@@ -8,82 +8,75 @@ function formatarNumero(numero) {
   return d.startsWith('55') ? d : '55' + d;
 }
  
-// ─── WhatsApp via ZAP-API ─────────────────────────────────────────────────────
+// ─── WhatsApp via W-API ───────────────────────────────────────────────────────
+// Instância: LITE-HJ7UCD-BSORBT
+// Testa múltiplos formatos de endpoint da W-API
  
 async function enviarWhatsApp(numero, mensagem) {
   const token      = process.env.ZAPAPI_TOKEN;
   const instanceId = process.env.ZAPAPI_INSTANCE;
  
   if (!token || !instanceId) {
-    console.warn('ZAP-API não configurada');
+    console.warn('W-API não configurada');
     return { ok: false };
   }
  
   const fone = formatarNumero(numero);
  
-  // O log mostrou status 307 redirect para /login — o token precisa ir como
-  // cookie de sessão E como Bearer. Tentamos as duas formas.
+  // W-API usa base URL: https://api.w-api.app
+  const base = 'https://api.w-api.app';
+ 
   const tentativas = [
-    // Tentativa 1: Bearer padrão com maxRedirects para seguir o 307
+    // Formato 1: W-API padrão com instanceId e token no header
     {
-      url: `https://zap-api.tech/v1/instances/${instanceId}/send`,
-      config: {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        maxRedirects: 5
-      },
-      body: { phone: fone, type: 'text', body: mensagem }
+      url: `${base}/v1/message/send-text`,
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: { phone: fone, message: mensagem, instanceId }
     },
-    // Tentativa 2: token como query param
+    // Formato 2: token como apikey, instância na URL
     {
-      url: `https://zap-api.tech/v1/instances/${instanceId}/send?token=${token}`,
-      config: {
-        headers: { 'Content-Type': 'application/json' },
-        maxRedirects: 5
-      },
-      body: { phone: fone, type: 'text', body: mensagem }
+      url: `${base}/v1/instances/${instanceId}/send-text`,
+      headers: { 'apikey': token, 'Content-Type': 'application/json' },
+      body: { phone: fone, message: mensagem }
     },
-    // Tentativa 3: token no header X-API-Key
+    // Formato 3: Bearer com instância na URL
     {
-      url: `https://zap-api.tech/v1/instances/${instanceId}/send`,
-      config: {
-        headers: {
-          'X-API-Key': token,
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        maxRedirects: 5
-      },
-      body: { phone: fone, type: 'text', body: mensagem }
+      url: `${base}/v1/instances/${instanceId}/send-text`,
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: { phone: fone, message: mensagem }
+    },
+    // Formato 4: token como Authorization, número no body com "to"
+    {
+      url: `${base}/v1/message/text`,
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: { to: fone, text: mensagem, instance: instanceId }
+    },
+    // Formato 5: painel.w-api.app
+    {
+      url: `https://painel.w-api.app/api/v1/instances/${instanceId}/messages`,
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: { to: fone, type: 'text', body: mensagem }
     }
   ];
  
-  for (const t of tentativas) {
+  for (let i = 0; i < tentativas.length; i++) {
+    const t = tentativas[i];
     try {
-      const { data, status } = await axios.post(t.url, t.body, t.config);
-      console.log(`✅ WhatsApp enviado para ${fone} (status ${status})`);
+      const { data, status } = await axios.post(t.url, t.body, {
+        headers: t.headers,
+        timeout: 15000,
+        maxRedirects: 3
+      });
+      console.log(`✅ WhatsApp enviado para ${fone} (tentativa ${i+1}, status ${status})`);
       return { ok: true, data };
     } catch (err) {
       const status = err.response?.status;
-      const detail = JSON.stringify(err.response?.data || err.message).substring(0, 200);
-      console.warn(`ZAP-API tentativa falhou ${status}: ${detail}`);
+      const detail = JSON.stringify(err.response?.data || err.message).substring(0, 150);
+      console.warn(`W-API tentativa ${i+1} falhou (${t.url}): ${status} ${detail}`);
     }
   }
  
-  // Última tentativa: verificar se a instância está conectada
-  try {
-    const { data } = await axios.get(
-      `https://zap-api.tech/v1/instances/${instanceId}`,
-      { headers: { 'Authorization': `Bearer ${token}` }, maxRedirects: 5 }
-    );
-    console.log(`ZAP-API status da instância: ${JSON.stringify(data).substring(0, 200)}`);
-  } catch (err) {
-    console.error(`ZAP-API verificação da instância: ${err.response?.status} ${JSON.stringify(err.response?.data || err.message).substring(0,100)}`);
-  }
- 
+  console.error(`W-API: todas as tentativas falharam para ${fone}`);
   return { ok: false };
 }
  
@@ -95,35 +88,28 @@ async function enviarEmail({ para, assunto, html, texto }) {
     return { ok: false };
   }
  
-  const configs = [
-    { host: 'smtp.gmail.com', port: 587, secure: false },
-    { host: 'smtp.gmail.com', port: 465, secure: true },
-  ];
- 
-  for (const cfg of configs) {
-    try {
-      const transporter = nodemailer.createTransport({
-        host: cfg.host,
-        port: cfg.port,
-        secure: cfg.secure,
-        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-        connectionTimeout: 15000,
-        tls: { rejectUnauthorized: false }
-      });
-      await transporter.sendMail({
-        from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
-        to: para,
-        subject: assunto,
-        text: texto || '',
-        html: html || ''
-      });
-      console.log(`✅ E-mail enviado para ${para} porta ${cfg.port}`);
-      return { ok: true };
-    } catch (err) {
-      console.warn(`E-mail porta ${cfg.port}: ${err.message}`);
-    }
+  try {
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.gmail.com',
+      port: 587,
+      secure: false,
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+      connectionTimeout: 15000,
+      tls: { rejectUnauthorized: false }
+    });
+    await transporter.sendMail({
+      from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
+      to: para,
+      subject: assunto,
+      text: texto || '',
+      html: html || ''
+    });
+    console.log(`✅ E-mail enviado para ${para}`);
+    return { ok: true };
+  } catch (err) {
+    console.error(`E-mail erro: ${err.message}`);
+    return { ok: false };
   }
-  return { ok: false };
 }
  
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -194,3 +180,4 @@ async function notificarAniversario({ membro, config }) {
 }
  
 module.exports = { enviarWhatsApp, enviarEmail, notificarCobranca, notificarAniversario };
+ 
