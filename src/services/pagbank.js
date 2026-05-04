@@ -15,21 +15,20 @@ async function criarCobranca({ membro, valor, vencimento, referencia }) {
     'Content-Type': 'application/json'
   };
 
-  // Expiracao maxima 180 dias
-  let expDate;
-  try {
-    const vencDate = new Date(vencimento + 'T23:59:59-03:00');
-    const maxDate = new Date(Date.now() + 179 * 24 * 60 * 60 * 1000);
-    const finalDate = vencDate > maxDate ? maxDate : vencDate;
-    expDate = finalDate.toISOString().replace('Z', '-03:00').substring(0, 22) + ':00';
-  } catch (e) {
-    expDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().substring(0, 10) + 'T23:59:59-03:00';
-  }
+  // Data no formato exato que o PagBank espera: YYYY-MM-DDThh:mm:ss-03:00
+  const hoje = new Date();
+  const emSeteDias = new Date(hoje.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const ano = emSeteDias.getFullYear();
+  const mes = String(emSeteDias.getMonth() + 1).padStart(2, '0');
+  const dia = String(emSeteDias.getDate()).padStart(2, '0');
+  const expDate = ano + '-' + mes + '-' + dia + 'T23:59:59-03:00';
 
   const valorCentavos = Math.round(valor * 100);
   const cpf = (membro.cpf || '').replace(/\D/g, '');
   const cpfValido = cpf.length === 11 ? cpf : '12345678909';
   const emailMembro = membro.email || 'membro@ligaurologia.com.br';
+
+  console.log('PagBank criando cobranca - exp:', expDate, 'valor:', valorCentavos, 'cpf:', cpfValido);
 
   try {
     const { data, status } = await axios.post(
@@ -58,9 +57,8 @@ async function criarCobranca({ membro, valor, vencimento, referencia }) {
     );
 
     console.log('PagBank order OK ' + status + ' id:' + data.id);
-    console.log('PagBank resposta qr_codes:', JSON.stringify(data.qr_codes).substring(0, 500));
+    console.log('PagBank qr_codes:', JSON.stringify(data.qr_codes).substring(0, 600));
 
-    // Extrai link do QR Code — testa todos os campos possíveis
     let link = null;
     let pixText = null;
 
@@ -68,29 +66,24 @@ async function criarCobranca({ membro, valor, vencimento, referencia }) {
       const qr = data.qr_codes[0];
       pixText = qr.text || null;
 
-      // Tenta extrair link de várias formas
       if (qr.links && qr.links.length > 0) {
-        // Procura link de pagamento ou QR Code PNG
-        const payLink = qr.links.find(function(l) { return l.rel === 'PAY' || l.rel === 'pay'; });
-        const qrPng = qr.links.find(function(l) { return l.rel === 'QRCODE_PNG' || l.rel === 'qrcode_png'; });
-        const anyLink = qr.links[0];
-        link = (payLink && payLink.href) || (qrPng && qrPng.href) || (anyLink && anyLink.href) || null;
+        console.log('PagBank qr links:', JSON.stringify(qr.links));
+        const qrPng = qr.links.find(function(l) { return l.rel === 'QRCODE_PNG'; });
+        const payLink = qr.links.find(function(l) { return l.rel === 'PAY'; });
+        link = (payLink && payLink.href) || (qrPng && qrPng.href) || qr.links[0].href;
       }
 
-      // Se não achou link mas tem texto PIX, usa link do sandbox para visualizar
       if (!link && pixText) {
-        link = 'https://sandbox.pagseguro.uol.com.br/pagamento/qrcode/' + (qr.id || data.id);
-      }
-
-      // Fallback: usa link dos links do pedido
-      if (!link && data.links && data.links.length > 0) {
-        const payLink = data.links.find(function(l) { return l.rel === 'PAY' || l.rel === 'CHECKOUT'; });
-        link = payLink ? payLink.href : data.links[0].href;
+        link = 'https://sandbox.pagseguro.uol.com.br/pagamento/qrcode/' + (qr.id || referencia);
       }
     }
 
-    console.log('PagBank link extraido:', link);
-    console.log('PagBank pix text:', pixText ? pixText.substring(0, 50) + '...' : 'null');
+    if (!link && data.links && data.links.length > 0) {
+      console.log('PagBank order links:', JSON.stringify(data.links));
+      link = data.links[0].href;
+    }
+
+    console.log('PagBank link final:', link);
 
     return {
       ok: true,
