@@ -9,75 +9,43 @@ function formatarNumero(numero) {
 }
  
 // ─── WhatsApp via W-API ───────────────────────────────────────────────────────
-// Instância: LITE-HJ7UCD-BSORBT
-// Testa múltiplos formatos de endpoint da W-API
+// Endpoint: POST https://api.w-api.app/v1/message/send-text?instanceId=INSTANCE_ID
+// Header: Authorization: Bearer API_KEY_MESTRA
+// Body: { phone: "5511999998888", message: "texto" }
  
 async function enviarWhatsApp(numero, mensagem) {
-  const token      = process.env.ZAPAPI_TOKEN;
-  const instanceId = process.env.ZAPAPI_INSTANCE;
+  const apiKey     = process.env.WAPI_KEY;      // API Key Mestra
+  const instanceId = process.env.ZAPAPI_INSTANCE; // LITE-HJ7UCD-BSORBT
  
-  if (!token || !instanceId) {
-    console.warn('W-API não configurada');
+  if (!apiKey || !instanceId) {
+    console.warn('W-API não configurada — WAPI_KEY ou ZAPAPI_INSTANCE ausente');
     return { ok: false };
   }
  
   const fone = formatarNumero(numero);
+  const url  = `https://api.w-api.app/v1/message/send-text?instanceId=${instanceId}`;
  
-  // W-API usa base URL: https://api.w-api.app
-  const base = 'https://api.w-api.app';
- 
-  const tentativas = [
-    // Formato 1: W-API padrão com instanceId e token no header
-    {
-      url: `${base}/v1/message/send-text`,
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: { phone: fone, message: mensagem, instanceId }
-    },
-    // Formato 2: token como apikey, instância na URL
-    {
-      url: `${base}/v1/instances/${instanceId}/send-text`,
-      headers: { 'apikey': token, 'Content-Type': 'application/json' },
-      body: { phone: fone, message: mensagem }
-    },
-    // Formato 3: Bearer com instância na URL
-    {
-      url: `${base}/v1/instances/${instanceId}/send-text`,
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: { phone: fone, message: mensagem }
-    },
-    // Formato 4: token como Authorization, número no body com "to"
-    {
-      url: `${base}/v1/message/text`,
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: { to: fone, text: mensagem, instance: instanceId }
-    },
-    // Formato 5: painel.w-api.app
-    {
-      url: `https://painel.w-api.app/api/v1/instances/${instanceId}/messages`,
-      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: { to: fone, type: 'text', body: mensagem }
-    }
-  ];
- 
-  for (let i = 0; i < tentativas.length; i++) {
-    const t = tentativas[i];
-    try {
-      const { data, status } = await axios.post(t.url, t.body, {
-        headers: t.headers,
-        timeout: 15000,
+  try {
+    const { data, status } = await axios.post(
+      url,
+      { phone: fone, message: mensagem },
+      {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 20000,
         maxRedirects: 3
-      });
-      console.log(`✅ WhatsApp enviado para ${fone} (tentativa ${i+1}, status ${status})`);
-      return { ok: true, data };
-    } catch (err) {
-      const status = err.response?.status;
-      const detail = JSON.stringify(err.response?.data || err.message).substring(0, 150);
-      console.warn(`W-API tentativa ${i+1} falhou (${t.url}): ${status} ${detail}`);
-    }
+      }
+    );
+    console.log(`✅ WhatsApp enviado para ${fone} (status ${status})`);
+    return { ok: true, data };
+  } catch (err) {
+    const status = err.response?.status;
+    const detail = JSON.stringify(err.response?.data || err.message).substring(0, 300);
+    console.error(`W-API erro ${status}: ${detail}`);
+    return { ok: false, status, erro: detail };
   }
- 
-  console.error(`W-API: todas as tentativas falharam para ${fone}`);
-  return { ok: false };
 }
  
 // ─── E-mail ───────────────────────────────────────────────────────────────────
@@ -87,7 +55,6 @@ async function enviarEmail({ para, assunto, html, texto }) {
     console.warn('E-mail não configurado');
     return { ok: false };
   }
- 
   try {
     const transporter = nodemailer.createTransport({
       host: 'smtp.gmail.com',
@@ -127,7 +94,13 @@ function htmlCobranca({ titulo, mensagem, link, orgNome, orgCor }) {
 }
  
 function preencherTemplate(tpl, dados) {
-  return (tpl||'').replace(/{nome}/g,dados.nome||'').replace(/{dias}/g,dados.dias||'').replace(/{data}/g,dados.data||'').replace(/{valor_desc}/g,dados.valor_desc||'').replace(/{valor_cheio}/g,dados.valor_cheio||'').replace(/{link}/g,dados.link||'');
+  return (tpl||'')
+    .replace(/{nome}/g, dados.nome||'')
+    .replace(/{dias}/g, dados.dias||'')
+    .replace(/{data}/g, dados.data||'')
+    .replace(/{valor_desc}/g, dados.valor_desc||'')
+    .replace(/{valor_cheio}/g, dados.valor_cheio||'')
+    .replace(/{link}/g, dados.link||'');
 }
  
 async function notificarCobranca({ membro, cobranca, tipo, config }) {
@@ -180,4 +153,3 @@ async function notificarAniversario({ membro, config }) {
 }
  
 module.exports = { enviarWhatsApp, enviarEmail, notificarCobranca, notificarAniversario };
- 
