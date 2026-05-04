@@ -5,19 +5,15 @@ services:
     buildCommand: npm install
     startCommand: node src/server.js
     healthCheckPath: /health
-    disk:
-      name: liga-data
-      mountPath: /var/data
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
-      - key: RENDER
-        value: "true"
-      - key: PORT
-        value: "3000"
       - key: SESSION_SECRET
         generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: liga-db
+          property: connectionString
       - key: APP_URL
         sync: false
       - key: PAGBANK_TOKEN
@@ -40,7 +36,9 @@ services:
         sync: false
       - key: EMAIL_FROM
         sync: false
-      - key: ORG_NOME
-        value: Liga Academica de Urologia
-      - key: ORG_COR
-        value: "#1a56db"
+
+databases:
+  - name: liga-db
+    databaseName: liga_urologia
+    user: liga_user
+    plan: free

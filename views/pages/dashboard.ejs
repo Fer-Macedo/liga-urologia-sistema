@@ -1,0 +1,114 @@
+<%
+  paginaAtual = 'dashboard';
+  titulo = 'Dashboard';
+  const body_content = `
+`;
+%>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — <%= config.org_nome || 'Liga Urologia' %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>:root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }</style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar') %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Dashboard</h1>
+      <div class="topbar-acoes">
+        <a href="/cobrancas/gerar" onclick="return confirm('Gerar cobranças do mês para todos os membros?')" class="btn btn-primario">+ Gerar cobranças do mês</a>
+      </div>
+    </div>
+
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total de membros</div>
+          <div class="stat-valor"><%= stats.total %></div>
+          <div class="stat-sub neutro">membros ativos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pagamentos em dia</div>
+          <div class="stat-valor verde"><%= stats.pagos %></div>
+          <div class="stat-sub verde">R$ <%= Number(stats.totalRecebido).toFixed(2).replace('.',',') %> recebido</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Pendentes (este mês)</div>
+          <div class="stat-valor amarelo"><%= stats.pendentes %></div>
+          <div class="stat-sub amarelo">R$ <%= Number(stats.totalPendente).toFixed(2).replace('.',',') %> a receber</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Em atraso</div>
+          <div class="stat-valor vermelho"><%= stats.atrasados %></div>
+          <div class="stat-sub vermelho">R$ <%= Number(stats.totalAtrasado).toFixed(2).replace('.',',') %> inadimplente</div>
+        </div>
+      </div>
+
+      <div class="dois-colunas">
+        <!-- Cobranças recentes -->
+        <div>
+          <div class="section-titulo">Cobranças recentes</div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead><tr>
+                <th>Membro</th><th>Referência</th><th>Vencimento</th><th>Status</th>
+              </tr></thead>
+              <tbody>
+                <% if (recentes.length === 0) { %>
+                  <tr><td colspan="4" style="text-align:center;color:#888;padding:20px">Nenhuma cobrança ainda</td></tr>
+                <% } %>
+                <% recentes.forEach(c => { %>
+                <tr>
+                  <td><div class="membro-cell"><div class="avatar"><%= c.nome.substring(0,2).toUpperCase() %></div><%= c.nome.split(' ').slice(0,2).join(' ') %></div></td>
+                  <td><%= c.referencia %></td>
+                  <td><%= new Date(c.data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR') %></td>
+                  <td>
+                    <% if (c.status === 'pago') { %><span class="badge verde">Pago</span>
+                    <% } else if (c.status === 'atrasado') { %><span class="badge vermelho">Atrasado</span>
+                    <% } else { %><span class="badge amarelo">Pendente</span><% } %>
+                  </td>
+                </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+          <a href="/cobrancas" class="link-ver-mais">Ver todas as cobranças →</a>
+        </div>
+
+        <!-- Aniversários -->
+        <div>
+          <div class="section-titulo">Aniversários próximos</div>
+          <% if (aniversariantes.length === 0) { %>
+            <div class="vazio">Nenhum aniversariante cadastrado</div>
+          <% } %>
+          <% aniversariantes.forEach(m => {
+            const hoje_md = new Date().toLocaleDateString('pt-BR',{month:'2-digit',day:'2-digit'}).split('/').reverse().join('-');
+            const md = m.data_nascimento ? m.data_nascimento.substring(5) : '';
+            const isHoje = md === hoje_md;
+          %>
+          <div class="aniv-card">
+            <div class="aniv-icone">🎂</div>
+            <div class="aniv-info">
+              <div class="aniv-nome"><%= m.nome.split(' ').slice(0,3).join(' ') %></div>
+              <div class="aniv-data"><%= new Date(m.data_nascimento + 'T12:00:00').toLocaleDateString('pt-BR', {day:'numeric',month:'long'}) %></div>
+            </div>
+            <% if (isHoje) { %><span class="badge azul">Hoje!</span><% } %>
+          </div>
+          <% }) %>
+          <a href="/aniversarios" class="link-ver-mais">Ver todos os aniversários →</a>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/js/app.js"></script>
+</body>
+</html>

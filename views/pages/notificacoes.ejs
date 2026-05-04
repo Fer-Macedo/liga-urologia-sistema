@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notificações — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>:root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }</style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'notificacoes' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Notificações automáticas</h1>
+    </div>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
+
+      <form action="/notificacoes" method="POST">
+        <div class="config-secao">
+          <div class="config-secao-titulo">Ativação das notificações</div>
+          <div class="notif-lista">
+
+            <div class="notif-card">
+              <div class="notif-header">
+                <div>
+                  <div class="notif-titulo">Lembrete 3 dias antes do vencimento</div>
+                  <div class="notif-desc">Envia link de pagamento com desconto por WhatsApp e e-mail</div>
+                </div>
+                <label class="toggle-label">
+                  <input type="checkbox" name="notif_pre_ativo" <%= config.notif_pre_ativo === '1' ? 'checked' : '' %>>
+                  <span class="toggle"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="notif-card">
+              <div class="notif-header">
+                <div>
+                  <div class="notif-titulo">Lembrete no dia do vencimento</div>
+                  <div class="notif-desc">Envia link de pagamento com desconto (último dia)</div>
+                </div>
+                <label class="toggle-label">
+                  <input type="checkbox" name="notif_dia_ativo" <%= config.notif_dia_ativo === '1' ? 'checked' : '' %>>
+                  <span class="toggle"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="notif-card">
+              <div class="notif-header">
+                <div>
+                  <div class="notif-titulo">Cobrança 1 dia após vencimento</div>
+                  <div class="notif-desc">Avisa que o desconto expirou e envia novo link de pagamento</div>
+                </div>
+                <label class="toggle-label">
+                  <input type="checkbox" name="notif_pos1_ativo" <%= config.notif_pos1_ativo === '1' ? 'checked' : '' %>>
+                  <span class="toggle"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="notif-card">
+              <div class="notif-header">
+                <div>
+                  <div class="notif-titulo">Reforço de cobrança 7 dias após vencimento</div>
+                  <div class="notif-desc">Segunda cobrança para inadimplentes com mais de uma semana</div>
+                </div>
+                <label class="toggle-label">
+                  <input type="checkbox" name="notif_pos7_ativo" <%= config.notif_pos7_ativo === '1' ? 'checked' : '' %>>
+                  <span class="toggle"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="notif-card">
+              <div class="notif-header">
+                <div>
+                  <div class="notif-titulo">Mensagem de aniversário</div>
+                  <div class="notif-desc">Envia parabéns automaticamente no dia do aniversário do membro</div>
+                </div>
+                <label class="toggle-label">
+                  <input type="checkbox" name="notif_aniversario_ativo" <%= config.notif_aniversario_ativo === '1' ? 'checked' : '' %>>
+                  <span class="toggle"></span>
+                </label>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="config-secao">
+          <div class="config-secao-titulo">Textos das mensagens</div>
+          <p class="config-dica">Use as variáveis: <code>{nome}</code> <code>{dias}</code> <code>{data}</code> <code>{valor_desc}</code> <code>{valor_cheio}</code> <code>{link}</code></p>
+
+          <div class="form-grid">
+            <div class="campo full">
+              <label class="label">Mensagem — 3 dias antes do vencimento</label>
+              <textarea name="msg_cobranca_pre" class="input" rows="3"><%= config.msg_cobranca_pre || '' %></textarea>
+            </div>
+            <div class="campo full">
+              <label class="label">Mensagem — no dia do vencimento</label>
+              <textarea name="msg_cobranca_dia" class="input" rows="3"><%= config.msg_cobranca_dia || '' %></textarea>
+            </div>
+            <div class="campo full">
+              <label class="label">Mensagem — após o vencimento (cobrança de atraso)</label>
+              <textarea name="msg_cobranca_pos" class="input" rows="3"><%= config.msg_cobranca_pos || '' %></textarea>
+            </div>
+            <div class="campo full">
+              <label class="label">Mensagem de aniversário</label>
+              <textarea name="msg_aniversario" class="input" rows="3"><%= config.msg_aniversario || '' %></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;margin-top:8px">
+          <button type="submit" class="btn btn-primario">Salvar configurações</button>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+<script src="/js/app.js"></script>
+</body></html>

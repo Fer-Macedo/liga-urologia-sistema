@@ -1,0 +1,44 @@
+<aside class="sidebar">
+  <div class="logo-area">
+    <div class="logo-box">
+      <% if (config.org_logo) { %>
+        <img src="<%= config.org_logo %>" alt="Logo" class="logo-img">
+      <% } else { %>
+        <div class="logo-icone">LU</div>
+      <% } %>
+      <div class="logo-texto"><%= config.org_nome || 'Liga Acadêmica de Urologia' %></div>
+    </div>
+  </div>
+  <nav class="nav">
+    <a href="/dashboard" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'dashboard' ? 'ativo' : '' %>">
+      <span class="nav-icone">▦</span> Dashboard
+    </a>
+    <a href="/membros" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'membros' ? 'ativo' : '' %>">
+      <span class="nav-icone">◎</span> Membros
+    </a>
+    <a href="/cobrancas" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'cobrancas' ? 'ativo' : '' %>">
+      <span class="nav-icone">◈</span> Cobranças
+    </a>
+    <a href="/aniversarios" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'aniversarios' ? 'ativo' : '' %>">
+      <span class="nav-icone">◆</span> Aniversários
+    </a>
+    <% if (usuarioLogado && usuarioLogado.perfil === 'admin') { %>
+    <a href="/notificacoes" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'notificacoes' ? 'ativo' : '' %>">
+      <span class="nav-icone">◉</span> Notificações
+    </a>
+    <a href="/configuracoes" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'configuracoes' ? 'ativo' : '' %>">
+      <span class="nav-icone">✦</span> Configurações
+    </a>
+    <a href="/usuarios" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'usuarios' ? 'ativo' : '' %>">
+      <span class="nav-icone">◎</span> Usuários
+    </a>
+    <% } %>
+  </nav>
+  <div class="sidebar-rodape">
+    <div class="usuario-info">
+      <div class="usuario-nome"><%= usuarioLogado?.nome || '' %></div>
+      <div class="usuario-perfil"><%= usuarioLogado?.perfil || '' %></div>
+    </div>
+    <a href="/logout" class="btn-sair">Sair</a>
+  </div>
+</aside>

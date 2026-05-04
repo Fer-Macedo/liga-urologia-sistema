@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configurações — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>:root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }</style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'configuracoes' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Configurações do sistema</h1>
+    </div>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
+
+      <form action="/configuracoes" method="POST">
+
+        <div class="config-secao">
+          <div class="config-secao-titulo">🎨 Identidade visual</div>
+          <div class="form-grid">
+            <div class="campo full">
+              <label class="label">Nome da organização</label>
+              <input name="org_nome" class="input" value="<%= config.org_nome || '' %>" required>
+            </div>
+            <div class="campo">
+              <label class="label">Cor principal (código hex)</label>
+              <div style="display:flex;gap:8px;align-items:center">
+                <input type="color" name="org_cor" value="<%= config.org_cor || '#1a56db' %>" style="width:48px;height:38px;border-radius:6px;border:1px solid #ddd;cursor:pointer">
+                <input class="input" id="corTexto" value="<%= config.org_cor || '#1a56db' %>" placeholder="#1a56db" style="flex:1" readonly>
+              </div>
+            </div>
+            <div class="campo">
+              <label class="label">URL da logomarca (opcional)</label>
+              <input name="org_logo" class="input" value="<%= config.org_logo || '' %>" placeholder="https://seusite.com/logo.png">
+            </div>
+          </div>
+        </div>
+
+        <div class="config-secao">
+          <div class="config-secao-titulo">💰 Cobranças e pagamentos</div>
+          <div class="form-grid">
+            <div class="campo">
+              <label class="label">Mensalidade padrão (R$)</label>
+              <input name="mensalidade_padrao" type="number" step="0.01" class="input" value="<%= config.mensalidade_padrao || '100' %>">
+            </div>
+            <div class="campo">
+              <label class="label">Desconto por pontualidade (%)</label>
+              <input name="desconto_padrao" type="number" min="0" max="100" class="input" value="<%= config.desconto_padrao || '10' %>">
+            </div>
+            <div class="campo">
+              <label class="label">Dia de vencimento padrão</label>
+              <input name="dia_vencimento_padrao" type="number" min="1" max="28" class="input" value="<%= config.dia_vencimento_padrao || '5' %>">
+            </div>
+            <div class="campo">
+              <label class="label">Multa por atraso (%)</label>
+              <input name="multa_atraso" type="number" min="0" max="100" step="0.1" class="input" value="<%= config.multa_atraso || '2' %>">
+            </div>
+          </div>
+        </div>
+
+        <div class="config-secao">
+          <div class="config-secao-titulo">🔌 Integrações — configure no arquivo .env</div>
+          <div class="config-dica" style="margin-bottom:12px">
+            As chaves de API (PagBank, Mega-API, E-mail) são configuradas no arquivo <code>.env</code> no servidor por segurança.
+            Consulte o guia de instalação para saber como editar esse arquivo.
+          </div>
+          <div class="form-grid">
+            <div class="campo full">
+              <label class="label">Status PagBank</label>
+              <div class="input" style="background:#f9fafb;color:#6b7280">
+                Token: <%= process.env.PAGBANK_TOKEN ? '✅ Configurado' : '❌ Não configurado — edite o arquivo .env' %>
+              </div>
+            </div>
+            <div class="campo full">
+              <label class="label">Status Mega-API (WhatsApp)</label>
+              <div class="input" style="background:#f9fafb;color:#6b7280">
+                Token: <%= process.env.MEGAAPI_TOKEN ? '✅ Configurado' : '❌ Não configurado — edite o arquivo .env' %>
+              </div>
+            </div>
+            <div class="campo full">
+              <label class="label">Status E-mail</label>
+              <div class="input" style="background:#f9fafb;color:#6b7280">
+                <%= process.env.EMAIL_USER ? '✅ Configurado: ' + process.env.EMAIL_USER : '❌ Não configurado — edite o arquivo .env' %>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;margin-top:8px">
+          <button type="submit" class="btn btn-primario">Salvar configurações</button>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+<script src="/js/app.js"></script>
+<script>
+  document.querySelector('input[type="color"]').addEventListener('input', function() {
+    document.getElementById('corTexto').value = this.value;
+  });
+</script>
+</body></html>

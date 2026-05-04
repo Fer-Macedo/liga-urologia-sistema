@@ -1,0 +1,20 @@
+function requireAuth(req, res, next) {
+  if (req.session && req.session.usuario) return next();
+  req.flash('erro', 'Faça login para continuar.');
+  res.redirect('/login');
+}
+
+function requireAdmin(req, res, next) {
+  if (req.session?.usuario?.perfil === 'admin') return next();
+  req.flash('erro', 'Acesso restrito ao administrador.');
+  res.redirect('/dashboard');
+}
+
+function requireFinanceiro(req, res, next) {
+  const perfil = req.session?.usuario?.perfil;
+  if (perfil === 'admin' || perfil === 'financeiro') return next();
+  req.flash('erro', 'Sem permissão para esta ação.');
+  res.redirect('/dashboard');
+}
+
+module.exports = { requireAuth, requireAdmin, requireFinanceiro };

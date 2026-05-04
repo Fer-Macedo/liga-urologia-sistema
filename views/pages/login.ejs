@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — <%= config.org_nome || 'Liga Urologia' %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>:root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }</style>
+</head>
+<body class="login-body">
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-logo">
+        <% if (config.org_logo) { %>
+          <img src="<%= config.org_logo %>" alt="Logo" style="height:60px;margin-bottom:8px">
+        <% } else { %>
+          <div class="login-logo-icone">LU</div>
+        <% } %>
+        <h1 class="login-titulo"><%= config.org_nome || 'Liga Acadêmica de Urologia' %></h1>
+        <p class="login-sub">Sistema de Gestão de Mensalidades</p>
+      </div>
+
+      <% if (erro && erro.length > 0) { %>
+        <div class="alerta alerta-erro"><%= erro[0] %></div>
+      <% } %>
+
+      <form action="/login" method="POST" class="login-form">
+        <div class="campo">
+          <label class="label">E-mail</label>
+          <input type="email" name="email" class="input" placeholder="seu@email.com.br" required autofocus>
+        </div>
+        <div class="campo">
+          <label class="label">Senha</label>
+          <input type="password" name="senha" class="input" placeholder="••••••••" required>
+        </div>
+        <button type="submit" class="btn btn-primario" style="width:100%;justify-content:center">Entrar no sistema</button>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

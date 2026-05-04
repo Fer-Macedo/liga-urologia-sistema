@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Membros — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>:root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }</style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'membros' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Membros</h1>
+      <button class="btn btn-primario" onclick="abrirModal('modal-membro')">+ Cadastrar membro</button>
+    </div>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
+
+      <div class="filtro-bar">
+        <a href="/membros" class="filtro-btn <%= filtro==='todos'?'ativo':'' %>">Todos (<%= membros.length %>)</a>
+        <a href="/membros?filtro=ativos" class="filtro-btn <%= filtro==='ativos'?'ativo':'' %>">Ativos</a>
+        <a href="/membros?filtro=inativos" class="filtro-btn <%= filtro==='inativos'?'ativo':'' %>">Inativos</a>
+      </div>
+
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr>
+            <th>Nome</th><th>WhatsApp</th><th>E-mail</th><th>Mensalidade</th><th>Vencimento</th><th>Status</th><th>Ações</th>
+          </tr></thead>
+          <tbody>
+            <% if (membros.length === 0) { %>
+              <tr><td colspan="7" style="text-align:center;padding:30px;color:#888">Nenhum membro cadastrado ainda</td></tr>
+            <% } %>
+            <% membros.forEach(m => { %>
+            <tr>
+              <td><div class="membro-cell"><div class="avatar"><%= m.nome.substring(0,2).toUpperCase() %></div><%= m.nome %></div></td>
+              <td><%= m.whatsapp || '—' %></td>
+              <td><%= m.email || '—' %></td>
+              <td>R$ <%= Number(m.mensalidade).toFixed(2).replace('.',',') %></td>
+              <td>Dia <%= m.dia_vencimento %></td>
+              <td>
+                <% if (!m.ativo) { %><span class="badge cinza">Inativo</span>
+                <% } else if (m.ultimo_status === 'atrasado') { %><span class="badge vermelho">Atrasado</span>
+                <% } else if (m.ultimo_status === 'pago') { %><span class="badge verde">Em dia</span>
+                <% } else { %><span class="badge amarelo">Pendente</span><% } %>
+              </td>
+              <td>
+                <div class="btn-acoes">
+                  <a href="/membros/<%= m.id %>/editar" class="icon-btn" title="Editar">✏</a>
+                  <a href="/cobrancas?membro=<%= m.id %>" class="icon-btn" title="Ver cobranças">◈</a>
+                </div>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal cadastro de membro -->
+<div class="modal-overlay" id="modal-membro" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">Cadastrar novo membro</span>
+      <button class="icon-btn" onclick="fecharModal('modal-membro')">✕</button>
+    </div>
+    <form action="/membros" method="POST">
+      <div class="form-grid">
+        <div class="campo full"><label class="label">Nome completo *</label><input name="nome" class="input" required placeholder="Dr. Nome Sobrenome"></div>
+        <div class="campo"><label class="label">CPF</label><input name="cpf" class="input" placeholder="000.000.000-00"></div>
+        <div class="campo"><label class="label">Data de nascimento</label><input name="data_nascimento" type="date" class="input"></div>
+        <div class="campo"><label class="label">E-mail</label><input name="email" type="email" class="input" placeholder="nome@email.com"></div>
+        <div class="campo"><label class="label">WhatsApp *</label><input name="whatsapp" class="input" placeholder="(11) 99999-0000" required></div>
+        <div class="campo"><label class="label">Mensalidade (R$)</label><input name="mensalidade" type="number" step="0.01" class="input" value="100"></div>
+        <div class="campo"><label class="label">Desconto pontualidade (%)</label><input name="desconto_pontualidade" type="number" class="input" value="10"></div>
+        <div class="campo"><label class="label">Dia de vencimento</label><input name="dia_vencimento" type="number" min="1" max="28" class="input" value="5"></div>
+        <div class="campo full"><label class="label">Observações</label><textarea name="observacoes" class="input" rows="2"></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-membro')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar membro</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+</body></html>

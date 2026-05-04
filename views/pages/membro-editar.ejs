@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editar Membro — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>:root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }</style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'membros' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Editar membro</h1>
+      <a href="/membros" class="btn">← Voltar</a>
+    </div>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
+
+      <div class="config-secao">
+        <form action="/membros/<%= membro.id %>/editar" method="POST">
+          <div class="form-grid">
+            <div class="campo full"><label class="label">Nome completo *</label><input name="nome" class="input" value="<%= membro.nome %>" required></div>
+            <div class="campo"><label class="label">CPF</label><input name="cpf" class="input" value="<%= membro.cpf || '' %>" placeholder="000.000.000-00"></div>
+            <div class="campo"><label class="label">Data de nascimento</label><input name="data_nascimento" type="date" class="input" value="<%= membro.data_nascimento || '' %>"></div>
+            <div class="campo"><label class="label">E-mail</label><input name="email" type="email" class="input" value="<%= membro.email || '' %>"></div>
+            <div class="campo"><label class="label">WhatsApp</label><input name="whatsapp" class="input" value="<%= membro.whatsapp || '' %>" placeholder="(11) 99999-0000"></div>
+            <div class="campo"><label class="label">Mensalidade (R$)</label><input name="mensalidade" type="number" step="0.01" class="input" value="<%= membro.mensalidade %>"></div>
+            <div class="campo"><label class="label">Desconto pontualidade (%)</label><input name="desconto_pontualidade" type="number" class="input" value="<%= membro.desconto_pontualidade %>"></div>
+            <div class="campo"><label class="label">Dia de vencimento</label><input name="dia_vencimento" type="number" min="1" max="28" class="input" value="<%= membro.dia_vencimento %>"></div>
+            <div class="campo">
+              <label class="label">Status</label>
+              <select name="ativo" class="input">
+                <option value="1" <%= membro.ativo ? 'selected' : '' %>>Ativo</option>
+                <option value="" <%= !membro.ativo ? 'selected' : '' %>>Inativo</option>
+              </select>
+            </div>
+            <div class="campo full"><label class="label">Observações</label><textarea name="observacoes" class="input" rows="3"><%= membro.observacoes || '' %></textarea></div>
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
+            <a href="/membros" class="btn">Cancelar</a>
+            <button type="submit" class="btn btn-primario">Salvar alterações</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+<script src="/js/app.js"></script>
+</body></html>
