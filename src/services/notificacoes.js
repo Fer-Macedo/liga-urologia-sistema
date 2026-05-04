@@ -9,13 +9,13 @@ function formatarNumero(numero) {
 }
  
 // ─── WhatsApp via W-API ───────────────────────────────────────────────────────
-// Endpoint: POST https://api.w-api.app/v1/message/send-text?instanceId=INSTANCE_ID
-// Header: Authorization: Bearer API_KEY_MESTRA
+// Endpoint correto: POST https://api.w-api.app/v1/message/send-text?instanceId=LITE-xxx
+// Header: Authorization: Bearer [API_KEY_MESTRA]
 // Body: { phone: "5511999998888", message: "texto" }
  
 async function enviarWhatsApp(numero, mensagem) {
-  const apiKey     = process.env.WAPI_KEY;      // API Key Mestra
-  const instanceId = process.env.ZAPAPI_INSTANCE; // LITE-HJ7UCD-BSORBT
+  const apiKey     = process.env.WAPI_KEY;
+  const instanceId = process.env.ZAPAPI_INSTANCE;
  
   if (!apiKey || !instanceId) {
     console.warn('W-API não configurada — WAPI_KEY ou ZAPAPI_INSTANCE ausente');
@@ -23,7 +23,9 @@ async function enviarWhatsApp(numero, mensagem) {
   }
  
   const fone = formatarNumero(numero);
-  const url  = `https://api.w-api.app/v1/message/send-text?instanceId=${instanceId}`;
+ 
+  // URL com instanceId como query parameter (formato correto da W-API)
+  const url = `https://api.w-api.app/v1/message/send-text?instanceId=${encodeURIComponent(instanceId)}`;
  
   try {
     const { data, status } = await axios.post(
@@ -78,8 +80,6 @@ async function enviarEmail({ para, assunto, html, texto }) {
     return { ok: false };
   }
 }
- 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
  
 function htmlCobranca({ titulo, mensagem, link, orgNome, orgCor }) {
   return `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f4f4f4;margin:0;padding:30px">
@@ -153,3 +153,4 @@ async function notificarAniversario({ membro, config }) {
 }
  
 module.exports = { enviarWhatsApp, enviarEmail, notificarCobranca, notificarAniversario };
+ 
