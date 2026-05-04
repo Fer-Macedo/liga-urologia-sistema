@@ -9,35 +9,36 @@ function formatarNumero(numero) {
 }
  
 // ─── WhatsApp via W-API ───────────────────────────────────────────────────────
-// Endpoint correto: POST https://api.w-api.app/v1/message/send-text?instanceId=LITE-xxx
+// Endpoint: POST https://api.w-api.app/v1/message/send-text
 // Header: Authorization: Bearer [API_KEY_MESTRA]
-// Body: { phone: "5511999998888", message: "texto" }
+// Body: { phone, message, instanceId, delayMessage }
  
 async function enviarWhatsApp(numero, mensagem) {
   const apiKey     = process.env.WAPI_KEY;
   const instanceId = process.env.ZAPAPI_INSTANCE;
  
   if (!apiKey || !instanceId) {
-    console.warn('W-API não configurada — WAPI_KEY ou ZAPAPI_INSTANCE ausente');
+    console.warn('W-API não configurada');
     return { ok: false };
   }
  
   const fone = formatarNumero(numero);
  
-  // URL com instanceId como query parameter (formato correto da W-API)
-  const url = `https://api.w-api.app/v1/message/send-text?instanceId=${encodeURIComponent(instanceId)}`;
- 
   try {
     const { data, status } = await axios.post(
-      url,
-      { phone: fone, message: mensagem },
+      'https://api.w-api.app/v1/message/send-text',
+      {
+        phone: fone,
+        message: mensagem,
+        instanceId: instanceId,
+        delayMessage: 2
+      },
       {
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         },
-        timeout: 20000,
-        maxRedirects: 3
+        timeout: 20000
       }
     );
     console.log(`✅ WhatsApp enviado para ${fone} (status ${status})`);
@@ -46,7 +47,7 @@ async function enviarWhatsApp(numero, mensagem) {
     const status = err.response?.status;
     const detail = JSON.stringify(err.response?.data || err.message).substring(0, 300);
     console.error(`W-API erro ${status}: ${detail}`);
-    return { ok: false, status, erro: detail };
+    return { ok: false };
   }
 }
  
@@ -153,4 +154,3 @@ async function notificarAniversario({ membro, config }) {
 }
  
 module.exports = { enviarWhatsApp, enviarEmail, notificarCobranca, notificarAniversario };
- 
