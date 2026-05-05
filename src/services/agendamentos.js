@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const dayjs = require('dayjs');
 const { query } = require('../models/database');
-const { criarCobranca } = require('./pagbank');
+const { criarCobranca } = require('./mercadopago');
 const { notificarCobranca, notificarAniversario } = require('./notificacoes');
 
 async function getConfig() {
@@ -14,46 +14,40 @@ async function getConfig() {
 async function gerarCobrancasMes() {
   const hoje = dayjs();
   const mes = hoje.format('YYYY-MM');
-  const membros = await query('SELECT * FROM membros WHERE ativo = 1');
+  const membros = await query('SELECT * FROM membros WHERE ativo=1');
   const config = await getConfig();
 
   for (const membro of membros.rows) {
-    const ref = `${membro.id}-${mes}`;
-    const existe = await query('SELECT id FROM cobrancas WHERE referencia = $1', [ref]);
+    const ref = membro.id + '-' + mes;
+    const existe = await query('SELECT id FROM cobrancas WHERE referencia=$1', [ref]);
     if (existe.rows.length > 0) continue;
 
-    const diaVenc = membro.dia_vencimento || parseInt(config.dia_vencimento_padrao) || 5;
+    const diaVenc = membro.dia_vencimento || parseInt(config.dia_vencimento_padrao) || 16;
     const dataVenc = hoje.date(diaVenc).format('YYYY-MM-DD');
     const valorCheio = membro.mensalidade;
-    const descPct = membro.desconto_pontualidade || parseFloat(config.desconto_padrao) || 10;
+    const descPct = membro.desconto_pontualidade || parseFloat(config.desconto_padrao) || 20;
     const valorDesc = +(valorCheio * (1 - descPct / 100)).toFixed(2);
 
-    const pagResult = await criarCobranca({ membro, valor: valorDesc, vencimento: dataVenc, referencia: ref });
+    const pag = await criarCobranca({ membro, valor: valorDesc, vencimento: dataVenc, referencia: ref });
 
     await query(
-      'INSERT INTO cobrancas (membro_id,referencia,valor_cheio,valor_desconto,data_vencimento,status,pagbank_charge_id,pagbank_link) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
-      [membro.id, ref, valorCheio, valorDesc, dataVenc, 'pendente', pagResult.charge_id||null, pagResult.link||null]
+      'INSERT INTO cobrancas (membro_id,referencia,valor_cheio,valor_desconto,data_vencimento,status,mp_payment_id,pagbank_link,pix_qr_code,pix_qr_code_base64) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+      [membro.id, ref, valorCheio, valorDesc, dataVenc, 'pendente',
+       pag.payment_id||null, pag.link||null,
+       pag.qr_code||null, pag.qr_code_base64||null]
     );
-    console.log(`Cobranca gerada: ${membro.nome} - ${ref}`);
+    console.log('Cobranca MP gerada:', membro.nome, ref);
   }
 }
 
 async function verificarPagamentos() {
-  // So verifica pagamentos em producao — em Sandbox o PagBank confirma automaticamente
-  // causando cobranças incorretamente marcadas como pagas
-  const isSandbox = (process.env.PAGBANK_BASE_URL || '').includes('sandbox');
-  if (isSandbox) {
-    console.log('verificarPagamentos ignorado - ambiente Sandbox');
-    return;
-  }
-
-  const { consultarCobranca } = require('./pagbank');
-  const r = await query("SELECT * FROM cobrancas WHERE status='pendente' AND pagbank_charge_id IS NOT NULL");
+  const { consultarPagamento } = require('./mercadopago');
+  const r = await query("SELECT * FROM cobrancas WHERE status='pendente' AND mp_payment_id IS NOT NULL");
   for (const cob of r.rows) {
-    const result = await consultarCobranca(cob.pagbank_charge_id);
-    if (result.ok && result.status === 'PAID') {
+    const result = await consultarPagamento(cob.mp_payment_id);
+    if (result.ok && result.status === 'approved') {
       await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW() WHERE id=$1", [cob.id]);
-      console.log(`Pagamento confirmado: cobranca id ${cob.id}`);
+      console.log('Pagamento confirmado via cron:', cob.id);
     }
   }
 }
@@ -61,7 +55,7 @@ async function verificarPagamentos() {
 async function atualizarAtrasados() {
   const hoje = dayjs().format('YYYY-MM-DD');
   const r = await query("UPDATE cobrancas SET status='atrasado' WHERE status='pendente' AND data_vencimento < $1", [hoje]);
-  if (r.rowCount > 0) console.log(`${r.rowCount} cobrancas marcadas como atrasadas`);
+  if (r.rowCount > 0) console.log(r.rowCount + ' cobrancas marcadas como atrasadas');
 }
 
 async function enviarNotificacoes() {
@@ -102,19 +96,6 @@ async function enviarNotificacoes() {
       if (j.rows.length === 0) await notificarCobranca({ membro: cob, cobranca: cob, tipo: 'pos', config });
     }
   }
-
-  if (config.notif_pos7_ativo === '1') {
-    const ha7 = hoje.subtract(7, 'day').format('YYYY-MM-DD');
-    const r = await query(
-      "SELECT c.*, m.nome, m.email, m.whatsapp FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.data_vencimento=$1 AND c.status='atrasado'", [ha7]
-    );
-    for (const cob of r.rows) {
-      const j = await query(
-        "SELECT id FROM notificacoes_log WHERE cobranca_id=$1 AND tipo='pos' AND enviado_em > NOW() - INTERVAL '8 days'", [cob.id]
-      );
-      if (j.rows.length === 0) await notificarCobranca({ membro: cob, cobranca: cob, tipo: 'pos', config });
-    }
-  }
 }
 
 async function enviarAniversarios() {
@@ -131,7 +112,7 @@ async function enviarAniversarios() {
     );
     if (j.rows.length === 0) {
       await notificarAniversario({ membro, config });
-      console.log(`Parabens enviado: ${membro.nome}`);
+      console.log('Parabens enviado:', membro.nome);
     }
   }
 }
@@ -144,21 +125,19 @@ async function logNotificacao({ membro_id, cobranca_id, tipo, canal, status }) {
 }
 
 function iniciarAgendamentos() {
-  console.log('Agendamentos automaticos iniciados...');
+  console.log('Agendamentos MP iniciados...');
 
-  // Rotina diaria as 08:00 horario de Brasilia
   cron.schedule('0 8 * * *', async () => {
     console.log('Rotina diaria iniciando...');
     try {
       await gerarCobrancasMes();
       await atualizarAtrasados();
-      await verificarPagamentos(); // Ignorado automaticamente no Sandbox
+      await verificarPagamentos();
       await enviarNotificacoes();
       await enviarAniversarios();
     } catch (e) { console.error('Rotina diaria erro:', e.message); }
   }, { timezone: 'America/Sao_Paulo' });
 
-  // Verificacao de pagamentos a cada 2 horas (ignorado no Sandbox)
   cron.schedule('0 */2 * * *', async () => {
     try { await verificarPagamentos(); } catch (e) { console.error(e.message); }
   });
