@@ -4,7 +4,13 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Usuários — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
-  <style>:root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }</style>
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+    .perm-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:12px; }
+    .perm-item { display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--fundo);border-radius:8px;border:1px solid var(--borda);cursor:pointer;font-size:13px; }
+    .perm-item input { accent-color:var(--cor-primaria);width:16px;height:16px; }
+    .perm-item.ativo { background:var(--cor-primaria-claro);border-color:var(--cor-primaria); }
+  </style>
 </head>
 <body>
 <div class="layout">
@@ -15,8 +21,8 @@
       <button class="btn btn-primario" onclick="abrirModal('modal-usuario')">+ Novo usuário</button>
     </div>
     <div class="content">
-      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
-      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
 
       <div class="table-wrap">
         <table class="table">
@@ -29,21 +35,17 @@
               <td><div class="membro-cell"><div class="avatar"><%= u.nome.substring(0,2).toUpperCase() %></div><%= u.nome %></div></td>
               <td><%= u.email %></td>
               <td>
-                <% if (u.perfil === 'admin') { %>
-                  <span class="badge azul">Administrador</span>
-                <% } else if (u.perfil === 'financeiro') { %>
-                  <span class="badge amarelo">Financeiro</span>
-                <% } else if (u.perfil === 'secretaria') { %>
-                  <span class="badge cinza">Secretaria</span>
-                <% } else { %>
-                  <span class="badge cinza">Visualizador</span>
-                <% } %>
+                <% if (u.perfil === 'admin') { %><span class="badge azul">Administrador</span>
+                <% } else if (u.perfil === 'financeiro') { %><span class="badge amarelo">Financeiro</span>
+                <% } else if (u.perfil === 'secretaria') { %><span class="badge cinza">Secretaria</span>
+                <% } else { %><span class="badge cinza">Visualizador</span><% } %>
               </td>
               <td><span class="badge <%= u.ativo ? 'verde' : 'vermelho' %>"><%= u.ativo ? 'Ativo' : 'Inativo' %></span></td>
               <td><%= new Date(u.criado_em).toLocaleDateString('pt-BR') %></td>
               <td>
                 <div class="btn-acoes">
                   <% if (u.perfil !== 'admin') { %>
+                    <button class="icon-btn verde" onclick="abrirPermissoes(<%= u.id %>, '<%= u.nome %>', '<%= u.perfil %>')" title="Gerenciar permissões">🔐</button>
                     <form action="/usuarios/<%= u.id %>/toggle" method="POST" style="display:inline" onsubmit="return confirm('<%= u.ativo ? 'Desativar' : 'Ativar' %> este usuário?')">
                       <button class="icon-btn" title="<%= u.ativo ? 'Desativar' : 'Ativar' %>"><%= u.ativo ? '⏸' : '▶' %></button>
                     </form>
@@ -61,10 +63,11 @@
 
       <div class="info-box" style="margin-top:14px">
         <strong>Perfis disponíveis:</strong><br>
-        <span style="color:var(--cor-primaria)">Administrador</span> — acesso total ao sistema, configurações e usuários<br>
-        <span style="color:#9f580a">Financeiro</span> — gerencia membros e cobranças, envia notificações<br>
+        <span style="color:var(--cor-primaria)">Administrador</span> — acesso total ao sistema<br>
+        <span style="color:#9f580a">Financeiro</span> — gerencia membros, cobranças e notificações<br>
         <span style="color:#6b7280">Secretaria</span> — lança frequências e atividades das turmas<br>
-        <span style="color:#6b7280">Visualizador</span> — somente visualização, sem poder alterar dados
+        <span style="color:#6b7280">Visualizador</span> — somente visualização<br>
+        <br>💡 Clique em 🔐 para personalizar as permissões de cada usuário.
       </div>
     </div>
   </main>
@@ -80,20 +83,46 @@
     <form action="/usuarios" method="POST">
       <div class="form-grid">
         <div class="campo full"><label class="label">Nome completo</label><input name="nome" class="input" required></div>
-        <div class="campo full"><label class="label">E-mail (será usado para login)</label><input name="email" type="email" class="input" required></div>
+        <div class="campo full"><label class="label">E-mail (usado para login)</label><input name="email" type="email" class="input" required></div>
         <div class="campo full"><label class="label">Senha inicial</label><input name="senha" type="password" class="input" required minlength="6" placeholder="Mínimo 6 caracteres"></div>
         <div class="campo full">
           <label class="label">Perfil de acesso</label>
-          <select name="perfil" class="input">
+          <select name="perfil" class="input" id="selectPerfil" onchange="atualizarPermissoesDefault()">
             <option value="secretaria">Secretaria</option>
             <option value="financeiro">Financeiro</option>
             <option value="visualizador">Visualizador</option>
           </select>
         </div>
+        <div class="campo full">
+          <label class="label">Permissões iniciais</label>
+          <div class="perm-grid" id="permissoesNovoUsuario">
+            <!-- Preenchido pelo JS -->
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-usuario')">Cancelar</button>
         <button type="submit" class="btn btn-primario">Criar usuário</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal permissões -->
+<div class="modal-overlay" id="modal-permissoes" style="display:none">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-header">
+      <span class="modal-titulo" id="titulo-permissoes">Permissões</span>
+      <button class="icon-btn" onclick="fecharModal('modal-permissoes')">✕</button>
+    </div>
+    <p style="font-size:13px;color:var(--texto2);margin-bottom:16px">
+      Marque os módulos que este usuário pode acessar. O administrador sempre tem acesso total.
+    </p>
+    <form id="form-permissoes" action="" method="POST">
+      <div class="perm-grid" id="grid-permissoes"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-permissoes')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">💾 Salvar permissões</button>
       </div>
     </form>
   </div>
@@ -121,6 +150,69 @@
 
 <script src="/js/app.js"></script>
 <script>
+const TODOS_MODULOS = [
+  { id: 'dashboard',      label: '▦ Dashboard' },
+  { id: 'membros',        label: '◎ Membros' },
+  { id: 'cobrancas',      label: '◈ Cobranças' },
+  { id: 'frequencia',     label: '📊 Frequência' },
+  { id: 'aniversarios',   label: '◆ Aniversários' },
+  { id: 'notificacoes',   label: '◉ Notificações' },
+  { id: 'configuracoes',  label: '✦ Configurações' },
+  { id: 'usuarios',       label: '◎ Usuários' }
+];
+
+const PERMISSOES_PADRAO = {
+  secretaria:  ['dashboard', 'frequencia', 'aniversarios'],
+  financeiro:  ['dashboard', 'membros', 'cobrancas', 'aniversarios', 'notificacoes'],
+  visualizador:['dashboard']
+};
+
+// Permissoes atuais dos usuarios (carregadas do servidor)
+const permissoesUsuarios = <%- JSON.stringify(permissoesUsuarios) %>;
+
+function abrirPermissoes(id, nome, perfil) {
+  document.getElementById('titulo-permissoes').textContent = '🔐 Permissões — ' + nome;
+  document.getElementById('form-permissoes').action = '/usuarios/' + id + '/permissoes';
+
+  const permsAtuais = permissoesUsuarios[id] || PERMISSOES_PADRAO[perfil] || ['dashboard'];
+  const grid = document.getElementById('grid-permissoes');
+  grid.innerHTML = '';
+
+  TODOS_MODULOS.forEach(function(m) {
+    const checked = permsAtuais.includes(m.id);
+    const label = document.createElement('label');
+    label.className = 'perm-item' + (checked ? ' ativo' : '');
+    label.innerHTML = '<input type="checkbox" name="modulos" value="' + m.id + '"' + (checked ? ' checked' : '') + '> ' + m.label;
+    label.querySelector('input').addEventListener('change', function() {
+      label.classList.toggle('ativo', this.checked);
+    });
+    grid.appendChild(label);
+  });
+
+  abrirModal('modal-permissoes');
+}
+
+function atualizarPermissoesDefault() {
+  const perfil = document.getElementById('selectPerfil').value;
+  const padrao = PERMISSOES_PADRAO[perfil] || ['dashboard'];
+  const grid = document.getElementById('permissoesNovoUsuario');
+  grid.innerHTML = '';
+
+  TODOS_MODULOS.forEach(function(m) {
+    const checked = padrao.includes(m.id);
+    const label = document.createElement('label');
+    label.className = 'perm-item' + (checked ? ' ativo' : '');
+    label.innerHTML = '<input type="checkbox" name="modulos_inicial" value="' + m.id + '"' + (checked ? ' checked' : '') + '> ' + m.label;
+    label.querySelector('input').addEventListener('change', function() {
+      label.classList.toggle('ativo', this.checked);
+    });
+    grid.appendChild(label);
+  });
+}
+
+// Inicializa permissoes do novo usuario
+atualizarPermissoesDefault();
+
 function abrirSenha(id, nome) {
   document.getElementById('titulo-senha').textContent = 'Redefinir senha — ' + nome;
   document.getElementById('form-senha').action = '/usuarios/' + id + '/senha';
