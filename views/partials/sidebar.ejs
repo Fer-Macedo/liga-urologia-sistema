@@ -2,11 +2,11 @@
   <div class="logo-area">
     <div class="logo-box">
       <% if (config.org_logo) { %>
-        <img src="<%= config.org_logo %>" alt="Logo" class="logo-img">
+        <img src="<%= config.org_logo %>" alt="Logo" class="logo-img" style="width:100%;height:auto;max-height:60px;object-fit:contain;border-radius:8px">
       <% } else { %>
         <div class="logo-icone">LU</div>
+        <div class="logo-texto"><%= config.org_nome || 'Liga Acadêmica de Urologia' %></div>
       <% } %>
-      <div class="logo-texto"><%= config.org_nome || 'Liga Acadêmica de Urologia' %></div>
     </div>
   </div>
   <nav class="nav">
