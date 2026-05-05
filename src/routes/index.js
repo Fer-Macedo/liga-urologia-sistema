@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const dayjs = require('dayjs');
 const { query } = require('../models/database');
-const { requireAuth, requireAdmin, requireFinanceiro } = require('../middleware/auth');
+const { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria } = require('../middleware/auth');
 const { criarCobranca } = require('../services/pagbank');
 const { notificarCobranca } = require('../services/notificacoes');
 
@@ -479,7 +479,7 @@ module.exports = router;
 
 // ─── FREQUÊNCIA ───────────────────────────────────────────────────────────────
 
-router.get('/frequencia', requireAuth, async (req, res) => {
+router.get('/frequencia', requireAuth, requireSecretaria, async (req, res) => {
   const config = await getConfig();
   const turmaId = req.query.turma;
   const turmasR = await query('SELECT * FROM turmas WHERE ativo=1 ORDER BY data_inicio DESC');
@@ -535,14 +535,14 @@ router.get('/frequencia', requireAuth, async (req, res) => {
   });
 });
 
-router.post('/frequencia/turma', requireAuth, async (req, res) => {
+router.post('/frequencia/turma', requireAuth, requireSecretaria, async (req, res) => {
   const { nome, data_inicio, data_fim } = req.body;
   await query('INSERT INTO turmas (nome,data_inicio,data_fim) VALUES ($1,$2,$3)', [nome, data_inicio, data_fim||null]);
   req.flash('msg', 'Turma ' + nome + ' criada!');
   res.redirect('/frequencia');
 });
 
-router.post('/frequencia/atividade', requireAuth, async (req, res) => {
+router.post('/frequencia/atividade', requireAuth, requireSecretaria, async (req, res) => {
   const turma_id = req.body.turma_id_sel || req.body.turma_id;
   const { tipo, descricao, data_atividade } = req.body;
   const r = await query(
@@ -557,7 +557,7 @@ router.post('/frequencia/atividade', requireAuth, async (req, res) => {
   res.redirect('/frequencia?turma=' + turma_id);
 });
 
-router.post('/frequencia/atividade/:id/presenca', requireAuth, async (req, res) => {
+router.post('/frequencia/atividade/:id/presenca', requireAuth, requireSecretaria, async (req, res) => {
   const atId = req.params.id;
   const presentes = [].concat(req.body.presentes || []);
   const at = await query('SELECT turma_id FROM atividades WHERE id=$1', [atId]);
@@ -575,7 +575,7 @@ router.post('/frequencia/atividade/:id/presenca', requireAuth, async (req, res) 
   res.redirect('/frequencia?turma=' + turmaId);
 });
 
-router.post('/frequencia/atividade/:id/deletar', requireAuth, async (req, res) => {
+router.post('/frequencia/atividade/:id/deletar', requireAuth, requireSecretaria, async (req, res) => {
   const at = await query('SELECT turma_id FROM atividades WHERE id=$1', [req.params.id]);
   const turmaId = at.rows[0]?.turma_id;
   await query('DELETE FROM presencas WHERE atividade_id=$1', [req.params.id]);
@@ -584,7 +584,7 @@ router.post('/frequencia/atividade/:id/deletar', requireAuth, async (req, res) =
   res.redirect('/frequencia?turma=' + turmaId);
 });
 
-router.post('/frequencia/turma/:id/adicionar-membro', requireAuth, async (req, res) => {
+router.post('/frequencia/turma/:id/adicionar-membro', requireAuth, requireSecretaria, async (req, res) => {
   const { membro_id, data_entrada } = req.body;
   await query('INSERT INTO turma_membros (turma_id,membro_id,data_entrada) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING', [req.params.id, membro_id, data_entrada]);
   const ats = await query('SELECT id FROM atividades WHERE turma_id=$1', [req.params.id]);
@@ -595,14 +595,14 @@ router.post('/frequencia/turma/:id/adicionar-membro', requireAuth, async (req, r
   res.redirect('/frequencia?turma=' + req.params.id);
 });
 
-router.post('/frequencia/turma/:id/remover-membro', requireAuth, async (req, res) => {
+router.post('/frequencia/turma/:id/remover-membro', requireAuth, requireSecretaria, async (req, res) => {
   const { membro_id } = req.body;
   await query('DELETE FROM turma_membros WHERE turma_id=$1 AND membro_id=$2', [req.params.id, membro_id]);
   req.flash('msg', 'Membro removido da turma!');
   res.redirect('/frequencia?turma=' + req.params.id);
 });
 
-router.get('/frequencia/relatorio/:turmaId', requireAuth, async (req, res) => {
+router.get('/frequencia/relatorio/:turmaId', requireAuth, requireSecretaria, async (req, res) => {
   const turmaR = await query('SELECT * FROM turmas WHERE id=$1', [req.params.turmaId]);
   const turma = turmaR.rows[0];
   if (!turma) return res.redirect('/frequencia');
@@ -638,7 +638,7 @@ router.get('/frequencia/relatorio/:turmaId', requireAuth, async (req, res) => {
   res.send(html);
 });
 
-router.post('/frequencia/turma/:id/enviar', requireAuth, async (req, res) => {
+router.post('/frequencia/turma/:id/enviar', requireAuth, requireSecretaria, async (req, res) => {
   const config = await getConfig();
   const { enviarWhatsApp, enviarEmail } = require('../services/notificacoes');
   const turmaR = await query('SELECT * FROM turmas WHERE id=$1', [req.params.id]);
