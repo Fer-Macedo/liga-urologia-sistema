@@ -5,7 +5,7 @@ const crypto = require('crypto');
 const dayjs = require('dayjs');
 const { query } = require('../models/database');
 const { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria, requirePermissao } = require('../middleware/auth');
-const { criarCobranca } = require('../services/pagbank');
+const { criarCobranca, consultarPagamento } = require('../services/mercadopago');
 const { notificarCobranca } = require('../services/notificacoes');
 
 async function getConfig() {
@@ -434,30 +434,32 @@ router.post('/meu-email', requireAuth, async (req, res) => {
 
 // ─── WEBHOOK PAGBANK ──────────────────────────────────────────────────────────
 
-router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) => {
+router.post('/webhook/mercadopago', express.raw({ type: '*/*' }), async (req, res) => {
   try {
     let body;
-    try { body = JSON.parse(req.body.toString()); }
-    catch (e) { console.error('Webhook JSON erro:', e.message); return res.sendStatus(200); }
+    try { body = JSON.parse(req.body.toString()); } 
+    catch (e) { return res.sendStatus(200); }
 
-    console.log('Webhook recebido:', JSON.stringify(body).substring(0, 200));
+    console.log('MP Webhook:', JSON.stringify(body).substring(0, 200));
 
-    const isSandbox = (process.env.PAGBANK_BASE_URL || '').includes('sandbox');
-    if (isSandbox) { console.log('Webhook ignorado - Sandbox'); return res.sendStatus(200); }
+    // Notificacao de pagamento
+    if (body.type === 'payment' && body.data?.id) {
+      const paymentId = body.data.id;
+      const { consultarPagamento } = require('../services/mercadopago');
+      const result = await consultarPagamento(paymentId);
 
-    if (body.charges && body.charges[0] && body.charges[0].status === 'PAID') {
-      const ref = body.charges[0].reference_id || body.charges[0].id;
-      let r = await query(
-        "UPDATE cobrancas SET status='pago', data_pagamento=NOW() WHERE referencia=$1 AND status!='pago'", [ref]
-      );
-      if (r.rowCount === 0) {
-        await query(
-          "UPDATE cobrancas SET status='pago', data_pagamento=NOW() WHERE pagbank_charge_id=$1 AND status!='pago'", [ref]
-        );
+      if (result.ok && result.status === 'approved') {
+        const ref = result.data.external_reference;
+        if (ref) {
+          const r = await query(
+            "UPDATE cobrancas SET status='pago', data_pagamento=NOW(), mp_payment_id=$1 WHERE referencia=$2 AND status!='pago'",
+            [String(paymentId), ref]
+          );
+          if (r.rowCount > 0) console.log('MP Pagamento confirmado:', ref, paymentId);
+        }
       }
-      console.log('Pagamento confirmado:', ref);
     }
-  } catch (e) { console.error('Webhook erro:', e.message); }
+  } catch (e) { console.error('MP Webhook erro:', e.message); }
   res.sendStatus(200);
 });
 
