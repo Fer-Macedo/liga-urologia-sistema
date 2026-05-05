@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recuperar Senha — <%= config.org_nome || 'Liga Urologia' %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>:root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }</style>
+</head>
+<body class="login-body">
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-logo">
+        <% if (config.org_logo) { %>
+          <img src="<%= config.org_logo %>" alt="Logo" class="login-logo-img">
+        <% } else { %>
+          <div class="login-logo-icone">LU</div>
+        <% } %>
+        <h1 class="login-titulo"><%= config.org_nome || 'Liga Acadêmica de Urologia' %></h1>
+        <p class="login-sub">Recuperação de senha</p>
+      </div>
+
+      <% if (msg && msg.length > 0) { %>
+        <div class="alerta alerta-ok">✅ <%= msg[0] %></div>
+      <% } %>
+      <% if (erro && erro.length > 0) { %>
+        <div class="alerta alerta-erro">❌ <%= erro[0] %></div>
+      <% } %>
+
+      <% if (!enviado) { %>
+      <p style="font-size:13px;color:var(--texto2);margin-bottom:20px;text-align:center">
+        Digite seu e-mail cadastrado e enviaremos um link para redefinir sua senha.
+      </p>
+
+      <form action="/recuperar-senha" method="POST" class="login-form">
+        <div class="campo">
+          <label class="label">E-mail cadastrado</label>
+          <input type="email" name="email" class="input" placeholder="seu@email.com" required autofocus>
+        </div>
+        <button type="submit" class="btn btn-primario" style="width:100%;justify-content:center;padding:12px">
+          📧 Enviar link de recuperação
+        </button>
+      </form>
+      <% } else { %>
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:48px;margin-bottom:16px">📬</div>
+        <p style="font-size:14px;color:var(--texto);margin-bottom:8px;font-weight:600">E-mail enviado!</p>
+        <p style="font-size:13px;color:var(--texto2)">
+          Verifique sua caixa de entrada e clique no link para redefinir sua senha.<br>
+          O link expira em <strong>30 minutos</strong>.
+        </p>
+      </div>
+      <% } %>
+
+      <div style="text-align:center;margin-top:20px">
+        <a href="/login" style="font-size:13px;color:var(--cor-primaria);text-decoration:none">← Voltar ao login</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
