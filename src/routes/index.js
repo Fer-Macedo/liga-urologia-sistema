@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const dayjs = require('dayjs');
 const { query } = require('../models/database');
-const { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria } = require('../middleware/auth');
+const { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria, requirePermissao } = require('../middleware/auth');
 const { criarCobranca } = require('../services/pagbank');
 const { notificarCobranca } = require('../services/notificacoes');
 
@@ -196,7 +196,7 @@ router.get('/dashboard', requireAuth, async (req, res) => {
 
 // ─── MEMBROS ──────────────────────────────────────────────────────────────────
 
-router.get('/membros', requireAuth, async (req, res) => {
+router.get('/membros', requireAuth, requirePermissao('membros'), async (req, res) => {
   const config = await getConfig();
   const filtro = req.query.filtro || 'todos';
   let where = '';
@@ -238,7 +238,7 @@ router.post('/membros/:id/editar', requireAuth, requireFinanceiro, async (req, r
 
 // ─── COBRANÇAS ─────────────────────────────────────────────────────────────────
 
-router.get('/cobrancas', requireAuth, async (req, res) => {
+router.get('/cobrancas', requireAuth, requirePermissao('cobrancas'), async (req, res) => {
   const config = await getConfig();
   const filtro = req.query.filtro || 'todas';
   let where = '';
@@ -291,7 +291,7 @@ router.post('/cobrancas/nova', requireAuth, requireFinanceiro, async (req, res) 
 
 // ─── ANIVERSÁRIOS ─────────────────────────────────────────────────────────────
 
-router.get('/aniversarios', requireAuth, async (req, res) => {
+router.get('/aniversarios', requireAuth, requirePermissao('aniversarios'), async (req, res) => {
   const config = await getConfig();
   const hoje = dayjs().format('MM-DD');
   const r = await query(
@@ -302,7 +302,7 @@ router.get('/aniversarios', requireAuth, async (req, res) => {
 
 // ─── NOTIFICAÇÕES ──────────────────────────────────────────────────────────────
 
-router.get('/notificacoes', requireAuth, requireAdmin, async (req, res) => {
+router.get('/notificacoes', requireAuth, requirePermissao('notificacoes'), async (req, res) => {
   res.render('pages/notificacoes', { config: await getConfig(), usuario: req.session.usuario, msg: req.flash('msg') });
 });
 
@@ -319,7 +319,7 @@ router.post('/notificacoes', requireAuth, requireAdmin, async (req, res) => {
 
 // ─── CONFIGURAÇÕES ─────────────────────────────────────────────────────────────
 
-router.get('/configuracoes', requireAuth, requireAdmin, async (req, res) => {
+router.get('/configuracoes', requireAuth, requirePermissao('configuracoes'), async (req, res) => {
   res.render('pages/configuracoes', { config: await getConfig(), usuario: req.session.usuario, msg: req.flash('msg'), erro: req.flash('erro') });
 });
 
@@ -351,7 +351,7 @@ router.post('/configuracoes/logo-url', requireAuth, requireAdmin, async (req, re
 
 // ─── USUÁRIOS ──────────────────────────────────────────────────────────────────
 
-router.get('/usuarios', requireAuth, requireAdmin, async (req, res) => {
+router.get('/usuarios', requireAuth, requirePermissao('usuarios'), async (req, res) => {
   const config = await getConfig();
   const r = await query('SELECT id,nome,email,perfil,ativo,criado_em FROM usuarios ORDER BY criado_em');
   res.render('pages/usuarios', { config, usuario: req.session.usuario, usuarios: r.rows, msg: req.flash('msg'), erro: req.flash('erro') });
@@ -475,11 +475,11 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
   res.sendStatus(200);
 });
 
-module.exports = router;
+
 
 // ─── FREQUÊNCIA ───────────────────────────────────────────────────────────────
 
-router.get('/frequencia', requireAuth, requireSecretaria, async (req, res) => {
+router.get('/frequencia', requireAuth, requirePermissao('frequencia'), async (req, res) => {
   const config = await getConfig();
   const turmaId = req.query.turma;
   const turmasR = await query('SELECT * FROM turmas WHERE ativo=1 ORDER BY data_inicio DESC');
@@ -663,3 +663,82 @@ router.post('/frequencia/turma/:id/enviar', requireAuth, requireSecretaria, asyn
   }
   res.json({ ok: true, msg: 'Frequência enviada para ' + enviados + ' membros!' });
 });
+
+// ─── PERMISSÕES DE USUÁRIO ────────────────────────────────────────────────────
+
+// Sobrescreve rota GET /usuarios para incluir permissoes
+router.get('/usuarios', requireAuth, requirePermissao('usuarios'), async (req, res) => {
+  const config = await getConfig();
+  const r = await query('SELECT id,nome,email,perfil,ativo,criado_em FROM usuarios ORDER BY criado_em');
+
+  // Busca permissoes de todos os usuarios
+  const permR = await query('SELECT usuario_id, modulo FROM usuario_permissoes');
+  const permissoesUsuarios = {};
+  permR.rows.forEach(function(row) {
+    if (!permissoesUsuarios[row.usuario_id]) permissoesUsuarios[row.usuario_id] = [];
+    permissoesUsuarios[row.usuario_id].push(row.modulo);
+  });
+
+  res.render('pages/usuarios', {
+    config, usuario: req.session.usuario,
+    usuarios: r.rows, permissoesUsuarios,
+    msg: req.flash('msg'), erro: req.flash('erro')
+  });
+});
+
+// Salvar permissoes
+router.post('/usuarios/:id/permissoes', requireAuth, requireAdmin, async (req, res) => {
+  const userId = req.params.id;
+  const modulos = [].concat(req.body.modulos || []);
+
+  // Remove permissoes antigas
+  await query('DELETE FROM usuario_permissoes WHERE usuario_id=$1', [userId]);
+
+  // Insere novas permissoes
+  for (const modulo of modulos) {
+    await query(
+      'INSERT INTO usuario_permissoes (usuario_id,modulo) VALUES ($1,$2) ON CONFLICT DO NOTHING',
+      [userId, modulo]
+    );
+  }
+
+  req.flash('msg', 'Permissões atualizadas!');
+  res.redirect('/usuarios');
+});
+
+// Criar usuario com permissoes iniciais
+router.post('/usuarios', requireAuth, requireAdmin, async (req, res) => {
+  const { nome, email, senha, perfil } = req.body;
+  const modulosInicial = [].concat(req.body.modulos_inicial || []);
+  const hash = bcrypt.hashSync(senha, 10);
+
+  try {
+    const r = await query(
+      'INSERT INTO usuarios (nome,email,senha,perfil) VALUES ($1,$2,$3,$4) RETURNING id',
+      [nome, email, hash, perfil]
+    );
+    const novoId = r.rows[0].id;
+
+    // Se nao vieram modulos, usa padrao do perfil
+    const PADRAO = {
+      secretaria:  ['dashboard', 'frequencia', 'aniversarios'],
+      financeiro:  ['dashboard', 'membros', 'cobrancas', 'aniversarios', 'notificacoes'],
+      visualizador:['dashboard']
+    };
+    const perms = modulosInicial.length > 0 ? modulosInicial : (PADRAO[perfil] || ['dashboard']);
+
+    for (const modulo of perms) {
+      await query(
+        'INSERT INTO usuario_permissoes (usuario_id,modulo) VALUES ($1,$2) ON CONFLICT DO NOTHING',
+        [novoId, modulo]
+      );
+    }
+
+    req.flash('msg', 'Usuário ' + nome + ' criado com sucesso!');
+  } catch (e) {
+    req.flash('erro', 'E-mail já cadastrado.');
+  }
+  res.redirect('/usuarios');
+});
+
+module.exports = router;
