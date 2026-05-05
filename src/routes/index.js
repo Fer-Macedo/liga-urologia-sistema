@@ -476,3 +476,190 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
 });
 
 module.exports = router;
+
+// ─── FREQUÊNCIA ───────────────────────────────────────────────────────────────
+
+router.get('/frequencia', requireAuth, async (req, res) => {
+  const config = await getConfig();
+  const turmaId = req.query.turma;
+  const turmasR = await query('SELECT * FROM turmas WHERE ativo=1 ORDER BY data_inicio DESC');
+  const turmas = turmasR.rows;
+  let turmaAtual = null, atividades = [], membrosFrequencia = [], todosMembros = [];
+  let resumo = { aptos: 0, risco: 0, inaptos: 0 };
+
+  if (turmaId) {
+    const tr = await query('SELECT * FROM turmas WHERE id=$1', [turmaId]);
+    turmaAtual = tr.rows[0];
+    if (turmaAtual) {
+      const atR = await query(
+        `SELECT a.*,
+          (SELECT COUNT(*) FROM presencas p WHERE p.atividade_id=a.id AND p.presente=1) as presentes,
+          (SELECT COUNT(*) FROM turma_membros tm WHERE tm.turma_id=a.turma_id) as total_membros
+         FROM atividades a WHERE a.turma_id=$1 ORDER BY a.data_atividade DESC`, [turmaId]
+      );
+      for (const at of atR.rows) {
+        const membR = await query(
+          `SELECT m.id as membro_id, m.nome,
+            COALESCE((SELECT p.presente FROM presencas p WHERE p.atividade_id=$1 AND p.membro_id=m.id),0) as presente
+           FROM turma_membros tm JOIN membros m ON m.id=tm.membro_id
+           WHERE tm.turma_id=$2 ORDER BY m.nome`, [at.id, turmaId]
+        );
+        at.membros = membR.rows;
+        atividades.push(at);
+      }
+      const mfR = await query(
+        `SELECT m.id as membro_id, m.nome, m.whatsapp, m.email, tm.data_entrada,
+          (SELECT COUNT(*) FROM atividades a WHERE a.turma_id=$1) as total_atividades,
+          (SELECT COUNT(*) FROM presencas p JOIN atividades a ON a.id=p.atividade_id
+           WHERE a.turma_id=$1 AND p.membro_id=m.id AND p.presente=1) as presencas
+         FROM turma_membros tm JOIN membros m ON m.id=tm.membro_id
+         WHERE tm.turma_id=$1 ORDER BY m.nome`, [turmaId]
+      );
+      membrosFrequencia = mfR.rows;
+      membrosFrequencia.forEach(m => {
+        const pct = m.total_atividades > 0 ? (m.presencas / m.total_atividades) * 100 : 0;
+        if (pct >= 75) resumo.aptos++;
+        else if (pct >= 50) resumo.risco++;
+        else resumo.inaptos++;
+      });
+    }
+  }
+
+  const tmR = await query('SELECT * FROM membros WHERE ativo=1 ORDER BY nome');
+  todosMembros = tmR.rows;
+
+  res.render('pages/frequencia', {
+    config, usuario: req.session.usuario,
+    turmas, turmaAtual, atividades, membrosFrequencia, todosMembros, resumo,
+    msg: req.flash('msg'), erro: req.flash('erro')
+  });
+});
+
+router.post('/frequencia/turma', requireAuth, async (req, res) => {
+  const { nome, data_inicio, data_fim } = req.body;
+  await query('INSERT INTO turmas (nome,data_inicio,data_fim) VALUES ($1,$2,$3)', [nome, data_inicio, data_fim||null]);
+  req.flash('msg', 'Turma ' + nome + ' criada!');
+  res.redirect('/frequencia');
+});
+
+router.post('/frequencia/atividade', requireAuth, async (req, res) => {
+  const turma_id = req.body.turma_id_sel || req.body.turma_id;
+  const { tipo, descricao, data_atividade } = req.body;
+  const r = await query(
+    'INSERT INTO atividades (turma_id,tipo,descricao,data_atividade) VALUES ($1,$2,$3,$4) RETURNING id',
+    [turma_id, tipo, descricao, data_atividade]
+  );
+  const membros = await query('SELECT membro_id FROM turma_membros WHERE turma_id=$1', [turma_id]);
+  for (const m of membros.rows) {
+    await query('INSERT INTO presencas (atividade_id,membro_id,presente) VALUES ($1,$2,0) ON CONFLICT DO NOTHING', [r.rows[0].id, m.membro_id]);
+  }
+  req.flash('msg', 'Atividade criada!');
+  res.redirect('/frequencia?turma=' + turma_id);
+});
+
+router.post('/frequencia/atividade/:id/presenca', requireAuth, async (req, res) => {
+  const atId = req.params.id;
+  const presentes = [].concat(req.body.presentes || []);
+  const at = await query('SELECT turma_id FROM atividades WHERE id=$1', [atId]);
+  if (!at.rows[0]) return res.redirect('/frequencia');
+  const turmaId = at.rows[0].turma_id;
+  const membros = await query('SELECT membro_id FROM turma_membros WHERE turma_id=$1', [turmaId]);
+  for (const m of membros.rows) {
+    const presente = presentes.includes(String(m.membro_id)) ? 1 : 0;
+    await query(
+      'INSERT INTO presencas (atividade_id,membro_id,presente) VALUES ($1,$2,$3) ON CONFLICT (atividade_id,membro_id) DO UPDATE SET presente=$3',
+      [atId, m.membro_id, presente]
+    );
+  }
+  req.flash('msg', 'Presenças salvas!');
+  res.redirect('/frequencia?turma=' + turmaId);
+});
+
+router.post('/frequencia/atividade/:id/deletar', requireAuth, async (req, res) => {
+  const at = await query('SELECT turma_id FROM atividades WHERE id=$1', [req.params.id]);
+  const turmaId = at.rows[0]?.turma_id;
+  await query('DELETE FROM presencas WHERE atividade_id=$1', [req.params.id]);
+  await query('DELETE FROM atividades WHERE id=$1', [req.params.id]);
+  req.flash('msg', 'Atividade excluída!');
+  res.redirect('/frequencia?turma=' + turmaId);
+});
+
+router.post('/frequencia/turma/:id/adicionar-membro', requireAuth, async (req, res) => {
+  const { membro_id, data_entrada } = req.body;
+  await query('INSERT INTO turma_membros (turma_id,membro_id,data_entrada) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING', [req.params.id, membro_id, data_entrada]);
+  const ats = await query('SELECT id FROM atividades WHERE turma_id=$1', [req.params.id]);
+  for (const at of ats.rows) {
+    await query('INSERT INTO presencas (atividade_id,membro_id,presente) VALUES ($1,$2,0) ON CONFLICT DO NOTHING', [at.id, membro_id]);
+  }
+  req.flash('msg', 'Membro adicionado à turma!');
+  res.redirect('/frequencia?turma=' + req.params.id);
+});
+
+router.post('/frequencia/turma/:id/remover-membro', requireAuth, async (req, res) => {
+  const { membro_id } = req.body;
+  await query('DELETE FROM turma_membros WHERE turma_id=$1 AND membro_id=$2', [req.params.id, membro_id]);
+  req.flash('msg', 'Membro removido da turma!');
+  res.redirect('/frequencia?turma=' + req.params.id);
+});
+
+router.get('/frequencia/relatorio/:turmaId', requireAuth, async (req, res) => {
+  const turmaR = await query('SELECT * FROM turmas WHERE id=$1', [req.params.turmaId]);
+  const turma = turmaR.rows[0];
+  if (!turma) return res.redirect('/frequencia');
+  const membros = await query(
+    `SELECT m.nome, m.email, tm.data_entrada,
+      (SELECT COUNT(*) FROM atividades a WHERE a.turma_id=$1) as total_atividades,
+      (SELECT COUNT(*) FROM presencas p JOIN atividades a ON a.id=p.atividade_id WHERE a.turma_id=$1 AND p.membro_id=m.id AND p.presente=1) as presencas
+     FROM turma_membros tm JOIN membros m ON m.id=tm.membro_id WHERE tm.turma_id=$1 ORDER BY m.nome`,
+    [req.params.turmaId]
+  );
+  const atividades = await query('SELECT tipo,descricao,data_atividade FROM atividades WHERE turma_id=$1 ORDER BY data_atividade', [req.params.turmaId]);
+
+  let linhas = membros.rows.map(m => {
+    const pct = m.total_atividades > 0 ? Math.round((m.presencas / m.total_atividades) * 100) : 0;
+    const status = pct >= 75 ? 'APTO' : pct >= 50 ? 'EM RISCO' : 'NÃO APTO';
+    const cor = pct >= 75 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
+    return `<tr><td style="padding:10px;border:1px solid #e5e7eb">${m.nome}</td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center">${m.presencas}</td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center">${m.total_atividades}</td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center"><strong>${pct}%</strong></td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:${cor};font-weight:bold">${status}</td></tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório — ${turma.nome}</title>
+    <style>body{font-family:Arial,sans-serif;padding:30px}h1{color:#1a56db}table{width:100%;border-collapse:collapse}th{background:#1a56db;color:white;padding:12px;text-align:left}@media print{.no-print{display:none}}</style>
+    </head><body>
+    <div class="no-print" style="margin-bottom:20px"><button onclick="window.print()" style="background:#1a56db;color:white;border:none;padding:10px 24px;border-radius:6px;cursor:pointer;font-size:14px">🖨️ Imprimir / Salvar PDF</button></div>
+    <h1>Relatório de Frequência — ${turma.nome}</h1>
+    <p><strong>Período:</strong> ${new Date(turma.data_inicio+'T12:00:00').toLocaleDateString('pt-BR')} ${turma.data_fim?'— '+new Date(turma.data_fim+'T12:00:00').toLocaleDateString('pt-BR'):''}</p>
+    <p><strong>Total de atividades:</strong> ${atividades.rows.length} &nbsp;|&nbsp; <strong>Critério:</strong> Mínimo 75% de presença</p>
+    <p><strong>Gerado em:</strong> ${new Date().toLocaleString('pt-BR')}</p><br>
+    <table><thead><tr><th>Membro</th><th>Presenças</th><th>Total</th><th>Frequência</th><th>Status</th></tr></thead><tbody>${linhas}</tbody></table>
+    <br><h3>Atividades realizadas:</h3>
+    <table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th></tr></thead><tbody>
+    ${atividades.rows.map(a=>`<tr><td style="padding:8px;border:1px solid #e5e7eb">${new Date(a.data_atividade+'T12:00:00').toLocaleDateString('pt-BR')}</td><td style="padding:8px;border:1px solid #e5e7eb">${a.tipo}</td><td style="padding:8px;border:1px solid #e5e7eb">${a.descricao}</td></tr>`).join('')}
+    </tbody></table></body></html>`;
+  res.send(html);
+});
+
+router.post('/frequencia/turma/:id/enviar', requireAuth, async (req, res) => {
+  const config = await getConfig();
+  const { enviarWhatsApp, enviarEmail } = require('../services/notificacoes');
+  const turmaR = await query('SELECT * FROM turmas WHERE id=$1', [req.params.id]);
+  const turma = turmaR.rows[0];
+  const membros = await query(
+    `SELECT m.*, tm.data_entrada,
+      (SELECT COUNT(*) FROM atividades a WHERE a.turma_id=$1) as total_atividades,
+      (SELECT COUNT(*) FROM presencas p JOIN atividades a ON a.id=p.atividade_id WHERE a.turma_id=$1 AND p.membro_id=m.id AND p.presente=1) as presencas
+     FROM turma_membros tm JOIN membros m ON m.id=tm.membro_id WHERE tm.turma_id=$1`, [req.params.id]
+  );
+  const orgNome = config.org_nome || 'Liga Academica de Urologia';
+  let enviados = 0;
+  for (const m of membros.rows) {
+    const pct = m.total_atividades > 0 ? Math.round((m.presencas / m.total_atividades) * 100) : 0;
+    const status = pct >= 75 ? 'APTO ✅' : pct >= 50 ? 'EM RISCO ⚠️' : 'NÃO APTO ❌';
+    const msgWpp = `*${orgNome}* 📊\n\nOlá, *${m.nome.split(' ')[0]}*!\n\nSeu relatório de frequência da turma *${turma.nome}*:\n\n📅 Atividades realizadas: *${m.total_atividades}*\n✅ Suas presenças: *${m.presencas}*\n📊 Frequência: *${pct}%*\n🎓 Status: *${status}*\n\n${pct >= 75 ? 'Parabéns! Você está apto para o certificado! 🎉' : pct >= 50 ? 'Atenção! Você está em risco. Não falte às próximas atividades! ⚠️' : 'Atenção! Você está abaixo do mínimo exigido (75%). Participe mais! ❌'}\n\nQualquer dúvida, entre em contato com a secretaria.`;
+    if (m.whatsapp) { try { await enviarWhatsApp(m.whatsapp, msgWpp); enviados++; } catch(e) {} }
+    if (m.email) {
+      const html = `<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f4f4f4;padding:20px"><div style="max-width:560px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden"><div style="background:#1a56db;padding:20px 32px"><h1 style="color:white;margin:0;font-size:18px">${orgNome}</h1></div><div style="padding:28px"><h2>📊 Relatório de Frequência — ${turma.nome}</h2><p>Olá, <strong>${m.nome.split(' ')[0]}</strong>!</p><table style="width:100%;border-collapse:collapse;margin:16px 0"><tr style="background:#f4f4f4"><td style="padding:10px;border:1px solid #e5e7eb">Atividades realizadas</td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center"><strong>${m.total_atividades}</strong></td></tr><tr><td style="padding:10px;border:1px solid #e5e7eb">Suas presenças</td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center"><strong>${m.presencas}</strong></td></tr><tr style="background:#f4f4f4"><td style="padding:10px;border:1px solid #e5e7eb">Frequência</td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center"><strong>${pct}%</strong></td></tr><tr><td style="padding:10px;border:1px solid #e5e7eb">Status</td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:${pct>=75?'#22c55e':pct>=50?'#f59e0b':'#ef4444'};font-weight:bold">${status}</td></tr></table><p style="color:#666;font-size:13px">O certificado de 1 ano de liga requer mínimo de 75% de frequência.</p></div></div></body></html>`;
+      try { await enviarEmail({ para: m.email, assunto: 'Relatório de Frequência — ' + turma.nome, html, texto: msgWpp }); } catch(e) {}
+    }
+  }
+  res.json({ ok: true, msg: 'Frequência enviada para ' + enviados + ' membros!' });
+});
