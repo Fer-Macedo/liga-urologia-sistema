@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Frequência — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+    .freq-card { background:var(--card);border:1px solid var(--borda);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--sombra);margin-bottom:16px; }
+    .freq-tabs { display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid var(--borda); }
+    .freq-tab { padding:10px 20px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--texto2);border-bottom:3px solid transparent;margin-bottom:-2px;font-family:Outfit,sans-serif;transition:all 0.15s; }
+    .freq-tab.ativo { color:var(--cor-primaria);border-bottom-color:var(--cor-primaria);font-weight:600; }
+    .freq-tab:hover { color:var(--texto); }
+    .tab-content { display:none; }
+    .tab-content.ativo { display:block; }
+    .presenca-grid { display:grid;gap:8px; }
+    .presenca-row { display:grid;grid-template-columns:1fr auto;align-items:center;padding:10px 14px;background:var(--fundo);border-radius:8px;border:1px solid var(--borda); }
+    .barra-wrap { background:#e5e7eb;border-radius:20px;height:8px;flex:1;margin:0 10px; }
+    .barra { height:8px;border-radius:20px;transition:width 0.3s; }
+    .apto { background:#22c55e; }
+    .risco { background:#f59e0b; }
+    .inapto { background:#ef4444; }
+    .pct-label { font-size:12px;font-weight:600;min-width:40px;text-align:right; }
+    .check-wrap { display:flex;align-items:center;gap:8px; }
+    .check-membro { width:20px;height:20px;cursor:pointer;accent-color:var(--cor-primaria); }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'frequencia' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">📊 Frequência</h1>
+      <div class="topbar-acoes">
+        <button class="btn" onclick="abrirModal('modal-turma')">+ Nova turma</button>
+        <button class="btn btn-primario" onclick="abrirModal('modal-atividade')">+ Nova atividade</button>
+      </div>
+    </div>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
+
+      <!-- Seletor de turma -->
+      <div class="freq-card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="font-size:13px;font-weight:600;color:var(--texto2)">TURMA:</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;flex:1">
+          <% turmas.forEach(t => { %>
+            <a href="/frequencia?turma=<%= t.id %>"
+              class="filtro-btn <%= turmaAtual && turmaAtual.id == t.id ? 'ativo' : '' %>">
+              <%= t.nome %>
+              <span style="font-size:10px;opacity:0.7;margin-left:4px">
+                <%= new Date(t.data_inicio+'T12:00:00').toLocaleDateString('pt-BR',{month:'short',year:'numeric'}) %>
+              </span>
+            </a>
+          <% }) %>
+          <% if (turmas.length === 0) { %>
+            <span style="color:var(--texto2);font-size:13px">Nenhuma turma cadastrada. Crie uma turma para começar.</span>
+          <% } %>
+        </div>
+        <% if (turmaAtual) { %>
+          <a href="/frequencia/relatorio/<%= turmaAtual.id %>" class="btn" target="_blank">📥 Relatório</a>
+          <button class="btn" onclick="enviarFrequencias(<%= turmaAtual.id %>)">📱 Enviar frequências</button>
+        <% } %>
+      </div>
+
+      <% if (turmaAtual) { %>
+
+      <!-- Tabs -->
+      <div class="freq-tabs">
+        <button class="freq-tab ativo" onclick="mostrarTab('tab-resumo')">📊 Resumo</button>
+        <button class="freq-tab" onclick="mostrarTab('tab-atividades')">📅 Atividades (<%= atividades.length %>)</button>
+        <button class="freq-tab" onclick="mostrarTab('tab-membros')">👥 Membros</button>
+      </div>
+
+      <!-- Tab Resumo -->
+      <div id="tab-resumo" class="tab-content ativo">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px">
+          <div class="stat-card verde">
+            <div class="stat-label">Aptos (≥75%)</div>
+            <div class="stat-valor verde"><%= resumo.aptos %></div>
+            <div class="stat-sub verde">membros</div>
+          </div>
+          <div class="stat-card amarelo">
+            <div class="stat-label">Em risco (50-74%)</div>
+            <div class="stat-valor amarelo"><%= resumo.risco %></div>
+            <div class="stat-sub amarelo">membros</div>
+          </div>
+          <div class="stat-card vermelho">
+            <div class="stat-label">Não aptos (<50%)</div>
+            <div class="stat-valor vermelho"><%= resumo.inaptos %></div>
+            <div class="stat-sub vermelho">membros</div>
+          </div>
+        </div>
+
+        <div class="freq-card">
+          <div class="section-titulo" style="margin-bottom:16px">Frequência por membro</div>
+          <div class="presenca-grid">
+            <% if (membrosFrequencia.length === 0) { %>
+              <div class="vazio">Nenhum membro na turma ainda</div>
+            <% } %>
+            <% membrosFrequencia.forEach(m => {
+              const pct = m.total_atividades > 0 ? Math.round((m.presencas / m.total_atividades) * 100) : 0;
+              const cor = pct >= 75 ? 'apto' : pct >= 50 ? 'risco' : 'inapto';
+              const corTexto = pct >= 75 ? 'var(--verde)' : pct >= 50 ? 'var(--amarelo)' : 'var(--vermelho)';
+            %>
+            <div class="presenca-row">
+              <div style="display:flex;align-items:center;gap:10px;flex:1">
+                <div class="avatar" style="width:32px;height:32px;font-size:11px"><%= m.nome.substring(0,2).toUpperCase() %></div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= m.nome.split(' ').slice(0,3).join(' ') %></div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                    <div class="barra-wrap"><div class="barra <%= cor %>" style="width:<%= pct %>%"></div></div>
+                    <span style="font-size:11px;color:var(--texto2)"><%= m.presencas %>/<%= m.total_atividades %></span>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="pct-label" style="color:<%= corTexto %>"><%= pct %>%</span>
+                <span class="badge <%= pct >= 75 ? 'verde' : pct >= 50 ? 'amarelo' : 'vermelho' %>">
+                  <%= pct >= 75 ? 'Apto' : pct >= 50 ? 'Em risco' : 'Não apto' %>
+                </span>
+              </div>
+            </div>
+            <% }) %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Atividades -->
+      <div id="tab-atividades" class="tab-content">
+        <% if (atividades.length === 0) { %>
+          <div class="vazio">Nenhuma atividade cadastrada para esta turma</div>
+        <% } %>
+        <% atividades.forEach(a => { %>
+        <div class="freq-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+            <div>
+              <div style="font-size:15px;font-weight:600"><%= a.descricao %></div>
+              <div style="font-size:12px;color:var(--texto2);margin-top:2px">
+                <span class="badge azul" style="font-size:10px"><%= a.tipo %></span>
+                &nbsp;<%= new Date(a.data_atividade+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) %>
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <span style="font-size:12px;color:var(--texto2)">
+                <%= a.presentes %>/<%= a.total_membros %> presentes
+              </span>
+              <form action="/frequencia/atividade/<%= a.id %>/deletar" method="POST"
+                onsubmit="return confirm('Excluir esta atividade e todas as presenças?')">
+                <button class="icon-btn" style="color:var(--vermelho)" title="Excluir">🗑</button>
+              </form>
+            </div>
+          </div>
+          <form action="/frequencia/atividade/<%= a.id %>/presenca" method="POST">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:12px">
+              <% a.membros.forEach(m => { %>
+              <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--fundo);border-radius:8px;border:1px solid var(--borda);cursor:pointer">
+                <input type="checkbox" name="presentes" value="<%= m.membro_id %>"
+                  class="check-membro" <%= m.presente ? 'checked' : '' %>>
+                <span style="font-size:13px"><%= m.nome.split(' ').slice(0,2).join(' ') %></span>
+              </label>
+              <% }) %>
+            </div>
+            <div style="text-align:right">
+              <button type="submit" class="btn btn-primario" style="font-size:12px;padding:7px 16px">✅ Salvar presenças</button>
+            </div>
+          </form>
+        </div>
+        <% }) %>
+      </div>
+
+      <!-- Tab Membros -->
+      <div id="tab-membros" class="tab-content">
+        <div class="freq-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+            <div class="section-titulo">Membros da turma</div>
+            <button class="btn btn-primario" style="font-size:12px" onclick="abrirModal('modal-add-membro')">+ Adicionar membro</button>
+          </div>
+          <% if (membrosFrequencia.length === 0) { %>
+            <div class="vazio">Nenhum membro na turma</div>
+          <% } %>
+          <% membrosFrequencia.forEach(m => {
+            const pct = m.total_atividades > 0 ? Math.round((m.presencas / m.total_atividades) * 100) : 0;
+          %>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--borda)">
+            <div style="display:flex;align-items:center;gap:10px">
+              <div class="avatar" style="width:32px;height:32px;font-size:11px"><%= m.nome.substring(0,2).toUpperCase() %></div>
+              <div>
+                <div style="font-size:13px;font-weight:600"><%= m.nome.split(' ').slice(0,3).join(' ') %></div>
+                <div style="font-size:11px;color:var(--texto2)">Desde <%= new Date(m.data_entrada+'T12:00:00').toLocaleDateString('pt-BR') %></div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="badge <%= pct >= 75 ? 'verde' : pct >= 50 ? 'amarelo' : 'vermelho' %>"><%= pct %>%</span>
+              <form action="/frequencia/turma/<%= turmaAtual.id %>/remover-membro" method="POST"
+                onsubmit="return confirm('Remover este membro da turma?')">
+                <input type="hidden" name="membro_id" value="<%= m.membro_id %>">
+                <button class="icon-btn" style="color:var(--vermelho)" title="Remover">✕</button>
+              </form>
+            </div>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <% } else if (turmas.length > 0) { %>
+        <div class="vazio">Selecione uma turma acima para ver a frequência</div>
+      <% } %>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Nova Turma -->
+<div class="modal-overlay" id="modal-turma" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">Nova Turma</span>
+      <button class="icon-btn" onclick="fecharModal('modal-turma')">✕</button>
+    </div>
+    <form action="/frequencia/turma" method="POST">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo">
+          <label class="label">Nome da turma *</label>
+          <input name="nome" class="input" required placeholder="Ex: 2025.2, 2026.1, 2026.2">
+        </div>
+        <div class="campo">
+          <label class="label">Data de início *</label>
+          <input name="data_inicio" type="date" class="input" required>
+        </div>
+        <div class="campo">
+          <label class="label">Data de término (opcional)</label>
+          <input name="data_fim" type="date" class="input">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-turma')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Criar turma</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Nova Atividade -->
+<div class="modal-overlay" id="modal-atividade" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">Nova Atividade</span>
+      <button class="icon-btn" onclick="fecharModal('modal-atividade')">✕</button>
+    </div>
+    <form action="/frequencia/atividade" method="POST">
+      <input type="hidden" name="turma_id" value="<%= turmaAtual ? turmaAtual.id : '' %>">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo">
+          <label class="label">Turma *</label>
+          <select name="turma_id_sel" class="input" required>
+            <% turmas.forEach(t => { %>
+              <option value="<%= t.id %>" <%= turmaAtual && turmaAtual.id == t.id ? 'selected' : '' %>><%= t.nome %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="campo">
+          <label class="label">Tipo de atividade *</label>
+          <select name="tipo" class="input" required>
+            <option value="Aula Teórica">📚 Aula Teórica</option>
+            <option value="Aula Prática">🔬 Aula Prática</option>
+            <option value="Extensão">🌐 Extensão</option>
+            <option value="Reunião">👥 Reunião</option>
+            <option value="Bienvenidas">🎉 Bienvenidas</option>
+            <option value="Expoligas">🏆 Expoligas</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label class="label">Descrição *</label>
+          <input name="descricao" class="input" required placeholder="Ex: Urgências Urológicas, HPB, Câncer de Próstata...">
+        </div>
+        <div class="campo">
+          <label class="label">Data da atividade *</label>
+          <input name="data_atividade" type="date" class="input" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-atividade')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Criar atividade</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Adicionar Membro à Turma -->
+<div class="modal-overlay" id="modal-add-membro" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">Adicionar Membro à Turma</span>
+      <button class="icon-btn" onclick="fecharModal('modal-add-membro')">✕</button>
+    </div>
+    <form action="/frequencia/turma/<%= turmaAtual ? turmaAtual.id : 0 %>/adicionar-membro" method="POST">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo">
+          <label class="label">Membro *</label>
+          <select name="membro_id" class="input" required>
+            <option value="">Selecione...</option>
+            <% todosMembros.forEach(m => { %>
+              <% const jaNaTurma = membrosFrequencia.some(mf => mf.membro_id == m.id); %>
+              <% if (!jaNaTurma) { %>
+                <option value="<%= m.id %>"><%= m.nome %></option>
+              <% } %>
+            <% }) %>
+          </select>
+        </div>
+        <div class="campo">
+          <label class="label">Data de entrada na turma *</label>
+          <input name="data_entrada" type="date" class="input" required value="<%= new Date().toISOString().split('T')[0] %>">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-add-membro')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Adicionar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+function mostrarTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('ativo'));
+  document.querySelectorAll('.freq-tab').forEach(t => t.classList.remove('ativo'));
+  document.getElementById(tabId).classList.add('ativo');
+  event.target.classList.add('ativo');
+}
+
+function enviarFrequencias(turmaId) {
+  if (!confirm('Enviar relatório de frequência para todos os membros da turma por WhatsApp e e-mail?')) return;
+  fetch('/frequencia/turma/' + turmaId + '/enviar', { method: 'POST' })
+    .then(r => r.json())
+    .then(d => alert(d.msg || 'Enviado!'))
+    .catch(() => alert('Erro ao enviar'));
+}
+</script>
+</body></html>
