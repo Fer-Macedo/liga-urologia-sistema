@@ -29,16 +29,22 @@
               <td><div class="membro-cell"><div class="avatar"><%= u.nome.substring(0,2).toUpperCase() %></div><%= u.nome %></div></td>
               <td><%= u.email %></td>
               <td>
-                <% if (u.perfil === 'admin') { %><span class="badge azul">Administrador</span>
-                <% } else if (u.perfil === 'financeiro') { %><span class="badge amarelo">Financeiro</span>
-                <% } else { %><span class="badge cinza">Visualizador</span><% } %>
+                <% if (u.perfil === 'admin') { %>
+                  <span class="badge azul">Administrador</span>
+                <% } else if (u.perfil === 'financeiro') { %>
+                  <span class="badge amarelo">Financeiro</span>
+                <% } else if (u.perfil === 'secretaria') { %>
+                  <span class="badge cinza">Secretaria</span>
+                <% } else { %>
+                  <span class="badge cinza">Visualizador</span>
+                <% } %>
               </td>
               <td><span class="badge <%= u.ativo ? 'verde' : 'vermelho' %>"><%= u.ativo ? 'Ativo' : 'Inativo' %></span></td>
               <td><%= new Date(u.criado_em).toLocaleDateString('pt-BR') %></td>
               <td>
                 <div class="btn-acoes">
                   <% if (u.perfil !== 'admin') { %>
-                    <form action="/usuarios/<%= u.id %>/toggle" method="POST" style="display:inline" onsubmit="return confirm('<%= u.ativo ? "Desativar" : "Ativar" %> este usuário?')">
+                    <form action="/usuarios/<%= u.id %>/toggle" method="POST" style="display:inline" onsubmit="return confirm('<%= u.ativo ? 'Desativar' : 'Ativar' %> este usuário?')">
                       <button class="icon-btn" title="<%= u.ativo ? 'Desativar' : 'Ativar' %>"><%= u.ativo ? '⏸' : '▶' %></button>
                     </form>
                     <button class="icon-btn" onclick="abrirSenha(<%= u.id %>, '<%= u.nome %>')" title="Redefinir senha">🔑</button>
@@ -57,6 +63,7 @@
         <strong>Perfis disponíveis:</strong><br>
         <span style="color:var(--cor-primaria)">Administrador</span> — acesso total ao sistema, configurações e usuários<br>
         <span style="color:#9f580a">Financeiro</span> — gerencia membros e cobranças, envia notificações<br>
+        <span style="color:#6b7280">Secretaria</span> — lança frequências e atividades das turmas<br>
         <span style="color:#6b7280">Visualizador</span> — somente visualização, sem poder alterar dados
       </div>
     </div>
