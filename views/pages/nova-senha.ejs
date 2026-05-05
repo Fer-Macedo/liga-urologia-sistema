@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nova Senha — <%= config.org_nome || 'Liga Urologia' %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>:root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }</style>
+</head>
+<body class="login-body">
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-logo">
+        <% if (config.org_logo) { %>
+          <img src="<%= config.org_logo %>" alt="Logo" class="login-logo-img">
+        <% } else { %>
+          <div class="login-logo-icone">LU</div>
+        <% } %>
+        <h1 class="login-titulo">Nova Senha</h1>
+        <p class="login-sub">Digite sua nova senha</p>
+      </div>
+
+      <% if (erro && erro.length > 0) { %>
+        <div class="alerta alerta-erro">❌ <%= erro[0] %></div>
+      <% } %>
+
+      <% if (tokenValido) { %>
+      <form action="/nova-senha" method="POST" class="login-form">
+        <input type="hidden" name="token" value="<%= token %>">
+        <div class="campo">
+          <label class="label">Nova senha</label>
+          <input type="password" name="nova_senha" class="input" placeholder="Mínimo 8 caracteres" minlength="8" required autofocus>
+        </div>
+        <div class="campo">
+          <label class="label">Confirmar nova senha</label>
+          <input type="password" name="confirmar_senha" class="input" placeholder="Repita a nova senha" required>
+        </div>
+        <button type="submit" class="btn btn-primario" style="width:100%;justify-content:center;padding:12px">
+          🔒 Definir nova senha
+        </button>
+      </form>
+      <% } else { %>
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:48px;margin-bottom:16px">⏰</div>
+        <p style="font-size:14px;color:var(--vermelho);font-weight:600">Link expirado ou inválido</p>
+        <p style="font-size:13px;color:var(--texto2);margin-top:8px">
+          Solicite um novo link de recuperação de senha.
+        </p>
+      </div>
+      <% } %>
+
+      <div style="text-align:center;margin-top:20px">
+        <a href="/recuperar-senha" style="font-size:13px;color:var(--cor-primaria);text-decoration:none">← Solicitar novo link</a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
