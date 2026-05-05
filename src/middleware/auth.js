@@ -17,4 +17,11 @@ function requireFinanceiro(req, res, next) {
   res.redirect('/dashboard');
 }
 
-module.exports = { requireAuth, requireAdmin, requireFinanceiro };
+function requireSecretaria(req, res, next) {
+  const perfil = req.session?.usuario?.perfil;
+  if (perfil === 'admin' || perfil === 'secretaria') return next();
+  req.flash('erro', 'Acesso restrito ao secretário e administrador.');
+  res.redirect('/dashboard');
+}
+
+module.exports = { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria };
