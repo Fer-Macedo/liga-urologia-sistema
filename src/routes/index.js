@@ -351,23 +351,9 @@ router.post('/configuracoes/logo-url', requireAuth, requireAdmin, async (req, re
 
 // ─── USUÁRIOS ──────────────────────────────────────────────────────────────────
 
-router.get('/usuarios', requireAuth, requirePermissao('usuarios'), async (req, res) => {
-  const config = await getConfig();
-  const r = await query('SELECT id,nome,email,perfil,ativo,criado_em FROM usuarios ORDER BY criado_em');
-  res.render('pages/usuarios', { config, usuario: req.session.usuario, usuarios: r.rows, msg: req.flash('msg'), erro: req.flash('erro') });
-});
 
-router.post('/usuarios', requireAuth, requireAdmin, async (req, res) => {
-  const { nome, email, senha, perfil } = req.body;
-  const hash = bcrypt.hashSync(senha, 10);
-  try {
-    await query('INSERT INTO usuarios (nome,email,senha,perfil) VALUES ($1,$2,$3,$4)', [nome, email, hash, perfil]);
-    req.flash('msg', 'Usuário ' + nome + ' criado!');
-  } catch (e) {
-    req.flash('erro', 'E-mail já cadastrado.');
-  }
-  res.redirect('/usuarios');
-});
+
+
 
 router.post('/usuarios/:id/toggle', requireAuth, requireAdmin, async (req, res) => {
   const r = await query('SELECT * FROM usuarios WHERE id=$1', [req.params.id]);
