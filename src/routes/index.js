@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
+const crypto = require('crypto');
 const dayjs = require('dayjs');
 const { query } = require('../models/database');
 const { requireAuth, requireAdmin, requireFinanceiro } = require('../middleware/auth');
@@ -15,7 +16,7 @@ async function getConfig() {
 }
 
 // ─── PROTEÇÃO FORÇA BRUTA ─────────────────────────────────────────────────────
-const tentativas = {}; // { ip: { count, bloqueadoAte } }
+const tentativas = {};
 
 function verificarBloqueio(ip) {
   const t = tentativas[ip];
@@ -29,14 +30,15 @@ function registrarTentativa(ip) {
   if (!tentativas[ip]) tentativas[ip] = { count: 0 };
   tentativas[ip].count++;
   if (tentativas[ip].count >= 5) {
-    tentativas[ip].bloqueadoAte = new Date(Date.now() + 15 * 60 * 1000); // 15 min
-    console.warn(`IP bloqueado por tentativas: ${ip}`);
+    tentativas[ip].bloqueadoAte = new Date(Date.now() + 15 * 60 * 1000);
+    console.warn('IP bloqueado por tentativas: ' + ip);
   }
 }
 
-function limparTentativas(ip) {
-  delete tentativas[ip];
-}
+function limparTentativas(ip) { delete tentativas[ip]; }
+
+// ─── TOKENS RECUPERAÇÃO SENHA ─────────────────────────────────────────────────
+const tokensSenha = {}; // { token: { userId, expira } }
 
 // ─── AUTH ─────────────────────────────────────────────────────────────────────
 
@@ -44,13 +46,12 @@ router.get('/', (req, res) => res.redirect('/dashboard'));
 
 router.get('/login', async (req, res) => {
   if (req.session?.usuario) return res.redirect('/dashboard');
-  res.render('pages/login', { config: await getConfig(), erro: req.flash('erro') });
+  res.render('pages/login', { config: await getConfig(), erro: req.flash('erro'), msg: req.flash('msg') });
 });
 
 router.post('/login', async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress;
 
-  // Verifica bloqueio por força bruta
   if (verificarBloqueio(ip)) {
     req.flash('erro', 'Muitas tentativas incorretas. Aguarde 15 minutos.');
     return res.redirect('/login');
@@ -58,7 +59,6 @@ router.post('/login', async (req, res) => {
 
   const { email, senha } = req.body;
 
-  // Validação básica
   if (!email || !senha || email.length > 100 || senha.length > 100) {
     req.flash('erro', 'Dados inválidos.');
     return res.redirect('/login');
@@ -71,42 +71,94 @@ router.post('/login', async (req, res) => {
     registrarTentativa(ip);
     const t = tentativas[ip];
     const restantes = t ? Math.max(0, 5 - t.count) : 5;
-    req.flash('erro', `E-mail ou senha incorretos. ${restantes > 0 ? restantes + ' tentativas restantes.' : 'Conta bloqueada por 15 minutos.'}`);
+    req.flash('erro', 'E-mail ou senha incorretos. ' + (restantes > 0 ? restantes + ' tentativas restantes.' : 'IP bloqueado por 15 minutos.'));
     return res.redirect('/login');
   }
 
-  // Login bem sucedido
   limparTentativas(ip);
+  console.log('LOGIN: ' + usuario.email + ' | IP: ' + ip + ' | ' + new Date().toISOString());
 
-  // Registra log de acesso
-  console.log(`LOGIN: ${usuario.email} | IP: ${ip} | ${new Date().toISOString()}`);
+  const dadosUsuario = { id: usuario.id, nome: usuario.nome, email: usuario.email, perfil: usuario.perfil };
 
-  req.session.usuario = {
-    id: usuario.id,
-    nome: usuario.nome,
-    email: usuario.email,
-    perfil: usuario.perfil,
-    loginEm: new Date().toISOString()
-  };
-
-  // Regenera sessão para evitar session fixation
   req.session.regenerate((err) => {
     if (err) console.error('Session regenerate erro:', err);
-    req.session.usuario = {
-      id: usuario.id,
-      nome: usuario.nome,
-      email: usuario.email,
-      perfil: usuario.perfil,
-      loginEm: new Date().toISOString()
-    };
+    req.session.usuario = dadosUsuario;
     res.redirect('/dashboard');
   });
 });
 
 router.get('/logout', (req, res) => {
-  const email = req.session?.usuario?.email;
-  console.log(`LOGOUT: ${email} | ${new Date().toISOString()}`);
+  console.log('LOGOUT: ' + (req.session?.usuario?.email || '?') + ' | ' + new Date().toISOString());
   req.session.destroy();
+  res.redirect('/login');
+});
+
+// ─── RECUPERAÇÃO DE SENHA ─────────────────────────────────────────────────────
+
+router.get('/recuperar-senha', async (req, res) => {
+  res.render('pages/recuperar-senha', {
+    config: await getConfig(), enviado: false,
+    msg: req.flash('msg'), erro: req.flash('erro')
+  });
+});
+
+router.post('/recuperar-senha', async (req, res) => {
+  const config = await getConfig();
+  const email = (req.body.email || '').toLowerCase().trim();
+  const r = await query('SELECT * FROM usuarios WHERE email=$1 AND ativo=1', [email]);
+  const usuario = r.rows[0];
+
+  if (usuario) {
+    const token = crypto.randomBytes(32).toString('hex');
+    tokensSenha[token] = { userId: usuario.id, expira: new Date(Date.now() + 30 * 60 * 1000) };
+
+    const { enviarEmail } = require('../services/notificacoes');
+    const appUrl = process.env.APP_URL || 'https://liga-urologia.onrender.com';
+    const link = appUrl + '/nova-senha?token=' + token;
+    const orgNome = config.org_nome || 'Liga Academica de Urologia';
+
+    await enviarEmail({
+      para: usuario.email,
+      assunto: 'Recuperação de senha — ' + orgNome,
+      texto: 'Clique no link para redefinir sua senha:\n' + link + '\n\nExpira em 30 minutos.',
+      html: '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f4f4f4;padding:30px"><div style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden"><div style="background:#1a56db;padding:24px 32px"><h1 style="color:white;margin:0;font-size:20px">' + orgNome + '</h1></div><div style="padding:32px"><h2 style="margin:0 0 16px">Recuperação de senha</h2><p style="color:#444;margin:0 0 24px">Olá, <strong>' + usuario.nome + '</strong>!<br><br>Clique no botão abaixo para criar uma nova senha:</p><div style="text-align:center;margin:24px 0"><a href="' + link + '" style="display:inline-block;background:#1a56db;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:bold">🔒 Redefinir minha senha</a></div><p style="color:#888;font-size:12px">Este link expira em <strong>30 minutos</strong>.<br>Se não solicitou, ignore este e-mail.</p></div></div></body></html>'
+    });
+
+    console.log('RECUPERACAO SENHA: ' + email + ' | ' + new Date().toISOString());
+  }
+
+  res.render('pages/recuperar-senha', { config, enviado: true, msg: [], erro: [] });
+});
+
+router.get('/nova-senha', async (req, res) => {
+  const config = await getConfig();
+  const token = req.query.token || '';
+  const dados = tokensSenha[token];
+  const tokenValido = !!(dados && new Date() < dados.expira);
+  res.render('pages/nova-senha', { config, token, tokenValido, erro: req.flash('erro') });
+});
+
+router.post('/nova-senha', async (req, res) => {
+  const config = await getConfig();
+  const { token, nova_senha, confirmar_senha } = req.body;
+  const dados = tokensSenha[token];
+
+  if (!dados || new Date() > dados.expira) {
+    req.flash('erro', 'Link expirado ou inválido. Solicite um novo.');
+    return res.redirect('/recuperar-senha');
+  }
+  if (nova_senha !== confirmar_senha) {
+    return res.render('pages/nova-senha', { config, token, tokenValido: true, erro: ['As senhas não coincidem.'] });
+  }
+  if (nova_senha.length < 8) {
+    return res.render('pages/nova-senha', { config, token, tokenValido: true, erro: ['A senha deve ter pelo menos 8 caracteres.'] });
+  }
+
+  await query('UPDATE usuarios SET senha=$1 WHERE id=$2', [bcrypt.hashSync(nova_senha, 10), dados.userId]);
+  delete tokensSenha[token];
+
+  console.log('SENHA REDEFINIDA: userId ' + dados.userId + ' | ' + new Date().toISOString());
+  req.flash('msg', 'Senha redefinida com sucesso! Faça login com a nova senha.');
   res.redirect('/login');
 });
 
@@ -116,7 +168,7 @@ router.get('/dashboard', requireAuth, async (req, res) => {
   const config = await getConfig();
   const hoje = dayjs();
   const mes = hoje.format('YYYY-MM');
-  const mesStr = `%-${mes}`;
+  const mesStr = '%-' + mes;
   const [total, pagos, pendentes, atrasados, recTot, pendTot, atrTot, recentes, aniversariantes] = await Promise.all([
     query("SELECT COUNT(*) n FROM membros WHERE ativo=1"),
     query("SELECT COUNT(*) n FROM cobrancas WHERE status='pago' AND referencia LIKE $1", [mesStr]),
@@ -151,8 +203,7 @@ router.get('/membros', requireAuth, async (req, res) => {
   if (filtro === 'ativos') where = 'WHERE m.ativo=1';
   else if (filtro === 'inativos') where = 'WHERE m.ativo=0';
   const membros = await query(
-    `SELECT m.*, (SELECT status FROM cobrancas WHERE membro_id=m.id ORDER BY criado_em DESC LIMIT 1) as ultimo_status
-     FROM membros m ${where} ORDER BY m.nome`
+    'SELECT m.*, (SELECT status FROM cobrancas WHERE membro_id=m.id ORDER BY criado_em DESC LIMIT 1) as ultimo_status FROM membros m ' + where + ' ORDER BY m.nome'
   );
   res.render('pages/membros', { config, usuario: req.session.usuario, membros: membros.rows, filtro, msg: req.flash('msg'), erro: req.flash('erro') });
 });
@@ -163,7 +214,7 @@ router.post('/membros', requireAuth, requireFinanceiro, async (req, res) => {
     'INSERT INTO membros (nome,cpf,email,whatsapp,data_nascimento,dia_vencimento,mensalidade,desconto_pontualidade,observacoes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
     [nome, cpf||null, email||null, whatsapp||null, data_nascimento||null, parseInt(dia_vencimento)||5, parseFloat(mensalidade)||100, parseFloat(desconto_pontualidade)||10, observacoes||null]
   );
-  req.flash('msg', `Membro ${nome} cadastrado!`);
+  req.flash('msg', 'Membro ' + nome + ' cadastrado!');
   res.redirect('/membros');
 });
 
@@ -195,8 +246,7 @@ router.get('/cobrancas', requireAuth, async (req, res) => {
   else if (filtro === 'pendentes') where = "WHERE c.status='pendente'";
   else if (filtro === 'atrasadas') where = "WHERE c.status='atrasado'";
   const r = await query(
-    `SELECT c.*, m.nome, m.whatsapp, m.email FROM cobrancas c
-     JOIN membros m ON m.id=c.membro_id ${where} ORDER BY c.data_vencimento DESC LIMIT 100`
+    'SELECT c.*, m.nome, m.whatsapp, m.email FROM cobrancas c JOIN membros m ON m.id=c.membro_id ' + where + ' ORDER BY c.data_vencimento DESC LIMIT 100'
   );
   res.render('pages/cobrancas', { config, usuario: req.session.usuario, cobrancas: r.rows, filtro, dayjs, msg: req.flash('msg'), erro: req.flash('erro') });
 });
@@ -312,7 +362,7 @@ router.post('/usuarios', requireAuth, requireAdmin, async (req, res) => {
   const hash = bcrypt.hashSync(senha, 10);
   try {
     await query('INSERT INTO usuarios (nome,email,senha,perfil) VALUES ($1,$2,$3,$4)', [nome, email, hash, perfil]);
-    req.flash('msg', `Usuário ${nome} criado!`);
+    req.flash('msg', 'Usuário ' + nome + ' criado!');
   } catch (e) {
     req.flash('erro', 'E-mail já cadastrado.');
   }
@@ -335,39 +385,40 @@ router.post('/usuarios/:id/senha', requireAuth, requireAdmin, async (req, res) =
   res.redirect('/usuarios');
 });
 
-// ─── MEU PERFIL — alterar email e senha ──────────────────────────────────────
+// ─── MEU PERFIL ───────────────────────────────────────────────────────────────
 
 router.post('/minha-senha', requireAuth, async (req, res) => {
   const { senha_atual, nova_senha, confirmar_senha } = req.body;
 
-  // Validacoes
-  if (nova_senha !== confirmar_senha) {
-    req.flash('erro', 'A nova senha e a confirmação não coincidem.');
+  if (!nova_senha || nova_senha.length < 8) {
+    req.flash('erro', 'A nova senha deve ter pelo menos 8 caracteres.');
     return res.redirect('/dashboard');
   }
-  if (nova_senha.length < 8) {
-    req.flash('erro', 'A nova senha deve ter pelo menos 8 caracteres.');
+  if (nova_senha !== confirmar_senha) {
+    req.flash('erro', 'A nova senha e a confirmação não coincidem.');
     return res.redirect('/dashboard');
   }
 
   const r = await query('SELECT * FROM usuarios WHERE id=$1', [req.session.usuario.id]);
   const usuario = r.rows[0];
 
-  if (!bcrypt.compareSync(senha_atual, usuario.senha)) {
+  if (!usuario || !bcrypt.compareSync(senha_atual, usuario.senha)) {
     req.flash('erro', 'Senha atual incorreta.');
     return res.redirect('/dashboard');
   }
 
-  await query('UPDATE usuarios SET senha=$1 WHERE id=$2', [bcrypt.hashSync(nova_senha, 10), usuario.id]);
-  console.log(`SENHA ALTERADA: ${usuario.email} | ${new Date().toISOString()}`);
-  req.flash('msg', 'Senha alterada com sucesso!');
-  res.redirect('/dashboard');
+  const novoHash = bcrypt.hashSync(nova_senha, 10);
+  await query('UPDATE usuarios SET senha=$1 WHERE id=$2', [novoHash, usuario.id]);
+
+  console.log('SENHA ALTERADA: ' + usuario.email + ' | ' + new Date().toISOString());
+  req.flash('msg', 'Senha alterada com sucesso! Faça login novamente.');
+  req.session.destroy();
+  res.redirect('/login');
 });
 
 router.post('/meu-email', requireAuth, async (req, res) => {
   const { novo_email, senha_confirmacao } = req.body;
 
-  // Validacoes
   if (!novo_email || !novo_email.includes('@')) {
     req.flash('erro', 'E-mail inválido.');
     return res.redirect('/dashboard');
@@ -376,12 +427,11 @@ router.post('/meu-email', requireAuth, async (req, res) => {
   const r = await query('SELECT * FROM usuarios WHERE id=$1', [req.session.usuario.id]);
   const usuario = r.rows[0];
 
-  if (!bcrypt.compareSync(senha_confirmacao, usuario.senha)) {
+  if (!usuario || !bcrypt.compareSync(senha_confirmacao, usuario.senha)) {
     req.flash('erro', 'Senha incorreta. Não foi possível alterar o e-mail.');
     return res.redirect('/dashboard');
   }
 
-  // Verifica se o email ja existe
   const emailExiste = await query('SELECT id FROM usuarios WHERE email=$1 AND id!=$2', [novo_email.toLowerCase().trim(), usuario.id]);
   if (emailExiste.rows.length > 0) {
     req.flash('erro', 'Este e-mail já está em uso.');
@@ -389,11 +439,9 @@ router.post('/meu-email', requireAuth, async (req, res) => {
   }
 
   await query('UPDATE usuarios SET email=$1 WHERE id=$2', [novo_email.toLowerCase().trim(), usuario.id]);
-
-  // Atualiza a sessao
   req.session.usuario.email = novo_email.toLowerCase().trim();
 
-  console.log(`EMAIL ALTERADO: ${usuario.email} -> ${novo_email} | ${new Date().toISOString()}`);
+  console.log('EMAIL ALTERADO: ' + usuario.email + ' -> ' + novo_email + ' | ' + new Date().toISOString());
   req.flash('msg', 'E-mail alterado com sucesso!');
   res.redirect('/dashboard');
 });
@@ -409,21 +457,16 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
     console.log('Webhook recebido:', JSON.stringify(body).substring(0, 200));
 
     const isSandbox = (process.env.PAGBANK_BASE_URL || '').includes('sandbox');
-    if (isSandbox) {
-      console.log('Webhook ignorado - ambiente Sandbox');
-      return res.sendStatus(200);
-    }
+    if (isSandbox) { console.log('Webhook ignorado - Sandbox'); return res.sendStatus(200); }
 
     if (body.charges && body.charges[0] && body.charges[0].status === 'PAID') {
       const ref = body.charges[0].reference_id || body.charges[0].id;
       let r = await query(
-        "UPDATE cobrancas SET status='pago', data_pagamento=NOW() WHERE referencia=$1 AND status!='pago'",
-        [ref]
+        "UPDATE cobrancas SET status='pago', data_pagamento=NOW() WHERE referencia=$1 AND status!='pago'", [ref]
       );
       if (r.rowCount === 0) {
         await query(
-          "UPDATE cobrancas SET status='pago', data_pagamento=NOW() WHERE pagbank_charge_id=$1 AND status!='pago'",
-          [ref]
+          "UPDATE cobrancas SET status='pago', data_pagamento=NOW() WHERE pagbank_charge_id=$1 AND status!='pago'", [ref]
         );
       }
       console.log('Pagamento confirmado:', ref);
