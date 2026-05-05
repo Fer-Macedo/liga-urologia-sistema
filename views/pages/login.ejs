@@ -12,7 +12,7 @@
     <div class="login-card">
       <div class="login-logo">
         <% if (config.org_logo) { %>
-          <img src="<%= config.org_logo %>" alt="Logo" style="height:60px;margin-bottom:8px">
+          <img src="<%= config.org_logo %>" alt="Logo" class="login-logo-img">
         <% } else { %>
           <div class="login-logo-icone">LU</div>
         <% } %>
@@ -20,8 +20,11 @@
         <p class="login-sub">Sistema de Gestão de Mensalidades</p>
       </div>
 
+      <% if (msg && msg.length > 0) { %>
+        <div class="alerta alerta-ok">✅ <%= msg[0] %></div>
+      <% } %>
       <% if (erro && erro.length > 0) { %>
-        <div class="alerta alerta-erro"><%= erro[0] %></div>
+        <div class="alerta alerta-erro">❌ <%= erro[0] %></div>
       <% } %>
 
       <form action="/login" method="POST" class="login-form">
@@ -30,10 +33,17 @@
           <input type="email" name="email" class="input" placeholder="seu@email.com.br" required autofocus>
         </div>
         <div class="campo">
-          <label class="label">Senha</label>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <label class="label" style="margin:0">Senha</label>
+            <a href="/recuperar-senha" style="font-size:12px;color:var(--cor-primaria);text-decoration:none">
+              Esqueceu a senha?
+            </a>
+          </div>
           <input type="password" name="senha" class="input" placeholder="••••••••" required>
         </div>
-        <button type="submit" class="btn btn-primario" style="width:100%;justify-content:center">Entrar no sistema</button>
+        <button type="submit" class="btn btn-primario" style="width:100%;justify-content:center;padding:12px">
+          Entrar no sistema
+        </button>
       </form>
     </div>
   </div>
