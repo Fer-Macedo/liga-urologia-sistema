@@ -24,4 +24,28 @@ function requireSecretaria(req, res, next) {
   res.redirect('/dashboard');
 }
 
-module.exports = { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria };
+// Middleware flexivel — verifica permissao no banco
+function requirePermissao(modulo) {
+  return async function(req, res, next) {
+    const usuario = req.session?.usuario;
+    if (!usuario) { req.flash('erro', 'Faça login para continuar.'); return res.redirect('/login'); }
+
+    // Admin tem acesso total
+    if (usuario.perfil === 'admin') return next();
+
+    // Verifica permissao no banco
+    try {
+      const { query } = require('../models/database');
+      const r = await query(
+        'SELECT id FROM usuario_permissoes WHERE usuario_id=$1 AND modulo=$2',
+        [usuario.id, modulo]
+      );
+      if (r.rows.length > 0) return next();
+    } catch(e) { console.error('Erro ao verificar permissao:', e.message); }
+
+    req.flash('erro', 'Você não tem permissão para acessar este módulo.');
+    res.redirect('/dashboard');
+  };
+}
+
+module.exports = { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria, requirePermissao };
