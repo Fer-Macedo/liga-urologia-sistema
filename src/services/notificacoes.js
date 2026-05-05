@@ -125,7 +125,7 @@ function montarMensagemWhatsapp(tipo, dados, pixText) {
       + (dados.link ? '🔗 *Link de pagamento:*\n' + dados.link + '\n\n' : '')
       + 'Não perca o desconto! 🙏',
 
-    pos: '*Liga Acadêmica de Urologia - LAURO* 🏥\n\n'
+    pos: '*Liga Acadêmica de Urologia* 🏥\n\n'
       + 'Olá, *' + dados.nome + '*!\n\n'
       + '❗ Sua mensalidade está *em atraso* desde ' + dados.data + '.\n\n'
       + '💰 Valor: *' + dados.valor_cheio + '*\n\n'
