@@ -4,7 +4,13 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cobranças — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
-  <style>:root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }</style>
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+    .qr-modal { text-align:center; }
+    .qr-modal img { width:200px;height:200px;border:2px solid var(--borda);border-radius:8px;margin:12px auto;display:block; }
+    .pix-copia { background:var(--fundo);border:1px solid var(--borda);border-radius:8px;padding:10px;font-size:11px;word-break:break-all;font-family:monospace;margin:10px 0;cursor:pointer;text-align:left; }
+    .pix-copia:hover { background:var(--cor-primaria-claro); }
+  </style>
 </head>
 <body>
 <div class="layout">
@@ -20,8 +26,8 @@
       </div>
     </div>
     <div class="content">
-      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
-      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
 
       <div class="filtro-bar">
         <a href="/cobrancas" class="filtro-btn <%= filtro==='todas'?'ativo':'' %>">Todas</a>
@@ -47,22 +53,28 @@
               <td>R$ <%= Number(c.valor_cheio).toFixed(2).replace('.',',') %></td>
               <td>R$ <%= Number(c.valor_desconto).toFixed(2).replace('.',',') %></td>
               <td>
-                <% if (c.status==='pago') { %><span class="badge verde">Pago</span>
-                <% } else if (c.status==='atrasado') { %><span class="badge vermelho">Atrasado</span>
-                <% } else { %><span class="badge amarelo">Pendente</span><% } %>
+                <% if (c.status==='pago') { %><span class="badge verde">✅ Pago</span>
+                <% } else if (c.status==='atrasado') { %><span class="badge vermelho">⚠️ Atrasado</span>
+                <% } else { %><span class="badge amarelo">⏳ Pendente</span><% } %>
               </td>
               <td>
                 <div class="btn-acoes">
                   <% if (c.status !== 'pago') { %>
+                    <% if (c.pix_qr_code || c.pix_qr_code_base64) { %>
+                      <button class="icon-btn" title="Ver QR Code PIX"
+                        onclick="abrirPix('<%= c.id %>', '<%= c.nome.split(' ')[0] %>', '<%= c.valor_desconto %>', '<%= (c.pix_qr_code_base64||'').substring(0,20) %>', `<%= c.pix_qr_code %>`)">
+                        📱
+                      </button>
+                    <% } %>
+                    <% if (c.pagbank_link) { %>
+                      <a href="<%= c.pagbank_link %>" target="_blank" class="icon-btn" title="Link cartão crédito">💳</a>
+                    <% } %>
                     <form action="/cobrancas/<%= c.id %>/notificar" method="POST" style="display:inline">
                       <button class="icon-btn" title="Enviar notificação" type="submit">✉</button>
                     </form>
                     <form action="/cobrancas/<%= c.id %>/pago" method="POST" style="display:inline" onsubmit="return confirm('Marcar como pago?')">
                       <button class="icon-btn verde" title="Marcar como pago">✓</button>
                     </form>
-                  <% } %>
-                  <% if (c.pagbank_link) { %>
-                    <a href="<%= c.pagbank_link %>" target="_blank" class="icon-btn" title="Abrir link de pagamento">🔗</a>
                   <% } %>
                 </div>
               </td>
@@ -73,6 +85,24 @@
       </div>
     </div>
   </main>
+</div>
+
+<!-- Modal QR Code PIX -->
+<div class="modal-overlay" id="modal-pix" style="display:none">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <span class="modal-titulo" id="pix-titulo">QR Code PIX</span>
+      <button class="icon-btn" onclick="fecharModal('modal-pix')">✕</button>
+    </div>
+    <div class="qr-modal">
+      <p style="font-size:13px;color:var(--texto2);margin-bottom:8px">Escaneie o QR Code ou copie o código abaixo</p>
+      <img id="pix-qr-img" src="" alt="QR Code PIX">
+      <p style="font-size:12px;font-weight:600;margin:8px 0 4px">Valor: <span id="pix-valor" style="color:var(--cor-primaria)"></span></p>
+      <p style="font-size:11px;color:var(--texto2);margin-bottom:6px">📋 Pix Copia e Cola:</p>
+      <div class="pix-copia" id="pix-codigo" onclick="copiarPix()"></div>
+      <button class="btn btn-primario" style="width:100%;margin-top:8px" onclick="copiarPix()">📋 Copiar código PIX</button>
+    </div>
+  </div>
 </div>
 
 <!-- Modal nova cobrança manual -->
@@ -104,4 +134,45 @@
 </div>
 
 <script src="/js/app.js"></script>
+<script>
+// Armazena dados dos QR codes
+const pixData = {};
+<% cobrancas.forEach(c => { %>
+  <% if (c.pix_qr_code) { %>
+  pixData['<%= c.id %>'] = {
+    qr_code: `<%= c.pix_qr_code %>`,
+    qr_code_base64: '<%= c.pix_qr_code_base64 || "" %>',
+    valor: 'R$ <%= Number(c.valor_desconto).toFixed(2).replace(".",",") %>',
+    nome: '<%= c.nome.split(" ")[0] %>'
+  };
+  <% } %>
+<% }) %>
+
+function abrirPix(id, nome, valor, qrBase64Prefix, qrCode) {
+  const dados = pixData[id];
+  if (!dados) return;
+
+  document.getElementById('pix-titulo').textContent = 'PIX — ' + dados.nome;
+  document.getElementById('pix-valor').textContent = dados.valor;
+  document.getElementById('pix-codigo').textContent = dados.qr_code;
+
+  if (dados.qr_code_base64) {
+    document.getElementById('pix-qr-img').src = 'data:image/png;base64,' + dados.qr_code_base64;
+    document.getElementById('pix-qr-img').style.display = 'block';
+  } else {
+    document.getElementById('pix-qr-img').style.display = 'none';
+  }
+
+  abrirModal('modal-pix');
+}
+
+function copiarPix() {
+  const codigo = document.getElementById('pix-codigo').textContent;
+  navigator.clipboard.writeText(codigo).then(() => {
+    const btn = document.querySelector('#modal-pix .btn-primario');
+    btn.textContent = '✅ Copiado!';
+    setTimeout(() => { btn.textContent = '📋 Copiar código PIX'; }, 2000);
+  });
+}
+</script>
 </body></html>
