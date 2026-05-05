@@ -11,11 +11,54 @@
   <%- include('../partials/sidebar', { paginaAtual: 'configuracoes' }) %>
   <main class="main">
     <div class="topbar">
-      <h1 class="page-titulo">Configurações do sistema</h1>
+      <h1 class="page-titulo">⚙️ Configurações do sistema</h1>
     </div>
     <div class="content">
-      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
-      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
+
+      <!-- UPLOAD DE LOGO -->
+      <div class="config-secao">
+        <div class="config-secao-titulo">🖼️ Logomarca da Liga</div>
+        <div style="display:flex;align-items:flex-start;gap:24px;flex-wrap:wrap">
+          <div style="text-align:center">
+            <div style="margin-bottom:10px;font-size:12px;color:var(--texto2);font-weight:600">LOGO ATUAL</div>
+            <% if (config.org_logo) { %>
+              <img id="previewLogo" src="<%= config.org_logo %>" alt="Logo"
+                style="width:100px;height:100px;object-fit:contain;border:2px solid var(--borda);border-radius:12px;background:#f8fafc;padding:6px">
+            <% } else { %>
+              <div id="previewLogo" style="width:100px;height:100px;border:2px dashed var(--borda);border-radius:12px;background:#f8fafc;display:flex;align-items:center;justify-content:center;font-size:28px">🏥</div>
+            <% } %>
+          </div>
+          <div style="flex:1;min-width:200px">
+            <div style="margin-bottom:12px">
+              <label class="label" style="margin-bottom:8px;display:block">Enviar nova logomarca</label>
+              <input type="file" id="logoFile" accept="image/*" style="display:none" onchange="previewLogoFn(this)">
+              <button type="button" class="btn" onclick="document.getElementById('logoFile').click()">
+                📁 Escolher arquivo
+              </button>
+              <span id="nomeArquivo" style="margin-left:10px;font-size:12px;color:var(--texto2)">Nenhum arquivo selecionado</span>
+            </div>
+            <div style="margin-bottom:12px">
+              <label class="label" style="margin-bottom:6px;display:block">Ou cole a URL da imagem</label>
+              <div style="display:flex;gap:8px">
+                <input id="urlLogo" class="input" placeholder="https://..." value="<%= config.org_logo || '' %>"
+                  oninput="document.getElementById('previewLogo').src = this.value" style="flex:1">
+                <button type="button" class="btn btn-primario" onclick="salvarUrlLogo()">Salvar URL</button>
+              </div>
+            </div>
+            <div style="font-size:11px;color:var(--texto2);background:var(--cinza-claro);padding:8px 12px;border-radius:6px">
+              💡 <strong>Dica:</strong> PNG com fundo transparente ou branco. Tamanho recomendado: 200x200px ou maior.
+              A logo aparece no login, menu lateral e nas cobranças por e-mail.
+            </div>
+          </div>
+        </div>
+
+        <!-- Form oculto para upload -->
+        <form id="formUploadLogo" action="/configuracoes/logo" method="POST" enctype="multipart/form-data" style="display:none">
+          <input type="file" id="logoFileForm" name="logo">
+        </form>
+      </div>
 
       <form action="/configuracoes" method="POST">
 
@@ -29,13 +72,12 @@
             <div class="campo">
               <label class="label">Cor principal (código hex)</label>
               <div style="display:flex;gap:8px;align-items:center">
-                <input type="color" name="org_cor" value="<%= config.org_cor || '#1a56db' %>" style="width:48px;height:38px;border-radius:6px;border:1px solid #ddd;cursor:pointer">
-                <input class="input" id="corTexto" value="<%= config.org_cor || '#1a56db' %>" placeholder="#1a56db" style="flex:1" readonly>
+                <input type="color" name="org_cor" id="corPicker" value="<%= config.org_cor || '#1a56db' %>"
+                  style="width:48px;height:38px;border-radius:6px;border:1px solid #ddd;cursor:pointer"
+                  oninput="document.getElementById('corTexto').value = this.value">
+                <input class="input" id="corTexto" value="<%= config.org_cor || '#1a56db' %>"
+                  placeholder="#1a56db" style="flex:1" readonly>
               </div>
-            </div>
-            <div class="campo">
-              <label class="label">URL da logomarca (opcional)</label>
-              <input name="org_logo" class="input" value="<%= config.org_logo || '' %>" placeholder="https://seusite.com/logo.png">
             </div>
           </div>
         </div>
@@ -63,44 +105,137 @@
         </div>
 
         <div class="config-secao">
-          <div class="config-secao-titulo">🔌 Integrações — configure no arquivo .env</div>
-          <div class="config-dica" style="margin-bottom:12px">
-            As chaves de API (PagBank, Mega-API, E-mail) são configuradas no arquivo <code>.env</code> no servidor por segurança.
-            Consulte o guia de instalação para saber como editar esse arquivo.
+          <div class="config-secao-titulo">📱 Mensagens automáticas — WhatsApp e E-mail</div>
+          <div class="config-dica">Use <code>{nome}</code>, <code>{dias}</code>, <code>{data}</code>, <code>{valor_desc}</code>, <code>{valor_cheio}</code> para personalizar.</div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="campo">
+              <label class="label">📅 Lembrete antes do vencimento (3 dias antes)</label>
+              <textarea name="msg_cobranca_pre" class="input" rows="3"><%= config.msg_cobranca_pre || 'Olá {nome}! Sua mensalidade vence em {dias} dias ({data}). Valor com desconto: {valor_desc}. Após o vencimento: {valor_cheio}. Pague agora: {link}' %></textarea>
+            </div>
+            <div class="campo">
+              <label class="label">📅 No dia do vencimento</label>
+              <textarea name="msg_cobranca_dia" class="input" rows="3"><%= config.msg_cobranca_dia || 'Olá {nome}! Hoje é o último dia para pagar sua mensalidade com desconto (R$ {valor_desc}). Após hoje o valor será R$ {valor_cheio}. Pague agora: {link}' %></textarea>
+            </div>
+            <div class="campo">
+              <label class="label">⚠️ Após o vencimento (cobrança em atraso)</label>
+              <textarea name="msg_cobranca_pos" class="input" rows="3"><%= config.msg_cobranca_pos || 'Olá {nome}! Sua mensalidade venceu em {data} e está em atraso. Valor: {valor_cheio}. Por favor regularize: {link}' %></textarea>
+            </div>
+            <div class="campo">
+              <label class="label">🎂 Mensagem de aniversário</label>
+              <textarea name="msg_aniversario" class="input" rows="2"><%= config.msg_aniversario || 'Parabéns pelo seu aniversário, {nome}! 🎉 A Liga Acadêmica de Urologia deseja um dia incrível para você!' %></textarea>
+            </div>
           </div>
-          <div class="form-grid">
-            <div class="campo full">
-              <label class="label">Status PagBank</label>
-              <div class="input" style="background:#f9fafb;color:#6b7280">
-                Token: <%= process.env.PAGBANK_TOKEN ? '✅ Configurado' : '❌ Não configurado — edite o arquivo .env' %>
+        </div>
+
+        <div class="config-secao">
+          <div class="config-secao-titulo">🔔 Notificações automáticas</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--fundo);border-radius:8px;border:1px solid var(--borda)">
+              <div>
+                <div style="font-size:13px;font-weight:600">Lembrete 3 dias antes</div>
+                <div style="font-size:12px;color:var(--texto2)">Envia WhatsApp + e-mail 3 dias antes do vencimento</div>
               </div>
+              <label class="toggle-label">
+                <input type="checkbox" name="notif_pre_ativo" value="1" <%= config.notif_pre_ativo === '1' ? 'checked' : '' %>>
+                <span class="toggle"></span>
+              </label>
             </div>
-            <div class="campo full">
-              <label class="label">Status Mega-API (WhatsApp)</label>
-              <div class="input" style="background:#f9fafb;color:#6b7280">
-                Token: <%= process.env.MEGAAPI_TOKEN ? '✅ Configurado' : '❌ Não configurado — edite o arquivo .env' %>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--fundo);border-radius:8px;border:1px solid var(--borda)">
+              <div>
+                <div style="font-size:13px;font-weight:600">No dia do vencimento</div>
+                <div style="font-size:12px;color:var(--texto2)">Envia WhatsApp + e-mail no dia do vencimento</div>
               </div>
+              <label class="toggle-label">
+                <input type="checkbox" name="notif_dia_ativo" value="1" <%= config.notif_dia_ativo === '1' ? 'checked' : '' %>>
+                <span class="toggle"></span>
+              </label>
             </div>
-            <div class="campo full">
-              <label class="label">Status E-mail</label>
-              <div class="input" style="background:#f9fafb;color:#6b7280">
-                <%= process.env.EMAIL_USER ? '✅ Configurado: ' + process.env.EMAIL_USER : '❌ Não configurado — edite o arquivo .env' %>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--fundo);border-radius:8px;border:1px solid var(--borda)">
+              <div>
+                <div style="font-size:13px;font-weight:600">Cobranças em atraso</div>
+                <div style="font-size:12px;color:var(--texto2)">Envia lembretes para mensalidades atrasadas</div>
               </div>
+              <label class="toggle-label">
+                <input type="checkbox" name="notif_pos1_ativo" value="1" <%= config.notif_pos1_ativo === '1' ? 'checked' : '' %>>
+                <span class="toggle"></span>
+              </label>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--fundo);border-radius:8px;border:1px solid var(--borda)">
+              <div>
+                <div style="font-size:13px;font-weight:600">Mensagens de aniversário</div>
+                <div style="font-size:12px;color:var(--texto2)">Envia parabéns automaticamente no aniversário do membro</div>
+              </div>
+              <label class="toggle-label">
+                <input type="checkbox" name="notif_aniversario_ativo" value="1" <%= config.notif_aniversario_ativo === '1' ? 'checked' : '' %>>
+                <span class="toggle"></span>
+              </label>
             </div>
           </div>
         </div>
 
         <div style="display:flex;justify-content:flex-end;margin-top:8px">
-          <button type="submit" class="btn btn-primario">Salvar configurações</button>
+          <button type="submit" class="btn btn-primario" style="padding:12px 32px;font-size:14px">💾 Salvar configurações</button>
         </div>
+
       </form>
     </div>
   </main>
 </div>
-<script src="/js/app.js"></script>
+
 <script>
-  document.querySelector('input[type="color"]').addEventListener('input', function() {
-    document.getElementById('corTexto').value = this.value;
+function previewLogoFn(input) {
+  if (input.files && input.files[0]) {
+    const file = input.files[0];
+    document.getElementById('nomeArquivo').textContent = file.name;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const preview = document.getElementById('previewLogo');
+      if (preview.tagName === 'IMG') {
+        preview.src = e.target.result;
+      } else {
+        const img = document.createElement('img');
+        img.id = 'previewLogo';
+        img.src = e.target.result;
+        img.style.cssText = 'width:100px;height:100px;object-fit:contain;border:2px solid var(--borda);border-radius:12px;background:#f8fafc;padding:6px';
+        preview.parentNode.replaceChild(img, preview);
+      }
+      document.getElementById('urlLogo').value = '';
+    };
+    reader.readAsDataURL(file);
+    // Upload automatico
+    uploadLogo(file);
+  }
+}
+
+function uploadLogo(file) {
+  const formData = new FormData();
+  formData.append('logo', file);
+  fetch('/configuracoes/logo', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(data => {
+      if (data.url) {
+        document.getElementById('urlLogo').value = data.url;
+        alert('✅ Logomarca enviada com sucesso!');
+      }
+    })
+    .catch(() => {
+      alert('⚠️ Erro ao enviar a logo. Tente usar a URL diretamente.');
+    });
+}
+
+function salvarUrlLogo() {
+  const url = document.getElementById('urlLogo').value;
+  if (!url) return alert('Cole a URL da imagem primeiro!');
+  fetch('/configuracoes/logo-url', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url })
+  })
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) alert('✅ Logo salva com sucesso!');
   });
+}
 </script>
-</body></html>
+</body>
+</html>
