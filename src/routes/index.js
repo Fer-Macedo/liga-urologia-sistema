@@ -1163,7 +1163,8 @@ router.get('/arquivos', requireAuth, async (req, res) => {
     return { ...a, icone: iconeArquivo(a.mimetype), tamanho_fmt: kb > 1024 ? (kb/1024).toFixed(1)+'MB' : kb.toFixed(0)+'KB' };
   });
 
-  res.render('pages/arquivos', { config, msg, erro, usuario: req.session.usuario, arquivos, pastas, pastaAtual });
+  const stats = { total: arquivos.length, fotos: arquivos.filter(a => a.categoria === 'fotos').length, videos: arquivos.filter(a => a.categoria === 'videos').length, documentos: arquivos.filter(a => ['documentos','pdfs','planilhas','apresentacoes'].includes(a.categoria)).length };
+  res.render('pages/arquivos', { config, msg, erro, usuario: req.session.usuario, arquivos, pastas, pastaAtual, stats });
 });
 
 router.post('/arquivos/pasta', requireAuth, requireSecretaria, async (req, res) => {
