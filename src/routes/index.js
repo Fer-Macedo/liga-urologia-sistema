@@ -921,4 +921,229 @@ router.post('/diretivos/:id/toggle', requireAuth, requireAdmin, async (req, res)
 });
 
 
+
+// ─── FREQUÊNCIA DIRETIVOS ─────────────────────────────────────────────────────
+
+router.get('/frequencia-diretivos', requireAuth, requireSecretaria, async (req, res) => {
+  const config = await getConfig();
+  const msg = req.session.msg || []; req.session.msg = [];
+  const erro = req.session.erro || []; req.session.erro = [];
+
+  const turmasR = await query('SELECT * FROM diretivo_turmas WHERE ativo=1 ORDER BY nome');
+  const turmas = turmasR.rows;
+
+  let turmaAtual = null;
+  let atividades = [];
+  let membrosFrequencia = [];
+  let resumo = { aptos:0, risco:0, inaptos:0 };
+  let todosDiretivos = [];
+
+  const turmaId = req.query.turma;
+  if (turmaId) {
+    const tR = await query('SELECT * FROM diretivo_turmas WHERE id=$1', [turmaId]);
+    turmaAtual = tR.rows[0] || null;
+  }
+  if (!turmaAtual && turmas.length > 0) turmaAtual = turmas[0];
+
+  const todosR = await query('SELECT id, nome FROM diretivos WHERE ativo=1 ORDER BY nome');
+  todosDiretivos = todosR.rows;
+
+  if (turmaAtual) {
+    const atR = await query(
+      `SELECT a.*, 
+        (SELECT COUNT(*) FROM diretivo_presencas p WHERE p.atividade_id=a.id AND p.presente=1) as presentes,
+        (SELECT COUNT(*) FROM diretivo_turma_membros tm WHERE tm.turma_id=a.turma_id) as total_membros
+       FROM diretivo_atividades a WHERE a.turma_id=$1 ORDER BY a.data_atividade DESC`,
+      [turmaAtual.id]
+    );
+    for (const at of atR.rows) {
+      const mR = await query(
+        `SELECT d.id as diretivo_id, d.nome, COALESCE(p.presente,0) as presente
+         FROM diretivo_turma_membros tm
+         JOIN diretivos d ON d.id=tm.diretivo_id
+         LEFT JOIN diretivo_presencas p ON p.atividade_id=$1 AND p.diretivo_id=d.id
+         WHERE tm.turma_id=$2 ORDER BY d.nome`,
+        [at.id, turmaAtual.id]
+      );
+      at.membros = mR.rows;
+      atividades.push(at);
+    }
+
+    const mfR = await query(
+      `SELECT d.id as membro_id, d.nome, d.cargo, tm.data_entrada,
+        (SELECT COUNT(*) FROM diretivo_atividades a WHERE a.turma_id=$1) as total_atividades,
+        (SELECT COUNT(*) FROM diretivo_presencas p JOIN diretivo_atividades a ON a.id=p.atividade_id WHERE a.turma_id=$1 AND p.diretivo_id=d.id AND p.presente=1) as presencas
+       FROM diretivo_turma_membros tm JOIN diretivos d ON d.id=tm.diretivo_id WHERE tm.turma_id=$1 ORDER BY d.nome`,
+      [turmaAtual.id]
+    );
+    membrosFrequencia = mfR.rows;
+    membrosFrequencia.forEach(m => {
+      const pct = m.total_atividades > 0 ? Math.round((m.presencas/m.total_atividades)*100) : 0;
+      if (pct >= 75) resumo.aptos++; else if (pct >= 50) resumo.risco++; else resumo.inaptos++;
+    });
+  }
+
+  res.render('pages/frequencia-diretivos', {
+    config, msg, erro, usuario: req.session.usuario,
+    turmas: turmas.sort((a,b) => a.nome.localeCompare(b.nome)),
+    turmaAtual, atividades, membrosFrequencia, resumo, todosDiretivos
+  });
+});
+
+router.post('/frequencia-diretivos/turma', requireAuth, requireSecretaria, async (req, res) => {
+  const { nome, data_inicio, data_fim } = req.body;
+  await query('INSERT INTO diretivo_turmas (nome,data_inicio,data_fim) VALUES ($1,$2,$3)',
+    [nome, data_inicio, data_fim||null]);
+  req.session.msg = ['Turma criada com sucesso!'];
+  res.redirect('/frequencia-diretivos');
+});
+
+router.post('/frequencia-diretivos/atividade', requireAuth, requireSecretaria, async (req, res) => {
+  const turma_id = req.body.turma_id_sel || req.body.turma_id;
+  const { tipo, descricao, data_atividade } = req.body;
+  const r = await query(
+    'INSERT INTO diretivo_atividades (turma_id,tipo,descricao,data_atividade) VALUES ($1,$2,$3,$4) RETURNING id',
+    [turma_id, tipo, descricao, data_atividade]
+  );
+  const membros = await query('SELECT diretivo_id FROM diretivo_turma_membros WHERE turma_id=$1', [turma_id]);
+  for (const m of membros.rows) {
+    await query('INSERT INTO diretivo_presencas (atividade_id,diretivo_id,presente) VALUES ($1,$2,0) ON CONFLICT DO NOTHING',
+      [r.rows[0].id, m.diretivo_id]);
+  }
+  req.session.msg = ['Atividade criada!'];
+  res.redirect('/frequencia-diretivos?turma=' + turma_id);
+});
+
+router.post('/frequencia-diretivos/atividade/:id/presenca', requireAuth, requireSecretaria, async (req, res) => {
+  const atR = await query('SELECT * FROM diretivo_atividades WHERE id=$1', [req.params.id]);
+  const at = atR.rows[0];
+  if (!at) return res.redirect('/frequencia-diretivos');
+  const membros = await query('SELECT diretivo_id FROM diretivo_turma_membros WHERE turma_id=$1', [at.turma_id]);
+  const presentes = [].concat(req.body.presentes || []).map(Number);
+  for (const m of membros.rows) {
+    await query(
+      'INSERT INTO diretivo_presencas (atividade_id,diretivo_id,presente) VALUES ($1,$2,$3) ON CONFLICT (atividade_id,diretivo_id) DO UPDATE SET presente=$3',
+      [at.id, m.diretivo_id, presentes.includes(m.diretivo_id) ? 1 : 0]
+    );
+  }
+  req.session.msg = ['Presenças salvas!'];
+  res.redirect('/frequencia-diretivos?turma=' + at.turma_id);
+});
+
+router.post('/frequencia-diretivos/atividade/:id/deletar', requireAuth, requireSecretaria, async (req, res) => {
+  const atR = await query('SELECT turma_id FROM diretivo_atividades WHERE id=$1', [req.params.id]);
+  const turma_id = atR.rows[0]?.turma_id;
+  await query('DELETE FROM diretivo_presencas WHERE atividade_id=$1', [req.params.id]);
+  await query('DELETE FROM diretivo_atividades WHERE id=$1', [req.params.id]);
+  req.session.msg = ['Atividade removida!'];
+  res.redirect('/frequencia-diretivos?turma=' + turma_id);
+});
+
+router.post('/frequencia-diretivos/turma/:id/adicionar-membro', requireAuth, requireSecretaria, async (req, res) => {
+  const { diretivo_id, data_entrada } = req.body;
+  await query('INSERT INTO diretivo_turma_membros (turma_id,diretivo_id,data_entrada) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING',
+    [req.params.id, diretivo_id, data_entrada]);
+  const ats = await query('SELECT id FROM diretivo_atividades WHERE turma_id=$1', [req.params.id]);
+  for (const at of ats.rows) {
+    await query('INSERT INTO diretivo_presencas (atividade_id,diretivo_id,presente) VALUES ($1,$2,0) ON CONFLICT DO NOTHING',
+      [at.id, diretivo_id]);
+  }
+  req.session.msg = ['Diretivo adicionado à turma!'];
+  res.redirect('/frequencia-diretivos?turma=' + req.params.id);
+});
+
+router.post('/frequencia-diretivos/turma/:id/remover-membro', requireAuth, requireSecretaria, async (req, res) => {
+  await query('DELETE FROM diretivo_turma_membros WHERE turma_id=$1 AND diretivo_id=$2',
+    [req.params.id, req.body.diretivo_id]);
+  req.session.msg = ['Diretivo removido da turma!'];
+  res.redirect('/frequencia-diretivos?turma=' + req.params.id);
+});
+
+router.get('/frequencia-diretivos/relatorio/:turmaId', requireAuth, requireSecretaria, async (req, res) => {
+  const config = await getConfig();
+  const turmaR = await query('SELECT * FROM diretivo_turmas WHERE id=$1', [req.params.turmaId]);
+  const turma = turmaR.rows[0];
+  if (!turma) return res.redirect('/frequencia-diretivos');
+
+  const membros = await query(
+    `SELECT d.id, d.nome, d.cargo,
+      (SELECT COUNT(*) FROM diretivo_atividades a WHERE a.turma_id=$1) as total_atividades,
+      (SELECT COUNT(*) FROM diretivo_presencas p JOIN diretivo_atividades a ON a.id=p.atividade_id WHERE a.turma_id=$1 AND p.diretivo_id=d.id AND p.presente=1) as presencas
+     FROM diretivo_turma_membros tm JOIN diretivos d ON d.id=tm.diretivo_id WHERE tm.turma_id=$1 ORDER BY d.nome`,
+    [req.params.turmaId]
+  );
+  const atividades = await query(
+    'SELECT id, tipo, descricao, data_atividade FROM diretivo_atividades WHERE turma_id=$1 ORDER BY data_atividade',
+    [req.params.turmaId]
+  );
+  const pd = {};
+  for (const at of atividades.rows) {
+    const pr = await query('SELECT diretivo_id, presente FROM diretivo_presencas WHERE atividade_id=$1', [at.id]);
+    pd[at.id] = {};
+    pr.rows.forEach(p => { pd[at.id][p.diretivo_id] = p.presente; });
+  }
+
+  const orgNome = config.org_nome || 'Liga Urologia';
+  const orgCor = config.org_cor || '#1a56db';
+  const orgLogo = config.org_logo || null;
+  const logoHtml = orgLogo ? '<div style="text-align:center;margin-bottom:16px"><img src="' + orgLogo + '" style="max-height:90px;object-fit:contain"></div>' : '';
+
+  let linhasMembros = membros.rows.map(m => {
+    const pct = m.total_atividades > 0 ? Math.round((m.presencas/m.total_atividades)*100) : 0;
+    const faltas = Number(m.total_atividades) - Number(m.presencas);
+    const status = pct>=75?'APTO':pct>=50?'EM RISCO':'NAO APTO';
+    const cor = pct>=75?'#22c55e':pct>=50?'#f59e0b':'#ef4444';
+    return '<tr><td style="padding:10px;border:1px solid #e5e7eb">' + m.nome + '</td>'
+      + '<td style="padding:10px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280">' + (m.cargo||'') + '</td>'
+      + '<td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:#22c55e;font-weight:600">' + m.presencas + '</td>'
+      + '<td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:#ef4444;font-weight:600">' + faltas + '</td>'
+      + '<td style="padding:10px;border:1px solid #e5e7eb;text-align:center">' + m.total_atividades + '</td>'
+      + '<td style="padding:10px;border:1px solid #e5e7eb;text-align:center"><strong>' + pct + '%</strong></td>'
+      + '<td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:' + cor + ';font-weight:bold">' + status + '</td></tr>';
+  }).join('');
+
+  let headerAt = '<th style="padding:10px;background:'+orgCor+';color:white;text-align:left;min-width:150px">Membro</th>'
+    + '<th style="padding:10px;background:'+orgCor+';color:white;text-align:left">Cargo</th>';
+  for (const at of atividades.rows) {
+    const dt = new Date(at.data_atividade).toLocaleDateString('pt-BR',{timeZone:'UTC'});
+    headerAt += '<th style="padding:8px;background:'+orgCor+';color:white;text-align:center;font-size:11px;min-width:80px">'+dt+'<br>'+at.tipo+'<br>'+at.descricao.substring(0,12)+'</th>';
+  }
+  let linhasAt = '';
+  for (const m of membros.rows) {
+    let cols = '<td style="padding:8px;border:1px solid #e5e7eb;font-weight:600">' + m.nome + '</td>'
+      + '<td style="padding:8px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280">' + (m.cargo||'') + '</td>';
+    for (const at of atividades.rows) {
+      const presente = pd[at.id] && pd[at.id][m.id] ? 1 : 0;
+      cols += '<td style="padding:8px;border:1px solid #e5e7eb;text-align:center;background:'+(presente?'#dcfce7':'#fee2e2')+';color:'+(presente?'#166534':'#991b1b')+';font-weight:600">'+(presente?'SIM':'NAO')+'</td>';
+    }
+    linhasAt += '<tr>' + cols + '</tr>';
+  }
+
+  const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório Diretivos</title>'
+    + '<style>body{font-family:Arial,sans-serif;padding:30px}table{width:100%;border-collapse:collapse}h3{color:'+orgCor+'}@media print{.no-print{display:none}}</style>'
+    + '</head><body>'
+    + '<div class="no-print" style="margin-bottom:20px"><button onclick="window.print()" style="background:'+orgCor+';color:white;border:none;padding:10px 24px;border-radius:6px;cursor:pointer">Imprimir / Salvar PDF</button></div>'
+    + logoHtml
+    + '<div style="text-align:center;padding-bottom:16px;border-bottom:3px solid '+orgCor+';margin-bottom:24px">'
+    + '<h1 style="margin:0 0 6px;color:'+orgCor+'">Relatório de Frequência — Diretivos</h1>'
+    + '<p style="margin:0;color:#6b7280">Turma: <strong>'+turma.nome+'</strong> | Total atividades: <strong>'+atividades.rows.length+'</strong> | Mínimo 75% | '+new Date().toLocaleString('pt-BR')+'</p>'
+    + '</div>'
+    + '<h3>Resumo por diretivo</h3>'
+    + '<table><thead><tr>'
+    + '<th style="padding:10px;background:'+orgCor+';color:white;text-align:left">Nome</th>'
+    + '<th style="padding:10px;background:'+orgCor+';color:white;text-align:left">Cargo</th>'
+    + '<th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Presenças</th>'
+    + '<th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Faltas</th>'
+    + '<th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Total</th>'
+    + '<th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Frequência</th>'
+    + '<th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Status</th>'
+    + '</tr></thead><tbody>'+linhasMembros+'</tbody></table>'
+    + '<br><h3>Presenças por atividade</h3>'
+    + '<div style="overflow-x:auto"><table><thead><tr>'+headerAt+'</tr></thead><tbody>'+linhasAt+'</tbody></table></div>'
+    + '</body></html>';
+
+  res.send(html);
+});
+
+
 module.exports = router;
