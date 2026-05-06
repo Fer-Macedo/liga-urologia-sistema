@@ -1132,55 +1132,87 @@ router.get('/frequencia-diretivos/relatorio/:turmaId', requireAuth, requireSecre
 
 
 
-// ─── ARQUIVOS — Cloudflare R2 ─────────────────────────────────────────────────
+
+// ─── ARQUIVOS — Cloudflare R2 com Pastas ─────────────────────────────────────
 
 router.get('/arquivos', requireAuth, async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg || []; req.session.msg = [];
   const erro = req.session.erro || []; req.session.erro = [];
 
-  const r = await query('SELECT * FROM arquivos WHERE ativo=1 ORDER BY criado_em DESC');
-  const arquivos = r.rows;
+  const pastaId = req.query.pasta || null;
+  const pastasR = await query('SELECT * FROM arquivo_pastas ORDER BY nome');
+  const pastas = pastasR.rows;
+
+  let pastaAtual = null;
+  if (pastaId) {
+    pastaAtual = pastas.find(p => p.id == pastaId) || null;
+  }
+
+  // Busca arquivos da pasta atual
+  let arquivosR;
+  if (pastaId) {
+    arquivosR = await query('SELECT * FROM arquivos WHERE ativo=1 AND pasta_id=$1 ORDER BY criado_em DESC', [pastaId]);
+  } else {
+    arquivosR = await query('SELECT * FROM arquivos WHERE ativo=1 AND pasta_id IS NULL ORDER BY criado_em DESC');
+  }
 
   const { iconeArquivo } = require('../services/arquivos');
-  arquivos.forEach(a => {
-    a.icone = iconeArquivo(a.mimetype);
+  const arquivos = arquivosR.rows.map(a => {
     const kb = a.tamanho / 1024;
-    a.tamanho_fmt = kb > 1024 ? (kb/1024).toFixed(1)+'MB' : kb.toFixed(0)+'KB';
+    return { ...a, icone: iconeArquivo(a.mimetype), tamanho_fmt: kb > 1024 ? (kb/1024).toFixed(1)+'MB' : kb.toFixed(0)+'KB' };
   });
 
-  const stats = {
-    total: arquivos.length,
-    fotos: arquivos.filter(a => a.categoria === 'fotos').length,
-    videos: arquivos.filter(a => a.categoria === 'videos').length,
-    documentos: arquivos.filter(a => ['documentos','pdfs','planilhas','apresentacoes'].includes(a.categoria)).length
-  };
+  res.render('pages/arquivos', { config, msg, erro, usuario: req.session.usuario, arquivos, pastas, pastaAtual });
+});
 
-  res.render('pages/arquivos', { config, msg, erro, usuario: req.session.usuario, arquivos, stats });
+router.post('/arquivos/pasta', requireAuth, requireSecretaria, async (req, res) => {
+  const { nome, pasta_pai_id, icone, cor } = req.body;
+  await query('INSERT INTO arquivo_pastas (nome, pasta_pai_id, icone, cor) VALUES ($1,$2,$3,$4)',
+    [nome, pasta_pai_id || null, icone || '📁', cor || '#1a56db']);
+  req.session.msg = ['Pasta criada com sucesso!'];
+  res.redirect('/arquivos' + (pasta_pai_id ? '?pasta=' + pasta_pai_id : ''));
 });
 
 router.post('/arquivos/upload', requireAuth, async (req, res) => {
   try {
-    const { upload, uploadArquivo, categoriaArquivo } = require('../services/arquivos');
+    const { upload, uploadArquivo } = require('../services/arquivos');
     upload.array('arquivo', 20)(req, res, async (err) => {
       if (err) { req.session.erro = [err.message]; return res.redirect('/arquivos'); }
       if (!req.files || req.files.length === 0) { req.session.erro = ['Nenhum arquivo selecionado.']; return res.redirect('/arquivos'); }
-
+      const pastaId = req.body.pasta_id || null;
       for (const file of req.files) {
         const r = await uploadArquivo(file.buffer, file.originalname, file.mimetype);
         await query(
-          'INSERT INTO arquivos (nome_original, chave_r2, categoria, mimetype, tamanho, enviado_por) VALUES ($1,$2,$3,$4,$5,$6)',
-          [file.originalname, r.chave, r.categoria, r.mimetype, r.tamanho, req.session.usuario.id]
+          'INSERT INTO arquivos (nome_original, chave_r2, categoria, mimetype, tamanho, enviado_por, pasta_id) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+          [file.originalname, r.chave, r.categoria, r.mimetype, r.tamanho, req.session.usuario.id, pastaId]
         );
       }
-
-      req.session.msg = [req.files.length + ' arquivo(s) enviado(s) com sucesso!'];
-      res.redirect('/arquivos');
+      req.session.msg = [req.files.length + ' arquivo(s) enviado(s)!'];
+      res.redirect('/arquivos' + (pastaId ? '?pasta=' + pastaId : ''));
     });
   } catch(e) {
-    console.error('Upload erro:', e.message);
     req.session.erro = ['Erro ao fazer upload: ' + e.message];
     res.redirect('/arquivos');
+  }
+});
+
+router.get('/arquivos/:id/visualizar', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT * FROM arquivos WHERE id=$1 AND ativo=1', [req.params.id]);
+    const arquivo = r.rows[0];
+    if (!arquivo) return res.status(404).send('Arquivo não encontrado');
+    const { gerarUrlDownload } = require('../services/arquivos');
+    // Para imagens e PDFs abre inline, outros faz download
+    const inline = ['image/jpeg','image/png','image/gif','image/webp','application/pdf'].includes(arquivo.mimetype);
+    const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
+    const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+    const R2 = new S3Client({ region:'auto', endpoint:process.env.R2_ENDPOINT, credentials:{ accessKeyId:process.env.R2_ACCESS_KEY_ID, secretAccessKey:process.env.R2_SECRET_ACCESS_KEY } });
+    const cmd = new GetObjectCommand({ Bucket: process.env.R2_BUCKET || 'liga-urologia-files', Key: arquivo.chave_r2, ResponseContentDisposition: inline ? 'inline' : 'attachment; filename="'+encodeURIComponent(arquivo.nome_original)+'"', ResponseContentType: arquivo.mimetype });
+    const url = await getSignedUrl(R2, cmd, { expiresIn: 3600 });
+    res.redirect(url);
+  } catch(e) {
+    res.status(500).send('Erro ao visualizar arquivo: ' + e.message);
   }
 });
 
@@ -1198,6 +1230,27 @@ router.get('/arquivos/:id/download', requireAuth, async (req, res) => {
   }
 });
 
+router.post('/arquivos/:id/substituir', requireAuth, async (req, res) => {
+  try {
+    const { upload, uploadArquivo, deletarArquivo } = require('../services/arquivos');
+    upload.single('arquivo')(req, res, async (err) => {
+      if (err || !req.file) { req.session.erro = ['Erro ao substituir.']; return res.redirect('/arquivos'); }
+      const r = await query('SELECT * FROM arquivos WHERE id=$1', [req.params.id]);
+      const antigo = r.rows[0];
+      if (!antigo) { req.session.erro = ['Arquivo não encontrado.']; return res.redirect('/arquivos'); }
+      await deletarArquivo(antigo.chave_r2);
+      const novo = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype);
+      await query('UPDATE arquivos SET nome_original=$1, chave_r2=$2, categoria=$3, mimetype=$4, tamanho=$5 WHERE id=$6',
+        [req.file.originalname, novo.chave, novo.categoria, novo.mimetype, novo.tamanho, req.params.id]);
+      req.session.msg = ['Arquivo substituído com sucesso!'];
+      res.redirect('/arquivos' + (antigo.pasta_id ? '?pasta=' + antigo.pasta_id : ''));
+    });
+  } catch(e) {
+    req.session.erro = ['Erro ao substituir: ' + e.message];
+    res.redirect('/arquivos');
+  }
+});
+
 router.post('/arquivos/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
   try {
     const r = await query('SELECT * FROM arquivos WHERE id=$1', [req.params.id]);
@@ -1207,10 +1260,10 @@ router.post('/arquivos/:id/deletar', requireAuth, requireAdmin, async (req, res)
       await deletarArquivo(arquivo.chave_r2);
       await query('UPDATE arquivos SET ativo=0 WHERE id=$1', [req.params.id]);
     }
-    req.session.msg = ['Arquivo excluído com sucesso!'];
-    res.redirect('/arquivos');
+    req.session.msg = ['Arquivo excluído!'];
+    res.redirect('/arquivos' + (arquivo && arquivo.pasta_id ? '?pasta=' + arquivo.pasta_id : ''));
   } catch(e) {
-    req.session.erro = ['Erro ao excluir arquivo.'];
+    req.session.erro = ['Erro ao excluir.'];
     res.redirect('/arquivos');
   }
 });
