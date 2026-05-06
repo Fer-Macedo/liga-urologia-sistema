@@ -21,8 +21,6 @@
     .risco { background:#f59e0b; }
     .inapto { background:#ef4444; }
     .pct-label { font-size:12px;font-weight:600;min-width:40px;text-align:right; }
-    .check-wrap { display:flex;align-items:center;gap:8px; }
-    .check-membro { width:20px;height:20px;cursor:pointer;accent-color:var(--cor-primaria); }
   </style>
 </head>
 <body>
@@ -40,11 +38,11 @@
       <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
       <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
 
-      <!-- Seletor de turma -->
+      <!-- Seletor de turma — ordenado por nome (ex: 2025.1, 2025.2, 2026.1) -->
       <div class="freq-card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
         <div style="font-size:13px;font-weight:600;color:var(--texto2)">TURMA:</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;flex:1">
-          <% turmas.forEach(t => { %>
+          <% turmas.slice().sort((a,b) => a.nome.localeCompare(b.nome)).forEach(t => { %>
             <a href="/frequencia?turma=<%= t.id %>"
               class="filtro-btn <%= turmaAtual && turmaAtual.id == t.id ? 'ativo' : '' %>">
               <%= t.nome %>
@@ -100,6 +98,7 @@
             <% } %>
             <% membrosFrequencia.forEach(m => {
               const pct = m.total_atividades > 0 ? Math.round((m.presencas / m.total_atividades) * 100) : 0;
+              const faltas = m.total_atividades - m.presencas;
               const cor = pct >= 75 ? 'apto' : pct >= 50 ? 'risco' : 'inapto';
               const corTexto = pct >= 75 ? 'var(--verde)' : pct >= 50 ? 'var(--amarelo)' : 'var(--vermelho)';
             %>
@@ -107,10 +106,10 @@
               <div style="display:flex;align-items:center;gap:10px;flex:1">
                 <div class="avatar" style="width:32px;height:32px;font-size:11px"><%= m.nome.substring(0,2).toUpperCase() %></div>
                 <div style="flex:1;min-width:0">
-                  <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%= m.nome.split(' ').slice(0,3).join(' ') %></div>
+                  <div style="font-size:13px;font-weight:600"><%= m.nome %></div>
                   <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
                     <div class="barra-wrap"><div class="barra <%= cor %>" style="width:<%= pct %>%"></div></div>
-                    <span style="font-size:11px;color:var(--texto2)"><%= m.presencas %>/<%= m.total_atividades %></span>
+                    <span style="font-size:11px;color:var(--texto2)">✅ <%= m.presencas %> | ❌ <%= faltas %> | Total: <%= m.total_atividades %></span>
                   </div>
                 </div>
               </div>
@@ -152,12 +151,12 @@
             </div>
           </div>
           <form action="/frequencia/atividade/<%= a.id %>/presenca" method="POST">
-            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;margin-bottom:12px">
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px;margin-bottom:12px">
               <% a.membros.forEach(m => { %>
               <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--fundo);border-radius:8px;border:1px solid var(--borda);cursor:pointer">
                 <input type="checkbox" name="presentes" value="<%= m.membro_id %>"
-                  class="check-membro" <%= m.presente ? 'checked' : '' %>>
-                <span style="font-size:13px"><%= m.nome.split(' ').slice(0,2).join(' ') %></span>
+                  style="width:18px;height:18px;accent-color:var(--cor-primaria)" <%= m.presente ? 'checked' : '' %>>
+                <span style="font-size:13px"><%= m.nome %></span>
               </label>
               <% }) %>
             </div>
@@ -169,7 +168,7 @@
         <% }) %>
       </div>
 
-      <!-- Tab Membros -->
+      <!-- Tab Membros — nome completo -->
       <div id="tab-membros" class="tab-content">
         <div class="freq-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -181,13 +180,17 @@
           <% } %>
           <% membrosFrequencia.forEach(m => {
             const pct = m.total_atividades > 0 ? Math.round((m.presencas / m.total_atividades) * 100) : 0;
+            const faltas = m.total_atividades - m.presencas;
           %>
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--borda)">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--borda)">
             <div style="display:flex;align-items:center;gap:10px">
               <div class="avatar" style="width:32px;height:32px;font-size:11px"><%= m.nome.substring(0,2).toUpperCase() %></div>
               <div>
-                <div style="font-size:13px;font-weight:600"><%= m.nome.split(' ').slice(0,3).join(' ') %></div>
-                <div style="font-size:11px;color:var(--texto2)">Desde <%= new Date(m.data_entrada+'T12:00:00').toLocaleDateString('pt-BR') %></div>
+                <div style="font-size:13px;font-weight:600"><%= m.nome %></div>
+                <div style="font-size:11px;color:var(--texto2)">
+                  Desde <%= new Date(m.data_entrada+'T12:00:00').toLocaleDateString('pt-BR') %> &nbsp;|&nbsp;
+                  ✅ <%= m.presencas %> presenças &nbsp;|&nbsp; ❌ <%= faltas %> faltas
+                </div>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:8px">
@@ -261,12 +264,13 @@
         <div class="campo">
           <label class="label">Tipo de atividade *</label>
           <select name="tipo" class="input" required>
-            <option value="Aula Teórica">📚 Aula Teórica</option>
-            <option value="Aula Prática">🔬 Aula Prática</option>
+            <option value="Aula Presencial">📚 Aula Presencial</option>
+            <option value="Aula On-line">💻 Aula On-line</option>
             <option value="Extensão">🌐 Extensão</option>
             <option value="Reunião">👥 Reunião</option>
             <option value="Bienvenidas">🎉 Bienvenidas</option>
             <option value="Expoligas">🏆 Expoligas</option>
+            <option value="Outras">📌 Outras</option>
           </select>
         </div>
         <div class="campo">
