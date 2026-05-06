@@ -1,5 +1,43 @@
 const express = require('express');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const xss = require('xss');
 const router = express.Router();
+
+// ─── SEGURANÇA ────────────────────────────────────────────────────────────────
+router.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
+
+// Rate limit geral
+const limiterGeral = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  message: 'Muitas requisições. Tente novamente em 15 minutos.',
+  standardHeaders: true,
+  legacyHeaders: false
+});
+router.use(limiterGeral);
+
+// Rate limit para login
+const limiterLogin = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'Muitas tentativas de login. Aguarde 15 minutos.'
+});
+
+// Sanitiza inputs contra XSS
+router.use((req, res, next) => {
+  if (req.body) {
+    for (const key in req.body) {
+      if (typeof req.body[key] === 'string') {
+        req.body[key] = xss(req.body[key]);
+      }
+    }
+  }
+  next();
+});
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const dayjs = require('dayjs');
@@ -7,6 +45,18 @@ const { query } = require('../models/database');
 const { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria, requirePermissao } = require('../middleware/auth');
 const { criarCobranca, consultarPagamento } = require('../services/mercadopago');
 const { notificarCobranca } = require('../services/notificacoes');
+
+// ─── LOG DE ATIVIDADES ───────────────────────────────────────────────────────
+async function logAtividade(usuarioId, acao, detalhes, req) {
+  try {
+    const ip = req ? (req.headers['x-forwarded-for'] || req.connection.remoteAddress || '') : '';
+    const userAgent = req ? (req.headers['user-agent'] || '') : '';
+    await query(
+      'INSERT INTO log_atividades (usuario_id, acao, detalhes, ip, user_agent) VALUES ($1,$2,$3,$4,$5)',
+      [usuarioId, acao, detalhes, ip.substring(0,50), userAgent.substring(0,200)]
+    );
+  } catch(e) { /* silencioso */ }
+}
 
 async function getConfig() {
   const r = await query('SELECT chave, valor FROM configuracoes');
@@ -1133,6 +1183,42 @@ router.get('/frequencia-diretivos/relatorio/:turmaId', requireAuth, requireSecre
 
 
 
+// ─── LOG DE ATIVIDADES — Painel ──────────────────────────────────────────────
+
+router.get('/auditoria', requireAuth, requireAdmin, async (req, res) => {
+  const config = await getConfig();
+  const pagina = parseInt(req.query.pagina) || 1;
+  const limite = 50;
+  const offset = (pagina - 1) * limite;
+  const filtroUsuario = req.query.usuario || '';
+  const filtroAcao = req.query.acao || '';
+
+  let where = 'WHERE 1=1';
+  const params = [];
+  if (filtroUsuario) { params.push('%'+filtroUsuario+'%'); where += ' AND u.nome ILIKE $'+params.length; }
+  if (filtroAcao) { params.push(filtroAcao); where += ' AND l.acao = $'+params.length; }
+
+  params.push(limite); params.push(offset);
+  const r = await query(`
+    SELECT l.*, u.nome as usuario_nome, u.email as usuario_email, u.perfil
+    FROM log_atividades l
+    LEFT JOIN usuarios u ON l.usuario_id = u.id
+    ${where}
+    ORDER BY l.criado_em DESC
+    LIMIT $${params.length-1} OFFSET $${params.length}
+  `, params);
+
+  const total = await query(`SELECT COUNT(*) FROM log_atividades l LEFT JOIN usuarios u ON l.usuario_id = u.id ${where}`, params.slice(0,-2));
+
+  res.render('pages/auditoria', {
+    config, usuario: req.session.usuario,
+    logs: r.rows,
+    pagina, limite,
+    total: parseInt(total.rows[0].count),
+    filtroUsuario, filtroAcao
+  });
+});
+
 // ─── ARQUIVOS — Cloudflare R2 com Pastas ─────────────────────────────────────
 
 router.get('/arquivos', requireAuth, async (req, res) => {
@@ -1167,12 +1253,50 @@ router.get('/arquivos', requireAuth, async (req, res) => {
   res.render('pages/arquivos', { config, msg, erro, usuario: req.session.usuario, arquivos, pastas, pastaAtual, stats });
 });
 
-router.post('/arquivos/pasta', requireAuth, requireSecretaria, async (req, res) => {
+router.post('/arquivos/pasta', requireAuth, async (req, res) => {
   const { nome, pasta_pai_id, icone, cor } = req.body;
   await query('INSERT INTO arquivo_pastas (nome, pasta_pai_id, icone, cor) VALUES ($1,$2,$3,$4)',
     [nome, pasta_pai_id || null, icone || '📁', cor || '#1a56db']);
   req.session.msg = ['Pasta criada com sucesso!'];
   res.redirect('/arquivos' + (pasta_pai_id ? '?pasta=' + pasta_pai_id : ''));
+});
+
+router.post('/arquivos/pasta/:id/renomear', requireAuth, async (req, res) => {
+  const { nome } = req.body;
+  const r = await query('SELECT * FROM arquivo_pastas WHERE id=$1', [req.params.id]);
+  const pasta = r.rows[0];
+  if (!pasta) { req.session.erro = ['Pasta não encontrada.']; return res.redirect('/arquivos'); }
+  await query('UPDATE arquivo_pastas SET nome=$1 WHERE id=$2', [nome, req.params.id]);
+  await logAtividade(req.session.usuario.id, 'PASTA_RENOMEADA', 'Pasta renomeada: ' + pasta.nome + ' → ' + nome, req);
+  req.session.msg = ['Pasta renomeada com sucesso!'];
+  res.redirect('/arquivos' + (pasta.pasta_pai_id ? '?pasta=' + pasta.pasta_pai_id : ''));
+});
+
+router.post('/arquivos/pasta/:id/deletar', requireAuth, async (req, res) => {
+  const r = await query('SELECT * FROM arquivo_pastas WHERE id=$1', [req.params.id]);
+  const pasta = r.rows[0];
+  if (!pasta) { req.session.erro = ['Pasta não encontrada.']; return res.redirect('/arquivos'); }
+  const filhos = await query('SELECT COUNT(*) FROM arquivo_pastas WHERE pasta_pai_id=$1', [req.params.id]);
+  const arquivosNaPasta = await query('SELECT COUNT(*) FROM arquivos WHERE pasta_id=$1 AND ativo=1', [req.params.id]);
+  if (parseInt(filhos.rows[0].count) > 0 || parseInt(arquivosNaPasta.rows[0].count) > 0) {
+    req.session.erro = ['Pasta não pode ser excluída pois contém arquivos ou subpastas.'];
+    return res.redirect('/arquivos' + (pasta.pasta_pai_id ? '?pasta=' + pasta.pasta_pai_id : ''));
+  }
+  await query('DELETE FROM arquivo_pastas WHERE id=$1', [req.params.id]);
+  await logAtividade(req.session.usuario.id, 'PASTA_DELETADA', 'Pasta excluída: ' + pasta.nome, req);
+  req.session.msg = ['Pasta excluída com sucesso!'];
+  res.redirect('/arquivos' + (pasta.pasta_pai_id ? '?pasta=' + pasta.pasta_pai_id : ''));
+});
+
+router.post('/arquivos/:id/mover', requireAuth, async (req, res) => {
+  const { pasta_id } = req.body;
+  const r = await query('SELECT * FROM arquivos WHERE id=$1', [req.params.id]);
+  const arquivo = r.rows[0];
+  if (!arquivo) { req.session.erro = ['Arquivo não encontrado.']; return res.redirect('/arquivos'); }
+  await query('UPDATE arquivos SET pasta_id=$1 WHERE id=$2', [pasta_id || null, req.params.id]);
+  await logAtividade(req.session.usuario.id, 'ARQUIVO_MOVIDO', 'Arquivo movido: ' + arquivo.nome_original, req);
+  req.session.msg = ['Arquivo movido com sucesso!'];
+  res.redirect('/arquivos' + (pasta_id ? '?pasta=' + pasta_id : ''));
 });
 
 router.post('/arquivos/upload', requireAuth, async (req, res) => {
@@ -1189,6 +1313,7 @@ router.post('/arquivos/upload', requireAuth, async (req, res) => {
           [file.originalname, r.chave, r.categoria, r.mimetype, r.tamanho, req.session.usuario.id, pastaId]
         );
       }
+      await logAtividade(req.session.usuario.id, 'UPLOAD', req.files.length + ' arquivo(s) enviado(s)', req);
       req.session.msg = [req.files.length + ' arquivo(s) enviado(s)!'];
       res.redirect('/arquivos' + (pastaId ? '?pasta=' + pastaId : ''));
     });
@@ -1243,6 +1368,7 @@ router.post('/arquivos/:id/substituir', requireAuth, async (req, res) => {
       const novo = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype);
       await query('UPDATE arquivos SET nome_original=$1, chave_r2=$2, categoria=$3, mimetype=$4, tamanho=$5 WHERE id=$6',
         [req.file.originalname, novo.chave, novo.categoria, novo.mimetype, novo.tamanho, req.params.id]);
+      await logAtividade(req.session.usuario.id, 'ARQUIVO_SUBSTITUIDO', 'Arquivo substituído: ' + req.file.originalname, req);
       req.session.msg = ['Arquivo substituído com sucesso!'];
       res.redirect('/arquivos' + (antigo.pasta_id ? '?pasta=' + antigo.pasta_id : ''));
     });
@@ -1261,6 +1387,7 @@ router.post('/arquivos/:id/deletar', requireAuth, requireAdmin, async (req, res)
       await deletarArquivo(arquivo.chave_r2);
       await query('UPDATE arquivos SET ativo=0 WHERE id=$1', [req.params.id]);
     }
+    await logAtividade(req.session.usuario.id, 'ARQUIVO_DELETADO', 'Arquivo excluído: ' + (arquivo ? arquivo.nome_original : ''), req);
     req.session.msg = ['Arquivo excluído!'];
     res.redirect('/arquivos' + (arquivo && arquivo.pasta_id ? '?pasta=' + arquivo.pasta_id : ''));
   } catch(e) {
