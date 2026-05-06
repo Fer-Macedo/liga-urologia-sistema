@@ -88,8 +88,12 @@ INFORMAÇÕES DA LIGA:
 - Mensalidade: R$ 25,00 (R$ 20,00 com 20% de desconto pagando até dia 16)
 - Certificados UCP CDE: aparecem no portal da UCP na aba Eventos automaticamente
 - Certificados externos: enviados via link no grupo do WhatsApp do evento
-- Prazo certificados: até 30 dias após encerramento do evento/semestre
-- Frequência mínima para certificado: 75% de presença
+- Prazo certificados: até 90 dias após o término do evento, porém normalmente são lançados muito antes
+- Acompanhe o grupo do WhatsApp do evento — a equipe da Liga avisa quando o certificado for lançado
+- Certificados de eventos presenciais: é necessário ter assinado a lista de presença no evento
+- Certificados de eventos on-line: é necessário ter preenchido o check-out ao final da aula
+- NÃO há percentual mínimo de frequência para certificado de eventos — basta confirmar a presença
+- Frequência mínima 75%: aplica-se apenas ao certificado anual da Liga (membros e diretivos), NÃO para certificados de eventos
 - Relatório de frequência: enviado automaticamente no último dia de cada mês
 - Formas de pagamento: PIX ou Cartão de crédito
 
@@ -121,8 +125,12 @@ INFORMACIÓN DE LA LIGA:
 - Mensualidad: R$ 25,00 (R$ 20,00 con 20% de descuento pagando hasta el día 16)
 - Certificados UCP CDE: aparecen en el portal UCP en la pestaña Eventos automáticamente
 - Certificados externos: enviados por enlace en el grupo de WhatsApp del evento
-- Plazo certificados: hasta 30 días después del cierre del evento/semestre
-- Asistencia mínima para certificado: 75%
+- Plazo certificados: hasta 90 días después del cierre del evento, aunque normalmente se lanzan mucho antes
+- Sigue el grupo de WhatsApp del evento — el equipo de la Liga avisa cuando el certificado esté disponible
+- Certificados de eventos presenciales: es necesario haber firmado la lista de asistencia
+- Certificados de eventos online: es necesario haber completado el check-out al final de la clase
+- NO hay porcentaje mínimo de asistencia para certificados de eventos — solo confirmar la presencia
+- Asistencia mínima 75%: aplica solo al certificado anual de la Liga (miembros y directivos), NO para certificados de eventos
 - Reporte de asistencia: enviado automáticamente el último día de cada mes
 
 ÁREAS DE CONTACTO: Secretaría, Finanzas, Científico, Extensión, Enseñanza, Marketing, Presidencia
