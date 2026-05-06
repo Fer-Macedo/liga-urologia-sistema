@@ -38,7 +38,7 @@
                 <% if (u.perfil === 'admin') { %><span class="badge azul">Administrador</span>
                 <% } else if (u.perfil === 'financeiro') { %><span class="badge amarelo">Financeiro</span>
                 <% } else if (u.perfil === 'secretaria') { %><span class="badge cinza">Secretaria</span>
-                <% } else { %><span class="badge cinza">Visualizador</span><% } %>
+                <% } else if (u.perfil === 'presidencia') { %><span class="badge" style="background:#f0fdf4;color:#15803d">Presidência</span><% } else { %><span class="badge cinza">Visualizador</span><% } %>
               </td>
               <td><span class="badge <%= u.ativo ? 'verde' : 'vermelho' %>"><%= u.ativo ? 'Ativo' : 'Inativo' %></span></td>
               <td><%= new Date(u.criado_em).toLocaleDateString('pt-BR') %></td>
@@ -63,10 +63,11 @@
 
       <div class="info-box" style="margin-top:14px">
         <strong>Perfis disponíveis:</strong><br>
-        <span style="color:var(--cor-primaria)">Administrador</span> — acesso total ao sistema<br>
-        <span style="color:#9f580a">Financeiro</span> — gerencia membros, cobranças e notificações<br>
-        <span style="color:#6b7280">Secretaria</span> — lança frequências e atividades das turmas<br>
-        <span style="color:#6b7280">Visualizador</span> — somente visualização<br>
+        <span style="color:#1a56db;font-weight:600">Administrador</span> — acesso total ao sistema<br>
+        <span style="color:#15803d;font-weight:600">Presidência</span> — permissões personalizadas<br>
+        <span style="color:#9f580a;font-weight:600">Financeiro</span> — gerencia membros, cobranças e notificações<br>
+        <span style="color:#7c3aed;font-weight:600">Secretaria</span> — lança frequências e atividades das turmas<br>
+        <span style="color:#6b7280;font-weight:600">Visualizador</span> — somente visualização<br>
         <br>💡 Clique em 🔐 para personalizar as permissões de cada usuário.
       </div>
     </div>
@@ -88,6 +89,7 @@
         <div class="campo full">
           <label class="label">Perfil de acesso</label>
           <select name="perfil" class="input" id="selectPerfil" onchange="atualizarPermissoesDefault()">
+            <option value="presidencia">Presidência</option>
             <option value="secretaria">Secretaria</option>
             <option value="financeiro">Financeiro</option>
             <option value="visualizador">Visualizador</option>
@@ -164,6 +166,7 @@ const TODOS_MODULOS = [
 ];
 
 const PERMISSOES_PADRAO = {
+  presidencia: ['dashboard', 'membros', 'cobrancas', 'frequencia', 'diretivos', 'frequencia-diretivos', 'aniversarios', 'notificacoes'],
   secretaria:  ['dashboard', 'membros', 'frequencia', 'diretivos', 'frequencia-diretivos', 'aniversarios'],
   financeiro:  ['dashboard', 'membros', 'cobrancas', 'aniversarios', 'notificacoes'],
   visualizador:['dashboard']
