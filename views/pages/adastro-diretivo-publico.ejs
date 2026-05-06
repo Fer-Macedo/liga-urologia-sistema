@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cadastro de Diretivo — <%= config.org_nome || 'Liga Acadêmica de Urologia' %></title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+    body { background: #f0f4ff; min-height: 100vh; padding: 32px 16px; }
+    .container { max-width: 720px; margin: 0 auto; }
+    .header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .logo { max-height: 80px; max-width: 200px; object-fit: contain; margin-bottom: 16px; }
+    .header h1 { font-size: 24px; font-weight: 700; color: #1a56db; margin-bottom: 6px; }
+    .header p { color: #6b7280; font-size: 14px; }
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+      margin-bottom: 20px;
+    }
+    .card-titulo {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1a56db;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .grid-1 { grid-template-columns: 1fr; }
+    .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .campo { display: flex; flex-direction: column; gap: 6px; }
+    .campo.full { grid-column: 1 / -1; }
+    label { font-size: 13px; font-weight: 600; color: #374151; }
+    label span { color: #ef4444; margin-left: 2px; }
+    input, select, textarea {
+      padding: 10px 14px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 14px;
+      color: #111827;
+      background: #f9fafb;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      font-family: 'Inter', sans-serif;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: #1a56db;
+      box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
+      background: white;
+    }
+    textarea { resize: vertical; min-height: 80px; }
+    .radio-group { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+    .radio-option {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 14px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    .radio-option input { width: auto; margin: 0; }
+    .radio-option:has(input:checked) { border-color: #1a56db; background: #eff6ff; color: #1a56db; font-weight: 600; }
+    .checkbox-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+    .checkbox-option {
+      display: flex; align-items: center; gap: 6px;
+      padding: 8px 14px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+    .checkbox-option input { width: auto; margin: 0; }
+    .checkbox-option:has(input:checked) { border-color: #1a56db; background: #eff6ff; color: #1a56db; font-weight: 600; }
+    .btn-submit {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #1a56db, #1e40af);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      margin-top: 8px;
+    }
+    .btn-submit:hover { opacity: 0.95; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(26,86,219,0.3); }
+    .alerta { padding: 14px 18px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; font-weight: 500; }
+    .alerta-ok { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+    .alerta-erro { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+    .footer { text-align: center; margin-top: 24px; color: #9ca3af; font-size: 12px; }
+    #campos-transporte { display: none; margin-top: 12px; }
+    @media (max-width: 600px) {
+      .grid, .grid-3 { grid-template-columns: 1fr; }
+      .card { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <% if (config.org_logo) { %>
+      <img src="<%= config.org_logo %>" alt="<%= config.org_nome %>" class="logo">
+    <% } %>
+    <h1>Cadastro de Diretivo</h1>
+    <p><%= config.org_nome || 'Liga Acadêmica de Urologia' %> — Preencha todos os campos obrigatórios</p>
+  </div>
+
+  <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
+  <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
+
+  <form action="/cadastro-diretivo" method="POST">
+
+    <!-- DADOS PESSOAIS -->
+    <div class="card">
+      <div class="card-titulo">👤 Dados Pessoais</div>
+      <div class="grid">
+        <div class="campo full">
+          <label>Nome Completo <span>*</span></label>
+          <input name="nome" required placeholder="Seu nome completo" value="<%= form.nome || '' %>">
+        </div>
+        <div class="campo">
+          <label>RG / C.I. <span>*</span></label>
+          <input name="rg" required placeholder="Número do RG ou CI" value="<%= form.rg || '' %>">
+        </div>
+        <div class="campo">
+          <label>CPF</label>
+          <input name="cpf" placeholder="000.000.000-00" value="<%= form.cpf || '' %>">
+        </div>
+        <div class="campo">
+          <label>Data de Nascimento <span>*</span></label>
+          <input name="data_nascimento" type="date" required value="<%= form.data_nascimento || '' %>">
+        </div>
+        <div class="campo">
+          <label>E-mail <span>*</span></label>
+          <input name="email" type="email" required placeholder="seu@email.com" value="<%= form.email || '' %>">
+        </div>
+        <div class="campo">
+          <label>WhatsApp <span>*</span></label>
+          <input name="whatsapp" required placeholder="+55 (00) 00000-0000" value="<%= form.whatsapp || '' %>">
+        </div>
+        <div class="campo">
+          <label>Instagram</label>
+          <input name="instagram" placeholder="@seuinstagram" value="<%= form.instagram || '' %>">
+        </div>
+        <div class="campo">
+          <label>Onde reside? <span>*</span></label>
+          <input name="onde_reside" required placeholder="Cidade, Estado / País" value="<%= form.onde_reside || '' %>">
+        </div>
+      </div>
+    </div>
+
+    <!-- DADOS ACADÊMICOS -->
+    <div class="card">
+      <div class="card-titulo">🎓 Dados Acadêmicos</div>
+      <div class="grid">
+        <div class="campo">
+          <label>Catraca (matrícula)</label>
+          <input name="catraca" placeholder="Número da catraca" value="<%= form.catraca || '' %>">
+        </div>
+        <div class="campo">
+          <label>Ano de Ingresso na Universidade <span>*</span></label>
+          <input name="ano_ingresso" required placeholder="Ex: 2025.1" value="<%= form.ano_ingresso || '' %>">
+        </div>
+        <div class="campo">
+          <label>Semestre / Turma atual <span>*</span></label>
+          <input name="semestre_turma" required placeholder="Ex: 2025.2" value="<%= form.semestre_turma || '' %>">
+        </div>
+        <div class="campo">
+          <label>ORCID</label>
+          <input name="orcid" placeholder="0000-0000-0000-0000" value="<%= form.orcid || '' %>">
+        </div>
+        <div class="campo full">
+          <label>Já possui alguma graduação ou curso técnico? Qual?</label>
+          <input name="graduacao" placeholder="Ex: Técnico em Enfermagem, Bacharel em..." value="<%= form.graduacao || '' %>">
+        </div>
+        <div class="campo full">
+          <label>Tem experiência com Urologia e afins?</label>
+          <textarea name="experiencia_urologia" placeholder="Descreva sua experiência, se houver..."><%= form.experiencia_urologia || '' %></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- DADOS DA LIGA -->
+    <div class="card">
+      <div class="card-titulo">🏥 Dados na Liga</div>
+      <div class="grid">
+        <div class="campo full">
+          <label>Cargo na Liga <span>*</span></label>
+          <select name="cargo" required>
+            <option value="">Selecione seu cargo...</option>
+            <option value="Presidente(a)" <%= form.cargo === 'Presidente(a)' ? 'selected' : '' %>>👑 Presidente(a)</option>
+            <option value="Vice-presidente(a)" <%= form.cargo === 'Vice-presidente(a)' ? 'selected' : '' %>>🥈 Vice-presidente(a)</option>
+            <option value="Secretário(a)" <%= form.cargo === 'Secretário(a)' ? 'selected' : '' %>>📋 Secretário(a)</option>
+            <option value="Diretor(a) Financeiro(a)" <%= form.cargo === 'Diretor(a) Financeiro(a)' ? 'selected' : '' %>>💰 Diretor(a) Financeiro(a)</option>
+            <option value="Diretor(a) Científico" <%= form.cargo === 'Diretor(a) Científico' ? 'selected' : '' %>>🔬 Diretor(a) Científico</option>
+            <option value="Vice Diretor(a) Científico" <%= form.cargo === 'Vice Diretor(a) Científico' ? 'selected' : '' %>>🔬 Vice Diretor(a) Científico</option>
+            <option value="Diretor(a) de Extensão" <%= form.cargo === 'Diretor(a) de Extensão' ? 'selected' : '' %>>🌐 Diretor(a) de Extensão</option>
+            <option value="Vice Diretor(a) de Extensão" <%= form.cargo === 'Vice Diretor(a) de Extensão' ? 'selected' : '' %>>🌐 Vice Diretor(a) de Extensão</option>
+            <option value="Diretor(a) de Ensino" <%= form.cargo === 'Diretor(a) de Ensino' ? 'selected' : '' %>>📚 Diretor(a) de Ensino</option>
+            <option value="Vice Diretor(a) de Ensino" <%= form.cargo === 'Vice Diretor(a) de Ensino' ? 'selected' : '' %>>📚 Vice Diretor(a) de Ensino</option>
+            <option value="Diretor(a) de Marketing" <%= form.cargo === 'Diretor(a) de Marketing' ? 'selected' : '' %>>📣 Diretor(a) de Marketing</option>
+            <option value="Vice Diretor(a) de Marketing" <%= form.cargo === 'Vice Diretor(a) de Marketing' ? 'selected' : '' %>>📣 Vice Diretor(a) de Marketing</option>
+          </select>
+        </div>
+
+        <div class="campo full">
+          <label>Disponibilidade <span>*</span></label>
+          <div class="checkbox-group">
+            <label class="checkbox-option"><input type="checkbox" name="disponibilidade" value="Manhã" <%= (form.disponibilidade||'').includes('Manhã') ? 'checked' : '' %>> 🌅 Manhã</label>
+            <label class="checkbox-option"><input type="checkbox" name="disponibilidade" value="Tarde" <%= (form.disponibilidade||'').includes('Tarde') ? 'checked' : '' %>> ☀️ Tarde</label>
+            <label class="checkbox-option"><input type="checkbox" name="disponibilidade" value="Noite" <%= (form.disponibilidade||'').includes('Noite') ? 'checked' : '' %>> 🌙 Noite</label>
+            <label class="checkbox-option"><input type="checkbox" name="disponibilidade" value="Integral" <%= (form.disponibilidade||'').includes('Integral') ? 'checked' : '' %>> 🕐 Integral</label>
+          </div>
+        </div>
+
+        <div class="campo">
+          <label>Possui Transporte Próprio? <span>*</span></label>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="transporte_proprio" value="Sim" onchange="toggleTransporte(true)" <%= form.transporte_proprio === 'Sim' ? 'checked' : '' %>> Sim</label>
+            <label class="radio-option"><input type="radio" name="transporte_proprio" value="Não" onchange="toggleTransporte(false)" <%= form.transporte_proprio === 'Não' ? 'checked' : '' %>> Não</label>
+          </div>
+          <div id="campos-transporte">
+            <label style="margin-top:8px">Se SIM, qual tipo?</label>
+            <input name="tipo_transporte" placeholder="Ex: Carro, Moto, Bicicleta..." value="<%= form.tipo_transporte || '' %>">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn-submit">✅ Enviar Cadastro</button>
+  </form>
+
+  <div class="footer">
+    <%= config.org_nome || 'Liga Acadêmica de Urologia' %> — Cadastro registrado em <%= new Date().toLocaleString('pt-BR') %>
+  </div>
+</div>
+
+<script>
+function toggleTransporte(sim) {
+  document.getElementById('campos-transporte').style.display = sim ? 'block' : 'none';
+}
+// Mostra campo transporte se já estava selecionado
+window.addEventListener('load', function() {
+  const sim = document.querySelector('input[name="transporte_proprio"][value="Sim"]');
+  if (sim && sim.checked) toggleTransporte(true);
+});
+</script>
+</body>
+</html>
