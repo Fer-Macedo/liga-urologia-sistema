@@ -154,7 +154,9 @@ const TODOS_MODULOS = [
   { id: 'dashboard',      label: '▦ Dashboard' },
   { id: 'membros',        label: '◎ Membros' },
   { id: 'cobrancas',      label: '◈ Cobranças' },
-  { id: 'frequencia',     label: '📊 Frequência' },
+  { id: 'frequencia',        label: '📊 Frequência Membros' },
+  { id: 'diretivos',         label: '🏛️ Diretivos' },
+  { id: 'frequencia-diretivos', label: '🏛️ Frequência Diretivos' },
   { id: 'aniversarios',   label: '◆ Aniversários' },
   { id: 'notificacoes',   label: '◉ Notificações' },
   { id: 'configuracoes',  label: '✦ Configurações' },
@@ -162,7 +164,7 @@ const TODOS_MODULOS = [
 ];
 
 const PERMISSOES_PADRAO = {
-  secretaria:  ['dashboard', 'frequencia', 'aniversarios'],
+  secretaria:  ['dashboard', 'membros', 'frequencia', 'diretivos', 'frequencia-diretivos', 'aniversarios'],
   financeiro:  ['dashboard', 'membros', 'cobrancas', 'aniversarios', 'notificacoes'],
   visualizador:['dashboard']
 };
