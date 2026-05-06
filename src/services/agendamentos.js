@@ -195,7 +195,7 @@ async function enviarFrequenciaMensal() {
       if (m.email) {
         const html = '<!DOCTYPE html><html><body style="font-family:Arial;background:#f4f4f4;padding:20px">'
           + '<div style="max-width:560px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden">'
-          + (orgLogo ? '<div style="background:#1a56db;padding:20px;text-align:center"><img src="' + orgLogo + '" style="max-height:70px"></div>'
+          + (orgLogo ? '<div style="background:#1a56db;padding:20px;text-align:center"><img src="' + orgLogo + '" style="max-height:70px;max-width:200px;width:auto;height:auto;object-fit:contain"></div>'
                      : '<div style="background:#1a56db;padding:20px"><h1 style="color:white;margin:0">' + orgNome + '</h1></div>')
           + '<div style="padding:28px"><h2>📊 Frequência — ' + turma.nome + '</h2>'
           + '<p>Olá, <strong>' + m.nome.split(' ')[0] + '</strong>!</p>'
