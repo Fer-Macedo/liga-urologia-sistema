@@ -694,13 +694,25 @@ router.post('/frequencia/turma/:id/enviar', requireAuth, requireSecretaria, asyn
   const { enviarWhatsApp, enviarEmail } = require('../services/notificacoes');
   const turmaR = await query('SELECT * FROM turmas WHERE id=$1', [req.params.id]);
   const turma = turmaR.rows[0];
+
+  // Filtra por membros selecionados (se nenhum, envia para todos)
+  const membrosSelecionados = [].concat(req.body.membros_ids || []);
+
+  let sqlFiltro = '';
+  let params = [req.params.id];
+  if (membrosSelecionados.length > 0) {
+    sqlFiltro = ' AND m.id = ANY($2::int[])';
+    params.push(membrosSelecionados.map(Number));
+  }
+
   const membros = await query(
     `SELECT m.*, tm.data_entrada,
       (SELECT COUNT(*) FROM atividades a WHERE a.turma_id=$1) as total_atividades,
       (SELECT COUNT(*) FROM presencas p JOIN atividades a ON a.id=p.atividade_id WHERE a.turma_id=$1 AND p.membro_id=m.id AND p.presente=1) as presencas
-     FROM turma_membros tm JOIN membros m ON m.id=tm.membro_id WHERE tm.turma_id=$1`, [req.params.id]
+     FROM turma_membros tm JOIN membros m ON m.id=tm.membro_id WHERE tm.turma_id=$1` + sqlFiltro, params
   );
   const orgNome = config.org_nome || 'Liga Academica de Urologia';
+  const orgLogo = config.org_logo || null;
   let enviados = 0;
   for (const m of membros.rows) {
     const pct = m.total_atividades > 0 ? Math.round((m.presencas / m.total_atividades) * 100) : 0;
