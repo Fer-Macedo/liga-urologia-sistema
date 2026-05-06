@@ -4,27 +4,56 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Arquivos — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
-    * { font-family: 'Inter', sans-serif; }
-    .arquivo-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:16px; }
-    .arquivo-card { background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:16px;text-align:center;transition:all 0.2s;cursor:pointer; }
-    .arquivo-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.1);transform:translateY(-2px); }
-    .arquivo-icone { font-size:40px;margin-bottom:10px; }
-    .arquivo-nome { font-size:12px;font-weight:600;word-break:break-all;color:var(--texto);margin-bottom:6px; }
-    .arquivo-meta { font-size:11px;color:var(--texto2); }
-    .arquivo-acoes { display:flex;gap:6px;justify-content:center;margin-top:10px; }
-    .categorias { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px; }
-    .cat-btn { padding:6px 14px;border-radius:20px;border:1.5px solid var(--borda);background:var(--fundo);font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s; }
-    .cat-btn.ativo { background:var(--cor-primaria);color:white;border-color:var(--cor-primaria); }
-    .upload-area { border:2px dashed var(--cor-primaria);border-radius:14px;padding:40px;text-align:center;background:var(--cor-primaria)08;margin-bottom:20px;cursor:pointer;transition:all 0.2s; }
-    .upload-area:hover { background:var(--cor-primaria)15; }
-    .upload-area.dragover { background:var(--cor-primaria)20;border-style:solid; }
-    .progresso { display:none;margin-top:12px; }
-    .barra-prog { height:6px;background:#e5e7eb;border-radius:10px;overflow:hidden; }
-    .barra-fill { height:100%;background:var(--cor-primaria);width:0%;transition:width 0.3s; }
-    .stat-storage { display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px; }
+    .files-layout { display:grid;grid-template-columns:260px 1fr;gap:0;height:calc(100vh - 120px);border:1px solid var(--borda);border-radius:14px;overflow:hidden;background:var(--card); }
+    .sidebar-files { border-right:1px solid var(--borda);overflow-y:auto;padding:12px; }
+    .sidebar-files-titulo { font-size:11px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:0.5px;padding:8px 8px 4px; }
+    .pasta-item { display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all 0.15s;user-select:none; }
+    .pasta-item:hover { background:var(--fundo); }
+    .pasta-item.ativa { background:var(--cor-primaria)15;color:var(--cor-primaria);font-weight:600; }
+    .pasta-item.sub { padding-left:28px;font-size:12px; }
+    .pasta-toggle { font-size:10px;color:var(--texto2);transition:transform 0.2s;margin-left:auto; }
+    .pasta-subs { display:none; }
+    .pasta-subs.aberta { display:block; }
+    .files-main { display:flex;flex-direction:column;overflow:hidden; }
+    .files-header { padding:16px 20px;border-bottom:1px solid var(--borda);display:flex;align-items:center;gap:12px;flex-wrap:wrap; }
+    .breadcrumb { display:flex;align-items:center;gap:6px;font-size:13px;flex:1; }
+    .breadcrumb span { color:var(--texto2);cursor:pointer; }
+    .breadcrumb span:hover { color:var(--cor-primaria); }
+    .breadcrumb span.atual { color:var(--texto);font-weight:600; }
+    .files-toolbar { display:flex;gap:8px;align-items:center; }
+    .files-content { flex:1;overflow-y:auto;padding:16px 20px; }
+    .files-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px; }
+    .files-list { display:flex;flex-direction:column;gap:4px; }
+    .pasta-card { background:var(--fundo);border:1.5px solid var(--borda);border-radius:10px;padding:16px 12px;text-align:center;cursor:pointer;transition:all 0.15s; }
+    .pasta-card:hover { border-color:var(--cor-primaria);box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+    .pasta-card-icone { font-size:36px;margin-bottom:8px; }
+    .pasta-card-nome { font-size:12px;font-weight:600;word-break:break-word; }
+    .pasta-card-meta { font-size:11px;color:var(--texto2);margin-top:3px; }
+    .arquivo-card { background:var(--fundo);border:1.5px solid var(--borda);border-radius:10px;padding:14px 12px;text-align:center;transition:all 0.15s;position:relative; }
+    .arquivo-card:hover { border-color:var(--cor-primaria);box-shadow:0 2px 8px rgba(0,0,0,0.08); }
+    .arquivo-card:hover .arquivo-acoes { opacity:1; }
+    .arquivo-icone { font-size:36px;margin-bottom:8px; }
+    .arquivo-nome { font-size:11px;font-weight:600;word-break:break-all; }
+    .arquivo-meta { font-size:10px;color:var(--texto2);margin-top:3px; }
+    .arquivo-acoes { position:absolute;top:6px;right:6px;display:flex;gap:4px;opacity:0;transition:opacity 0.15s; }
+    .arquivo-acoes button, .arquivo-acoes a { background:white;border:1px solid var(--borda);border-radius:6px;padding:3px 6px;font-size:11px;cursor:pointer;text-decoration:none;color:var(--texto); }
+    .arquivo-acoes button:hover, .arquivo-acoes a:hover { background:var(--fundo); }
+    .upload-drop { border:2px dashed var(--borda);border-radius:10px;padding:30px;text-align:center;color:var(--texto2);transition:all 0.2s;margin-bottom:16px; }
+    .upload-drop.over { border-color:var(--cor-primaria);background:var(--cor-primaria)08;color:var(--cor-primaria); }
+    .view-btn { padding:6px 10px;border:1.5px solid var(--borda);border-radius:8px;background:none;cursor:pointer;font-size:14px; }
+    .view-btn.ativo { background:var(--cor-primaria);color:white;border-color:var(--cor-primaria); }
+    .empty-state { text-align:center;padding:60px 20px;color:var(--texto2); }
+    .search-input { padding:7px 14px;border:1.5px solid var(--borda);border-radius:8px;font-size:13px;width:200px;background:var(--fundo); }
+    /* Lista view */
+    .lista-item { display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;transition:background 0.15s;cursor:pointer; }
+    .lista-item:hover { background:var(--fundo); }
+    .lista-item .icone { font-size:20px;flex-shrink:0; }
+    .lista-item .info { flex:1;min-width:0; }
+    .lista-item .nome { font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+    .lista-item .meta { font-size:11px;color:var(--texto2); }
+    .lista-item .acoes { display:flex;gap:6px;flex-shrink:0; }
   </style>
 </head>
 <body>
@@ -34,122 +63,300 @@
     <div class="topbar">
       <h1 class="page-titulo">📁 Arquivos da Liga</h1>
       <div class="topbar-acoes">
+        <button class="btn" onclick="abrirModal('modal-pasta')">📁 Nova pasta</button>
         <button class="btn btn-primario" onclick="document.getElementById('input-upload').click()">⬆️ Upload</button>
       </div>
     </div>
-    <div class="content">
-      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
-      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
+    <div class="content" style="padding:0">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok" style="margin:16px">✅ <%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro" style="margin:16px">❌ <%= erro[0] %></div><% } %>
 
-      <!-- Stats -->
-      <div class="stat-storage">
-        <div class="stat-card azul"><div class="stat-label">Total</div><div class="stat-valor azul"><%= stats.total %></div><div class="stat-sub azul">arquivos</div></div>
-        <div class="stat-card verde"><div class="stat-label">Fotos</div><div class="stat-valor verde"><%= stats.fotos %></div><div class="stat-sub verde">imagens</div></div>
-        <div class="stat-card amarelo"><div class="stat-label">Documentos</div><div class="stat-valor amarelo"><%= stats.documentos %></div><div class="stat-sub amarelo">arquivos</div></div>
-        <div class="stat-card roxo" style="--roxo:#8b5cf6"><div class="stat-label">Vídeos</div><div class="stat-valor" style="color:#8b5cf6"><%= stats.videos %></div><div class="stat-sub" style="color:#8b5cf6">arquivos</div></div>
-      </div>
+      <div class="files-layout">
+        <!-- Sidebar de pastas -->
+        <div class="sidebar-files">
+          <div class="sidebar-files-titulo">Pastas</div>
 
-      <!-- Upload area -->
-      <div class="upload-area" id="upload-area" onclick="document.getElementById('input-upload').click()">
-        <div style="font-size:40px;margin-bottom:10px">☁️</div>
-        <div style="font-size:15px;font-weight:600;color:var(--cor-primaria)">Clique ou arraste arquivos aqui</div>
-        <div style="font-size:12px;color:var(--texto2);margin-top:6px">PDF, Word, Excel, PowerPoint, Imagens, Vídeos — até 500MB</div>
-        <div class="progresso" id="progresso">
-          <div style="font-size:12px;margin-bottom:6px" id="prog-texto">Enviando...</div>
-          <div class="barra-prog"><div class="barra-fill" id="barra-fill"></div></div>
-        </div>
-      </div>
-      <input type="file" id="input-upload" style="display:none" multiple onchange="uploadArquivos(this.files)">
-
-      <!-- Filtro por categoria -->
-      <div class="categorias">
-        <button class="cat-btn ativo" onclick="filtrar('todos', this)">📁 Todos (<%= stats.total %>)</button>
-        <button class="cat-btn" onclick="filtrar('fotos', this)">🖼️ Fotos</button>
-        <button class="cat-btn" onclick="filtrar('videos', this)">🎬 Vídeos</button>
-        <button class="cat-btn" onclick="filtrar('pdfs', this)">📄 PDFs</button>
-        <button class="cat-btn" onclick="filtrar('documentos', this)">📝 Word</button>
-        <button class="cat-btn" onclick="filtrar('planilhas', this)">📊 Excel</button>
-        <button class="cat-btn" onclick="filtrar('apresentacoes', this)">📑 PowerPoint</button>
-        <button class="cat-btn" onclick="filtrar('outros', this)">📁 Outros</button>
-      </div>
-
-      <!-- Busca -->
-      <input type="text" class="input" placeholder="🔍 Buscar arquivo..." oninput="buscar(this.value)" style="margin-bottom:16px;max-width:400px">
-
-      <!-- Grid de arquivos -->
-      <div class="arquivo-grid" id="grid-arquivos">
-        <% if (arquivos.length === 0) { %>
-          <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--texto2)">
-            <div style="font-size:48px;margin-bottom:12px">📂</div>
-            <div style="font-size:15px;font-weight:600">Nenhum arquivo ainda</div>
-            <div style="font-size:13px;margin-top:6px">Faça upload dos seus arquivos acima</div>
+          <!-- Raiz -->
+          <div class="pasta-item <%= !pastaAtual ? 'ativa' : '' %>" onclick="navegarPasta(null)">
+            🏠 Início
           </div>
-        <% } %>
-        <% arquivos.forEach(a => { %>
-        <div class="arquivo-card" data-categoria="<%= a.categoria %>" data-nome="<%= a.nome_original.toLowerCase() %>">
-          <div class="arquivo-icone"><%= a.icone %></div>
-          <div class="arquivo-nome" title="<%= a.nome_original %>"><%= a.nome_original.length > 25 ? a.nome_original.substring(0,22)+'...' : a.nome_original %></div>
-          <div class="arquivo-meta"><%= a.tamanho_fmt %> • <%= new Date(a.criado_em).toLocaleDateString('pt-BR') %></div>
-          <div class="arquivo-acoes">
-            <a href="/arquivos/<%= a.id %>/download" class="btn" style="font-size:11px;padding:5px 10px" title="Baixar">⬇️</a>
-            <% if (usuario.perfil === 'admin' || usuario.perfil === 'presidencia') { %>
-            <form action="/arquivos/<%= a.id %>/deletar" method="POST" onsubmit="return confirm('Excluir este arquivo?')">
-              <button class="btn" style="font-size:11px;padding:5px 10px;color:var(--vermelho)" title="Excluir">🗑</button>
-            </form>
+
+          <!-- Pastas raiz -->
+          <% pastas.filter(p => !p.pasta_pai_id).forEach(pasta => { %>
+          <% const subs = pastas.filter(s => s.pasta_pai_id == pasta.id); %>
+          <div>
+            <div class="pasta-item <%= pastaAtual && pastaAtual.id == pasta.id ? 'ativa' : '' %>"
+              onclick="<%= subs.length > 0 ? 'toggleSub('+pasta.id+')' : 'navegarPasta('+pasta.id+')' %>">
+              <span><%= pasta.icone %></span>
+              <span><%= pasta.nome %></span>
+              <% if (subs.length > 0) { %>
+                <span class="pasta-toggle" id="toggle-<%= pasta.id %>">▶</span>
+              <% } %>
+            </div>
+            <% if (subs.length > 0) { %>
+            <div class="pasta-subs" id="subs-<%= pasta.id %>">
+              <% subs.forEach(sub => { %>
+              <div class="pasta-item sub <%= pastaAtual && pastaAtual.id == sub.id ? 'ativa' : '' %>"
+                onclick="navegarPasta(<%= sub.id %>)">
+                <span><%= sub.icone || '📄' %></span>
+                <span><%= sub.nome %></span>
+              </div>
+              <% }) %>
+            </div>
             <% } %>
           </div>
+          <% }) %>
         </div>
-        <% }) %>
+
+        <!-- Conteúdo principal -->
+        <div class="files-main">
+          <div class="files-header">
+            <!-- Breadcrumb -->
+            <div class="breadcrumb">
+              <span onclick="navegarPasta(null)">🏠 Início</span>
+              <% if (pastaAtual) { %>
+                <% if (pastaAtual.pasta_pai_id) { %>
+                  <% const pai = pastas.find(p => p.id == pastaAtual.pasta_pai_id); %>
+                  <% if (pai) { %> › <span onclick="navegarPasta(<%= pai.id %>)"><%= pai.nome %></span><% } %>
+                <% } %>
+                › <span class="atual"><%= pastaAtual.nome %></span>
+              <% } else { %>
+                <span class="atual">Todos os arquivos</span>
+              <% } %>
+            </div>
+            <!-- Toolbar -->
+            <div class="files-toolbar">
+              <input type="text" class="search-input" placeholder="🔍 Buscar..." oninput="buscar(this.value)">
+              <button class="view-btn ativo" id="btn-grid" onclick="setView('grid')">⊞</button>
+              <button class="view-btn" id="btn-lista" onclick="setView('lista')">☰</button>
+            </div>
+          </div>
+
+          <div class="files-content">
+            <!-- Drop area -->
+            <div class="upload-drop" id="drop-area">
+              ☁️ Arraste arquivos aqui para fazer upload
+              <div id="prog-upload" style="display:none;margin-top:8px;font-size:12px">Enviando...</div>
+            </div>
+            <input type="file" id="input-upload" style="display:none" multiple onchange="uploadArquivos(this.files)">
+
+            <!-- Subpastas -->
+            <% const subPastas = pastaAtual ? pastas.filter(p => p.pasta_pai_id == pastaAtual.id) : pastas.filter(p => !p.pasta_pai_id); %>
+            <% if (subPastas.length > 0) { %>
+            <div style="font-size:12px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Pastas</div>
+            <div class="files-grid" id="pastas-grid" style="margin-bottom:20px">
+              <% subPastas.forEach(pasta => { %>
+              <div class="pasta-card" onclick="navegarPasta(<%= pasta.id %>)">
+                <div class="pasta-card-icone"><%= pasta.icone || '📁' %></div>
+                <div class="pasta-card-nome"><%= pasta.nome %></div>
+                <div class="pasta-card-meta">
+                  <%= pastas.filter(p => p.pasta_pai_id == pasta.id).length %> subpastas •
+                  <%= arquivos.filter(a => a.pasta_id == pasta.id).length %> arquivos
+                </div>
+              </div>
+              <% }) %>
+            </div>
+            <% } %>
+
+            <!-- Arquivos -->
+            <% if (arquivos.length > 0) { %>
+            <div style="font-size:12px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Arquivos (<%= arquivos.length %>)</div>
+            <% } %>
+
+            <!-- Grid view -->
+            <div class="files-grid" id="view-grid">
+              <% if (arquivos.length === 0 && subPastas.length === 0) { %>
+              <div class="empty-state" style="grid-column:1/-1">
+                <div style="font-size:48px">📂</div>
+                <div style="font-size:15px;font-weight:600;margin-top:10px">Pasta vazia</div>
+                <div style="font-size:13px;margin-top:6px">Faça upload ou arraste arquivos aqui</div>
+              </div>
+              <% } %>
+              <% arquivos.forEach(a => { %>
+              <div class="arquivo-card" data-nome="<%= a.nome_original.toLowerCase() %>">
+                <div class="arquivo-acoes">
+                  <a href="/arquivos/<%= a.id %>/visualizar" target="_blank" title="Visualizar">👁</a>
+                  <a href="/arquivos/<%= a.id %>/download" title="Baixar">⬇️</a>
+                  <button onclick="abrirSubstituir(<%= a.id %>, '<%= a.nome_original %>')" title="Substituir">🔄</button>
+                  <% if (usuario.perfil === 'admin' || usuario.perfil === 'presidencia') { %>
+                  <button onclick="excluirArquivo(<%= a.id %>)" style="color:var(--vermelho)" title="Excluir">🗑</button>
+                  <% } %>
+                </div>
+                <div class="arquivo-icone"><%= a.icone %></div>
+                <div class="arquivo-nome" title="<%= a.nome_original %>"><%= a.nome_original.length > 20 ? a.nome_original.substring(0,18)+'...' : a.nome_original %></div>
+                <div class="arquivo-meta"><%= a.tamanho_fmt %></div>
+                <div class="arquivo-meta"><%= new Date(a.criado_em).toLocaleDateString('pt-BR') %></div>
+              </div>
+              <% }) %>
+            </div>
+
+            <!-- Lista view -->
+            <div id="view-lista" style="display:none">
+              <% arquivos.forEach(a => { %>
+              <div class="lista-item" data-nome="<%= a.nome_original.toLowerCase() %>">
+                <div class="icone"><%= a.icone %></div>
+                <div class="info">
+                  <div class="nome"><%= a.nome_original %></div>
+                  <div class="meta"><%= a.tamanho_fmt %> • <%= new Date(a.criado_em).toLocaleDateString('pt-BR') %></div>
+                </div>
+                <div class="acoes">
+                  <a href="/arquivos/<%= a.id %>/visualizar" target="_blank" class="btn" style="font-size:11px;padding:4px 8px">👁 Ver</a>
+                  <a href="/arquivos/<%= a.id %>/download" class="btn" style="font-size:11px;padding:4px 8px">⬇️ Baixar</a>
+                  <button onclick="abrirSubstituir(<%= a.id %>, '<%= a.nome_original %>')" class="btn" style="font-size:11px;padding:4px 8px">🔄</button>
+                  <% if (usuario.perfil === 'admin' || usuario.perfil === 'presidencia') { %>
+                  <button onclick="excluirArquivo(<%= a.id %>)" class="btn" style="font-size:11px;padding:4px 8px;color:var(--vermelho)">🗑</button>
+                  <% } %>
+                </div>
+              </div>
+              <% }) %>
+            </div>
+
+          </div>
+        </div>
       </div>
     </div>
   </main>
 </div>
 
+<!-- Modal Nova Pasta -->
+<div class="modal-overlay" id="modal-pasta" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">📁 Nova Pasta</span>
+      <button class="icon-btn" onclick="fecharModal('modal-pasta')">✕</button>
+    </div>
+    <form action="/arquivos/pasta" method="POST">
+      <input type="hidden" name="pasta_pai_id" value="<%= pastaAtual ? pastaAtual.id : '' %>">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo"><label class="label">Nome da pasta *</label><input name="nome" class="input" required placeholder="Ex: Contratos 2026"></div>
+        <div class="campo">
+          <label class="label">Ícone</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <% ['📁','📄','📝','📊','📑','🖼️','🎬','📣','🔬','🌐','📋','👥','🏛️','⚖️','💰'].forEach(ic => { %>
+            <label style="cursor:pointer;padding:6px;border:1.5px solid var(--borda);border-radius:8px;font-size:20px">
+              <input type="radio" name="icone" value="<%= ic %>" style="display:none"> <%= ic %>
+            </label>
+            <% }) %>
+          </div>
+        </div>
+        <div class="campo">
+          <label class="label">Cor</label>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <% ['#1a56db','#059669','#dc2626','#d97706','#8b5cf6','#0891b2','#db2777','#0f766e'].forEach(cor => { %>
+            <label style="cursor:pointer">
+              <input type="radio" name="cor" value="<%= cor %>" style="display:none">
+              <div style="width:28px;height:28px;border-radius:50%;background:<%= cor %>;border:2px solid transparent;transition:border-color 0.15s"></div>
+            </label>
+            <% }) %>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-pasta')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Criar pasta</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Substituir arquivo -->
+<div class="modal-overlay" id="modal-substituir" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">🔄 Substituir arquivo</span>
+      <button class="icon-btn" onclick="fecharModal('modal-substituir')">✕</button>
+    </div>
+    <form id="form-substituir" action="" method="POST" enctype="multipart/form-data">
+      <div style="margin-bottom:14px;font-size:13px;color:var(--texto2)" id="substituir-nome"></div>
+      <div class="campo"><label class="label">Selecione o novo arquivo</label><input type="file" name="arquivo" class="input" required></div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-substituir')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Substituir</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script src="/js/app.js"></script>
 <script>
+const pastaAtualId = <%= pastaAtual ? pastaAtual.id : 'null' %>;
+
+function navegarPasta(id) {
+  window.location.href = '/arquivos' + (id ? '?pasta=' + id : '');
+}
+
+function toggleSub(id) {
+  const subs = document.getElementById('subs-' + id);
+  const toggle = document.getElementById('toggle-' + id);
+  if (subs.classList.contains('aberta')) {
+    subs.classList.remove('aberta');
+    toggle.textContent = '▶';
+  } else {
+    subs.classList.add('aberta');
+    toggle.textContent = '▼';
+    navegarPasta(id);
+  }
+}
+
+// Abre automaticamente a pasta pai se tiver subpasta ativa
+<% if (pastaAtual && pastaAtual.pasta_pai_id) { %>
+document.addEventListener('DOMContentLoaded', function() {
+  const subs = document.getElementById('subs-<%= pastaAtual.pasta_pai_id %>');
+  const toggle = document.getElementById('toggle-<%= pastaAtual.pasta_pai_id %>');
+  if (subs) { subs.classList.add('aberta'); if(toggle) toggle.textContent = '▼'; }
+});
+<% } %>
+
+function setView(v) {
+  document.getElementById('view-grid').style.display = v === 'grid' ? 'grid' : 'none';
+  document.getElementById('view-lista').style.display = v === 'lista' ? 'block' : 'none';
+  document.getElementById('btn-grid').classList.toggle('ativo', v === 'grid');
+  document.getElementById('btn-lista').classList.toggle('ativo', v === 'lista');
+  localStorage.setItem('files-view', v);
+}
+// Restaura view preferida
+window.addEventListener('load', () => { const v = localStorage.getItem('files-view'); if(v) setView(v); });
+
+function buscar(termo) {
+  document.querySelectorAll('[data-nome]').forEach(c => {
+    c.style.display = c.dataset.nome.includes(termo.toLowerCase()) ? '' : 'none';
+  });
+}
+
 // Drag and drop
-const uploadArea = document.getElementById('upload-area');
-uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
-uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
-uploadArea.addEventListener('drop', e => { e.preventDefault(); uploadArea.classList.remove('dragover'); uploadArquivos(e.dataTransfer.files); });
+const drop = document.getElementById('drop-area');
+drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); uploadArquivos(e.dataTransfer.files); });
 
 async function uploadArquivos(files) {
   if (!files.length) return;
-  const prog = document.getElementById('progresso');
-  const texto = document.getElementById('prog-texto');
-  const barra = document.getElementById('barra-fill');
+  const prog = document.getElementById('prog-upload');
   prog.style.display = 'block';
-
   for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    texto.textContent = `Enviando ${i+1}/${files.length}: ${file.name}`;
-    barra.style.width = ((i / files.length) * 100) + '%';
-
+    prog.textContent = 'Enviando ' + (i+1) + '/' + files.length + ': ' + files[i].name;
     const fd = new FormData();
-    fd.append('arquivo', file);
-
-    try {
-      await fetch('/arquivos/upload', { method: 'POST', body: fd });
-    } catch(e) { console.error(e); }
+    fd.append('arquivo', files[i]);
+    if (pastaAtualId) fd.append('pasta_id', pastaAtualId);
+    await fetch('/arquivos/upload', { method: 'POST', body: fd });
   }
-
-  barra.style.width = '100%';
-  texto.textContent = 'Concluído!';
-  setTimeout(() => location.reload(), 800);
+  prog.textContent = 'Concluído!';
+  setTimeout(() => location.reload(), 600);
 }
 
-function filtrar(categoria, btn) {
-  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('ativo'));
-  btn.classList.add('ativo');
-  document.querySelectorAll('.arquivo-card').forEach(c => {
-    c.style.display = (categoria === 'todos' || c.dataset.categoria === categoria) ? '' : 'none';
-  });
+function abrirSubstituir(id, nome) {
+  document.getElementById('form-substituir').action = '/arquivos/' + id + '/substituir';
+  document.getElementById('substituir-nome').textContent = 'Substituindo: ' + nome;
+  abrirModal('modal-substituir');
 }
 
-function buscar(termo) {
-  document.querySelectorAll('.arquivo-card').forEach(c => {
-    c.style.display = c.dataset.nome.includes(termo.toLowerCase()) ? '' : 'none';
-  });
+function excluirArquivo(id) {
+  if (!confirm('Excluir este arquivo permanentemente?')) return;
+  const f = document.createElement('form');
+  f.method = 'POST';
+  f.action = '/arquivos/' + id + '/deletar';
+  document.body.appendChild(f);
+  f.submit();
 }
 </script>
 </body>
