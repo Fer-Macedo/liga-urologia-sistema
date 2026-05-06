@@ -5,101 +5,389 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard — <%= config.org_nome || 'Liga Urologia' %></title>
   <link rel="stylesheet" href="/css/style.css">
-  <style>:root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }</style>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cor-primaria: <%= config.org_cor || '#1a56db' %>;
+      --cor-primaria-light: <%= config.org_cor || '#1a56db' %>22;
+      --verde: #10b981;
+      --verde-light: #10b98115;
+      --amarelo: #f59e0b;
+      --amarelo-light: #f59e0b15;
+      --vermelho: #ef4444;
+      --vermelho-light: #ef444415;
+      --roxo: #8b5cf6;
+      --roxo-light: #8b5cf615;
+    }
+    * { font-family: 'Inter', sans-serif; }
+
+    /* TOPBAR */
+    .topbar {
+      background: linear-gradient(135deg, var(--cor-primaria) 0%, #1e40af 100%);
+      padding: 20px 28px;
+      border-radius: 16px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 20px rgba(26,86,219,0.3);
+    }
+    .topbar-left h1 {
+      color: white;
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 4px;
+    }
+    .topbar-left p {
+      color: rgba(255,255,255,0.75);
+      font-size: 13px;
+      margin: 0;
+    }
+    .topbar-acoes { display: flex; gap: 10px; align-items: center; }
+    .btn-perfil {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-perfil:hover { background: rgba(255,255,255,0.25); }
+    .btn-gerar {
+      background: white;
+      color: var(--cor-primaria);
+      border: none;
+      padding: 8px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+    .btn-gerar:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* STATS */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card-novo {
+      background: var(--card);
+      border-radius: 16px;
+      padding: 20px;
+      border: 1px solid var(--borda);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .stat-card-novo:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+    .stat-card-novo::before {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      opacity: 0.08;
+    }
+    .stat-card-novo.azul::before { background: var(--cor-primaria); }
+    .stat-card-novo.verde::before { background: var(--verde); }
+    .stat-card-novo.amarelo::before { background: var(--amarelo); }
+    .stat-card-novo.vermelho::before { background: var(--vermelho); }
+    .stat-icone {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      margin-bottom: 14px;
+    }
+    .azul .stat-icone { background: var(--cor-primaria-light); }
+    .verde .stat-icone { background: var(--verde-light); }
+    .amarelo .stat-icone { background: var(--amarelo-light); }
+    .vermelho .stat-icone { background: var(--vermelho-light); }
+    .stat-label-novo { font-size: 12px; font-weight: 500; color: var(--texto2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .stat-valor-novo { font-size: 32px; font-weight: 800; margin-bottom: 4px; line-height: 1; }
+    .azul .stat-valor-novo { color: var(--cor-primaria); }
+    .verde .stat-valor-novo { color: var(--verde); }
+    .amarelo .stat-valor-novo { color: var(--amarelo); }
+    .vermelho .stat-valor-novo { color: var(--vermelho); }
+    .stat-sub-novo { font-size: 12px; color: var(--texto2); font-weight: 500; }
+
+    /* GRID INFERIOR */
+    .bottom-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; }
+
+    /* CARD */
+    .card-moderno {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--borda);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-titulo { font-size: 15px; font-weight: 700; color: var(--texto); }
+    .card-link { font-size: 12px; color: var(--cor-primaria); text-decoration: none; font-weight: 500; }
+    .card-link:hover { text-decoration: underline; }
+
+    /* TABELA MODERNA */
+    .table-moderna { width: 100%; border-collapse: collapse; }
+    .table-moderna thead th {
+      padding: 10px 16px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--texto2);
+      background: var(--fundo);
+      text-align: left;
+    }
+    .table-moderna tbody tr {
+      border-bottom: 1px solid var(--borda);
+      transition: background 0.15s;
+    }
+    .table-moderna tbody tr:hover { background: var(--fundo); }
+    .table-moderna tbody tr:last-child { border-bottom: none; }
+    .table-moderna tbody td { padding: 12px 16px; font-size: 13px; }
+
+    /* AVATAR MODERNO */
+    .avatar-mod {
+      width: 32px; height: 32px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--cor-primaria), #6366f1);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .membro-mod { display: flex; align-items: center; gap: 10px; }
+    .membro-nome { font-weight: 600; font-size: 13px; }
+
+    /* BADGE MODERNO */
+    .badge-mod {
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      display: inline-block;
+    }
+    .badge-mod.pago { background: var(--verde-light); color: var(--verde); }
+    .badge-mod.pendente { background: var(--amarelo-light); color: var(--amarelo); }
+    .badge-mod.atrasado { background: var(--vermelho-light); color: var(--vermelho); }
+
+    /* ANIVERSÁRIOS */
+    .aniv-lista { padding: 8px 0; }
+    .aniv-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--borda);
+      transition: background 0.15s;
+    }
+    .aniv-item:hover { background: var(--fundo); }
+    .aniv-item:last-child { border-bottom: none; }
+    .aniv-avatar {
+      width: 40px; height: 40px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f59e0b, #ef4444);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+    .aniv-avatar.hoje {
+      background: linear-gradient(135deg, #10b981, #1a56db);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+    }
+    .aniv-info { flex: 1; min-width: 0; }
+    .aniv-nome-mod { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .aniv-data-mod { font-size: 12px; color: var(--texto2); margin-top: 2px; }
+    .badge-hoje { background: linear-gradient(135deg, #10b981, #1a56db); color: white; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+
+    /* BARRA PROGRESSO */
+    .progresso-wrap { margin-top: 16px; padding: 0 20px 16px; }
+    .progresso-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--texto2); margin-bottom: 6px; }
+    .progresso-bar { height: 6px; background: var(--borda); border-radius: 10px; overflow: hidden; }
+    .progresso-fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, var(--verde), #34d399); transition: width 0.5s; }
+
+    /* VAZIO */
+    .vazio-mod { padding: 40px 20px; text-align: center; color: var(--texto2); font-size: 13px; }
+
+    @media (max-width: 1100px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .bottom-grid { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
 <div class="layout">
-  <%- include('../partials/sidebar') %>
+  <%- include('../partials/sidebar', { paginaAtual: 'dashboard' }) %>
   <main class="main">
-    <div class="topbar">
-      <h1 class="page-titulo">Dashboard</h1>
-      <div class="topbar-acoes">
-        <button onclick="abrirPerfil()" class="btn" title="Meu perfil">👤 <%= usuario.nome.split(' ')[0] %></button>
-        <a href="/cobrancas" onclick="return confirm('Gerar cobranças do mês para todos os membros?')" class="btn btn-primario">+ Gerar cobranças</a>
-      </div>
-    </div>
-
     <div class="content">
       <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
       <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
 
-      <!-- Stats -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">Total de membros</div>
-          <div class="stat-valor"><%= stats.total %></div>
-          <div class="stat-sub">membros ativos</div>
+      <!-- TOPBAR MODERNA -->
+      <div class="topbar">
+        <div class="topbar-left">
+          <h1>Olá, <%= usuario.nome.split(' ')[0] %>! 👋</h1>
+          <p>Bem-vindo ao painel da <%= config.org_nome || 'Liga Acadêmica de Urologia' %></p>
         </div>
-        <div class="stat-card verde">
-          <div class="stat-label">Pagamentos em dia</div>
-          <div class="stat-valor verde"><%= stats.pagos %></div>
-          <div class="stat-sub verde">R$ <%= Number(stats.totalRecebido).toFixed(2).replace('.',',') %> recebido</div>
-        </div>
-        <div class="stat-card amarelo">
-          <div class="stat-label">Pendentes (este mês)</div>
-          <div class="stat-valor amarelo"><%= stats.pendentes %></div>
-          <div class="stat-sub amarelo">R$ <%= Number(stats.totalPendente).toFixed(2).replace('.',',') %> a receber</div>
-        </div>
-        <div class="stat-card vermelho">
-          <div class="stat-label">Em atraso</div>
-          <div class="stat-valor vermelho"><%= stats.atrasados %></div>
-          <div class="stat-sub vermelho">R$ <%= Number(stats.totalAtrasado).toFixed(2).replace('.',',') %> inadimplente</div>
+        <div class="topbar-acoes">
+          <button onclick="abrirPerfil()" class="btn-perfil">
+            👤 <%= usuario.nome.split(' ')[0] %>
+          </button>
+          <a href="/cobrancas" class="btn-gerar">
+            ⚡ Gerar cobranças
+          </a>
         </div>
       </div>
 
-      <div class="dois-colunas">
-        <!-- Cobranças recentes -->
-        <div>
-          <div class="section-titulo">Cobranças recentes</div>
-          <div class="table-wrap">
-            <table class="table">
-              <thead><tr>
-                <th>Membro</th><th>Referência</th><th>Vencimento</th><th>Status</th>
-              </tr></thead>
-              <tbody>
-                <% if (recentes.length === 0) { %>
-                  <tr><td colspan="4" style="text-align:center;color:#888;padding:20px">Nenhuma cobrança ainda</td></tr>
-                <% } %>
-                <% recentes.forEach(c => { %>
-                <tr>
-                  <td><div class="membro-cell"><div class="avatar"><%= c.nome.substring(0,2).toUpperCase() %></div><%= c.nome.split(' ').slice(0,2).join(' ') %></div></td>
-                  <td><%= c.referencia %></td>
-                  <td><%= new Date(c.data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR') %></td>
-                  <td>
-                    <% if (c.status === 'pago') { %><span class="badge verde">Pago</span>
-                    <% } else if (c.status === 'atrasado') { %><span class="badge vermelho">Atrasado</span>
-                    <% } else { %><span class="badge amarelo">Pendente</span><% } %>
-                  </td>
-                </tr>
-                <% }) %>
-              </tbody>
-            </table>
+      <!-- STATS -->
+      <div class="stats-grid">
+        <div class="stat-card-novo azul">
+          <div class="stat-icone">👥</div>
+          <div class="stat-label-novo">Total de membros</div>
+          <div class="stat-valor-novo"><%= stats.total %></div>
+          <div class="stat-sub-novo">membros ativos</div>
+        </div>
+        <div class="stat-card-novo verde">
+          <div class="stat-icone">✅</div>
+          <div class="stat-label-novo">Pagamentos em dia</div>
+          <div class="stat-valor-novo"><%= stats.pagos %></div>
+          <div class="stat-sub-novo">R$ <%= Number(stats.totalRecebido).toFixed(2).replace('.',',') %> recebido</div>
+        </div>
+        <div class="stat-card-novo amarelo">
+          <div class="stat-icone">⏳</div>
+          <div class="stat-label-novo">Pendentes</div>
+          <div class="stat-valor-novo"><%= stats.pendentes %></div>
+          <div class="stat-sub-novo">R$ <%= Number(stats.totalPendente).toFixed(2).replace('.',',') %> a receber</div>
+        </div>
+        <div class="stat-card-novo vermelho">
+          <div class="stat-icone">⚠️</div>
+          <div class="stat-label-novo">Em atraso</div>
+          <div class="stat-valor-novo"><%= stats.atrasados %></div>
+          <div class="stat-sub-novo">R$ <%= Number(stats.totalAtrasado).toFixed(2).replace('.',',') %> inadimplente</div>
+        </div>
+      </div>
+
+      <% 
+        const totalMembros = Number(stats.total) || 1;
+        const pagos = Number(stats.pagos) || 0;
+        const pctPago = Math.round((pagos / totalMembros) * 100);
+      %>
+
+      <!-- GRID INFERIOR -->
+      <div class="bottom-grid">
+
+        <!-- COBRANÇAS RECENTES -->
+        <div class="card-moderno">
+          <div class="card-header">
+            <div class="card-titulo">📋 Cobranças recentes</div>
+            <a href="/cobrancas" class="card-link">Ver todas →</a>
           </div>
-          <a href="/cobrancas" class="link-ver-mais">Ver todas as cobranças →</a>
+
+          <!-- Barra de progresso -->
+          <div class="progresso-wrap">
+            <div class="progresso-label">
+              <span>Taxa de pagamento este mês</span>
+              <span style="font-weight:600;color:var(--verde)"><%= pctPago %>%</span>
+            </div>
+            <div class="progresso-bar">
+              <div class="progresso-fill" style="width:<%= pctPago %>%"></div>
+            </div>
+          </div>
+
+          <% if (recentes.length === 0) { %>
+            <div class="vazio-mod">📭 Nenhuma cobrança ainda</div>
+          <% } else { %>
+          <table class="table-moderna">
+            <thead>
+              <tr>
+                <th>Membro</th>
+                <th>Referência</th>
+                <th>Vencimento</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% recentes.forEach(c => { %>
+              <tr>
+                <td>
+                  <div class="membro-mod">
+                    <div class="avatar-mod"><%= c.nome.substring(0,2).toUpperCase() %></div>
+                    <span class="membro-nome"><%= c.nome.split(' ').slice(0,2).join(' ') %></span>
+                  </div>
+                </td>
+                <td style="color:var(--texto2);font-size:12px"><%= c.referencia %></td>
+                <td style="font-size:12px"><%= new Date(c.data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR') %></td>
+                <td>
+                  <% if (c.status === 'pago') { %>
+                    <span class="badge-mod pago">✅ Pago</span>
+                  <% } else if (c.status === 'atrasado') { %>
+                    <span class="badge-mod atrasado">⚠️ Atrasado</span>
+                  <% } else { %>
+                    <span class="badge-mod pendente">⏳ Pendente</span>
+                  <% } %>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+          <% } %>
         </div>
 
-        <!-- Aniversários -->
-        <div>
-          <div class="section-titulo">Aniversários próximos</div>
-          <% if (aniversariantes.length === 0) { %>
-            <div class="vazio">Nenhum aniversariante cadastrado</div>
-          <% } %>
-          <% aniversariantes.forEach(m => {
-            const hoje_md = new Date().toLocaleDateString('pt-BR',{month:'2-digit',day:'2-digit'}).split('/').reverse().join('-');
-            const md = m.data_nascimento ? m.data_nascimento.substring(5) : '';
-            const isHoje = md === hoje_md;
-          %>
-          <div class="aniv-card <%= isHoje ? 'hoje' : '' %>">
-            <div class="aniv-icone">🎂</div>
-            <div class="aniv-info">
-              <div class="aniv-nome"><%= m.nome.split(' ').slice(0,3).join(' ') %></div>
-              <div class="aniv-data"><%= new Date(m.data_nascimento + 'T12:00:00').toLocaleDateString('pt-BR', {day:'numeric',month:'long'}) %></div>
-            </div>
-            <% if (isHoje) { %><span class="badge azul">🎉 Hoje!</span><% } %>
+        <!-- ANIVERSÁRIOS -->
+        <div class="card-moderno">
+          <div class="card-header">
+            <div class="card-titulo">🎂 Aniversários</div>
+            <a href="/aniversarios" class="card-link">Ver todos →</a>
           </div>
-          <% }) %>
-          <a href="/aniversarios" class="link-ver-mais">Ver todos os aniversários →</a>
+          <div class="aniv-lista">
+            <% if (aniversariantes.length === 0) { %>
+              <div class="vazio-mod">🎈 Nenhum aniversariante cadastrado</div>
+            <% } %>
+            <% aniversariantes.forEach(m => {
+              const hoje_md = new Date().toLocaleDateString('pt-BR',{month:'2-digit',day:'2-digit'}).split('/').reverse().join('-');
+              const md = m.data_nascimento ? m.data_nascimento.substring(5) : '';
+              const isHoje = md === hoje_md;
+            %>
+            <div class="aniv-item">
+              <div class="aniv-avatar <%= isHoje ? 'hoje' : '' %>">🎂</div>
+              <div class="aniv-info">
+                <div class="aniv-nome-mod"><%= m.nome.split(' ').slice(0,3).join(' ') %></div>
+                <div class="aniv-data-mod">
+                  <%= new Date(m.data_nascimento + 'T12:00:00').toLocaleDateString('pt-BR', {day:'numeric',month:'long'}) %>
+                </div>
+              </div>
+              <% if (isHoje) { %>
+                <span class="badge-hoje">🎉 Hoje!</span>
+              <% } %>
+            </div>
+            <% }) %>
+          </div>
         </div>
+
       </div>
     </div>
   </main>
@@ -112,81 +400,47 @@
       <div class="modal-titulo">👤 Meu Perfil</div>
       <button onclick="fecharPerfil()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#666">✕</button>
     </div>
-
-    <!-- Info atual -->
     <div class="info-box" style="margin-bottom:20px">
       <strong>Usuário:</strong> <%= usuario.nome %><br>
       <strong>E-mail atual:</strong> <%= usuario.email %><br>
       <strong>Perfil:</strong> <span style="text-transform:capitalize"><%= usuario.perfil %></span>
     </div>
-
-    <!-- Tabs -->
-    <div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--borda);padding-bottom:0">
+    <div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--borda)">
       <button onclick="mostrarTab('senha')" id="tab-senha"
-        style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--cor-primaria);border-bottom:2px solid var(--cor-primaria);font-family:Outfit,sans-serif">
+        style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--cor-primaria);border-bottom:2px solid var(--cor-primaria);font-family:Inter,sans-serif">
         🔒 Alterar Senha
       </button>
       <button onclick="mostrarTab('email')" id="tab-email"
-        style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--texto2);border-bottom:2px solid transparent;font-family:Outfit,sans-serif">
+        style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--texto2);border-bottom:2px solid transparent;font-family:Inter,sans-serif">
         📧 Alterar E-mail
       </button>
     </div>
-
-    <!-- Tab Senha -->
     <div id="form-senha">
       <form action="/minha-senha" method="POST">
         <div style="display:flex;flex-direction:column;gap:14px">
-          <div class="campo">
-            <label class="label">Senha atual</label>
-            <input type="password" name="senha_atual" class="input" required placeholder="Digite sua senha atual">
-          </div>
-          <div class="campo">
-            <label class="label">Nova senha</label>
-            <input type="password" name="nova_senha" class="input" required placeholder="Mínimo 8 caracteres" minlength="8">
-          </div>
-          <div class="campo">
-            <label class="label">Confirmar nova senha</label>
-            <input type="password" name="confirmar_senha" class="input" required placeholder="Repita a nova senha">
-          </div>
-          <div style="background:var(--amarelo-claro);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--amarelo)">
-            ⚠️ Após alterar a senha você precisará fazer login novamente.
-          </div>
+          <div class="campo"><label class="label">Senha atual</label><input type="password" name="senha_atual" class="input" required placeholder="Digite sua senha atual"></div>
+          <div class="campo"><label class="label">Nova senha</label><input type="password" name="nova_senha" class="input" required placeholder="Mínimo 8 caracteres" minlength="8"></div>
+          <div class="campo"><label class="label">Confirmar nova senha</label><input type="password" name="confirmar_senha" class="input" required placeholder="Repita a nova senha"></div>
           <button type="submit" class="btn btn-primario" style="width:100%;justify-content:center">🔒 Alterar senha</button>
         </div>
       </form>
     </div>
-
-    <!-- Tab Email -->
     <div id="form-email" style="display:none">
       <form action="/meu-email" method="POST">
         <div style="display:flex;flex-direction:column;gap:14px">
-          <div class="campo">
-            <label class="label">Novo e-mail</label>
-            <input type="email" name="novo_email" class="input" required placeholder="novo@email.com">
-          </div>
-          <div class="campo">
-            <label class="label">Confirme sua senha</label>
-            <input type="password" name="senha_confirmacao" class="input" required placeholder="Digite sua senha para confirmar">
-          </div>
-          <div style="background:var(--azul-claro);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--azul)">
-            ℹ️ Você usará o novo e-mail para fazer login a partir de agora.
-          </div>
+          <div class="campo"><label class="label">Novo e-mail</label><input type="email" name="novo_email" class="input" required placeholder="novo@email.com"></div>
+          <div class="campo"><label class="label">Confirme sua senha</label><input type="password" name="senha_confirmacao" class="input" required placeholder="Digite sua senha para confirmar"></div>
           <button type="submit" class="btn btn-primario" style="width:100%;justify-content:center">📧 Alterar e-mail</button>
         </div>
       </form>
     </div>
-
   </div>
 </div>
 
 <script src="/js/app.js"></script>
 <script>
-function abrirPerfil() {
-  document.getElementById('modalPerfil').style.display = 'flex';
-}
-function fecharPerfil() {
-  document.getElementById('modalPerfil').style.display = 'none';
-}
+function abrirPerfil() { document.getElementById('modalPerfil').style.display = 'flex'; }
+function fecharPerfil() { document.getElementById('modalPerfil').style.display = 'none'; }
 function mostrarTab(tab) {
   document.getElementById('form-senha').style.display = tab === 'senha' ? 'block' : 'none';
   document.getElementById('form-email').style.display = tab === 'email' ? 'block' : 'none';
@@ -195,14 +449,8 @@ function mostrarTab(tab) {
   document.getElementById('tab-email').style.color = tab === 'email' ? 'var(--cor-primaria)' : 'var(--texto2)';
   document.getElementById('tab-email').style.borderBottomColor = tab === 'email' ? 'var(--cor-primaria)' : 'transparent';
 }
-// Fecha modal clicando fora
-document.getElementById('modalPerfil').addEventListener('click', function(e) {
-  if (e.target === this) fecharPerfil();
-});
-// Abre automaticamente se houver erro
-<% if (erro && erro.length > 0) { %>
-window.addEventListener('load', function() { abrirPerfil(); });
-<% } %>
+document.getElementById('modalPerfil').addEventListener('click', function(e) { if (e.target === this) fecharPerfil(); });
+<% if (erro && erro.length > 0) { %>window.addEventListener('load', function() { abrirPerfil(); });<% } %>
 </script>
 </body>
 </html>
