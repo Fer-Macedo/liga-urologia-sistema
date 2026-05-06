@@ -1,7 +1,7 @@
-// ─── LAURO — Atendente Virtual da Liga Acadêmica de Urologia ─────────────────
+// ─── LAURO — Atendente Virtual com IA (Claude) ───────────────────────────────
 const axios = require('axios');
+const { query } = require('../models/database');
 
-// Números dos responsáveis por área
 const CONTATOS = {
   secretaria:  '595973738431',
   financeiro:  '5561993270096',
@@ -12,494 +12,249 @@ const CONTATOS = {
   presidencia: '5579999444808'
 };
 
-// Estado das conversas (em memória)
-// { numero: { etapa, idioma, tentativas, ts } }
+// Sessoes em memoria { numero: { idioma, historico[], ts } }
 const sessoes = {};
-
-const TIMEOUT_SESSAO = 30 * 60 * 1000; // 30 minutos
+const TIMEOUT = 30 * 60 * 1000;
 
 function getSessao(numero) {
   const agora = Date.now();
-  if (!sessoes[numero] || (agora - sessoes[numero].ts) > TIMEOUT_SESSAO) {
-    sessoes[numero] = { etapa: 'idioma', idioma: null, tentativas: 0, ts: agora };
+  if (!sessoes[numero] || (agora - sessoes[numero].ts) > TIMEOUT) {
+    sessoes[numero] = { idioma: null, historico: [], ts: agora, etapa: 'idioma' };
   }
   sessoes[numero].ts = agora;
   return sessoes[numero];
 }
 
-function resetSessao(numero) {
-  sessoes[numero] = { etapa: 'idioma', idioma: null, tentativas: 0, ts: Date.now() };
+// Busca base de conhecimento do banco
+async function getBaseConhecimento() {
+  try {
+    const r = await query('SELECT pergunta, resposta FROM lauro_conhecimento WHERE ativo=1 ORDER BY criado_em DESC');
+    return r.rows.map(k => `P: ${k.pergunta}\nR: ${k.resposta}`).join('\n\n');
+  } catch(e) {
+    return '';
+  }
 }
 
-// Mensagens bilíngues
-const MSG = {
-  pt: {
-    boas_vindas: `Olá! 👋 Bem-vindo à *Liga Acadêmica de Urologia*! 🏥
-
-Sou o *Lauro*, seu assistente virtual.
-
-Para melhor te atender, em qual idioma prefere ser atendido?
-
-1️⃣ Português
-2️⃣ Español`,
-
-    menu_principal: `Olá! Sou o *Lauro*, assistente virtual da *Liga Acadêmica de Urologia* 🏥
-
-Como posso te ajudar hoje?
-
-1️⃣ Certificados
-2️⃣ Financeiro / Mensalidades
-3️⃣ Atividades e Eventos
-4️⃣ Frequência
-5️⃣ Outras dúvidas
-6️⃣ Falar com um responsável`,
-
-    certificado: `📜 *Informações sobre Certificados*
-
-Os certificados são emitidos pela coordenação após o encerramento das atividades do semestre.
-
-📌 *Alunos da UCP CDE:*
-O certificado aparecerá diretamente no *Portal da UCP* na aba *Eventos*. Não é necessário solicitar.
-
-📌 *Alunos externos:*
-Enviaremos o link para download no *grupo do WhatsApp do evento* assim que os certificados forem disponibilizados pela coordenação.
-
-⏳ *Prazo:* Os certificados são disponibilizados em até *30 dias* após o encerramento do evento/semestre.
-
-Posso te ajudar com mais alguma coisa?
-
-1️⃣ Voltar ao menu
-2️⃣ Falar com a Secretaria`,
-
-    financeiro: `💰 *Financeiro / Mensalidades*
-
-Para questões financeiras, como pagamento de mensalidades, boletos ou cobranças, nossa equipe pode te ajudar.
-
-O que você precisa?
-
-1️⃣ Informações sobre mensalidade
-2️⃣ Problema com pagamento
-3️⃣ Falar com o Financeiro
-4️⃣ Voltar ao menu`,
-
-    mensalidade_info: `💰 *Informações sobre Mensalidade*
-
-📌 *Valor:* R$ 25,00 (com desconto de 20% pagando até o dia 16: R$ 20,00)
-📌 *Vencimento:* Todo dia 16 de cada mês
-📌 *Formas de pagamento:* PIX ou Cartão de crédito
-
-Você recebe mensalmente um link de pagamento por WhatsApp e e-mail.
-
-Precisa de mais alguma informação?
-
-1️⃣ Falar com o Financeiro
-2️⃣ Voltar ao menu`,
-
-    atividades: `📅 *Atividades e Eventos*
-
-A Liga realiza diversas atividades ao longo do semestre:
-
-🔬 Aulas Presenciais e On-line
-🌐 Extensão
-👥 Reuniões
-🎉 Bienvenidas
-🏆 Expoligas
-
-Para informações sobre próximas atividades ou inscrições, entre em contato com nossa equipe.
-
-1️⃣ Falar com Ensino
-2️⃣ Falar com Extensão
-3️⃣ Voltar ao menu`,
-
-    frequencia: `📊 *Frequência*
-
-Para ser aprovado e receber o certificado de 1 ano de liga, você precisa ter *mínimo de 75% de presença* nas atividades.
-
-Você recebe automaticamente todo último dia do mês um relatório com sua frequência por WhatsApp e e-mail.
-
-Dúvidas sobre sua frequência?
-
-1️⃣ Falar com a Secretaria
-2️⃣ Voltar ao menu`,
-
-    outras_duvidas: `💬 *Outras dúvidas*
-
-Não encontrou o que procurava? Nossa equipe pode te ajudar!
-
-Com qual área deseja falar?
-
-1️⃣ Secretaria
-2️⃣ Financeiro
-3️⃣ Científico
-4️⃣ Extensão
-5️⃣ Ensino
-6️⃣ Marketing
-7️⃣ Presidência
-8️⃣ Voltar ao menu`,
-
-    menu_responsaveis: `👥 *Falar com um responsável*
-
-Escolha a área:
-
-1️⃣ Secretaria
-2️⃣ Financeiro
-3️⃣ Científico
-4️⃣ Extensão
-5️⃣ Ensino
-6️⃣ Marketing
-7️⃣ Presidência
-8️⃣ Voltar ao menu`,
-
-    redirecionando: (area) => `✅ Certo! Estou te redirecionando para o responsável pela área de *${area}*.
-
-Em instantes você será atendido. 😊
-
-_Mensagem automática — Liga Acadêmica de Urologia_`,
-
-    aviso_presidencia: (nome, numero, area) => `📬 *Notificação de Atendimento*\n\nUm membro foi redirecionado para a área de *${area}*.\n\n👤 Número: ${numero}`,
-
-    nao_entendi: `Desculpe, não entendi sua mensagem. 😅
-
-Por favor, escolha uma das opções do menu digitando o *número* correspondente.
-
-Digite *menu* para ver as opções novamente.`,
-
-    encerramento: `Foi um prazer te atender! 😊
-
-Se precisar de mais ajuda, é só me chamar.
-
-Atenciosamente,
-*Lauro* — Assistente Virtual
-*Liga Acadêmica de Urologia* 🏥`
-  },
-
-  es: {
-    boas_vindas: `¡Hola! 👋 ¡Bienvenido a la *Liga Académica de Urología*! 🏥
-
-Soy *Lauro*, tu asistente virtual.
-
-¿En qué idioma prefiere ser atendido?
-
-1️⃣ Português
-2️⃣ Español`,
-
-    menu_principal: `¡Hola! Soy *Lauro*, asistente virtual de la *Liga Académica de Urología* 🏥
-
-¿Cómo puedo ayudarte hoy?
-
-1️⃣ Certificados
-2️⃣ Finanzas / Mensualidades
-3️⃣ Actividades y Eventos
-4️⃣ Frecuencia / Asistencia
-5️⃣ Otras consultas
-6️⃣ Hablar con un responsable`,
-
-    certificado: `📜 *Información sobre Certificados*
-
-Los certificados son emitidos por la coordinación al finalizar las actividades del semestre.
-
-📌 *Estudiantes de UCP CDE:*
-El certificado aparecerá directamente en el *Portal UCP* en la pestaña *Eventos*. No es necesario solicitarlo.
-
-📌 *Estudiantes externos:*
-Enviaremos el enlace de descarga al *grupo de WhatsApp del evento* cuando los certificados sean disponibilizados por la coordinación.
-
-⏳ *Plazo:* Los certificados se disponibilizan en hasta *30 días* después del cierre del evento/semestre.
-
-¿Puedo ayudarte con algo más?
-
-1️⃣ Volver al menú
-2️⃣ Hablar con Secretaría`,
-
-    financeiro: `💰 *Finanzas / Mensualidades*
-
-Para cuestiones financieras, nuestro equipo puede ayudarte.
-
-¿Qué necesitas?
-
-1️⃣ Información sobre mensualidad
-2️⃣ Problema con pago
-3️⃣ Hablar con Finanzas
-4️⃣ Volver al menú`,
-
-    mensalidade_info: `💰 *Información sobre Mensualidad*
-
-📌 *Valor:* R$ 25,00 (con descuento del 20% pagando hasta el día 16: R$ 20,00)
-📌 *Vencimiento:* Cada día 16 del mes
-📌 *Formas de pago:* PIX o Tarjeta de crédito
-
-Recibes mensualmente un enlace de pago por WhatsApp y correo electrónico.
-
-¿Necesitas más información?
-
-1️⃣ Hablar con Finanzas
-2️⃣ Volver al menú`,
-
-    atividades: `📅 *Actividades y Eventos*
-
-La Liga realiza diversas actividades durante el semestre:
-
-🔬 Clases Presenciales y On-line
-🌐 Extensión
-👥 Reuniones
-🎉 Bienvenidas
-🏆 Expoligas
-
-Para información sobre próximas actividades o inscripciones, contacta a nuestro equipo.
-
-1️⃣ Hablar con Enseñanza
-2️⃣ Hablar con Extensión
-3️⃣ Volver al menú`,
-
-    frequencia: `📊 *Frecuencia / Asistencia*
-
-Para ser aprobado y recibir el certificado de 1 año de liga, necesitas tener *mínimo 75% de asistencia* en las actividades.
-
-Recibes automáticamente cada último día del mes un reporte con tu frecuencia por WhatsApp y correo.
-
-¿Dudas sobre tu frecuencia?
-
-1️⃣ Hablar con Secretaría
-2️⃣ Volver al menú`,
-
-    outras_duvidas: `💬 *Otras consultas*
-
-¿No encontraste lo que buscabas? ¡Nuestro equipo puede ayudarte!
-
-¿Con qué área deseas hablar?
-
-1️⃣ Secretaría
-2️⃣ Finanzas
-3️⃣ Científico
-4️⃣ Extensión
-5️⃣ Enseñanza
-6️⃣ Marketing
-7️⃣ Presidencia
-8️⃣ Volver al menú`,
-
-    menu_responsaveis: `👥 *Hablar con un responsable*
-
-Elige el área:
-
-1️⃣ Secretaría
-2️⃣ Finanzas
-3️⃣ Científico
-4️⃣ Extensión
-5️⃣ Enseñanza
-6️⃣ Marketing
-7️⃣ Presidencia
-8️⃣ Volver al menú`,
-
-    redirecionando: (area) => `✅ ¡Entendido! Te estoy redirigiendo al responsable del área de *${area}*.
-
-En breve serás atendido. 😊
-
-_Mensaje automático — Liga Académica de Urología_`,
-
-    aviso_presidencia: (nome, numero, area) => `📬 *Notificación de Atención*\n\nUn miembro fue redirigido al área de *${area}*.\n\n👤 Número: ${numero}`,
-
-    nao_entendi: `Disculpa, no entendí tu mensaje. 😅
-
-Por favor, elige una de las opciones del menú escribiendo el *número* correspondiente.
-
-Escribe *menu* para ver las opciones nuevamente.`,
-
-    encerramento: `¡Fue un placer atenderte! 😊
-
-Si necesitas más ayuda, solo escríbeme.
-
-Atentamente,
-*Lauro* — Asistente Virtual
-*Liga Académica de Urología* 🏥`
+// Salva aprendizado novo no banco
+async function salvarAprendizado(pergunta, resposta) {
+  try {
+    await query(
+      'INSERT INTO lauro_conhecimento (pergunta, resposta, ativo) VALUES ($1, $2, 1) ON CONFLICT DO NOTHING',
+      [pergunta.substring(0, 500), resposta.substring(0, 2000)]
+    );
+  } catch(e) { console.error('Erro salvar aprendizado:', e.message); }
+}
+
+// Salva conversa no banco
+async function salvarConversa(numero, papel, mensagem) {
+  try {
+    await query(
+      'INSERT INTO lauro_conversas (numero, papel, mensagem) VALUES ($1, $2, $3)',
+      [numero, papel, mensagem.substring(0, 2000)]
+    );
+  } catch(e) {}
+}
+
+// Chama a API do Claude
+async function chamarClaude(sessao, mensagemUsuario, idioma) {
+  const baseConhecimento = await getBaseConhecimento();
+
+  const sistemaPT = `Você é o Lauro, atendente virtual da Liga Acadêmica de Urologia, uma liga acadêmica que atua no Paraguai com maioria de alunos brasileiros.
+
+Seu perfil:
+- Nome: Lauro
+- Personalidade: simpático, prestativo, descontraído mas profissional
+- Você deve parecer uma pessoa real, não um robô
+- Use emojis com moderação para parecer mais humano
+- Escreva de forma natural, como se estivesse numa conversa de WhatsApp
+- Nunca diga que é um bot ou assistente virtual — aja como se fosse uma pessoa real da equipe
+
+INFORMAÇÕES DA LIGA:
+- Mensalidade: R$ 25,00 (R$ 20,00 com 20% de desconto pagando até dia 16)
+- Certificados UCP CDE: aparecem no portal da UCP na aba Eventos automaticamente
+- Certificados externos: enviados via link no grupo do WhatsApp do evento
+- Prazo certificados: até 30 dias após encerramento do evento/semestre
+- Frequência mínima para certificado: 75% de presença
+- Relatório de frequência: enviado automaticamente no último dia de cada mês
+- Formas de pagamento: PIX ou Cartão de crédito
+
+ÁREAS DE CONTATO (quando precisar direcionar):
+- Secretaria, Financeiro, Científico, Extensão, Ensino, Marketing, Presidência
+
+BASE DE CONHECIMENTO ADICIONAL:
+${baseConhecimento || 'Nenhuma informação adicional cadastrada ainda.'}
+
+REGRAS IMPORTANTES:
+1. Responda SEMPRE em português (o usuário escolheu português)
+2. Se não souber a resposta, diga que vai verificar e ofereça falar com a equipe
+3. Se o usuário quiser falar com alguém, pergunte com qual área e responda APENAS com: DIRECIONAR:nomearea (ex: DIRECIONAR:financeiro)
+4. Se a pergunta for nova e você aprender algo útil, salve mentalmente
+5. Mantenha respostas curtas e objetivas — WhatsApp não é email
+6. Nunca invente informações que não tem certeza`;
+
+  const sistemaES = `Eres Lauro, asistente de atención de la Liga Académica de Urología, una liga académica que opera en Paraguay con mayoría de estudiantes brasileños.
+
+Tu perfil:
+- Nombre: Lauro  
+- Personalidad: simpático, servicial, desenfadado pero profesional
+- Debes parecer una persona real, no un robot
+- Usa emojis con moderación
+- Escribe de forma natural, como si estuvieras en una conversación de WhatsApp
+- Nunca digas que eres un bot — actúa como si fueras una persona real del equipo
+
+INFORMACIÓN DE LA LIGA:
+- Mensualidad: R$ 25,00 (R$ 20,00 con 20% de descuento pagando hasta el día 16)
+- Certificados UCP CDE: aparecen en el portal UCP en la pestaña Eventos automáticamente
+- Certificados externos: enviados por enlace en el grupo de WhatsApp del evento
+- Plazo certificados: hasta 30 días después del cierre del evento/semestre
+- Asistencia mínima para certificado: 75%
+- Reporte de asistencia: enviado automáticamente el último día de cada mes
+
+ÁREAS DE CONTACTO: Secretaría, Finanzas, Científico, Extensión, Enseñanza, Marketing, Presidencia
+
+BASE DE CONOCIMIENTO ADICIONAL:
+${baseConhecimento || 'Sin información adicional registrada aún.'}
+
+REGLAS IMPORTANTES:
+1. Responde SIEMPRE en español
+2. Si no sabes la respuesta, ofrece hablar con el equipo
+3. Si el usuario quiere hablar con alguien, responde SOLO con: DIRECIONAR:nomearea
+4. Mantén respuestas cortas — WhatsApp no es email
+5. Nunca inventes información`;
+
+  const sistema = idioma === 'es' ? sistemaES : sistemaPT;
+
+  // Monta historico para contexto (ultimas 10 mensagens)
+  const historico = sessao.historico.slice(-10).map(h => ({
+    role: h.papel === 'user' ? 'user' : 'assistant',
+    content: h.mensagem
+  }));
+
+  try {
+    const response = await axios.post('https://api.anthropic.com/v1/messages', {
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 500,
+      system: sistema,
+      messages: [...historico, { role: 'user', content: mensagemUsuario }]
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01'
+      },
+      timeout: 30000
+    });
+
+    return response.data.content[0].text;
+  } catch(e) {
+    console.error('Erro Claude:', e.response?.data || e.message);
+    return idioma === 'es'
+      ? 'Disculpa, tuve un problema técnico. ¿Puedo ayudarte con algo más? 😊'
+      : 'Desculpa, tive um problema técnico. Posso te ajudar com mais alguma coisa? 😊';
   }
-};
-
-const AREAS = {
-  pt: ['secretaria', 'financeiro', 'cientifico', 'extensao', 'ensino', 'marketing', 'presidencia'],
-  es: ['secretaria', 'financeiro', 'cientifico', 'extensao', 'ensino', 'marketing', 'presidencia']
-};
-
-const NOMES_AREAS = {
-  pt: ['Secretaria', 'Financeiro', 'Científico', 'Extensão', 'Ensino', 'Marketing', 'Presidência'],
-  es: ['Secretaría', 'Finanzas', 'Científico', 'Extensión', 'Enseñanza', 'Marketing', 'Presidencia']
-};
+}
 
 async function enviarMensagem(numero, mensagem) {
   const token = process.env.ZAPAPI_TOKEN;
   const instanceId = process.env.ZAPAPI_INSTANCE;
   try {
+    const delay = Math.min(Math.max(mensagem.length * 25, 1500), 4000);
+    await new Promise(r => setTimeout(r, delay));
     await axios.post(
       'https://api.w-api.app/v1/message/send-text?instanceId=' + instanceId,
-      { phone: numero, message: mensagem, instanceId, delayMessage: 1 },
+      { phone: numero, message: mensagem, instanceId, delayMessage: 2 },
       { headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, timeout: 20000 }
     );
     console.log('Lauro enviou para', numero);
-  } catch (e) {
-    console.error('Lauro erro envio:', e.message);
+  } catch(e) { console.error('Lauro erro envio:', e.message); }
+}
+
+async function redirecionarArea(numero, area, idioma) {
+  const areas = ['secretaria','financeiro','cientifico','extensao','ensino','marketing','presidencia'];
+  const nomesPT = ['Secretaria','Financeiro','Científico','Extensão','Ensino','Marketing','Presidência'];
+  const nomesES = ['Secretaría','Finanzas','Científico','Extensión','Enseñanza','Marketing','Presidencia'];
+  const idx = areas.indexOf(area.toLowerCase());
+  if (idx === -1) return;
+  const nomeArea = idioma === 'es' ? nomesES[idx] : nomesPT[idx];
+  const numeroArea = CONTATOS[area];
+
+  const msgCliente = idioma === 'es'
+    ? `¡Perfecto! Ya avisé al equipo de *${nomeArea}* sobre tu contacto 📲\n\nEn breve alguien del equipo se pondrá en contacto contigo. Si necesitas algo más, ¡estoy aquí!\n\n*Lauro — Liga Académica de Urología* 🏥`
+    : `Perfeito! Já avisei o pessoal de *${nomeArea}* sobre o seu contato 📲\n\nEm breve alguém da equipe vai entrar em contato com você. Qualquer coisa, pode me chamar!\n\n*Lauro — Liga Acadêmica de Urologia* 🏥`;
+
+  await enviarMensagem(numero, msgCliente);
+
+  const hora = new Date().toLocaleString('pt-BR', {timeZone:'America/Sao_Paulo'});
+  const msgArea = `Olá! Venho através do WhatsApp do *Lauro* 🤖
+
+Um membro solicitou atendimento de *${nomesPT[idx]}*.
+
+📱 Contato: wa.me/${numero}
+🌐 Idioma: ${idioma === "es" ? "Español" : "Português"}
+🕐 ${hora}
+
+_Por favor entre em contato com o membro para dar continuidade ao atendimento._`;
+  await enviarMensagem(numeroArea, msgArea);
+
+  if (area !== 'presidencia') {
+    await enviarMensagem(CONTATOS.presidencia,
+      `📊 *Lauro — Atendimento registrado*\n\n📱 Número: wa.me/${numero}\n📁 Área: *${nomesPT[idx]}*\n🕐 ${hora}`
+    );
   }
 }
 
 async function processarMensagem(numero, texto) {
   const sessao = getSessao(numero);
-  const msg = texto.trim().toLowerCase();
-  const idioma = sessao.idioma || 'pt';
-  const t = MSG[idioma];
+  const msg = texto.trim();
+  const msgLower = msg.toLowerCase();
 
-  console.log('Lauro recebeu de', numero, '| etapa:', sessao.etapa, '| msg:', msg);
+  console.log('Lauro | de:', numero, '| etapa:', sessao.etapa, '| msg:', msg.substring(0,40));
 
-  // Comando menu em qualquer etapa
-  if (msg === 'menu' || msg === 'menú') {
-    sessao.etapa = 'menu';
-    await enviarMensagem(numero, t.menu_principal);
-    return;
-  }
+  // Salva mensagem do usuario
+  await salvarConversa(numero, 'user', msg);
+  sessao.historico.push({ papel: 'user', mensagem: msg });
 
-  // ─── ETAPA: IDIOMA ────────────────────────────────────────────────────────
+  // Primeira mensagem — pergunta idioma
   if (sessao.etapa === 'idioma') {
-    if (msg === '1' || msg.includes('portugu')) {
+    if (msgLower === '1' || msgLower.includes('portugu') || msgLower.includes('brasil')) {
       sessao.idioma = 'pt';
-      sessao.etapa = 'menu';
-      await enviarMensagem(numero, MSG.pt.menu_principal);
-    } else if (msg === '2' || msg.includes('espa') || msg.includes('españ')) {
+      sessao.etapa = 'ativo';
+    } else if (msgLower === '2' || msgLower.includes('espan') || msgLower.includes('españ')) {
       sessao.idioma = 'es';
-      sessao.etapa = 'menu';
-      await enviarMensagem(numero, MSG.es.menu_principal);
+      sessao.etapa = 'ativo';
     } else {
-      // Primeira mensagem — envia boas vindas
-      await enviarMensagem(numero, MSG.pt.boas_vindas);
+      const boasVindas = `Oi! 😊 Tudo bem? Aqui é o *Lauro*, da *Liga Acadêmica de Urologia*!\n\nAntes de começar, me diz: prefere que eu te atenda em português ou espanhol?\n\n1️⃣ Português 🇧🇷\n2️⃣ Español 🇵🇾`;
+      await enviarMensagem(numero, boasVindas);
+      await salvarConversa(numero, 'assistant', boasVindas);
+      sessao.historico.push({ papel: 'assistant', mensagem: boasVindas });
+      return;
     }
+
+    const boasVindas = sessao.idioma === 'es'
+      ? `¡Perfecto! 😊 Cuéntame, ¿en qué puedo ayudarte hoy?`
+      : `Perfeito! 😊 Me conta, como posso te ajudar hoje?`;
+    await enviarMensagem(numero, boasVindas);
+    await salvarConversa(numero, 'assistant', boasVindas);
+    sessao.historico.push({ papel: 'assistant', mensagem: boasVindas });
     return;
   }
 
-  // ─── ETAPA: MENU PRINCIPAL ────────────────────────────────────────────────
-  if (sessao.etapa === 'menu') {
-    if (msg === '1') {
-      sessao.etapa = 'certificado';
-      await enviarMensagem(numero, t.certificado);
-    } else if (msg === '2') {
-      sessao.etapa = 'financeiro';
-      await enviarMensagem(numero, t.financeiro);
-    } else if (msg === '3') {
-      sessao.etapa = 'atividades';
-      await enviarMensagem(numero, t.atividades);
-    } else if (msg === '4') {
-      sessao.etapa = 'frequencia';
-      await enviarMensagem(numero, t.frequencia);
-    } else if (msg === '5') {
-      sessao.etapa = 'outras';
-      await enviarMensagem(numero, t.outras_duvidas);
-    } else if (msg === '6') {
-      sessao.etapa = 'responsaveis';
-      await enviarMensagem(numero, t.menu_responsaveis);
-    } else {
-      await enviarMensagem(numero, t.nao_entendi);
-    }
+  // Conversa ativa — usa Claude
+  const resposta = await chamarClaude(sessao, msg, sessao.idioma || 'pt');
+
+  // Verifica se Claude quer direcionar para area
+  if (resposta.startsWith('DIRECIONAR:')) {
+    const area = resposta.replace('DIRECIONAR:', '').trim().toLowerCase();
+    await redirecionarArea(numero, area, sessao.idioma || 'pt');
+    const msgLog = `[Direcionado para ${area}]`;
+    await salvarConversa(numero, 'assistant', msgLog);
+    sessao.historico.push({ papel: 'assistant', mensagem: msgLog });
     return;
   }
 
-  // ─── ETAPA: CERTIFICADO ───────────────────────────────────────────────────
-  if (sessao.etapa === 'certificado') {
-    if (msg === '1') {
-      sessao.etapa = 'menu';
-      await enviarMensagem(numero, t.menu_principal);
-    } else if (msg === '2') {
-      sessao.etapa = 'menu';
-      await redirecionarArea(numero, 'secretaria', idioma);
-    } else {
-      await enviarMensagem(numero, t.nao_entendi);
-    }
-    return;
-  }
-
-  // ─── ETAPA: FINANCEIRO ────────────────────────────────────────────────────
-  if (sessao.etapa === 'financeiro') {
-    if (msg === '1') {
-      sessao.etapa = 'menu';
-      await enviarMensagem(numero, t.mensalidade_info);
-    } else if (msg === '2' || msg === '3') {
-      sessao.etapa = 'menu';
-      await redirecionarArea(numero, 'financeiro', idioma);
-    } else if (msg === '4') {
-      sessao.etapa = 'menu';
-      await enviarMensagem(numero, t.menu_principal);
-    } else {
-      await enviarMensagem(numero, t.nao_entendi);
-    }
-    return;
-  }
-
-  // ─── ETAPA: ATIVIDADES ────────────────────────────────────────────────────
-  if (sessao.etapa === 'atividades') {
-    if (msg === '1') {
-      sessao.etapa = 'menu';
-      await redirecionarArea(numero, 'ensino', idioma);
-    } else if (msg === '2') {
-      sessao.etapa = 'menu';
-      await redirecionarArea(numero, 'extensao', idioma);
-    } else if (msg === '3') {
-      sessao.etapa = 'menu';
-      await enviarMensagem(numero, t.menu_principal);
-    } else {
-      await enviarMensagem(numero, t.nao_entendi);
-    }
-    return;
-  }
-
-  // ─── ETAPA: FREQUÊNCIA ────────────────────────────────────────────────────
-  if (sessao.etapa === 'frequencia') {
-    if (msg === '1') {
-      sessao.etapa = 'menu';
-      await redirecionarArea(numero, 'secretaria', idioma);
-    } else if (msg === '2') {
-      sessao.etapa = 'menu';
-      await enviarMensagem(numero, t.menu_principal);
-    } else {
-      await enviarMensagem(numero, t.nao_entendi);
-    }
-    return;
-  }
-
-  // ─── ETAPA: OUTRAS / RESPONSÁVEIS ────────────────────────────────────────
-  if (sessao.etapa === 'outras' || sessao.etapa === 'responsaveis') {
-    const idx = parseInt(msg) - 1;
-    if (idx >= 0 && idx <= 6) {
-      const area = AREAS.pt[idx];
-      sessao.etapa = 'menu';
-      await redirecionarArea(numero, area, idioma);
-    } else if (msg === '8') {
-      sessao.etapa = 'menu';
-      await enviarMensagem(numero, t.menu_principal);
-    } else {
-      await enviarMensagem(numero, t.nao_entendi);
-    }
-    return;
-  }
-
-  // Fallback
-  await enviarMensagem(numero, t.nao_entendi);
+  // Envia resposta normal
+  await enviarMensagem(numero, resposta);
+  await salvarConversa(numero, 'assistant', resposta);
+  sessao.historico.push({ papel: 'assistant', mensagem: resposta });
 }
 
-async function redirecionarArea(numeroCliente, area, idioma) {
-  const t = MSG[idioma];
-  const idx = AREAS.pt.indexOf(area);
-  const nomeArea = NOMES_AREAS[idioma][idx];
-  const numeroArea = CONTATOS[area];
-
-  // Mensagem para o cliente
-  await enviarMensagem(numeroCliente, t.redirecionando(nomeArea));
-
-  // Notifica o responsável da área
-  const msgResponsavel = idioma === 'pt'
-    ? `📬 *Nova solicitação de atendimento*\n\nUm membro entrou em contato e foi direcionado para *${nomeArea}*.\n\n👤 Número: wa.me/${numeroCliente}\n\n_Por favor, entre em contato para dar continuidade ao atendimento._`
-    : `📬 *Nueva solicitud de atención*\n\nUn miembro contactó y fue dirigido a *${nomeArea}*.\n\n👤 Número: wa.me/${numeroCliente}\n\n_Por favor, contacte para continuar la atención._`;
-
-  await enviarMensagem(numeroArea, msgResponsavel);
-
-  // Sempre notifica a presidência (exceto se já é a própria presidência)
-  if (area !== 'presidencia') {
-    const msgPresidencia = `📊 *Lauro — Registro de Atendimento*\n\n👤 Número: wa.me/${numeroCliente}\n📁 Direcionado para: *${NOMES_AREAS['pt'][idx]}*\n🕐 Horário: ${new Date().toLocaleString('pt-BR', {timeZone:'America/Sao_Paulo'})}`;
-    await enviarMensagem(CONTATOS.presidencia, msgPresidencia);
-  }
-}
-
-module.exports = { processarMensagem, getSessao, resetSessao };
+module.exports = { processarMensagem };
