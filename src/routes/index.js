@@ -653,7 +653,7 @@ router.get('/frequencia/relatorio/:turmaId', requireAuth, requireSecretaria, asy
 
   let headerAtividades = '<th style="padding:10px;background:'+orgCor+';color:white;text-align:left;min-width:160px">Membro</th>';
   for (const at of atividades.rows) {
-    const data = new Date(at.data_atividade + 'T12:00:00').toLocaleDateString('pt-BR');
+    const data = new Date(at.data_atividade).toLocaleDateString('pt-BR',{timeZone:'UTC'});
     headerAtividades += '<th style="padding:8px;background:'+orgCor+';color:white;text-align:center;font-size:11px;min-width:90px"><strong>' + data + '</strong><br><span style="font-weight:400;font-size:10px">' + at.tipo + '</span><br><span style="font-weight:400;font-size:10px">' + at.descricao.substring(0,15) + '</span></th>';
   }
 
@@ -667,7 +667,7 @@ router.get('/frequencia/relatorio/:turmaId', requireAuth, requireSecretaria, asy
     <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #1a56db">
       ${logoHtml}
       <h1 style="margin:12px 0 4px;font-size:20px">Relatório de Frequência</h1>
-      <p style="margin:0;color:#6b7280">Turma: <strong>${turma.nome}</strong> &nbsp;|&nbsp; Período: ${new Date(turma.data_inicio+'T12:00:00').toLocaleDateString('pt-BR')} ${turma.data_fim ? '— '+new Date(turma.data_fim+'T12:00:00').toLocaleDateString('pt-BR') : ''}</p>
+      <p style="margin:0;color:#6b7280">Turma: <strong>${turma.nome}</strong> &nbsp;|&nbsp; Período: ${new Date(turma.data_inicio).toLocaleDateString('pt-BR',{timeZone:'UTC'})} ${turma.data_fim ? '— '+new Date(turma.data_fim+'T12:00:00').toLocaleDateString('pt-BR') : ''}</p>
       <p style="margin:4px 0 0;color:#6b7280">Total de atividades: <strong>${atividades.rows.length}</strong> &nbsp;|&nbsp; Critério: <strong>mínimo 75% de presença</strong> &nbsp;|&nbsp; Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
     </div>
     <h3>📋 Resumo por membro</h3>
