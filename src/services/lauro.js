@@ -65,8 +65,8 @@ async function alertarCreditos(tipo) {
 
 // Menu de fallback quando IA nao esta disponivel
 function menuFallback(idioma) {
-  const pt = 'Ola! Sou o Lauro da Liga Academica de Urologia.\n\nCom quem deseja falar?\n\n1 - Secretaria\n2 - Financeiro\n3 - Cientifico\n4 - Extensao\n5 - Ensino\n6 - Marketing\n7 - Presidencia';
-  const es = 'Hola! Soy Lauro de la Liga Academica de Urologia.\n\nCon quien deseas hablar?\n\n1 - Secretaria\n2 - Finanzas\n3 - Cientifico\n4 - Extension\n5 - Ensenanza\n6 - Marketing\n7 - Presidencia';
+  const pt = '💚💙 *Lauro* - Liga Academica de Urologia\n\nOla! Como posso te ajudar? Escolha com quem deseja falar:\n\n1 - Secretaria\n2 - Financeiro\n3 - Cientifico\n4 - Extensao\n5 - Ensino\n6 - Marketing\n7 - Presidencia';
+  const es = '💚💙 *Lauro* - Liga Academica de Urologia\n\nHola! Como puedo ayudarte? Elige con quien deseas hablar:\n\n1 - Secretaria\n2 - Finanzas\n3 - Cientifico\n4 - Extension\n5 - Ensenanza\n6 - Marketing\n7 - Presidencia';
   return idioma === 'es' ? es : pt;
 }
 
@@ -154,7 +154,8 @@ REGLAS IMPORTANTES:
     }, {
       headers: {
         'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01'
+        'anthropic-version': '2023-06-01',
+        'x-api-key': process.env.ANTHROPIC_API_KEY
       },
       timeout: 30000
     });
@@ -171,6 +172,7 @@ REGLAS IMPORTANTES:
       // Retorna menu de fallback
       return 'FALLBACK_MENU';
     }
+    // Fallback apenas se nao for erro temporario
     return 'FALLBACK_MENU';
   }
 }
@@ -270,6 +272,17 @@ async function processarMensagem(numero, texto) {
     } else {
       await enviarMensagem(numero, menuFallback(sessao.idioma || 'pt'));
     }
+    return;
+  }
+
+  // Detecta pedido de atendente humano
+  const pedidoHumano = ['atendente', 'humano', 'pessoa', 'responsavel', 'falar com', 'quero falar', 'equipe', 'agente'];
+  if (pedidoHumano.some(p => msgLower.includes(p))) {
+    const menuHumano = menuFallback(sessao.idioma || 'pt');
+    await enviarMensagem(numero, menuHumano);
+    await salvarConversa(numero, 'assistant', menuHumano);
+    sessao.historico.push({ papel: 'assistant', mensagem: menuHumano });
+    sessao.etapa = 'fallback';
     return;
   }
 
