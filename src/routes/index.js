@@ -651,11 +651,10 @@ router.get('/frequencia/relatorio/:turmaId', requireAuth, requireSecretaria, asy
     linhasAtividades += '<tr>' + cols + '</tr>';
   }
 
-  let headerAtividades = '<th style="padding:10px;background:#1a56db;color:white;text-align:left;min-width:160px">Membro</th>';
+  let headerAtividades = '<th style="padding:10px;background:'+orgCor+';color:white;text-align:left;min-width:160px">Membro</th>';
   for (const at of atividades.rows) {
-    const data = new Date(at.data_atividade + 'T12:00:00').toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit',year:'2-digit'});
-    headerAtividades += '<th style="padding:8px;background:#1a56db;color:white;text-align:center;font-size:11px;min-width:90px">'
-      + data + '<br><span style="font-weight:400;font-size:10px">' + at.tipo + '</span><br><span style="font-weight:400;font-size:10px">' + at.descricao.substring(0,20) + '</span></th>';
+    const data = new Date(at.data_atividade + 'T12:00:00').toLocaleDateString('pt-BR');
+    headerAtividades += '<th style="padding:8px;background:'+orgCor+';color:white;text-align:center;font-size:11px;min-width:90px"><strong>' + data + '</strong><br><span style="font-weight:400;font-size:10px">' + at.tipo + '</span><br><span style="font-weight:400;font-size:10px">' + at.descricao.substring(0,15) + '</span></th>';
   }
 
   const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
