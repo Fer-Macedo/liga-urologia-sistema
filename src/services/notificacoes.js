@@ -216,7 +216,7 @@ async function notificarCobranca(opts) {
     pos: 'Mensalidade em atraso'
   };
 
-  const msgWpp = montarMensagemWhatsapp(tipo, dados, orgNome, pixCode, linkCartao);
+  const msgsWpp = montarMensagensWhatsapp(tipo, dados, orgNome, pixCode, linkCartao);
   const msgHtml = htmlCobranca({
     titulo: tituloMap[tipo] || '',
     mensagem: 'Prezado(a) ' + dados.nome + ', segue abaixo as opções para pagamento da sua mensalidade.',
@@ -225,12 +225,20 @@ async function notificarCobranca(opts) {
   });
 
   if (membro.whatsapp) {
-    const r = await enviarWhatsApp(membro.whatsapp, msgWpp);
+    let wppOk = false;
+    for (const msg of msgsWpp) {
+      if (!msg) continue;
+      const r = await enviarWhatsApp(membro.whatsapp, msg);
+      if (r.ok) wppOk = true;
+      await new Promise(res => setTimeout(res, 1500)); // aguarda 1.5s entre mensagens
+    }
     await query('INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
-      [membro.id, cobranca.id, tipo, 'whatsapp', r.ok ? 'ok' : 'erro']);
+      [membro.id, cobranca.id, tipo, 'whatsapp', wppOk ? 'ok' : 'erro']);
   }
   if (membro.email) {
-    const r = await enviarEmail({ para: membro.email, assunto: assuntoMap[tipo] || '', html: msgHtml, texto: msgWpp });
+    const r = await enviarEmail({ para: membro.email, assunto: assuntoMap[tipo] || '', html: msgHtml, texto: msgsWpp.join('
+
+') });
     await query('INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
       [membro.id, cobranca.id, tipo, 'email', r.ok ? 'ok' : 'erro']);
   }
