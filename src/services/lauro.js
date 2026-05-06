@@ -55,6 +55,21 @@ async function salvarConversa(numero, papel, mensagem) {
   } catch(e) {}
 }
 
+// Envia alerta para presidencia quando creditos estao acabando
+async function alertarCreditos(tipo) {
+  const zerado = 'Atencao: Os creditos da API do Claude acabaram! O Lauro esta em modo basico. Recarregue em console.anthropic.com/settings/billing';
+  const baixo = 'Atencao: Os creditos da API do Claude estao baixos! Recarregue em breve em console.anthropic.com/settings/billing';
+  const msg = tipo === 'zerado' ? zerado : baixo;
+  try { await enviarMensagem(CONTATOS.presidencia, msg); } catch(e) {}
+}
+
+// Menu de fallback quando IA nao esta disponivel
+function menuFallback(idioma) {
+  const pt = 'Ola! Sou o Lauro da Liga Academica de Urologia.\n\nCom quem deseja falar?\n\n1 - Secretaria\n2 - Financeiro\n3 - Cientifico\n4 - Extensao\n5 - Ensino\n6 - Marketing\n7 - Presidencia';
+  const es = 'Hola! Soy Lauro de la Liga Academica de Urologia.\n\nCon quien deseas hablar?\n\n1 - Secretaria\n2 - Finanzas\n3 - Cientifico\n4 - Extension\n5 - Ensenanza\n6 - Marketing\n7 - Presidencia';
+  return idioma === 'es' ? es : pt;
+}
+
 // Chama a API do Claude
 async function chamarClaude(sessao, mensagemUsuario, idioma) {
   const baseConhecimento = await getBaseConhecimento();
@@ -146,10 +161,17 @@ REGLAS IMPORTANTES:
 
     return response.data.content[0].text;
   } catch(e) {
-    console.error('Erro Claude:', e.response?.data || e.message);
-    return idioma === 'es'
-      ? 'Disculpa, tuve un problema técnico. ¿Puedo ayudarte con algo más? 😊'
-      : 'Desculpa, tive um problema técnico. Posso te ajudar com mais alguma coisa? 😊';
+    const errMsg = JSON.stringify(e.response?.data || e.message || '');
+    console.error('Erro Claude:', errMsg);
+    
+    // Verifica se e erro de credito
+    if (errMsg.includes('credit') || errMsg.includes('balance') || errMsg.includes('quota')) {
+      // Alerta a presidencia
+      alertarCreditos('zerado');
+      // Retorna menu de fallback
+      return 'FALLBACK_MENU';
+    }
+    return 'FALLBACK_MENU';
   }
 }
 
@@ -238,6 +260,19 @@ async function processarMensagem(numero, texto) {
     return;
   }
 
+  // Modo fallback — sem creditos IA
+  if (sessao.etapa === 'fallback') {
+    const areas = ['secretaria','financeiro','cientifico','extensao','ensino','marketing','presidencia'];
+    const idx = parseInt(msg) - 1;
+    if (idx >= 0 && idx <= 6) {
+      sessao.etapa = 'ativo';
+      await redirecionarArea(numero, areas[idx], sessao.idioma || 'pt');
+    } else {
+      await enviarMensagem(numero, menuFallback(sessao.idioma || 'pt'));
+    }
+    return;
+  }
+
   // Conversa ativa — usa Claude
   const resposta = await chamarClaude(sessao, msg, sessao.idioma || 'pt');
 
@@ -248,6 +283,16 @@ async function processarMensagem(numero, texto) {
     const msgLog = `[Direcionado para ${area}]`;
     await salvarConversa(numero, 'assistant', msgLog);
     sessao.historico.push({ papel: 'assistant', mensagem: msgLog });
+    return;
+  }
+
+  // Verifica se e fallback (sem creditos)
+  if (resposta === 'FALLBACK_MENU') {
+    const msgFallback = menuFallback(sessao.idioma || 'pt');
+    await enviarMensagem(numero, msgFallback);
+    await salvarConversa(numero, 'assistant', msgFallback);
+    sessao.historico.push({ papel: 'assistant', mensagem: msgFallback });
+    sessao.etapa = 'fallback';
     return;
   }
 
