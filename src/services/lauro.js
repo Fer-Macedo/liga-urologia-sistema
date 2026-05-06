@@ -213,8 +213,8 @@ async function redirecionarArea(numero, area, idioma) {
   const numeroArea = CONTATOS[area];
 
   const msgCliente = idioma === 'es'
-    ? `¡Perfecto! Ya avisé al equipo de *${nomeArea}* sobre tu contacto 📲\n\nEn breve alguien del equipo se pondrá en contacto contigo. Si necesitas algo más, ¡estoy aquí!\n\n💚💙 *Lauro — Liga Académica de Urología* 🏥`
-    : `Perfeito! Já avisei o pessoal de *${nomeArea}* sobre o seu contato 📲\n\nEm breve alguém da equipe vai entrar em contato com você. Qualquer coisa, pode me chamar!\n\n💚💙 *Lauro — Liga Acadêmica de Urologia* 🏥`;
+    ? 'Entendido! Ja encaminhei sua solicitacao para o time de ' + nomeArea + '. Assim que estiverem disponiveis, alguem vai entrar em contato para dar continuidade. Posso ajudar com mais alguma coisa?'
+    : 'Entendido! Ja encaminhei sua solicitacao para a equipe de ' + nomeArea + '. Assim que estiverem disponiveis, alguem vai entrar em contato para dar continuidade ao atendimento. Tem mais alguma duvida que eu possa te ajudar?';
 
   await enviarMensagem(numero, msgCliente);
 
