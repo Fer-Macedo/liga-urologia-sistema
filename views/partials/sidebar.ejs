@@ -16,14 +16,22 @@
     <a href="/membros" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'membros' ? 'ativo' : '' %>">
       <span class="nav-icone">◎</span> Membros
     </a>
+    <a href="/diretivos" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'diretivos' ? 'ativo' : '' %>">
+      <span class="nav-icone">🏛</span> Diretivos
+    </a>
+    <a href="/frequencia" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'frequencia' ? 'ativo' : '' %>">
+      <span class="nav-icone">◉</span> Frequência Membros
+    </a>
+    <a href="/frequencia-diretivos" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'frequencia-diretivos' ? 'ativo' : '' %>">
+      <span class="nav-icone">◉</span> Frequência Diretivos
+    </a>
     <a href="/cobrancas" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'cobrancas' ? 'ativo' : '' %>">
       <span class="nav-icone">◈</span> Cobranças
-<a href="/frequencia" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'frequencia' ? 'ativo' : '' %>"><span class="nav-icone">📊</span> Frequência</a>
     </a>
     <a href="/aniversarios" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'aniversarios' ? 'ativo' : '' %>">
       <span class="nav-icone">◆</span> Aniversários
     </a>
-    <% if (usuario && usuario.perfil === 'admin') { %>
+    <% if (usuarioLogado && usuarioLogado.perfil === 'admin') { %>
     <a href="/notificacoes" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'notificacoes' ? 'ativo' : '' %>">
       <span class="nav-icone">◉</span> Notificações
     </a>
@@ -37,8 +45,8 @@
   </nav>
   <div class="sidebar-rodape">
     <div class="usuario-info">
-      <div class="usuario-nome"><%= usuario?.nome || '' %></div>
-      <div class="usuario-perfil"><%= usuario?.perfil || '' %></div>
+      <div class="usuario-nome"><%= usuarioLogado?.nome || '' %></div>
+      <div class="usuario-perfil"><%= usuarioLogado?.perfil || '' %></div>
     </div>
     <a href="/logout" class="btn-sair">Sair</a>
   </div>
