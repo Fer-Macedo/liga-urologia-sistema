@@ -57,7 +57,7 @@
         </div>
         <% if (turmaAtual) { %>
           <a href="/frequencia/relatorio/<%= turmaAtual.id %>" class="btn" target="_blank">📥 Relatório</a>
-          <button class="btn" onclick="enviarFrequencias(<%= turmaAtual.id %>)">📱 Enviar frequências</button>
+          <button class="btn" onclick="abrirModalEnvio(<%= turmaAtual.id %>)">📱 Enviar frequências</button>
         <% } %>
       </div>
 
@@ -324,6 +324,43 @@
   </div>
 </div>
 
+<!-- Modal Enviar Frequência -->
+<div class="modal-overlay" id="modal-envio" style="display:none">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header">
+      <span class="modal-titulo">📱 Enviar Frequência</span>
+      <button class="icon-btn" onclick="fecharModal('modal-envio')">✕</button>
+    </div>
+    <div style="margin-bottom:14px">
+      <p style="font-size:13px;color:var(--texto2);margin:0 0 12px">Selecione quem receberá o relatório de frequência por WhatsApp e e-mail:</p>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button class="btn btn-primario" style="font-size:12px" onclick="selecionarTodos(true)">✅ Selecionar todos</button>
+        <button class="btn" style="font-size:12px" onclick="selecionarTodos(false)">☐ Desmarcar todos</button>
+      </div>
+      <div id="lista-membros-envio" style="display:flex;flex-direction:column;gap:6px;max-height:300px;overflow-y:auto">
+        <% if (turmaAtual) { %>
+          <% membrosFrequencia.forEach(m => { %>
+          <label style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--fundo);border-radius:8px;border:1px solid var(--borda);cursor:pointer">
+            <input type="checkbox" class="check-envio" value="<%= m.membro_id %>" checked style="width:18px;height:18px;accent-color:var(--cor-primaria)">
+            <div>
+              <div style="font-size:13px;font-weight:600"><%= m.nome %></div>
+              <div style="font-size:11px;color:var(--texto2)">
+                <% const pctE = m.total_atividades > 0 ? Math.round((m.presencas / m.total_atividades) * 100) : 0; %>
+                ✅ <%= m.presencas %> presenças | ❌ <%= m.total_atividades - m.presencas %> faltas | <%= pctE %>%
+              </div>
+            </div>
+          </label>
+          <% }) %>
+        <% } %>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" onclick="fecharModal('modal-envio')">Cancelar</button>
+      <button type="button" class="btn btn-primario" onclick="confirmarEnvio()">📱 Enviar selecionados</button>
+    </div>
+  </div>
+</div>
+
 <script src="/js/app.js"></script>
 <script>
 function mostrarTab(tabId) {
@@ -333,9 +370,26 @@ function mostrarTab(tabId) {
   event.target.classList.add('ativo');
 }
 
-function enviarFrequencias(turmaId) {
-  if (!confirm('Enviar relatório de frequência para todos os membros da turma por WhatsApp e e-mail?')) return;
-  fetch('/frequencia/turma/' + turmaId + '/enviar', { method: 'POST' })
+let turmaIdEnvio = null;
+
+function abrirModalEnvio(turmaId) {
+  turmaIdEnvio = turmaId;
+  abrirModal('modal-envio');
+}
+
+function selecionarTodos(val) {
+  document.querySelectorAll('.check-envio').forEach(c => c.checked = val);
+}
+
+function confirmarEnvio() {
+  const selecionados = Array.from(document.querySelectorAll('.check-envio:checked')).map(c => c.value);
+  if (selecionados.length === 0) { alert('Selecione pelo menos um membro!'); return; }
+  fecharModal('modal-envio');
+
+  const formData = new FormData();
+  selecionados.forEach(id => formData.append('membros_ids', id));
+
+  fetch('/frequencia/turma/' + turmaIdEnvio + '/enviar', { method: 'POST', body: formData })
     .then(r => r.json())
     .then(d => alert(d.msg || 'Enviado!'))
     .catch(() => alert('Erro ao enviar'));
