@@ -178,13 +178,13 @@ async function redirecionarArea(numero, area, idioma) {
   const numeroArea = CONTATOS[area];
 
   const msgCliente = idioma === 'es'
-    ? `¡Perfecto! Ya avisé al equipo de *${nomeArea}* sobre tu contacto 📲\n\nEn breve alguien del equipo se pondrá en contacto contigo. Si necesitas algo más, ¡estoy aquí!\n\n*Lauro — Liga Académica de Urología* 🏥`
-    : `Perfeito! Já avisei o pessoal de *${nomeArea}* sobre o seu contato 📲\n\nEm breve alguém da equipe vai entrar em contato com você. Qualquer coisa, pode me chamar!\n\n*Lauro — Liga Acadêmica de Urologia* 🏥`;
+    ? `¡Perfecto! Ya avisé al equipo de *${nomeArea}* sobre tu contacto 📲\n\nEn breve alguien del equipo se pondrá en contacto contigo. Si necesitas algo más, ¡estoy aquí!\n\n💚💙 *Lauro — Liga Académica de Urología* 🏥`
+    : `Perfeito! Já avisei o pessoal de *${nomeArea}* sobre o seu contato 📲\n\nEm breve alguém da equipe vai entrar em contato com você. Qualquer coisa, pode me chamar!\n\n💚💙 *Lauro — Liga Acadêmica de Urologia* 🏥`;
 
   await enviarMensagem(numero, msgCliente);
 
   const hora = new Date().toLocaleString('pt-BR', {timeZone:'America/Sao_Paulo'});
-  const msgArea = `Olá! Venho através do WhatsApp do *Lauro* 🤖
+  const msgArea = `Olá! Venho através do WhatsApp do 💚💙 *Lauro* 🤖
 
 Um membro solicitou atendimento de *${nomesPT[idx]}*.
 
@@ -197,7 +197,7 @@ _Por favor entre em contato com o membro para dar continuidade ao atendimento._`
 
   if (area !== 'presidencia') {
     await enviarMensagem(CONTATOS.presidencia,
-      `📊 *Lauro — Atendimento registrado*\n\n📱 Número: wa.me/${numero}\n📁 Área: *${nomesPT[idx]}*\n🕐 ${hora}`
+      `📊 💚💙 *Lauro — Atendimento registrado*\n\n📱 Número: wa.me/${numero}\n📁 Área: *${nomesPT[idx]}*\n🕐 ${hora}`
     );
   }
 }
@@ -222,7 +222,7 @@ async function processarMensagem(numero, texto) {
       sessao.idioma = 'es';
       sessao.etapa = 'ativo';
     } else {
-      const boasVindas = `Oi! 😊 Tudo bem? Aqui é o *Lauro*, da *Liga Acadêmica de Urologia*!\n\nAntes de começar, me diz: prefere que eu te atenda em português ou espanhol?\n\n1️⃣ Português 🇧🇷\n2️⃣ Español 🇵🇾`;
+      const boasVindas = `Oi! 😊 Tudo bem? Aqui é o 💚💙 *Lauro*, da *Liga Acadêmica de Urologia*!\n\nAntes de começar, me diz: prefere que eu te atenda em português ou espanhol?\n\n1️⃣ Português 🇧🇷\n2️⃣ Español 🇵🇾`;
       await enviarMensagem(numero, boasVindas);
       await salvarConversa(numero, 'assistant', boasVindas);
       sessao.historico.push({ papel: 'assistant', mensagem: boasVindas });
