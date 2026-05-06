@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auditoria — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+    .log-tabela { width:100%;border-collapse:collapse;font-size:13px; }
+    .log-tabela th { background:var(--fundo);padding:10px 14px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;color:var(--texto2);border-bottom:1.5px solid var(--borda); }
+    .log-tabela td { padding:10px 14px;border-bottom:1px solid var(--borda);vertical-align:middle; }
+    .log-tabela tr:hover td { background:var(--fundo); }
+    .badge-acao { padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600; }
+    .badge-LOGIN { background:#dcfce7;color:#166534; }
+    .badge-LOGOUT { background:#f1f5f9;color:#475569; }
+    .badge-UPLOAD { background:#dbeafe;color:#1e40af; }
+    .badge-ARQUIVO_DELETADO { background:#fee2e2;color:#991b1b; }
+    .badge-ARQUIVO_SUBSTITUIDO { background:#fef3c7;color:#92400e; }
+    .badge-ARQUIVO_MOVIDO { background:#ede9fe;color:#5b21b6; }
+    .badge-PASTA_RENOMEADA { background:#fef9c3;color:#713f12; }
+    .badge-PASTA_DELETADA { background:#fee2e2;color:#991b1b; }
+    .badge-default { background:#f1f5f9;color:#475569; }
+    .filtros { display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:flex-end; }
+    .paginacao { display:flex;gap:8px;justify-content:center;margin-top:20px; }
+    .pag-btn { padding:6px 14px;border:1.5px solid var(--borda);border-radius:8px;background:var(--fundo);cursor:pointer;font-size:13px;text-decoration:none;color:var(--texto); }
+    .pag-btn.ativo { background:var(--cor-primaria);color:white;border-color:var(--cor-primaria); }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'auditoria' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">🔍 Auditoria do Sistema</h1>
+      <div class="topbar-acoes">
+        <span style="font-size:13px;color:var(--texto2)"><%= total %> registros encontrados</span>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- Filtros -->
+      <form method="GET" action="/auditoria">
+        <div class="filtros">
+          <div class="campo">
+            <label class="label">Usuário</label>
+            <input name="usuario" class="input" placeholder="Nome do usuário" value="<%= filtroUsuario %>" style="width:200px">
+          </div>
+          <div class="campo">
+            <label class="label">Ação</label>
+            <select name="acao" class="input" style="width:200px">
+              <option value="">Todas</option>
+              <option value="LOGIN" <%= filtroAcao==='LOGIN'?'selected':'' %>>Login</option>
+              <option value="LOGOUT" <%= filtroAcao==='LOGOUT'?'selected':'' %>>Logout</option>
+              <option value="UPLOAD" <%= filtroAcao==='UPLOAD'?'selected':'' %>>Upload</option>
+              <option value="ARQUIVO_DELETADO" <%= filtroAcao==='ARQUIVO_DELETADO'?'selected':'' %>>Arquivo Excluído</option>
+              <option value="ARQUIVO_SUBSTITUIDO" <%= filtroAcao==='ARQUIVO_SUBSTITUIDO'?'selected':'' %>>Arquivo Substituído</option>
+              <option value="ARQUIVO_MOVIDO" <%= filtroAcao==='ARQUIVO_MOVIDO'?'selected':'' %>>Arquivo Movido</option>
+              <option value="PASTA_RENOMEADA" <%= filtroAcao==='PASTA_RENOMEADA'?'selected':'' %>>Pasta Renomeada</option>
+              <option value="PASTA_DELETADA" <%= filtroAcao==='PASTA_DELETADA'?'selected':'' %>>Pasta Excluída</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primario">🔍 Filtrar</button>
+          <a href="/auditoria" class="btn">Limpar</a>
+        </div>
+      </form>
+
+      <!-- Tabela -->
+      <div class="tabela-container">
+        <table class="log-tabela">
+          <thead>
+            <tr>
+              <th>Data/Hora</th>
+              <th>Usuário</th>
+              <th>Perfil</th>
+              <th>Ação</th>
+              <th>Detalhes</th>
+              <th>IP</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (logs.length === 0) { %>
+            <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--texto2)">Nenhum registro encontrado</td></tr>
+            <% } %>
+            <% logs.forEach(log => { %>
+            <tr>
+              <td style="white-space:nowrap;font-size:12px;color:var(--texto2)">
+                <%= new Date(log.criado_em).toLocaleDateString('pt-BR') %>
+                <%= new Date(log.criado_em).toLocaleTimeString('pt-BR') %>
+              </td>
+              <td>
+                <div style="font-weight:600"><%= log.usuario_nome || 'Sistema' %></div>
+                <div style="font-size:11px;color:var(--texto2)"><%= log.usuario_email || '' %></div>
+              </td>
+              <td><span class="badge badge-<%= log.perfil || 'default' %>"><%= log.perfil || '-' %></span></td>
+              <td><span class="badge-acao badge-<%= log.acao || 'default' %>"><%= log.acao %></span></td>
+              <td style="max-width:300px;font-size:12px"><%= log.detalhes || '-' %></td>
+              <td style="font-size:11px;color:var(--texto2)"><%= log.ip || '-' %></td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Paginação -->
+      <% const totalPaginas = Math.ceil(total / limite); %>
+      <% if (totalPaginas > 1) { %>
+      <div class="paginacao">
+        <% if (pagina > 1) { %>
+          <a href="/auditoria?pagina=<%= pagina-1 %>&usuario=<%= filtroUsuario %>&acao=<%= filtroAcao %>" class="pag-btn">← Anterior</a>
+        <% } %>
+        <% for(let i = Math.max(1, pagina-2); i <= Math.min(totalPaginas, pagina+2); i++) { %>
+          <a href="/auditoria?pagina=<%= i %>&usuario=<%= filtroUsuario %>&acao=<%= filtroAcao %>" class="pag-btn <%= i===pagina ? 'ativo' : '' %>"><%= i %></a>
+        <% } %>
+        <% if (pagina < totalPaginas) { %>
+          <a href="/auditoria?pagina=<%= pagina+1 %>&usuario=<%= filtroUsuario %>&acao=<%= filtroAcao %>" class="pag-btn">Próxima →</a>
+        <% } %>
+      </div>
+      <% } %>
+
+    </div>
+  </main>
+</div>
+<script src="/js/app.js"></script>
+</body>
+</html>
