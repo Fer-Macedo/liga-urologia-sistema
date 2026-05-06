@@ -805,34 +805,19 @@ router.post('/usuarios', requireAuth, requireAdmin, async (req, res) => {
 
 
 // ─── WEBHOOK WHATSAPP — LAURO ─────────────────────────────────────────────────
-router.post('/webhook/whatsapp', express.raw({ type: '*/*' }), async (req, res) => {
+router.post('/webhook/whatsapp', async (req, res) => {
   try {
-    let body;
-    try { body = JSON.parse(req.body.toString()); } catch(e) { return res.sendStatus(200); }
-
+    const body = req.body;
+    if (!body || typeof body !== 'object') return res.sendStatus(200);
     console.log('Webhook WA recebido:', JSON.stringify(body).substring(0, 200));
-
-    // Ignora mensagens enviadas pelo proprio bot
-    if (body.isFromMe || body.fromMe) return res.sendStatus(200);
-
-    // Ignora grupos
-    if (body.isGroup || (body.chatId && body.chatId.includes('@g'))) return res.sendStatus(200);
-
-    // Extrai numero e texto
-    const numero = (body.phone || body.from || '').replace(/[^0-9]/g, '');
-    const texto = body.text || body.body || body.message || '';
-
-    if (!numero || !texto) return res.sendStatus(200);
-
-    // Ignora numero da propria instancia
-    const instancePhone = process.env.INSTANCE_PHONE || '';
-    if (numero === instancePhone) return res.sendStatus(200);
-
-    console.log('Lauro processando:', numero, '-', texto.substring(0, 50));
-
+    if (body.fromMe === true) return res.sendStatus(200);
+    if (body.isGroup === true) return res.sendStatus(200);
+    const numero = (body.sender && body.sender.id ? body.sender.id : '').replace(/[^0-9]/g, '');
+    const texto = body.msgContent && body.msgContent.conversation ? body.msgContent.conversation : (body.msgContent && body.msgContent.extendedTextMessage ? body.msgContent.extendedTextMessage.text : '');
+    if (numero.length < 5 || texto.length < 1) return res.sendStatus(200);
+    console.log('Lauro processando:', numero, '-', texto);
     const { processarMensagem } = require('../services/lauro');
-    await processarMensagem(numero, texto);
-
+    processarMensagem(numero, texto);
   } catch(e) { console.error('Webhook WA erro:', e.message); }
   res.sendStatus(200);
 });
