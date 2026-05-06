@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arquivos — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+    * { font-family: 'Inter', sans-serif; }
+    .arquivo-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:16px; }
+    .arquivo-card { background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:16px;text-align:center;transition:all 0.2s;cursor:pointer; }
+    .arquivo-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.1);transform:translateY(-2px); }
+    .arquivo-icone { font-size:40px;margin-bottom:10px; }
+    .arquivo-nome { font-size:12px;font-weight:600;word-break:break-all;color:var(--texto);margin-bottom:6px; }
+    .arquivo-meta { font-size:11px;color:var(--texto2); }
+    .arquivo-acoes { display:flex;gap:6px;justify-content:center;margin-top:10px; }
+    .categorias { display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px; }
+    .cat-btn { padding:6px 14px;border-radius:20px;border:1.5px solid var(--borda);background:var(--fundo);font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s; }
+    .cat-btn.ativo { background:var(--cor-primaria);color:white;border-color:var(--cor-primaria); }
+    .upload-area { border:2px dashed var(--cor-primaria);border-radius:14px;padding:40px;text-align:center;background:var(--cor-primaria)08;margin-bottom:20px;cursor:pointer;transition:all 0.2s; }
+    .upload-area:hover { background:var(--cor-primaria)15; }
+    .upload-area.dragover { background:var(--cor-primaria)20;border-style:solid; }
+    .progresso { display:none;margin-top:12px; }
+    .barra-prog { height:6px;background:#e5e7eb;border-radius:10px;overflow:hidden; }
+    .barra-fill { height:100%;background:var(--cor-primaria);width:0%;transition:width 0.3s; }
+    .stat-storage { display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'arquivos' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">📁 Arquivos da Liga</h1>
+      <div class="topbar-acoes">
+        <button class="btn btn-primario" onclick="document.getElementById('input-upload').click()">⬆️ Upload</button>
+      </div>
+    </div>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
+
+      <!-- Stats -->
+      <div class="stat-storage">
+        <div class="stat-card azul"><div class="stat-label">Total</div><div class="stat-valor azul"><%= stats.total %></div><div class="stat-sub azul">arquivos</div></div>
+        <div class="stat-card verde"><div class="stat-label">Fotos</div><div class="stat-valor verde"><%= stats.fotos %></div><div class="stat-sub verde">imagens</div></div>
+        <div class="stat-card amarelo"><div class="stat-label">Documentos</div><div class="stat-valor amarelo"><%= stats.documentos %></div><div class="stat-sub amarelo">arquivos</div></div>
+        <div class="stat-card roxo" style="--roxo:#8b5cf6"><div class="stat-label">Vídeos</div><div class="stat-valor" style="color:#8b5cf6"><%= stats.videos %></div><div class="stat-sub" style="color:#8b5cf6">arquivos</div></div>
+      </div>
+
+      <!-- Upload area -->
+      <div class="upload-area" id="upload-area" onclick="document.getElementById('input-upload').click()">
+        <div style="font-size:40px;margin-bottom:10px">☁️</div>
+        <div style="font-size:15px;font-weight:600;color:var(--cor-primaria)">Clique ou arraste arquivos aqui</div>
+        <div style="font-size:12px;color:var(--texto2);margin-top:6px">PDF, Word, Excel, PowerPoint, Imagens, Vídeos — até 500MB</div>
+        <div class="progresso" id="progresso">
+          <div style="font-size:12px;margin-bottom:6px" id="prog-texto">Enviando...</div>
+          <div class="barra-prog"><div class="barra-fill" id="barra-fill"></div></div>
+        </div>
+      </div>
+      <input type="file" id="input-upload" style="display:none" multiple onchange="uploadArquivos(this.files)">
+
+      <!-- Filtro por categoria -->
+      <div class="categorias">
+        <button class="cat-btn ativo" onclick="filtrar('todos', this)">📁 Todos (<%= stats.total %>)</button>
+        <button class="cat-btn" onclick="filtrar('fotos', this)">🖼️ Fotos</button>
+        <button class="cat-btn" onclick="filtrar('videos', this)">🎬 Vídeos</button>
+        <button class="cat-btn" onclick="filtrar('pdfs', this)">📄 PDFs</button>
+        <button class="cat-btn" onclick="filtrar('documentos', this)">📝 Word</button>
+        <button class="cat-btn" onclick="filtrar('planilhas', this)">📊 Excel</button>
+        <button class="cat-btn" onclick="filtrar('apresentacoes', this)">📑 PowerPoint</button>
+        <button class="cat-btn" onclick="filtrar('outros', this)">📁 Outros</button>
+      </div>
+
+      <!-- Busca -->
+      <input type="text" class="input" placeholder="🔍 Buscar arquivo..." oninput="buscar(this.value)" style="margin-bottom:16px;max-width:400px">
+
+      <!-- Grid de arquivos -->
+      <div class="arquivo-grid" id="grid-arquivos">
+        <% if (arquivos.length === 0) { %>
+          <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--texto2)">
+            <div style="font-size:48px;margin-bottom:12px">📂</div>
+            <div style="font-size:15px;font-weight:600">Nenhum arquivo ainda</div>
+            <div style="font-size:13px;margin-top:6px">Faça upload dos seus arquivos acima</div>
+          </div>
+        <% } %>
+        <% arquivos.forEach(a => { %>
+        <div class="arquivo-card" data-categoria="<%= a.categoria %>" data-nome="<%= a.nome_original.toLowerCase() %>">
+          <div class="arquivo-icone"><%= a.icone %></div>
+          <div class="arquivo-nome" title="<%= a.nome_original %>"><%= a.nome_original.length > 25 ? a.nome_original.substring(0,22)+'...' : a.nome_original %></div>
+          <div class="arquivo-meta"><%= a.tamanho_fmt %> • <%= new Date(a.criado_em).toLocaleDateString('pt-BR') %></div>
+          <div class="arquivo-acoes">
+            <a href="/arquivos/<%= a.id %>/download" class="btn" style="font-size:11px;padding:5px 10px" title="Baixar">⬇️</a>
+            <% if (usuario.perfil === 'admin' || usuario.perfil === 'presidencia') { %>
+            <form action="/arquivos/<%= a.id %>/deletar" method="POST" onsubmit="return confirm('Excluir este arquivo?')">
+              <button class="btn" style="font-size:11px;padding:5px 10px;color:var(--vermelho)" title="Excluir">🗑</button>
+            </form>
+            <% } %>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+// Drag and drop
+const uploadArea = document.getElementById('upload-area');
+uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+uploadArea.addEventListener('drop', e => { e.preventDefault(); uploadArea.classList.remove('dragover'); uploadArquivos(e.dataTransfer.files); });
+
+async function uploadArquivos(files) {
+  if (!files.length) return;
+  const prog = document.getElementById('progresso');
+  const texto = document.getElementById('prog-texto');
+  const barra = document.getElementById('barra-fill');
+  prog.style.display = 'block';
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    texto.textContent = `Enviando ${i+1}/${files.length}: ${file.name}`;
+    barra.style.width = ((i / files.length) * 100) + '%';
+
+    const fd = new FormData();
+    fd.append('arquivo', file);
+
+    try {
+      await fetch('/arquivos/upload', { method: 'POST', body: fd });
+    } catch(e) { console.error(e); }
+  }
+
+  barra.style.width = '100%';
+  texto.textContent = 'Concluído!';
+  setTimeout(() => location.reload(), 800);
+}
+
+function filtrar(categoria, btn) {
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('ativo'));
+  btn.classList.add('ativo');
+  document.querySelectorAll('.arquivo-card').forEach(c => {
+    c.style.display = (categoria === 'todos' || c.dataset.categoria === categoria) ? '' : 'none';
+  });
+}
+
+function buscar(termo) {
+  document.querySelectorAll('.arquivo-card').forEach(c => {
+    c.style.display = c.dataset.nome.includes(termo.toLowerCase()) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>
