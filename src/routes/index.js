@@ -658,18 +658,18 @@ router.get('/frequencia/relatorio/:turmaId', requireAuth, requireSecretaria, asy
       + data + '<br><span style="font-weight:400;font-size:10px">' + at.tipo + '</span><br><span style="font-weight:400;font-size:10px">' + at.descricao.substring(0,20) + '</span></th>';
   }
 
-  const html = \`<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <title>Relatório — \${turma.nome}</title>
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <title>Relatório — ${turma.nome}</title>
     <style>body{font-family:Arial,sans-serif;padding:30px;color:#111}table{width:100%;border-collapse:collapse}@media print{.no-print{display:none}}h3{color:#1a56db}</style>
     </head><body>
     <div class="no-print" style="margin-bottom:20px">
       <button onclick="window.print()" style="background:#1a56db;color:white;border:none;padding:10px 24px;border-radius:6px;cursor:pointer;font-size:14px">🖨️ Imprimir / Salvar PDF</button>
     </div>
     <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #1a56db">
-      \${logoHtml}
+      ${logoHtml}
       <h1 style="margin:12px 0 4px;font-size:20px">Relatório de Frequência</h1>
-      <p style="margin:0;color:#6b7280">Turma: <strong>\${turma.nome}</strong> &nbsp;|&nbsp; Período: \${new Date(turma.data_inicio+'T12:00:00').toLocaleDateString('pt-BR')} \${turma.data_fim ? '— '+new Date(turma.data_fim+'T12:00:00').toLocaleDateString('pt-BR') : ''}</p>
-      <p style="margin:4px 0 0;color:#6b7280">Total de atividades: <strong>\${atividades.rows.length}</strong> &nbsp;|&nbsp; Critério: <strong>mínimo 75% de presença</strong> &nbsp;|&nbsp; Gerado em: \${new Date().toLocaleString('pt-BR')}</p>
+      <p style="margin:0;color:#6b7280">Turma: <strong>${turma.nome}</strong> &nbsp;|&nbsp; Período: ${new Date(turma.data_inicio+'T12:00:00').toLocaleDateString('pt-BR')} ${turma.data_fim ? '— '+new Date(turma.data_fim+'T12:00:00').toLocaleDateString('pt-BR') : ''}</p>
+      <p style="margin:4px 0 0;color:#6b7280">Total de atividades: <strong>${atividades.rows.length}</strong> &nbsp;|&nbsp; Critério: <strong>mínimo 75% de presença</strong> &nbsp;|&nbsp; Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
     </div>
     <h3>📋 Resumo por membro</h3>
     <table><thead><tr>
@@ -679,12 +679,12 @@ router.get('/frequencia/relatorio/:turmaId', requireAuth, requireSecretaria, asy
       <th style="padding:10px;background:#1a56db;color:white;text-align:center">Total</th>
       <th style="padding:10px;background:#1a56db;color:white;text-align:center">Frequência</th>
       <th style="padding:10px;background:#1a56db;color:white;text-align:center">Status</th>
-    </tr></thead><tbody>\${linhasMembros}</tbody></table>
+    </tr></thead><tbody>${linhasMembros}</tbody></table>
     <br><h3>📅 Presenças por atividade</h3>
     <div style="overflow-x:auto">
-    <table><thead><tr>\${headerAtividades}</tr></thead><tbody>\${linhasAtividades}</tbody></table>
+    <table><thead><tr>${headerAtividades}</tr></thead><tbody>${linhasAtividades}</tbody></table>
     </div>
-    </body></html>\`;
+    </body></html>`;
 
   res.send(html);
 });
