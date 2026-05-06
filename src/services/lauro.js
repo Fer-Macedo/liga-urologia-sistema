@@ -147,7 +147,7 @@ REGLAS IMPORTANTES:
 
   try {
     const response = await axios.post('https://api.anthropic.com/v1/messages', {
-      model: 'claude-sonnet-4-20250514',
+      model: 'claude-sonnet-4-5',
       max_tokens: 500,
       system: sistema,
       messages: [...historico, { role: 'user', content: mensagemUsuario }]
