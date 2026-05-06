@@ -19,8 +19,8 @@ function requireFinanceiro(req, res, next) {
 
 function requireSecretaria(req, res, next) {
   const perfil = req.session?.usuario?.perfil;
-  if (perfil === 'admin' || perfil === 'secretaria') return next();
-  req.flash('erro', 'Acesso restrito ao secretário e administrador.');
+  if (perfil === 'admin' || perfil === 'secretaria' || perfil === 'presidencia') return next();
+  req.flash('erro', 'Acesso restrito.');
   res.redirect('/dashboard');
 }
 
@@ -48,4 +48,11 @@ function requirePermissao(modulo) {
   };
 }
 
-module.exports = { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria, requirePermissao };
+function requirePresidencia(req, res, next) {
+  const perfil = req.session?.usuario?.perfil;
+  if (perfil === 'admin' || perfil === 'presidencia') return next();
+  req.flash('erro', 'Acesso restrito.');
+  res.redirect('/dashboard');
+}
+
+module.exports = { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria, requirePresidencia, requirePermissao };
