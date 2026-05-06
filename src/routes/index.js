@@ -837,4 +837,88 @@ router.post('/webhook/whatsapp', express.raw({ type: '*/*' }), async (req, res) 
   res.sendStatus(200);
 });
 
+
+// ─── DIRETIVOS ────────────────────────────────────────────────────────────────
+
+// Formulário público de cadastro (sem login)
+router.get('/cadastro-diretivo', async (req, res) => {
+  const config = await getConfig();
+  const msg = req.session.msg || []; req.session.msg = [];
+  const erro = req.session.erro || []; req.session.erro = [];
+  res.render('pages/cadastro-diretivo-publico', { config, msg, erro, form: {}, appUrl: process.env.APP_URL || '' });
+});
+
+router.post('/cadastro-diretivo', async (req, res) => {
+  try {
+    const { nome, rg, cpf, email, catraca, cargo, semestre_turma, orcid, data_nascimento,
+            whatsapp, instagram, graduacao, ano_ingresso, onde_reside, transporte_proprio,
+            tipo_transporte, experiencia_urologia } = req.body;
+    const disponibilidade = [].concat(req.body.disponibilidade || []).join(', ');
+    if (!nome || !email) { req.session.erro = ['Nome e e-mail são obrigatórios.']; return res.redirect('/cadastro-diretivo'); }
+    await query(
+      `INSERT INTO diretivos (nome,rg,cpf,email,catraca,cargo,semestre_turma,orcid,data_nascimento,
+        whatsapp,instagram,graduacao,ano_ingresso,onde_reside,transporte_proprio,tipo_transporte,
+        disponibilidade,experiencia_urologia,cadastrado_em)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,NOW())`,
+      [nome,rg,cpf,email,catraca,cargo,semestre_turma,orcid,data_nascimento||null,
+       whatsapp,instagram,graduacao,ano_ingresso,onde_reside,transporte_proprio,
+       tipo_transporte,disponibilidade,experiencia_urologia]
+    );
+    req.session.msg = ['Cadastro realizado com sucesso! Obrigado, ' + nome.split(' ')[0] + '!'];
+    res.redirect('/cadastro-diretivo');
+  } catch(e) {
+    console.error('Erro cadastro diretivo:', e.message);
+    req.session.erro = ['Erro ao cadastrar. Tente novamente.'];
+    res.redirect('/cadastro-diretivo');
+  }
+});
+
+// Painel de diretivos (com login)
+router.get('/diretivos', requireAuth, requireSecretaria, async (req, res) => {
+  const config = await getConfig();
+  const msg = req.session.msg || []; req.session.msg = [];
+  const erro = req.session.erro || []; req.session.erro = [];
+  const r = await query('SELECT * FROM diretivos WHERE ativo=1 ORDER BY cargo, nome');
+  res.render('pages/diretivos', {
+    config, msg, erro,
+    diretivos: r.rows,
+    usuario: req.session.usuario,
+    appUrl: process.env.APP_URL || 'https://liga-urologia.onrender.com'
+  });
+});
+
+router.post('/diretivos', requireAuth, requireSecretaria, async (req, res) => {
+  const { nome, rg, cpf, email, whatsapp, cargo, semestre_turma, data_nascimento, onde_reside, disponibilidade } = req.body;
+  await query(
+    'INSERT INTO diretivos (nome,rg,cpf,email,whatsapp,cargo,semestre_turma,data_nascimento,onde_reside,disponibilidade) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+    [nome,rg,cpf,email,whatsapp,cargo,semestre_turma,data_nascimento||null,onde_reside,disponibilidade]
+  );
+  req.session.msg = ['Diretivo cadastrado com sucesso!'];
+  res.redirect('/diretivos');
+});
+
+router.post('/diretivos/:id/editar', requireAuth, requireSecretaria, async (req, res) => {
+  const { nome,rg,cpf,email,whatsapp,instagram,catraca,cargo,semestre_turma,data_nascimento,
+          onde_reside,disponibilidade,ano_ingresso,orcid,graduacao,experiencia_urologia,
+          transporte_proprio,tipo_transporte } = req.body;
+  await query(
+    `UPDATE diretivos SET nome=$1,rg=$2,cpf=$3,email=$4,whatsapp=$5,instagram=$6,catraca=$7,
+     cargo=$8,semestre_turma=$9,data_nascimento=$10,onde_reside=$11,disponibilidade=$12,
+     ano_ingresso=$13,orcid=$14,graduacao=$15,experiencia_urologia=$16,
+     transporte_proprio=$17,tipo_transporte=$18 WHERE id=$19`,
+    [nome,rg,cpf,email,whatsapp,instagram,catraca,cargo,semestre_turma,data_nascimento||null,
+     onde_reside,disponibilidade,ano_ingresso,orcid,graduacao,experiencia_urologia,
+     transporte_proprio,tipo_transporte,req.params.id]
+  );
+  req.session.msg = ['Diretivo atualizado com sucesso!'];
+  res.redirect('/diretivos');
+});
+
+router.post('/diretivos/:id/toggle', requireAuth, requireAdmin, async (req, res) => {
+  await query('UPDATE diretivos SET ativo=0 WHERE id=$1', [req.params.id]);
+  req.session.msg = ['Diretivo removido.'];
+  res.redirect('/diretivos');
+});
+
+
 module.exports = router;
