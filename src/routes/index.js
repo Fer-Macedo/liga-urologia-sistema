@@ -1131,4 +1131,89 @@ router.get('/frequencia-diretivos/relatorio/:turmaId', requireAuth, requireSecre
 });
 
 
+
+// ─── ARQUIVOS — Cloudflare R2 ─────────────────────────────────────────────────
+
+router.get('/arquivos', requireAuth, async (req, res) => {
+  const config = await getConfig();
+  const msg = req.session.msg || []; req.session.msg = [];
+  const erro = req.session.erro || []; req.session.erro = [];
+
+  const r = await query('SELECT * FROM arquivos WHERE ativo=1 ORDER BY criado_em DESC');
+  const arquivos = r.rows;
+
+  const { iconeArquivo } = require('../services/arquivos');
+  arquivos.forEach(a => {
+    a.icone = iconeArquivo(a.mimetype);
+    const kb = a.tamanho / 1024;
+    a.tamanho_fmt = kb > 1024 ? (kb/1024).toFixed(1)+'MB' : kb.toFixed(0)+'KB';
+  });
+
+  const stats = {
+    total: arquivos.length,
+    fotos: arquivos.filter(a => a.categoria === 'fotos').length,
+    videos: arquivos.filter(a => a.categoria === 'videos').length,
+    documentos: arquivos.filter(a => ['documentos','pdfs','planilhas','apresentacoes'].includes(a.categoria)).length
+  };
+
+  res.render('pages/arquivos', { config, msg, erro, usuario: req.session.usuario, arquivos, stats });
+});
+
+router.post('/arquivos/upload', requireAuth, async (req, res) => {
+  try {
+    const { upload, uploadArquivo, categoriaArquivo } = require('../services/arquivos');
+    upload.array('arquivo', 20)(req, res, async (err) => {
+      if (err) { req.session.erro = [err.message]; return res.redirect('/arquivos'); }
+      if (!req.files || req.files.length === 0) { req.session.erro = ['Nenhum arquivo selecionado.']; return res.redirect('/arquivos'); }
+
+      for (const file of req.files) {
+        const r = await uploadArquivo(file.buffer, file.originalname, file.mimetype);
+        await query(
+          'INSERT INTO arquivos (nome_original, chave_r2, categoria, mimetype, tamanho, enviado_por) VALUES ($1,$2,$3,$4,$5,$6)',
+          [file.originalname, r.chave, r.categoria, r.mimetype, r.tamanho, req.session.usuario.id]
+        );
+      }
+
+      req.session.msg = [req.files.length + ' arquivo(s) enviado(s) com sucesso!'];
+      res.redirect('/arquivos');
+    });
+  } catch(e) {
+    console.error('Upload erro:', e.message);
+    req.session.erro = ['Erro ao fazer upload: ' + e.message];
+    res.redirect('/arquivos');
+  }
+});
+
+router.get('/arquivos/:id/download', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT * FROM arquivos WHERE id=$1 AND ativo=1', [req.params.id]);
+    const arquivo = r.rows[0];
+    if (!arquivo) return res.redirect('/arquivos');
+    const { gerarUrlDownload } = require('../services/arquivos');
+    const url = await gerarUrlDownload(arquivo.chave_r2, arquivo.nome_original);
+    res.redirect(url);
+  } catch(e) {
+    req.session.erro = ['Erro ao baixar arquivo.'];
+    res.redirect('/arquivos');
+  }
+});
+
+router.post('/arquivos/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const r = await query('SELECT * FROM arquivos WHERE id=$1', [req.params.id]);
+    const arquivo = r.rows[0];
+    if (arquivo) {
+      const { deletarArquivo } = require('../services/arquivos');
+      await deletarArquivo(arquivo.chave_r2);
+      await query('UPDATE arquivos SET ativo=0 WHERE id=$1', [req.params.id]);
+    }
+    req.session.msg = ['Arquivo excluído com sucesso!'];
+    res.redirect('/arquivos');
+  } catch(e) {
+    req.session.erro = ['Erro ao excluir arquivo.'];
+    res.redirect('/arquivos');
+  }
+});
+
+
 module.exports = router;
