@@ -1484,4 +1484,174 @@ router.get('/ligantes/:id/foto', requireAuth, async (req, res) => {
 });
 
 
+
+// ─── DESLIGAMENTOS ────────────────────────────────────────────────────────────
+
+router.get('/desligamentos', requireAuth, async (req, res) => {
+  const config = await getConfig();
+  const msg = req.session.msg || []; req.session.msg = [];
+  const erro = req.session.erro || []; req.session.erro = [];
+
+  const [deslig, membros] = await Promise.all([
+    query(`SELECT d.*, m.nome as membro_nome, m.email as membro_email
+           FROM desligamentos d JOIN membros m ON m.id=d.membro_id
+           ORDER BY d.criado_em DESC`),
+    query(`SELECT id, nome, cargo FROM membros WHERE ativo=1 ORDER BY nome`)
+  ]);
+
+  res.render('pages/desligamentos', { config, usuario: req.session.usuario, msg, erro,
+    desligamentos: deslig.rows, membros: membros.rows });
+});
+
+router.post('/desligamentos/configurar', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.fields([
+      { name: 'timbrado', maxCount: 1 },
+      { name: 'assinatura_presidente', maxCount: 1 },
+      { name: 'assinatura_secretario', maxCount: 1 }
+    ])(req, res, async (err) => {
+      const campos = ['presidente_nome', 'secretario_nome'];
+      for (const campo of campos) {
+        if (req.body[campo]) {
+          await query('INSERT INTO configuracoes (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', [campo, req.body[campo]]);
+        }
+      }
+      const arquivos_cfg = [
+        { field: 'timbrado', chave_cfg: 'timbrado_chave', pasta: 'timbrado' },
+        { field: 'assinatura_presidente', chave_cfg: 'assinatura_presidente_chave', pasta: 'assinaturas' },
+        { field: 'assinatura_secretario', chave_cfg: 'assinatura_secretario_chave', pasta: 'assinaturas' }
+      ];
+      for (const a of arquivos_cfg) {
+        if (req.files && req.files[a.field] && req.files[a.field][0]) {
+          const file = req.files[a.field][0];
+          const r = await uploadArquivo(file.buffer, file.originalname, file.mimetype, a.pasta);
+          await query('INSERT INTO configuracoes (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', [a.chave_cfg, r.chave]);
+        }
+      }
+      req.session.msg = ['Configurações salvas com sucesso!'];
+      res.redirect('/desligamentos');
+    });
+  } catch(e) {
+    req.session.erro = ['Erro ao salvar configurações: ' + e.message];
+    res.redirect('/desligamentos');
+  }
+});
+
+router.post('/desligamentos', requireAuth, async (req, res) => {
+  try {
+    const { membro_id, data_solicitacao, motivo } = req.body;
+    await query(
+      'INSERT INTO desligamentos (membro_id, data_solicitacao, motivo, criado_por) VALUES ($1,$2,$3,$4)',
+      [membro_id, data_solicitacao || new Date(), motivo || null, req.session.usuario.id]
+    );
+    await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_CRIADO', 'Desligamento criado para membro ID: ' + membro_id, req);
+    req.session.msg = ['Documento de desligamento criado! Clique em 📧 para enviar por email.'];
+    res.redirect('/desligamentos');
+  } catch(e) {
+    req.session.erro = ['Erro ao criar desligamento: ' + e.message];
+    res.redirect('/desligamentos');
+  }
+});
+
+router.get('/desligamentos/:id/visualizar', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT d.*, m.* FROM desligamentos d JOIN membros m ON m.id=d.membro_id WHERE d.id=$1', [req.params.id]);
+    const d = r.rows[0];
+    if (!d) return res.status(404).send('Não encontrado');
+
+    const config = await getConfig();
+    const { gerarHTMLDesligamento, getUrlAssinada } = require('../services/desligamento');
+
+    // Busca URLs assinadas para timbrado e assinaturas
+    config.timbrado_url = await getUrlAssinada(config.timbrado_chave);
+    config.assinatura_presidente_url = await getUrlAssinada(config.assinatura_presidente_chave);
+    config.assinatura_secretario_url = await getUrlAssinada(config.assinatura_secretario_chave);
+
+    const html = gerarHTMLDesligamento(d, config, d.data_solicitacao);
+    res.send(html);
+  } catch(e) {
+    res.status(500).send('Erro: ' + e.message);
+  }
+});
+
+router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT d.*, m.nome, m.email, m.catraca, m.rg, m.cargo FROM desligamentos d JOIN membros m ON m.id=d.membro_id WHERE d.id=$1', [req.params.id]);
+    const d = r.rows[0];
+    if (!d) { req.session.erro = ['Não encontrado.']; return res.redirect('/desligamentos'); }
+
+    const config = await getConfig();
+    const { gerarHTMLDesligamento, getUrlAssinada } = require('../services/desligamento');
+    const nodemailer = require('nodemailer');
+
+    config.timbrado_url = await getUrlAssinada(config.timbrado_chave);
+    config.assinatura_presidente_url = await getUrlAssinada(config.assinatura_presidente_chave);
+    config.assinatura_secretario_url = await getUrlAssinada(config.assinatura_secretario_chave);
+
+    const html = gerarHTMLDesligamento(d, config, d.data_solicitacao);
+
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT,
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+    });
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: d.email,
+      subject: 'Carta de Rescisión — Liga Académica de Urología LAURO',
+      html: `<p>Estimado/a ${d.nome},</p>
+             <p>Adjunto encontrará su carta de rescisión de la Liga Académica de Urología LAURO.</p>
+             <p>Por favor, imprima, firme y devuelva el documento firmado a nuestro correo electrónico.</p>
+             <p>Atentamente,<br>Secretaría — LAURO</p>`,
+      attachments: [{ filename: 'carta-rescision-LAURO.html', content: html, contentType: 'text/html' }]
+    });
+
+    await query('UPDATE desligamentos SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', req.params.id]);
+    await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_ENVIADO', 'Email enviado para: ' + d.email, req);
+    req.session.msg = ['Email enviado com sucesso para ' + d.email + '!'];
+    res.redirect('/desligamentos');
+  } catch(e) {
+    req.session.erro = ['Erro ao enviar email: ' + e.message];
+    res.redirect('/desligamentos');
+  }
+});
+
+router.post('/desligamentos/:id/assinado', requireAuth, async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.single('pdf_assinado')(req, res, async (err) => {
+      if (!req.file) { req.session.erro = ['Nenhum arquivo enviado.']; return res.redirect('/desligamentos'); }
+      const r = await uploadArquivo(req.file.buffer, 'desligamento-assinado-' + req.params.id + '.pdf', req.file.mimetype, 'desligamentos');
+      await query('UPDATE desligamentos SET pdf_assinado_chave=$1, status=$2, assinado_em=NOW() WHERE id=$3',
+        [r.chave, 'assinado', req.params.id]);
+
+      // Marca membro como desligado
+      const d = await query('SELECT membro_id FROM desligamentos WHERE id=$1', [req.params.id]);
+      if (d.rows[0]) {
+        await query('UPDATE membros SET ativo=0, status=$1 WHERE id=$2', ['desligado', d.rows[0].membro_id]);
+      }
+
+      await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_ASSINADO', 'Documento assinado anexado', req);
+      req.session.msg = ['Documento assinado anexado e membro marcado como desligado!'];
+      res.redirect('/desligamentos');
+    });
+  } catch(e) {
+    req.session.erro = ['Erro: ' + e.message];
+    res.redirect('/desligamentos');
+  }
+});
+
+router.get('/desligamentos/:id/assinado', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT pdf_assinado_chave FROM desligamentos WHERE id=$1', [req.params.id]);
+    const d = r.rows[0];
+    if (!d || !d.pdf_assinado_chave) return res.status(404).send('Não encontrado');
+    const { getUrlAssinada } = require('../services/desligamento');
+    const url = await getUrlAssinada(d.pdf_assinado_chave);
+    res.redirect(url);
+  } catch(e) { res.status(500).send('Erro'); }
+});
+
+
 module.exports = router;
