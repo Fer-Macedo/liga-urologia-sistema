@@ -153,21 +153,24 @@
 <script src="/js/app.js"></script>
 <script>
 const TODOS_MODULOS = [
-  { id: 'dashboard',      label: '▦ Dashboard' },
-  { id: 'membros',        label: '◎ Membros' },
-  { id: 'cobrancas',      label: '◈ Cobranças' },
-  { id: 'frequencia',        label: '📊 Frequência Membros' },
-  { id: 'diretivos',         label: '🏛️ Diretivos' },
-  { id: 'frequencia-diretivos', label: '🏛️ Frequência Diretivos' },
-  { id: 'aniversarios',   label: '◆ Aniversários' },
-  { id: 'notificacoes',   label: '◉ Notificações' },
-  { id: 'configuracoes',  label: '✦ Configurações' },
-  { id: 'usuarios',       label: '◎ Usuários' }
+  { id: 'dashboard',            label: '▦ Dashboard' },
+  { id: 'membros',              label: '◎ Membros' },
+  { id: 'diretivos',            label: '🏛️ Diretivos' },
+  { id: 'ligantes',             label: '🎓 Ligantes' },
+  { id: 'arquivos',             label: '📁 Arquivos' },
+  { id: 'frequencia',           label: '📊 Frequência Membros' },
+  { id: 'frequencia-diretivos', label: '📊 Frequência Diretivos' },
+  { id: 'cobrancas',            label: '◈ Cobranças' },
+  { id: 'aniversarios',         label: '◆ Aniversários' },
+  { id: 'auditoria',            label: '🔍 Auditoria' },
+  { id: 'notificacoes',         label: '◉ Notificações' },
+  { id: 'configuracoes',        label: '✦ Configurações' },
+  { id: 'usuarios',             label: '◎ Usuários' }
 ];
 
 const PERMISSOES_PADRAO = {
-  presidencia: ['dashboard', 'membros', 'cobrancas', 'frequencia', 'diretivos', 'frequencia-diretivos', 'aniversarios', 'notificacoes'],
-  secretaria:  ['dashboard', 'membros', 'frequencia', 'diretivos', 'frequencia-diretivos', 'aniversarios'],
+  presidencia: ['dashboard', 'membros', 'diretivos', 'ligantes', 'arquivos', 'frequencia', 'frequencia-diretivos', 'cobrancas', 'aniversarios', 'auditoria', 'notificacoes'],
+  secretaria:  ['dashboard', 'membros', 'diretivos', 'ligantes', 'arquivos', 'frequencia', 'frequencia-diretivos', 'aniversarios'],
   financeiro:  ['dashboard', 'membros', 'cobrancas', 'aniversarios', 'notificacoes'],
   visualizador:['dashboard']
 };
