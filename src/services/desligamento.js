@@ -36,10 +36,14 @@ function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
   });
   const [dia, mes, ano] = dataFormatada.split('/');
 
-  // Usa base64 diretamente nas imagens
   const timbradoSrc = config.timbrado_b64 || null;
   const presidenteSrc = config.assinatura_presidente_b64 || null;
   const secretarioSrc = config.assinatura_secretario_b64 || null;
+
+  const tipoMembro = tipo_membro || membro.cargo || 'LIGANTE';
+  const catraca = membro.catraca || '___________________';
+  const rg = membro.rg || '___________________';
+  const cargo = membro.cargo || tipoMembro;
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -47,37 +51,35 @@ function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
 <meta charset="UTF-8">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Times New Roman', serif; font-size: 12pt; color: #000; padding: 40px 60px; }
-  .timbrado { width: 100%; margin-bottom: 30px; }
-  .timbrado img { width: 100%; max-height: 120px; object-fit: contain; }
-  .titulo { text-align: center; font-size: 14pt; font-weight: bold; text-transform: uppercase; margin-bottom: 30px; letter-spacing: 1px; }
-  .corpo { text-align: justify; line-height: 2; margin-bottom: 30px; }
-  .data { text-align: right; margin-bottom: 40px; }
-  .assinaturas { margin-top: 60px; }
-  .assinatura-bloco { margin-bottom: 50px; text-align: center; }
-  .linha-assinatura { border-top: 1px solid #000; width: 80%; margin: 0 auto 8px; }
-  .assinatura-img { max-height: 60px; margin-bottom: 4px; }
+  body { font-family: 'Times New Roman', serif; font-size: 12pt; color: #000; padding: 40px 60px; position: relative; min-height: 297mm; }
+  .fundo-timbrado { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; object-fit: cover; }
+  .titulo { text-align: center; font-size: 14pt; font-weight: bold; text-transform: uppercase; margin-bottom: 30px; letter-spacing: 1px; padding-bottom: 10px; border-bottom: 1px solid #000; }
+  .corpo { text-align: justify; line-height: 2; margin-bottom: 20px; }
+  .corpo p { margin-bottom: 14px; }
+  .data { text-align: right; margin: 30px 0; font-size: 11pt; }
+  .assinaturas { margin-top: 50px; display: flex; justify-content: space-around; flex-wrap: wrap; gap: 20px; }
+  .assinatura-bloco { text-align: center; min-width: 200px; flex: 1; }
+  .assinatura-img-wrap { height: 100px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 6px; }
+  .assinatura-img { max-height: 100px; max-width: 200px; object-fit: contain; }
+  .linha-assinatura { border-top: 1.5px solid #000; width: 90%; margin: 0 auto 8px; }
   .assinatura-nome { font-weight: bold; font-size: 11pt; }
-  .assinatura-cargo { font-size: 10pt; }
+  .assinatura-cargo { font-size: 10pt; margin-top: 4px; }
+  .espacador { height: 40px; }
 </style>
 </head>
 <body>
 
-  <div class="timbrado">
-    ${timbradoSrc ? `<img src="${timbradoSrc}" alt="Timbrado">` : `<div style="border:2px solid #000;padding:20px;text-align:center;font-size:16pt;font-weight:bold">${config.org_nome || 'Liga Académica de Urología — LAURO'}</div>`}
-  </div>
+  ${timbradoSrc ? `<img class="fundo-timbrado" src="${timbradoSrc}">` : ''}
+
+  <div class="espacador"></div>
 
   <div class="titulo">Carta de Rescisión de la Liga Académica de Urología</div>
 
   <div class="corpo">
-    <p>Yo, <strong>${membro.nome}</strong>, estudiante de Medicina, con CATRACA: <strong>${membro.catraca || '___________'}</strong>, portador del documento de identidad (RG): <strong>${membro.rg || '___________'}</strong>, por medio de la presente, comunico mi decisión de renunciar al cargo de <strong>${membro.cargo || 'LIGANTE'}</strong> de la Liga Académica de Urología - LAURO, con sede en la Universidad Central del Paraguay, en Ciudad del Este - PY, debido a razones personales/profesionales.</p>
-    <br>
+    <p>Yo, <strong>${membro.nome}</strong>, estudiante de Medicina, con CATRACA: <strong>${catraca}</strong>, portador del documento de identidad (RG): <strong>${rg}</strong>, por medio de la presente, comunico mi decisión de renunciar al cargo de <strong>${cargo}</strong> de la Liga Académica de Urología - LAURO, con sede en la Universidad Central del Paraguay, en Ciudad del Este - PY, debido a razones personales/profesionales.</p>
     <p>Agradezco la oportunidad brindada y la colaboración de todos los miembros de la Liga durante mi tiempo de participación.</p>
-    <br>
-    <p>Asimismo, reconozco y acepto que, con mi salida de la Liga, no tendré derecho a recibir un certificado de participación como LIGANTE de ésta, conforme a las normativas establecidas por la Coordinación de Ligas.</p>
-    <br>
+    <p>Asimismo, reconozco y acepto que, con mi salida de la Liga, no tendré derecho a recibir un certificado de participación como <strong>${tipoMembro}</strong> de ésta, conforme a las normativas establecidas por la Coordinación de Ligas.</p>
     <p>Sin otro particular, quedo a disposición para formalizar cualquier detalle relacionado con mi salida del cargo.</p>
-    <br>
     <p>Atentamente,</p>
   </div>
 
@@ -85,20 +87,25 @@ function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
 
   <div class="assinaturas">
     <div class="assinatura-bloco">
+      <div class="assinatura-img-wrap"></div>
       <div class="linha-assinatura"></div>
       <div class="assinatura-nome">${membro.nome}</div>
-      <div class="assinatura-cargo">LIGANTE<br>Estudiante de Medicina – Universidad Central del Paraguay</div>
+      <div class="assinatura-cargo">${tipoMembro}<br>Estudiante de Medicina – Universidad Central del Paraguay</div>
     </div>
 
     <div class="assinatura-bloco">
-      ${presidenteSrc ? `<img src="${presidenteSrc}" class="assinatura-img">` : ''}
+      <div class="assinatura-img-wrap">
+        ${presidenteSrc ? `<img src="${presidenteSrc}" class="assinatura-img">` : ''}
+      </div>
       <div class="linha-assinatura"></div>
       <div class="assinatura-nome">${config.presidente_nome || 'MANUEL FERNANDO MACEDO NETO'}</div>
       <div class="assinatura-cargo">PRESIDENTE</div>
     </div>
 
     <div class="assinatura-bloco">
-      ${secretarioSrc ? `<img src="${secretarioSrc}" class="assinatura-img">` : ''}
+      <div class="assinatura-img-wrap">
+        ${secretarioSrc ? `<img src="${secretarioSrc}" class="assinatura-img">` : ''}
+      </div>
       <div class="linha-assinatura"></div>
       <div class="assinatura-nome">${config.secretario_nome || 'KAUÊ TEIXEIRA LACERDA'}</div>
       <div class="assinatura-cargo">SECRETÁRIO</div>
