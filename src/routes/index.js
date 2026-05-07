@@ -1540,10 +1540,10 @@ router.post('/desligamentos/configurar', requireAuth, requireAdmin, async (req, 
 
 router.post('/desligamentos', requireAuth, async (req, res) => {
   try {
-    const { membro_id, data_solicitacao, motivo } = req.body;
+    const { membro_id, data_solicitacao, motivo, tipo_membro } = req.body;
     await query(
-      'INSERT INTO desligamentos (membro_id, data_solicitacao, motivo, criado_por) VALUES ($1,$2,$3,$4)',
-      [membro_id, data_solicitacao || new Date(), motivo || null, req.session.usuario.id]
+      'INSERT INTO desligamentos (membro_id, data_solicitacao, motivo, tipo_membro, criado_por) VALUES ($1,$2,$3,$4,$5)',
+      [membro_id, data_solicitacao || new Date(), motivo || null, tipo_membro || 'LIGANTE', req.session.usuario.id]
     );
     await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_CRIADO', 'Desligamento criado para membro ID: ' + membro_id, req);
     req.session.msg = ['Documento de desligamento criado! Clique em 📧 para enviar por email.'];
@@ -1568,7 +1568,7 @@ router.get('/desligamentos/:id/visualizar', requireAuth, async (req, res) => {
     config.assinatura_presidente_url = await getUrlAssinada(config.assinatura_presidente_chave);
     config.assinatura_secretario_url = await getUrlAssinada(config.assinatura_secretario_chave);
 
-    const html = gerarHTMLDesligamento(d, config, d.data_solicitacao);
+    const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
     res.send(html);
   } catch(e) {
     res.status(500).send('Erro: ' + e.message);
@@ -1589,7 +1589,7 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
     config.assinatura_presidente_url = await getUrlAssinada(config.assinatura_presidente_chave);
     config.assinatura_secretario_url = await getUrlAssinada(config.assinatura_secretario_chave);
 
-    const html = gerarHTMLDesligamento(d, config, d.data_solicitacao);
+    const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
 
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT,
