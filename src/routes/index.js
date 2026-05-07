@@ -1692,4 +1692,36 @@ router.post('/ligantes/:id/deletar', requireAuth, requireAdmin, async (req, res)
 });
 
 
+
+router.post('/desligamentos/:id/substituir', requireAuth, async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.single('pdf_assinado')(req, res, async (err) => {
+      if (!req.file) { req.session.erro = ['Nenhum arquivo enviado.']; return res.redirect('/desligamentos'); }
+      const r = await uploadArquivo(req.file.buffer, 'desligamento-assinado-' + req.params.id + '.pdf', req.file.mimetype, 'desligamentos');
+      await query('UPDATE desligamentos SET pdf_assinado_chave=$1, status=$2, assinado_em=NOW() WHERE id=$3',
+        [r.chave, 'assinado', req.params.id]);
+      await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_SUBSTITUIDO', 'Documento substituido ID: ' + req.params.id, req);
+      req.session.msg = ['Documento substituído com sucesso!'];
+      res.redirect('/desligamentos');
+    });
+  } catch(e) {
+    req.session.erro = ['Erro: ' + e.message];
+    res.redirect('/desligamentos');
+  }
+});
+
+router.post('/desligamentos/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await query('DELETE FROM desligamentos WHERE id=$1', [req.params.id]);
+    await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_DELETADO', 'Desligamento apagado ID: ' + req.params.id, req);
+    req.session.msg = ['Desligamento apagado com sucesso!'];
+    res.redirect('/desligamentos');
+  } catch(e) {
+    req.session.erro = ['Erro: ' + e.message];
+    res.redirect('/desligamentos');
+  }
+});
+
+
 module.exports = router;
