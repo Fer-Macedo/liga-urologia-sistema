@@ -12,12 +12,34 @@ const R2 = new S3Client({
 });
 const BUCKET = process.env.R2_BUCKET || 'liga-urologia-files';
 
+// Baixa imagem do R2 e converte para base64
+async function imagemBase64(chave) {
+  if (!chave) return null;
+  try {
+    const r = await R2.send(new GetObjectCommand({ Bucket: BUCKET, Key: chave }));
+    const chunks = [];
+    for await (const chunk of r.Body) chunks.push(chunk);
+    const buffer = Buffer.concat(chunks);
+    const ext = chave.split('.').pop().toLowerCase();
+    const mime = ext === 'png' ? 'image/png' : ext === 'pdf' ? 'application/pdf' : 'image/jpeg';
+    return 'data:' + mime + ';base64,' + buffer.toString('base64');
+  } catch(e) {
+    console.error('Erro ao carregar imagem:', e.message);
+    return null;
+  }
+}
+
 // Gera HTML do documento de desligamento
 function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
   const dataFormatada = new Date(data).toLocaleDateString('es-PY', {
     day: '2-digit', month: '2-digit', year: 'numeric'
   });
   const [dia, mes, ano] = dataFormatada.split('/');
+
+  // Usa base64 diretamente nas imagens
+  const timbradoSrc = config.timbrado_b64 || null;
+  const presidenteSrc = config.assinatura_presidente_b64 || null;
+  const secretarioSrc = config.assinatura_secretario_b64 || null;
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -42,7 +64,7 @@ function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
 <body>
 
   <div class="timbrado">
-    ${config.timbrado_url ? `<img src="${config.timbrado_url}" alt="Timbrado">` : `<div style="border:2px solid #000;padding:20px;text-align:center;font-size:16pt;font-weight:bold">${config.org_nome || 'Liga Académica de Urología — LAURO'}</div>`}
+    ${timbradoSrc ? `<img src="${timbradoSrc}" alt="Timbrado">` : `<div style="border:2px solid #000;padding:20px;text-align:center;font-size:16pt;font-weight:bold">${config.org_nome || 'Liga Académica de Urología — LAURO'}</div>`}
   </div>
 
   <div class="titulo">Carta de Rescisión de la Liga Académica de Urología</div>
@@ -69,14 +91,14 @@ function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
     </div>
 
     <div class="assinatura-bloco">
-      ${config.assinatura_presidente_url ? `<img src="${config.assinatura_presidente_url}" class="assinatura-img">` : ''}
+      ${presidenteSrc ? `<img src="${presidenteSrc}" class="assinatura-img">` : ''}
       <div class="linha-assinatura"></div>
       <div class="assinatura-nome">${config.presidente_nome || 'MANUEL FERNANDO MACEDO NETO'}</div>
       <div class="assinatura-cargo">PRESIDENTE</div>
     </div>
 
     <div class="assinatura-bloco">
-      ${config.assinatura_secretario_url ? `<img src="${config.assinatura_secretario_url}" class="assinatura-img">` : ''}
+      ${secretarioSrc ? `<img src="${secretarioSrc}" class="assinatura-img">` : ''}
       <div class="linha-assinatura"></div>
       <div class="assinatura-nome">${config.secretario_nome || 'KAUÊ TEIXEIRA LACERDA'}</div>
       <div class="assinatura-cargo">SECRETÁRIO</div>
@@ -98,4 +120,4 @@ async function uploadBuffer(buffer, chave, contentType) {
   await R2.send(new PutObjectCommand({ Bucket: BUCKET, Key: chave, Body: buffer, ContentType: contentType }));
 }
 
-module.exports = { gerarHTMLDesligamento, getUrlAssinada, uploadBuffer };
+module.exports = { gerarHTMLDesligamento, getUrlAssinada, uploadBuffer, imagemBase64 };
