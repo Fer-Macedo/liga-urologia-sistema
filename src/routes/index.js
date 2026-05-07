@@ -1492,15 +1492,14 @@ router.get('/desligamentos', requireAuth, async (req, res) => {
   const msg = req.session.msg || []; req.session.msg = [];
   const erro = req.session.erro || []; req.session.erro = [];
 
-  const [deslig, membros] = await Promise.all([
-    query(`SELECT d.*, m.nome as membro_nome, m.email as membro_email
-           FROM desligamentos d JOIN membros m ON m.id=d.membro_id
-           ORDER BY d.criado_em DESC`),
-    query(`SELECT id, nome, cargo FROM membros WHERE ativo=1 ORDER BY nome`)
+  const [deslig, membros, ligR] = await Promise.all([
+    query(`SELECT d.*, COALESCE(m.nome,l.nome) as membro_nome, COALESCE(m.email,l.email) as membro_email FROM desligamentos d LEFT JOIN membros m ON m.id=d.membro_id LEFT JOIN ligantes l ON l.id=d.ligante_id ORDER BY d.criado_em DESC`),
+    query(`SELECT id, nome, cargo FROM membros WHERE ativo=1 ORDER BY nome`),
+    query(`SELECT id, nome, email, turma, semestre, rg, catraca FROM ligantes ORDER BY nome`)
   ]);
 
   res.render('pages/desligamentos', { config, usuario: req.session.usuario, msg, erro,
-    desligamentos: deslig.rows, membros: membros.rows });
+    desligamentos: deslig.rows, membros: membros.rows, ligantes: ligR.rows });
 });
 
 router.post('/desligamentos/configurar', requireAuth, requireAdmin, async (req, res) => {
