@@ -13,7 +13,7 @@ const R2 = new S3Client({
 const BUCKET = process.env.R2_BUCKET || 'liga-urologia-files';
 
 // Gera HTML do documento de desligamento
-function gerarHTMLDesligamento(membro, config, data) {
+function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
   const dataFormatada = new Date(data).toLocaleDateString('es-PY', {
     day: '2-digit', month: '2-digit', year: 'numeric'
   });
