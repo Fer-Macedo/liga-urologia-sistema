@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Desligamentos — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+    .status-badge { padding:3px 12px;border-radius:20px;font-size:11px;font-weight:700; }
+    .status-pendente { background:#fef3c7;color:#92400e; }
+    .status-enviado { background:#dbeafe;color:#1e40af; }
+    .status-assinado { background:#dcfce7;color:#166534; }
+    .status-concluido { background:#f0fdf4;color:#15803d; }
+    .upload-assinado { border:2px dashed var(--borda);border-radius:10px;padding:16px;text-align:center;cursor:pointer;background:var(--fundo); }
+    .upload-assinado:hover { border-color:var(--cor-primaria); }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'desligamentos' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">📋 Desligamentos</h1>
+      <button class="btn btn-primario" onclick="abrirModal('modal-novo')">+ Novo desligamento</button>
+    </div>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
+
+      <!-- Configurações de timbrado e assinaturas -->
+      <div class="card" style="margin-bottom:20px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:16px">⚙️ Configurações do Documento</div>
+        <form action="/desligamentos/configurar" method="POST" enctype="multipart/form-data">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
+            <div class="campo">
+              <label class="label">📄 Papel Timbrado (PDF ou PNG)</label>
+              <input type="file" name="timbrado" class="input" accept=".pdf,.png,.jpg">
+              <% if (config.timbrado_chave) { %><span style="font-size:11px;color:var(--verde)">✅ Timbrado configurado</span><% } %>
+            </div>
+            <div class="campo">
+              <label class="label">✍️ Assinatura do Presidente (PNG)</label>
+              <input type="file" name="assinatura_presidente" class="input" accept=".png,.jpg">
+              <% if (config.assinatura_presidente_chave) { %><span style="font-size:11px;color:var(--verde)">✅ Assinatura configurada</span><% } %>
+            </div>
+            <div class="campo">
+              <label class="label">✍️ Assinatura do Secretário (PNG)</label>
+              <input type="file" name="assinatura_secretario" class="input" accept=".png,.jpg">
+              <% if (config.assinatura_secretario_chave) { %><span style="font-size:11px;color:var(--verde)">✅ Assinatura configurada</span><% } %>
+            </div>
+            <div class="campo">
+              <label class="label">Nome do Presidente</label>
+              <input name="presidente_nome" class="input" value="<%= config.presidente_nome || 'Manuel Fernando Macedo Neto' %>">
+            </div>
+            <div class="campo">
+              <label class="label">Nome do Secretário</label>
+              <input name="secretario_nome" class="input" value="<%= config.secretario_nome || 'Kauê Teixeira Lacerda' %>">
+            </div>
+            <div class="campo" style="align-self:flex-end">
+              <button type="submit" class="btn btn-primario">💾 Salvar configurações</button>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <!-- Lista de desligamentos -->
+      <div class="tabela-container">
+        <table class="table">
+          <thead><tr>
+            <th>Membro</th><th>Data Solicitação</th><th>Status</th><th>Enviado em</th><th>Assinado em</th><th>Ações</th>
+          </tr></thead>
+          <tbody>
+            <% if (desligamentos.length === 0) { %>
+            <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--texto2)">Nenhum desligamento registrado</td></tr>
+            <% } %>
+            <% desligamentos.forEach(d => { %>
+            <tr>
+              <td>
+                <div style="font-weight:600"><%= d.membro_nome %></div>
+                <div style="font-size:11px;color:var(--texto2)"><%= d.membro_email %></div>
+              </td>
+              <td><%= new Date(d.data_solicitacao).toLocaleDateString('pt-BR') %></td>
+              <td>
+                <span class="status-badge status-<%= d.status %>">
+                  <% if(d.status==='pendente'){%>⏳ Pendente<%}else if(d.status==='enviado'){%>📧 Enviado<%}else if(d.status==='assinado'){%>✍️ Assinado<%}else{%>✅ Concluído<%}%>
+                </span>
+              </td>
+              <td><%= d.enviado_em ? new Date(d.enviado_em).toLocaleDateString('pt-BR') : '—' %></td>
+              <td><%= d.assinado_em ? new Date(d.assinado_em).toLocaleDateString('pt-BR') : '—' %></td>
+              <td>
+                <div class="btn-acoes">
+                  <a href="/desligamentos/<%= d.id %>/visualizar" target="_blank" class="btn" style="font-size:11px;padding:4px 8px" title="Visualizar documento">👁</a>
+                  <% if (d.status === 'pendente') { %>
+                  <form action="/desligamentos/<%= d.id %>/enviar" method="POST" style="display:inline" onsubmit="return confirm('Enviar documento por email para <%= d.membro_nome %>?')">
+                    <button class="btn btn-primario" style="font-size:11px;padding:4px 8px" title="Enviar por email">📧</button>
+                  </form>
+                  <% } %>
+                  <% if (d.status === 'enviado') { %>
+                  <button class="btn" style="font-size:11px;padding:4px 8px" onclick="abrirUploadAssinado(<%= d.id %>, '<%= d.membro_nome %>')" title="Anexar documento assinado">📎</button>
+                  <% } %>
+                  <% if (d.pdf_assinado_chave) { %>
+                  <a href="/desligamentos/<%= d.id %>/assinado" target="_blank" class="btn" style="font-size:11px;padding:4px 8px;color:var(--verde)" title="Ver documento assinado">✍️</a>
+                  <% } %>
+                </div>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal novo desligamento -->
+<div class="modal-overlay" id="modal-novo" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">📋 Novo Desligamento</span>
+      <button class="icon-btn" onclick="fecharModal('modal-novo')">✕</button>
+    </div>
+    <form action="/desligamentos" method="POST">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo">
+          <label class="label">Membro <span style="color:red">*</span></label>
+          <select name="membro_id" class="input" required>
+            <option value="">Selecione o membro...</option>
+            <% membros.forEach(m => { %>
+            <option value="<%= m.id %>"><%= m.nome %> <%= m.cargo ? '— '+m.cargo : '' %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="campo">
+          <label class="label">Data da solicitação</label>
+          <input name="data_solicitacao" type="date" class="input" value="<%= new Date().toISOString().split('T')[0] %>">
+        </div>
+        <div class="campo">
+          <label class="label">Motivo (opcional — uso interno)</label>
+          <textarea name="motivo" class="input" rows="3" placeholder="Motivo do desligamento para registro interno..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-novo')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">📋 Gerar documento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal upload assinado -->
+<div class="modal-overlay" id="modal-assinado" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo" id="titulo-assinado">📎 Anexar documento assinado</span>
+      <button class="icon-btn" onclick="fecharModal('modal-assinado')">✕</button>
+    </div>
+    <form id="form-assinado" action="" method="POST" enctype="multipart/form-data">
+      <div class="campo" style="margin-bottom:16px">
+        <label class="label">Documento assinado (PDF)</label>
+        <input type="file" name="pdf_assinado" class="input" accept=".pdf" required>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-assinado')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">📎 Anexar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+function abrirUploadAssinado(id, nome) {
+  document.getElementById('titulo-assinado').textContent = 'Anexar documento assinado — ' + nome;
+  document.getElementById('form-assinado').action = '/desligamentos/' + id + '/assinado';
+  abrirModal('modal-assinado');
+}
+</script>
+</body>
+</html>
