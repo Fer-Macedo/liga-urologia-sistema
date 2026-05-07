@@ -130,6 +130,21 @@
           </select>
         </div>
         <div class="campo">
+          <label class="label">Tipo de membro <span style="color:red">*</span></label>
+          <select name="tipo_membro" class="input" required>
+            <option value="LIGANTE">LIGANTE</option>
+            <option value="DIRETIVO">DIRETIVO</option>
+            <option value="PRESIDENTE">PRESIDENTE</option>
+            <option value="VICE-PRESIDENTE">VICE-PRESIDENTE</option>
+            <option value="SECRETÁRIO">SECRETÁRIO</option>
+            <option value="DIRECTOR FINANCIERO">DIRECTOR FINANCIERO</option>
+            <option value="DIRECTOR CIENTÍFICO">DIRECTOR CIENTÍFICO</option>
+            <option value="DIRECTOR DE EXTENSIÓN">DIRECTOR DE EXTENSIÓN</option>
+            <option value="DIRECTOR DE ENSEÑANZA">DIRECTOR DE ENSEÑANZA</option>
+            <option value="DIRECTOR DE MARKETING">DIRECTOR DE MARKETING</option>
+          </select>
+        </div>
+        <div class="campo">
           <label class="label">Data da solicitação</label>
           <input name="data_solicitacao" type="date" class="input" value="<%= new Date().toISOString().split('T')[0] %>">
         </div>
