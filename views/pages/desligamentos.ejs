@@ -100,6 +100,10 @@
                   <% if (d.pdf_assinado_chave) { %>
                   <a href="/desligamentos/<%= d.id %>/assinado" target="_blank" class="btn" style="font-size:11px;padding:4px 8px;color:var(--verde)" title="Ver documento assinado">✍️</a>
                   <% } %>
+                  <button class="btn" style="font-size:11px;padding:4px 8px" onclick="abrirSubstituirDeslig(<%= d.id %>, '<%= d.membro_nome %>')" title="Substituir documento">🔄</button>
+                  <form action="/desligamentos/<%= d.id %>/deletar" method="POST" style="display:inline" onsubmit="return confirm('Apagar este desligamento?')">
+                    <button class="btn" style="font-size:11px;padding:4px 8px;color:var(--vermelho)" title="Apagar">🗑</button>
+                  </form>
                 </div>
               </td>
             </tr>
@@ -121,11 +125,29 @@
     <form action="/desligamentos" method="POST">
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="campo">
-          <label class="label">Membro <span style="color:red">*</span></label>
-          <select name="membro_id" class="input" required>
-            <option value="">Selecione o membro...</option>
+          <label class="label">Tipo de solicitante <span style="color:red">*</span></label>
+          <select class="input" id="select-tipo-solicitante" onchange="atualizarListaMembros()">
+            <option value="membro">Membro (paga mensalidade)</option>
+            <option value="ligante">Ligante</option>
+          </select>
+        </div>
+        <div class="campo" id="campo-membro">
+          <label class="label">Selecione o membro <span style="color:red">*</span></label>
+          <select name="membro_id" class="input" id="select-membro">
+            <option value="">Selecione...</option>
             <% membros.forEach(m => { %>
             <option value="<%= m.id %>"><%= m.nome %> <%= m.cargo ? '— '+m.cargo : '' %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="campo" id="campo-ligante" style="display:none">
+          <label class="label">Selecione o ligante <span style="color:red">*</span></label>
+          <select name="ligante_id" class="input" id="select-ligante">
+            <option value="">Selecione...</option>
+            <% ligantes.forEach(l => { %>
+            <option value="<%= l.id %>" data-nome="<%= l.nome %>" data-email="<%= l.email %>" data-rg="<%= l.rg||'' %>" data-catraca="<%= l.catraca||'' %>">
+              <%= l.nome %> — Turma <%= l.turma || '?' %>
+            </option>
             <% }) %>
           </select>
         </div>
@@ -161,6 +183,26 @@
   </div>
 </div>
 
+<!-- Modal substituir documento -->
+<div class="modal-overlay" id="modal-substituir-deslig" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo" id="titulo-substituir-deslig">🔄 Substituir documento</span>
+      <button class="icon-btn" onclick="fecharModal('modal-substituir-deslig')">✕</button>
+    </div>
+    <form id="form-substituir-deslig" action="" method="POST" enctype="multipart/form-data">
+      <div class="campo" style="margin-bottom:16px">
+        <label class="label">Novo documento assinado (PDF)</label>
+        <input type="file" name="pdf_assinado" class="input" accept=".pdf" required>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-substituir-deslig')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">🔄 Substituir</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- Modal upload assinado -->
 <div class="modal-overlay" id="modal-assinado" style="display:none">
   <div class="modal">
@@ -183,6 +225,19 @@
 
 <script src="/js/app.js"></script>
 <script>
+function atualizarListaMembros() {
+  const tipo = document.getElementById('select-tipo-solicitante').value;
+  document.getElementById('campo-membro').style.display = tipo === 'membro' ? '' : 'none';
+  document.getElementById('campo-ligante').style.display = tipo === 'ligante' ? '' : 'none';
+  document.getElementById('select-membro').required = tipo === 'membro';
+}
+
+function abrirSubstituirDeslig(id, nome) {
+  document.getElementById('titulo-substituir-deslig').textContent = 'Substituir documento — ' + nome;
+  document.getElementById('form-substituir-deslig').action = '/desligamentos/' + id + '/substituir';
+  abrirModal('modal-substituir-deslig');
+}
+
 function abrirUploadAssinado(id, nome) {
   document.getElementById('titulo-assinado').textContent = 'Anexar documento assinado — ' + nome;
   document.getElementById('form-assinado').action = '/desligamentos/' + id + '/assinado';
