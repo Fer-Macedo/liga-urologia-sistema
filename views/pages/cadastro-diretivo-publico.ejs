@@ -111,33 +111,7 @@
         </div>
         <div class="campo">
           <label>Semestre / Turma atual <span>*</span></label>
-          <select name="semestre_turma" required>
-            <option value="">Selecione sua turma</option>
-            <option value="1A" <%if(form.semestre_turma==='1A'){%>selected<%}%>>1A</option>
-            <option value="1B" <%if(form.semestre_turma==='1B'){%>selected<%}%>>1B</option>
-            <option value="2A" <%if(form.semestre_turma==='2A'){%>selected<%}%>>2A</option>
-            <option value="2B" <%if(form.semestre_turma==='2B'){%>selected<%}%>>2B</option>
-            <option value="3A" <%if(form.semestre_turma==='3A'){%>selected<%}%>>3A</option>
-            <option value="3B" <%if(form.semestre_turma==='3B'){%>selected<%}%>>3B</option>
-            <option value="4A" <%if(form.semestre_turma==='4A'){%>selected<%}%>>4A</option>
-            <option value="4B" <%if(form.semestre_turma==='4B'){%>selected<%}%>>4B</option>
-            <option value="5A" <%if(form.semestre_turma==='5A'){%>selected<%}%>>5A</option>
-            <option value="5B" <%if(form.semestre_turma==='5B'){%>selected<%}%>>5B</option>
-            <option value="6A" <%if(form.semestre_turma==='6A'){%>selected<%}%>>6A</option>
-            <option value="6B" <%if(form.semestre_turma==='6B'){%>selected<%}%>>6B</option>
-            <option value="7A" <%if(form.semestre_turma==='7A'){%>selected<%}%>>7A</option>
-            <option value="7B" <%if(form.semestre_turma==='7B'){%>selected<%}%>>7B</option>
-            <option value="8A" <%if(form.semestre_turma==='8A'){%>selected<%}%>>8A</option>
-            <option value="8B" <%if(form.semestre_turma==='8B'){%>selected<%}%>>8B</option>
-            <option value="9A" <%if(form.semestre_turma==='9A'){%>selected<%}%>>9A</option>
-            <option value="9B" <%if(form.semestre_turma==='9B'){%>selected<%}%>>9B</option>
-            <option value="10A" <%if(form.semestre_turma==='10A'){%>selected<%}%>>10A</option>
-            <option value="10B" <%if(form.semestre_turma==='10B'){%>selected<%}%>>10B</option>
-            <option value="11A" <%if(form.semestre_turma==='11A'){%>selected<%}%>>11A</option>
-            <option value="11B" <%if(form.semestre_turma==='11B'){%>selected<%}%>>11B</option>
-            <option value="12A" <%if(form.semestre_turma==='12A'){%>selected<%}%>>12A</option>
-            <option value="12B" <%if(form.semestre_turma==='12B'){%>selected<%}%>>12B</option>
-          </select>
+          <input name="semestre_turma" required placeholder="Ex: 2B, 5A, 7C..." value="<%= form.semestre_turma || '' %>">
         </div>
         <div class="campo">
           <label>ORCID</label>
