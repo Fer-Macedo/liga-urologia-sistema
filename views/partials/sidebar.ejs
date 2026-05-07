@@ -19,6 +19,9 @@
     <a href="/diretivos" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'diretivos' ? 'ativo' : '' %>">
       <span class="nav-icone">🏛</span> Diretivos
     </a>
+    <a href="/ligantes" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'ligantes' ? 'ativo' : '' %>">
+      <span class="nav-icone">🎓</span> Ligantes
+    </a>
     <a href="/arquivos" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'arquivos' ? 'ativo' : '' %>">
       <span class="nav-icone">📁</span> Arquivos
     </a>
@@ -34,7 +37,13 @@
     <a href="/aniversarios" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'aniversarios' ? 'ativo' : '' %>">
       <span class="nav-icone">◆</span> Aniversários
     </a>
-    <% if (usuarioLogado && usuarioLogado.perfil === 'admin') { %>
+    <% const u = typeof usuario !== 'undefined' ? usuario : (typeof usuarioLogado !== 'undefined' ? usuarioLogado : null); %>
+    <% if (u && (u.perfil === 'admin' || u.perfil === 'presidencia')) { %>
+    <a href="/auditoria" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'auditoria' ? 'ativo' : '' %>">
+      <span class="nav-icone">🔍</span> Auditoria
+    </a>
+    <% } %>
+    <% if (u && u.perfil === 'admin') { %>
     <a href="/notificacoes" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'notificacoes' ? 'ativo' : '' %>">
       <span class="nav-icone">◉</span> Notificações
     </a>
@@ -48,8 +57,8 @@
   </nav>
   <div class="sidebar-rodape">
     <div class="usuario-info">
-      <div class="usuario-nome"><%= usuarioLogado?.nome || '' %></div>
-      <div class="usuario-perfil"><%= usuarioLogado?.perfil || '' %></div>
+      <div class="usuario-nome"><%= u?.nome || '' %></div>
+      <div class="usuario-perfil"><%= u?.perfil || '' %></div>
     </div>
     <a href="/logout" class="btn-sair">Sair</a>
   </div>
