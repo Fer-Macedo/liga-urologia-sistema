@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="/css/style.css">
   <style>
     :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
-    .ligante-card { background:var(--card);border:1.5px solid var(--borda);border-radius:12px;padding:18px;display:flex;gap:16px;align-items:flex-start;transition:all 0.15s; }
+    .ligante-card { background:var(--card);border:1.5px solid var(--borda);border-radius:12px;padding:18px;display:flex;gap:16px;align-items:flex-start;transition:all 0.15s;position:relative; }
     .ligante-card:hover { border-color:var(--cor-primaria);box-shadow:0 2px 12px rgba(0,0,0,0.08); }
     .ligante-foto { width:60px;height:60px;border-radius:50%;object-fit:cover;background:var(--fundo);border:2px solid var(--borda);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px; }
     .ligante-foto img { width:60px;height:60px;border-radius:50%;object-fit:cover; }
@@ -58,7 +58,16 @@
         </div>
         <% } %>
         <% ligantes.forEach(l => { %>
-        <div class="ligante-card" onclick="abrirDetalhe(<%= l.id %>)" style="cursor:pointer">
+        <div class="ligante-card">
+          <div style="display:flex;gap:6px;position:absolute;top:10px;right:10px">
+            <a href="/ligantes/<%= l.id %>/editar" class="btn" style="font-size:11px;padding:3px 8px" title="Editar">✏️</a>
+            <% if (usuario.perfil === 'admin') { %>
+            <form action="/ligantes/<%= l.id %>/deletar" method="POST" onsubmit="return confirm('Excluir este ligante?')" style="display:inline">
+              <button class="btn" style="font-size:11px;padding:3px 8px;color:var(--vermelho)" title="Excluir">🗑</button>
+            </form>
+            <% } %>
+          </div>
+          <div onclick="abrirDetalhe(<%= l.id %>)" style="cursor:pointer;display:flex;gap:16px;align-items:flex-start;flex:1">
           <div class="ligante-foto">
             <% if (l.foto_chave) { %>
               <img src="/ligantes/<%= l.id %>/foto" alt="<%= l.nome %>">
@@ -66,8 +75,8 @@
               👤
             <% } %>
           </div>
-          <div class="ligante-info">
-            <div class="ligante-nome"><%= l.nome %></div>
+            <div class="ligante-info">
+              <div class="ligante-nome"><%= l.nome %></div>
             <div class="ligante-meta">
               <span>📧 <%= l.email %></span>
               <span>📱 <%= l.whatsapp %></span>
