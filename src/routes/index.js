@@ -1561,12 +1561,12 @@ router.get('/desligamentos/:id/visualizar', requireAuth, async (req, res) => {
     if (!d) return res.status(404).send('Não encontrado');
 
     const config = await getConfig();
-    const { gerarHTMLDesligamento, getUrlAssinada } = require('../services/desligamento');
+    const { gerarHTMLDesligamento, imagemBase64 } = require('../services/desligamento');
 
-    // Busca URLs assinadas para timbrado e assinaturas
-    config.timbrado_url = await getUrlAssinada(config.timbrado_chave);
-    config.assinatura_presidente_url = await getUrlAssinada(config.assinatura_presidente_chave);
-    config.assinatura_secretario_url = await getUrlAssinada(config.assinatura_secretario_chave);
+    // Carrega imagens em base64 para funcionar no HTML sem problemas de CORS/expiração
+    config.timbrado_b64 = await imagemBase64(config.timbrado_chave);
+    config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
+    config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
 
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
     res.send(html);
@@ -1582,12 +1582,12 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
     if (!d) { req.session.erro = ['Não encontrado.']; return res.redirect('/desligamentos'); }
 
     const config = await getConfig();
-    const { gerarHTMLDesligamento, getUrlAssinada } = require('../services/desligamento');
+    const { gerarHTMLDesligamento, imagemBase64 } = require('../services/desligamento');
     const nodemailer = require('nodemailer');
 
-    config.timbrado_url = await getUrlAssinada(config.timbrado_chave);
-    config.assinatura_presidente_url = await getUrlAssinada(config.assinatura_presidente_chave);
-    config.assinatura_secretario_url = await getUrlAssinada(config.assinatura_secretario_chave);
+    config.timbrado_b64 = await imagemBase64(config.timbrado_chave);
+    config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
+    config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
 
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
 
@@ -1651,6 +1651,44 @@ router.get('/desligamentos/:id/assinado', requireAuth, async (req, res) => {
     const url = await getUrlAssinada(d.pdf_assinado_chave);
     res.redirect(url);
   } catch(e) { res.status(500).send('Erro'); }
+});
+
+
+
+router.get('/ligantes/:id/editar', requireAuth, async (req, res) => {
+  const config = await getConfig();
+  const r = await query('SELECT * FROM ligantes WHERE id=$1', [req.params.id]);
+  const ligante = r.rows[0];
+  if (!ligante) { req.session.erro = ['Ligante não encontrado.']; return res.redirect('/ligantes'); }
+  res.render('pages/ligante-editar', { config, usuario: req.session.usuario, ligante,
+    msg: req.session.msg||[], erro: req.session.erro||[] });
+  req.session.msg = []; req.session.erro = [];
+});
+
+router.post('/ligantes/:id/editar', requireAuth, async (req, res) => {
+  const b = req.body;
+  await query(`UPDATE ligantes SET nome=$1, data_nascimento=$2, sexo=$3, email=$4,
+    email_alternativo=$5, whatsapp=$6, rg=$7, cpf=$8, semestre=$9, turma=$10,
+    catraca=$11, orcid=$12, tem_formacao=$13, qual_formacao=$14, habilidades=$15,
+    aceita_cargo=$16, qual_cargo=$17, contribuicao_grupo=$18, ideia_inovadora=$19,
+    tema_interesse=$20, porque_lauro=$21, apresentacao=$22 WHERE id=$23`,
+    [b.nome, b.data_nascimento||null, b.sexo, b.email, b.email_alternativo||null,
+     b.whatsapp, b.rg, b.cpf||null, b.semestre, b.turma, b.catraca||null,
+     b.orcid||null, b.tem_formacao||null, b.qual_formacao||null, b.habilidades||null,
+     b.aceita_cargo||null, b.qual_cargo||null, b.contribuicao_grupo||null,
+     b.ideia_inovadora||null, b.tema_interesse||null, b.porque_lauro, b.apresentacao,
+     req.params.id]);
+  await logAtividade(req.session.usuario.id, 'LIGANTE_EDITADO', 'Ligante editado: ' + b.nome, req);
+  req.session.msg = ['Ligante atualizado com sucesso!'];
+  res.redirect('/ligantes');
+});
+
+router.post('/ligantes/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
+  const r = await query('SELECT nome FROM ligantes WHERE id=$1', [req.params.id]);
+  await query('DELETE FROM ligantes WHERE id=$1', [req.params.id]);
+  await logAtividade(req.session.usuario.id, 'LIGANTE_DELETADO', 'Ligante excluído: ' + (r.rows[0]?.nome||''), req);
+  req.session.msg = ['Ligante excluído com sucesso!'];
+  res.redirect('/ligantes');
 });
 
 
