@@ -1397,4 +1397,76 @@ router.post('/arquivos/:id/deletar', requireAuth, requireAdmin, async (req, res)
 });
 
 
+
+// ─── CADASTRO LIGANTE PÚBLICO ─────────────────────────────────────────────────
+
+router.get('/cadastro-ligante', async (req, res) => {
+  const config = await getConfig();
+  const msg = req.session.msg || []; req.session.msg = [];
+  const erro = req.session.erro || []; req.session.erro = [];
+  res.render('pages/cadastro-ligante-publico', { config, msg, erro, form: {} });
+});
+
+router.post('/cadastro-ligante', async (req, res) => {
+  const config = await getConfig();
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.single('foto')(req, res, async (err) => {
+      const form = req.body;
+      const campos = ['nome','data_nascimento','sexo','email','whatsapp','rg','semestre','turma','porque_lauro','apresentacao'];
+      const faltando = campos.filter(c => !form[c] || form[c].trim() === '');
+      if (faltando.length > 0) {
+        req.session.erro = ['Preencha todos os campos obrigatórios.'];
+        return res.render('pages/cadastro-ligante-publico', { config, msg: [], erro: req.session.erro, form });
+      }
+
+      let foto_chave = null;
+      if (req.file) {
+        const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'ligantes');
+        foto_chave = r.chave;
+      }
+
+      await query(`INSERT INTO ligantes (
+        nome, data_nascimento, sexo, email, email_alternativo, whatsapp, rg, cpf,
+        semestre, turma, catraca, orcid, tem_formacao, qual_formacao,
+        habilidades, aceita_cargo, qual_cargo, contribuicao_grupo,
+        ideia_inovadora, tema_interesse, porque_lauro, apresentacao,
+        foto_chave, criado_em
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,NOW())`,
+      [
+        form.nome, form.data_nascimento, form.sexo, form.email, form.email_alternativo||null,
+        form.whatsapp, form.rg, form.cpf||null, form.semestre, form.turma,
+        form.catraca||null, form.orcid||null, form.tem_formacao||null, form.qual_formacao||null,
+        form.habilidades||null, form.aceita_cargo||null, form.qual_cargo||null,
+        form.contribuicao_grupo||null, form.ideia_inovadora||null, form.tema_interesse||null,
+        form.porque_lauro, form.apresentacao, foto_chave
+      ]);
+
+      req.session.msg = ['Cadastro realizado com sucesso! Bem-vindo(a) à LAURO! 🎉'];
+      res.redirect('/cadastro-ligante');
+    });
+  } catch(e) {
+    console.error('Erro cadastro ligante:', e.message);
+    req.session.erro = ['Erro ao salvar cadastro. Tente novamente.'];
+    res.redirect('/cadastro-ligante');
+  }
+});
+
+// Lista de ligantes (interno)
+router.get('/ligantes', requireAuth, async (req, res) => {
+  const config = await getConfig();
+  const busca = req.query.busca || '';
+  let sql = 'SELECT * FROM ligantes ORDER BY criado_em DESC';
+  let params = [];
+  if (busca) {
+    sql = 'SELECT * FROM ligantes WHERE nome ILIKE $1 OR email ILIKE $1 OR turma ILIKE $1 ORDER BY criado_em DESC';
+    params = ['%' + busca + '%'];
+  }
+  const r = await query(sql, params);
+  res.render('pages/ligantes', { config, usuario: req.session.usuario, ligantes: r.rows, busca,
+    msg: req.session.msg||[], erro: req.session.erro||[] });
+  req.session.msg = []; req.session.erro = [];
+});
+
+
 module.exports = router;
