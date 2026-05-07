@@ -1469,4 +1469,19 @@ router.get('/ligantes', requireAuth, async (req, res) => {
 });
 
 
+
+router.get('/ligantes/:id/foto', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT foto_chave FROM ligantes WHERE id=$1', [req.params.id]);
+    const ligante = r.rows[0];
+    if (!ligante || !ligante.foto_chave) return res.status(404).send('Foto não encontrada');
+    const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
+    const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+    const R2 = new S3Client({ region:'auto', endpoint:process.env.R2_ENDPOINT, credentials:{ accessKeyId:process.env.R2_ACCESS_KEY_ID, secretAccessKey:process.env.R2_SECRET_ACCESS_KEY } });
+    const url = await getSignedUrl(R2, new GetObjectCommand({ Bucket: process.env.R2_BUCKET||'liga-urologia-files', Key: ligante.foto_chave }), { expiresIn: 3600 });
+    res.redirect(url);
+  } catch(e) { res.status(500).send('Erro'); }
+});
+
+
 module.exports = router;
