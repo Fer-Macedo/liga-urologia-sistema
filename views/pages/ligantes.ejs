@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ligantes — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+    .ligante-card { background:var(--card);border:1.5px solid var(--borda);border-radius:12px;padding:18px;display:flex;gap:16px;align-items:flex-start;transition:all 0.15s; }
+    .ligante-card:hover { border-color:var(--cor-primaria);box-shadow:0 2px 12px rgba(0,0,0,0.08); }
+    .ligante-foto { width:60px;height:60px;border-radius:50%;object-fit:cover;background:var(--fundo);border:2px solid var(--borda);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:24px; }
+    .ligante-foto img { width:60px;height:60px;border-radius:50%;object-fit:cover; }
+    .ligante-info { flex:1;min-width:0; }
+    .ligante-nome { font-size:15px;font-weight:700;margin-bottom:4px; }
+    .ligante-meta { font-size:12px;color:var(--texto2);display:flex;gap:12px;flex-wrap:wrap;margin-bottom:6px; }
+    .ligante-tags { display:flex;gap:6px;flex-wrap:wrap; }
+    .tag { padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;background:var(--fundo);border:1px solid var(--borda); }
+    .lista-ligantes { display:flex;flex-direction:column;gap:10px; }
+    .modal-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center; }
+    .modal-overlay.aberto { display:flex; }
+    .modal-detalhe { background:var(--card);border-radius:16px;padding:28px;max-width:600px;width:90%;max-height:85vh;overflow-y:auto; }
+    .detalhe-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px; }
+    .detalhe-item { display:flex;flex-direction:column;gap:3px; }
+    .detalhe-label { font-size:11px;font-weight:700;color:var(--texto2);text-transform:uppercase; }
+    .detalhe-valor { font-size:13px;color:var(--texto); }
+    .detalhe-full { grid-column:1/-1; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'ligantes' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">🎓 Ligantes</h1>
+      <div class="topbar-acoes">
+        <a href="/cadastro-ligante" target="_blank" class="btn btn-primario">🔗 Link de Cadastro</a>
+      </div>
+    </div>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
+
+      <!-- Busca e stats -->
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:20px;flex-wrap:wrap">
+        <form method="GET" action="/ligantes" style="flex:1;min-width:200px">
+          <input type="text" name="busca" class="input" placeholder="🔍 Buscar por nome, email ou turma..." value="<%= busca %>" style="max-width:400px">
+        </form>
+        <div style="font-size:13px;color:var(--texto2)"><strong><%= ligantes.length %></strong> ligante(s) encontrado(s)</div>
+      </div>
+
+      <!-- Lista -->
+      <div class="lista-ligantes">
+        <% if (ligantes.length === 0) { %>
+        <div style="text-align:center;padding:60px;color:var(--texto2)">
+          <div style="font-size:48px;margin-bottom:12px">🎓</div>
+          <div style="font-size:15px;font-weight:600">Nenhum ligante cadastrado ainda</div>
+          <div style="font-size:13px;margin-top:6px">Compartilhe o link de cadastro com os ligantes</div>
+          <a href="/cadastro-ligante" target="_blank" class="btn btn-primario" style="margin-top:16px;display:inline-block">🔗 Abrir formulário de cadastro</a>
+        </div>
+        <% } %>
+        <% ligantes.forEach(l => { %>
+        <div class="ligante-card" onclick="abrirDetalhe(<%= l.id %>)" style="cursor:pointer">
+          <div class="ligante-foto">
+            <% if (l.foto_chave) { %>
+              <img src="/ligantes/<%= l.id %>/foto" alt="<%= l.nome %>">
+            <% } else { %>
+              👤
+            <% } %>
+          </div>
+          <div class="ligante-info">
+            <div class="ligante-nome"><%= l.nome %></div>
+            <div class="ligante-meta">
+              <span>📧 <%= l.email %></span>
+              <span>📱 <%= l.whatsapp %></span>
+              <% if (l.semestre) { %><span>📚 <%= l.semestre %>º sem.</span><% } %>
+              <% if (l.turma) { %><span>🏫 Turma <%= l.turma %></span><% } %>
+            </div>
+            <div class="ligante-tags">
+              <% if (l.sexo) { %><span class="tag"><%= l.sexo %></span><% } %>
+              <% if (l.aceita_cargo === 'Sim') { %><span class="tag" style="background:#dcfce7;color:#166534">Aceita cargo</span><% } %>
+              <% if (l.tem_formacao === 'Sim') { %><span class="tag" style="background:#dbeafe;color:#1e40af">Com formação</span><% } %>
+              <span class="tag" style="color:var(--texto2)"><%= new Date(l.criado_em).toLocaleDateString('pt-BR') %></span>
+            </div>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal detalhes -->
+<div class="modal-overlay" id="modal-detalhe" onclick="fecharDetalhe(event)">
+  <div class="modal-detalhe" id="conteudo-detalhe">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <span style="font-size:16px;font-weight:700">Detalhes do Ligante</span>
+      <button onclick="document.getElementById('modal-detalhe').classList.remove('aberto')" style="background:none;border:none;font-size:20px;cursor:pointer">✕</button>
+    </div>
+    <div id="detalhe-corpo"></div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const ligantes = <%- JSON.stringify(ligantes) %>;
+
+function abrirDetalhe(id) {
+  const l = ligantes.find(x => x.id === id);
+  if (!l) return;
+  const foto = l.foto_chave ? `<img src="/ligantes/${l.id}/foto" style="width:80px;height:80px;border-radius:50%;object-fit:cover;margin-bottom:12px">` : '<div style="font-size:48px;margin-bottom:12px">👤</div>';
+  document.getElementById('detalhe-corpo').innerHTML = `
+    <div style="text-align:center">${foto}<div style="font-size:18px;font-weight:700">${l.nome}</div><div style="font-size:12px;color:var(--texto2);margin-top:4px">Cadastrado em ${new Date(l.criado_em).toLocaleString('pt-BR')}</div></div>
+    <div class="detalhe-grid">
+      <div class="detalhe-item"><span class="detalhe-label">E-mail</span><span class="detalhe-valor">${l.email||'-'}</span></div>
+      <div class="detalhe-item"><span class="detalhe-label">WhatsApp</span><span class="detalhe-valor">${l.whatsapp||'-'}</span></div>
+      <div class="detalhe-item"><span class="detalhe-label">Nascimento</span><span class="detalhe-valor">${l.data_nascimento ? new Date(l.data_nascimento).toLocaleDateString('pt-BR') : '-'}</span></div>
+      <div class="detalhe-item"><span class="detalhe-label">Sexo</span><span class="detalhe-valor">${l.sexo||'-'}</span></div>
+      <div class="detalhe-item"><span class="detalhe-label">RG/CI</span><span class="detalhe-valor">${l.rg||'-'}</span></div>
+      <div class="detalhe-item"><span class="detalhe-label">CPF</span><span class="detalhe-valor">${l.cpf||'-'}</span></div>
+      <div class="detalhe-item"><span class="detalhe-label">Semestre</span><span class="detalhe-valor">${l.semestre||'-'}</span></div>
+      <div class="detalhe-item"><span class="detalhe-label">Turma</span><span class="detalhe-valor">${l.turma||'-'}</span></div>
+      <div class="detalhe-item"><span class="detalhe-label">Catraca</span><span class="detalhe-valor">${l.catraca||'-'}</span></div>
+      <div class="detalhe-item"><span class="detalhe-label">ORCID</span><span class="detalhe-valor">${l.orcid||'-'}</span></div>
+      <div class="detalhe-item"><span class="detalhe-label">Formação</span><span class="detalhe-valor">${l.tem_formacao||'-'}${l.qual_formacao?' — '+l.qual_formacao:''}</span></div>
+      <div class="detalhe-item"><span class="detalhe-label">Aceita cargo</span><span class="detalhe-valor">${l.aceita_cargo||'-'}${l.qual_cargo?' — '+l.qual_cargo:''}</span></div>
+      <div class="detalhe-item detalhe-full"><span class="detalhe-label">Habilidades</span><span class="detalhe-valor">${l.habilidades||'-'}</span></div>
+      <div class="detalhe-item detalhe-full"><span class="detalhe-label">Contribuição em grupo</span><span class="detalhe-valor">${l.contribuicao_grupo||'-'}</span></div>
+      <div class="detalhe-item detalhe-full"><span class="detalhe-label">Ideia inovadora</span><span class="detalhe-valor">${l.ideia_inovadora||'-'}</span></div>
+      <div class="detalhe-item detalhe-full"><span class="detalhe-label">Tema de interesse</span><span class="detalhe-valor">${l.tema_interesse||'-'}</span></div>
+      <div class="detalhe-item detalhe-full"><span class="detalhe-label">Por que a LAURO?</span><span class="detalhe-valor">${l.porque_lauro||'-'}</span></div>
+      <div class="detalhe-item detalhe-full"><span class="detalhe-label">Apresentação</span><span class="detalhe-valor">${l.apresentacao||'-'}</span></div>
+    </div>
+  `;
+  document.getElementById('modal-detalhe').classList.add('aberto');
+}
+
+function fecharDetalhe(e) {
+  if (e.target === document.getElementById('modal-detalhe')) {
+    document.getElementById('modal-detalhe').classList.remove('aberto');
+  }
+}
+</script>
+</body>
+</html>
