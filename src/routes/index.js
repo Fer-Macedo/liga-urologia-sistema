@@ -1225,180 +1225,39 @@ router.get('/arquivos', requireAuth, async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg || []; req.session.msg = [];
   const erro = req.session.erro || []; req.session.erro = [];
-
   const pastaId = req.query.pasta || null;
-  const pastasR = await query('SELECT * FROM arquivo_pastas ORDER BY nome');
-  const pastas = pastasR.rows;
+  const lixeiraMode = req.query.lixeira === '1';
 
-  let pastaAtual = null;
-  if (pastaId) {
-    pastaAtual = pastas.find(p => p.id == pastaId) || null;
-  }
+  const [pastasR, arquivosR, lixeiraR] = await Promise.all([
+    query('SELECT * FROM arquivo_pastas WHERE lixeira=0 OR lixeira IS NULL ORDER BY nome'),
+    lixeiraMode
+      ? query('SELECT * FROM arquivos WHERE lixeira=1 ORDER BY criado_em DESC')
+      : pastaId
+        ? query('SELECT * FROM arquivos WHERE pasta_id=$1 AND (lixeira=0 OR lixeira IS NULL) ORDER BY nome_original', [pastaId])
+        : query('SELECT * FROM arquivos WHERE pasta_id IS NULL AND (lixeira=0 OR lixeira IS NULL) ORDER BY nome_original'),
+    query('SELECT COUNT(*) n FROM arquivos WHERE lixeira=1')
+  ]);
 
-  // Busca arquivos da pasta atual
-  let arquivosR;
-  if (pastaId) {
-    arquivosR = await query('SELECT * FROM arquivos WHERE ativo=1 AND pasta_id=$1 ORDER BY criado_em DESC', [pastaId]);
-  } else {
-    arquivosR = await query('SELECT * FROM arquivos WHERE ativo=1 AND pasta_id IS NULL ORDER BY criado_em DESC');
-  }
+  const todasPastas = pastasR.rows;
+  let pastaAtual = pastaId ? todasPastas.find(p => p.id == pastaId) || null : null;
 
-  const { iconeArquivo } = require('../services/arquivos');
+  // Formata tamanho
   const arquivos = arquivosR.rows.map(a => {
-    const kb = a.tamanho / 1024;
-    return { ...a, icone: iconeArquivo(a.mimetype), tamanho_fmt: kb > 1024 ? (kb/1024).toFixed(1)+'MB' : kb.toFixed(0)+'KB' };
+    const kb = (a.tamanho || 0) / 1024;
+    a.tamanho_fmt = kb < 1024 ? kb.toFixed(0) + ' KB' : (kb/1024).toFixed(1) + ' MB';
+    const ext = (a.nome_original || '').split('.').pop().toLowerCase();
+    const icons = { pdf:'📑', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊', ppt:'📣', pptx:'📣', jpg:'🖼️', jpeg:'🖼️', png:'🖼️', gif:'🖼️', mp4:'🎬', mp3:'🎵', zip:'📦', rar:'📦' };
+    a.icone = a.tipo === 'google' ? '🔗' : (icons[ext] || '📄');
+    return a;
   });
 
-  const stats = { total: arquivos.length, fotos: arquivos.filter(a => a.categoria === 'fotos').length, videos: arquivos.filter(a => a.categoria === 'videos').length, documentos: arquivos.filter(a => ['documentos','pdfs','planilhas','apresentacoes'].includes(a.categoria)).length };
-  res.render('pages/arquivos', { config, msg, erro, usuario: req.session.usuario, arquivos, pastas, pastaAtual, stats });
+  res.render('pages/arquivos', {
+    config, usuario: req.session.usuario, msg, erro,
+    todasPastas, pastas: todasPastas, pastaAtual, arquivos,
+    lixeiraMode, lixeiraCount: parseInt(lixeiraR.rows[0].n)
+  });
 });
 
-router.post('/arquivos/pasta', requireAuth, async (req, res) => {
-  const { nome, pasta_pai_id, icone, cor } = req.body;
-  await query('INSERT INTO arquivo_pastas (nome, pasta_pai_id, icone, cor) VALUES ($1,$2,$3,$4)',
-    [nome, pasta_pai_id || null, icone || '📁', cor || '#1a56db']);
-  req.session.msg = ['Pasta criada com sucesso!'];
-  res.redirect('/arquivos' + (pasta_pai_id ? '?pasta=' + pasta_pai_id : ''));
-});
-
-router.post('/arquivos/pasta/:id/renomear', requireAuth, async (req, res) => {
-  const { nome } = req.body;
-  const r = await query('SELECT * FROM arquivo_pastas WHERE id=$1', [req.params.id]);
-  const pasta = r.rows[0];
-  if (!pasta) { req.session.erro = ['Pasta não encontrada.']; return res.redirect('/arquivos'); }
-  await query('UPDATE arquivo_pastas SET nome=$1 WHERE id=$2', [nome, req.params.id]);
-  await logAtividade(req.session.usuario.id, 'PASTA_RENOMEADA', 'Pasta renomeada: ' + pasta.nome + ' → ' + nome, req);
-  req.session.msg = ['Pasta renomeada com sucesso!'];
-  res.redirect('/arquivos' + (pasta.pasta_pai_id ? '?pasta=' + pasta.pasta_pai_id : ''));
-});
-
-router.post('/arquivos/pasta/:id/deletar', requireAuth, async (req, res) => {
-  const r = await query('SELECT * FROM arquivo_pastas WHERE id=$1', [req.params.id]);
-  const pasta = r.rows[0];
-  if (!pasta) { req.session.erro = ['Pasta não encontrada.']; return res.redirect('/arquivos'); }
-  const filhos = await query('SELECT COUNT(*) FROM arquivo_pastas WHERE pasta_pai_id=$1', [req.params.id]);
-  const arquivosNaPasta = await query('SELECT COUNT(*) FROM arquivos WHERE pasta_id=$1 AND ativo=1', [req.params.id]);
-  if (parseInt(filhos.rows[0].count) > 0 || parseInt(arquivosNaPasta.rows[0].count) > 0) {
-    req.session.erro = ['Pasta não pode ser excluída pois contém arquivos ou subpastas.'];
-    return res.redirect('/arquivos' + (pasta.pasta_pai_id ? '?pasta=' + pasta.pasta_pai_id : ''));
-  }
-  await query('DELETE FROM arquivo_pastas WHERE id=$1', [req.params.id]);
-  await logAtividade(req.session.usuario.id, 'PASTA_DELETADA', 'Pasta excluída: ' + pasta.nome, req);
-  req.session.msg = ['Pasta excluída com sucesso!'];
-  res.redirect('/arquivos' + (pasta.pasta_pai_id ? '?pasta=' + pasta.pasta_pai_id : ''));
-});
-
-router.post('/arquivos/:id/mover', requireAuth, async (req, res) => {
-  const { pasta_id } = req.body;
-  const r = await query('SELECT * FROM arquivos WHERE id=$1', [req.params.id]);
-  const arquivo = r.rows[0];
-  if (!arquivo) { req.session.erro = ['Arquivo não encontrado.']; return res.redirect('/arquivos'); }
-  await query('UPDATE arquivos SET pasta_id=$1 WHERE id=$2', [pasta_id || null, req.params.id]);
-  await logAtividade(req.session.usuario.id, 'ARQUIVO_MOVIDO', 'Arquivo movido: ' + arquivo.nome_original, req);
-  req.session.msg = ['Arquivo movido com sucesso!'];
-  res.redirect('/arquivos' + (pasta_id ? '?pasta=' + pasta_id : ''));
-});
-
-router.post('/arquivos/upload', requireAuth, async (req, res) => {
-  try {
-    const { upload, uploadArquivo } = require('../services/arquivos');
-    upload.array('arquivo', 20)(req, res, async (err) => {
-      if (err) { req.session.erro = [err.message]; return res.redirect('/arquivos'); }
-      if (!req.files || req.files.length === 0) { req.session.erro = ['Nenhum arquivo selecionado.']; return res.redirect('/arquivos'); }
-      const pastaId = req.body.pasta_id || null;
-      for (const file of req.files) {
-        const r = await uploadArquivo(file.buffer, file.originalname, file.mimetype);
-        await query(
-          'INSERT INTO arquivos (nome_original, chave_r2, categoria, mimetype, tamanho, enviado_por, pasta_id) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-          [file.originalname, r.chave, r.categoria, r.mimetype, r.tamanho, req.session.usuario.id, pastaId]
-        );
-      }
-      await logAtividade(req.session.usuario.id, 'UPLOAD', req.files.length + ' arquivo(s) enviado(s)', req);
-      req.session.msg = [req.files.length + ' arquivo(s) enviado(s)!'];
-      res.redirect('/arquivos' + (pastaId ? '?pasta=' + pastaId : ''));
-    });
-  } catch(e) {
-    req.session.erro = ['Erro ao fazer upload: ' + e.message];
-    res.redirect('/arquivos');
-  }
-});
-
-router.get('/arquivos/:id/visualizar', requireAuth, async (req, res) => {
-  try {
-    const r = await query('SELECT * FROM arquivos WHERE id=$1 AND ativo=1', [req.params.id]);
-    const arquivo = r.rows[0];
-    if (!arquivo) return res.status(404).send('Arquivo não encontrado');
-    const { gerarUrlDownload } = require('../services/arquivos');
-    // Para imagens e PDFs abre inline, outros faz download
-    const inline = ['image/jpeg','image/png','image/gif','image/webp','application/pdf'].includes(arquivo.mimetype);
-    const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
-    const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
-    const R2 = new S3Client({ region:'auto', endpoint:process.env.R2_ENDPOINT, credentials:{ accessKeyId:process.env.R2_ACCESS_KEY_ID, secretAccessKey:process.env.R2_SECRET_ACCESS_KEY } });
-    const cmd = new GetObjectCommand({ Bucket: process.env.R2_BUCKET || 'liga-urologia-files', Key: arquivo.chave_r2, ResponseContentDisposition: inline ? 'inline' : 'attachment; filename="'+encodeURIComponent(arquivo.nome_original)+'"', ResponseContentType: arquivo.mimetype });
-    const url = await getSignedUrl(R2, cmd, { expiresIn: 3600 });
-    res.redirect(url);
-  } catch(e) {
-    res.status(500).send('Erro ao visualizar arquivo: ' + e.message);
-  }
-});
-
-router.get('/arquivos/:id/download', requireAuth, async (req, res) => {
-  try {
-    const r = await query('SELECT * FROM arquivos WHERE id=$1 AND ativo=1', [req.params.id]);
-    const arquivo = r.rows[0];
-    if (!arquivo) return res.redirect('/arquivos');
-    const { gerarUrlDownload } = require('../services/arquivos');
-    const url = await gerarUrlDownload(arquivo.chave_r2, arquivo.nome_original);
-    res.redirect(url);
-  } catch(e) {
-    req.session.erro = ['Erro ao baixar arquivo.'];
-    res.redirect('/arquivos');
-  }
-});
-
-router.post('/arquivos/:id/substituir', requireAuth, async (req, res) => {
-  try {
-    const { upload, uploadArquivo, deletarArquivo } = require('../services/arquivos');
-    upload.array('arquivos', 20)(req, res, async (err) => {
-      if (err || !req.file) { req.session.erro = ['Erro ao substituir.']; return res.redirect('/arquivos'); }
-      const r = await query('SELECT * FROM arquivos WHERE id=$1', [req.params.id]);
-      const antigo = r.rows[0];
-      if (!antigo) { req.session.erro = ['Arquivo não encontrado.']; return res.redirect('/arquivos'); }
-      await deletarArquivo(antigo.chave_r2);
-      const novo = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype);
-      await query('UPDATE arquivos SET nome_original=$1, chave_r2=$2, categoria=$3, mimetype=$4, tamanho=$5 WHERE id=$6',
-        [req.file.originalname, novo.chave, novo.categoria, novo.mimetype, novo.tamanho, req.params.id]);
-      await logAtividade(req.session.usuario.id, 'ARQUIVO_SUBSTITUIDO', 'Arquivo substituído: ' + req.file.originalname, req);
-      req.session.msg = ['Arquivo substituído com sucesso!'];
-      res.redirect('/arquivos' + (antigo.pasta_id ? '?pasta=' + antigo.pasta_id : ''));
-    });
-  } catch(e) {
-    req.session.erro = ['Erro ao substituir: ' + e.message];
-    res.redirect('/arquivos');
-  }
-});
-
-router.post('/arquivos/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const r = await query('SELECT * FROM arquivos WHERE id=$1', [req.params.id]);
-    const arquivo = r.rows[0];
-    if (arquivo) {
-      const { deletarArquivo } = require('../services/arquivos');
-      await deletarArquivo(arquivo.chave_r2);
-      await query('UPDATE arquivos SET ativo=0 WHERE id=$1', [req.params.id]);
-    }
-    await logAtividade(req.session.usuario.id, 'ARQUIVO_DELETADO', 'Arquivo excluído: ' + (arquivo ? arquivo.nome_original : ''), req);
-    req.session.msg = ['Arquivo excluído!'];
-    res.redirect('/arquivos' + (arquivo && arquivo.pasta_id ? '?pasta=' + arquivo.pasta_id : ''));
-  } catch(e) {
-    req.session.erro = ['Erro ao excluir.'];
-    res.redirect('/arquivos');
-  }
-});
-
-
-
-// ─── CADASTRO LIGANTE PÚBLICO ─────────────────────────────────────────────────
 
 router.get('/cadastro-ligante', async (req, res) => {
   const config = await getConfig();
@@ -1936,6 +1795,72 @@ router.post('/financeiro-pastas/:id/mover', requireAuth, async (req, res) => {
     await query('UPDATE financeiro_pastas SET pai_id=$1 WHERE id=$2', [pai_id, req.params.id]);
     res.json({ ok: true });
   } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+
+
+// Arquivos — novas rotas
+router.post('/arquivos/google', requireAuth, async (req, res) => {
+  const { nome, google_url, pasta_id } = req.body;
+  const pid = pasta_id && pasta_id !== '' ? pasta_id : null;
+  let embed = google_url;
+  if (google_url && google_url.includes('docs.google.com')) {
+    embed = google_url.replace(/\/edit.*$/, '/edit?embedded=true&rm=minimal');
+  } else if (google_url && google_url.includes('drive.google.com/file')) {
+    const m = google_url.match(/\/d\/([^/]+)/);
+    if (m) embed = 'https://drive.google.com/file/d/' + m[1] + '/preview';
+  }
+  await query('INSERT INTO arquivos (nome_original, tipo, google_url, google_embed, pasta_id, enviado_por) VALUES ($1,$2,$3,$4,$5,$6)',
+    [nome, 'google', google_url, embed, pid, req.session.usuario.id]);
+  req.session.msg = ['Link Google adicionado!'];
+  res.redirect('/arquivos' + (pid ? '?pasta=' + pid : ''));
+});
+
+router.post('/arquivos/:id/renomear', requireAuth, async (req, res) => {
+  await query('UPDATE arquivos SET nome_original=$1 WHERE id=$2', [req.body.nome, req.params.id]);
+  res.json({ ok: true });
+});
+
+router.post('/arquivos/:id/mover', requireAuth, async (req, res) => {
+  const pid = req.body.pasta_id || null;
+  await query('UPDATE arquivos SET pasta_id=$1 WHERE id=$2', [pid, req.params.id]);
+  res.json({ ok: true });
+});
+
+router.post('/arquivos/pasta/:id/mover', requireAuth, async (req, res) => {
+  const pid = req.body.pasta_pai_id || null;
+  await query('UPDATE arquivo_pastas SET pasta_pai_id=$1 WHERE id=$2', [pid, req.params.id]);
+  res.json({ ok: true });
+});
+
+router.post('/arquivos/:id/lixeira', requireAuth, async (req, res) => {
+  await query('UPDATE arquivos SET lixeira=1 WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+router.post('/arquivos/:id/restaurar', requireAuth, async (req, res) => {
+  await query('UPDATE arquivos SET lixeira=0 WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+router.post('/arquivos/lixeira/esvaziar', requireAuth, requireAdmin, async (req, res) => {
+  await query('DELETE FROM arquivos WHERE lixeira=1');
+  res.json({ ok: true });
+});
+
+router.post('/arquivos/pasta/:id/lixeira', requireAuth, async (req, res) => {
+  await query('UPDATE arquivo_pastas SET lixeira=1 WHERE id=$1', [req.params.id]);
+  res.json({ ok: true });
+});
+
+router.post('/arquivos/pasta/:id/editar', requireAuth, async (req, res) => {
+  const { nome, icone, cor } = req.body;
+  await query('UPDATE arquivo_pastas SET nome=$1, icone=$2, cor=$3 WHERE id=$4',
+    [nome, icone || '📁', cor || null, req.params.id]);
+  req.session.msg = ['Pasta atualizada!'];
+  const pasta = await query('SELECT pasta_pai_id FROM arquivo_pastas WHERE id=$1', [req.params.id]);
+  const pid = pasta.rows[0]?.pasta_pai_id;
+  res.redirect('/arquivos' + (pid ? '?pasta=' + pid : '?pasta=' + req.params.id));
 });
 
 
