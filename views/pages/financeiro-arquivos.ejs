@@ -131,6 +131,9 @@
             <button class="btn" style="font-size:12px;padding:4px 12px" onclick="limparSelecao()">✕ Cancelar</button>
           </div>
 
+          <!-- Drop zone -->
+          <div id="drop-zona-principal" style="display:none;border:2px dashed var(--borda);border-radius:10px;padding:20px;text-align:center;color:var(--texto2);font-size:12px;margin-bottom:12px">📁 Solte aqui para mover</div>
+
           <!-- Grid de arquivos -->
           <div class="arquivos-grid">
             <% pastas.filter(p => String(p.pai_id) === String(pastaAtual) || (!p.pai_id && !pastaAtual)).forEach(p => { %>
