@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arquivos Financeiros — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+    .fin-layout { display:grid;grid-template-columns:260px 1fr;gap:16px;height:calc(100vh - 120px); }
+    .fin-sidebar { background:var(--card);border:1.5px solid var(--borda);border-radius:12px;padding:16px;overflow-y:auto; }
+    .fin-main { display:flex;flex-direction:column;gap:12px; }
+    .pasta-item { display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;transition:all 0.15s; }
+    .pasta-item:hover { background:var(--fundo); }
+    .pasta-item.ativa { background:var(--cor-primaria-claro);color:var(--cor-primaria);font-weight:600; }
+    .pasta-item.sub { padding-left:24px;font-size:12px; }
+    .arquivos-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px; }
+    .arquivo-card { background:var(--card);border:1.5px solid var(--borda);border-radius:10px;padding:14px;text-align:center;cursor:pointer;transition:all 0.15s;position:relative; }
+    .arquivo-card:hover { border-color:var(--cor-primaria);box-shadow:0 2px 12px rgba(0,0,0,0.08);transform:translateY(-1px); }
+    .arquivo-icon { font-size:36px;margin-bottom:8px; }
+    .arquivo-nome { font-size:11px;font-weight:600;word-break:break-word;line-height:1.3; }
+    .arquivo-meta { font-size:10px;color:var(--texto2);margin-top:4px; }
+    .arquivo-acoes { position:absolute;top:6px;right:6px;display:none;gap:4px; }
+    .arquivo-card:hover .arquivo-acoes { display:flex; }
+    .breadcrumb { display:flex;align-items:center;gap:6px;font-size:13px;flex-wrap:wrap; }
+    .breadcrumb span { color:var(--texto2); }
+    .breadcrumb a { color:var(--cor-primaria);cursor:pointer;font-weight:600; }
+    .viewer-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:2000;flex-direction:column; }
+    .viewer-overlay.aberto { display:flex; }
+    .viewer-header { background:#1a1a2e;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;color:white; }
+    .viewer-body { flex:1;display:flex; }
+    .viewer-iframe { width:100%;height:100%;border:none; }
+    .tipo-badge { padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;position:absolute;bottom:6px;left:50%;transform:translateX(-50%);white-space:nowrap; }
+    .badge-google { background:#dbeafe;color:#1e40af; }
+    .badge-upload { background:#dcfce7;color:#166534; }
+    .badge-pdf { background:#fee2e2;color:#991b1b; }
+    .topbar-fin { display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'cobrancas' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">📁 Arquivos Financeiros</h1>
+      <div class="topbar-acoes">
+        <a href="/cobrancas" class="btn">← Cobranças</a>
+        <button class="btn" onclick="abrirModal('modal-pasta')">📁 Nova pasta</button>
+        <button class="btn btn-primario" onclick="abrirModal('modal-upload')">⬆️ Upload arquivo</button>
+        <button class="btn btn-primario" onclick="abrirModal('modal-google')" style="background:#4285f4">🔗 Link Google</button>
+      </div>
+    </div>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
+
+      <div class="fin-layout">
+        <!-- Sidebar pastas -->
+        <div class="fin-sidebar">
+          <div style="font-size:12px;font-weight:700;color:var(--texto2);margin-bottom:12px;text-transform:uppercase">📁 Pastas</div>
+          <div class="pasta-item <%= !pastaAtual ? 'ativa' : '' %>" onclick="irPasta(null)">
+            🏠 Raiz
+          </div>
+          <% function renderPastas(pastas, pai, nivel) {
+            pastas.filter(p => p.pai_id == pai).forEach(p => { %>
+          <div class="pasta-item <%= String(pastaAtual) === String(p.id) ? 'ativa' : '' %> <%= nivel > 0 ? 'sub' : '' %>"
+            onclick="irPasta(<%= p.id %>)">
+            📁 <%= p.nome %>
+            <span style="margin-left:auto;font-size:10px;cursor:pointer;color:var(--vermelho)" onclick="event.stopPropagation();deletarPasta(<%= p.id %>, '<%= p.nome %>')">✕</span>
+          </div>
+          <% renderPastas(pastas, p.id, nivel+1); }); }
+          renderPastas(pastas, null, 0); %>
+        </div>
+
+        <!-- Área principal -->
+        <div class="fin-main">
+          <!-- Breadcrumb -->
+          <div class="breadcrumb">
+            <a onclick="irPasta(null)">🏠 Raiz</a>
+            <% if (pastaAtual) { %>
+            <span>›</span>
+            <span><%= pastas.find(p=>p.id==pastaAtual)?.nome || '' %></span>
+            <% } %>
+            <span style="margin-left:auto;font-size:12px;color:var(--texto2)"><%= arquivos.length %> arquivo(s)</span>
+          </div>
+
+          <!-- Grid de arquivos -->
+          <div class="arquivos-grid">
+            <% pastas.filter(p => String(p.pai_id) === String(pastaAtual) || (!p.pai_id && !pastaAtual)).forEach(p => { %>
+            <div class="arquivo-card" onclick="irPasta(<%= p.id %>)">
+              <div class="arquivo-acoes">
+                <button onclick="event.stopPropagation();deletarPasta(<%= p.id %>, '<%= p.nome %>')" style="background:#fee2e2;border:none;border-radius:4px;cursor:pointer;padding:2px 6px">🗑</button>
+              </div>
+              <div class="arquivo-icon">📁</div>
+              <div class="arquivo-nome"><%= p.nome %></div>
+            </div>
+            <% }) %>
+
+            <% if (arquivos.length === 0 && pastas.filter(p => String(p.pai_id) === String(pastaAtual) || (!p.pai_id && !pastaAtual)).length === 0) { %>
+            <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--texto2)">
+              <div style="font-size:48px;margin-bottom:12px">📂</div>
+              <div style="font-size:14px;font-weight:600">Pasta vazia</div>
+              <div style="font-size:12px;margin-top:6px">Faça upload ou adicione um link do Google Drive</div>
+            </div>
+            <% } %>
+
+            <% arquivos.forEach(a => { %>
+            <%
+              let icon = '📄';
+              let badgeClass = 'badge-upload';
+              let badgeText = 'Upload';
+              if (a.tipo === 'google') { icon = '🔗'; badgeClass = 'badge-google'; badgeText = 'Google'; }
+              else if (a.mimetype && a.mimetype.includes('pdf')) { icon = '📑'; badgeClass = 'badge-pdf'; badgeText = 'PDF'; }
+              else if (a.mimetype && a.mimetype.includes('image')) { icon = '🖼️'; }
+              else if (a.mimetype && (a.mimetype.includes('sheet') || a.mimetype.includes('excel'))) { icon = '📊'; }
+              else if (a.mimetype && (a.mimetype.includes('word') || a.mimetype.includes('document'))) { icon = '📝'; }
+            %>
+            <div class="arquivo-card" onclick="abrirArquivo(<%= a.id %>)">
+              <div class="arquivo-acoes">
+                <button onclick="event.stopPropagation();deletarArquivo(<%= a.id %>, '<%= a.nome %>')" style="background:#fee2e2;border:none;border-radius:4px;cursor:pointer;padding:2px 6px">🗑</button>
+                <% if (a.tipo !== 'google') { %>
+                <a href="/financeiro-arquivos/<%= a.id %>/download" onclick="event.stopPropagation()" style="background:#dbeafe;border:none;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px;text-decoration:none">⬇️</a>
+                <% } %>
+              </div>
+              <div class="arquivo-icon"><%= icon %></div>
+              <div class="arquivo-nome"><%= a.nome %></div>
+              <div class="arquivo-meta"><%= new Date(a.criado_em).toLocaleDateString('pt-BR') %></div>
+              <span class="tipo-badge <%= badgeClass %>"><%= badgeText %></span>
+            </div>
+            <% }) %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Viewer -->
+<div class="viewer-overlay" id="viewer">
+  <div class="viewer-header">
+    <span id="viewer-titulo" style="font-weight:600"></span>
+    <div style="display:flex;gap:10px;align-items:center">
+      <a id="viewer-link-externo" href="#" target="_blank" style="color:#90cdf4;font-size:13px">↗ Abrir no Google</a>
+      <button onclick="fecharViewer()" style="background:#ef4444;border:none;color:white;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:14px">✕ Fechar</button>
+    </div>
+  </div>
+  <div class="viewer-body">
+    <iframe id="viewer-iframe" class="viewer-iframe" allowfullscreen></iframe>
+  </div>
+</div>
+
+<!-- Modal nova pasta -->
+<div class="modal-overlay" id="modal-pasta" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">📁 Nova Pasta</span>
+      <button class="icon-btn" onclick="fecharModal('modal-pasta')">✕</button>
+    </div>
+    <form action="/financeiro-arquivos/pasta" method="POST">
+      <input type="hidden" name="pai_id" value="<%= pastaAtual || '' %>">
+      <div class="campo" style="margin-bottom:16px">
+        <label class="label">Nome da pasta</label>
+        <input name="nome" class="input" required placeholder="Ex: Comprovantes Maio 2026">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-pasta')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">📁 Criar pasta</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal upload -->
+<div class="modal-overlay" id="modal-upload" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">⬆️ Upload de Arquivo</span>
+      <button class="icon-btn" onclick="fecharModal('modal-upload')">✕</button>
+    </div>
+    <form action="/financeiro-arquivos/upload" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="pasta_id" value="<%= pastaAtual || '' %>">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo">
+          <label class="label">Nome do arquivo (opcional)</label>
+          <input name="nome" class="input" placeholder="Deixe em branco para usar o nome original">
+        </div>
+        <div class="campo">
+          <label class="label">Arquivo *</label>
+          <input type="file" name="arquivo" class="input" required accept="image/*,.pdf,.xlsx,.xls,.csv,.docx,.doc,.pptx,.ppt,.txt">
+          <span style="font-size:11px;color:var(--texto2)">Imagens, PDF, Excel, Word, PowerPoint — máx. 10MB</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-upload')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">⬆️ Enviar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Google Drive -->
+<div class="modal-overlay" id="modal-google" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">🔗 Adicionar Link Google</span>
+      <button class="icon-btn" onclick="fecharModal('modal-google')">✕</button>
+    </div>
+    <form action="/financeiro-arquivos/google" method="POST">
+      <input type="hidden" name="pasta_id" value="<%= pastaAtual || '' %>">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo">
+          <label class="label">Nome do arquivo *</label>
+          <input name="nome" class="input" required placeholder="Ex: Planilha Financeira Maio 2026">
+        </div>
+        <div class="campo">
+          <label class="label">Link do Google Drive *</label>
+          <input name="google_url" id="input-google-url" class="input" required placeholder="https://docs.google.com/..." oninput="gerarEmbed(this.value)">
+          <span style="font-size:11px;color:var(--texto2)">Cole o link de compartilhamento do Google Docs, Sheets, Slides ou Drive</span>
+        </div>
+        <div class="campo">
+          <label class="label">Tipo</label>
+          <select name="google_tipo" class="input">
+            <option value="docs">📝 Google Docs</option>
+            <option value="sheets">📊 Google Sheets</option>
+            <option value="slides">📑 Google Slides</option>
+            <option value="drive">📁 Google Drive (arquivo)</option>
+          </select>
+        </div>
+        <div id="preview-embed" style="display:none;background:var(--fundo);border-radius:8px;padding:10px;font-size:12px;color:var(--texto2)">
+          ✅ Link válido do Google detectado
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-google')">Cancelar</button>
+        <button type="submit" class="btn btn-primario" style="background:#4285f4">🔗 Adicionar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const arquivosData = <%- JSON.stringify(arquivos) %>;
+
+function irPasta(id) {
+  const url = new URL(window.location.href);
+  if (id) url.searchParams.set('pasta', id);
+  else url.searchParams.delete('pasta');
+  window.location.href = url.toString();
+}
+
+function abrirArquivo(id) {
+  const a = arquivosData.find(x => x.id === id);
+  if (!a) return;
+  document.getElementById('viewer-titulo').textContent = a.nome;
+
+  let src = '';
+  let linkExterno = '';
+
+  if (a.tipo === 'google') {
+    src = a.google_embed || converterParaEmbed(a.google_url);
+    linkExterno = a.google_url;
+    document.getElementById('viewer-link-externo').style.display = '';
+  } else {
+    src = '/financeiro-arquivos/' + id + '/visualizar';
+    linkExterno = src;
+    document.getElementById('viewer-link-externo').style.display = 'none';
+  }
+
+  document.getElementById('viewer-link-externo').href = linkExterno;
+  document.getElementById('viewer-iframe').src = src;
+  document.getElementById('viewer').classList.add('aberto');
+}
+
+function converterParaEmbed(url) {
+  if (!url) return '';
+  // Google Docs/Sheets/Slides
+  url = url.replace('/edit', '/edit').replace(/\/pub.*$/, '/edit');
+  if (url.includes('docs.google.com')) {
+    return url.replace(/\/edit.*$/, '/edit?embedded=true&rm=minimal');
+  }
+  if (url.includes('drive.google.com/file')) {
+    const m = url.match(/\/d\/([^/]+)/);
+    if (m) return 'https://drive.google.com/file/d/' + m[1] + '/preview';
+  }
+  return url;
+}
+
+function fecharViewer() {
+  document.getElementById('viewer').classList.remove('aberto');
+  document.getElementById('viewer-iframe').src = '';
+}
+
+function gerarEmbed(url) {
+  const preview = document.getElementById('preview-embed');
+  if (url.includes('google.com')) {
+    preview.style.display = 'block';
+  } else {
+    preview.style.display = 'none';
+  }
+}
+
+function deletarArquivo(id, nome) {
+  if (!confirm('Excluir "' + nome + '"?')) return;
+  const f = document.createElement('form');
+  f.method = 'POST';
+  f.action = '/financeiro-arquivos/' + id + '/deletar';
+  document.body.appendChild(f);
+  f.submit();
+}
+
+function deletarPasta(id, nome) {
+  if (!confirm('Excluir pasta "' + nome + '"? Os arquivos dentro serão removidos.')) return;
+  const f = document.createElement('form');
+  f.method = 'POST';
+  f.action = '/financeiro-pastas/' + id + '/deletar';
+  document.body.appendChild(f);
+  f.submit();
+}
+
+// Fechar viewer com ESC
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharViewer(); });
+</script>
+</body>
+</html>
