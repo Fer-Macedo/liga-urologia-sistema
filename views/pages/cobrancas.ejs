@@ -23,6 +23,7 @@
           <button class="btn" onclick="return confirm('Gerar cobranças do mês?')">↻ Gerar do mês</button>
         </form>
         <button class="btn btn-primario" onclick="abrirModal('modal-nova')">+ Nova cobrança</button>
+        <a href="/financeiro-arquivos" class="btn" style="background:#4285f4;color:white;text-decoration:none">📁 Arquivos</a>
       </div>
     </div>
     <div class="content">
@@ -135,7 +136,6 @@
 
 <script src="/js/app.js"></script>
 <script>
-// Armazena dados dos QR codes
 const pixData = {};
 <% cobrancas.forEach(c => { %>
   <% if (c.pix_qr_code) { %>
@@ -151,18 +151,15 @@ const pixData = {};
 function abrirPix(id, nome, valor, qrBase64Prefix, qrCode) {
   const dados = pixData[id];
   if (!dados) return;
-
   document.getElementById('pix-titulo').textContent = 'PIX — ' + dados.nome;
   document.getElementById('pix-valor').textContent = dados.valor;
   document.getElementById('pix-codigo').textContent = dados.qr_code;
-
   if (dados.qr_code_base64) {
     document.getElementById('pix-qr-img').src = 'data:image/png;base64,' + dados.qr_code_base64;
     document.getElementById('pix-qr-img').style.display = 'block';
   } else {
     document.getElementById('pix-qr-img').style.display = 'none';
   }
-
   abrirModal('modal-pix');
 }
 
@@ -175,4 +172,5 @@ function copiarPix() {
   });
 }
 </script>
-</body></html>
+</body>
+</html>
