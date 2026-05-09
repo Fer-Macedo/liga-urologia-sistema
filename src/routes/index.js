@@ -1975,4 +1975,16 @@ router.post("/arquivos/upload-drive", requireAuth, async (req, res) => {
   }
 });
 
+
+router.get("/arquivos/:id/url", requireAuth, async (req, res) => {
+  try {
+    const r = await query("SELECT chave_r2 FROM arquivos WHERE id=$1", [req.params.id]);
+    const a = r.rows[0];
+    if (!a || !a.chave_r2) return res.status(404).json({ erro: "Nao encontrado" });
+    const { getUrlAssinada } = require("../services/desligamento");
+    const url = await getUrlAssinada(a.chave_r2);
+    res.json({ url });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
 module.exports = router;
