@@ -179,8 +179,7 @@
               data-id="<%= a.id %>"
               ondragstart="dragStart(event, 'arquivo', <%= a.id %>)"
               ondragend="dragEnd(event)"
-              onclick="toggleSelecao(event, <%= a.id %>)">
-              <div class="check-box" id="check-<%= a.id %>"></div>
+              onclick="abrirArquivo(<%= a.id %>)">
               <div class="arquivo-acoes">
                 <button onclick="event.stopPropagation();renomear('arquivo',<%= a.id %>,'<%= a.nome %>')" style="background:#dbeafe;border:none;border-radius:4px;cursor:pointer;padding:2px 6px">✏️</button><button onclick="event.stopPropagation();deletarArquivo(<%= a.id %>, '<%= a.nome %>')" style="background:#fee2e2;border:none;border-radius:4px;cursor:pointer;padding:2px 6px">🗑</button>
                 <% if (a.tipo !== 'google') { %>
@@ -330,22 +329,7 @@ function voltarPasta() {
 // Seleção múltipla
 const selecionados = new Set();
 
-function toggleSelecao(event, id) {
-  // Se clicou no checkbox ou na area de selecao
-  if (event.target.classList.contains('arquivo-acoes') || event.target.closest('.arquivo-acoes')) {
-    return;
-  }
-  if (selecionados.has(id)) {
-    selecionados.delete(id);
-    document.getElementById('card-' + id).classList.remove('selecionado');
-    document.getElementById('check-' + id).textContent = '';
-  } else {
-    selecionados.add(id);
-    document.getElementById('card-' + id).classList.add('selecionado');
-    document.getElementById('check-' + id).textContent = '✓';
-  }
-  atualizarBarraSelecao();
-}
+function toggleSelecao(event, id) { abrirArquivo(id); }
 
 function atualizarBarraSelecao() {
   const barra = document.getElementById('barra-selecao');
@@ -383,7 +367,6 @@ function abrirArquivo(id) {
   if (!a) return;
   document.getElementById('viewer-titulo').textContent = a.nome;
   document.getElementById('viewer-baixar').href = '/financeiro-arquivos/' + id + '/download';
-
   if (a.tipo === 'google' && a.google_embed) {
     document.getElementById('viewer-externo').href = a.google_url || '#';
     document.getElementById('viewer-externo').style.display = '';
@@ -391,10 +374,8 @@ function abrirArquivo(id) {
     document.getElementById('viewer').classList.add('aberto');
     return;
   }
-
   const ext = (a.nome || '').split('.').pop().toLowerCase();
   const imgs = ['jpg','jpeg','png','gif','webp','bmp'];
-
   if (ext === 'pdf' || imgs.includes(ext)) {
     document.getElementById('viewer-iframe').src = '/financeiro-arquivos/' + id + '/visualizar';
     document.getElementById('viewer-externo').style.display = 'none';
