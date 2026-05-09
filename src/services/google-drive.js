@@ -100,4 +100,23 @@ async function uploadParaDrive(tokens, buffer, nome, mimetype) {
   };
 }
 
-module.exports = { getAuthUrl, getTokens, getClient, uploadParaDrive };
+// Obtém cliente com refresh automático
+async function getClientAtualizado(pool) {
+  const r = await pool.query("SELECT valor FROM configuracoes WHERE chave='google_tokens'");
+  if (!r.rows[0]) throw new Error('Google Drive não conectado. Acesse Configurações e conecte.');
+  let tokens = JSON.parse(r.rows[0].valor);
+  const client = new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    process.env.GOOGLE_REDIRECT_URI
+  );
+  client.setCredentials(tokens);
+  // Refresh automático quando token expirar
+  client.on('tokens', async (newTokens) => {
+    const merged = { ...tokens, ...newTokens };
+    await pool.query("UPDATE configuracoes SET valor=$1 WHERE chave='google_tokens'", [JSON.stringify(merged)]);
+  });
+  return client;
+}
+
+module.exports = { getAuthUrl, getTokens, getClient, getClientAtualizado, uploadParaDrive };
