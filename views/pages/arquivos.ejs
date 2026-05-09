@@ -473,9 +473,20 @@ function abrirArquivo(id) {
     document.getElementById("viewer-externo").href = a.google_url || "#";
     document.getElementById("viewer-iframe").src = a.google_embed;
     document.getElementById("viewer").classList.add("aberto");
-  } else {
-    window.open("/arquivos/" + id + "/visualizar", "_blank");
+    return;
   }
+  const ext = (a.nome_original || "").split(".").pop().toLowerCase();
+  const imgExts = ["jpg","jpeg","png","gif","webp","bmp"];
+  document.getElementById("viewer-titulo").textContent = a.nome_original;
+  document.getElementById("viewer-baixar").href = "/arquivos/" + id + "/download";
+  document.getElementById("viewer-externo").href = "/arquivos/" + id + "/visualizar";
+  if (ext === "pdf" || imgExts.includes(ext)) {
+    document.getElementById("viewer-iframe").src = "/arquivos/" + id + "/visualizar";
+  } else {
+    const src = "https://docs.google.com/viewer?url=" + encodeURIComponent(window.location.origin + "/arquivos/" + id + "/visualizar") + "&embedded=true";
+    document.getElementById("viewer-iframe").src = src;
+  }
+  document.getElementById("viewer").classList.add("aberto");
 }
 
 function fecharViewer() {
