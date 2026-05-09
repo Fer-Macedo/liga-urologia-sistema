@@ -1864,4 +1864,62 @@ router.post('/arquivos/pasta/:id/editar', requireAuth, async (req, res) => {
 });
 
 
+
+router.get("/arquivos/:id/visualizar", requireAuth, async (req, res) => {
+  try {
+    const r = await query("SELECT * FROM arquivos WHERE id=$1", [req.params.id]);
+    const a = r.rows[0];
+    if (!a) return res.status(404).send("Nao encontrado");
+    if (a.tipo === "google" && a.google_embed) return res.redirect(a.google_embed);
+    const { getUrlAssinada } = require("../services/desligamento");
+    const url = await getUrlAssinada(a.chave_r2);
+    res.redirect(url);
+  } catch(e) { res.status(500).send("Erro: " + e.message); }
+});
+
+router.get("/arquivos/:id/download", requireAuth, async (req, res) => {
+  try {
+    const r = await query("SELECT * FROM arquivos WHERE id=$1", [req.params.id]);
+    const a = r.rows[0];
+    if (!a || !a.chave_r2) return res.status(404).send("Nao encontrado");
+    const { getUrlAssinada } = require("../services/desligamento");
+    const url = await getUrlAssinada(a.chave_r2);
+    res.redirect(url);
+  } catch(e) { res.status(500).send("Erro"); }
+});
+
+router.post("/arquivos/:id/deletar", requireAuth, async (req, res) => {
+  await query("DELETE FROM arquivos WHERE id=$1", [req.params.id]);
+  req.session.msg = ["Arquivo excluido!"];
+  res.redirect("/arquivos");
+});
+
+router.post("/arquivos/:id/substituir", requireAuth, async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require("../services/arquivos");
+    upload.single("arquivo")(req, res, async (err) => {
+      if (!req.file) { req.session.erro = ["Sem arquivo"]; return res.redirect("/arquivos"); }
+      const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, "liga");
+      await query("UPDATE arquivos SET chave_r2=$1,mimetype=$2,tamanho=$3,nome_original=$4 WHERE id=$5",
+        [r.chave, req.file.mimetype, req.file.size, req.file.originalname, req.params.id]);
+      req.session.msg = ["Substituido!"];
+      res.redirect("/arquivos");
+    });
+  } catch(e) { req.session.erro = [e.message]; res.redirect("/arquivos"); }
+});
+
+router.post("/arquivos/upload", requireAuth, async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require("../services/arquivos");
+    upload.single("arquivo")(req, res, async (err) => {
+      if (!req.file) return res.status(400).json({ erro: "Sem arquivo" });
+      const pid = req.body.pasta_id || null;
+      const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, "liga");
+      await query("INSERT INTO arquivos (nome_original,chave_r2,mimetype,tamanho,pasta_id,enviado_por,ativo) VALUES ($1,$2,$3,$4,$5,$6,1)",
+        [req.file.originalname, r.chave, req.file.mimetype, req.file.size, pid||null, req.session.usuario.id]);
+      res.json({ ok: true });
+    });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
 module.exports = router;
