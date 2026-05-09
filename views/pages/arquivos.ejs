@@ -17,43 +17,50 @@
     .pasta-subs { display:none; }
     .pasta-subs.aberta { display:block; }
     .files-main { display:flex;flex-direction:column;overflow:hidden; }
-    .files-header { padding:16px 20px;border-bottom:1px solid var(--borda);display:flex;align-items:center;gap:12px;flex-wrap:wrap; }
-    .breadcrumb { display:flex;align-items:center;gap:6px;font-size:13px;flex:1; }
+    .files-header { padding:12px 20px;border-bottom:1px solid var(--borda);display:flex;align-items:center;gap:12px;flex-wrap:wrap; }
+    .breadcrumb { display:flex;align-items:center;gap:6px;font-size:13px;flex:1;flex-wrap:wrap; }
     .breadcrumb span { color:var(--texto2);cursor:pointer; }
     .breadcrumb span:hover { color:var(--cor-primaria); }
     .breadcrumb span.atual { color:var(--texto);font-weight:600; }
     .files-toolbar { display:flex;gap:8px;align-items:center; }
     .files-content { flex:1;overflow-y:auto;padding:16px 20px; }
     .files-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px; }
-    .files-list { display:flex;flex-direction:column;gap:4px; }
-    .pasta-card { background:var(--fundo);border:1.5px solid var(--borda);border-radius:10px;padding:16px 12px;text-align:center;cursor:pointer;transition:all 0.15s; }
+    .pasta-card { border:1.5px solid var(--borda);border-radius:10px;padding:16px 12px;text-align:center;cursor:pointer;transition:all 0.15s;position:relative; }
     .pasta-card:hover { border-color:var(--cor-primaria);box-shadow:0 2px 8px rgba(0,0,0,0.08); }
     .pasta-card-icone { font-size:36px;margin-bottom:8px; }
     .pasta-card-nome { font-size:12px;font-weight:600;word-break:break-word; }
-    .pasta-card-meta { font-size:11px;color:var(--texto2);margin-top:3px; }
-    .arquivo-card { background:var(--fundo);border:1.5px solid var(--borda);border-radius:10px;padding:14px 12px;text-align:center;transition:all 0.15s;position:relative; }
+    .pasta-card-meta { font-size:10px;color:var(--texto2);margin-top:3px; }
+    .pasta-card-acoes { position:absolute;top:4px;right:4px;display:none;gap:3px; }
+    .pasta-card:hover .pasta-card-acoes { display:flex; }
+    .arquivo-card { background:var(--fundo);border:1.5px solid var(--borda);border-radius:10px;padding:14px 12px;text-align:center;transition:all 0.15s;position:relative;cursor:pointer; }
     .arquivo-card:hover { border-color:var(--cor-primaria);box-shadow:0 2px 8px rgba(0,0,0,0.08); }
     .arquivo-card:hover .arquivo-acoes { opacity:1; }
     .arquivo-icone { font-size:36px;margin-bottom:8px; }
     .arquivo-nome { font-size:11px;font-weight:600;word-break:break-all; }
     .arquivo-meta { font-size:10px;color:var(--texto2);margin-top:3px; }
-    .arquivo-acoes { position:absolute;top:6px;right:6px;display:flex;gap:4px;opacity:0;transition:opacity 0.15s; }
-    .arquivo-acoes button, .arquivo-acoes a { background:white;border:1px solid var(--borda);border-radius:6px;padding:3px 6px;font-size:11px;cursor:pointer;text-decoration:none;color:var(--texto); }
-    .arquivo-acoes button:hover, .arquivo-acoes a:hover { background:var(--fundo); }
-    .upload-drop { border:2px dashed var(--borda);border-radius:10px;padding:30px;text-align:center;color:var(--texto2);transition:all 0.2s;margin-bottom:16px; }
+    .arquivo-acoes { position:absolute;top:6px;right:6px;display:flex;gap:3px;opacity:0;transition:opacity 0.15s; }
+    .arquivo-acoes button, .arquivo-acoes a { background:white;border:1px solid var(--borda);border-radius:5px;padding:2px 5px;font-size:11px;cursor:pointer;text-decoration:none;color:var(--texto); }
+    .upload-drop { border:2px dashed var(--borda);border-radius:10px;padding:24px;text-align:center;color:var(--texto2);transition:all 0.2s;margin-bottom:16px; }
     .upload-drop.over { border-color:var(--cor-primaria);background:var(--cor-primaria)08;color:var(--cor-primaria); }
     .view-btn { padding:6px 10px;border:1.5px solid var(--borda);border-radius:8px;background:none;cursor:pointer;font-size:14px; }
     .view-btn.ativo { background:var(--cor-primaria);color:white;border-color:var(--cor-primaria); }
-    .empty-state { text-align:center;padding:60px 20px;color:var(--texto2); }
     .search-input { padding:7px 14px;border:1.5px solid var(--borda);border-radius:8px;font-size:13px;width:200px;background:var(--fundo); }
-    /* Lista view */
-    .lista-item { display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;transition:background 0.15s;cursor:pointer; }
+    .lista-item { display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;transition:background 0.15s; }
     .lista-item:hover { background:var(--fundo); }
     .lista-item .icone { font-size:20px;flex-shrink:0; }
     .lista-item .info { flex:1;min-width:0; }
     .lista-item .nome { font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
     .lista-item .meta { font-size:11px;color:var(--texto2); }
     .lista-item .acoes { display:flex;gap:6px;flex-shrink:0; }
+    .viewer-overlay { display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:2000;flex-direction:column; }
+    .viewer-overlay.aberto { display:flex; }
+    .viewer-header { background:#1a1a2e;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;color:white;gap:12px; }
+    .viewer-body { flex:1;display:flex; }
+    .viewer-iframe { width:100%;height:100%;border:none; }
+    .lixeira-badge { position:absolute;bottom:4px;left:50%;transform:translateX(-50%);font-size:9px;background:#fee2e2;color:#dc2626;padding:1px 6px;border-radius:10px;font-weight:700; }
+    .secao-titulo { font-size:12px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;display:flex;align-items:center;gap:8px; }
+    .btn-mini { padding:2px 6px;border:1px solid var(--borda);border-radius:5px;background:white;font-size:11px;cursor:pointer;color:var(--texto); }
+    .btn-mini:hover { background:var(--fundo); }
   </style>
 </head>
 <body>
@@ -63,6 +70,8 @@
     <div class="topbar">
       <h1 class="page-titulo">📁 Arquivos da Liga</h1>
       <div class="topbar-acoes">
+        <a href="/arquivos?lixeira=1" class="btn" style="color:#dc2626">🗑 Lixeira (<%= lixeiraCount %>)</a>
+        <button class="btn" onclick="abrirModal('modal-google')">🔗 Link Google</button>
         <button class="btn" onclick="abrirModal('modal-pasta')">📁 Nova pasta</button>
         <button class="btn btn-primario" onclick="document.getElementById('input-upload').click()">⬆️ Upload</button>
       </div>
@@ -71,121 +80,145 @@
       <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok" style="margin:16px">✅ <%= msg[0] %></div><% } %>
       <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro" style="margin:16px">❌ <%= erro[0] %></div><% } %>
 
+      <% if (lixeiraMode) { %>
+      <div style="background:#fee2e2;padding:10px 20px;font-size:13px;color:#dc2626;font-weight:600;display:flex;justify-content:space-between;align-items:center">
+        🗑 Visualizando lixeira — arquivos excluídos
+        <a href="/arquivos" class="btn" style="font-size:12px">← Voltar</a>
+      </div>
+      <% } %>
+
       <div class="files-layout">
-        <!-- Sidebar de pastas -->
+        <!-- Sidebar -->
         <div class="sidebar-files">
           <div class="sidebar-files-titulo">Pastas</div>
-
-          <!-- Raiz -->
-          <div class="pasta-item <%= !pastaAtual ? 'ativa' : '' %>" onclick="navegarPasta(null)">
-            🏠 Início
-          </div>
-
-          <!-- Pastas raiz -->
-          <% pastas.filter(p => !p.pasta_pai_id).forEach(pasta => { %>
-          <% const subs = pastas.filter(s => s.pasta_pai_id == pasta.id); %>
+          <div class="pasta-item <%= !pastaAtual && !lixeiraMode ? 'ativa' : '' %>" onclick="navegarPasta(null)">🏠 Início</div>
+          <% const pastasRaiz = todasPastas.filter(p => !p.pasta_pai_id && !p.lixeira).sort((a,b)=>a.nome.localeCompare(b.nome)); %>
+          <% pastasRaiz.forEach(pasta => { %>
+          <% const subs = todasPastas.filter(s => s.pasta_pai_id == pasta.id && !s.lixeira).sort((a,b)=>a.nome.localeCompare(b.nome)); %>
           <div>
             <div class="pasta-item <%= pastaAtual && pastaAtual.id == pasta.id ? 'ativa' : '' %>"
+              style="<%= pasta.cor ? 'border-left:3px solid '+pasta.cor : '' %>"
               onclick="<%= subs.length > 0 ? 'toggleSub('+pasta.id+')' : 'navegarPasta('+pasta.id+')' %>">
-              <span><%= pasta.icone %></span>
+              <span><%= pasta.icone || '📁' %></span>
               <span><%= pasta.nome %></span>
-              <% if (subs.length > 0) { %>
-                <span class="pasta-toggle" id="toggle-<%= pasta.id %>">▶</span>
-              <% } %>
+              <% if (subs.length > 0) { %><span class="pasta-toggle" id="toggle-<%= pasta.id %>">▶</span><% } %>
             </div>
             <% if (subs.length > 0) { %>
             <div class="pasta-subs" id="subs-<%= pasta.id %>">
               <% subs.forEach(sub => { %>
-              <div class="pasta-item sub <%= pastaAtual && pastaAtual.id == sub.id ? 'ativa' : '' %>"
-                onclick="navegarPasta(<%= sub.id %>)">
-                <span><%= sub.icone || '📄' %></span>
-                <span><%= sub.nome %></span>
+              <div class="pasta-item sub <%= pastaAtual && pastaAtual.id == sub.id ? 'ativa' : '' %>" onclick="navegarPasta(<%= sub.id %>)">
+                <span><%= sub.icone || '📄' %></span><span><%= sub.nome %></span>
               </div>
               <% }) %>
             </div>
             <% } %>
           </div>
           <% }) %>
+          <div class="pasta-item <%= lixeiraMode ? 'ativa' : '' %>" onclick="navegarPasta('lixeira')" style="margin-top:8px;color:#dc2626">
+            🗑 Lixeira (<%= lixeiraCount %>)
+          </div>
         </div>
 
-        <!-- Conteúdo principal -->
+        <!-- Conteúdo -->
         <div class="files-main">
           <div class="files-header">
-            <!-- Breadcrumb -->
             <div class="breadcrumb">
-              <span onclick="navegarPasta(null)">🏠 Início</span>
-              <% if (pastaAtual) { %>
-                <% if (pastaAtual.pasta_pai_id) { %>
-                  <% const pai = pastas.find(p => p.id == pastaAtual.pasta_pai_id); %>
-                  <% if (pai) { %> › <span onclick="navegarPasta(<%= pai.id %>)"><%= pai.nome %></span><% } %>
-                <% } %>
-                › <span class="atual"><%= pastaAtual.nome %></span>
+              <% if (pastaAtual && pastaAtual.pasta_pai_id) { %>
+              <span onclick="navegarPasta(null)">🏠</span>
+              <% const pai = todasPastas.find(p => p.id == pastaAtual.pasta_pai_id); %>
+              <% if (pai) { %> › <span onclick="navegarPasta(<%= pai.id %>)"><%= pai.nome %></span><% } %>
+              › <span class="atual"><%= pastaAtual.nome %></span>
+              <% } else if (pastaAtual) { %>
+              <span onclick="navegarPasta(null)">🏠 Início</span> › <span class="atual"><%= pastaAtual.nome %></span>
+              <% } else if (lixeiraMode) { %>
+              <span onclick="navegarPasta(null)">🏠 Início</span> › <span class="atual" style="color:#dc2626">🗑 Lixeira</span>
               <% } else { %>
-                <span class="atual">Todos os arquivos</span>
+              <span class="atual">🏠 Todos os arquivos</span>
+              <% } %>
+              <% if (pastaAtual) { %>
+              <span style="margin-left:8px;color:var(--texto2)">|</span>
+              <button class="btn-mini" onclick="editarPasta(<%= pastaAtual.id %>, '<%= pastaAtual.nome %>', '<%= pastaAtual.icone||'📁' %>', '<%= pastaAtual.cor||'' %>')">✏️ Editar pasta</button>
+              <button class="btn-mini" onclick="moverPasta(<%= pastaAtual.id %>)">↕️ Mover</button>
+              <button class="btn-mini" style="color:#dc2626" onclick="excluirPasta(<%= pastaAtual.id %>)">🗑 Excluir</button>
               <% } %>
             </div>
-            <!-- Toolbar -->
             <div class="files-toolbar">
-              <input type="text" class="search-input" placeholder="🔍 Buscar..." oninput="buscar(this.value)">
-              <button class="view-btn ativo" id="btn-grid" onclick="setView('grid')">⊞</button>
-              <button class="view-btn" id="btn-lista" onclick="setView('lista')">☰</button>
+              <input type="text" class="search-input" id="search-input" placeholder="🔍 Buscar..." oninput="buscar(this.value)">
+              <button class="view-btn ativo" id="btn-grid" onclick="setView('grid')" title="Grade">⊞</button>
+              <button class="view-btn" id="btn-lista" onclick="setView('lista')" title="Lista">☰</button>
             </div>
           </div>
 
           <div class="files-content">
-            <!-- Drop area -->
+            <% if (!lixeiraMode) { %>
             <div class="upload-drop" id="drop-area">
               ☁️ Arraste arquivos aqui para fazer upload
               <div id="prog-upload" style="display:none;margin-top:8px;font-size:12px">Enviando...</div>
             </div>
+            <% } %>
             <input type="file" id="input-upload" style="display:none" multiple onchange="uploadArquivos(this.files)">
 
             <!-- Subpastas -->
-            <% const subPastas = pastaAtual ? pastas.filter(p => p.pasta_pai_id == pastaAtual.id) : pastas.filter(p => !p.pasta_pai_id); %>
-            <% if (subPastas.length > 0) { %>
-            <div style="font-size:12px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Pastas</div>
+            <% const subPastas = pastaAtual ? todasPastas.filter(p => p.pasta_pai_id == pastaAtual.id && !p.lixeira) : todasPastas.filter(p => !p.pasta_pai_id && !p.lixeira); %>
+            <% const subPastasOrdenadas = subPastas.sort((a,b) => a.nome.localeCompare(b.nome)); %>
+            <% if (subPastasOrdenadas.length > 0 && !lixeiraMode) { %>
+            <div class="secao-titulo">📁 Pastas (<%= subPastasOrdenadas.length %>)</div>
             <div class="files-grid" id="pastas-grid" style="margin-bottom:20px">
-              <% subPastas.forEach(pasta => { %>
-              <div class="pasta-card" onclick="navegarPasta(<%= pasta.id %>)">
-                <div class="pasta-card-icone"><%= pasta.icone || '📁' %></div>
-                <div class="pasta-card-nome"><%= pasta.nome %></div>
-                <div class="pasta-card-meta">
-                  <%= pastas.filter(p => p.pasta_pai_id == pasta.id).length %> subpastas •
-                  <%= arquivos.filter(a => a.pasta_id == pasta.id).length %> arquivos
+              <% subPastasOrdenadas.forEach(pasta => { %>
+              <div class="pasta-card" style="background:<%= pasta.cor ? pasta.cor+'18' : 'var(--fundo)' %>;border-color:<%= pasta.cor || 'var(--borda)' %>">
+                <div class="pasta-card-acoes">
+                  <button class="btn-mini" onclick="event.stopPropagation();editarPasta(<%= pasta.id %>,'<%= pasta.nome %>','<%= pasta.icone||'📁' %>','<%= pasta.cor||'' %>')" title="Editar">✏️</button>
+                  <button class="btn-mini" onclick="event.stopPropagation();moverPasta(<%= pasta.id %>)" title="Mover">↕️</button>
+                  <button class="btn-mini" onclick="event.stopPropagation();excluirPasta(<%= pasta.id %>)" style="color:#dc2626" title="Excluir">🗑</button>
+                </div>
+                <div onclick="navegarPasta(<%= pasta.id %>)">
+                  <div class="pasta-card-icone"><%= pasta.icone || '📁' %></div>
+                  <div class="pasta-card-nome"><%= pasta.nome %></div>
+                  <div class="pasta-card-meta"><%= todasPastas.filter(p=>p.pasta_pai_id==pasta.id).length %> subpastas • <%= arquivos.filter(a=>a.pasta_id==pasta.id).length %> arquivos</div>
                 </div>
               </div>
               <% }) %>
             </div>
             <% } %>
 
-            <!-- Arquivos -->
-            <% if (arquivos.length > 0) { %>
-            <div style="font-size:12px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">Arquivos (<%= arquivos.length %>)</div>
+            <!-- Arquivos Grid -->
+            <% if (arquivos.length > 0 || lixeiraMode) { %>
+            <div class="secao-titulo">
+              📄 Arquivos (<%= arquivos.length %>)
+              <% if (lixeiraMode && arquivos.length > 0) { %>
+              <button class="btn-mini" style="color:#dc2626" onclick="esvaziarLixeira()">🗑 Esvaziar lixeira</button>
+              <% } %>
+            </div>
             <% } %>
 
-            <!-- Grid view -->
             <div class="files-grid" id="view-grid">
-              <% if (arquivos.length === 0 && subPastas.length === 0) { %>
-              <div class="empty-state" style="grid-column:1/-1">
-                <div style="font-size:48px">📂</div>
-                <div style="font-size:15px;font-weight:600;margin-top:10px">Pasta vazia</div>
-                <div style="font-size:13px;margin-top:6px">Faça upload ou arraste arquivos aqui</div>
+              <% if (arquivos.length === 0 && subPastasOrdenadas.length === 0) { %>
+              <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--texto2)">
+                <div style="font-size:48px"><%= lixeiraMode ? '🗑' : '📂' %></div>
+                <div style="font-size:15px;font-weight:600;margin-top:10px"><%= lixeiraMode ? 'Lixeira vazia' : 'Pasta vazia' %></div>
               </div>
               <% } %>
               <% arquivos.forEach(a => { %>
-              <div class="arquivo-card" data-nome="<%= a.nome_original.toLowerCase() %>">
+              <div class="arquivo-card" data-nome="<%= (a.nome_original||'').toLowerCase() %>" onclick="abrirArquivo(<%= a.id %>)">
                 <div class="arquivo-acoes">
-                  <a href="/arquivos/<%= a.id %>/visualizar" target="_blank" title="Visualizar">👁</a>
-                  <a href="/arquivos/<%= a.id %>/download" title="Baixar">⬇️</a>
-                  <button onclick="abrirSubstituir(<%= a.id %>, '<%= a.nome_original %>')" title="Substituir">🔄</button>
-                  <% if (usuario.perfil === 'admin' || usuario.perfil === 'presidencia') { %>
-                  <button onclick="excluirArquivo(<%= a.id %>)" style="color:var(--vermelho)" title="Excluir">🗑</button>
+                  <% if (!lixeiraMode) { %>
+                  <a href="/arquivos/<%= a.id %>/download" onclick="event.stopPropagation()" title="Baixar">⬇️</a>
+                  <button onclick="event.stopPropagation();abrirSubstituir(<%= a.id %>, '<%= a.nome_original %>')" title="Substituir">🔄</button>
+                  <button onclick="event.stopPropagation();renomearArquivo(<%= a.id %>, '<%= a.nome_original %>')" title="Renomear">✏️</button>
+                  <button onclick="event.stopPropagation();moverArquivo(<%= a.id %>)" title="Mover">↕️</button>
+                  <% } %>
+                  <% if (lixeiraMode) { %>
+                  <button onclick="event.stopPropagation();restaurarArquivo(<%= a.id %>)" style="color:#16a34a" title="Restaurar">↩️</button>
+                  <button onclick="event.stopPropagation();excluirDefinitivo(<%= a.id %>)" style="color:#dc2626" title="Excluir definitivamente">🗑</button>
+                  <% } else if (usuario.perfil === 'admin' || usuario.perfil === 'presidencia') { %>
+                  <button onclick="event.stopPropagation();moverLixeira(<%= a.id %>)" style="color:#dc2626" title="Mover para lixeira">🗑</button>
                   <% } %>
                 </div>
-                <div class="arquivo-icone"><%= a.icone %></div>
-                <div class="arquivo-nome" title="<%= a.nome_original %>"><%= a.nome_original.length > 20 ? a.nome_original.substring(0,18)+'...' : a.nome_original %></div>
-                <div class="arquivo-meta"><%= a.tamanho_fmt %></div>
+                <div class="arquivo-icone"><%= a.icone || (a.tipo==='google'?'🔗':'📄') %></div>
+                <div class="arquivo-nome" title="<%= a.nome_original %>"><%= (a.nome_original||'').length > 20 ? (a.nome_original||'').substring(0,18)+'...' : (a.nome_original||'') %></div>
+                <div class="arquivo-meta"><%= a.tamanho_fmt || '' %></div>
                 <div class="arquivo-meta"><%= new Date(a.criado_em).toLocaleDateString('pt-BR') %></div>
+                <% if (lixeiraMode) { %><span class="lixeira-badge">Na lixeira</span><% } %>
               </div>
               <% }) %>
             </div>
@@ -193,24 +226,23 @@
             <!-- Lista view -->
             <div id="view-lista" style="display:none">
               <% arquivos.forEach(a => { %>
-              <div class="lista-item" data-nome="<%= a.nome_original.toLowerCase() %>">
-                <div class="icone"><%= a.icone %></div>
+              <div class="lista-item" data-nome="<%= (a.nome_original||'').toLowerCase() %>" onclick="abrirArquivo(<%= a.id %>)">
+                <div class="icone"><%= a.icone || (a.tipo==='google'?'🔗':'📄') %></div>
                 <div class="info">
                   <div class="nome"><%= a.nome_original %></div>
-                  <div class="meta"><%= a.tamanho_fmt %> • <%= new Date(a.criado_em).toLocaleDateString('pt-BR') %></div>
+                  <div class="meta"><%= a.tamanho_fmt || '' %> • <%= new Date(a.criado_em).toLocaleDateString('pt-BR') %></div>
                 </div>
-                <div class="acoes">
-                  <a href="/arquivos/<%= a.id %>/visualizar" target="_blank" class="btn" style="font-size:11px;padding:4px 8px">👁 Ver</a>
-                  <a href="/arquivos/<%= a.id %>/download" class="btn" style="font-size:11px;padding:4px 8px">⬇️ Baixar</a>
-                  <button onclick="abrirSubstituir(<%= a.id %>, '<%= a.nome_original %>')" class="btn" style="font-size:11px;padding:4px 8px">🔄</button>
-                  <% if (usuario.perfil === 'admin' || usuario.perfil === 'presidencia') { %>
-                  <button onclick="excluirArquivo(<%= a.id %>)" class="btn" style="font-size:11px;padding:4px 8px;color:var(--vermelho)">🗑</button>
+                <div class="acoes" onclick="event.stopPropagation()">
+                  <a href="/arquivos/<%= a.id %>/download" class="btn" style="font-size:11px;padding:4px 8px">⬇️</a>
+                  <% if (!lixeiraMode) { %>
+                  <button onclick="moverLixeira(<%= a.id %>)" class="btn" style="font-size:11px;padding:4px 8px;color:#dc2626">🗑</button>
+                  <% } else { %>
+                  <button onclick="restaurarArquivo(<%= a.id %>)" class="btn" style="font-size:11px;padding:4px 8px;color:#16a34a">↩️</button>
                   <% } %>
                 </div>
               </div>
               <% }) %>
             </div>
-
           </div>
         </div>
       </div>
@@ -218,34 +250,48 @@
   </main>
 </div>
 
+<!-- Viewer Google/PDF -->
+<div class="viewer-overlay" id="viewer">
+  <div class="viewer-header">
+    <span id="viewer-titulo" style="font-weight:600;flex:1"></span>
+    <a id="viewer-externo" href="#" target="_blank" style="color:#90cdf4;font-size:13px">↗ Abrir externamente</a>
+    <a id="viewer-baixar" href="#" style="color:#90cdf4;font-size:13px;margin-left:12px">⬇️ Baixar</a>
+    <button onclick="fecharViewer()" style="background:#ef4444;border:none;color:white;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:14px;margin-left:12px">✕ Fechar</button>
+  </div>
+  <div class="viewer-body">
+    <iframe id="viewer-iframe" class="viewer-iframe" allowfullscreen allow="camera;microphone"></iframe>
+  </div>
+</div>
+
 <!-- Modal Nova Pasta -->
 <div class="modal-overlay" id="modal-pasta" style="display:none">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-titulo">📁 Nova Pasta</span>
+      <span class="modal-titulo" id="titulo-modal-pasta">📁 Nova Pasta</span>
       <button class="icon-btn" onclick="fecharModal('modal-pasta')">✕</button>
     </div>
-    <form action="/arquivos/pasta" method="POST">
-      <input type="hidden" name="pasta_pai_id" value="<%= pastaAtual ? pastaAtual.id : '' %>">
+    <form id="form-pasta" action="/arquivos/pasta" method="POST">
+      <input type="hidden" name="pasta_pai_id" id="pasta-pai-id" value="<%= pastaAtual ? pastaAtual.id : '' %>">
+      <input type="hidden" name="pasta_edit_id" id="pasta-edit-id" value="">
       <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="campo"><label class="label">Nome da pasta *</label><input name="nome" class="input" required placeholder="Ex: Contratos 2026"></div>
+        <div class="campo"><label class="label">Nome da pasta *</label><input name="nome" id="input-pasta-nome" class="input" required placeholder="Ex: Contratos 2026"></div>
         <div class="campo">
           <label class="label">Ícone</label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <% ['📁','📄','📝','📊','📑','🖼️','🎬','📣','🔬','🌐','📋','👥','🏛️','⚖️','💰'].forEach(ic => { %>
-            <label style="cursor:pointer;padding:6px;border:1.5px solid var(--borda);border-radius:8px;font-size:20px">
+          <div style="display:flex;gap:6px;flex-wrap:wrap" id="icones-grid">
+            <% ['📁','📂','📄','📝','📊','📑','🖼️','🎬','📣','🔬','🌐','📋','👥','🏛️','⚖️','💰','📆','🔒','📬','🎓','🏥','💊','🔑','📌','⭐','🏆','💡','🔧','📎','🗂️'].forEach(ic => { %>
+            <label style="cursor:pointer;padding:6px;border:1.5px solid var(--borda);border-radius:8px;font-size:20px;transition:all 0.15s" class="icone-opt">
               <input type="radio" name="icone" value="<%= ic %>" style="display:none"> <%= ic %>
             </label>
             <% }) %>
           </div>
         </div>
         <div class="campo">
-          <label class="label">Cor</label>
+          <label class="label">Cor da pasta</label>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <% ['#1a56db','#059669','#dc2626','#d97706','#8b5cf6','#0891b2','#db2777','#0f766e'].forEach(cor => { %>
-            <label style="cursor:pointer">
+            <% ['#1a56db','#059669','#dc2626','#d97706','#8b5cf6','#0891b2','#db2777','#0f766e','#92400e','#1e3a5f','#374151','#000000'].forEach(cor => { %>
+            <label style="cursor:pointer" class="cor-opt">
               <input type="radio" name="cor" value="<%= cor %>" style="display:none">
-              <div style="width:28px;height:28px;border-radius:50%;background:<%= cor %>;border:2px solid transparent;transition:border-color 0.15s"></div>
+              <div style="width:28px;height:28px;border-radius:50%;background:<%= cor %>;border:2px solid transparent;transition:border 0.15s" class="cor-circle"></div>
             </label>
             <% }) %>
           </div>
@@ -253,13 +299,13 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-pasta')">Cancelar</button>
-        <button type="submit" class="btn btn-primario">Criar pasta</button>
+        <button type="submit" class="btn btn-primario" id="btn-salvar-pasta">Criar pasta</button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- Modal Substituir arquivo -->
+<!-- Modal Substituir -->
 <div class="modal-overlay" id="modal-substituir" style="display:none">
   <div class="modal">
     <div class="modal-header">
@@ -277,28 +323,96 @@
   </div>
 </div>
 
+<!-- Modal Renomear -->
+<div class="modal-overlay" id="modal-renomear-arq" style="display:none">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <span class="modal-titulo">✏️ Renomear arquivo</span>
+      <button class="icon-btn" onclick="document.getElementById('modal-renomear-arq').style.display='none'">✕</button>
+    </div>
+    <div class="campo" style="margin:16px 0">
+      <label class="label">Novo nome</label>
+      <input id="input-renomear-arq" class="input" placeholder="Digite o novo nome...">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="document.getElementById('modal-renomear-arq').style.display='none'">Cancelar</button>
+      <button class="btn btn-primario" onclick="confirmarRenomearArquivo()">✏️ Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Mover -->
+<div class="modal-overlay" id="modal-mover" style="display:none">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <span class="modal-titulo">↕️ Mover para pasta</span>
+      <button class="icon-btn" onclick="document.getElementById('modal-mover').style.display='none'">✕</button>
+    </div>
+    <div class="campo" style="margin:16px 0">
+      <label class="label">Selecione a pasta de destino</label>
+      <select id="select-mover" class="input">
+        <option value="">🏠 Raiz (sem pasta)</option>
+        <% todasPastas.filter(p=>!p.lixeira).sort((a,b)=>a.nome.localeCompare(b.nome)).forEach(p => { %>
+        <option value="<%= p.id %>"><%= p.icone || '📁' %> <%= p.nome %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="document.getElementById('modal-mover').style.display='none'">Cancelar</button>
+      <button class="btn btn-primario" onclick="confirmarMover()">↕️ Mover</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Google Drive -->
+<div class="modal-overlay" id="modal-google" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">🔗 Adicionar Link Google</span>
+      <button class="icon-btn" onclick="fecharModal('modal-google')">✕</button>
+    </div>
+    <form action="/arquivos/google" method="POST">
+      <input type="hidden" name="pasta_id" value="<%= pastaAtual ? pastaAtual.id : '' %>">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo">
+          <label class="label">Nome *</label>
+          <input name="nome" class="input" required placeholder="Ex: Planilha Financeira 2026">
+        </div>
+        <div class="campo">
+          <label class="label">Link do Google Drive *</label>
+          <input name="google_url" class="input" required placeholder="https://docs.google.com/...">
+          <span style="font-size:11px;color:var(--texto2)">Cole o link de compartilhamento do Google Docs, Sheets, Slides ou Drive</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-google')">Cancelar</button>
+        <button type="submit" class="btn btn-primario" style="background:#4285f4">🔗 Adicionar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script src="/js/app.js"></script>
 <script>
 const pastaAtualId = <%= pastaAtual ? pastaAtual.id : 'null' %>;
+const arquivosData = <%- JSON.stringify(arquivos) %>;
+const todasPastasData = <%- JSON.stringify(todasPastas) %>;
+let _moverTipo = null, _moverId = null, _renomearId = null;
 
 function navegarPasta(id) {
+  if (id === 'lixeira') { window.location.href = '/arquivos?lixeira=1'; return; }
   window.location.href = '/arquivos' + (id ? '?pasta=' + id : '');
 }
 
 function toggleSub(id) {
   const subs = document.getElementById('subs-' + id);
   const toggle = document.getElementById('toggle-' + id);
-  if (subs.classList.contains('aberta')) {
-    subs.classList.remove('aberta');
-    toggle.textContent = '▶';
-  } else {
-    subs.classList.add('aberta');
-    toggle.textContent = '▼';
-    navegarPasta(id);
-  }
+  if (!subs) { navegarPasta(id); return; }
+  if (subs.classList.contains('aberta')) { subs.classList.remove('aberta'); toggle.textContent = '▶'; }
+  else { subs.classList.add('aberta'); toggle.textContent = '▼'; navegarPasta(id); }
 }
 
-// Abre automaticamente a pasta pai se tiver subpasta ativa
+// Abre pasta pai automaticamente
 <% if (pastaAtual && pastaAtual.pasta_pai_id) { %>
 document.addEventListener('DOMContentLoaded', function() {
   const subs = document.getElementById('subs-<%= pastaAtual.pasta_pai_id %>');
@@ -307,27 +421,32 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 <% } %>
 
+// View grid/lista
 function setView(v) {
   document.getElementById('view-grid').style.display = v === 'grid' ? 'grid' : 'none';
-  document.getElementById('view-lista').style.display = v === 'lista' ? 'block' : 'none';
+  document.getElementById('view-lista').style.display = v === 'lista' ? 'flex' : 'none';
   document.getElementById('btn-grid').classList.toggle('ativo', v === 'grid');
   document.getElementById('btn-lista').classList.toggle('ativo', v === 'lista');
   localStorage.setItem('files-view', v);
 }
-// Restaura view preferida
 window.addEventListener('load', () => { const v = localStorage.getItem('files-view'); if(v) setView(v); });
 
+// Busca funcional
 function buscar(termo) {
+  const t = termo.toLowerCase().trim();
   document.querySelectorAll('[data-nome]').forEach(c => {
-    c.style.display = c.dataset.nome.includes(termo.toLowerCase()) ? '' : 'none';
+    c.style.display = (!t || c.dataset.nome.includes(t)) ? '' : 'none';
   });
 }
+document.getElementById('search-input').addEventListener('input', e => buscar(e.target.value));
 
-// Drag and drop
+// Upload drag & drop
 const drop = document.getElementById('drop-area');
-drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
-drop.addEventListener('dragleave', () => drop.classList.remove('over'));
-drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); uploadArquivos(e.dataTransfer.files); });
+if (drop) {
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('over'); uploadArquivos(e.dataTransfer.files); });
+}
 
 async function uploadArquivos(files) {
   if (!files.length) return;
@@ -344,20 +463,147 @@ async function uploadArquivos(files) {
   setTimeout(() => location.reload(), 600);
 }
 
+// Abrir arquivo no viewer
+function abrirArquivo(id) {
+  const a = arquivosData.find(x => x.id === id);
+  if (!a) return;
+  document.getElementById('viewer-titulo').textContent = a.nome_original;
+  document.getElementById('viewer-baixar').href = '/arquivos/' + id + '/download';
+
+  let src = '';
+  if (a.tipo === 'google' && a.google_embed) {
+    src = a.google_embed;
+    document.getElementById('viewer-externo').href = a.google_url || '#';
+    document.getElementById('viewer-externo').style.display = '';
+  } else {
+    // Verifica tipo para abrir no Google Viewer
+    const ext = (a.nome_original || '').split('.').pop().toLowerCase();
+    const googleViewerExts = ['pdf','doc','docx','xls','xlsx','ppt','pptx'];
+    if (googleViewerExts.includes(ext)) {
+      const url = window.location.origin + '/arquivos/' + id + '/visualizar';
+      src = 'https://docs.google.com/viewer?url=' + encodeURIComponent(url) + '&embedded=true';
+    } else {
+      src = '/arquivos/' + id + '/visualizar';
+    }
+    document.getElementById('viewer-externo').href = '/arquivos/' + id + '/visualizar';
+    document.getElementById('viewer-externo').style.display = '';
+  }
+
+  document.getElementById('viewer-iframe').src = src;
+  document.getElementById('viewer').classList.add('aberto');
+}
+
+function fecharViewer() {
+  document.getElementById('viewer').classList.remove('aberto');
+  document.getElementById('viewer-iframe').src = '';
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharViewer(); });
+
+// Substituir
 function abrirSubstituir(id, nome) {
   document.getElementById('form-substituir').action = '/arquivos/' + id + '/substituir';
   document.getElementById('substituir-nome').textContent = 'Substituindo: ' + nome;
   abrirModal('modal-substituir');
 }
 
-function excluirArquivo(id) {
-  if (!confirm('Excluir este arquivo permanentemente?')) return;
-  const f = document.createElement('form');
-  f.method = 'POST';
-  f.action = '/arquivos/' + id + '/deletar';
-  document.body.appendChild(f);
-  f.submit();
+// Renomear arquivo
+function renomearArquivo(id, nome) {
+  _renomearId = id;
+  document.getElementById('input-renomear-arq').value = nome;
+  document.getElementById('modal-renomear-arq').style.display = 'flex';
+  setTimeout(() => document.getElementById('input-renomear-arq').select(), 100);
 }
+async function confirmarRenomearArquivo() {
+  const n = document.getElementById('input-renomear-arq').value.trim();
+  if (!n) return;
+  const r = await fetch('/arquivos/' + _renomearId + '/renomear', {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({nome: n})
+  });
+  if (r.ok) window.location.reload();
+}
+
+// Mover arquivo
+function moverArquivo(id) {
+  _moverTipo = 'arquivo'; _moverId = id;
+  document.getElementById('modal-mover').style.display = 'flex';
+}
+function moverPasta(id) {
+  _moverTipo = 'pasta'; _moverId = id;
+  document.getElementById('modal-mover').style.display = 'flex';
+}
+async function confirmarMover() {
+  const destino = document.getElementById('select-mover').value;
+  const url = _moverTipo === 'pasta'
+    ? '/arquivos/pasta/' + _moverId + '/mover'
+    : '/arquivos/' + _moverId + '/mover';
+  const r = await fetch(url, {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(_moverTipo === 'pasta' ? {pasta_pai_id: destino||null} : {pasta_id: destino||null})
+  });
+  if (r.ok) window.location.reload();
+}
+
+// Lixeira
+async function moverLixeira(id) {
+  if (!confirm('Mover para lixeira?')) return;
+  const r = await fetch('/arquivos/' + id + '/lixeira', {method:'POST'});
+  if (r.ok) window.location.reload();
+}
+async function restaurarArquivo(id) {
+  const r = await fetch('/arquivos/' + id + '/restaurar', {method:'POST'});
+  if (r.ok) window.location.reload();
+}
+async function excluirDefinitivo(id) {
+  if (!confirm('Excluir PERMANENTEMENTE? Não poderá ser recuperado!')) return;
+  const f = document.createElement('form');
+  f.method = 'POST'; f.action = '/arquivos/' + id + '/deletar';
+  document.body.appendChild(f); f.submit();
+}
+async function esvaziarLixeira() {
+  if (!confirm('Esvaziar lixeira permanentemente?')) return;
+  const r = await fetch('/arquivos/lixeira/esvaziar', {method:'POST'});
+  if (r.ok) window.location.reload();
+}
+
+// Excluir pasta
+function excluirPasta(id) {
+  if (!confirm('Mover pasta para lixeira?')) return;
+  fetch('/arquivos/pasta/' + id + '/lixeira', {method:'POST'}).then(r => { if(r.ok) window.location.reload(); });
+}
+
+// Editar pasta
+function editarPasta(id, nome, icone, cor) {
+  document.getElementById('titulo-modal-pasta').textContent = '✏️ Editar Pasta';
+  document.getElementById('btn-salvar-pasta').textContent = 'Salvar alterações';
+  document.getElementById('form-pasta').action = '/arquivos/pasta/' + id + '/editar';
+  document.getElementById('pasta-edit-id').value = id;
+  document.getElementById('input-pasta-nome').value = nome;
+  // Seleciona ícone atual
+  document.querySelectorAll('.icone-opt input').forEach(i => {
+    i.checked = i.value === icone;
+    i.closest('label').style.borderColor = i.value === icone ? 'var(--cor-primaria)' : 'var(--borda)';
+  });
+  // Seleciona cor atual
+  document.querySelectorAll('.cor-opt .cor-circle').forEach(c => {
+    const val = c.previousElementSibling ? c.previousElementSibling.value : '';
+    c.style.border = (c.parentElement.querySelector('input').value === cor) ? '3px solid #000' : '2px solid transparent';
+  });
+  abrirModal('modal-pasta');
+}
+
+// Ícones e cores interativos
+document.querySelectorAll('.icone-opt input').forEach(i => {
+  i.addEventListener('change', () => {
+    document.querySelectorAll('.icone-opt label').forEach(l => l.style.borderColor = 'var(--borda)');
+    i.closest('label').style.borderColor = 'var(--cor-primaria)';
+  });
+});
+document.querySelectorAll('.cor-opt input').forEach(i => {
+  i.addEventListener('change', () => {
+    document.querySelectorAll('.cor-opt .cor-circle').forEach(c => c.style.border = '2px solid transparent');
+    i.nextElementSibling.style.border = '3px solid #000';
+  });
+});
 </script>
 </body>
 </html>
