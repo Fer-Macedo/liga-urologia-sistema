@@ -34,6 +34,11 @@
     .badge-upload { background:#dcfce7;color:#166534; }
     .badge-pdf { background:#fee2e2;color:#991b1b; }
     .topbar-fin { display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px; }
+    .arquivo-card.selecionado { border-color:#ef4444;background:#fff5f5; }
+    .arquivo-card.selecionado .check-box { background:#ef4444;color:white; }
+    .check-box { width:18px;height:18px;border:2px solid var(--borda);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;position:absolute;top:8px;left:8px;background:white;cursor:pointer;z-index:2; }
+    .barra-selecao { display:none;background:#fee2e2;border:1.5px solid #fca5a5;border-radius:10px;padding:10px 16px;align-items:center;gap:12px;margin-bottom:12px; }
+    .barra-selecao.visivel { display:flex; }
   </style>
 </head>
 <body>
@@ -73,14 +78,43 @@
 
         <!-- Área principal -->
         <div class="fin-main">
-          <!-- Breadcrumb -->
+          <!-- Breadcrumb com navegação -->
           <div class="breadcrumb">
+            <% if (pastaAtual) { %>
+            <button onclick="voltarPasta()" class="btn" style="padding:4px 10px;font-size:12px">← Voltar</button>
+            <% } %>
             <a onclick="irPasta(null)">🏠 Raiz</a>
             <% if (pastaAtual) { %>
-            <span>›</span>
-            <span><%= pastas.find(p=>p.id==pastaAtual)?.nome || '' %></span>
+              <% 
+                // Monta breadcrumb completo
+                let caminho = [];
+                let pid = pastaAtual;
+                let seguranca = 0;
+                while (pid && seguranca < 10) {
+                  const p = pastas.find(x => String(x.id) === String(pid));
+                  if (!p) break;
+                  caminho.unshift(p);
+                  pid = p.pai_id;
+                  seguranca++;
+                }
+              %>
+              <% caminho.forEach((p, i) => { %>
+              <span>›</span>
+              <% if (i < caminho.length - 1) { %>
+                <a onclick="irPasta(<%= p.id %>)"><%= p.nome %></a>
+              <% } else { %>
+                <span style="color:var(--texto);font-weight:600"><%= p.nome %></span>
+              <% } %>
+              <% }) %>
             <% } %>
             <span style="margin-left:auto;font-size:12px;color:var(--texto2)"><%= arquivos.length %> arquivo(s)</span>
+          </div>
+
+          <!-- Barra de seleção múltipla -->
+          <div class="barra-selecao" id="barra-selecao">
+            <span id="count-selecionados" style="font-weight:600;color:#dc2626">0 selecionados</span>
+            <button class="btn" style="background:#dc2626;color:white;font-size:12px;padding:4px 12px" onclick="deletarSelecionados()">🗑 Excluir selecionados</button>
+            <button class="btn" style="font-size:12px;padding:4px 12px" onclick="limparSelecao()">✕ Cancelar</button>
           </div>
 
           <!-- Grid de arquivos -->
@@ -114,7 +148,8 @@
               else if (a.mimetype && (a.mimetype.includes('sheet') || a.mimetype.includes('excel'))) { icon = '📊'; }
               else if (a.mimetype && (a.mimetype.includes('word') || a.mimetype.includes('document'))) { icon = '📝'; }
             %>
-            <div class="arquivo-card" onclick="abrirArquivo(<%= a.id %>)">
+            <div class="arquivo-card" id="card-<%= a.id %>" onclick="toggleSelecao(event, <%= a.id %>)">
+              <div class="check-box" id="check-<%= a.id %>"></div>
               <div class="arquivo-acoes">
                 <button onclick="event.stopPropagation();deletarArquivo(<%= a.id %>, '<%= a.nome %>')" style="background:#fee2e2;border:none;border-radius:4px;cursor:pointer;padding:2px 6px">🗑</button>
                 <% if (a.tipo !== 'google') { %>
@@ -241,11 +276,75 @@
 <script>
 const arquivosData = <%- JSON.stringify(arquivos) %>;
 
+const pastasData = <%- JSON.stringify(pastas) %>;
+const pastaAtualId = <%- JSON.stringify(pastaAtual) %>;
+
 function irPasta(id) {
   const url = new URL(window.location.href);
   if (id) url.searchParams.set('pasta', id);
   else url.searchParams.delete('pasta');
   window.location.href = url.toString();
+}
+
+function voltarPasta() {
+  if (!pastaAtualId) return;
+  const pasta = pastasData.find(p => String(p.id) === String(pastaAtualId));
+  if (pasta && pasta.pai_id) {
+    irPasta(pasta.pai_id);
+  } else {
+    irPasta(null);
+  }
+}
+
+// Seleção múltipla
+const selecionados = new Set();
+
+function toggleSelecao(event, id) {
+  // Se clicou no checkbox ou na area de selecao
+  if (event.target.classList.contains('arquivo-acoes') || event.target.closest('.arquivo-acoes')) {
+    return;
+  }
+  if (selecionados.has(id)) {
+    selecionados.delete(id);
+    document.getElementById('card-' + id).classList.remove('selecionado');
+    document.getElementById('check-' + id).textContent = '';
+  } else {
+    selecionados.add(id);
+    document.getElementById('card-' + id).classList.add('selecionado');
+    document.getElementById('check-' + id).textContent = '✓';
+  }
+  atualizarBarraSelecao();
+}
+
+function atualizarBarraSelecao() {
+  const barra = document.getElementById('barra-selecao');
+  const count = document.getElementById('count-selecionados');
+  if (selecionados.size > 0) {
+    barra.classList.add('visivel');
+    count.textContent = selecionados.size + ' selecionado(s)';
+  } else {
+    barra.classList.remove('visivel');
+  }
+}
+
+function limparSelecao() {
+  selecionados.forEach(id => {
+    document.getElementById('card-' + id)?.classList.remove('selecionado');
+    const check = document.getElementById('check-' + id);
+    if (check) check.textContent = '';
+  });
+  selecionados.clear();
+  atualizarBarraSelecao();
+}
+
+async function deletarSelecionados() {
+  if (selecionados.size === 0) return;
+  if (!confirm('Excluir ' + selecionados.size + ' arquivo(s) selecionado(s)?')) return;
+  const ids = Array.from(selecionados);
+  for (const id of ids) {
+    await fetch('/financeiro-arquivos/' + id + '/deletar', { method: 'POST' });
+  }
+  window.location.reload();
 }
 
 function abrirArquivo(id) {
