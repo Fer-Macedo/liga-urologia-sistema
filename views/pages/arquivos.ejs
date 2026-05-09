@@ -71,6 +71,9 @@
       <h1 class="page-titulo">📁 Arquivos da Liga</h1>
       <div class="topbar-acoes">
         <a href="/arquivos?lixeira=1" class="btn" style="color:#dc2626">🗑 Lixeira (<%= lixeiraCount %>)</a>
+        <% if (usuario.perfil === "admin") { %>
+        <a href="/google/auth" class="btn" style="background:#4285f4;color:white">🔗 Conectar Google Drive</a>
+        <% } %>
         <button class="btn" onclick="abrirModal('modal-google')">🔗 Link Google</button>
         <button class="btn" onclick="abrirModal('modal-pasta')">📁 Nova pasta</button>
         <button class="btn btn-primario" onclick="document.getElementById('input-upload').click()">⬆️ Upload</button>
@@ -449,6 +452,7 @@ if (drop) {
 }
 
 async function uploadArquivos(files) {
+  const driveExts = ["doc","docx","xls","xlsx","ppt","pptx"];
   if (!files.length) return;
   const prog = document.getElementById('prog-upload');
   prog.style.display = 'block';
