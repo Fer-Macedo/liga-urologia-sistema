@@ -1729,4 +1729,64 @@ router.post('/desligamentos/:id/deletar', requireAuth, requireAdmin, async (req,
 });
 
 
+
+// ─── RELATÓRIO LIGANTES ───────────────────────────────────────────────────────
+router.get('/ligantes/relatorio', requireAuth, async (req, res) => {
+  const config = await getConfig();
+  const q = req.query;
+
+  const filtros = {
+    status:       q.status       || 'todos',
+    sexo:         q.sexo         || 'todos',
+    semestre:     q.semestre     || 'todos',
+    turma:        q.turma        || 'todos',
+    aceita_cargo: q.aceita_cargo || 'todos',
+    tem_formacao: q.tem_formacao || 'todos',
+    ordem:        q.ordem        || 'nome',
+    colunas:      q.colunas ? (Array.isArray(q.colunas) ? q.colunas : [q.colunas]) : ['nome','email','whatsapp','semestre','turma','rg','catraca','status']
+  };
+
+  let where = [];
+  if (filtros.status === 'ativo')    where.push("ativo = 1");
+  if (filtros.status === 'inativo')  where.push("ativo = 0");
+  if (filtros.sexo !== 'todos')      where.push(`sexo = '${filtros.sexo.replace(/'/g,"''")}'`);
+  if (filtros.semestre !== 'todos')  where.push(`semestre = '${filtros.semestre.replace(/'/g,"''")}'`);
+  if (filtros.turma !== 'todos')     where.push(`turma = '${filtros.turma.replace(/'/g,"''")}'`);
+  if (filtros.aceita_cargo !== 'todos') where.push(`aceita_cargo = '${filtros.aceita_cargo.replace(/'/g,"''")}'`);
+  if (filtros.tem_formacao !== 'todos') where.push(`tem_formacao = '${filtros.tem_formacao.replace(/'/g,"''")}'`);
+
+  const ordens = {
+    nome: 'nome ASC', nome_desc: 'nome DESC',
+    idade: 'data_nascimento DESC', idade_desc: 'data_nascimento ASC',
+    semestre: 'semestre ASC', turma: 'turma ASC', criado_em: 'criado_em DESC'
+  };
+  const orderBy = ordens[filtros.ordem] || 'nome ASC';
+  const sql = `SELECT * FROM ligantes ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY ${orderBy}`;
+
+  const [r, todos] = await Promise.all([query(sql), query('SELECT DISTINCT semestre FROM ligantes WHERE semestre IS NOT NULL ORDER BY semestre'), ]);
+  const turmasR = await query('SELECT DISTINCT turma FROM ligantes WHERE turma IS NOT NULL ORDER BY turma');
+  const semestresR = await query('SELECT DISTINCT semestre FROM ligantes WHERE semestre IS NOT NULL ORDER BY semestre');
+
+  const labelColuna = (col) => ({
+    nome:'Nome', email:'E-mail', whatsapp:'WhatsApp', sexo:'Sexo',
+    data_nascimento:'Nascimento', semestre:'Semestre', turma:'Turma',
+    catraca:'Catraca', rg:'RG/CI', cpf:'CPF', orcid:'ORCID',
+    tem_formacao:'Formação', aceita_cargo:'Aceita cargo',
+    habilidades:'Habilidades', status:'Status', criado_em:'Cadastro'
+  }[col] || col);
+
+  res.render('pages/ligantes-relatorio', {
+    config, usuario: req.session.usuario,
+    ligantes: r.rows,
+    filtros,
+    semestres: semestresR.rows.map(x => x.semestre).filter(Boolean),
+    turmas: turmasR.rows.map(x => x.turma).filter(Boolean),
+    colunasVisiveis: filtros.colunas,
+    labelColuna,
+    msg: req.session.msg||[], erro: req.session.erro||[]
+  });
+  req.session.msg = []; req.session.erro = [];
+});
+
+
 module.exports = router;
