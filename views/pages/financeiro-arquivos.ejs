@@ -147,7 +147,7 @@
               ondrop="drop(event, 'pasta', <%= p.id %>)"
               onclick="irPasta(<%= p.id %>)">
               <div class="arquivo-acoes">
-                <button onclick="event.stopPropagation();deletarPasta(<%= p.id %>, '<%= p.nome %>')" style="background:#fee2e2;border:none;border-radius:4px;cursor:pointer;padding:2px 6px">🗑</button>
+                <button onclick="event.stopPropagation();renomear('pasta',<%= p.id %>,'<%= p.nome %>')" style="background:#dbeafe;border:none;border-radius:4px;cursor:pointer;padding:2px 6px">✏️</button><button onclick="event.stopPropagation();deletarPasta(<%= p.id %>, '<%= p.nome %>')" style="background:#fee2e2;border:none;border-radius:4px;cursor:pointer;padding:2px 6px">🗑</button>
               </div>
               <div class="arquivo-icon">📁</div>
               <div class="arquivo-nome"><%= p.nome %></div>
@@ -182,7 +182,7 @@
               onclick="toggleSelecao(event, <%= a.id %>)">
               <div class="check-box" id="check-<%= a.id %>"></div>
               <div class="arquivo-acoes">
-                <button onclick="event.stopPropagation();deletarArquivo(<%= a.id %>, '<%= a.nome %>')" style="background:#fee2e2;border:none;border-radius:4px;cursor:pointer;padding:2px 6px">🗑</button>
+                <button onclick="event.stopPropagation();renomear('arquivo',<%= a.id %>,'<%= a.nome %>')" style="background:#dbeafe;border:none;border-radius:4px;cursor:pointer;padding:2px 6px">✏️</button><button onclick="event.stopPropagation();deletarArquivo(<%= a.id %>, '<%= a.nome %>')" style="background:#fee2e2;border:none;border-radius:4px;cursor:pointer;padding:2px 6px">🗑</button>
                 <% if (a.tipo !== 'google') { %>
                 <a href="/financeiro-arquivos/<%= a.id %>/download" onclick="event.stopPropagation()" style="background:#dbeafe;border:none;border-radius:4px;cursor:pointer;padding:2px 6px;font-size:11px;text-decoration:none">⬇️</a>
                 <% } %>
@@ -534,6 +534,15 @@ async function moverPasta(pastaId, pastaDestinoId) {
   } catch(e) { alert('Erro: ' + e.message); }
 }
 
+let _rT=null,_rI=null;
+function renomear(t,id,n){_rT=t;_rI=id;document.getElementById("input-renomear").value=n;abrirModal("modal-renomear");}
+async function confirmarRenomear(){
+  const n=document.getElementById("input-renomear").value.trim();
+  if(!n)return;
+  const u=_rT==="pasta"?"/financeiro-pastas/"+_rI+"/renomear":"/financeiro-arquivos/"+_rI+"/renomear";
+  const r=await fetch(u,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({nome:n})});
+  if(r.ok)window.location.reload();
+}
 // Fechar viewer com ESC
 document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharViewer(); });
 </script>
