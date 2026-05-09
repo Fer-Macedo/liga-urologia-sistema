@@ -1918,4 +1918,25 @@ router.post('/financeiro-arquivos/deletar-multiplos', requireAuth, async (req, r
 });
 
 
+
+// Mover arquivo para pasta
+router.post('/financeiro-arquivos/:id/mover', requireAuth, async (req, res) => {
+  try {
+    const pasta_id = req.body.pasta_id || null;
+    await query('UPDATE financeiro_arquivos SET pasta_id=$1 WHERE id=$2', [pasta_id, req.params.id]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+// Mover pasta para outra pasta
+router.post('/financeiro-pastas/:id/mover', requireAuth, async (req, res) => {
+  try {
+    const pai_id = req.body.pai_id || null;
+    if (String(pai_id) === String(req.params.id)) return res.status(400).json({ erro: 'Não pode mover para si mesmo' });
+    await query('UPDATE financeiro_pastas SET pai_id=$1 WHERE id=$2', [pai_id, req.params.id]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+
 module.exports = router;
