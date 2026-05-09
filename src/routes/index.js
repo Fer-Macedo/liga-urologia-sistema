@@ -1455,17 +1455,23 @@ router.post('/cadastro-ligante', async (req, res) => {
 // Lista de ligantes (interno)
 router.get('/ligantes', requireAuth, async (req, res) => {
   const config = await getConfig();
-  const busca = req.query.busca || '';
-  let sql = 'SELECT * FROM ligantes ORDER BY criado_em DESC';
-  let params = [];
-  if (busca) {
-    sql = 'SELECT * FROM ligantes WHERE nome ILIKE $1 OR email ILIKE $1 OR turma ILIKE $1 ORDER BY criado_em DESC';
-    params = ['%' + busca + '%'];
-  }
-  const r = await query(sql, params);
-  res.render('pages/ligantes', { config, usuario: req.session.usuario, ligantes: r.rows, busca,
-    msg: req.session.msg||[], erro: req.session.erro||[] });
-  req.session.msg = []; req.session.erro = [];
+  const msg = req.session.msg||[]; req.session.msg = [];
+  const erro = req.session.erro||[]; req.session.erro = [];
+  const r = await query('SELECT * FROM ligantes ORDER BY nome ASC');
+  const ligantes = r.rows;
+  const total = ligantes.length;
+  const ativos = ligantes.filter(l => l.ativo != 0).length;
+  const inativos = ligantes.filter(l => l.ativo == 0).length;
+  res.render('pages/ligantes', { config, usuario: req.session.usuario, ligantes, msg, erro, total, ativos, inativos });
+});
+
+router.post('/ligantes/:id/toggle', requireAuth, async (req, res) => {
+  const r = await query('SELECT ativo FROM ligantes WHERE id=$1', [req.params.id]);
+  const atual = r.rows[0]?.ativo;
+  await query('UPDATE ligantes SET ativo=$1 WHERE id=$2', [atual == 0 ? 1 : 0, req.params.id]);
+  await logAtividade(req.session.usuario.id, 'LIGANTE_STATUS', 'Status alterado ID: ' + req.params.id, req);
+  req.session.msg = ['Status atualizado com sucesso!'];
+  res.redirect('/ligantes');
 });
 
 
