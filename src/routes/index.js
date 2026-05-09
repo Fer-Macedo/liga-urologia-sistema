@@ -1922,4 +1922,57 @@ router.post("/arquivos/upload", requireAuth, async (req, res) => {
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
+
+// ─── GOOGLE DRIVE INTEGRATION ─────────────────────────────────────────────────
+
+router.get("/google/auth", requireAuth, requireAdmin, (req, res) => {
+  const { getAuthUrl } = require("../services/google-drive");
+  const url = getAuthUrl();
+  res.redirect(url);
+});
+
+router.get("/google/callback", requireAuth, async (req, res) => {
+  try {
+    const { getTokens } = require("../services/google-drive");
+    const tokens = await getTokens(req.query.code);
+    // Salva tokens nas configuracoes
+    await query("INSERT INTO configuracoes (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2",
+      ["google_tokens", JSON.stringify(tokens)]);
+    req.session.msg = ["Google Drive conectado com sucesso!"];
+    res.redirect("/configuracoes");
+  } catch(e) {
+    req.session.erro = ["Erro ao conectar Google Drive: " + e.message];
+    res.redirect("/configuracoes");
+  }
+});
+
+router.post("/arquivos/upload-drive", requireAuth, async (req, res) => {
+  try {
+    const { upload } = require("../services/arquivos");
+    const { uploadParaDrive } = require("../services/google-drive");
+
+    upload.single("arquivo")(req, res, async (err) => {
+      if (!req.file) return res.status(400).json({ erro: "Sem arquivo" });
+
+      // Busca tokens do Google
+      const tokensR = await query("SELECT valor FROM configuracoes WHERE chave='google_tokens'");
+      if (!tokensR.rows[0]) return res.status(400).json({ erro: "Google Drive nao conectado. Va em Configuracoes e conecte." });
+
+      const tokens = JSON.parse(tokensR.rows[0].valor);
+      const pasta_id = req.body.pasta_id || null;
+
+      // Faz upload para o Google Drive
+      const result = await uploadParaDrive(tokens, req.file.buffer, req.file.originalname, req.file.mimetype);
+
+      // Salva referencia no banco
+      await query("INSERT INTO arquivos (nome_original, tipo, google_url, google_embed, pasta_id, enviado_por, ativo) VALUES ($1,$2,$3,$4,$5,$6,1)",
+        [req.file.originalname, "google", result.webViewLink, result.embedUrl, pasta_id||null, req.session.usuario.id]);
+
+      res.json({ ok: true, embedUrl: result.embedUrl });
+    });
+  } catch(e) {
+    res.status(500).json({ erro: e.message });
+  }
+});
+
 module.exports = router;
