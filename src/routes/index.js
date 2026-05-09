@@ -1901,4 +1901,21 @@ router.post('/financeiro-pastas/:id/deletar', requireAuth, async (req, res) => {
 });
 
 
+
+router.post('/financeiro-arquivos/deletar-multiplos', requireAuth, async (req, res) => {
+  try {
+    const ids = req.body.ids ? (Array.isArray(req.body.ids) ? req.body.ids : [req.body.ids]) : [];
+    const pasta_id = req.body.pasta_id || null;
+    for (const id of ids) {
+      await query('DELETE FROM financeiro_arquivos WHERE id=$1', [id]);
+    }
+    req.session.msg = [ids.length + ' arquivo(s) excluído(s)!'];
+    res.redirect('/financeiro-arquivos' + (pasta_id ? '?pasta=' + pasta_id : ''));
+  } catch(e) {
+    req.session.erro = ['Erro: ' + e.message];
+    res.redirect('/financeiro-arquivos');
+  }
+});
+
+
 module.exports = router;
