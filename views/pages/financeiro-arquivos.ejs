@@ -35,6 +35,13 @@
     .badge-pdf { background:#fee2e2;color:#991b1b; }
     .topbar-fin { display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px; }
     .arquivo-card.selecionado { border-color:#ef4444;background:#fff5f5; }
+    .arquivo-card.dragging { opacity:0.4;transform:scale(0.95); }
+    .arquivo-card.drag-over { border-color:#16a34a;background:#f0fdf4;transform:scale(1.02); }
+    .pasta-item.drag-over { background:#dcfce7;border-radius:8px; }
+    .drop-zona { border:2px dashed var(--borda);border-radius:10px;padding:20px;text-align:center;color:var(--texto2);font-size:12px;display:none;margin-bottom:12px; }
+    .drop-zona.ativa { display:block;border-color:var(--cor-primaria);background:var(--cor-primaria-claro); }
+    .arquivo-card[draggable] { cursor:grab; }
+    .arquivo-card[draggable]:active { cursor:grabbing; }
     .arquivo-card.selecionado .check-box { background:#ef4444;color:white; }
     .check-box { width:18px;height:18px;border:2px solid var(--borda);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;position:absolute;top:8px;left:8px;background:white;cursor:pointer;z-index:2; }
     .barra-selecao { display:none;background:#fee2e2;border:1.5px solid #fca5a5;border-radius:10px;padding:10px 16px;align-items:center;gap:12px;margin-bottom:12px; }
@@ -62,12 +69,19 @@
         <!-- Sidebar pastas -->
         <div class="fin-sidebar">
           <div style="font-size:12px;font-weight:700;color:var(--texto2);margin-bottom:12px;text-transform:uppercase">📁 Pastas</div>
-          <div class="pasta-item <%= !pastaAtual ? 'ativa' : '' %>" onclick="irPasta(null)">
+          <div class="pasta-item <%= !pastaAtual ? 'ativa' : '' %>"
+            ondragover="event.preventDefault();this.classList.add('drag-over')"
+            ondragleave="this.classList.remove('drag-over')"
+            ondrop="dropNaPasta(event, null)"
+            onclick="irPasta(null)">
             🏠 Raiz
           </div>
           <% function renderPastas(pastas, pai, nivel) {
             pastas.filter(p => p.pai_id == pai).forEach(p => { %>
           <div class="pasta-item <%= String(pastaAtual) === String(p.id) ? 'ativa' : '' %> <%= nivel > 0 ? 'sub' : '' %>"
+            ondragover="event.preventDefault();this.classList.add('drag-over')"
+            ondragleave="this.classList.remove('drag-over')"
+            ondrop="dropNaPasta(event, <%= p.id %>)"
             onclick="irPasta(<%= p.id %>)">
             📁 <%= p.nome %>
             <span style="margin-left:auto;font-size:10px;cursor:pointer;color:var(--vermelho)" onclick="event.stopPropagation();deletarPasta(<%= p.id %>, '<%= p.nome %>')">✕</span>
@@ -120,7 +134,15 @@
           <!-- Grid de arquivos -->
           <div class="arquivos-grid">
             <% pastas.filter(p => String(p.pai_id) === String(pastaAtual) || (!p.pai_id && !pastaAtual)).forEach(p => { %>
-            <div class="arquivo-card" onclick="irPasta(<%= p.id %>)">
+            <div class="arquivo-card" 
+              draggable="true"
+              data-tipo="pasta"
+              data-id="<%= p.id %>"
+              ondragstart="dragStart(event, 'pasta', <%= p.id %>)"
+              ondragover="dragOver(event)"
+              ondragleave="dragLeave(event)"
+              ondrop="drop(event, 'pasta', <%= p.id %>)"
+              onclick="irPasta(<%= p.id %>)">
               <div class="arquivo-acoes">
                 <button onclick="event.stopPropagation();deletarPasta(<%= p.id %>, '<%= p.nome %>')" style="background:#fee2e2;border:none;border-radius:4px;cursor:pointer;padding:2px 6px">🗑</button>
               </div>
@@ -148,7 +170,13 @@
               else if (a.mimetype && (a.mimetype.includes('sheet') || a.mimetype.includes('excel'))) { icon = '📊'; }
               else if (a.mimetype && (a.mimetype.includes('word') || a.mimetype.includes('document'))) { icon = '📝'; }
             %>
-            <div class="arquivo-card" id="card-<%= a.id %>" onclick="toggleSelecao(event, <%= a.id %>)">
+            <div class="arquivo-card" id="card-<%= a.id %>"
+              draggable="true"
+              data-tipo="arquivo"
+              data-id="<%= a.id %>"
+              ondragstart="dragStart(event, 'arquivo', <%= a.id %>)"
+              ondragend="dragEnd(event)"
+              onclick="toggleSelecao(event, <%= a.id %>)">
               <div class="check-box" id="check-<%= a.id %>"></div>
               <div class="arquivo-acoes">
                 <button onclick="event.stopPropagation();deletarArquivo(<%= a.id %>, '<%= a.nome %>')" style="background:#fee2e2;border:none;border-radius:4px;cursor:pointer;padding:2px 6px">🗑</button>
@@ -414,6 +442,93 @@ function deletarPasta(id, nome) {
   f.action = '/financeiro-pastas/' + id + '/deletar';
   document.body.appendChild(f);
   f.submit();
+}
+
+// ─── DRAG & DROP ──────────────────────────────────────────────────────────────
+let dragTipo = null;
+let dragId = null;
+
+function dragStart(event, tipo, id) {
+  dragTipo = tipo;
+  dragId = id;
+  event.dataTransfer.effectAllowed = 'move';
+  event.target.classList.add('dragging');
+  document.getElementById('drop-zona-principal').classList.add('ativa');
+}
+
+function dragEnd(event) {
+  event.target.classList.remove('dragging');
+  document.getElementById('drop-zona-principal').classList.remove('ativa');
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+}
+
+function dragOver(event) {
+  event.preventDefault();
+  event.target.closest('.arquivo-card')?.classList.add('drag-over');
+}
+
+function dragLeave(event) {
+  event.target.closest('.arquivo-card')?.classList.remove('drag-over');
+}
+
+function mostrarDropZona(event) {
+  event.preventDefault();
+}
+
+function esconderDropZona(event) {
+  if (!event.currentTarget.contains(event.relatedTarget)) {
+    document.getElementById('drop-zona-principal').classList.remove('ativa');
+  }
+}
+
+function drop(event, tipo, id) {
+  event.preventDefault();
+  event.stopPropagation();
+  event.target.closest('.arquivo-card')?.classList.remove('drag-over');
+  // Se soltou em cima de uma pasta, move para ela
+  if (tipo === 'pasta' && dragTipo === 'arquivo') {
+    moverArquivo(dragId, id);
+  } else if (tipo === 'pasta' && dragTipo === 'pasta' && dragId !== id) {
+    moverPasta(dragId, id);
+  }
+}
+
+function dropNaPasta(event, pastaDestino) {
+  event.preventDefault();
+  event.stopPropagation();
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  document.getElementById('drop-zona-principal').classList.remove('ativa');
+  if (!dragId) return;
+  if (dragTipo === 'arquivo') {
+    moverArquivo(dragId, pastaDestino);
+  } else if (dragTipo === 'pasta') {
+    moverPasta(dragId, pastaDestino);
+  }
+}
+
+async function moverArquivo(arquivoId, pastaDestinoId) {
+  try {
+    const resp = await fetch('/financeiro-arquivos/' + arquivoId + '/mover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pasta_id: pastaDestinoId })
+    });
+    if (resp.ok) window.location.reload();
+    else alert('Erro ao mover arquivo');
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+async function moverPasta(pastaId, pastaDestinoId) {
+  if (String(pastaId) === String(pastaDestinoId)) return;
+  try {
+    const resp = await fetch('/financeiro-pastas/' + pastaId + '/mover', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pai_id: pastaDestinoId })
+    });
+    if (resp.ok) window.location.reload();
+    else alert('Erro ao mover pasta');
+  } catch(e) { alert('Erro: ' + e.message); }
 }
 
 // Fechar viewer com ESC
