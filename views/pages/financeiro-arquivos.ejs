@@ -382,23 +382,32 @@ function abrirArquivo(id) {
   const a = arquivosData.find(x => x.id === id);
   if (!a) return;
   document.getElementById('viewer-titulo').textContent = a.nome;
+  document.getElementById('viewer-baixar').href = '/financeiro-arquivos/' + id + '/download';
 
-  let src = '';
-  let linkExterno = '';
-
-  if (a.tipo === 'google') {
-    src = a.google_embed || converterParaEmbed(a.google_url);
-    linkExterno = a.google_url;
-    document.getElementById('viewer-link-externo').style.display = '';
-  } else {
-    src = '/financeiro-arquivos/' + id + '/visualizar';
-    linkExterno = src;
-    document.getElementById('viewer-link-externo').style.display = 'none';
+  if (a.tipo === 'google' && a.google_embed) {
+    document.getElementById('viewer-externo').href = a.google_url || '#';
+    document.getElementById('viewer-externo').style.display = '';
+    document.getElementById('viewer-iframe').src = a.google_embed;
+    document.getElementById('viewer').classList.add('aberto');
+    return;
   }
 
-  document.getElementById('viewer-link-externo').href = linkExterno;
-  document.getElementById('viewer-iframe').src = src;
-  document.getElementById('viewer').classList.add('aberto');
+  const ext = (a.nome || '').split('.').pop().toLowerCase();
+  const imgs = ['jpg','jpeg','png','gif','webp','bmp'];
+
+  if (ext === 'pdf' || imgs.includes(ext)) {
+    document.getElementById('viewer-iframe').src = '/financeiro-arquivos/' + id + '/visualizar';
+    document.getElementById('viewer-externo').style.display = 'none';
+    document.getElementById('viewer').classList.add('aberto');
+  } else {
+    fetch('/financeiro-arquivos/' + id + '/url').then(r => r.json()).then(d => {
+      if (!d.url) return;
+      document.getElementById('viewer-iframe').src = 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(d.url);
+      document.getElementById('viewer-externo').href = d.url;
+      document.getElementById('viewer-externo').style.display = '';
+      document.getElementById('viewer').classList.add('aberto');
+    });
+  }
 }
 
 function converterParaEmbed(url) {
