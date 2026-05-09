@@ -228,7 +228,7 @@ router.get('/dashboard', requireAuth, async (req, res) => {
     query("SELECT COALESCE(SUM(valor_cheio),0) v FROM cobrancas WHERE status='pendente' AND referencia LIKE $1", [mesStr]),
     query("SELECT COALESCE(SUM(valor_cheio),0) v FROM cobrancas WHERE status='atrasado'"),
     query("SELECT c.*, m.nome FROM cobrancas c JOIN membros m ON m.id=c.membro_id ORDER BY c.criado_em DESC LIMIT 8"),
-    query("SELECT *, TO_CHAR(data_nascimento::date,'MM-DD') as aniv FROM membros WHERE ativo=1 AND data_nascimento IS NOT NULL ORDER BY CASE WHEN TO_CHAR(data_nascimento::date,'MM-DD') >= TO_CHAR(NOW(),'MM-DD') THEN TO_CHAR(data_nascimento::date,'MM-DD') ELSE TO_CHAR(data_nascimento::date,'MM-DD') || 'z' END LIMIT 6")
+    query("SELECT *, TO_CHAR(data_nascimento::date,'MM-DD') as aniv FROM membros WHERE ativo=1 AND data_nascimento IS NOT NULL ORDER BY CASE WHEN TO_CHAR(data_nascimento::date,'MM-DD') >= TO_CHAR(NOW(),'MM-DD') THEN 0 ELSE 1 END, TO_CHAR(data_nascimento::date,'MM-DD') LIMIT 6")
   ]);
 
   const stats = {
@@ -2000,3 +2000,4 @@ router.get('/financeiro-arquivos/:id/url', requireAuth, async (req, res) => {
 });
 
 module.exports = router;
+
