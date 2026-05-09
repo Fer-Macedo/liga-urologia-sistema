@@ -1359,7 +1359,7 @@ router.get('/arquivos/:id/download', requireAuth, async (req, res) => {
 router.post('/arquivos/:id/substituir', requireAuth, async (req, res) => {
   try {
     const { upload, uploadArquivo, deletarArquivo } = require('../services/arquivos');
-    upload.single('arquivo')(req, res, async (err) => {
+    upload.array('arquivos', 20)(req, res, async (err) => {
       if (err || !req.file) { req.session.erro = ['Erro ao substituir.']; return res.redirect('/arquivos'); }
       const r = await query('SELECT * FROM arquivos WHERE id=$1', [req.params.id]);
       const antigo = r.rows[0];
@@ -1822,13 +1822,15 @@ router.post('/financeiro-arquivos/pasta', requireAuth, async (req, res) => {
 router.post('/financeiro-arquivos/upload', requireAuth, async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
-    upload.single('arquivo')(req, res, async (err) => {
-      if (!req.file) { req.session.erro=['Nenhum arquivo.']; return res.redirect('/financeiro-arquivos'); }
+    upload.array('arquivos', 20)(req, res, async (err) => {
+      if (!req.files || req.files.length===0) { req.session.erro=['Nenhum arquivo.']; return res.redirect('/financeiro-arquivos'); }
       const pasta_id = req.body.pasta_id && req.body.pasta_id !== '' ? req.body.pasta_id : null;
-      const nome = req.body.nome || req.file.originalname;
-      const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'financeiro');
-      await query('INSERT INTO financeiro_arquivos (nome,tipo,chave_r2,mimetype,tamanho,pasta_id,enviado_por) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-        [nome, 'upload', r.chave, req.file.mimetype, req.file.size, pasta_id, req.session.usuario.id]);
+      for (const file of req.files) {
+        const nome = req.body.nome || file.originalname;
+        const r = await uploadArquivo(file.buffer, file.originalname, file.mimetype, 'financeiro');
+        await query('INSERT INTO financeiro_arquivos (nome,tipo,chave_r2,mimetype,tamanho,pasta_id,enviado_por) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+          [nome, 'upload', r.chave, file.mimetype, file.size, pasta_id, req.session.usuario.id]);
+      }
       req.session.msg = ['Arquivo enviado com sucesso!'];
       res.redirect('/financeiro-arquivos' + (pasta_id ? '?pasta='+pasta_id : ''));
     });
