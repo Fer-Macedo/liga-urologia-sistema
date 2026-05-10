@@ -1404,12 +1404,14 @@ router.post('/desligamentos/configurar', requireAuth, requireAdmin, async (req, 
 
 router.post('/desligamentos', requireAuth, async (req, res) => {
   try {
-    const { membro_id, data_solicitacao, motivo, tipo_membro } = req.body;
+    const { membro_id, ligante_id, data_solicitacao, motivo, tipo_membro } = req.body;
+    const mid = membro_id && membro_id !== '' && membro_id !== 'null' ? parseInt(membro_id) : null;
+    const lid = ligante_id && ligante_id !== '' && ligante_id !== 'null' ? parseInt(ligante_id) : null;
     await query(
-      'INSERT INTO desligamentos (membro_id, data_solicitacao, motivo, tipo_membro, criado_por) VALUES ($1,$2,$3,$4,$5)',
-      [membro_id, data_solicitacao || new Date(), motivo || null, tipo_membro || 'LIGANTE', req.session.usuario.id]
+      'INSERT INTO desligamentos (membro_id, ligante_id, data_solicitacao, motivo, tipo_membro, criado_por) VALUES ($1,$2,$3,$4,$5,$6)',
+      [mid, lid, data_solicitacao || new Date(), motivo || null, tipo_membro || 'LIGANTE', req.session.usuario.id]
     );
-    await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_CRIADO', 'Desligamento criado para membro ID: ' + membro_id, req);
+    await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_CRIADO', 'Desligamento criado', req);
     req.session.msg = ['Documento de desligamento criado! Clique em 📧 para enviar por email.'];
     res.redirect('/desligamentos');
   } catch(e) {
