@@ -43,37 +43,45 @@ function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
 <meta charset="UTF-8">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-html, body { width:210mm; }
+body {
+  width: 210mm;
+  height: 297mm;
+  overflow: hidden;
+  position: relative;
+  font-family: 'Times New Roman', serif;
+  font-size: 11pt;
+  color: #000;
+}
 #timbrado-bg {
-  position: fixed;
+  position: absolute;
   top: 0; left: 0;
   width: 210mm;
   height: 297mm;
   z-index: 0;
 }
 #timbrado-bg img {
-  width: 100%;
-  height: 100%;
+  width: 210mm;
+  height: 297mm;
   display: block;
 }
 #conteudo {
-  position: relative;
-  z-index: 1;
+  position: absolute;
+  top: 0; left: 0;
   width: 210mm;
-  min-height: 297mm;
-  padding: 55mm 22mm 45mm 22mm;
-  font-family: 'Times New Roman', serif;
-  font-size: 11pt;
-  color: #000;
+  height: 297mm;
+  z-index: 1;
+  padding: 52mm 22mm 42mm 22mm;
+  display: flex;
+  flex-direction: column;
 }
-.titulo { text-align:center; font-size:12pt; font-weight:bold; text-transform:uppercase; margin-bottom:18px; }
-.corpo { text-align:justify; line-height:1.6; }
-.corpo p { margin-bottom:10px; }
-.data { text-align:right; margin:12px 0; font-size:10pt; }
-.assinaturas { display:flex; justify-content:space-around; margin-top:18px; gap:10px; }
+.titulo { text-align:center; font-size:12pt; font-weight:bold; text-transform:uppercase; margin-bottom:14px; }
+.corpo { text-align:justify; line-height:1.55; flex:1; }
+.corpo p { margin-bottom:8px; }
+.data { text-align:right; margin:8px 0; font-size:10pt; }
+.assinaturas { display:flex; justify-content:space-around; margin-top:10px; gap:8px; }
 .assinatura-bloco { text-align:center; flex:1; }
-.assinatura-img-wrap { height:60px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:3px; }
-.assinatura-img { max-height:60px; max-width:150px; object-fit:contain; }
+.assinatura-img-wrap { height:55px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:3px; }
+.assinatura-img { max-height:55px; max-width:140px; object-fit:contain; }
 .linha-assinatura { border-top:1.5px solid #000; width:90%; margin:0 auto 4px; }
 .assinatura-nome { font-weight:bold; font-size:9pt; text-transform:uppercase; }
 .assinatura-cargo { font-size:8pt; margin-top:2px; }
@@ -118,6 +126,7 @@ ${timbrado ? `<div id="timbrado-bg"><img src="${timbrado}"></div>` : ''}
     </div>
   </div>
 </div>
+
 </body>
 </html>`;
 }
