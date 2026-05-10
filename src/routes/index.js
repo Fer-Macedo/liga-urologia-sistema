@@ -2272,4 +2272,31 @@ router.post('/desvinculacoes/:id/deletar', requireAuth, requireAdmin, async (req
   res.redirect('/desvinculacoes');
 });
 
+
+router.post('/desvinculacoes/:id/editar', requireAuth, async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.fields([{name:'adv1'},{name:'adv2'},{name:'adv3'}])(req, res, async (err) => {
+      const { num_advertencias } = req.body;
+      let updates = ['num_advertencias=$1'];
+      let vals = [parseInt(num_advertencias)||3];
+      let idx = 2;
+      for (const num of [1,2,3]) {
+        const key = 'adv'+num;
+        if (req.files && req.files[key] && req.files[key][0]) {
+          const f = req.files[key][0];
+          const r = await uploadArquivo(f.buffer, f.originalname, f.mimetype, 'advertencias');
+          updates.push('adv'+num+'_chave=$'+idx);
+          vals.push(r.chave);
+          idx++;
+        }
+      }
+      vals.push(req.params.id);
+      await query('UPDATE desvinculacoes SET '+updates.join(',')+' WHERE id=$'+idx, vals);
+      req.session.msg = ['Desvinculação atualizada!'];
+      res.redirect('/desvinculacoes');
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/desvinculacoes'); }
+});
+
 module.exports = router;
