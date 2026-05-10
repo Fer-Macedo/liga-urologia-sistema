@@ -35,6 +35,7 @@ function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
   const [dia, mes, ano] = dataFormatada.split('/');
 
   const timbradoSrc = config.timbrado_b64 || null;
+  const bgStyle = timbradoSrc ? "background-image:url(" + JSON.stringify(timbradoSrc) + ");background-size:100% 100%;background-repeat:no-repeat;background-position:top left;" : "";
   const presidenteSrc = config.assinatura_presidente_b64 || null;
   const secretarioSrc = config.assinatura_secretario_b64 || null;
 
@@ -65,12 +66,12 @@ function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
   </div>`;
 
   return `<!DOCTYPE html>
-<html lang="es">
+<html lang="es" style="${bgStyle}">
 <head>
 <meta charset="UTF-8">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { font-family: 'Times New Roman', serif; font-size: 12pt; color: #000; background: white; }
+  body { font-family: 'Times New Roman', serif; font-size: 12pt; color: #000; background: transparent; }
   .pagina { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 20mm 25mm 20mm 25mm; display: flex; flex-direction: column; }
   .cabecalho { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #1a3d2b; padding-bottom: 12px; margin-bottom: 30px; }
   .titulo { text-align: center; font-size: 14pt; font-weight: bold; text-transform: uppercase; margin-bottom: 30px; letter-spacing: 1px; color: #1a3d2b; }
