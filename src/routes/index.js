@@ -2365,7 +2365,7 @@ body { font-family:'Times New Roman',serif; font-size:11pt; color:#000; }
     </div>
     <div class="assinaturas">
       <div class="assinatura-bloco">
-        <div class="assinatura-img-wrap">${financeiroSrc ? `<img src="${presidenteSrc}" class="assinatura-img">` : ''}</div>
+        <div class="assinatura-img-wrap">${financeiroSrc ? `<img src="${financeiroSrc}" class="assinatura-img">` : ''}</div>
         <div class="linha"></div>
         <div class="assinatura-nome">${nomeFinanceiro}</div>
         <div class="assinatura-cargo">Director(a) Financiero(a)<br>LAURO – Liga Académica de Urología</div>
