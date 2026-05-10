@@ -2218,7 +2218,7 @@ router.get('/desvinculacoes/:id/visualizar', requireAuth, async (req, res) => {
     if (!rd.rows[0]) return res.status(404).send('Não encontrado');
     const desl = rd.rows[0];
     const rl = await query('SELECT * FROM ligantes WHERE id=$1', [desl.ligante_id]);
-    const ligante = rl.rows[0] || {};
+    const ligante = {...(rl.rows[0] || {}), num_advertencias: desl.num_advertencias || 3};
     const config = await prepararConfigDesvinc(await getConfig());
     const html = await gerarHTMLDesvinculacao(ligante, config, desl.data_solicitacao);
     res.send(html);
@@ -2230,8 +2230,9 @@ router.get('/desvinculacoes/:id/imprimir', requireAuth, async (req, res) => {
     const rd = await query('SELECT * FROM desvinculacoes WHERE id=$1', [req.params.id]);
     if (!rd.rows[0]) return res.status(404).send('Não encontrado');
     const rl = await query('SELECT * FROM ligantes WHERE id=$1', [rd.rows[0].ligante_id]);
+    const ligante = {...(rl.rows[0] || {}), num_advertencias: rd.rows[0].num_advertencias || 3};
     const config = await prepararConfigDesvinc(await getConfig());
-    let html = await gerarHTMLDesvinculacao(rl.rows[0] || {}, config, rd.rows[0].data_solicitacao);
+    let html = await gerarHTMLDesvinculacao(ligante, config, rd.rows[0].data_solicitacao);
     html = html.replace('</body>', '<script>window.onload=function(){window.print()}</script></body>');
     res.send(html);
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
