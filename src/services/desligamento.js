@@ -43,7 +43,7 @@ function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
 <meta charset="UTF-8">
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
-html, body { width:210mm; height:297mm; }
+html, body { width:210mm; height:297mm; overflow:hidden; }
 #timbrado-bg {
   position: fixed;
   top: 0; left: 0;
@@ -61,14 +61,14 @@ html, body { width:210mm; height:297mm; }
   z-index: 1;
   width: 210mm;
   min-height: 297mm;
-  padding: 35mm 20mm 25mm 20mm;
+  padding: 55mm 22mm 40mm 22mm;
   font-family: 'Times New Roman', serif;
-  font-size: 12pt;
+  font-size: 11pt;
   color: #000;
 }
 .titulo { text-align:center; font-size:13pt; font-weight:bold; text-transform:uppercase; margin-bottom:25px; }
-.corpo { text-align:justify; line-height:1.8; }
-.corpo p { margin-bottom:14px; }
+.corpo { text-align:justify; line-height:1.6; }
+.corpo p { margin-bottom:10px; }
 .data { text-align:right; margin:20px 0; font-size:11pt; }
 .assinaturas { display:flex; justify-content:space-around; margin-top:40px; gap:15px; }
 .assinatura-bloco { text-align:center; flex:1; }
