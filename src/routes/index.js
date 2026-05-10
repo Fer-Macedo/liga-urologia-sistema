@@ -2142,7 +2142,7 @@ async function gerarHTMLDesvinculacao(ligante, config, data) {
   const timbrado = config.timbrado_b64 || null;
   const presidente = config.assinatura_presidente_b64 || null;
   const secretario = config.assinatura_secretario_b64 || null;
-  const nomePresidente = (config.financeiro_nome || config.presidente_nome || 'MANUEL FERNANDO MACEDO NETO').toUpperCase();
+  const nomePresidente = (config.presidente_nome || 'MANUEL FERNANDO MACEDO NETO').toUpperCase();
   const nomeSecretario = (config.secretario_nome || 'KAUÊ TEIXEIRA LACERDA').toUpperCase();
   const d = new Date(data);
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
