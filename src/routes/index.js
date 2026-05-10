@@ -1559,21 +1559,20 @@ router.get('/ligantes/:id/editar', requireAuth, async (req, res) => {
 });
 
 router.post('/ligantes/:id/editar', requireAuth, async (req, res) => {
-  const b = req.body;
-  await query(`UPDATE ligantes SET nome=$1, data_nascimento=$2, sexo=$3, email=$4,
-    email_alternativo=$5, whatsapp=$6, rg=$7, cpf=$8, semestre=$9, turma=$10,
-    catraca=$11, orcid=$12, tem_formacao=$13, qual_formacao=$14, habilidades=$15,
-    aceita_cargo=$16, qual_cargo=$17, contribuicao_grupo=$18, ideia_inovadora=$19,
-    tema_interesse=$20, porque_lauro=$21, apresentacao=$22 WHERE id=$23`,
-    [b.nome, b.data_nascimento||null, b.sexo, b.email, b.email_alternativo||null,
-     b.whatsapp, b.rg, b.cpf||null, b.semestre, b.turma, b.catraca||null,
-     b.orcid||null, b.tem_formacao||null, b.qual_formacao||null, b.habilidades||null,
-     b.aceita_cargo||null, b.qual_cargo||null, b.contribuicao_grupo||null,
-     b.ideia_inovadora||null, b.tema_interesse||null, b.porque_lauro, b.apresentacao,
-     req.params.id]);
-  await logAtividade(req.session.usuario.id, 'LIGANTE_EDITADO', 'Ligante editado: ' + b.nome, req);
-  req.session.msg = ['Ligante atualizado com sucesso!'];
-  res.redirect('/ligantes');
+  try {
+    const {upload,uploadArquivo}=require('../services/arquivos');
+    upload.single('foto')(req,res,async(err)=>{
+      const b=req.body;
+      let fk=null;
+      if(req.file){const r=await uploadArquivo(req.file.buffer,req.file.originalname,req.file.mimetype,'ligantes');fk=r.chave;}
+      const fu=fk?',foto_chave=$24':'';
+      const p=[b.nome,b.data_nascimento||null,b.sexo,b.email,b.email_alternativo||null,b.whatsapp,b.rg,b.cpf||null,b.semestre,b.turma,b.catraca||null,b.orcid||null,b.tem_formacao||null,b.qual_formacao||null,b.habilidades||null,b.aceita_cargo||null,b.qual_cargo||null,b.contribuicao_grupo||null,b.ideia_inovadora||null,b.tema_interesse||null,b.porque_lauro,b.apresentacao,req.params.id];
+      if(fk)p.push(fk);
+      await query('UPDATE ligantes SET nome=$1,data_nascimento=$2,sexo=$3,email=$4,email_alternativo=$5,whatsapp=$6,rg=$7,cpf=$8,semestre=$9,turma=$10,catraca=$11,orcid=$12,tem_formacao=$13,qual_formacao=$14,habilidades=$15,aceita_cargo=$16,qual_cargo=$17,contribuicao_grupo=$18,ideia_inovadora=$19,tema_interesse=$20,porque_lauro=$21,apresentacao=$22'+fu+' WHERE id=$23',p);
+      await logAtividade(req.session.usuario.id,'LIGANTE_EDITADO','Ligante editado: '+b.nome,req);
+      req.session.msg=['Ligante atualizado!'];res.redirect('/ligantes');
+    });
+  }catch(e){req.session.erro=[e.message];res.redirect('/ligantes');}
 });
 
 router.post('/ligantes/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
