@@ -2300,4 +2300,171 @@ router.post('/desvinculacoes/:id/editar', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=[e.message]; res.redirect('/desvinculacoes'); }
 });
 
+
+// ─── CARTA DE COBRANÇA ────────────────────────────────────────────────────────
+
+function gerarHTMLCartaCobranca(pessoa, config, carta) {
+  const timbrado = config.timbrado_b64 || null;
+  const presidente = config.assinatura_presidente_b64 || null;
+  const nomePresidente = (config.presidente_nome || 'MANUEL FERNANDO MACEDO NETO').toUpperCase();
+  const d = new Date(carta.data || new Date());
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const dataStr = d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
+  const mesRef = carta.mes_referencia || '___________';
+  const venc = carta.vencimento ? new Date(carta.vencimento).toLocaleDateString('es-PY') : '___________';
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Times New Roman',serif; font-size:11pt; color:#000; }
+.pagina { width:210mm; height:297mm; position:relative; overflow:hidden; }
+.bg { position:absolute; top:0; left:0; width:210mm; height:297mm; z-index:0; }
+.bg img { width:210mm; height:297mm; display:block; }
+.texto { position:absolute; top:52mm; left:22mm; width:166mm; height:203mm; z-index:1; display:flex; flex-direction:column; }
+.titulo { font-size:13pt; font-weight:bold; text-align:center; margin-bottom:6px; text-transform:uppercase; }
+.subtitulo { font-size:11pt; font-weight:bold; text-align:center; margin-bottom:14px; text-transform:uppercase; }
+.corpo { text-align:justify; line-height:1.55; flex:1; }
+.corpo p { margin-bottom:8px; }
+.assinaturas { display:flex; flex-direction:column; gap:10px; align-items:center; margin-top:10px; }
+.assinatura-bloco { text-align:center; width:70%; }
+.assinatura-img-wrap { height:50px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:3px; }
+.assinatura-img { max-height:50px; max-width:130px; object-fit:contain; }
+.linha { border-top:1.5px solid #000; width:90%; margin:0 auto 3px; }
+.assinatura-nome { font-weight:bold; font-size:8.5pt; text-transform:uppercase; }
+.assinatura-cargo { font-size:8pt; margin-top:2px; }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <div class="bg">${timbrado ? `<img src="${timbrado}">` : ''}</div>
+  <div class="texto">
+    <div class="titulo">Carta de Cobro — LAURO</div>
+    <div class="subtitulo">Pago Mensual Vencido</div>
+    <div class="corpo">
+      <p>Ciudad del Este/PY, ${dataStr}.</p>
+      <p>Estimado/a señor/a <strong>${pessoa.nome || '___________'}</strong>,</p>
+      <p>Esperamos que este mensaje le encuentre bien.</p>
+      <p>Nos ponemos en contacto con usted en nombre de LAURO – Liga Académica de Urología para recordarle que su cuota de membresía está vencida. Como ya le informamos, las cuotas de membresía vencen el día 15 de cada mes.</p>
+      <p>Hasta la fecha, no hemos recibido el pago de la cuota mensual correspondiente al mes de <strong>${mesRef}</strong>, cuyo vencimiento fue el <strong>${venc}</strong>. Solicitamos amablemente que se abone la deuda lo antes posible para evitar cualquier restricción en la participación en las actividades de la Liga.</p>
+      <p>Si ya ha realizado el pago, ignore este mensaje o, si es posible, envíenos el comprobante de pago para su verificación.</p>
+      <p>Estamos a su disposición para responder cualquier pregunta o proporcionar aclaraciones.</p>
+      <p>Atentamente,</p>
+    </div>
+    <div class="assinaturas">
+      <div class="assinatura-bloco">
+        <div class="assinatura-img-wrap">${presidente ? `<img src="${presidente}" class="assinatura-img">` : ''}</div>
+        <div class="linha"></div>
+        <div class="assinatura-nome">${nomePresidente}</div>
+        <div class="assinatura-cargo">Director(a) Financiero(a)<br>LAURO – Liga Académica de Urología</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>`;
+}
+
+async function prepararConfigCobranca(config) {
+  const { imagemBase64 } = require('../services/desligamento');
+  config.timbrado_b64 = await imagemBase64(config.timbrado_chave);
+  config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
+  return config;
+}
+
+async function buscarPessoaCarta(carta) {
+  let pessoa = {};
+  if (carta.membro_id) {
+    const r = await query('SELECT * FROM membros WHERE id=$1', [carta.membro_id]);
+    pessoa = r.rows[0] || {};
+  } else if (carta.ligante_id) {
+    const r = await query('SELECT * FROM ligantes WHERE id=$1', [carta.ligante_id]);
+    pessoa = r.rows[0] || {};
+  }
+  return pessoa;
+}
+
+router.get('/carta-cobranca', requireAuth, async (req, res) => {
+  const config = await getConfig();
+  const msg = req.session.msg || []; req.session.msg = [];
+  const erro = req.session.erro || []; req.session.erro = [];
+  const [cartasR, membrosR, ligantesR] = await Promise.all([
+    query(`SELECT c.*, COALESCE(m.nome,l.nome) as pessoa_nome, COALESCE(m.email,l.email) as pessoa_email FROM cartas_cobranca c LEFT JOIN membros m ON m.id=c.membro_id LEFT JOIN ligantes l ON l.id=c.ligante_id ORDER BY c.criado_em DESC`),
+    query('SELECT id,nome,email FROM membros WHERE ativo=1 ORDER BY nome'),
+    query('SELECT id,nome,email FROM ligantes WHERE ativo=1 ORDER BY nome')
+  ]);
+  res.render('pages/carta-cobranca', { config, usuario: req.session.usuario, msg, erro, cartas: cartasR.rows, membros: membrosR.rows, ligantes: ligantesR.rows });
+});
+
+router.post('/carta-cobranca', requireAuth, async (req, res) => {
+  const { membro_id, ligante_id, mes_referencia, vencimento } = req.body;
+  const mid = membro_id && membro_id !== '' ? parseInt(membro_id) : null;
+  const lid = ligante_id && ligante_id !== '' ? parseInt(ligante_id) : null;
+  await query('INSERT INTO cartas_cobranca (membro_id, ligante_id, mes_referencia, vencimento, criado_por) VALUES ($1,$2,$3,$4,$5)',
+    [mid, lid, mes_referencia, vencimento || null, req.session.usuario.id]);
+  req.session.msg = ['Carta criada!'];
+  res.redirect('/carta-cobranca');
+});
+
+router.get('/carta-cobranca/:id/visualizar', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT * FROM cartas_cobranca WHERE id=$1', [req.params.id]);
+    if (!r.rows[0]) return res.status(404).send('Nao encontrado');
+    const carta = r.rows[0];
+    const pessoa = await buscarPessoaCarta(carta);
+    const config = await prepararConfigCobranca(await getConfig());
+    const html = gerarHTMLCartaCobranca(pessoa, config, carta);
+    res.send(html);
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
+router.get('/carta-cobranca/:id/imprimir', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT * FROM cartas_cobranca WHERE id=$1', [req.params.id]);
+    if (!r.rows[0]) return res.status(404).send('Nao encontrado');
+    const carta = r.rows[0];
+    const pessoa = await buscarPessoaCarta(carta);
+    const config = await prepararConfigCobranca(await getConfig());
+    let html = gerarHTMLCartaCobranca(pessoa, config, carta);
+    html = html.replace('</body>', '<script>window.onload=function(){window.print()}</script></body>');
+    res.send(html);
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
+async function enviarCartaCobranca(id, req, res, reenvio) {
+  try {
+    const r = await query('SELECT * FROM cartas_cobranca WHERE id=$1', [id]);
+    if (!r.rows[0]) { req.session.erro=['Nao encontrado.']; return res.redirect('/carta-cobranca'); }
+    const carta = r.rows[0];
+    const pessoa = await buscarPessoaCarta(carta);
+    if (!pessoa.email) { req.session.erro=['Email nao cadastrado.']; return res.redirect('/carta-cobranca'); }
+    const config = await prepararConfigCobranca(await getConfig());
+    const html = gerarHTMLCartaCobranca(pessoa, config, carta);
+    const htmlPdf = require('html-pdf-node');
+    const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({ host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT, auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS } });
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER, to: pessoa.email,
+      subject: 'Carta de Cobro — LAURO' + (reenvio ? ' (Reenvío)' : ''),
+      html: `<p>Estimado(a) <strong>${pessoa.nome}</strong>,</p><p>Adjunto encontrará su Carta de Cobro de la Liga Académica de Urología - LAURO.</p><p>Si ya realizó el pago, por favor envíenos el comprobante respondiendo este email.</p><p>Atentamente,<br>Dirección Financiera — LAURO</p>`,
+      attachments: [{ filename: 'carta-cobro-LAURO.pdf', content: pdfBuffer, contentType: 'application/pdf' }]
+    });
+    await query('UPDATE cartas_cobranca SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', id]);
+    req.session.msg = ['Email enviado para ' + pessoa.email + '!'];
+    res.redirect('/carta-cobranca');
+  } catch(e) { req.session.erro=['Erro: ' + e.message]; res.redirect('/carta-cobranca'); }
+}
+
+router.post('/carta-cobranca/:id/enviar', requireAuth, (req, res) => enviarCartaCobranca(req.params.id, req, res, false));
+router.post('/carta-cobranca/:id/reenviar', requireAuth, (req, res) => enviarCartaCobranca(req.params.id, req, res, true));
+
+router.post('/carta-cobranca/:id/deletar', requireAuth, async (req, res) => {
+  await query('DELETE FROM cartas_cobranca WHERE id=$1', [req.params.id]);
+  req.session.msg = ['Carta excluída!'];
+  res.redirect('/carta-cobranca');
+});
+
 module.exports = router;
