@@ -12,7 +12,6 @@ const R2 = new S3Client({
 });
 const BUCKET = process.env.R2_BUCKET || 'liga-urologia-files';
 
-// Baixa imagem do R2 e converte para base64
 async function imagemBase64(chave) {
   if (!chave) return null;
   try {
@@ -29,7 +28,6 @@ async function imagemBase64(chave) {
   }
 }
 
-// Gera HTML do documento de desligamento
 function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
   const dataFormatada = new Date(data).toLocaleDateString('es-PY', {
     day: '2-digit', month: '2-digit', year: 'numeric'
@@ -52,7 +50,6 @@ function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Times New Roman', serif; font-size: 12pt; color: #000; padding: 40px 60px; position: relative; min-height: 297mm; }
-  .fundo-timbrado { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: -1; object-fit: cover; }
   .titulo { text-align: center; font-size: 14pt; font-weight: bold; text-transform: uppercase; margin-bottom: 30px; letter-spacing: 1px; padding-bottom: 10px; border-bottom: 1px solid #000; }
   .corpo { text-align: justify; line-height: 2; margin-bottom: 20px; }
   .corpo p { margin-bottom: 14px; }
@@ -68,13 +65,10 @@ function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
 </style>
 </head>
 <body>
-
-  ${timbradoSrc ? `<img class="fundo-timbrado" src="${timbradoSrc}">` : ''}
-
+  ${timbradoSrc ? `<img src="${timbradoSrc}" style="position:fixed;top:0;left:0;width:100vw;height:100vh;object-fit:cover;z-index:0;pointer-events:none;">` : ''}
+  <div style="position:relative;z-index:1">
   <div class="espacador"></div>
-
   <div class="titulo">Carta de Rescisión de la Liga Académica de Urología</div>
-
   <div class="corpo">
     <p>Yo, <strong>${membro.nome}</strong>, estudiante de Medicina, con CATRACA: <strong>${catraca}</strong>, portador del documento de identidad (RG): <strong>${rg}</strong>, por medio de la presente, comunico mi decisión de renunciar al cargo de <strong>${cargo}</strong> de la Liga Académica de Urología - LAURO, con sede en la Universidad Central del Paraguay, en Ciudad del Este - PY, debido a razones personales/profesionales.</p>
     <p>Agradezco la oportunidad brindada y la colaboración de todos los miembros de la Liga durante mi tiempo de participación.</p>
@@ -82,9 +76,7 @@ function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
     <p>Sin otro particular, quedo a disposición para formalizar cualquier detalle relacionado con mi salida del cargo.</p>
     <p>Atentamente,</p>
   </div>
-
   <div class="data">Ciudad del Este, ${dia} / ${mes} / ${ano}</div>
-
   <div class="assinaturas">
     <div class="assinatura-bloco">
       <div class="assinatura-img-wrap"></div>
@@ -92,7 +84,6 @@ function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
       <div class="assinatura-nome">${membro.nome}</div>
       <div class="assinatura-cargo">${tipoMembro}<br>Estudiante de Medicina – Universidad Central del Paraguay</div>
     </div>
-
     <div class="assinatura-bloco">
       <div class="assinatura-img-wrap">
         ${presidenteSrc ? `<img src="${presidenteSrc}" class="assinatura-img">` : ''}
@@ -101,7 +92,6 @@ function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
       <div class="assinatura-nome">${config.presidente_nome || 'MANUEL FERNANDO MACEDO NETO'}</div>
       <div class="assinatura-cargo">PRESIDENTE</div>
     </div>
-
     <div class="assinatura-bloco">
       <div class="assinatura-img-wrap">
         ${secretarioSrc ? `<img src="${secretarioSrc}" class="assinatura-img">` : ''}
@@ -111,7 +101,7 @@ function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
       <div class="assinatura-cargo">SECRETÁRIO</div>
     </div>
   </div>
-
+  </div>
 </body>
 </html>`;
 }
