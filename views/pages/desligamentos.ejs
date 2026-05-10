@@ -89,6 +89,7 @@
               <td>
                 <div class="btn-acoes">
                   <a href="/desligamentos/<%= d.id %>/visualizar" target="_blank" class="btn" style="font-size:11px;padding:4px 8px" title="Visualizar documento">👁</a>
+                  <a href="/desligamentos/<%= d.id %>/imprimir" target="_blank" class="btn" style="font-size:11px;padding:4px 8px;background:#6366f1;color:white" title="Imprimir PDF">🖨️</a>
                   <% if (d.status === 'pendente') { %>
                   <form action="/desligamentos/<%= d.id %>/enviar" method="POST" style="display:inline" onsubmit="return confirm('Enviar documento por email para <%= d.membro_nome %>?')">
                     <button class="btn btn-primario" style="font-size:11px;padding:4px 8px" title="Enviar por email">📧</button>
