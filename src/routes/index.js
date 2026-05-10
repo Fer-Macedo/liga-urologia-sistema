@@ -2196,13 +2196,13 @@ body { font-family:'Times New Roman',serif; font-size:11pt; color:#000; }
     </div>
     <div class="assinaturas">
       <div class="assinatura-bloco">
-        <div class="assinatura-img-wrap">${presidenteSrc ? `<img src="${presidente}" class="assinatura-img">` : ''}</div>
+        <div class="assinatura-img-wrap">${presidenteSrc ? `<img src="${presidenteSrc}" class="assinatura-img">` : ''}</div>
         <div class="linha"></div>
         <div class="assinatura-nome">${nomePresidente}</div>
         <div class="assinatura-cargo">PRESIDENTE — LAURO</div>
       </div>
       <div class="assinatura-bloco">
-        <div class="assinatura-img-wrap">${secretarioSrc ? `<img src="${secretario}" class="assinatura-img">` : ''}</div>
+        <div class="assinatura-img-wrap">${secretarioSrc ? `<img src="${secretarioSrc}" class="assinatura-img">` : ''}</div>
         <div class="linha"></div>
         <div class="assinatura-nome">${nomeSecretario}</div>
         <div class="assinatura-cargo">SECRETÁRIO — LAURO</div>
@@ -2365,7 +2365,7 @@ body { font-family:'Times New Roman',serif; font-size:11pt; color:#000; }
     </div>
     <div class="assinaturas">
       <div class="assinatura-bloco">
-        <div class="assinatura-img-wrap">${financeiroSrc ? `<img src="${presidente}" class="assinatura-img">` : ''}</div>
+        <div class="assinatura-img-wrap">${financeiroSrc ? `<img src="${presidenteSrc}" class="assinatura-img">` : ''}</div>
         <div class="linha"></div>
         <div class="assinatura-nome">${nomeFinanceiro}</div>
         <div class="assinatura-cargo">Director(a) Financiero(a)<br>LAURO – Liga Académica de Urología</div>
