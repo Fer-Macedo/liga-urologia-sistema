@@ -27,7 +27,8 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.9",
     "pg": "^8.11.3",
-    "xss": "^1.0.14"
+    "xss": "^1.0.14",
+    "puppeteer": "^22.0.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.3"
