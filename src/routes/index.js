@@ -1452,9 +1452,14 @@ router.get('/desligamentos/:id/visualizar', requireAuth, async (req, res) => {
 
 router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
   try {
-    const r = await query('SELECT d.*, m.nome, m.email, m.catraca, m.rg, m.cargo FROM desligamentos d JOIN membros m ON m.id=d.membro_id WHERE d.id=$1', [req.params.id]);
-    const d = r.rows[0];
-    if (!d) { req.session.erro = ['Não encontrado.']; return res.redirect('/desligamentos'); }
+    const rd = await query('SELECT * FROM desligamentos WHERE id=$1', [req.params.id]);
+    if (!rd.rows[0]) { req.session.erro = ['Não encontrado.']; return res.redirect('/desligamentos'); }
+    const desl = rd.rows[0];
+    let pessoa = {};
+    if (desl.membro_id) { const rm = await query('SELECT * FROM membros WHERE id=$1', [desl.membro_id]); pessoa = rm.rows[0] || {}; }
+    else if (desl.ligante_id) { const rl = await query('SELECT * FROM ligantes WHERE id=$1', [desl.ligante_id]); pessoa = rl.rows[0] || {}; }
+    const d = { ...desl, ...pessoa };
+    if (!d.email) { req.session.erro = ['Email não cadastrado.']; return res.redirect('/desligamentos'); }
 
     const config = await getConfig();
     const { gerarHTMLDesligamento, imagemBase64 } = require('../services/desligamento');
@@ -2008,6 +2013,27 @@ router.get('/financeiro-arquivos/:id/url', requireAuth, async (req, res) => {
     const url = await getUrlAssinada(a.chave_r2);
     res.json({ url });
   } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+
+router.get('/desligamentos/:id/imprimir', requireAuth, async (req, res) => {
+  try {
+    const rd = await query('SELECT * FROM desligamentos WHERE id=$1', [req.params.id]);
+    if (!rd.rows[0]) return res.status(404).send('Nao encontrado');
+    const desl = rd.rows[0];
+    let pessoa = {};
+    if (desl.membro_id) { const rm = await query('SELECT * FROM membros WHERE id=$1', [desl.membro_id]); pessoa = rm.rows[0] || {}; }
+    else if (desl.ligante_id) { const rl = await query('SELECT * FROM ligantes WHERE id=$1', [desl.ligante_id]); pessoa = rl.rows[0] || {}; }
+    const d = { ...desl, ...pessoa };
+    const config = await getConfig();
+    const { gerarHTMLDesligamento, imagemBase64 } = require('../services/desligamento');
+    config.timbrado_b64 = await imagemBase64(config.timbrado_chave);
+    config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
+    config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
+    let html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
+    html = html.replace('</body>', '<script>window.onload=function(){window.print()}</script></body>');
+    res.send(html);
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
 module.exports = router;
