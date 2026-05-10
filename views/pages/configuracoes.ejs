@@ -60,7 +60,7 @@
         </form>
       </div>
 
-      <form action="/configuracoes" method="POST">
+      <form action="/configuracoes" method="POST" enctype="multipart/form-data">
 
         <div class="config-secao">
           <div class="config-secao-titulo">🎨 Identidade visual</div>
@@ -173,7 +173,20 @@
           </div>
         </div>
 
-        <div style="display:flex;justify-content:flex-end;margin-top:8px">
+        
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-titulo">✍️ Assinaturas e Documentos</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="campo"><label class="label">Nome do Presidente</label><input name="presidente_nome" class="input" value="<%= config.presidente_nome || '' %>" placeholder="MANUEL FERNANDO MACEDO NETO"></div>
+            <div class="campo"><label class="label">Assinatura do Presidente</label><input type="file" name="assinatura_presidente" class="input" accept="image/*"><% if (config.assinatura_presidente_chave) { %><span style="font-size:11px;color:green">✅ Cadastrada</span><% } %></div>
+            <div class="campo"><label class="label">Nome do Secretário</label><input name="secretario_nome" class="input" value="<%= config.secretario_nome || '' %>"></div>
+            <div class="campo"><label class="label">Assinatura do Secretário</label><input type="file" name="assinatura_secretario" class="input" accept="image/*"><% if (config.assinatura_secretario_chave) { %><span style="font-size:11px;color:green">✅ Cadastrada</span><% } %></div>
+            <div class="campo"><label class="label">Nome do Dir. Financeiro(a)</label><input name="financeiro_nome" class="input" value="<%= config.financeiro_nome || '' %>"></div>
+            <div class="campo"><label class="label">Assinatura do Dir. Financeiro(a)</label><input type="file" name="assinatura_financeiro" class="input" accept="image/*"><% if (config.assinatura_financeiro_chave) { %><span style="font-size:11px;color:green">✅ Cadastrada</span><% } %></div>
+            <div class="campo" style="grid-column:1/-1"><label class="label">Papel Timbrado A4</label><input type="file" name="timbrado" class="input" accept="image/*"><% if (config.timbrado_chave) { %><span style="font-size:11px;color:green">✅ Cadastrado</span><% } %></div>
+          </div>
+        </div>
+<div style="display:flex;justify-content:flex-end;margin-top:8px">
           <button type="submit" class="btn btn-primario" style="padding:12px 32px;font-size:14px">💾 Salvar configurações</button>
         </div>
 
