@@ -61,19 +61,19 @@ html, body { width:210mm; height:297mm; overflow:hidden; }
   z-index: 1;
   width: 210mm;
   min-height: 297mm;
-  padding: 55mm 22mm 40mm 22mm;
+  padding: 38mm 20mm 30mm 20mm;
   font-family: 'Times New Roman', serif;
-  font-size: 11pt;
+  font-size: 9.5pt;
   color: #000;
 }
-.titulo { text-align:center; font-size:13pt; font-weight:bold; text-transform:uppercase; margin-bottom:25px; }
-.corpo { text-align:justify; line-height:1.6; }
-.corpo p { margin-bottom:10px; }
-.data { text-align:right; margin:20px 0; font-size:11pt; }
-.assinaturas { display:flex; justify-content:space-around; margin-top:40px; gap:15px; }
+.titulo { text-align:center; font-size:13pt; font-weight:bold; text-transform:uppercase; margin-bottom:8px; }
+.corpo { text-align:justify; line-height:1.4; }
+.corpo p { margin-bottom:4px; }
+.data { text-align:right; margin:6px 0; font-size:11pt; }
+.assinaturas { display:flex; justify-content:space-around; margin-top:12px; gap:15px; }
 .assinatura-bloco { text-align:center; flex:1; }
-.assinatura-img-wrap { height:70px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:4px; }
-.assinatura-img { max-height:70px; max-width:160px; object-fit:contain; }
+.assinatura-img-wrap { height:45px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:4px; }
+.assinatura-img { max-height:45px; max-width:160px; object-fit:contain; }
 .linha-assinatura { border-top:1.5px solid #000; width:90%; margin:0 auto 5px; }
 .assinatura-nome { font-weight:bold; font-size:10pt; text-transform:uppercase; }
 .assinatura-cargo { font-size:9pt; margin-top:3px; }
