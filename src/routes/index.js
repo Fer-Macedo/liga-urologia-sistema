@@ -374,7 +374,7 @@ router.get('/configuracoes', requireAuth, requirePermissao('configuracoes'), asy
 });
 
 router.post('/configuracoes', requireAuth, requireAdmin, async (req, res) => {
-  const campos = ['org_nome','org_cor','mensalidade_padrao','desconto_padrao','dia_vencimento_padrao','multa_atraso'];
+  const campos = ['org_nome','org_cor','mensalidade_padrao','desconto_padrao','dia_vencimento_padrao','multa_atraso','presidente_nome','secretario_nome','financeiro_nome'];
   for (const c of campos) {
     if (req.body[c] !== undefined) {
       await query('INSERT INTO configuracoes (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', [c, req.body[c]]);
@@ -388,8 +388,18 @@ router.post('/configuracoes', requireAuth, requireAdmin, async (req, res) => {
       await query('INSERT INTO configuracoes (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', [c, val]);
     }
   }
-  req.flash('msg', 'Configurações salvas!');
-  res.redirect('/configuracoes');
+  const {upload:upCfg, uploadArquivo:upArqCfg} = require('../services/arquivos');
+  upCfg.fields([{name:'assinatura_presidente'},{name:'assinatura_secretario'},{name:'assinatura_financeiro'},{name:'timbrado'}])(req, res, async(err)=>{
+    for(const campo of ['assinatura_presidente','assinatura_secretario','assinatura_financeiro','timbrado']){
+      if(req.files && req.files[campo] && req.files[campo][0]){
+        const ff=req.files[campo][0];
+        const r=await upArqCfg(ff.buffer,ff.originalname,ff.mimetype,campo);
+        await query('INSERT INTO configuracoes (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2',[campo+'_chave',r.chave]);
+      }
+    }
+    req.flash('msg', 'Configurações salvas!');
+    res.redirect('/configuracoes');
+  });
 });
 
 router.post('/configuracoes/logo-url', requireAuth, requireAdmin, async (req, res) => {
@@ -2132,7 +2142,7 @@ async function gerarHTMLDesvinculacao(ligante, config, data) {
   const timbrado = config.timbrado_b64 || null;
   const presidente = config.assinatura_presidente_b64 || null;
   const secretario = config.assinatura_secretario_b64 || null;
-  const nomePresidente = (config.presidente_nome || 'MANUEL FERNANDO MACEDO NETO').toUpperCase();
+  const nomePresidente = (config.financeiro_nome || config.presidente_nome || 'MANUEL FERNANDO MACEDO NETO').toUpperCase();
   const nomeSecretario = (config.secretario_nome || 'KAUÊ TEIXEIRA LACERDA').toUpperCase();
   const d = new Date(data);
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
@@ -2306,7 +2316,7 @@ router.post('/desvinculacoes/:id/editar', requireAuth, async (req, res) => {
 function gerarHTMLCartaCobranca(pessoa, config, carta) {
   const timbrado = config.timbrado_b64 || null;
   const presidente = config.assinatura_presidente_b64 || null;
-  const nomePresidente = (config.presidente_nome || 'MANUEL FERNANDO MACEDO NETO').toUpperCase();
+  const nomePresidente = (config.financeiro_nome || config.presidente_nome || 'MANUEL FERNANDO MACEDO NETO').toUpperCase();
   const d = new Date(carta.data || new Date());
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const dataStr = d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
