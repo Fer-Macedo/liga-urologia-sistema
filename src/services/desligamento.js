@@ -71,8 +71,8 @@ body { font-family:'Times New Roman',serif; font-size:11pt; color:#000; }
 .corpo { text-align:justify; line-height:1.5; flex:1; }
 .corpo p { margin-bottom:7px; }
 .data { text-align:right; margin:8px 0; font-size:10pt; }
-.assinaturas { display:flex; justify-content:space-around; gap:8px; }
-.assinatura-bloco { text-align:center; flex:1; }
+.assinaturas { display:flex; flex-direction:column; gap:12px; align-items:center; }
+.assinatura-bloco { text-align:center; width:70%; }
 .assinatura-img-wrap { height:50px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:3px; }
 .assinatura-img { max-height:50px; max-width:130px; object-fit:contain; }
 .linha { border-top:1.5px solid #000; width:90%; margin:0 auto 3px; }
