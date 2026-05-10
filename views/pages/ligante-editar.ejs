@@ -18,7 +18,7 @@
       <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
       <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
 
-      <form action="/ligantes/<%= ligante.id %>/editar" method="POST">
+      <form action="/ligantes/<%= ligante.id %>/editar" method="POST" enctype="multipart/form-data">
         <div class="card" style="margin-bottom:20px">
           <div style="font-size:14px;font-weight:700;margin-bottom:16px">👤 Dados Pessoais</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
@@ -81,6 +81,14 @@
 
         <div style="display:flex;gap:12px;justify-content:flex-end">
           <a href="/ligantes" class="btn">Cancelar</a>
+          <div class="campo" style="margin-bottom:16px">
+            <label class="label">📷 Foto do Ligante</label>
+            <% if (ligante.foto_chave) { %>
+            <div style="margin-bottom:8px"><img src="/ligantes/<%= ligante.id %>/foto" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--borda)"></div>
+            <% } %>
+            <input type="file" name="foto" class="input" accept="image/*">
+            <span style="font-size:11px;color:var(--texto2)">Deixe em branco para manter a foto atual</span>
+          </div>
           <button type="submit" class="btn btn-primario">💾 Salvar alterações</button>
         </div>
       </form>
