@@ -1467,12 +1467,8 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
     // Gera PDF com puppeteer
-    const puppeteer = require('puppeteer');
-    const browser = await puppeteer.launch({ args: ['--no-sandbox','--disable-setuid-sandbox'] });
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-    await browser.close();
+    const htmlPdf = require('html-pdf-node');
+    const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
     const nodemailer = require('nodemailer');
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT,
@@ -2060,12 +2056,8 @@ router.post('/desligamentos/:id/reenviar', requireAuth, async (req, res) => {
     config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
-    const puppeteer = require('puppeteer');
-    const browser = await puppeteer.launch({args:['--no-sandbox','--disable-setuid-sandbox']});
-    const page = await browser.newPage();
-    await page.setContent(html, {waitUntil:'networkidle0'});
-    const pdfBuffer = await page.pdf({format:'A4',printBackground:true});
-    await browser.close();
+    const htmlPdf = require('html-pdf-node');
+    const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
     const nodemailer = require('nodemailer');
     const transporter = nodemailer.createTransport({host:process.env.EMAIL_HOST,port:process.env.EMAIL_PORT,auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS}});
     await transporter.sendMail({
