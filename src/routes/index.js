@@ -2140,8 +2140,8 @@ router.get('/desvinculacoes/:id/adv/:num', requireAuth, async (req, res) => {
 async function gerarHTMLDesvinculacao(ligante, config, data) {
   const { imagemBase64 } = require('../services/desligamento');
   const timbrado = config.timbrado_b64 || null;
-  const presidente = config.assinatura_presidente_b64 || null;
-  const secretario = config.assinatura_secretario_b64 || null;
+  const presidenteSrc = config.assinatura_presidente_b64 || null;
+  const secretarioSrc = config.assinatura_secretario_b64 || null;
   const nomePresidente = (config.presidente_nome || 'MANUEL FERNANDO MACEDO NETO').toUpperCase();
   const nomeSecretario = (config.secretario_nome || 'KAUÊ TEIXEIRA LACERDA').toUpperCase();
   const d = new Date(data);
@@ -2196,13 +2196,13 @@ body { font-family:'Times New Roman',serif; font-size:11pt; color:#000; }
     </div>
     <div class="assinaturas">
       <div class="assinatura-bloco">
-        <div class="assinatura-img-wrap">${presidente ? `<img src="${presidente}" class="assinatura-img">` : ''}</div>
+        <div class="assinatura-img-wrap">${presidenteSrc ? `<img src="${presidente}" class="assinatura-img">` : ''}</div>
         <div class="linha"></div>
         <div class="assinatura-nome">${nomePresidente}</div>
         <div class="assinatura-cargo">PRESIDENTE — LAURO</div>
       </div>
       <div class="assinatura-bloco">
-        <div class="assinatura-img-wrap">${secretario ? `<img src="${secretario}" class="assinatura-img">` : ''}</div>
+        <div class="assinatura-img-wrap">${secretarioSrc ? `<img src="${secretario}" class="assinatura-img">` : ''}</div>
         <div class="linha"></div>
         <div class="assinatura-nome">${nomeSecretario}</div>
         <div class="assinatura-cargo">SECRETÁRIO — LAURO</div>
