@@ -2072,4 +2072,172 @@ router.post('/desligamentos/:id/reenviar', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/desligamentos'); }
 });
 
+
+// ─── DESVINCULAÇÕES ────────────────────────────────────────────────────────────
+
+router.get('/desvinculacoes', requireAuth, async (req, res) => {
+  const config = await getConfig();
+  const msg = req.session.msg || []; req.session.msg = [];
+  const erro = req.session.erro || []; req.session.erro = [];
+  const [desvR, ligR] = await Promise.all([
+    query(`SELECT d.*, l.nome as ligante_nome, l.email as ligante_email FROM desvinculacoes d LEFT JOIN ligantes l ON l.id=d.ligante_id ORDER BY d.criado_em DESC`),
+    query('SELECT id,nome,email FROM ligantes WHERE ativo=1 ORDER BY nome')
+  ]);
+  res.render('pages/desvinculacoes', { config, usuario: req.session.usuario, msg, erro, desvinculacoes: desvR.rows, ligantes: ligR.rows });
+});
+
+router.post('/desvinculacoes', requireAuth, async (req, res) => {
+  const { ligante_id, data_solicitacao, motivo } = req.body;
+  const lid = ligante_id && ligante_id !== '' ? parseInt(ligante_id) : null;
+  await query('INSERT INTO desvinculacoes (ligante_id, data_solicitacao, motivo, criado_por) VALUES ($1,$2,$3,$4)',
+    [lid, data_solicitacao || new Date(), motivo || null, req.session.usuario.id]);
+  req.session.msg = ['Desvinculação criada!'];
+  res.redirect('/desvinculacoes');
+});
+
+async function gerarHTMLDesvinculacao(ligante, config, data) {
+  const { imagemBase64 } = require('../services/desligamento');
+  const timbrado = config.timbrado_b64 || null;
+  const presidente = config.assinatura_presidente_b64 || null;
+  const secretario = config.assinatura_secretario_b64 || null;
+  const nomePresidente = (config.presidente_nome || 'MANUEL FERNANDO MACEDO NETO').toUpperCase();
+  const nomeSecretario = (config.secretario_nome || 'KAUÊ TEIXEIRA LACERDA').toUpperCase();
+  const d = new Date(data);
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const dataStr = d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Times New Roman',serif; font-size:11pt; color:#000; }
+.pagina { width:210mm; height:297mm; position:relative; overflow:hidden; }
+.bg { position:absolute; top:0; left:0; width:210mm; height:297mm; z-index:0; }
+.bg img { width:210mm; height:297mm; display:block; }
+.texto { position:absolute; top:52mm; left:22mm; width:166mm; height:203mm; z-index:1; display:flex; flex-direction:column; }
+.titulo { font-size:11pt; font-weight:bold; margin-bottom:10px; }
+.corpo { text-align:justify; line-height:1.5; flex:1; }
+.corpo p { margin-bottom:7px; }
+.corpo ul { margin:5px 0 7px 20px; }
+.corpo ul li { margin-bottom:3px; }
+.assinaturas { display:flex; flex-direction:column; gap:10px; align-items:center; }
+.assinatura-bloco { text-align:center; width:70%; }
+.assinatura-img-wrap { height:50px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:3px; }
+.assinatura-img { max-height:50px; max-width:130px; object-fit:contain; }
+.linha { border-top:1.5px solid #000; width:90%; margin:0 auto 3px; }
+.assinatura-nome { font-weight:bold; font-size:8.5pt; text-transform:uppercase; }
+.assinatura-cargo { font-size:8pt; margin-top:2px; }
+</style>
+</head>
+<body>
+<div class="pagina">
+  <div class="bg">${timbrado ? `<img src="${timbrado}">` : ''}</div>
+  <div class="texto">
+    <div class="titulo">Liga Académica de Urología - LAURO<br>Universidad Central del Paraguay</div>
+    <div class="corpo">
+      <p>Ciudad del Este, ${dataStr}.</p>
+      <p>Al(la) Sr(a). <strong>${ligante.nome}</strong></p>
+      <p><strong>Asunto: Carta de desvinculación de la Liga Académica de Urología - LAURO</strong></p>
+      <p>Estimado(a) ${ligante.nome.split(' ')[0]},</p>
+      <p>De acuerdo con el Estatuto y el Reglamento Interno de la Liga Académica de Urología, los miembros (ligantes) deben cumplir con criterios indispensables para mantener su condición de activos, entre ellos:</p>
+      <ul>
+        <li>Participación regular en las actividades de la Liga;</li>
+        <li>Estar en posesión del uniforme de la Liga;</li>
+        <li>Estar al día con las mensualidades, según lo estipulado en el contrato firmado en la entrevista de ingreso.</li>
+      </ul>
+      <p>Sin embargo, tras la evaluación y registro, se constató que Vd. no cumplió con dichos criterios durante el período de su participación. Señalamos que, a lo largo del proceso, se emitieron tres advertencias por escrito, las cuales no fueron debidamente atendidas.</p>
+      <p>En vista de lo expuesto y en conformidad con nuestras normas estatutarias y reglamentarias, comunicamos que, a partir de esta fecha, Vd. queda desvinculado(a) de la Liga Académica de Urología.</p>
+      <p>Agradecemos la colaboración prestada hasta el momento y nos ponemos a disposición para cualquier aclaración que sea necesaria.</p>
+      <p>Atentamente,</p>
+    </div>
+    <div class="assinaturas">
+      <div class="assinatura-bloco">
+        <div class="assinatura-img-wrap">${presidente ? `<img src="${presidente}" class="assinatura-img">` : ''}</div>
+        <div class="linha"></div>
+        <div class="assinatura-nome">${nomePresidente}</div>
+        <div class="assinatura-cargo">PRESIDENTE — LAURO</div>
+      </div>
+      <div class="assinatura-bloco">
+        <div class="assinatura-img-wrap">${secretario ? `<img src="${secretario}" class="assinatura-img">` : ''}</div>
+        <div class="linha"></div>
+        <div class="assinatura-nome">${nomeSecretario}</div>
+        <div class="assinatura-cargo">SECRETÁRIO — LAURO</div>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>`;
+}
+
+async function prepararConfigDesvinc(config) {
+  const { imagemBase64 } = require('../services/desligamento');
+  config.timbrado_b64 = await imagemBase64(config.timbrado_chave);
+  config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
+  config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
+  return config;
+}
+
+router.get('/desvinculacoes/:id/visualizar', requireAuth, async (req, res) => {
+  try {
+    const rd = await query('SELECT * FROM desvinculacoes WHERE id=$1', [req.params.id]);
+    if (!rd.rows[0]) return res.status(404).send('Não encontrado');
+    const desl = rd.rows[0];
+    const rl = await query('SELECT * FROM ligantes WHERE id=$1', [desl.ligante_id]);
+    const ligante = rl.rows[0] || {};
+    const config = await prepararConfigDesvinc(await getConfig());
+    const html = await gerarHTMLDesvinculacao(ligante, config, desl.data_solicitacao);
+    res.send(html);
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
+router.get('/desvinculacoes/:id/imprimir', requireAuth, async (req, res) => {
+  try {
+    const rd = await query('SELECT * FROM desvinculacoes WHERE id=$1', [req.params.id]);
+    if (!rd.rows[0]) return res.status(404).send('Não encontrado');
+    const rl = await query('SELECT * FROM ligantes WHERE id=$1', [rd.rows[0].ligante_id]);
+    const config = await prepararConfigDesvinc(await getConfig());
+    let html = await gerarHTMLDesvinculacao(rl.rows[0] || {}, config, rd.rows[0].data_solicitacao);
+    html = html.replace('</body>', '<script>window.onload=function(){window.print()}</script></body>');
+    res.send(html);
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
+async function enviarEmailDesvinc(id, req, res, reenvio) {
+  try {
+    const rd = await query('SELECT * FROM desvinculacoes WHERE id=$1', [id]);
+    if (!rd.rows[0]) { req.session.erro=['Não encontrado.']; return res.redirect('/desvinculacoes'); }
+    const desl = rd.rows[0];
+    const rl = await query('SELECT * FROM ligantes WHERE id=$1', [desl.ligante_id]);
+    const ligante = rl.rows[0] || {};
+    if (!ligante.email) { req.session.erro=['Email não cadastrado.']; return res.redirect('/desvinculacoes'); }
+    const config = await prepararConfigDesvinc(await getConfig());
+    const html = await gerarHTMLDesvinculacao(ligante, config, desl.data_solicitacao);
+    const htmlPdf = require('html-pdf-node');
+    const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({ host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT, auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS } });
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER, to: ligante.email,
+      subject: 'Carta de Desvinculación — Liga Académica de Urología LAURO' + (reenvio ? ' (Reenvío)' : ''),
+      html: `<p>Estimado(a) <strong>${ligante.nome}</strong>,</p><p>Adjunto encontrará su Carta de Desvinculación de la Liga Académica de Urología - LAURO.</p><p>En caso de dudas, responda este mismo email.</p><p>Atentamente,<br>Secretaría — LAURO</p>`,
+      attachments: [{ filename: 'carta-desvinculacion-LAURO.pdf', content: pdfBuffer, contentType: 'application/pdf' }]
+    });
+    await query('UPDATE desvinculacoes SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', id]);
+    req.session.msg = ['Email enviado para ' + ligante.email + '!'];
+    res.redirect('/desvinculacoes');
+  } catch(e) { req.session.erro=['Erro: ' + e.message]; res.redirect('/desvinculacoes'); }
+}
+
+router.post('/desvinculacoes/:id/enviar', requireAuth, (req, res) => enviarEmailDesvinc(req.params.id, req, res, false));
+router.post('/desvinculacoes/:id/reenviar', requireAuth, (req, res) => enviarEmailDesvinc(req.params.id, req, res, true));
+
+router.post('/desvinculacoes/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
+  await query('DELETE FROM desvinculacoes WHERE id=$1', [req.params.id]);
+  req.session.msg = ['Desvinculação excluída!'];
+  res.redirect('/desvinculacoes');
+});
+
 module.exports = router;
