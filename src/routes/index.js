@@ -1453,40 +1453,47 @@ router.get('/desligamentos/:id/visualizar', requireAuth, async (req, res) => {
 router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
   try {
     const rd = await query('SELECT * FROM desligamentos WHERE id=$1', [req.params.id]);
-    if (!rd.rows[0]) { req.session.erro = ['Não encontrado.']; return res.redirect('/desligamentos'); }
+    if (!rd.rows[0]) { req.session.erro = ['Nao encontrado.']; return res.redirect('/desligamentos'); }
     const desl = rd.rows[0];
     let pessoa = {};
     if (desl.membro_id) { const rm = await query('SELECT * FROM membros WHERE id=$1', [desl.membro_id]); pessoa = rm.rows[0] || {}; }
     else if (desl.ligante_id) { const rl = await query('SELECT * FROM ligantes WHERE id=$1', [desl.ligante_id]); pessoa = rl.rows[0] || {}; }
     const d = { ...desl, ...pessoa };
-    if (!d.email) { req.session.erro = ['Email não cadastrado.']; return res.redirect('/desligamentos'); }
-
+    if (!d.email) { req.session.erro = ['Email nao cadastrado.']; return res.redirect('/desligamentos'); }
     const config = await getConfig();
     const { gerarHTMLDesligamento, imagemBase64 } = require('../services/desligamento');
-    const nodemailer = require('nodemailer');
-
     config.timbrado_b64 = await imagemBase64(config.timbrado_chave);
     config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
-
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
-
+    // Gera PDF com puppeteer
+    const puppeteer = require('puppeteer');
+    const browser = await puppeteer.launch({ args: ['--no-sandbox','--disable-setuid-sandbox'] });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
+    await browser.close();
+    const nodemailer = require('nodemailer');
     const transporter = nodemailer.createTransport({
       host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT,
       auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
     });
-
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: d.email,
       subject: 'Carta de Rescisión — Liga Académica de Urología LAURO',
-      html: `<p>Estimado/a ${d.nome},</p>
-             <p>Adjunto encontrará su carta de rescisión de la Liga Académica de Urología LAURO.</p>
-             <p>Por favor, imprima, firme y devuelva el documento firmado a nuestro correo electrónico.</p>
-             <p>Atentamente,<br>Secretaría — LAURO</p>`,
-      attachments: [{ filename: 'carta-rescision-LAURO.html', content: html, contentType: 'text/html' }]
+      html: `<p>Estimado/a <strong>${d.nome}</strong>,</p>
+<p>Adjunto encontrará su Carta de Rescisión de la Liga Académica de Urología - LAURO.</p>
+<p><strong>Instrucciones:</strong></p>
+<ol>
+<li>Imprima el documento adjunto</li>
+<li>Firme en el espacio indicado</li>
+<li>Escanee o fotografíe el documento firmado</li>
+<li><strong>Responda este mismo email</strong> con el documento firmado adjunto</li>
+</ol>
+<p>Atentamente,<br>Secretaría — LAURO<br>Liga Académica de Urología</p>`,
+      attachments: [{ filename: 'carta-rescision-LAURO.pdf', content: pdfBuffer, contentType: 'application/pdf' }]
     });
-
     await query('UPDATE desligamentos SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', req.params.id]);
     await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_ENVIADO', 'Email enviado para: ' + d.email, req);
     req.session.msg = ['Email enviado com sucesso para ' + d.email + '!'];
