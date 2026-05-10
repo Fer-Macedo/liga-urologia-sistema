@@ -2087,12 +2087,44 @@ router.get('/desvinculacoes', requireAuth, async (req, res) => {
 });
 
 router.post('/desvinculacoes', requireAuth, async (req, res) => {
-  const { ligante_id, data_solicitacao, motivo } = req.body;
-  const lid = ligante_id && ligante_id !== '' ? parseInt(ligante_id) : null;
-  await query('INSERT INTO desvinculacoes (ligante_id, data_solicitacao, motivo, criado_por) VALUES ($1,$2,$3,$4)',
-    [lid, data_solicitacao || new Date(), motivo || null, req.session.usuario.id]);
-  req.session.msg = ['Desvinculação criada!'];
-  res.redirect('/desvinculacoes');
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.fields([{name:'adv1'},{name:'adv2'},{name:'adv3'}])(req, res, async (err) => {
+      const { ligante_id, data_solicitacao, motivo, num_advertencias } = req.body;
+      const lid = ligante_id && ligante_id !== '' ? parseInt(ligante_id) : null;
+      let adv1=null, adv2=null, adv3=null;
+      if (req.files && req.files.adv1 && req.files.adv1[0]) {
+        const f = req.files.adv1[0];
+        const r = await uploadArquivo(f.buffer, f.originalname, f.mimetype, 'advertencias');
+        adv1 = r.chave;
+      }
+      if (req.files && req.files.adv2 && req.files.adv2[0]) {
+        const f = req.files.adv2[0];
+        const r = await uploadArquivo(f.buffer, f.originalname, f.mimetype, 'advertencias');
+        adv2 = r.chave;
+      }
+      if (req.files && req.files.adv3 && req.files.adv3[0]) {
+        const f = req.files.adv3[0];
+        const r = await uploadArquivo(f.buffer, f.originalname, f.mimetype, 'advertencias');
+        adv3 = r.chave;
+      }
+      await query('INSERT INTO desvinculacoes (ligante_id, data_solicitacao, motivo, num_advertencias, adv1_chave, adv2_chave, adv3_chave, criado_por) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+        [lid, data_solicitacao || new Date(), motivo || null, parseInt(num_advertencias)||3, adv1, adv2, adv3, req.session.usuario.id]);
+      req.session.msg = ['Desvinculação criada!'];
+      res.redirect('/desvinculacoes');
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/desvinculacoes'); }
+});
+
+router.get('/desvinculacoes/:id/adv/:num', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT adv'+req.params.num+'_chave as chave FROM desvinculacoes WHERE id=$1', [req.params.id]);
+    const chave = r.rows[0]?.chave;
+    if (!chave) return res.status(404).send('Não encontrado');
+    const { getUrlAssinada } = require('../services/desligamento');
+    const url = await getUrlAssinada(chave);
+    res.redirect(url);
+  } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
 async function gerarHTMLDesvinculacao(ligante, config, data) {
@@ -2147,7 +2179,7 @@ body { font-family:'Times New Roman',serif; font-size:11pt; color:#000; }
         <li>Estar en posesión del uniforme de la Liga;</li>
         <li>Estar al día con las mensualidades, según lo estipulado en el contrato firmado en la entrevista de ingreso.</li>
       </ul>
-      <p>Sin embargo, tras la evaluación y registro, se constató que Vd. no cumplió con dichos criterios durante el período de su participación. Señalamos que, a lo largo del proceso, se emitieron tres advertencias por escrito, las cuales no fueron debidamente atendidas.</p>
+      <p>Sin embargo, tras la evaluación y registro, se constató que Vd. no cumplió con dichos criterios durante el período de su participación. Señalamos que, a lo largo del proceso, se emitieron ${ligante.num_advertencias || 3} advertencia(s) por escrito, las cuales no fueron debidamente atendidas.</p>
       <p>En vista de lo expuesto y en conformidad con nuestras normas estatutarias y reglamentarias, comunicamos que, a partir de esta fecha, Vd. queda desvinculado(a) de la Liga Académica de Urología.</p>
       <p>Agradecemos la colaboración prestada hasta el momento y nos ponemos a disposición para cualquier aclaración que sea necesaria.</p>
       <p>Atentamente,</p>
