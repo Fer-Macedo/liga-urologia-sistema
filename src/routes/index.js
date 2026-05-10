@@ -1422,9 +1422,18 @@ router.post('/desligamentos', requireAuth, async (req, res) => {
 
 router.get('/desligamentos/:id/visualizar', requireAuth, async (req, res) => {
   try {
-    const r = await query('SELECT d.*, m.* FROM desligamentos d JOIN membros m ON m.id=d.membro_id WHERE d.id=$1', [req.params.id]);
-    const d = r.rows[0];
-    if (!d) return res.status(404).send('Não encontrado');
+    const rd = await query('SELECT * FROM desligamentos WHERE id=$1', [req.params.id]);
+    if (!rd.rows[0]) return res.status(404).send('Não encontrado');
+    const desl = rd.rows[0];
+    let pessoa = {};
+    if (desl.membro_id) {
+      const rm = await query('SELECT * FROM membros WHERE id=$1', [desl.membro_id]);
+      pessoa = rm.rows[0] || {};
+    } else if (desl.ligante_id) {
+      const rl = await query('SELECT * FROM ligantes WHERE id=$1', [desl.ligante_id]);
+      pessoa = rl.rows[0] || {};
+    }
+    const d = { ...desl, ...pessoa };
 
     const config = await getConfig();
     const { gerarHTMLDesligamento, imagemBase64 } = require('../services/desligamento');
