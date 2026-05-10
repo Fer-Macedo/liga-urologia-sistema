@@ -65,6 +65,7 @@
               <td><%= d.assinado_em ? new Date(d.assinado_em).toLocaleString('pt-BR') : '—' %></td>
               <td>
                 <div style="display:flex;gap:4px;flex-wrap:wrap">
+                  <button onclick="editarDesvinc(<%= d.id %>, <%= d.num_advertencias||3 %>)" class="btn" style="font-size:11px;padding:4px 8px;background:#0891b2;color:white" title="Editar">✏️</button>
                   <a href="/desvinculacoes/<%= d.id %>/visualizar" target="_blank" class="btn" style="font-size:11px;padding:4px 8px" title="Visualizar">👁</a>
                   <a href="/desvinculacoes/<%= d.id %>/imprimir" target="_blank" class="btn" style="font-size:11px;padding:4px 8px;background:#6366f1;color:white" title="Imprimir PDF">🖨️</a>
                   <form method="POST" action="/desvinculacoes/<%= d.id %>/enviar" style="display:inline">
@@ -144,6 +145,51 @@
   </div>
 </div>
 
+<!-- Modal Editar Desvinculação -->
+<div class="modal-overlay" id="modal-editar" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">✏️ Editar Desvinculação</span>
+      <button class="icon-btn" onclick="fecharModal('modal-editar')">✕</button>
+    </div>
+    <form id="form-editar" action="" method="POST" enctype="multipart/form-data">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo">
+          <label class="label">Nº de Advertências emitidas</label>
+          <select name="num_advertencias" id="edit-num-adv" class="input">
+            <option value="1">1 advertência</option>
+            <option value="2">2 advertências</option>
+            <option value="3">3 advertências</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label class="label">📎 Substituir PDF Advertência 1</label>
+          <input type="file" name="adv1" class="input" accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+        <div class="campo">
+          <label class="label">📎 Substituir PDF Advertência 2</label>
+          <input type="file" name="adv2" class="input" accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+        <div class="campo">
+          <label class="label">📎 Substituir PDF Advertência 3</label>
+          <input type="file" name="adv3" class="input" accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-editar')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">💾 Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script src="/js/app.js"></script>
+<script>
+function editarDesvinc(id, numAdv) {
+  document.getElementById('form-editar').action = '/desvinculacoes/' + id + '/editar';
+  document.getElementById('edit-num-adv').value = numAdv;
+  abrirModal('modal-editar');
+}
+</script>
 </body>
 </html>
