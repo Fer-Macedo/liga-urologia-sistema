@@ -34,6 +34,7 @@
               <th>Ligante</th>
               <th>Email</th>
               <th>Tipo</th>
+              <th>Advertências</th>
               <th>Status</th>
               <th>Enviado em</th>
               <th>Assinado em</th>
@@ -50,6 +51,7 @@
               <td><strong><%= d.ligante_nome || '—' %></strong></td>
               <td><%= d.ligante_email || '—' %></td>
               <td><span class="badge badge-pendente"><%= d.tipo_membro %></span></td>
+              <td style="text-align:center"><%= d.num_advertencias || 3 %> <% if(d.adv1_chave){%><a href="/desvinculacoes/<%= d.id %>/adv/1" target="_blank" class="btn" style="font-size:10px;padding:2px 5px">📄1</a><%}%><% if(d.adv2_chave){%><a href="/desvinculacoes/<%= d.id %>/adv/2" target="_blank" class="btn" style="font-size:10px;padding:2px 5px">📄2</a><%}%><% if(d.adv3_chave){%><a href="/desvinculacoes/<%= d.id %>/adv/3" target="_blank" class="btn" style="font-size:10px;padding:2px 5px">📄3</a><%}%></td>
               <td>
                 <% if (d.status === 'assinado') { %>
                   <span class="badge badge-assinado">✅ Assinado</span>
@@ -94,7 +96,7 @@
       <span class="modal-titulo">✂️ Nova Desvinculação</span>
       <button class="icon-btn" onclick="fecharModal('modal-nova')">✕</button>
     </div>
-    <form action="/desvinculacoes" method="POST">
+    <form action="/desvinculacoes" method="POST" enctype="multipart/form-data">
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="campo">
           <label class="label">Ligante *</label>
@@ -112,6 +114,26 @@
         <div class="campo">
           <label class="label">Motivo (opcional)</label>
           <textarea name="motivo" class="input" rows="3" placeholder="Motivo da desvinculação..."></textarea>
+        </div>
+        <div class="campo">
+          <label class="label">Nº de Advertências emitidas *</label>
+          <select name="num_advertencias" class="input" required>
+            <option value="1">1 advertência</option>
+            <option value="2">2 advertências</option>
+            <option value="3" selected>3 advertências</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label class="label">📎 PDF Advertência 1</label>
+          <input type="file" name="adv1" class="input" accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+        <div class="campo">
+          <label class="label">📎 PDF Advertência 2 (opcional)</label>
+          <input type="file" name="adv2" class="input" accept=".pdf,.jpg,.jpeg,.png">
+        </div>
+        <div class="campo">
+          <label class="label">📎 PDF Advertência 3 (opcional)</label>
+          <input type="file" name="adv3" class="input" accept=".pdf,.jpg,.jpeg,.png">
         </div>
       </div>
       <div class="modal-footer">
