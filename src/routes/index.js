@@ -2315,8 +2315,8 @@ router.post('/desvinculacoes/:id/editar', requireAuth, async (req, res) => {
 
 function gerarHTMLCartaCobranca(pessoa, config, carta) {
   const timbrado = config.timbrado_b64 || null;
-  const presidente = config.assinatura_presidente_b64 || null;
-  const nomePresidente = (config.financeiro_nome || config.presidente_nome || 'MANUEL FERNANDO MACEDO NETO').toUpperCase();
+  const financeiroSrc = config.assinatura_financeiro_b64 || null;
+  const nomeFinanceiro = (config.financeiro_nome || 'DIRECTOR(A) FINANCIERO(A)').toUpperCase();
   const d = new Date(carta.data || new Date());
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const dataStr = d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
@@ -2380,7 +2380,7 @@ body { font-family:'Times New Roman',serif; font-size:11pt; color:#000; }
 async function prepararConfigCobranca(config) {
   const { imagemBase64 } = require('../services/desligamento');
   config.timbrado_b64 = await imagemBase64(config.timbrado_chave);
-  config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
+  config.assinatura_financeiro_b64 = await imagemBase64(config.assinatura_financeiro_chave);
   return config;
 }
 
