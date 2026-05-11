@@ -47,6 +47,7 @@
         <button class="tab-btn" onclick="showTab('pagamentos')">💰 Pagamentos</button>
         <button class="tab-btn" onclick="showTab('certificados')">🏆 Certificados</button>
         <button class="tab-btn" onclick="showTab('campos')">⚙️ Campos</button>
+        <button class="tab-btn" onclick="showTab('avancado')">🔧 Avançado</button>
       </div>
 
       <!-- INFO -->
@@ -71,8 +72,8 @@
               </div>
               <div class="campo"><label class="label">Cor Tema do Evento</label>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-                  <% const cores=["#1a3d2b","#1a56db","#7c3aed","#dc2626","#ea580c","#ca8a04","#0891b2","#0f766e","#be185d","#374151"]; %>
-                  <% cores2.forEach(cor=>{ %>
+                  <% const coresPaleta=["#1a3d2b","#1a56db","#7c3aed","#dc2626","#ea580c","#ca8a04","#0891b2","#0f766e","#be185d","#374151"]; %>
+                  <% coresPaleta.forEach(cor=>{ %>
                   <div onclick="document.getElementById('cor-input').value='<%= cor %>';document.getElementById('cor-preview').style.background='<%= cor %>'" style="width:28px;height:28px;border-radius:6px;background:<%= cor %>;cursor:pointer;border:3px solid <%= (evento.cor_tema||'#1a3d2b')==cor?'white':'transparent' %>;box-shadow:<%= (evento.cor_tema||'#1a3d2b')==cor?'0 0 0 2px '+cor:'none' %>"></div>
                   <% }) %>
                   <input type="color" id="cor-custom" onchange="document.getElementById('cor-input').value=this.value;document.getElementById('cor-preview').style.background=this.value" style="width:28px;height:28px;border:none;border-radius:6px;cursor:pointer;padding:0">
@@ -291,6 +292,64 @@
         </div>
       </div>
 
+
+      <!-- AVANÇADO -->
+      <div class="tab-content" id="tab-avancado">
+        <form action="/eventos/<%= evento.id %>/avancado" method="POST">
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-titulo">📧 E-mails Personalizados</div>
+            <div class="campo">
+              <label class="label">Texto adicional — E-mail de inscrição realizada</label>
+              <textarea name="email_inscricao" class="input" rows="8" placeholder="Texto que aparecerá no email enviado após a inscrição..."><%= evento.email_inscricao||'' %></textarea>
+            </div>
+            <div class="campo">
+              <label class="label">Texto adicional — E-mail de confirmação de inscrição</label>
+              <textarea name="email_confirmacao" class="input" rows="8" placeholder="Texto que aparecerá no email de confirmação..."><%= evento.email_confirmacao||'' %></textarea>
+            </div>
+            <div class="campo">
+              <label class="label">Notificar nova inscrição para (email)</label>
+              <input name="notif_email" class="input" value="<%= evento.notif_email||'lauroucpcde@lauroucpcde.com' %>" placeholder="email@exemplo.com">
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-titulo">📱 Grupo do WhatsApp do Evento</div>
+            <div class="campo">
+              <label class="label">Link do grupo WhatsApp</label>
+              <input name="wpp_grupo" class="input" value="<%= evento.wpp_grupo||'' %>" placeholder="https://chat.whatsapp.com/...">
+              <span style="font-size:11px;color:var(--texto2)">Este link aparecerá na página pública e nos emails de confirmação.</span>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-titulo">⚙️ Configurações de Inscrição</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="campo">
+                <label class="label">Inscrições gratuitas</label>
+                <select name="inscricao_gratuita_auto" class="input">
+                  <option value="true" <%= evento.inscricao_gratuita_auto?'selected':'' %>>✅ Confirmadas automaticamente</option>
+                  <option value="false" <%= !evento.inscricao_gratuita_auto?'selected':'' %>>✋ Confirmadas manualmente</option>
+                </select>
+              </div>
+              <div class="campo">
+                <label class="label">Inscrição única por email</label>
+                <select name="inscricao_unica" class="input">
+                  <option value="false" <%= !evento.inscricao_unica?'selected':'' %>>Não — múltiplas inscrições</option>
+                  <option value="true" <%= evento.inscricao_unica?'selected':'' %>>Sim — apenas uma por email</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-titulo">📜 Termos e Condições</div>
+            <div class="campo">
+              <label class="label">Texto dos Termos de Participação</label>
+              <textarea name="termos_texto" class="input" rows="12" placeholder="Digite os termos e condições de participação..."><%= evento.termos_texto||'' %></textarea>
+              <span style="font-size:11px;color:var(--texto2)">Este texto aparecerá na página de inscrição para aceite obrigatório pelo participante.</span>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primario">💾 Salvar Configurações Avançadas</button>
+        </form>
+      </div>
+
       <!-- Modal Inscrição Manual -->
 <div class="modal-overlay" id="modal-inscricao-manual" style="display:none">
   <div class="modal">
@@ -318,8 +377,8 @@
               </div>
               <div class="campo"><label class="label">Cor Tema do Evento</label>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-                  <% const cores2=["#1a3d2b","#1a56db","#7c3aed","#dc2626","#ea580c","#ca8a04","#0891b2","#0f766e","#be185d","#374151"]; %>
-                  <% cores.forEach(cor=>{ %>
+                  <% const coresPaleta2=["#1a3d2b","#1a56db","#7c3aed","#dc2626","#ea580c","#ca8a04","#0891b2","#0f766e","#be185d","#374151"]; %>
+                  <% coresPaleta.forEach(cor=>{ %>
                   <div onclick="document.getElementById('cor-input').value='<%= cor %>';document.getElementById('cor-preview').style.background='<%= cor %>'" style="width:28px;height:28px;border-radius:6px;background:<%= cor %>;cursor:pointer;border:3px solid <%= (evento.cor_tema||'#1a3d2b')==cor?'white':'transparent' %>;box-shadow:<%= (evento.cor_tema||'#1a3d2b')==cor?'0 0 0 2px '+cor:'none' %>"></div>
                   <% }) %>
                   <input type="color" id="cor-custom" onchange="document.getElementById('cor-input').value=this.value;document.getElementById('cor-preview').style.background=this.value" style="width:28px;height:28px;border:none;border-radius:6px;cursor:pointer;padding:0">
