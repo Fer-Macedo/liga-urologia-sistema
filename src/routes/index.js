@@ -2797,4 +2797,253 @@ router.post('/marketing/whatsapp-massa', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing'); }
 });
 
+
+// ─── EVENTOS ──────────────────────────────────────────────────────────────────
+
+async function getEventoStats(eventoId) {
+  const [t, conf, chk, rec] = await Promise.all([
+    query('SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=$1', [eventoId]),
+    query("SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado'", [eventoId]),
+    query('SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=$1 AND checkin_em IS NOT NULL', [eventoId]),
+    query("SELECT COALESCE(SUM(p.valor),0) as total FROM evento_pagamentos p JOIN evento_inscricoes i ON i.id=p.inscricao_id WHERE i.evento_id=$1 AND p.status='pago'", [eventoId])
+  ]);
+  return { total: parseInt(t.rows[0].count), confirmados: parseInt(conf.rows[0].count), checkins: parseInt(chk.rows[0].count), receita: rec.rows[0].total };
+}
+
+router.get('/eventos', requireAuth, async (req, res) => {
+  const config = await getConfig();
+  const msg = req.session.msg || []; req.session.msg = [];
+  const erro = req.session.erro || []; req.session.erro = [];
+  const r = await query(`SELECT e.*, 
+    (SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=e.id) as total_inscritos,
+    (SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=e.id AND checkin_em IS NOT NULL) as total_checkins,
+    (SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=e.id AND status='confirmado') as total_pagos,
+    (SELECT COALESCE(SUM(p.valor),0) FROM evento_pagamentos p JOIN evento_inscricoes i ON i.id=p.inscricao_id WHERE i.evento_id=e.id AND p.status='pago') as receita
+    FROM eventos e ORDER BY e.criado_em DESC`);
+  const totalInscritos = r.rows.reduce((a,b)=>a+parseInt(b.total_inscritos||0),0);
+  const totalReceita = r.rows.reduce((a,b)=>a+parseFloat(b.receita||0),0);
+  const totalCheckins = r.rows.reduce((a,b)=>a+parseInt(b.total_checkins||0),0);
+  res.render('pages/eventos', { config, usuario: req.session.usuario, msg, erro, eventos: r.rows, totalInscritos, totalReceita, totalCheckins });
+});
+
+router.post('/eventos', requireAuth, async (req, res) => {
+  try {
+    const {upload, uploadArquivo} = require('../services/arquivos');
+    upload.single('banner')(req, res, async (err) => {
+      const {nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico} = req.body;
+      let bannerChave = null;
+      if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'eventos'); bannerChave = r.chave; }
+      await query('INSERT INTO eventos (nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico,banner_chave,criado_por) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',
+        [nome, descricao||null, data_inicio||null, data_fim||null, local||null, endereco||null, parseInt(vagas_total)||100, status||'rascunho', publico==='true', bannerChave, req.session.usuario.id]);
+      req.session.msg = ['Evento criado!'];
+      res.redirect('/eventos');
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos'); }
+});
+
+router.get('/eventos/:id', requireAuth, async (req, res) => {
+  const config = await getConfig();
+  const msg = req.session.msg || []; req.session.msg = [];
+  const erro = req.session.erro || []; req.session.erro = [];
+  const [evR, lotesR, inscrR, pgR, certR] = await Promise.all([
+    query('SELECT * FROM eventos WHERE id=$1', [req.params.id]),
+    query('SELECT l.*, (SELECT COUNT(*) FROM evento_inscricoes WHERE lote_id=l.id) as inscritos FROM evento_lotes l WHERE l.evento_id=$1 ORDER BY l.ordem', [req.params.id]),
+    query('SELECT i.*, l.nome as lote_nome FROM evento_inscricoes i LEFT JOIN evento_lotes l ON l.id=i.lote_id WHERE i.evento_id=$1 ORDER BY i.criado_em DESC', [req.params.id]),
+    query('SELECT p.*, i.nome as inscrito_nome FROM evento_pagamentos p JOIN evento_inscricoes i ON i.id=p.inscricao_id WHERE i.evento_id=$1 ORDER BY p.criado_em DESC', [req.params.id]),
+    query('SELECT c.*, i.nome as inscrito_nome FROM evento_certificados c JOIN evento_inscricoes i ON i.id=c.inscricao_id WHERE i.evento_id=$1 ORDER BY c.emitido_em DESC', [req.params.id])
+  ]);
+  if (!evR.rows[0]) { req.session.erro=['Evento não encontrado']; return res.redirect('/eventos'); }
+  const stats = await getEventoStats(req.params.id);
+  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats });
+});
+
+router.post('/eventos/:id/editar', requireAuth, async (req, res) => {
+  try {
+    const {upload, uploadArquivo} = require('../services/arquivos');
+    upload.single('banner')(req, res, async (err) => {
+      const {nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico} = req.body;
+      let bannerChave = null;
+      if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'eventos'); bannerChave = r.chave; }
+      const bannerUpdate = bannerChave ? ',banner_chave=$10' : '';
+      const params = [nome, descricao||null, data_inicio||null, data_fim||null, local||null, endereco||null, parseInt(vagas_total), status, publico==='true', req.params.id];
+      if (bannerChave) params.splice(9, 0, bannerChave);
+      await query(`UPDATE eventos SET nome=$1,descricao=$2,data_inicio=$3,data_fim=$4,local=$5,endereco=$6,vagas_total=$7,status=$8,publico=$9${bannerUpdate} WHERE id=${bannerChave?'$11':'$10'}`, params);
+      req.session.msg = ['Evento atualizado!'];
+      res.redirect('/eventos/' + req.params.id);
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
+});
+
+router.post('/eventos/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
+  await query('DELETE FROM eventos WHERE id=$1', [req.params.id]);
+  req.session.msg = ['Evento excluído!'];
+  res.redirect('/eventos');
+});
+
+router.get('/eventos/:id/banner', async (req, res) => {
+  try {
+    const r = await query('SELECT banner_chave FROM eventos WHERE id=$1', [req.params.id]);
+    if (!r.rows[0]?.banner_chave) return res.status(404).send('');
+    const {getUrlAssinada} = require('../services/desligamento');
+    const url = await getUrlAssinada(r.rows[0].banner_chave);
+    res.redirect(url);
+  } catch(e) { res.status(500).send(''); }
+});
+
+// LOTES
+router.post('/eventos/:id/lotes', requireAuth, async (req, res) => {
+  const {nome, preco, vagas, data_inicio, data_fim} = req.body;
+  const ordem = await query('SELECT COUNT(*) FROM evento_lotes WHERE evento_id=$1', [req.params.id]);
+  await query('INSERT INTO evento_lotes (evento_id,nome,preco,vagas,data_inicio,data_fim,ordem) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+    [req.params.id, nome, parseFloat(preco)||0, parseInt(vagas)||50, data_inicio||null, data_fim||null, parseInt(ordem.rows[0].count)+1]);
+  req.session.msg = ['Lote criado!'];
+  res.redirect('/eventos/' + req.params.id);
+});
+
+router.post('/eventos/:id/lotes/:lid/deletar', requireAuth, async (req, res) => {
+  await query('DELETE FROM evento_lotes WHERE id=$1', [req.params.lid]);
+  req.session.msg = ['Lote excluído!'];
+  res.redirect('/eventos/' + req.params.id);
+});
+
+// INSCRIÇÕES - Página Pública
+router.get('/inscricao/:id', async (req, res) => {
+  try {
+    const [evR, lotesR] = await Promise.all([
+      query(`SELECT e.*, (SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=e.id) as total_inscritos FROM eventos e WHERE id=$1 AND status='ativo'`, [req.params.id]),
+      query('SELECT l.*, (SELECT COUNT(*) FROM evento_inscricoes WHERE lote_id=l.id) as inscritos FROM evento_lotes l WHERE l.evento_id=$1 ORDER BY l.ordem', [req.params.id])
+    ]);
+    if (!evR.rows[0]) return res.status(404).send('Evento não encontrado ou encerrado.');
+    res.render('pages/evento-inscricao-publica', { evento: evR.rows[0], lotes: lotesR.rows, sucesso: false, qrcode: null });
+  } catch(e) { res.status(500).send('Erro: '+e.message); }
+});
+
+router.post('/inscricao/:id', async (req, res) => {
+  try {
+    const {nome, email, whatsapp, cpf, instituicao, lote_id} = req.body;
+    const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
+    if (!evR.rows[0]) return res.status(404).send('Evento não encontrado');
+    const loteR = await query('SELECT * FROM evento_lotes WHERE id=$1', [lote_id]);
+    const lote = loteR.rows[0];
+    const qrcode = 'LAURO-' + req.params.id + '-' + Date.now();
+    const inscR = await query('INSERT INTO evento_inscricoes (evento_id,lote_id,nome,email,whatsapp,cpf,instituicao,status,qrcode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
+      [req.params.id, lote_id||null, nome, email, whatsapp||null, cpf||null, instituicao||null, lote&&parseFloat(lote.preco)===0?'confirmado':'pendente', qrcode]);
+    if (lote && parseFloat(lote.preco) > 0) {
+      await query('INSERT INTO evento_pagamentos (inscricao_id,valor,metodo,status) VALUES ($1,$2,$3,$4)', [inscR.rows[0].id, lote.preco, 'pix', 'pendente']);
+    }
+    const nodemailer = require('nodemailer');
+    const config = await getConfig();
+    const transporter = nodemailer.createTransport({ host:process.env.EMAIL_HOST, port:process.env.EMAIL_PORT, auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS} });
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER, to: email,
+      subject: 'Inscrição confirmada — ' + evR.rows[0].nome,
+      html: `<h2>Olá, ${nome}!</h2><p>Sua inscrição no evento <strong>${evR.rows[0].nome}</strong> foi recebida.</p><p>Status: ${lote&&parseFloat(lote.preco)===0?'✅ Confirmada':'⏳ Aguardando pagamento'}</p><p>Seu código: <strong>${qrcode}</strong></p>`
+    }).catch(()=>{});
+    const [evR2, lotesR] = await Promise.all([
+      query('SELECT * FROM eventos WHERE id=$1', [req.params.id]),
+      query('SELECT * FROM evento_lotes WHERE evento_id=$1 ORDER BY ordem', [req.params.id])
+    ]);
+    res.render('pages/evento-inscricao-publica', { evento: evR2.rows[0], lotes: lotesR.rows, sucesso: true, qrcode: null });
+  } catch(e) { res.status(500).send('Erro: '+e.message); }
+});
+
+// INSCRIÇÕES - Admin
+router.get('/eventos/:id/inscricoes', requireAuth, async (req, res) => {
+  res.redirect('/eventos/' + req.params.id);
+});
+
+router.post('/eventos/:id/inscricoes/manual', requireAuth, async (req, res) => {
+  const {nome, email, whatsapp, cpf, lote_id, status} = req.body;
+  const qrcode = 'LAURO-' + req.params.id + '-' + Date.now();
+  await query('INSERT INTO evento_inscricoes (evento_id,lote_id,nome,email,whatsapp,cpf,status,qrcode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+    [req.params.id, lote_id||null, nome, email, whatsapp||null, cpf||null, status||'confirmado', qrcode]);
+  req.session.msg = ['Inscrição manual adicionada!'];
+  res.redirect('/eventos/' + req.params.id);
+});
+
+router.post('/eventos/:id/inscricoes/:iid/confirmar', requireAuth, async (req, res) => {
+  await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1", [req.params.iid]);
+  req.session.msg = ['Inscrição confirmada!'];
+  res.redirect('/eventos/' + req.params.id);
+});
+
+router.post('/eventos/:id/inscricoes/:iid/deletar', requireAuth, async (req, res) => {
+  await query('DELETE FROM evento_inscricoes WHERE id=$1', [req.params.iid]);
+  req.session.msg = ['Inscrição excluída!'];
+  res.redirect('/eventos/' + req.params.id);
+});
+
+// CHECK-IN
+router.get('/eventos/:id/checkin', requireAuth, async (req, res) => {
+  const config = await getConfig();
+  const msg = req.session.msg || []; req.session.msg = [];
+  const [evR, inscrR] = await Promise.all([
+    query('SELECT * FROM eventos WHERE id=$1', [req.params.id]),
+    query('SELECT i.*, l.nome as lote_nome FROM evento_inscricoes i LEFT JOIN evento_lotes l ON l.id=i.lote_id WHERE i.evento_id=$1 ORDER BY i.nome', [req.params.id])
+  ]);
+  const stats = await getEventoStats(req.params.id);
+  res.render('pages/evento-checkin', { config, usuario: req.session.usuario, msg, erro: [], evento: evR.rows[0], inscricoes: inscrR.rows, stats });
+});
+
+router.post('/eventos/:id/checkin/buscar', requireAuth, async (req, res) => {
+  try {
+    const {busca} = req.body;
+    const r = await query("SELECT * FROM evento_inscricoes WHERE evento_id=$1 AND (LOWER(nome) LIKE $2 OR qrcode=$3) LIMIT 1",
+      [req.params.id, '%'+busca.toLowerCase()+'%', busca]);
+    if (!r.rows[0]) return res.json({ok:false, msg:'Inscrito não encontrado'});
+    if (r.rows[0].checkin_em) return res.json({ok:false, msg:'Check-in já realizado por '+r.rows[0].nome});
+    await query('UPDATE evento_inscricoes SET checkin_em=NOW() WHERE id=$1', [r.rows[0].id]);
+    res.json({ok:true, msg:'✅ Check-in realizado: '+r.rows[0].nome});
+  } catch(e) { res.json({ok:false, msg:'Erro: '+e.message}); }
+});
+
+router.post('/eventos/:id/inscricoes/:iid/checkin', requireAuth, async (req, res) => {
+  await query('UPDATE evento_inscricoes SET checkin_em=NOW() WHERE id=$1', [req.params.iid]);
+  req.session.msg = ['Check-in realizado!'];
+  res.redirect('/eventos/' + req.params.id + '/checkin');
+});
+
+// PAGAMENTOS
+router.post('/eventos/:id/pagamentos/:pid/confirmar', requireAuth, async (req, res) => {
+  await query("UPDATE evento_pagamentos SET status='pago', pago_em=NOW() WHERE id=$1", [req.params.pid]);
+  await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=(SELECT inscricao_id FROM evento_pagamentos WHERE id=$1)", [req.params.pid]);
+  req.session.msg = ['Pagamento confirmado!'];
+  res.redirect('/eventos/' + req.params.id);
+});
+
+// CERTIFICADOS
+router.get('/eventos/:id/inscricoes/:iid/certificado', requireAuth, async (req, res) => {
+  try {
+    const [inscR, evR, configR] = await Promise.all([
+      query('SELECT * FROM evento_inscricoes WHERE id=$1', [req.params.iid]),
+      query('SELECT * FROM eventos WHERE id=$1', [req.params.id]),
+      getConfig()
+    ]);
+    const insc = inscR.rows[0]; const ev = evR.rows[0]; const config = configR;
+    const {imagemBase64} = require('../services/desligamento');
+    config.timbrado_b64 = await imagemBase64(config.timbrado_chave);
+    config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
+    config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
+    const dataEv = ev.data_inicio ? new Date(ev.data_inicio).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}) : '';
+    const timbrado = config.timbrado_b64 || null;
+    const presidenteSrc = config.assinatura_presidente_b64 || null;
+    const secretarioSrc = config.assinatura_secretario_b64 || null;
+    const nomePresidente = (config.presidente_nome || 'PRESIDENTE').toUpperCase();
+    const nomeSecretario = (config.secretario_nome || 'SECRETÁRIO').toUpperCase();
+    const bgHtml = timbrado ? `<div style="position:fixed;top:0;left:0;width:210mm;height:297mm;z-index:0"><img src="${timbrado}" style="width:210mm;height:297mm;display:block"></div>` : '';
+    const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',serif;color:#000;width:210mm}</style></head><body>${bgHtml}<div style="position:relative;z-index:1;width:210mm;min-height:297mm;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40mm 25mm;text-align:center"><div style="font-size:11pt;color:#666;margin-bottom:8px;text-transform:uppercase;letter-spacing:3px">Liga Académica de Urología — LAURO</div><div style="font-size:28pt;font-weight:bold;color:#1a3d2b;margin:20px 0;text-transform:uppercase;letter-spacing:2px">Certificado</div><div style="font-size:12pt;margin-bottom:16px">Certificamos que</div><div style="font-size:20pt;font-weight:bold;border-bottom:2px solid #1a3d2b;padding-bottom:8px;margin-bottom:16px">${insc.nome}</div><div style="font-size:12pt;line-height:1.8">participou do evento<br><strong style="font-size:14pt">${ev.nome}</strong><br>realizado em ${dataEv}<br>com carga horária de <strong>4 horas</strong></div><div style="display:flex;justify-content:space-around;margin-top:50px;width:100%"><div style="text-align:center"><div style="height:50px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:4px">${presidenteSrc?`<img src="${presidenteSrc}" style="max-height:50px">`:''}</div><div style="border-top:1.5px solid #000;width:160px;margin:0 auto 4px"></div><div style="font-size:9pt;font-weight:bold">${nomePresidente}</div><div style="font-size:8pt">PRESIDENTE</div></div><div style="text-align:center"><div style="height:50px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:4px">${secretarioSrc?`<img src="${secretarioSrc}" style="max-height:50px">`:''}</div><div style="border-top:1.5px solid #000;width:160px;margin:0 auto 4px"></div><div style="font-size:9pt;font-weight:bold">${nomeSecretario}</div><div style="font-size:8pt">SECRETÁRIO</div></div></div></div><script>window.onload=function(){window.print()}</script></body></html>`;
+    const certR2 = await query('INSERT INTO evento_certificados (inscricao_id) VALUES ($1) ON CONFLICT DO NOTHING RETURNING id', [insc.id]);
+    res.send(html);
+  } catch(e) { res.status(500).send('Erro: '+e.message); }
+});
+
+router.post('/eventos/:id/certificados/emitir-todos', requireAuth, async (req, res) => {
+  const inscritos = await query("SELECT id FROM evento_inscricoes WHERE evento_id=$1 AND checkin_em IS NOT NULL", [req.params.id]);
+  for (const i of inscritos.rows) {
+    await query('INSERT INTO evento_certificados (inscricao_id) VALUES ($1) ON CONFLICT DO NOTHING', [i.id]);
+  }
+  req.session.msg = ['Certificados emitidos para '+inscritos.rows.length+' participantes!'];
+  res.redirect('/eventos/' + req.params.id);
+});
+
 module.exports = router;
