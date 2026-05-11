@@ -2516,7 +2516,7 @@ async function gerarHTMLLista(lista, config) {
   const nomeSecretario = (config.secretario_nome || 'SECRETÁRIO').toUpperCase();
   const pessoas = await getPessoasLista();
   const d = lista.data_evento ? new Date(lista.data_evento).toLocaleDateString('es-PY') : '___/___/______';
-  const LINHAS_POR_PAGINA = 29;
+  const LINHAS_POR_PAGINA = 32;
   const paginas = [];
   for (let i = 0; i < pessoas.length; i += LINHAS_POR_PAGINA) {
     paginas.push(pessoas.slice(i, i + LINHAS_POR_PAGINA));
