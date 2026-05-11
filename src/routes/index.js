@@ -2851,12 +2851,15 @@ router.get('/eventos/:id', requireAuth, async (req, res) => {
     query('SELECT l.*, (SELECT COUNT(*) FROM evento_inscricoes WHERE lote_id=l.id) as inscritos FROM evento_lotes l WHERE l.evento_id=$1 ORDER BY l.ordem', [req.params.id]),
     query('SELECT i.*, l.nome as lote_nome FROM evento_inscricoes i LEFT JOIN evento_lotes l ON l.id=i.lote_id WHERE i.evento_id=$1 ORDER BY i.criado_em DESC', [req.params.id]),
     query('SELECT p.*, i.nome as inscrito_nome FROM evento_pagamentos p JOIN evento_inscricoes i ON i.id=p.inscricao_id WHERE i.evento_id=$1 ORDER BY p.criado_em DESC', [req.params.id]),
-    query('SELECT c.*, i.nome as inscrito_nome FROM evento_certificados c JOIN evento_inscricoes i ON i.id=c.inscricao_id WHERE i.evento_id=$1 ORDER BY c.emitido_em DESC', [req.params.id])
+    query('SELECT c.*, i.nome as inscrito_nome FROM evento_certificados c JOIN evento_inscricoes i ON i.id=c.inscricao_id WHERE i.evento_id=$1 ORDER BY c.emitido_em DESC', [req.params.id]),
+    query('SELECT * FROM evento_programacao WHERE evento_id=$1 ORDER BY ordem', [req.params.id]),
+    query('SELECT * FROM evento_palestrantes WHERE evento_id=$1 ORDER BY ordem', [req.params.id]),
+    query('SELECT * FROM evento_patrocinadores WHERE evento_id=$1 ORDER BY ordem', [req.params.id])
   ]);
   if (!evR.rows[0]) { req.session.erro=['Evento não encontrado']; return res.redirect('/eventos'); }
   const stats = await getEventoStats(req.params.id);
   const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem', [req.params.id]);
-  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows });
+  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows });
 });
 
 router.post('/eventos/:id/editar', requireAuth, async (req, res) => {
@@ -2917,8 +2920,9 @@ router.get('/inscricao/:id', async (req, res) => {
     ]);
     if (!evR.rows[0]) return res.status(404).send('Evento não encontrado ou encerrado.');
     const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem', [req.params.id]);
+    const [progPubR, palesPubR, patrocPubR] = await Promise.all([query('SELECT * FROM evento_programacao WHERE evento_id=$1 ORDER BY ordem',[req.params.id]),query('SELECT * FROM evento_palestrantes WHERE evento_id=$1 ORDER BY ordem',[req.params.id]),query('SELECT * FROM evento_patrocinadores WHERE evento_id=$1 ORDER BY ordem',[req.params.id])]);
     const cfgPub = await getConfig();
-    res.render('pages/evento-inscricao-publica', { evento: evR.rows[0], lotes: lotesR.rows, sucesso: false, qrcode: null, campos: camposR.rows, codigoInscricao: null, config: cfgPub });
+    res.render('pages/evento-inscricao-publica', { evento: evR.rows[0], lotes: lotesR.rows, sucesso: false, qrcode: null, campos: camposR.rows, codigoInscricao: null, config: cfgPub, programacao: progPubR.rows, palestrantes: palesPubR.rows, patrocinadores: patrocPubR.rows });
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
@@ -3119,6 +3123,82 @@ router.post('/eventos/:id/avancado', requireAuth, async (req, res) => {
     [email_inscricao||null, email_confirmacao||null, notif_email||null, wpp_grupo||null,
      inscricao_gratuita_auto==='true', inscricao_unica==='true', termos_texto||null, req.params.id]);
   req.session.msg = ['Configurações avançadas salvas!'];
+  res.redirect('/eventos/' + req.params.id);
+});
+
+
+// PROGRAMAÇÃO
+router.post('/eventos/:id/programacao', requireAuth, async (req, res) => {
+  const {horario, titulo, descricao, local} = req.body;
+  const ord = await query('SELECT COUNT(*) FROM evento_programacao WHERE evento_id=$1', [req.params.id]);
+  await query('INSERT INTO evento_programacao (evento_id,horario,titulo,descricao,local,ordem) VALUES ($1,$2,$3,$4,$5,$6)',
+    [req.params.id, horario, titulo, descricao||null, local||null, parseInt(ord.rows[0].count)+1]);
+  req.session.msg = ['Item adicionado!'];
+  res.redirect('/eventos/' + req.params.id);
+});
+router.post('/eventos/:id/programacao/:pid/deletar', requireAuth, async (req, res) => {
+  await query('DELETE FROM evento_programacao WHERE id=$1', [req.params.pid]);
+  req.session.msg = ['Item removido!'];
+  res.redirect('/eventos/' + req.params.id);
+});
+
+// PALESTRANTES
+router.post('/eventos/:id/palestrantes', requireAuth, async (req, res) => {
+  try {
+    const {upload, uploadArquivo} = require('../services/arquivos');
+    upload.single('foto')(req, res, async (err) => {
+      const {nome, bio, instituicao} = req.body;
+      let fotoChave = null;
+      if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'palestrantes'); fotoChave = r.chave; }
+      const ord = await query('SELECT COUNT(*) FROM evento_palestrantes WHERE evento_id=$1', [req.params.id]);
+      await query('INSERT INTO evento_palestrantes (evento_id,nome,bio,instituicao,foto_chave,ordem) VALUES ($1,$2,$3,$4,$5,$6)',
+        [req.params.id, nome, bio||null, instituicao||null, fotoChave, parseInt(ord.rows[0].count)+1]);
+      req.session.msg = ['Palestrante adicionado!'];
+      res.redirect('/eventos/' + req.params.id);
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
+});
+router.get('/eventos/palestrantes/:id/foto', async (req, res) => {
+  try {
+    const r = await query('SELECT foto_chave FROM evento_palestrantes WHERE id=$1', [req.params.id]);
+    if (!r.rows[0]?.foto_chave) return res.status(404).send('');
+    const {getUrlAssinada} = require('../services/desligamento');
+    res.redirect(await getUrlAssinada(r.rows[0].foto_chave));
+  } catch(e) { res.status(500).send(''); }
+});
+router.post('/eventos/:id/palestrantes/:pid/deletar', requireAuth, async (req, res) => {
+  await query('DELETE FROM evento_palestrantes WHERE id=$1', [req.params.pid]);
+  req.session.msg = ['Palestrante removido!'];
+  res.redirect('/eventos/' + req.params.id);
+});
+
+// PATROCINADORES
+router.post('/eventos/:id/patrocinadores', requireAuth, async (req, res) => {
+  try {
+    const {upload, uploadArquivo} = require('../services/arquivos');
+    upload.single('logo')(req, res, async (err) => {
+      const {nome, url} = req.body;
+      let logoChave = null;
+      if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'patrocinadores'); logoChave = r.chave; }
+      const ord = await query('SELECT COUNT(*) FROM evento_patrocinadores WHERE evento_id=$1', [req.params.id]);
+      await query('INSERT INTO evento_patrocinadores (evento_id,nome,url,logo_chave,ordem) VALUES ($1,$2,$3,$4,$5)',
+        [req.params.id, nome, url||null, logoChave, parseInt(ord.rows[0].count)+1]);
+      req.session.msg = ['Patrocinador adicionado!'];
+      res.redirect('/eventos/' + req.params.id);
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
+});
+router.get('/eventos/patrocinadores/:id/logo', async (req, res) => {
+  try {
+    const r = await query('SELECT logo_chave FROM evento_patrocinadores WHERE id=$1', [req.params.id]);
+    if (!r.rows[0]?.logo_chave) return res.status(404).send('');
+    const {getUrlAssinada} = require('../services/desligamento');
+    res.redirect(await getUrlAssinada(r.rows[0].logo_chave));
+  } catch(e) { res.status(500).send(''); }
+});
+router.post('/eventos/:id/patrocinadores/:pid/deletar', requireAuth, async (req, res) => {
+  await query('DELETE FROM evento_patrocinadores WHERE id=$1', [req.params.pid]);
+  req.session.msg = ['Patrocinador removido!'];
   res.redirect('/eventos/' + req.params.id);
 });
 
