@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Check-in — <%= evento.nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+    .checkin-box { background:var(--card); border:3px solid var(--borda); border-radius:16px; padding:24px; text-align:center; max-width:500px; margin:0 auto 24px; }
+    .checkin-input { font-size:20px; text-align:center; padding:14px; border:2px solid var(--borda); border-radius:10px; width:100%; margin-bottom:12px; }
+    .resultado { padding:20px; border-radius:12px; margin-top:16px; font-size:15px; font-weight:600; display:none; }
+    .resultado.ok { background:#dcfce7; color:#166534; }
+    .resultado.erro { background:#fee2e2; color:#991b1b; }
+    .stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
+    .stat-box { background:var(--card); border:1px solid var(--borda); border-radius:10px; padding:16px; text-align:center; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'eventos' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">✅ Check-in — <%= evento.nome %></h1>
+      <div class="topbar-acoes">
+        <a href="/eventos/<%= evento.id %>" class="btn">← Voltar</a>
+      </div>
+    </div>
+    <div class="content">
+      <div class="stat-grid">
+        <div class="stat-box"><div style="font-size:24px;font-weight:700;color:var(--cor-primaria)"><%= stats.total %></div><div style="font-size:12px;color:var(--texto2)">Inscritos</div></div>
+        <div class="stat-box"><div style="font-size:24px;font-weight:700;color:#059669"><%= stats.checkins %></div><div style="font-size:12px;color:var(--texto2)">Check-ins</div></div>
+        <div class="stat-box"><div style="font-size:24px;font-weight:700;color:#f59e0b"><%= stats.total - stats.checkins %></div><div style="font-size:12px;color:var(--texto2)">Aguardando</div></div>
+      </div>
+
+      <div class="checkin-box">
+        <h2 style="margin-bottom:16px">📷 Check-in por Nome ou QR Code</h2>
+        <input type="text" class="checkin-input" id="busca-checkin" placeholder="Digite o nome ou escaneie o QR Code..." autofocus>
+        <button class="btn btn-primario" style="width:100%" onclick="fazerCheckin()">✅ Confirmar Check-in</button>
+        <div class="resultado" id="resultado"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-titulo">📋 Lista de Presença</div>
+        <table class="tabela">
+          <thead><tr><th>Nome</th><th>Email</th><th>Lote</th><th>Check-in</th><th>Ação</th></tr></thead>
+          <tbody>
+            <% inscricoes.forEach(i => { %>
+            <tr>
+              <td><strong><%= i.nome %></strong></td>
+              <td><%= i.email %></td>
+              <td><%= i.lote_nome||'—' %></td>
+              <td><%= i.checkin_em ? '✅ ' + new Date(i.checkin_em).toLocaleTimeString('pt-BR') : '—' %></td>
+              <td>
+                <% if (!i.checkin_em) { %>
+                <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/checkin" style="display:inline">
+                  <button type="submit" class="btn" style="font-size:11px;padding:4px 8px;background:#059669;color:white">✅ Check-in</button>
+                </form>
+                <% } else { %>
+                <span style="color:#059669;font-size:12px">✅ Feito</span>
+                <% } %>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+function fazerCheckin() {
+  const busca = document.getElementById('busca-checkin').value.trim();
+  if (!busca) return;
+  fetch('/eventos/<%= evento.id %>/checkin/buscar', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({busca})
+  }).then(r=>r.json()).then(data => {
+    const res = document.getElementById('resultado');
+    res.style.display = 'block';
+    res.className = 'resultado ' + (data.ok ? 'ok' : 'erro');
+    res.textContent = data.msg;
+    if (data.ok) { document.getElementById('busca-checkin').value=''; setTimeout(()=>location.reload(),2000); }
+  });
+}
+document.getElementById('busca-checkin').addEventListener('keypress', e => { if(e.key==='Enter') fazerCheckin(); });
+</script>
+</body>
+</html>
