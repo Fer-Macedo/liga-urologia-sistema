@@ -72,7 +72,7 @@
               <div class="campo"><label class="label">Cor Tema do Evento</label>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
                   <% const cores=["#1a3d2b","#1a56db","#7c3aed","#dc2626","#ea580c","#ca8a04","#0891b2","#0f766e","#be185d","#374151"]; %>
-                  <% cores.forEach(cor=>{ %>
+                  <% cores2.forEach(cor=>{ %>
                   <div onclick="document.getElementById('cor-input').value='<%= cor %>';document.getElementById('cor-preview').style.background='<%= cor %>'" style="width:28px;height:28px;border-radius:6px;background:<%= cor %>;cursor:pointer;border:3px solid <%= (evento.cor_tema||'#1a3d2b')==cor?'white':'transparent' %>;box-shadow:<%= (evento.cor_tema||'#1a3d2b')==cor?'0 0 0 2px '+cor:'none' %>"></div>
                   <% }) %>
                   <input type="color" id="cor-custom" onchange="document.getElementById('cor-input').value=this.value;document.getElementById('cor-preview').style.background=this.value" style="width:28px;height:28px;border:none;border-radius:6px;cursor:pointer;padding:0">
@@ -318,7 +318,7 @@
               </div>
               <div class="campo"><label class="label">Cor Tema do Evento</label>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-                  <% const cores=["#1a3d2b","#1a56db","#7c3aed","#dc2626","#ea580c","#ca8a04","#0891b2","#0f766e","#be185d","#374151"]; %>
+                  <% const cores2=["#1a3d2b","#1a56db","#7c3aed","#dc2626","#ea580c","#ca8a04","#0891b2","#0f766e","#be185d","#374151"]; %>
                   <% cores.forEach(cor=>{ %>
                   <div onclick="document.getElementById('cor-input').value='<%= cor %>';document.getElementById('cor-preview').style.background='<%= cor %>'" style="width:28px;height:28px;border-radius:6px;background:<%= cor %>;cursor:pointer;border:3px solid <%= (evento.cor_tema||'#1a3d2b')==cor?'white':'transparent' %>;box-shadow:<%= (evento.cor_tema||'#1a3d2b')==cor?'0 0 0 2px '+cor:'none' %>"></div>
                   <% }) %>
