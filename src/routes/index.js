@@ -2833,8 +2833,9 @@ router.post('/eventos', requireAuth, async (req, res) => {
       const {nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico} = req.body;
       let bannerChave = null;
       if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'eventos'); bannerChave = r.chave; }
-      await query('INSERT INTO eventos (nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico,banner_chave,criado_por) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',
-        [nome, descricao||null, data_inicio||null, data_fim||null, local||null, endereco||null, parseInt(vagas_total)||100, status||'rascunho', publico==='true', bannerChave, req.session.usuario.id]);
+      const {cor_tema, tipo_evento} = req.body;
+      await query('INSERT INTO eventos (nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico,banner_chave,cor_tema,tipo_evento,criado_por) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
+        [nome, descricao||null, data_inicio||null, data_fim||null, local||null, endereco||null, parseInt(vagas_total)||100, status||'rascunho', publico==='true', bannerChave, cor_tema||'#1a3d2b', tipo_evento||'presencial', req.session.usuario.id]);
       req.session.msg = ['Evento criado!'];
       res.redirect('/eventos');
     });
@@ -2916,7 +2917,8 @@ router.get('/inscricao/:id', async (req, res) => {
     ]);
     if (!evR.rows[0]) return res.status(404).send('Evento não encontrado ou encerrado.');
     const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem', [req.params.id]);
-    res.render('pages/evento-inscricao-publica', { evento: evR.rows[0], lotes: lotesR.rows, sucesso: false, qrcode: null, campos: camposR.rows, codigoInscricao: null });
+    const cfgPub = await getConfig();
+    res.render('pages/evento-inscricao-publica', { evento: evR.rows[0], lotes: lotesR.rows, sucesso: false, qrcode: null, campos: camposR.rows, codigoInscricao: null, config: cfgPub });
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
@@ -2946,7 +2948,8 @@ router.post('/inscricao/:id', async (req, res) => {
       query('SELECT * FROM evento_lotes WHERE evento_id=$1 ORDER BY ordem', [req.params.id])
     ]);
     const camposR2 = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem', [req.params.id]);
-    res.render('pages/evento-inscricao-publica', { evento: evR2.rows[0], lotes: lotesR.rows, sucesso: true, qrcode: null, campos: camposR2.rows, codigoInscricao: qrcode });
+    const cfgPub2 = await getConfig();
+    res.render('pages/evento-inscricao-publica', { evento: evR2.rows[0], lotes: lotesR.rows, sucesso: true, qrcode: null, campos: camposR2.rows, codigoInscricao: qrcode, config: cfgPub2 });
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
@@ -3073,6 +3076,22 @@ router.post('/eventos/:id/lotes/:lid/editar', requireAuth, async (req, res) => {
     [nome, parseFloat(preco)||0, parseInt(vagas), data_inicio||null, data_fim||null, req.params.lid]);
   req.session.msg = ['Lote atualizado!'];
   res.redirect('/eventos/' + req.params.id);
+});
+
+
+router.post('/contato-evento/:id', async (req, res) => {
+  try {
+    const {nome, email, mensagem} = req.body;
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({ host:process.env.EMAIL_HOST, port:process.env.EMAIL_PORT, auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS} });
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: 'lauroucpcde@lauroucpcde.com',
+      subject: 'Contato via evento — ' + nome,
+      html: '<p><strong>Nome:</strong> '+nome+'</p><p><strong>Email:</strong> '+email+'</p><p><strong>Mensagem:</strong><br>'+mensagem+'</p>'
+    });
+    res.send('<script>alert("Mensagem enviada! Entraremos em contato em breve.");history.back();</script>');
+  } catch(e) { res.send('<script>alert("Erro ao enviar. Tente novamente.");history.back();</script>'); }
 });
 
 module.exports = router;
