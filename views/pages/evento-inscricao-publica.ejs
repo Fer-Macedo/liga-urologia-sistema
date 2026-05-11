@@ -9,362 +9,402 @@
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     :root{
-      --primary:<%= evento.cor_tema||'#1a3d2b' %>;
-      --primary-rgb:<%= (evento.cor_tema||'#1a3d2b').replace('#','') %>;
-      --white:#fff;
-      --gray-50:#f9fafb;
-      --gray-100:#f3f4f6;
-      --gray-200:#e5e7eb;
-      --gray-400:#9ca3af;
-      --gray-600:#4b5563;
-      --gray-800:#1f2937;
-      --gray-900:#111827;
+      --p:<%= evento.cor_tema||'#1a3d2b' %>;
+      --p10:color-mix(in srgb,<%= evento.cor_tema||'#1a3d2b' %> 10%,white);
+      --p20:color-mix(in srgb,<%= evento.cor_tema||'#1a3d2b' %> 20%,white);
+      --w:#fff;--g50:#f9fafb;--g100:#f3f4f6;--g200:#e5e7eb;--g400:#9ca3af;--g600:#4b5563;--g800:#1f2937;--g900:#111827;
+      --sh:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
     }
-    body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-900)}
+    body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);line-height:1.6}
 
     /* NAV */
-    nav{background:var(--white);border-bottom:1px solid var(--gray-200);position:sticky;top:0;z-index:100}
-    .nav-inner{max-width:1100px;margin:0 auto;padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between}
+    nav{background:var(--w);border-bottom:1px solid var(--g200);position:sticky;top:0;z-index:100;backdrop-filter:blur(10px)}
+    .nav-in{max-width:1200px;margin:0 auto;padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between}
     .nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
-    .nav-logo-img{height:34px;width:auto}
-    .nav-logo-text{font-weight:800;font-size:17px;color:var(--primary)}
-    .nav-links{display:flex;gap:20px;align-items:center}
-    .nav-link{font-size:13px;font-weight:500;color:var(--gray-600);text-decoration:none}
-    .nav-link:hover{color:var(--primary)}
-    .nav-cta{background:var(--primary);color:white;padding:7px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none}
+    .nav-logo img{height:32px;object-fit:contain}
+    .nav-logo-txt{font-weight:800;font-size:17px;color:var(--p)}
+    .nav-links{display:flex;gap:16px;align-items:center}
+    .nav-a{font-size:13px;font-weight:500;color:var(--g600);text-decoration:none;transition:.2s}
+    .nav-a:hover{color:var(--p)}
+    .nav-cta{background:var(--p);color:white;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;transition:.2s}
+    .nav-cta:hover{opacity:.88;transform:translateY(-1px)}
 
     /* BANNER */
-    .banner-wrap{width:100%;max-height:420px;overflow:hidden;background:var(--gray-900)}
-    .banner-img{width:100%;max-height:420px;object-fit:cover;display:block}
-    .banner-placeholder{width:100%;height:280px;background:linear-gradient(135deg,var(--primary),#000);display:flex;align-items:center;justify-content:center;color:white;font-size:48px}
+    .banner-wrap{width:100%;overflow:hidden;background:var(--g900);max-height:440px}
+    .banner-img{width:100%;max-height:440px;object-fit:cover;display:block}
+    .banner-ph{height:280px;background:linear-gradient(135deg,var(--p),#000);display:flex;align-items:center;justify-content:center;color:white;font-size:56px}
 
-    /* TITULO ABAIXO DO BANNER */
-    .titulo-wrap{background:var(--white);border-bottom:1px solid var(--gray-200);padding:28px 0 20px}
-    .titulo-inner{max-width:1100px;margin:0 auto;padding:0 24px}
-    .tipo-chip{display:inline-flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:10px}
-    .titulo-inner h1{font-size:clamp(20px,3.5vw,32px);font-weight:800;color:var(--gray-900);line-height:1.2;text-align:justify}
-    .titulo-meta{display:flex;flex-wrap:wrap;gap:16px;margin-top:14px}
-    .titulo-chip{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--gray-600);font-weight:500}
+    /* TITULO */
+    .title-wrap{background:var(--w);border-bottom:1px solid var(--g200);padding:24px 0 20px}
+    .title-in{max-width:1200px;margin:0 auto;padding:0 24px}
+    .tipo-chip{display:inline-flex;align-items:center;gap:6px;background:var(--g100);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--g600);margin-bottom:10px}
+    .title-in h1{font-size:clamp(20px,3.5vw,34px);font-weight:900;color:var(--g900);line-height:1.2;text-align:left}
+    .title-meta{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px}
+    .t-chip{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--g600);font-weight:500}
+
+    /* WPP BANNER */
+    .wpp-banner{background:linear-gradient(90deg,#128c7e,#25d366);padding:12px 0}
+    .wpp-in{max-width:1200px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+    .wpp-btn{background:white;color:#128c7e;padding:8px 20px;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:.2s}
+    .wpp-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
 
     /* LAYOUT */
-    .page-wrap{max-width:1100px;margin:0 auto;padding:28px 24px 80px}
-    .main-grid{display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start}
-    @media(max-width:860px){.main-grid{grid-template-columns:1fr}.sidebar{order:-1}}
+    .wrap{max-width:1200px;margin:0 auto;padding:28px 24px 80px}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}.sidebar{order:-1}}
 
-    /* CARDS */
-    .card{background:var(--white);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.08),0 2px 12px rgba(0,0,0,.05);overflow:hidden;margin-bottom:18px}
-    .card-hd{padding:18px 22px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:10px}
-    .card-hd h2{font-size:15px;font-weight:700;color:var(--gray-900)}
-    .card-hd p{font-size:12px;color:var(--gray-400);margin-top:1px}
+    /* CARD */
+    .card{background:var(--w);border-radius:16px;box-shadow:var(--sh);overflow:hidden;margin-bottom:18px}
+    .card-hd{padding:18px 22px;border-bottom:1px solid var(--g100);display:flex;align-items:center;justify-content:space-between}
+    .card-hd h2{font-size:15px;font-weight:700;color:var(--g900)}
     .card-bd{padding:20px 22px}
 
     /* LOTES */
-    .lote{border:2px solid var(--gray-200);border-radius:12px;padding:16px 18px;margin-bottom:10px;cursor:pointer;transition:all .2s;position:relative;background:var(--white)}
-    .lote:hover{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 15%,transparent)}
-    .lote.ativo{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 6%,white)}
-    .lote-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-    .lote-left{flex:1}
-    .lote-nome{font-weight:700;font-size:15px;color:var(--gray-900)}
-    .lote-info{font-size:12px;color:var(--gray-400);margin-top:3px}
-    .lote-preco{font-size:22px;font-weight:900;color:var(--primary);white-space:nowrap}
-    .badge-free{background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;display:inline-block}
-    .lote-check{width:22px;height:22px;border-radius:50%;border:2px solid var(--gray-300);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;transition:.2s}
-    .lote.ativo .lote-check{background:var(--primary);border-color:var(--primary);color:white}
+    .lote{border:2px solid var(--g200);border-radius:12px;padding:16px 18px;margin-bottom:10px;cursor:pointer;transition:all .2s;position:relative}
+    .lote:hover{border-color:var(--p);box-shadow:0 0 0 3px var(--p10)}
+    .lote.sel{border-color:var(--p);background:var(--p10)}
+    .lote-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .lote-nome{font-weight:700;font-size:15px;color:var(--g900)}
+    .lote-info{font-size:12px;color:var(--g400);margin-top:3px}
+    .lote-preco{font-size:22px;font-weight:900;color:var(--p);white-space:nowrap}
+    .badge-free{background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
+    .lote-radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--g300);flex-shrink:0;transition:.2s;display:flex;align-items:center;justify-content:center}
+    .lote.sel .lote-radio{border-color:var(--p);background:var(--p)}
+    .lote.sel .lote-radio::after{content:'';width:8px;height:8px;border-radius:50%;background:white}
 
-    /* QUANTIDADE */
-    .qty-wrap{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-100)}
-    .qty-btn{width:32px;height:32px;border-radius:8px;border:1.5px solid var(--gray-200);background:var(--white);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--gray-700);transition:.2s}
-    .qty-btn:hover{border-color:var(--primary);color:var(--primary)}
-    .qty-num{font-size:16px;font-weight:700;min-width:24px;text-align:center}
-    .qty-label{font-size:12px;color:var(--gray-400);margin-left:4px}
+    /* QTY */
+    .qty-row{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--g100)}
+    .qty-btn{width:34px;height:34px;border-radius:9px;border:1.5px solid var(--g200);background:var(--w);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--g700);transition:.2s;line-height:1}
+    .qty-btn:hover{border-color:var(--p);color:var(--p)}
+    .qty-n{font-size:18px;font-weight:800;min-width:28px;text-align:center}
+    .qty-lbl{font-size:12px;color:var(--g400)}
+
+    /* BTN PROSSEGUIR */
+    .btn-prox{width:100%;padding:15px;background:var(--p);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:14px;font-family:'Inter',sans-serif;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px}
+    .btn-prox:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.2)}
 
     /* CUPOM */
-    .cupom-wrap{display:flex;gap:8px;margin-top:14px}
-    .cupom-input{flex:1;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif}
-    .cupom-input:focus{outline:none;border-color:var(--primary)}
-    .cupom-btn{padding:9px 16px;background:var(--gray-100);border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;color:var(--gray-700)}
-    .cupom-btn:hover{background:var(--primary);color:white;border-color:var(--primary)}
-    .cupom-ok{background:#dcfce7;color:#166534;border-color:#86efac}
-    .cupom-erro{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+    .cupom-row{display:flex;gap:8px;margin-top:12px}
+    .cupom-in{flex:1;padding:10px 12px;border:1.5px solid var(--g200);border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;transition:.2s}
+    .cupom-in:focus{outline:none;border-color:var(--p)}
+    .cupom-btn{padding:10px 16px;background:var(--g100);border:1.5px solid var(--g200);border-radius:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;color:var(--g700);transition:.2s}
+    .cupom-btn:hover{background:var(--p);color:white;border-color:var(--p)}
+    .cupom-ok{font-size:12px;color:#166534;background:#dcfce7;padding:6px 10px;border-radius:7px;margin-top:6px}
+    .cupom-err{font-size:12px;color:#991b1b;background:#fee2e2;padding:6px 10px;border-radius:7px;margin-top:6px}
 
-    /* PARTICIPANTES */
-    .participante-bloco{border:1.5px solid var(--gray-200);border-radius:10px;padding:16px;margin-bottom:12px;position:relative}
-    .participante-titulo{font-size:13px;font-weight:700;color:var(--gray-700);margin-bottom:12px;display:flex;align-items:center;gap:8px}
-    .participante-num{width:22px;height:22px;background:var(--primary);color:white;border-radius:50%;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
-
-    /* CAMPOS FORM */
+    /* FORM SECTION */
+    .form-sec{overflow:hidden;max-height:0;opacity:0;transition:max-height .5s cubic-bezier(.4,0,.2,1),opacity .4s ease}
+    .form-sec.open{max-height:3000px;opacity:1}
+    .part-bloco{border:1.5px solid var(--g200);border-radius:12px;padding:18px;margin-bottom:14px}
+    .part-tit{font-size:13px;font-weight:700;color:var(--g700);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+    .part-num{width:22px;height:22px;background:var(--p);color:white;border-radius:50%;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .campo{margin-bottom:14px}
-    .campo label{display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:5px}
+    .campo label{display:block;font-size:12px;font-weight:600;color:var(--g700);margin-bottom:5px}
     .req{color:#ef4444}
-    .input{width:100%;padding:10px 13px;border:1.5px solid var(--gray-200);border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;transition:.2s}
-    .input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 12%,transparent)}
-    .input-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-    @media(max-width:500px){.input-grid{grid-template-columns:1fr}}
+    .inp{width:100%;padding:10px 13px;border:1.5px solid var(--g200);border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;transition:.2s;background:var(--w)}
+    .inp:focus{outline:none;border-color:var(--p);box-shadow:0 0 0 3px var(--p10)}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    @media(max-width:500px){.grid2{grid-template-columns:1fr}}
+    .btn-sub{width:100%;padding:16px;background:var(--p);color:white;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;transition:.2s;font-family:'Inter',sans-serif;margin-top:10px}
+    .btn-sub:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.2)}
+    .secure{text-align:center;font-size:12px;color:var(--g400);margin-top:8px;display:flex;align-items:center;justify-content:center;gap:4px}
 
-    /* FORM ANIMADO */
-    .form-section{overflow:hidden;transition:max-height .4s ease,opacity .4s ease;max-height:0;opacity:0}
-    .form-section.visivel{max-height:2000px;opacity:1}
+    /* ACCORDION PROGRAMAÇÃO */
+    .prog-acc{border:1.5px solid var(--g200);border-radius:12px;overflow:hidden;margin-bottom:8px}
+    .prog-hd{padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:.2s;user-select:none}
+    .prog-hd:hover{background:var(--g50)}
+    .prog-hd.open{background:var(--p10);border-bottom:1px solid var(--g200)}
+    .prog-info{flex:1}
+    .prog-titulo{font-weight:700;font-size:14px;color:var(--g900)}
+    .prog-hora{font-size:12px;color:var(--p);font-weight:600;margin-top:2px}
+    .prog-arrow{font-size:12px;color:var(--g400);transition:.3s}
+    .prog-hd.open .prog-arrow{transform:rotate(180deg)}
+    .prog-body{max-height:0;overflow:hidden;transition:max-height .3s ease}
+    .prog-body.open{max-height:200px}
+    .prog-desc{padding:12px 16px;font-size:13px;color:var(--g600);line-height:1.6}
 
-    /* SUBMIT */
-    .btn-submit{width:100%;padding:15px;background:var(--primary);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;transition:.2s;font-family:'Inter',sans-serif;margin-top:10px}
-    .btn-submit:hover{opacity:.92;transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.2)}
-    .secure{text-align:center;font-size:12px;color:var(--gray-400);margin-top:8px}
-
-    /* SIDEBAR */
-    .sidebar-card{background:var(--white);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.08),0 2px 12px rgba(0,0,0,.05);padding:20px;margin-bottom:16px}
-    .sidebar-title{font-size:13px;font-weight:700;color:var(--gray-900);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--gray-100)}
-    .info-item{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px}
-    .info-icon{width:34px;height:34px;border-radius:9px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-    .info-label{font-size:10px;color:var(--gray-400);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
-    .info-val{font-weight:600;font-size:13px;color:var(--gray-900);margin-top:1px}
-    .info-sub{font-size:11px;color:var(--gray-600);margin-top:1px}
-    .org-box{background:var(--gray-50);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;margin-top:14px}
-    .org-logo{width:38px;height:38px;border-radius:9px;overflow:hidden;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-    .org-logo img{width:100%;height:100%;object-fit:contain}
-
-    /* RESUMO SIDEBAR */
-    .resumo-box{background:color-mix(in srgb,var(--primary) 8%,white);border:1.5px solid var(--primary);border-radius:10px;padding:14px}
-    .resumo-nome{font-weight:700;font-size:13px;color:var(--primary)}
-    .resumo-preco{font-size:24px;font-weight:900;color:var(--primary)}
-    .resumo-qty{font-size:12px;color:var(--gray-600);margin-top:2px}
-    .btn-inscrever-side{display:flex;align-items:center;justify-content:center;margin-top:12px;padding:12px;background:var(--primary);color:white;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px}
+    /* PALESTRANTES */
+    .pales-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+    .pales-card{border:1.5px solid var(--g200);border-radius:12px;padding:16px;text-align:center;cursor:pointer;transition:.2s}
+    .pales-card:hover{border-color:var(--p);box-shadow:0 0 0 3px var(--p10)}
+    .pales-card.open{border-color:var(--p);background:var(--p10)}
+    .pales-foto{width:70px;height:70px;border-radius:50%;object-fit:cover;margin:0 auto 10px;display:block;border:2px solid var(--g200)}
+    .pales-ph{width:70px;height:70px;border-radius:50%;background:var(--g100);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:28px}
+    .pales-nome{font-weight:700;font-size:13px;color:var(--g900)}
+    .pales-inst{font-size:11px;color:var(--p);margin-top:2px}
+    .pales-bio-wrap{max-height:0;overflow:hidden;transition:max-height .3s ease}
+    .pales-bio-wrap.open{max-height:300px}
+    .pales-bio{padding:12px 0;font-size:13px;color:var(--g600);line-height:1.6;text-align:left;border-top:1px solid var(--g200);margin-top:10px}
 
     /* CONTATO */
-    .contato-link{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:9px;border:1.5px solid var(--gray-200);text-decoration:none;color:var(--gray-800);font-size:13px;font-weight:500;margin-bottom:8px;transition:.2s}
-    .contato-link:hover{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 5%,white)}
-    .c-icon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
-    .form-contato-input{width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;margin-bottom:8px}
-    .form-contato-input:focus{outline:none;border-color:var(--primary)}
-    .btn-contato{width:100%;padding:10px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
+    .contato-btns{display:flex;flex-direction:column;gap:10px}
+    .c-btn{display:flex;align-items:center;gap:12px;padding:13px 16px;border-radius:12px;border:1.5px solid var(--g200);text-decoration:none;color:var(--g800);font-size:14px;font-weight:600;transition:.2s;cursor:pointer}
+    .c-btn:hover{border-color:var(--p);background:var(--p10);transform:translateX(4px)}
+    .c-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+    .c-form{overflow:hidden;max-height:0;opacity:0;transition:max-height .4s ease,opacity .3s ease;margin-top:0}
+    .c-form.open{max-height:500px;opacity:1;margin-top:14px}
+    .c-inp{width:100%;padding:10px 12px;border:1.5px solid var(--g200);border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;margin-bottom:8px;transition:.2s}
+    .c-inp:focus{outline:none;border-color:var(--p)}
+    .c-send{width:100%;padding:11px;background:var(--p);color:white;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif}
+
+    /* SIDEBAR */
+    .s-card{background:var(--w);border-radius:16px;box-shadow:var(--sh);padding:20px;margin-bottom:16px}
+    .s-title{font-size:13px;font-weight:700;color:var(--g900);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--g100)}
+    .info-it{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px}
+    .i-icon{width:34px;height:34px;border-radius:9px;background:var(--g100);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+    .i-lbl{font-size:10px;color:var(--g400);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+    .i-val{font-weight:600;font-size:13px;color:var(--g900);margin-top:1px}
+    .i-sub{font-size:11px;color:var(--g600);margin-top:1px}
+    .org-box{background:var(--g50);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;margin-top:14px}
+    .org-logo{width:40px;height:40px;border-radius:9px;overflow:hidden;background:var(--p);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .org-logo img{width:100%;height:100%;object-fit:contain}
+
+    /* RESUMO INGRESSO */
+    .resumo-card{background:var(--p);border-radius:14px;padding:18px;margin-bottom:16px;color:white;position:relative;overflow:hidden}
+    .resumo-card::before{content:'';position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(255,255,255,.1);border-radius:50%}
+    .resumo-card::after{content:'';position:absolute;bottom:-30px;left:-10px;width:80px;height:80px;background:rgba(255,255,255,.07);border-radius:50%}
+    .resumo-label{font-size:11px;font-weight:600;opacity:.8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+    .resumo-nome{font-weight:800;font-size:16px;position:relative;z-index:1}
+    .resumo-preco{font-size:30px;font-weight:900;margin-top:6px;position:relative;z-index:1}
+    .resumo-qty{font-size:12px;opacity:.8;margin-top:2px;position:relative;z-index:1}
+    .resumo-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;padding:12px;background:white;color:var(--p);border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;transition:.2s;cursor:pointer;border:none;width:100%;font-family:'Inter',sans-serif}
+    .resumo-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.2)}
+
+    /* SOCIAL SIDEBAR */
+    .social-row{display:flex;flex-direction:column;gap:10px}
+    .s-wpp{display:flex;align-items:center;gap:12px;padding:13px 16px;background:linear-gradient(135deg,#128c7e,#25d366);border-radius:12px;text-decoration:none;color:white;font-weight:700;font-size:14px;transition:.2s}
+    .s-wpp:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(37,211,102,.3)}
+    .s-ig{display:flex;align-items:center;gap:12px;padding:13px 16px;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);border-radius:12px;text-decoration:none;color:white;font-weight:700;font-size:14px;transition:.2s}
+    .s-ig:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(225,48,108,.3)}
+    .s-icon{width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .s-icon svg{width:24px;height:24px;fill:white}
+
+    /* PATROCINADORES SIDEBAR */
+    .patroc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .patroc-item{border:1.5px solid var(--g200);border-radius:10px;padding:10px;display:flex;align-items:center;justify-content:center;min-height:60px;transition:.2s}
+    .patroc-item:hover{border-color:var(--p);box-shadow:0 0 0 2px var(--p10)}
+    .patroc-item img{max-height:40px;max-width:100%;object-fit:contain}
+    .patroc-nome{font-size:12px;font-weight:600;color:var(--g700);text-align:center}
+
+    /* TERMOS */
+    .termo-check{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--g800)}
+    .termo-check input{margin-top:2px;accent-color:var(--p);width:16px;height:16px;flex-shrink:0}
+    .termo-link{color:var(--p);font-weight:600;text-decoration:underline;cursor:pointer}
+
+    /* MODAL */
+    .modal-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center;padding:20px}
+    .modal-wrap.open{display:flex}
+    .modal-box{background:white;border-radius:16px;max-width:600px;width:100%;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;animation:mUp .3s ease}
+    @keyframes mUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+    .modal-hd{padding:18px 22px;border-bottom:1px solid var(--g200);display:flex;justify-content:space-between;align-items:center}
+    .modal-hd h3{font-weight:700;font-size:15px}
+    .modal-close{border:none;background:none;font-size:22px;cursor:pointer;color:var(--g400);line-height:1}
+    .modal-body{padding:20px 22px;overflow-y:auto;font-size:13px;color:var(--g700);line-height:1.8;white-space:pre-wrap;flex:1}
+    .modal-ft{padding:14px 22px;border-top:1px solid var(--g200);text-align:right}
+    .modal-ok{background:var(--p);color:white;border:none;padding:10px 24px;border-radius:9px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif}
 
     /* SUCESSO */
-    .sucesso-wrap{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:40px 20px}
-    .sucesso-box{background:var(--white);border-radius:20px;box-shadow:0 4px 40px rgba(0,0,0,.12);padding:44px 32px;text-align:center;max-width:480px;width:100%}
-    .sucesso-icon{width:72px;height:72px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 20px;animation:pop .4s ease}
+    .suc-wrap{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:40px 20px}
+    .suc-box{background:var(--w);border-radius:20px;box-shadow:0 4px 40px rgba(0,0,0,.12);padding:44px 32px;text-align:center;max-width:500px;width:100%}
+    .suc-icon{width:72px;height:72px;background:var(--p);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 20px;animation:pop .4s ease}
     @keyframes pop{0%{transform:scale(0)}80%{transform:scale(1.1)}100%{transform:scale(1)}}
-    .codigo-box{background:var(--gray-900);color:#10b981;font-family:monospace;font-size:15px;padding:12px 20px;border-radius:9px;margin:18px auto;display:inline-block;letter-spacing:2px}
+    .suc-cod{background:var(--g900);color:#10b981;font-family:monospace;font-size:15px;padding:12px 20px;border-radius:9px;margin:18px auto;display:inline-block;letter-spacing:2px}
 
-    /* WHATSAPP FLOAT */
-    .wpp-float{position:fixed;bottom:24px;right:24px;z-index:999;width:56px;height:56px;background:#25d366;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(37,211,102,.4);text-decoration:none;transition:.2s}
-    .wpp-float:hover{transform:scale(1.1);box-shadow:0 6px 28px rgba(37,211,102,.5)}
-    .wpp-float svg{width:30px;height:30px;fill:white}
+    /* WPP FLOAT */
+    .wpp-float{position:fixed;bottom:24px;right:24px;z-index:998;width:56px;height:56px;background:#25d366;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(37,211,102,.4);text-decoration:none;transition:.2s}
+    .wpp-float:hover{transform:scale(1.1)}
+    .wpp-float svg{width:28px;height:28px;fill:white}
 
-    /* FOOTER */
-    footer{background:var(--gray-900);color:rgba(255,255,255,.5);text-align:center;padding:22px;font-size:12px;margin-top:40px}
+    footer{background:var(--g900);color:rgba(255,255,255,.5);text-align:center;padding:22px;font-size:12px;margin-top:40px}
     footer strong{color:white}
   </style>
 </head>
 <body>
 
-<!-- NAV -->
 <nav>
-  <div class="nav-inner">
+  <div class="nav-in">
     <a href="/" class="nav-logo">
-      <% if (config && config.org_logo) { %>
-      <img src="<%= config.org_logo %>" class="nav-logo-img" alt="LAURO">
-      <% } else { %>
-      <div style="width:34px;height:34px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:15px">L</div>
-      <% } %>
-      <span class="nav-logo-text">LAURO</span>
+      <% if(config&&config.org_logo){%><img src="<%= config.org_logo %>" alt="LAURO"><%}else{%><div style="width:32px;height:32px;background:var(--p);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px">L</div><%}%>
+      <span class="nav-logo-txt">LAURO</span>
     </a>
     <div class="nav-links">
-      <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" class="nav-link">Instagram</a>
-      <a href="#contato" class="nav-link">Contato</a>
-      <a href="#inscricao" class="nav-cta">Inscrever-se</a>
+      <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" class="nav-a">Instagram</a>
+      <a href="#contato" class="nav-a">Contato</a>
+      <a href="#form-sec" class="nav-cta" onclick="abrirForm()">Inscrever-se</a>
     </div>
   </div>
 </nav>
 
-<% if (sucesso) { %>
-<div class="sucesso-wrap">
-  <div class="sucesso-box">
-    <div class="sucesso-icon">✓</div>
+<% if(sucesso){ %>
+<div class="suc-wrap">
+  <div class="suc-box">
+    <div class="suc-icon">✓</div>
     <h2 style="font-size:22px;font-weight:800;margin-bottom:8px">Inscrição Realizada!</h2>
-    <p style="color:var(--gray-600);font-size:14px;line-height:1.6">Sua inscrição foi confirmada. Verifique seu email.</p>
-    <div class="codigo-box"><%= codigoInscricao %></div>
-    <p style="font-size:12px;color:var(--gray-400);margin-top:4px">Apresente este código no check-in</p>
-    <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:20px;padding:12px 22px;background:var(--primary);color:white;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px">Seguir no Instagram →</a>
+    <p style="color:var(--g600);font-size:14px;line-height:1.6">Sua inscrição foi confirmada. Verifique seu email para o ticket com QR Code.</p>
+    <div class="suc-cod"><%= codigoInscricao %></div>
+    <p style="font-size:12px;color:var(--g400)">Apresente este código no check-in</p>
+    <% if(evento.wpp_grupo){%><a href="<%= evento.wpp_grupo %>" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:12px 22px;background:#25d366;color:white;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">📱 Entrar no Grupo do Evento</a><%}%>
   </div>
 </div>
-<% } else { %>
+<%}else{%>
 
 <!-- BANNER -->
 <div class="banner-wrap">
-  <% if (evento.banner_chave) { %>
-  <img src="/eventos/<%= evento.id %>/banner" class="banner-img" alt="Banner">
-  <% } else { %>
-  <div class="banner-placeholder">📅</div>
-  <% } %>
+  <% if(evento.banner_chave){%><img src="/eventos/<%= evento.id %>/banner" class="banner-img" alt="Banner">
+  <%}else{%><div class="banner-ph">📅</div><%}%>
 </div>
 
-<!-- TÍTULO ABAIXO DO BANNER -->
-<div class="titulo-wrap">
-  <div class="titulo-inner">
-    <div class="tipo-chip">
-      <% if(evento.tipo_evento==='online'){%>💻 Online<%}else if(evento.tipo_evento==='hibrido'){%>🔀 Híbrido<%}else{%>📍 Presencial<%}%>
-    </div>
+<!-- TÍTULO -->
+<div class="title-wrap">
+  <div class="title-in">
+    <div class="tipo-chip"><% if(evento.tipo_evento==='online'){%>💻 Online<%}else if(evento.tipo_evento==='hibrido'){%>🔀 Híbrido<%}else{%>📍 Presencial<%}%></div>
     <h1><%= evento.nome %></h1>
-    <div class="titulo-meta">
-      <% if (evento.data_inicio) { %>
-      <div class="titulo-chip">📅 <strong><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}) %></strong></div>
-      <% } %>
-      <% if (evento.local && evento.tipo_evento !== 'online') { %>
-      <div class="titulo-chip">📍 <span><%= evento.local %></span></div>
-      <% } %>
+    <div class="title-meta">
+      <% if(evento.data_inicio){%><div class="t-chip">📅 <strong><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}) %></strong></div><%}%>
+      <% if(evento.local&&evento.tipo_evento!=='online'){%><div class="t-chip">📍 <%= evento.local %></div><%}%>
     </div>
   </div>
 </div>
 
-<!-- GRUPO WHATSAPP -->
-<% if (evento.wpp_grupo) { %>
-<div style="background:#25d366;padding:12px 0">
-  <div style="max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
-    <div style="display:flex;align-items:center;gap:10px;color:white">
-      <span style="font-size:20px">📱</span>
-      <span style="font-weight:600;font-size:14px">Participe do grupo do WhatsApp do evento e fique por dentro de tudo!</span>
-    </div>
-    <a href="<%= evento.wpp_grupo %>" target="_blank" style="background:white;color:#25d366;padding:8px 20px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;white-space:nowrap">📲 Entrar no Grupo</a>
+<!-- GRUPO WPP -->
+<% if(evento.wpp_grupo){%>
+<div class="wpp-banner">
+  <div class="wpp-in">
+    <div style="color:white;font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px"><svg style="width:20px;height:20px;fill:white;flex-shrink:0" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>Participe do grupo oficial do evento no WhatsApp</div>
+    <a href="<%= evento.wpp_grupo %>" target="_blank" class="wpp-btn"><svg style="width:16px;height:16px;fill:#128c7e" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> Entrar no Grupo</a>
   </div>
 </div>
-<% } %>
+<%}%>
 
-<!-- MAIN -->
-<div class="page-wrap">
-  <div class="main-grid">
-
+<div class="wrap">
+  <div class="grid">
     <!-- COLUNA ESQUERDA -->
     <div>
 
-      <!-- Sobre -->
-      <% if (evento.descricao) { %>
+      <!-- SOBRE -->
+      <% if(evento.descricao){%>
       <div class="card">
         <div class="card-hd"><h2>Sobre o Evento</h2></div>
-        <div class="card-bd" style="font-size:14px;line-height:1.8;color:var(--gray-700);text-align:justify"><%- evento.descricao %></div>
+        <div class="card-bd" style="font-size:14px;line-height:1.8;color:var(--g700);text-align:justify"><%- evento.descricao %></div>
       </div>
-      <% } %>
+      <%}%>
 
-      <!-- Ingressos -->
-      <% if (lotes.length > 0) { %>
+      <!-- INGRESSOS -->
+      <% if(lotes.length>0){%>
       <div class="card" id="inscricao">
-        <div class="card-hd"><div><h2>🎫 Ingressos</h2><p>Selecione e escolha a quantidade</p></div></div>
+        <div class="card-hd"><div><h2>🎫 Ingressos</h2><p style="font-size:12px;color:var(--g400)">Selecione e escolha a quantidade</p></div></div>
         <div class="card-bd">
-          <% lotes.forEach((l, i) => { %>
-          <div class="lote <%= i===0?'ativo':'' %>" id="lote-<%= l.id %>" onclick="selecionarLote(<%= l.id %>, this)">
+          <% lotes.forEach((l,i)=>{%>
+          <div class="lote <%= i===0?'sel':'' %>" id="lote-<%= l.id %>" onclick="selLote(<%= l.id %>,this)">
             <div class="lote-top">
-              <div class="lote-left">
+              <div style="flex:1">
                 <div class="lote-nome"><%= l.nome %></div>
-                <% if (l.data_fim) { %><div class="lote-info">Até <%= new Date(l.data_fim).toLocaleDateString('pt-BR') %></div><% } %>
+                <% if(l.data_fim){%><div class="lote-info">Até <%= new Date(l.data_fim).toLocaleDateString('pt-BR') %></div><%}%>
               </div>
-              <div style="display:flex;align-items:center;gap:10px">
-                <div>
-                  <% if (parseFloat(l.preco) === 0) { %>
-                  <span class="badge-free">GRATUITO</span>
-                  <% } else { %>
-                  <div class="lote-preco">R$ <%= Number(l.preco).toFixed(2) %></div>
-                  <% } %>
-                </div>
-                <div class="lote-check"><%= i===0?'✓':'' %></div>
+              <div style="display:flex;align-items:center;gap:12px">
+                <% if(parseFloat(l.preco)===0){%><span class="badge-free">GRATUITO</span><%}else{%><div class="lote-preco">R$ <%= Number(l.preco).toFixed(2) %></div><%}%>
+                <div class="lote-radio"></div>
               </div>
             </div>
-            <% if (i===0) { %>
-            <div class="qty-wrap" id="qty-wrap-<%= l.id %>">
-              <button type="button" class="qty-btn" onclick="event.stopPropagation();alterarQty(-1)">−</button>
-              <span class="qty-num" id="qty-num">1</span>
-              <button type="button" class="qty-btn" onclick="event.stopPropagation();alterarQty(1)">+</button>
-              <span class="qty-label">ingresso(s)</span>
+            <% if(i===0){%>
+            <div class="qty-row" id="qty-<%= l.id %>">
+              <button type="button" class="qty-btn" onclick="event.stopPropagation();chgQty(-1)">−</button>
+              <span class="qty-n" id="qty-n">1</span>
+              <button type="button" class="qty-btn" onclick="event.stopPropagation();chgQty(1)">+</button>
+              <span class="qty-lbl">ingresso(s)</span>
             </div>
-            <% } %>
+            <%}%>
           </div>
-          <% }) %>
-
-          <!-- Cupom -->
-          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--gray-100)">
-            <div style="font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:8px">🏷️ Cupom de Desconto</div>
-            <div class="cupom-wrap">
-              <input type="text" id="cupom-input" class="cupom-input" placeholder="Digite seu cupom..." oninput="this.value=this.value.toUpperCase()">
+          <%})%>
+          <!-- CUPOM -->
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--g100)">
+            <div style="font-size:13px;font-weight:600;color:var(--g700);margin-bottom:8px">🏷️ Cupom de Desconto</div>
+            <div class="cupom-row">
+              <input id="cupom-in" class="cupom-in" placeholder="Código do cupom..." oninput="this.value=this.value.toUpperCase()">
               <button type="button" class="cupom-btn" onclick="aplicarCupom()">Aplicar</button>
             </div>
-            <div id="cupom-msg" style="font-size:12px;margin-top:6px;display:none"></div>
+            <div id="cupom-msg" style="display:none"></div>
           </div>
+          <!-- BTN PROSSEGUIR -->
+          <button class="btn-prox" onclick="abrirForm()">Prosseguir com a Inscrição →</button>
         </div>
       </div>
-      <% } %>
+      <%}%>
 
-      <!-- Formulário animado -->
-      <div class="form-section" id="form-section">
+      <!-- FORMULÁRIO ANIMADO -->
+      <div class="form-sec" id="form-sec">
         <div class="card">
-          <div class="card-hd"><div><h2>📝 Dados dos Participantes</h2><p>Preencha os dados de cada participante</p></div></div>
+          <div class="card-hd"><div><h2>📝 Dados dos Participantes</h2><p style="font-size:12px;color:var(--g400)">Preencha os dados de cada participante</p></div></div>
           <div class="card-bd">
-            <form action="/inscricao/<%= evento.id %>" method="POST" id="form-inscricao">
-              <input type="hidden" name="lote_id" id="lote_selecionado" value="<%= lotes[0]?.id %>">
+            <form action="/inscricao/<%= evento.id %>" method="POST" id="form-ins">
+              <input type="hidden" name="lote_id" id="lote-sel" value="<%= lotes[0]?.id %>">
               <input type="hidden" name="quantidade" id="campo-qty" value="1">
               <input type="hidden" name="cupom" id="campo-cupom" value="">
-
-              <div id="participantes-wrap">
-                <!-- Participante 1 -->
-                <div class="participante-bloco" id="part-1">
-                  <div class="participante-titulo"><div class="participante-num">1</div> Participante 1</div>
-                  <div class="input-grid">
-                    <div class="campo" style="grid-column:1/-1">
-                      <label>Nome Completo <span class="req">*</span></label>
-                      <input name="nome" class="input" required placeholder="Nome completo">
+              <div id="parts-wrap">
+                <div class="part-bloco" id="part-1">
+                  <div class="part-tit"><div class="part-num">1</div>Participante 1</div>
+                  <div class="grid2">
+                    <div class="campo" style="grid-column:1/-1"><label>Nome Completo <span class="req">*</span></label><input name="nome" class="inp" required placeholder="Nome completo"></div>
+                    <div class="campo"><label>Email <span class="req">*</span></label><input name="email" class="inp" type="email" required placeholder="email@exemplo.com"></div>
+                    <div class="campo"><label>WhatsApp</label>
+                      <div style="display:flex;gap:6px">
+                        <select name="whatsapp_pais" class="inp" style="max-width:88px">
+                          <option value="+595">🇵🇾 +595</option>
+                          <option value="+55">🇧🇷 +55</option>
+                          <option value="+54">🇦🇷 +54</option>
+                          <option value="+598">🇺🇾 +598</option>
+                          <option value="+1">🇺🇸 +1</option>
+                        </select>
+                        <input name="whatsapp" class="inp" placeholder="99 999 9999" style="flex:1">
+                      </div>
                     </div>
-                    <div class="campo">
-                      <label>Email <span class="req">*</span></label>
-                      <input name="email" class="input" type="email" required placeholder="email@exemplo.com">
+                    <div class="campo"><label>Data de Nascimento</label><input type="date" name="data_nascimento" class="inp"></div>
+                    <div class="campo"><label>RG / CI</label><input name="rg" class="inp" placeholder="Número do documento"></div>
+                    <div class="campo"><label>Catraca</label><input name="catraca" class="inp" placeholder="Número da catraca"></div>
+                    <div class="campo"><label>Semestre</label>
+                      <select name="semestre" class="inp">
+                        <option value="">Selecione...</option>
+                        <% for(let s=1;s<=10;s++){%><option value="<%= s %>º"><%= s %>º Semestre</option><%}%>
+                      </select>
                     </div>
-                    <div class="campo">
-                      <label>WhatsApp</label>
-                      <input name="whatsapp" class="input" placeholder="+595 99 999 9999">
-                    </div>
-                    <div class="campo">
-                      <label>CPF</label>
-                      <input name="cpf" class="input" placeholder="000.000.000-00">
-                    </div>
-                    <div class="campo">
-                      <label>Instituição</label>
-                      <input name="instituicao" class="input" placeholder="Universidade / Empresa">
+                    <div class="campo"><label>Turma</label>
+                      <select name="turma" class="inp">
+                        <option value="">Selecione...</option>
+                        <% 'ABCDEFGHIJKLMNOP'.split('').forEach(t=>{%><option value="<%= t %>">Turma <%= t %></option><%})%>
+                      </select>
                     </div>
                   </div>
-                  <% if (campos && campos.length > 0) { %>
-                  <% campos.forEach(campo => { %>
+                  <% if(campos&&campos.length>0){campos.forEach(campo=>{%>
                   <div class="campo">
                     <label><%= campo.label %><% if(campo.obrigatorio){%><span class="req"> *</span><%}%></label>
-                    <% if (campo.tipo === 'select') { %>
-                    <select name="campo_<%= campo.id %>" class="input" <%= campo.obrigatorio?'required':'' %>>
-                      <option value="">Selecione...</option>
-                      <% (campo.opcoes||'').split('\n').filter(o=>o.trim()).forEach(op=>{ %><option value="<%= op.trim() %>"><%= op.trim() %></option><% }) %>
-                    </select>
-                    <% } else if (campo.tipo === 'textarea') { %>
-                    <textarea name="campo_<%= campo.id %>" class="input" rows="3" <%= campo.obrigatorio?'required':'' %>></textarea>
-                    <% } else { %>
-                    <input type="<%= campo.tipo==='email'?'email':campo.tipo==='number'?'number':'text' %>" name="campo_<%= campo.id %>" class="input" <%= campo.obrigatorio?'required':'' %>>
-                    <% } %>
+                    <% if(campo.tipo==='select'){%>
+                    <select name="campo_<%= campo.id %>" class="inp" <%= campo.obrigatorio?'required':'' %>><option value="">Selecione...</option><% (campo.opcoes||'').split('\n').filter(o=>o.trim()).forEach(op=>{%><option value="<%= op.trim() %>"><%= op.trim() %></option><%})%></select>
+                    <%}else if(campo.tipo==='textarea'){%><textarea name="campo_<%= campo.id %>" class="inp" rows="3" <%= campo.obrigatorio?'required':'' %>></textarea>
+                    <%}else if(campo.tipo==='file'){%><input type="file" name="campo_<%= campo.id %>" class="inp" <%= campo.obrigatorio?'required':'' %>>
+                    <%}else{%><input type="<%= campo.tipo==='email'?'email':campo.tipo==='number'?'number':campo.tipo==='date'?'date':'text' %>" name="campo_<%= campo.id %>" class="inp" <%= campo.obrigatorio?'required':'' %>><%}%>
                   </div>
-                  <% }) %>
-                  <% } %>
+                  <%})}%>
                 </div>
               </div>
-
               <!-- TERMOS -->
-              <% if (evento.termos_texto) { %>
-              <div style="background:var(--gray-50);border:1.5px solid var(--gray-200);border-radius:10px;padding:14px;margin-top:16px;margin-bottom:14px">
-                <div style="font-size:13px;font-weight:700;color:var(--gray-800);margin-bottom:8px">📜 Termos e Condições</div>
-                <div style="max-height:150px;overflow-y:auto;font-size:12px;color:var(--gray-600);line-height:1.6;white-space:pre-wrap;margin-bottom:12px"><%= evento.termos_texto %></div>
-                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13px;color:var(--gray-800)">
-                  <input type="checkbox" name="aceite_termos" required style="margin-top:2px;accent-color:var(--primary);width:16px;height:16px;flex-shrink:0">
-                  <span>Li e concordo com os <strong><a href="#" onclick="document.getElementById('modal-termos').style.display='flex';return false" style="color:var(--primary)">Termos de Compra e Participação</a></strong> <span style="color:#ef4444">*</span></span>
-                </label>
+              <% if(evento.termos_texto){%>
+              <div style="background:var(--g50);border:1.5px solid var(--g200);border-radius:10px;padding:14px;margin-top:14px">
+                <div class="termo-check">
+                  <input type="checkbox" name="aceite_termos" required>
+                  <span>Li e concordo com os <span class="termo-link" onclick="abrirModal('modal-termos')">Termos de Compra e Participação</span> <span class="req">*</span></span>
+                </div>
+                <div class="termo-check">
+                  <input type="checkbox" name="aceite_lgpd" required>
+                  <span>Li e aceito a <span class="termo-link" onclick="abrirModal('modal-lgpd')">Política de Privacidade e LGPD</span> <span class="req">*</span></span>
+                </div>
               </div>
-              <% } %>
-              <!-- LGPD -->
-              <div style="margin-bottom:14px">
-                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13px;color:var(--gray-800)">
-                  <input type="checkbox" name="aceite_lgpd" required style="margin-top:2px;accent-color:var(--primary);width:16px;height:16px;flex-shrink:0">
-                  <span>Li e aceito a <strong>Política de Privacidade e tratamento de dados (LGPD)</strong> — Meus dados serão usados exclusivamente para gestão deste evento. <span style="color:#ef4444">*</span></span>
-                </label>
+              <%}else{%>
+              <div class="termo-check" style="margin-top:14px">
+                <input type="checkbox" name="aceite_lgpd" required>
+                <span>Li e aceito a <span class="termo-link" onclick="abrirModal('modal-lgpd')">Política de Privacidade e LGPD</span> <span class="req">*</span></span>
               </div>
-              <button type="submit" class="btn-submit" id="btn-submit">Confirmar Inscrição →</button>
+              <%}%>
+              <button type="submit" class="btn-sub">Confirmar Inscrição →</button>
               <div class="secure">🔒 Seus dados estão protegidos</div>
             </form>
           </div>
@@ -372,80 +412,76 @@
       </div>
 
       <!-- PROGRAMAÇÃO -->
-      <% if (programacao && programacao.length > 0) { %>
+      <% if(programacao&&programacao.length>0){%>
       <div class="card">
-        <div class="card-hd"><div><h2>🗓️ Programação</h2><p>Agenda completa do evento</p></div></div>
+        <div class="card-hd"><h2>🗓️ Programação</h2></div>
         <div class="card-bd">
-          <% programacao.forEach(p => { %>
-          <div style="border-left:3px solid var(--primary);padding:10px 14px;margin-bottom:10px;background:var(--gray-50);border-radius:0 8px 8px 0">
-            <div style="font-weight:700;font-size:14px"><%= p.titulo %></div>
-            <div style="font-size:12px;color:var(--primary);font-weight:600;margin-top:2px">⏰ <%= p.horario %><% if(p.local){%> · 📍 <%= p.local %><%}%></div>
-            <% if(p.descricao){%><div style="font-size:12px;color:var(--gray-600);margin-top:4px"><%= p.descricao %></div><%}%>
+          <% programacao.forEach((p,i)=>{%>
+          <div class="prog-acc">
+            <div class="prog-hd" onclick="togProg(this,<%= i %>)">
+              <div class="prog-info">
+                <div class="prog-titulo"><%= p.titulo %></div>
+                <div class="prog-hora">⏰ <%= p.horario %><% if(p.local){%> · 📍 <%= p.local %><%}%></div>
+              </div>
+              <% if(p.descricao){%><span class="prog-arrow">▼</span><%}%>
+            </div>
+            <% if(p.descricao){%>
+            <div class="prog-body" id="prog-<%= i %>">
+              <div class="prog-desc"><%= p.descricao %></div>
+            </div>
+            <%}%>
           </div>
-          <% }) %>
+          <%})%>
         </div>
       </div>
-      <% } %>
+      <%}%>
 
       <!-- PALESTRANTES -->
-      <% if (palestrantes && palestrantes.length > 0) { %>
+      <% if(palestrantes&&palestrantes.length>0){%>
       <div class="card">
-        <div class="card-hd"><div><h2>🎤 Palestrantes</h2></div></div>
+        <div class="card-hd"><h2>🎤 Palestrantes</h2></div>
         <div class="card-bd">
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px">
-          <% palestrantes.forEach(p => { %>
-          <div style="border:1.5px solid var(--gray-200);border-radius:12px;padding:16px;text-align:center">
-            <% if(p.foto_chave){%><img src="/eventos/palestrantes/<%= p.id %>/foto" style="width:70px;height:70px;border-radius:50%;object-fit:cover;margin:0 auto 10px;display:block"><%}else{%><div style="width:70px;height:70px;border-radius:50%;background:var(--gray-100);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:28px">🎤</div><%}%>
-            <div style="font-weight:700;font-size:14px"><%= p.nome %></div>
-            <% if(p.instituicao){%><div style="font-size:12px;color:var(--primary);margin-top:2px"><%= p.instituicao %></div><%}%>
-            <% if(p.bio){%><div style="font-size:12px;color:var(--gray-600);margin-top:6px;text-align:justify"><%= p.bio.substring(0,120) %><%= p.bio.length>120?'...':'' %></div><%}%>
-          </div>
-          <% }) %>
+          <div class="pales-grid">
+            <% palestrantes.forEach((p,i)=>{%>
+            <div class="pales-card" id="pales-<%= i %>" onclick="togPales(<%= i %>)">
+              <% if(p.foto_chave){%><img src="/eventos/palestrantes/<%= p.id %>/foto" class="pales-foto"><%}else{%><div class="pales-ph">🎤</div><%}%>
+              <div class="pales-nome"><%= p.nome %></div>
+              <% if(p.instituicao){%><div class="pales-inst"><%= p.instituicao %></div><%}%>
+              <% if(p.bio){%>
+              <div class="pales-bio-wrap" id="pbio-<%= i %>"><div class="pales-bio"><%= p.bio %></div></div>
+              <%}%>
+            </div>
+            <%})%>
           </div>
         </div>
       </div>
-      <% } %>
+      <%}%>
 
-      <!-- PATROCINADORES -->
-      <% if (patrocinadores && patrocinadores.length > 0) { %>
-      <div class="card">
-        <div class="card-hd"><div><h2>🤝 Patrocinadores</h2></div></div>
-        <div class="card-bd">
-          <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center">
-          <% patrocinadores.forEach(p => { %>
-            <% if(p.url){%><a href="<%= p.url %>" target="_blank" style="text-decoration:none"><%}%>
-            <% if(p.logo_chave){%><img src="/eventos/patrocinadores/<%= p.id %>/logo" style="height:50px;object-fit:contain;border:1px solid var(--gray-200);border-radius:8px;padding:4px" title="<%= p.nome %>">
-            <%}else{%><div style="padding:8px 16px;border:1px solid var(--gray-200);border-radius:8px;font-weight:600;font-size:13px"><%= p.nome %></div><%}%>
-            <% if(p.url){%></a><%}%>
-          <% }) %>
-          </div>
-        </div>
-      </div>
-      <% } %>
-
-      <!-- Contato -->
+      <!-- CONTATO -->
       <div class="card" id="contato">
-        <div class="card-hd"><div><h2>💬 Contato</h2><p>Fale com nossa equipe</p></div></div>
+        <div class="card-hd"><h2>💬 Contato</h2></div>
         <div class="card-bd">
-          <a href="mailto:lauroucpcde@lauroucpcde.com" class="contato-link">
-            <div class="c-icon" style="background:#fee2e2">✉️</div>
-            <div><div style="font-size:10px;color:var(--gray-400);font-weight:600">EMAIL</div>lauroucpcde@lauroucpcde.com</div>
-          </a>
-          <a href="https://wa.me/595994225753" target="_blank" class="contato-link">
-            <div class="c-icon" style="background:#dcfce7">📱</div>
-            <div><div style="font-size:10px;color:var(--gray-400);font-weight:600">WHATSAPP</div>+595 994 225 753</div>
-          </a>
-          <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" class="contato-link">
-            <div class="c-icon" style="background:#fce7f3">📸</div>
-            <div><div style="font-size:10px;color:var(--gray-400);font-weight:600">INSTAGRAM</div>@lauroucp.cde</div>
-          </a>
-          <div style="border-top:1px solid var(--gray-100);padding-top:16px;margin-top:8px">
-            <p style="font-size:13px;font-weight:600;margin-bottom:10px">Enviar mensagem</p>
+          <div class="contato-btns">
+            <a href="mailto:lauroucpcde@lauroucpcde.com" class="c-btn">
+              <div class="c-icon" style="background:#fee2e2">✉️</div>
+              <div><div style="font-size:10px;color:var(--g400);font-weight:600;text-transform:uppercase">Email</div>lauroucpcde@lauroucpcde.com</div>
+            </a>
+            <a href="https://wa.me/595994225753" target="_blank" class="c-btn">
+              <div class="c-icon" style="background:#dcfce7"><svg style="width:18px;height:18px;fill:#25d366" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
+              <div><div style="font-size:10px;color:var(--g400);font-weight:600;text-transform:uppercase">WhatsApp</div>+595 994 225 753</div>
+            </a>
+            <div class="c-btn" onclick="togForm()">
+              <div class="c-icon" style="background:#eff6ff">✉️</div>
+              <div><div style="font-size:10px;color:var(--g400);font-weight:600;text-transform:uppercase">Mensagem</div>Enviar mensagem para nossa equipe</div>
+              <span id="form-arrow" style="margin-left:auto;font-size:12px;color:var(--g400);transition:.3s">▼</span>
+            </div>
+          </div>
+          <div class="c-form" id="c-form">
             <form action="/contato-evento/<%= evento.id %>" method="POST">
-              <input name="nome" class="form-contato-input" placeholder="Seu nome" required>
-              <input name="email" type="email" class="form-contato-input" placeholder="Seu email" required>
-              <textarea name="mensagem" class="form-contato-input" rows="3" placeholder="Sua mensagem..." style="resize:vertical" required></textarea>
-              <button type="submit" class="btn-contato">Enviar →</button>
+              <input name="nome" class="c-inp" placeholder="Seu nome" required>
+              <input name="email" type="email" class="c-inp" placeholder="Seu email" required>
+              <textarea name="mensagem" class="c-inp" rows="3" placeholder="Sua mensagem..." style="resize:vertical" required></textarea>
+              <button type="submit" class="c-send">Enviar →</button>
             </form>
           </div>
         </div>
@@ -454,94 +490,94 @@
 
     <!-- SIDEBAR -->
     <div class="sidebar">
-      <div class="sidebar-card">
-        <div class="sidebar-title">Informações</div>
-        <% if (evento.data_inicio) { %>
-        <div class="info-item">
-          <div class="info-icon">📅</div>
-          <div><div class="info-label">Data</div><div class="info-val"><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}) %></div><div class="info-sub"><%= new Date(evento.data_inicio).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) %> h</div></div>
-        </div>
-        <% } %>
-        <% if (evento.data_fim) { %>
-        <div class="info-item">
-          <div class="info-icon">🏁</div>
-          <div><div class="info-label">Término</div><div class="info-val"><%= new Date(evento.data_fim).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) %> h</div></div>
-        </div>
-        <% } %>
-        <div class="info-item">
-          <div class="info-icon"><%= evento.tipo_evento==='online'?'💻':evento.tipo_evento==='hibrido'?'🔀':'📍' %></div>
-          <div><div class="info-label">Modalidade</div><div class="info-val"><%= evento.tipo_evento==='online'?'Online':evento.tipo_evento==='hibrido'?'Híbrido':'Presencial' %></div></div>
-        </div>
-        <% if (evento.local && evento.tipo_evento !== 'online') { %>
-        <div class="info-item">
-          <div class="info-icon">📍</div>
-          <div><div class="info-label">Local</div><div class="info-val"><%= evento.local %></div><% if(evento.endereco){%><div class="info-sub"><%= evento.endereco %></div><%}%></div>
-        </div>
-        <% } %>
+
+      <!-- RESUMO INGRESSO -->
+      <% if(lotes.length>0){%>
+      <div class="resumo-card">
+        <div class="resumo-label">Ingresso Selecionado</div>
+        <div class="resumo-nome" id="res-nome"><%= lotes[0]?.nome %></div>
+        <div class="resumo-preco" id="res-preco"><%= parseFloat(lotes[0]?.preco||0)===0?'Gratuito':'R$ '+Number(lotes[0]?.preco||0).toFixed(2) %></div>
+        <div class="resumo-qty" id="res-qty">1 ingresso</div>
+        <button class="resumo-btn" onclick="abrirForm()">Garantir Minha Vaga →</button>
+      </div>
+      <%}%>
+
+      <!-- INFO -->
+      <div class="s-card">
+        <div class="s-title">Informações</div>
+        <% if(evento.data_inicio){%>
+        <div class="info-it"><div class="i-icon">📅</div><div><div class="i-lbl">Data</div><div class="i-val"><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}) %></div><div class="i-sub"><%= new Date(evento.data_inicio).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) %> h</div></div></div>
+        <%}%>
+        <% if(evento.data_fim){%>
+        <div class="info-it"><div class="i-icon">🏁</div><div><div class="i-lbl">Término</div><div class="i-val"><%= new Date(evento.data_fim).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) %> h</div></div></div>
+        <%}%>
+        <div class="info-it"><div class="i-icon"><%= evento.tipo_evento==='online'?'💻':evento.tipo_evento==='hibrido'?'🔀':'📍' %></div><div><div class="i-lbl">Modalidade</div><div class="i-val"><%= evento.tipo_evento==='online'?'Online':evento.tipo_evento==='hibrido'?'Híbrido':'Presencial' %></div></div></div>
+        <% if(evento.local&&evento.tipo_evento!=='online'){%>
+        <div class="info-it"><div class="i-icon">📍</div><div><div class="i-lbl">Local</div><div class="i-val"><%= evento.local %></div><% if(evento.endereco){%><div class="i-sub"><%= evento.endereco %></div><%}%></div></div>
+        <%}%>
         <div class="org-box">
-          <div class="org-logo">
-            <% if (config && config.org_logo) { %><img src="<%= config.org_logo %>" alt="LAURO"><% } else { %><span style="color:white;font-weight:800;font-size:15px">L</span><% } %>
-          </div>
-          <div><div style="font-weight:700;font-size:13px">LAURO</div><div style="font-size:11px;color:var(--gray-600)">Liga Académica de Urología</div></div>
+          <div class="org-logo"><% if(config&&config.org_logo){%><img src="<%= config.org_logo %>" alt="LAURO"><%}else{%><span style="color:white;font-weight:800;font-size:14px">L</span><%}%></div>
+          <div><div style="font-weight:700;font-size:13px">LAURO</div><div style="font-size:11px;color:var(--g600)">Liga Académica de Urología</div></div>
         </div>
       </div>
 
-      <!-- Resumo Ingresso -->
-      <% if (lotes.length > 0) { %>
-      <div class="sidebar-card">
-        <div class="sidebar-title">Ingresso Selecionado</div>
-        <div class="resumo-box">
-          <div class="resumo-nome" id="resumo-nome"><%= lotes[0]?.nome %></div>
-          <div class="resumo-preco" id="resumo-preco"><%= parseFloat(lotes[0]?.preco||0)===0?'Gratuito':'R$ '+Number(lotes[0]?.preco||0).toFixed(2) %></div>
-          <div class="resumo-qty" id="resumo-qty">1 ingresso</div>
+      <!-- SOCIAL -->
+      <div class="s-card">
+        <div class="s-title">Siga a LAURO</div>
+        <div class="social-row">
+          <a href="https://wa.me/595994225753" target="_blank" class="s-wpp">
+            <div class="s-icon"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
+            <div><div style="font-size:11px;opacity:.8">Atendimento via</div><div style="font-weight:700">WhatsApp</div></div>
+          </a>
+          <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" class="s-ig">
+            <div class="s-icon"><svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></div>
+            <div><div style="font-size:11px;opacity:.8">Siga no</div><div style="font-weight:700">@lauroucp.cde</div></div>
+          </a>
         </div>
-        <a href="#form-section" class="btn-inscrever-side" onclick="mostrarForm()">Preencher Dados →</a>
       </div>
-      <% } %>
 
-      <!-- Grupo WhatsApp -->
-      <% if (evento.wpp_grupo) { %>
-      <div class="sidebar-card">
-        <a href="<%= evento.wpp_grupo %>" target="_blank" style="display:flex;align-items:center;gap:12px;padding:14px;background:#25d366;border-radius:10px;text-decoration:none;color:white">
-          <div style="font-size:26px">📱</div>
-          <div><div style="font-weight:700;font-size:14px">Grupo do Evento</div><div style="font-size:12px;opacity:.85">Entrar no WhatsApp</div></div>
-        </a>
+      <!-- PATROCINADORES -->
+      <% if(patrocinadores&&patrocinadores.length>0){%>
+      <div class="s-card">
+        <div class="s-title">Patrocinadores</div>
+        <div class="patroc-grid">
+          <% patrocinadores.forEach(p=>{%>
+          <% if(p.url){%><a href="<%= p.url %>" target="_blank" class="patroc-item"><%}else{%><div class="patroc-item"><%}%>
+            <% if(p.logo_chave){%><img src="/eventos/patrocinadores/<%= p.id %>/logo" title="<%= p.nome %>"><%}else{%><div class="patroc-nome"><%= p.nome %></div><%}%>
+          <% if(p.url){%></a><%}else{%></div><%}%>
+          <%})%>
+        </div>
       </div>
-      <% } %>
+      <%}%>
 
-      <!-- Instagram -->
-      <div class="sidebar-card">
-        <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" style="display:flex;align-items:center;gap:12px;padding:12px;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);border-radius:10px;text-decoration:none;color:white">
-          <div style="font-size:24px">📸</div>
-          <div><div style="font-weight:700;font-size:13px">@lauroucp.cde</div><div style="font-size:11px;opacity:.85">Siga no Instagram</div></div>
-        </a>
-      </div>
     </div>
   </div>
 </div>
-<% } %>
+<%}%>
 
-<!-- Modal Termos -->
-<% if (evento.termos_texto) { %>
-<div id="modal-termos" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)this.style.display='none'">
-  <div style="background:white;border-radius:16px;max-width:600px;width:100%;max-height:80vh;overflow:hidden;display:flex;flex-direction:column">
-    <div style="padding:20px 24px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center">
-      <h3 style="font-weight:700;font-size:16px">📜 Termos e Condições</h3>
-      <button onclick="document.getElementById('modal-termos').style.display='none'" style="border:none;background:none;font-size:20px;cursor:pointer;color:#6b7280">✕</button>
-    </div>
-    <div style="padding:20px 24px;overflow-y:auto;font-size:13px;line-height:1.7;color:#374151;white-space:pre-wrap"><%= evento.termos_texto %></div>
-    <div style="padding:16px 24px;border-top:1px solid #e5e7eb;text-align:right">
-      <button onclick="document.getElementById('modal-termos').style.display='none'" style="background:var(--primary);color:white;border:none;padding:10px 24px;border-radius:8px;font-weight:600;cursor:pointer">Entendi</button>
-    </div>
+<!-- MODAIS TERMOS -->
+<% if(evento.termos_texto){%>
+<div class="modal-wrap" id="modal-termos" onclick="if(event.target===this)fecharModal('modal-termos')">
+  <div class="modal-box">
+    <div class="modal-hd"><h3>📜 Termos de Compra e Participação</h3><button class="modal-close" onclick="fecharModal('modal-termos')">✕</button></div>
+    <div class="modal-body"><%= evento.termos_texto %></div>
+    <div class="modal-ft"><button class="modal-ok" onclick="fecharModal('modal-termos')">Entendi</button></div>
   </div>
 </div>
-<% } %>
+<%}%>
+<% if(evento.lgpd_texto){%>
+<div class="modal-wrap" id="modal-lgpd" onclick="if(event.target===this)fecharModal('modal-lgpd')">
+  <div class="modal-box">
+    <div class="modal-hd"><h3>🔒 Política de Privacidade e LGPD</h3><button class="modal-close" onclick="fecharModal('modal-lgpd')">✕</button></div>
+    <div class="modal-body"><%= evento.lgpd_texto %></div>
+    <div class="modal-ft"><button class="modal-ok" onclick="fecharModal('modal-lgpd')">Entendi</button></div>
+  </div>
+</div>
+<%}%>
 
-<!-- WHATSAPP FLOAT -->
-<a href="https://wa.me/595994225753" target="_blank" class="wpp-float" title="Fale conosco no WhatsApp">
-  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-  </svg>
+<!-- WPP FLOAT -->
+<a href="https://wa.me/595994225753" target="_blank" class="wpp-float" title="Fale conosco">
+  <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
 </a>
 
 <footer>
@@ -550,106 +586,94 @@
 </footer>
 
 <script>
-const lotesData = <%- JSON.stringify(lotes) %>;
-let qtyAtual = 1;
-let loteSelecionadoId = <%= lotes[0]?.id || 'null' %>;
-let precoBase = <%= parseFloat(lotes[0]?.preco||0) %>;
-let desconto = 0;
+const lotesData=<%- JSON.stringify(lotes) %>;
+let qty=1,loteId=<%= lotes[0]?.id||'null' %>,precoBase=<%= parseFloat(lotes[0]?.preco||0) %>,desconto=0;
 
-function selecionarLote(id, el) {
-  document.querySelectorAll('.lote').forEach(e=>{
-    e.classList.remove('ativo');
-    const chk=e.querySelector('.lote-check');
-    if(chk)chk.textContent='';
-    const qw=e.querySelector('.qty-wrap');
-    if(qw)qw.remove();
-  });
-  el.classList.add('ativo');
-  const chk=el.querySelector('.lote-check');
-  if(chk)chk.textContent='✓';
-  document.getElementById('lote_selecionado').value=id;
-  loteSelecionadoId=id;
+function selLote(id,el){
+  document.querySelectorAll('.lote').forEach(e=>{e.classList.remove('sel');const q=e.querySelector('.qty-row');if(q)q.remove();});
+  el.classList.add('sel');
+  document.getElementById('lote-sel').value=id;
+  loteId=id;
   const l=lotesData.find(x=>x.id==id);
   precoBase=l?parseFloat(l.preco):0;
-  // Adiciona qty
-  if(!el.querySelector('.qty-wrap')){
-    const qw=document.createElement('div');
-    qw.className='qty-wrap';
-    qw.id='qty-wrap-'+id;
-    qw.innerHTML='<button type="button" class="qty-btn" onclick="event.stopPropagation();alterarQty(-1)">−</button><span class="qty-num" id="qty-num">'+qtyAtual+'</span><button type="button" class="qty-btn" onclick="event.stopPropagation();alterarQty(1)">+</button><span class="qty-label">ingresso(s)</span>';
+  if(!el.querySelector('.qty-row')){
+    const qw=document.createElement('div');qw.className='qty-row';qw.id='qty-'+id;
+    qw.innerHTML='<button type="button" class="qty-btn" onclick="event.stopPropagation();chgQty(-1)">−</button><span class="qty-n" id="qty-n">'+qty+'</span><button type="button" class="qty-btn" onclick="event.stopPropagation();chgQty(1)">+</button><span class="qty-lbl">ingresso(s)</span>';
     el.appendChild(qw);
   }
-  atualizarResumo(l);
+  updRes(l);
 }
 
-function alterarQty(delta) {
-  qtyAtual = Math.max(1, Math.min(10, qtyAtual + delta));
-  const el=document.getElementById('qty-num');
-  if(el)el.textContent=qtyAtual;
-  document.getElementById('campo-qty').value=qtyAtual;
-  const l=lotesData.find(x=>x.id==loteSelecionadoId);
-  atualizarResumo(l);
-  atualizarParticipantes();
+function chgQty(d){
+  qty=Math.max(1,Math.min(10,qty+d));
+  const el=document.getElementById('qty-n');if(el)el.textContent=qty;
+  document.getElementById('campo-qty').value=qty;
+  updParts();
+  const l=lotesData.find(x=>x.id==loteId);updRes(l);
 }
 
-function atualizarResumo(l) {
-  const nome=l?l.nome:'';
-  const preco=precoBase*(1-desconto)*qtyAtual;
-  document.getElementById('resumo-nome').textContent=nome;
-  document.getElementById('resumo-preco').textContent=preco===0?'Gratuito':'R$ '+preco.toFixed(2);
-  document.getElementById('resumo-qty').textContent=qtyAtual+' ingresso'+(qtyAtual>1?'s':'');
+function updRes(l){
+  if(!document.getElementById('res-nome'))return;
+  const p=precoBase*(1-desconto)*qty;
+  document.getElementById('res-nome').textContent=l?l.nome:'';
+  document.getElementById('res-preco').textContent=p===0?'Gratuito':'R$ '+p.toFixed(2);
+  document.getElementById('res-qty').textContent=qty+' ingresso'+(qty>1?'s':'');
 }
 
-function atualizarParticipantes() {
-  const wrap=document.getElementById('participantes-wrap');
-  const atual=wrap.querySelectorAll('.participante-bloco').length;
-  if(qtyAtual>atual){
-    for(let i=atual+1;i<=qtyAtual;i++){
-      const div=document.createElement('div');
-      div.className='participante-bloco';
-      div.id='part-'+i;
-      div.innerHTML='<div class="participante-titulo"><div class="participante-num">'+i+'</div> Participante '+i+'</div><div class="input-grid"><div class="campo" style="grid-column:1/-1"><label>Nome Completo <span class="req">*</span></label><input name="nome_'+i+'" class="input" required placeholder="Nome completo"></div><div class="campo"><label>Email <span class="req">*</span></label><input name="email_'+i+'" class="input" type="email" required placeholder="email@exemplo.com"></div><div class="campo"><label>WhatsApp</label><input name="whatsapp_'+i+'" class="input" placeholder="+595 99 999 9999"></div></div>';
-      wrap.appendChild(div);
+function updParts(){
+  const wrap=document.getElementById('parts-wrap');
+  const cur=wrap.querySelectorAll('.part-bloco').length;
+  if(qty>cur){
+    for(let i=cur+1;i<=qty;i++){
+      const d=document.createElement('div');d.className='part-bloco';d.id='part-'+i;
+      d.innerHTML='<div class="part-tit"><div class="part-num">'+i+'</div>Participante '+i+'</div><div class="grid2"><div class="campo" style="grid-column:1/-1"><label>Nome Completo *</label><input name="nome_'+i+'" class="inp" required placeholder="Nome completo"></div><div class="campo"><label>Email *</label><input name="email_'+i+'" class="inp" type="email" required placeholder="email@exemplo.com"></div><div class="campo"><label>WhatsApp</label><input name="whatsapp_'+i+'" class="inp" placeholder="99 999 9999"></div></div>';
+      wrap.appendChild(d);
     }
-  } else {
-    for(let i=atual;i>qtyAtual;i--){
-      const el=document.getElementById('part-'+i);
-      if(el)el.remove();
-    }
-  }
+  }else{for(let i=cur;i>qty;i--){const e=document.getElementById('part-'+i);if(e)e.remove();}}
 }
 
-function mostrarForm() {
-  const fs=document.getElementById('form-section');
-  fs.classList.add('visivel');
+function abrirForm(){
+  const fs=document.getElementById('form-sec');
+  fs.classList.add('open');
   setTimeout(()=>fs.scrollIntoView({behavior:'smooth',block:'start'}),100);
 }
 
-function aplicarCupom() {
-  const cod=document.getElementById('cupom-input').value.trim();
+function aplicarCupom(){
+  const cod=document.getElementById('cupom-in').value.trim();
   const msg=document.getElementById('cupom-msg');
   if(!cod){msg.style.display='none';return;}
-  // Simulação - integrar com backend
   fetch('/eventos/<%= evento.id %>/cupom?cod='+encodeURIComponent(cod))
-    .then(r=>r.json())
-    .then(d=>{
+    .then(r=>r.json()).then(d=>{
       msg.style.display='block';
-      if(d.ok){
-        desconto=d.desconto||0;
-        msg.textContent='✅ Cupom aplicado! '+Math.round(desconto*100)+'% de desconto';
-        msg.className='cupom-ok';
-        document.getElementById('campo-cupom').value=cod;
-        const l=lotesData.find(x=>x.id==loteSelecionadoId);
-        atualizarResumo(l);
-      } else {
-        msg.textContent='❌ Cupom inválido ou expirado';
-        msg.className='cupom-erro';
-      }
-    }).catch(()=>{msg.textContent='❌ Erro ao verificar cupom';msg.style.display='block';msg.className='cupom-erro';});
+      if(d.ok){desconto=d.desconto||0;msg.className='cupom-ok';msg.textContent='✅ Cupom aplicado! '+Math.round(desconto*100)+'% de desconto';document.getElementById('campo-cupom').value=cod;const l=lotesData.find(x=>x.id==loteId);updRes(l);}
+      else{msg.className='cupom-err';msg.textContent='❌ Cupom inválido ou expirado';}
+    }).catch(()=>{msg.className='cupom-err';msg.textContent='❌ Erro ao verificar';msg.style.display='block';});
 }
 
-// Mostra form ao clicar em inscrever
-document.querySelector('a[href="#form-section"]')?.addEventListener('click', mostrarForm);
+function togProg(el,i){
+  const body=document.getElementById('prog-'+i);
+  if(!body)return;
+  const open=body.classList.toggle('open');
+  el.classList.toggle('open',open);
+}
+
+function togPales(i){
+  const card=document.getElementById('pales-'+i);
+  const bio=document.getElementById('pbio-'+i);
+  if(!bio)return;
+  const open=bio.classList.toggle('open');
+  card.classList.toggle('open',open);
+}
+
+function togForm(){
+  const f=document.getElementById('c-form');
+  const a=document.getElementById('form-arrow');
+  const open=f.classList.toggle('open');
+  if(a)a.style.transform=open?'rotate(180deg)':'';
+}
+
+function abrirModal(id){document.getElementById(id)?.classList.add('open');}
+function fecharModal(id){document.getElementById(id)?.classList.remove('open');}
 </script>
 </body>
 </html>
