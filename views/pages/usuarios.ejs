@@ -165,13 +165,19 @@ const TODOS_MODULOS = [
   { id: 'auditoria',            label: '🔍 Auditoria' },
   { id: 'notificacoes',         label: '◉ Notificações' },
   { id: 'configuracoes',        label: '✦ Configurações' },
-  { id: 'usuarios',             label: '◎ Usuários' }
+  { id: 'usuarios',             label: '◎ Usuários' },
+  { id: 'desligamentos',        label: '📋 Desligamentos' },
+  { id: 'desvinculacoes',       label: '✂️ Desvinculações' },
+  { id: 'carta-cobranca',       label: '📄 Carta de Cobrança' },
+  { id: 'lista-assinaturas',    label: '✍️ Lista de Assinaturas' },
+  { id: 'marketing',            label: '📣 Marketing' },
+  { id: 'eventos',              label: '🎪 Eventos' }
 ];
 
 const PERMISSOES_PADRAO = {
-  presidencia: ['dashboard', 'membros', 'diretivos', 'ligantes', 'arquivos', 'frequencia', 'frequencia-diretivos', 'cobrancas', 'aniversarios', 'auditoria', 'notificacoes'],
-  secretaria:  ['dashboard', 'membros', 'diretivos', 'ligantes', 'arquivos', 'frequencia', 'frequencia-diretivos', 'aniversarios'],
-  financeiro:  ['dashboard', 'membros', 'cobrancas', 'aniversarios', 'notificacoes'],
+  presidencia: ['dashboard','membros','diretivos','ligantes','arquivos','frequencia','frequencia-diretivos','cobrancas','aniversarios','auditoria','notificacoes','desligamentos','desvinculacoes','carta-cobranca','lista-assinaturas','marketing','eventos'],
+  secretaria:  ['dashboard','membros','diretivos','ligantes','arquivos','frequencia','frequencia-diretivos','aniversarios','desligamentos','desvinculacoes','lista-assinaturas','eventos'],
+  financeiro:  ['dashboard','membros','cobrancas','aniversarios','notificacoes','carta-cobranca','eventos'],
   visualizador:['dashboard']
 };
 
