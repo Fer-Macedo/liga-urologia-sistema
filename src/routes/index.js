@@ -2854,7 +2854,8 @@ router.get('/eventos/:id', requireAuth, async (req, res) => {
   ]);
   if (!evR.rows[0]) { req.session.erro=['Evento não encontrado']; return res.redirect('/eventos'); }
   const stats = await getEventoStats(req.params.id);
-  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats });
+  const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem', [req.params.id]);
+  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows });
 });
 
 router.post('/eventos/:id/editar', requireAuth, async (req, res) => {
@@ -2914,7 +2915,8 @@ router.get('/inscricao/:id', async (req, res) => {
       query('SELECT l.*, (SELECT COUNT(*) FROM evento_inscricoes WHERE lote_id=l.id) as inscritos FROM evento_lotes l WHERE l.evento_id=$1 ORDER BY l.ordem', [req.params.id])
     ]);
     if (!evR.rows[0]) return res.status(404).send('Evento não encontrado ou encerrado.');
-    res.render('pages/evento-inscricao-publica', { evento: evR.rows[0], lotes: lotesR.rows, sucesso: false, qrcode: null });
+    const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem', [req.params.id]);
+    res.render('pages/evento-inscricao-publica', { evento: evR.rows[0], lotes: lotesR.rows, sucesso: false, qrcode: null, campos: camposR.rows, codigoInscricao: null });
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
@@ -2943,7 +2945,8 @@ router.post('/inscricao/:id', async (req, res) => {
       query('SELECT * FROM eventos WHERE id=$1', [req.params.id]),
       query('SELECT * FROM evento_lotes WHERE evento_id=$1 ORDER BY ordem', [req.params.id])
     ]);
-    res.render('pages/evento-inscricao-publica', { evento: evR2.rows[0], lotes: lotesR.rows, sucesso: true, qrcode: null });
+    const camposR2 = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem', [req.params.id]);
+    res.render('pages/evento-inscricao-publica', { evento: evR2.rows[0], lotes: lotesR.rows, sucesso: true, qrcode: null, campos: camposR2.rows, codigoInscricao: qrcode });
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
@@ -3043,6 +3046,32 @@ router.post('/eventos/:id/certificados/emitir-todos', requireAuth, async (req, r
     await query('INSERT INTO evento_certificados (inscricao_id) VALUES ($1) ON CONFLICT DO NOTHING', [i.id]);
   }
   req.session.msg = ['Certificados emitidos para '+inscritos.rows.length+' participantes!'];
+  res.redirect('/eventos/' + req.params.id);
+});
+
+
+// CAMPOS CUSTOMIZADOS
+router.post('/eventos/:id/campos', requireAuth, async (req, res) => {
+  const {label, tipo, opcoes, obrigatorio} = req.body;
+  const ord = await query('SELECT COUNT(*) FROM evento_campos WHERE evento_id=$1', [req.params.id]);
+  await query('INSERT INTO evento_campos (evento_id,label,tipo,opcoes,obrigatorio,ordem) VALUES ($1,$2,$3,$4,$5,$6)',
+    [req.params.id, label, tipo||'text', opcoes||null, obrigatorio==='true', parseInt(ord.rows[0].count)+1]);
+  req.session.msg = ['Campo adicionado!'];
+  res.redirect('/eventos/' + req.params.id);
+});
+
+router.post('/eventos/:id/campos/:cid/deletar', requireAuth, async (req, res) => {
+  await query('DELETE FROM evento_campos WHERE id=$1', [req.params.cid]);
+  req.session.msg = ['Campo removido!'];
+  res.redirect('/eventos/' + req.params.id);
+});
+
+// EDITAR LOTE
+router.post('/eventos/:id/lotes/:lid/editar', requireAuth, async (req, res) => {
+  const {nome, preco, vagas, data_inicio, data_fim} = req.body;
+  await query('UPDATE evento_lotes SET nome=$1,preco=$2,vagas=$3,data_inicio=$4,data_fim=$5 WHERE id=$6',
+    [nome, parseFloat(preco)||0, parseInt(vagas), data_inicio||null, data_fim||null, req.params.lid]);
+  req.session.msg = ['Lote atualizado!'];
   res.redirect('/eventos/' + req.params.id);
 });
 
