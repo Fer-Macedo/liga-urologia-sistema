@@ -179,6 +179,8 @@
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
             <div class="campo"><label class="label">Nome do Presidente</label><input name="presidente_nome" class="input" value="<%= config.presidente_nome || '' %>" placeholder="MANUEL FERNANDO MACEDO NETO"></div>
             <div class="campo"><label class="label">Assinatura do Presidente</label><input type="file" name="assinatura_presidente" class="input" accept="image/*"><% if (config.assinatura_presidente_chave) { %><span style="font-size:11px;color:green">✅ Cadastrada</span><% } %></div>
+            <div class="campo"><label class="label">Nome do Vice-Presidente</label><input name="vicepresidente_nome" class="input" value="<%= config.vicepresidente_nome || '' %>"></div>
+            <div class="campo"><label class="label">Assinatura do Vice-Presidente</label><input type="file" name="assinatura_vicepresidente" class="input" accept="image/*"><% if (config.assinatura_vicepresidente_chave) { %><span style="font-size:11px;color:green">✅ Cadastrada</span><% } %></div>
             <div class="campo"><label class="label">Nome do Secretário</label><input name="secretario_nome" class="input" value="<%= config.secretario_nome || '' %>"></div>
             <div class="campo"><label class="label">Assinatura do Secretário</label><input type="file" name="assinatura_secretario" class="input" accept="image/*"><% if (config.assinatura_secretario_chave) { %><span style="font-size:11px;color:green">✅ Cadastrada</span><% } %></div>
             <div class="campo"><label class="label">Nome do Dir. Financeiro(a)</label><input name="financeiro_nome" class="input" value="<%= config.financeiro_nome || '' %>"></div>
