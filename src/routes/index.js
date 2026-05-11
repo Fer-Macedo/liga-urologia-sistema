@@ -2938,11 +2938,22 @@ router.post('/inscricao/:id', async (req, res) => {
     const nodemailer = require('nodemailer');
     const config = await getConfig();
     const transporter = nodemailer.createTransport({ host:process.env.EMAIL_HOST, port:process.env.EMAIL_PORT, auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS} });
+    const ev2 = evR.rows[0];
+    const textoExtra = ev2.email_inscricao || '';
+    const wppGrupo = ev2.wpp_grupo ? `<div style="margin:20px 0;text-align:center"><a href="${ev2.wpp_grupo}" style="background:#25d366;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">📱 ENTRAR NO GRUPO DO EVENTO NO WHATSAPP</a></div>` : '';
     await transporter.sendMail({
       from: process.env.EMAIL_USER, to: email,
-      subject: 'Inscrição confirmada — ' + evR.rows[0].nome,
-      html: `<h2>Olá, ${nome}!</h2><p>Sua inscrição no evento <strong>${evR.rows[0].nome}</strong> foi recebida.</p><p>Status: ${lote&&parseFloat(lote.preco)===0?'✅ Confirmada':'⏳ Aguardando pagamento'}</p><p>Seu código: <strong>${qrcode}</strong></p>`
+      subject: 'Inscrição realizada — ' + ev2.nome,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px"><h2 style="color:#1a3d2b">Olá, ${nome}!</h2><p>Sua inscrição no evento <strong>${ev2.nome}</strong> foi recebida com sucesso.</p><p><strong>Status:</strong> ${lote&&parseFloat(lote.preco)===0?'✅ Confirmada':'⏳ Aguardando pagamento'}</p><p><strong>Seu código:</strong> <code style="background:#f3f4f6;padding:4px 8px;border-radius:4px">${qrcode}</code></p>${textoExtra?`<hr><div style="margin-top:16px">${textoExtra.replace(/\n/g,'<br>')}</div>`:''}${wppGrupo}<hr><p style="font-size:12px;color:#6b7280">LAURO — Liga Académica de Urología</p></div>`
     }).catch(()=>{});
+    // Notifica admin
+    if (ev2.notif_email) {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER, to: ev2.notif_email,
+        subject: '🔔 Nova inscrição — ' + ev2.nome,
+        html: `<p>Nova inscrição recebida:<br><strong>${nome}</strong> (${email})</p>`
+      }).catch(()=>{});
+    }
     const [evR2, lotesR] = await Promise.all([
       query('SELECT * FROM eventos WHERE id=$1', [req.params.id]),
       query('SELECT * FROM evento_lotes WHERE evento_id=$1 ORDER BY ordem', [req.params.id])
@@ -3098,6 +3109,17 @@ router.post('/contato-evento/:id', async (req, res) => {
 router.get('/eventos/:id/cupom', async (req, res) => {
   // Implementação futura — por enquanto retorna inválido
   res.json({ok: false, msg: 'Cupom inválido'});
+});
+
+
+// CONFIGURAÇÕES AVANÇADAS DO EVENTO
+router.post('/eventos/:id/avancado', requireAuth, async (req, res) => {
+  const {email_inscricao, email_confirmacao, notif_email, wpp_grupo, inscricao_gratuita_auto, inscricao_unica, termos_texto} = req.body;
+  await query('UPDATE eventos SET email_inscricao=$1,email_confirmacao=$2,notif_email=$3,wpp_grupo=$4,inscricao_gratuita_auto=$5,inscricao_unica=$6,termos_texto=$7 WHERE id=$8',
+    [email_inscricao||null, email_confirmacao||null, notif_email||null, wpp_grupo||null,
+     inscricao_gratuita_auto==='true', inscricao_unica==='true', termos_texto||null, req.params.id]);
+  req.session.msg = ['Configurações avançadas salvas!'];
+  res.redirect('/eventos/' + req.params.id);
 });
 
 module.exports = router;
