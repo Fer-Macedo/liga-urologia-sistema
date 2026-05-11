@@ -64,6 +64,7 @@
         <button class="tab-btn" onclick="showTab('patrocinadores')">🤝 Patrocinadores</button>
         <button class="tab-btn" onclick="showTab('certificados')">🏆 Certificados</button>
         <button class="tab-btn" onclick="showTab('avancado')">🔧 Avançado</button>
+        <button class="tab-btn" onclick="showTab('cupons')">🏷️ Cupons</button>
       </div>
 
       <!-- INFO -->
@@ -403,7 +404,7 @@
             <div class="card-titulo">📧 E-mails Personalizados</div>
             <div class="campo"><label class="label">Texto adicional — E-mail de inscrição realizada</label><textarea name="email_inscricao" class="input" rows="8" placeholder="Texto enviado após o participante se inscrever..."><%= evento.email_inscricao||'' %></textarea></div>
             <div class="campo"><label class="label">Texto adicional — E-mail de confirmação</label><textarea name="email_confirmacao" class="input" rows="8" placeholder="Texto enviado após confirmação do pagamento..."><%= evento.email_confirmacao||'' %></textarea></div>
-            <div class="campo"><label class="label">Notificar novas inscrições para</label><input name="notif_email" class="input" value="<%= evento.notif_email||'lauroucpcde@lauroucpcde.com' %>"></div>
+            
           </div>
           <div class="card" style="margin-bottom:16px">
             <div class="card-titulo">📱 Grupo WhatsApp do Evento</div>
