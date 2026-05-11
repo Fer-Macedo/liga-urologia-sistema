@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marketing — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+    .mkt-tabs { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+    .mkt-tab { padding:8px 18px; border-radius:8px; border:2px solid var(--borda); background:var(--card); cursor:pointer; font-weight:600; font-size:13px; transition:all .2s; }
+    .mkt-tab.ativo { background:var(--cor-primaria); color:white; border-color:var(--cor-primaria); }
+    .mkt-section { display:none; }
+    .mkt-section.ativo { display:block; }
+    .post-card { background:var(--card); border:1px solid var(--borda); border-radius:12px; padding:16px; margin-bottom:12px; }
+    .post-card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+    .rede-badge { padding:3px 8px; border-radius:20px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:4px; }
+    .rede-instagram { background:#e1306c;color:white; }
+    .rede-facebook { background:#1877f2;color:white; }
+    .rede-whatsapp { background:#25d366;color:white; }
+    .status-badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+    .status-rascunho { background:#f3f4f6;color:#6b7280; }
+    .status-agendado { background:#dbeafe;color:#1e40af; }
+    .status-publicado { background:#dcfce7;color:#166534; }
+    .status-erro { background:#fee2e2;color:#991b1b; }
+    .calendario-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+    .cal-header { text-align:center; font-weight:700; font-size:12px; padding:6px; color:var(--texto2); }
+    .cal-dia { min-height:70px; background:var(--card); border:1px solid var(--borda); border-radius:8px; padding:4px; }
+    .cal-dia.hoje { border-color:var(--cor-primaria); }
+    .cal-dia.outro-mes { opacity:0.4; }
+    .cal-num { font-size:12px; font-weight:600; margin-bottom:3px; }
+    .cal-post { background:var(--cor-primaria); color:white; border-radius:4px; padding:2px 4px; font-size:10px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+    .midia-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+    .midia-card { border:1px solid var(--borda); border-radius:8px; overflow:hidden; position:relative; cursor:pointer; }
+    .midia-card img { width:100%; height:120px; object-fit:cover; display:block; }
+    .midia-card-info { padding:6px 8px; font-size:11px; }
+    .midia-card:hover .midia-overlay { opacity:1; }
+    .midia-overlay { position:absolute; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); opacity:0; transition:.2s; display:flex; align-items:center; justify-content:center; gap:8px; }
+    .stat-card { background:var(--card); border:1px solid var(--borda); border-radius:12px; padding:20px; text-align:center; }
+    .stat-num { font-size:28px; font-weight:700; color:var(--cor-primaria); }
+    .stat-label { font-size:12px; color:var(--texto2); margin-top:4px; }
+    .editor-preview { border:2px dashed var(--borda); border-radius:12px; min-height:200px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; background:#f8fafc; }
+    .whatsapp-preview { background:#e5ddd5; border-radius:12px; padding:16px; max-width:400px; }
+    .wpp-bubble { background:white; border-radius:12px; padding:10px 14px; margin-bottom:8px; box-shadow:0 1px 2px rgba(0,0,0,.1); font-size:14px; }
+    .wpp-bubble.saida { background:#d9fdd3; margin-left:40px; }
+    .engaj-bar { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+    .engaj-label { width:100px; font-size:12px; color:var(--texto2); }
+    .engaj-fill { flex:1; background:var(--fundo); border-radius:4px; height:8px; overflow:hidden; }
+    .engaj-valor { width:50px; font-size:12px; font-weight:600; text-align:right; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'marketing' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">📣 Marketing</h1>
+      <div class="topbar-acoes">
+        <button class="btn btn-primario" onclick="abrirModal('modal-novo-post')">✏️ Novo Post</button>
+        <button class="btn" onclick="abrirModal('modal-wpp-massa')">📱 WhatsApp em Massa</button>
+      </div>
+    </div>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
+
+      <!-- TABS -->
+      <div class="mkt-tabs">
+        <button class="mkt-tab ativo" onclick="showTab('dashboard')">📊 Dashboard</button>
+        <button class="mkt-tab" onclick="showTab('posts')">📝 Posts</button>
+        <button class="mkt-tab" onclick="showTab('calendario')">📅 Calendário</button>
+        <button class="mkt-tab" onclick="showTab('midias')">🖼️ Biblioteca de Mídias</button>
+        <button class="mkt-tab" onclick="showTab('whatsapp')">📱 WhatsApp</button>
+        <button class="mkt-tab" onclick="showTab('integracao')">🔗 Integrações</button>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div class="mkt-section ativo" id="tab-dashboard">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px">
+          <div class="stat-card"><div class="stat-num"><%= posts.length %></div><div class="stat-label">Total de Posts</div></div>
+          <div class="stat-card"><div class="stat-num"><%= posts.filter(p=>p.status==='agendado').length %></div><div class="stat-label">Agendados</div></div>
+          <div class="stat-card"><div class="stat-num"><%= posts.filter(p=>p.status==='publicado').length %></div><div class="stat-label">Publicados</div></div>
+          <div class="stat-card"><div class="stat-num"><%= midias.length %></div><div class="stat-label">Mídias</div></div>
+          <div class="stat-card"><div class="stat-num"><%= posts.filter(p=>p.status==='rascunho').length %></div><div class="stat-label">Rascunhos</div></div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="card-titulo">📅 Próximos Posts Agendados</div>
+            <% const agendados = posts.filter(p=>p.status==='agendado').slice(0,5); %>
+            <% if (agendados.length === 0) { %><p style="color:var(--texto2);font-size:13px">Nenhum post agendado</p><% } %>
+            <% agendados.forEach(p => { %>
+            <div class="post-card" style="padding:10px">
+              <div style="font-weight:600;font-size:13px"><%= p.titulo %></div>
+              <div style="font-size:11px;color:var(--texto2);margin-top:3px">📅 <%= p.agendado_para ? new Date(p.agendado_para).toLocaleString('pt-BR') : '—' %></div>
+              <div style="margin-top:5px"><% (p.redes||[]).forEach(r=>{ %><span class="rede-badge rede-<%= r %>"><%= r==='instagram'?'📸':r==='facebook'?'👍':'📱' %> <%= r %></span> <% }) %></div>
+            </div>
+            <% }) %>
+          </div>
+
+          <div class="card">
+            <div class="card-titulo">📊 Engajamento por Rede</div>
+            <div class="engaj-bar"><div class="engaj-label">Instagram</div><div class="engaj-fill"><div style="height:100%;background:#e1306c;width:<%= igPct %>%"></div></div><div class="engaj-valor" style="color:#e1306c"><%= posts.filter(p=>(p.redes||[]).includes('instagram')).length %></div></div>
+            <div class="engaj-bar"><div class="engaj-label">Facebook</div><div class="engaj-fill"><div style="height:100%;background:#1877f2;width:<%= fbPct %>%"></div></div><div class="engaj-valor" style="color:#1877f2"><%= posts.filter(p=>(p.redes||[]).includes('facebook')).length %></div></div>
+            <div class="engaj-bar"><div class="engaj-label">WhatsApp</div><div class="engaj-fill"><div style="height:100%;background:#25d366;width:<%= waPct %>%"></div></div><div class="engaj-valor" style="color:#25d366"><%= posts.filter(p=>(p.redes||[]).includes('whatsapp')).length %></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- POSTS -->
+      <div class="mkt-section" id="tab-posts">
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+          <button class="btn" onclick="filtrarPosts('todos')" id="f-todos" style="background:var(--cor-primaria);color:white">Todos</button>
+          <button class="btn" onclick="filtrarPosts('rascunho')" id="f-rascunho">Rascunhos</button>
+          <button class="btn" onclick="filtrarPosts('agendado')" id="f-agendado">Agendados</button>
+          <button class="btn" onclick="filtrarPosts('publicado')" id="f-publicado">Publicados</button>
+        </div>
+        <% if (posts.length === 0) { %><p style="color:var(--texto2)">Nenhum post criado ainda.</p><% } %>
+        <% posts.forEach(p => { %>
+        <div class="post-card post-item" data-status="<%= p.status %>">
+          <div class="post-card-header">
+            <div style="display:flex;align-items:center;gap:10px">
+              <% if (p.imagem_chave) { %><img src="/marketing/midia/<%= p.id %>/img" style="width:50px;height:50px;border-radius:8px;object-fit:cover"><% } else { %><div style="width:50px;height:50px;border-radius:8px;background:var(--fundo);display:flex;align-items:center;justify-content:center;font-size:20px">📝</div><% } %>
+              <div>
+                <div style="font-weight:700"><%= p.titulo || '(Sem título)' %></div>
+                <div style="font-size:11px;color:var(--texto2)">Criado <%= new Date(p.criado_em).toLocaleDateString('pt-BR') %></div>
+              </div>
+            </div>
+            <span class="status-badge status-<%= p.status %>"><%= p.status==='rascunho'?'⚪ Rascunho':p.status==='agendado'?'🔵 Agendado':p.status==='publicado'?'🟢 Publicado':'🔴 Erro' %></span>
+          </div>
+          <p style="font-size:13px;color:var(--texto2);margin-bottom:8px"><%= (p.conteudo||'').substring(0,120) %><%= (p.conteudo||'').length>120?'...':'' %></p>
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+            <div><% (p.redes||[]).forEach(r=>{ %><span class="rede-badge rede-<%= r %>"><%= r==='instagram'?'📸':r==='facebook'?'👍':'📱' %> <%= r %></span> <% }) %></div>
+            <div style="display:flex;gap:6px">
+              <% if (p.agendado_para) { %><span style="font-size:11px;color:var(--texto2)">📅 <%= new Date(p.agendado_para).toLocaleString('pt-BR') %></span><% } %>
+              <button onclick="editarPost(<%= p.id %>)" class="btn" style="font-size:11px;padding:4px 8px">✏️</button>
+              <% if (p.status==='rascunho'||p.status==='agendado') { %>
+              <form method="POST" action="/marketing/<%= p.id %>/publicar" style="display:inline"><button type="submit" class="btn" style="font-size:11px;padding:4px 8px;background:#059669;color:white">📤 Publicar</button></form>
+              <% } %>
+              <form method="POST" action="/marketing/<%= p.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')"><button type="submit" class="btn" style="font-size:11px;padding:4px 8px;color:var(--vermelho)">🗑</button></form>
+            </div>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+
+      <!-- CALENDÁRIO -->
+      <div class="mkt-section" id="tab-calendario">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <button class="btn" onclick="mudarMes(-1)">← Anterior</button>
+          <h3 id="cal-titulo" style="font-size:16px;font-weight:700"></h3>
+          <button class="btn" onclick="mudarMes(1)">Próximo →</button>
+        </div>
+        <div class="calendario-grid">
+          <div class="cal-header">Dom</div><div class="cal-header">Seg</div><div class="cal-header">Ter</div>
+          <div class="cal-header">Qua</div><div class="cal-header">Qui</div><div class="cal-header">Sex</div><div class="cal-header">Sáb</div>
+        </div>
+        <div class="calendario-grid" id="cal-grid" style="margin-top:4px"></div>
+        <script>
+          const postsData = <%- JSON.stringify(posts) %>;
+          let calMes = new Date().getMonth(), calAno = new Date().getFullYear();
+          function renderCal() {
+            const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+            document.getElementById('cal-titulo').textContent = meses[calMes] + ' ' + calAno;
+            const grid = document.getElementById('cal-grid');
+            grid.innerHTML = '';
+            const primeiro = new Date(calAno, calMes, 1).getDay();
+            const dias = new Date(calAno, calMes+1, 0).getDate();
+            const hoje = new Date();
+            for (let i=0;i<primeiro;i++) { const d=document.createElement('div');d.className='cal-dia outro-mes';grid.appendChild(d); }
+            for (let d=1;d<=dias;d++) {
+              const div=document.createElement('div');
+              div.className='cal-dia' + (d===hoje.getDate()&&calMes===hoje.getMonth()&&calAno===hoje.getFullYear()?' hoje':'');
+              div.innerHTML='<div class="cal-num">'+d+'</div>';
+              const dataStr = calAno+'-'+(String(calMes+1).padStart(2,'0'))+'-'+(String(d).padStart(2,'0'));
+              postsData.filter(p=>p.agendado_para&&p.agendado_para.startsWith(dataStr)).forEach(p=>{
+                const s=document.createElement('div');s.className='cal-post';s.textContent=p.titulo||'Post';div.appendChild(s);
+              });
+              grid.appendChild(div);
+            }
+          }
+          function mudarMes(d) { calMes+=d; if(calMes<0){calMes=11;calAno--;}if(calMes>11){calMes=0;calAno++;} renderCal(); }
+          renderCal();
+        </script>
+      </div>
+
+      <!-- MÍDIAS -->
+      <div class="mkt-section" id="tab-midias">
+        <div style="margin-bottom:16px">
+          <form action="/marketing/midias/upload" method="POST" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <input type="file" name="midia" class="input" accept="image/*,video/*" style="flex:1;min-width:200px">
+            <input type="text" name="nome" class="input" placeholder="Nome da mídia" style="flex:1;min-width:150px">
+            <button type="submit" class="btn btn-primario">📤 Upload</button>
+          </form>
+        </div>
+        <% if (midias.length === 0) { %><p style="color:var(--texto2)">Nenhuma mídia enviada ainda.</p><% } %>
+        <div class="midia-grid">
+          <% midias.forEach(m => { %>
+          <div class="midia-card">
+            <img src="/marketing/midias/<%= m.id %>/img" alt="<%= m.nome %>" onerror="this.src='/img/placeholder.png'">
+            <div class="midia-overlay">
+              <button onclick="usarMidia('<%= m.id %>','<%= m.nome %>')" class="btn" style="font-size:11px;padding:4px 8px;background:white;color:#000">✔ Usar</button>
+              <form method="POST" action="/marketing/midias/<%= m.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')"><button type="submit" class="btn" style="font-size:11px;padding:4px 8px;background:#dc2626;color:white">🗑</button></form>
+            </div>
+            <div class="midia-card-info"><%= m.nome %></div>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <!-- WHATSAPP -->
+      <div class="mkt-section" id="tab-whatsapp">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="card-titulo">📱 Envio em Massa</div>
+            <form action="/marketing/whatsapp-massa" method="POST">
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <div class="campo">
+                  <label class="label">Destinatários</label>
+                  <select name="destinatarios" class="input">
+                    <option value="todos">Todos (Ligantes + Diretivos)</option>
+                    <option value="ligantes">Somente Ligantes</option>
+                    <option value="diretivos">Somente Diretivos</option>
+                  </select>
+                </div>
+                <div class="campo">
+                  <label class="label">Mensagem</label>
+                  <textarea name="mensagem" class="input" rows="5" placeholder="Digite a mensagem..." oninput="previewWpp(this.value)"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primario" onclick="return confirm('Enviar para todos?')">📤 Enviar Agora</button>
+              </div>
+            </form>
+          </div>
+          <div class="card">
+            <div class="card-titulo">👁 Preview</div>
+            <div class="whatsapp-preview">
+              <div class="wpp-bubble">Olá! 👋</div>
+              <div class="wpp-bubble saida" id="wpp-preview-text">Sua mensagem aparecerá aqui...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INTEGRAÇÕES -->
+      <div class="mkt-section" id="tab-integracao">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+              <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;font-size:20px">📸</div>
+              <div><div style="font-weight:700">Instagram</div><div style="font-size:12px;color:var(--texto2)">Meta Graph API</div></div>
+              <% if (mktConfig.instagram_token) { %><span style="margin-left:auto;background:#dcfce7;color:#166534;padding:2px 8px;border-radius:20px;font-size:11px">✅ Conectado</span><% } else { %><span style="margin-left:auto;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:11px">❌ Desconectado</span><% } %>
+            </div>
+            <form action="/marketing/config/instagram" method="POST">
+              <div class="campo"><label class="label">Access Token</label><input name="instagram_token" class="input" type="password" placeholder="Token da API Meta" value="<%= mktConfig.instagram_token||'' %>"></div>
+              <div class="campo"><label class="label">Instagram Business ID</label><input name="instagram_id" class="input" placeholder="ID da conta business" value="<%= mktConfig.instagram_id||'' %>"></div>
+              <button type="submit" class="btn btn-primario" style="width:100%;margin-top:8px">💾 Salvar</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+              <div style="width:40px;height:40px;border-radius:10px;background:#1877f2;display:flex;align-items:center;justify-content:center;font-size:20px">👍</div>
+              <div><div style="font-weight:700">Facebook</div><div style="font-size:12px;color:var(--texto2)">Meta Graph API</div></div>
+              <% if (mktConfig.facebook_token) { %><span style="margin-left:auto;background:#dcfce7;color:#166534;padding:2px 8px;border-radius:20px;font-size:11px">✅ Conectado</span><% } else { %><span style="margin-left:auto;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:11px">❌ Desconectado</span><% } %>
+            </div>
+            <form action="/marketing/config/facebook" method="POST">
+              <div class="campo"><label class="label">Page Access Token</label><input name="facebook_token" class="input" type="password" placeholder="Token da página" value="<%= mktConfig.facebook_token||'' %>"></div>
+              <div class="campo"><label class="label">Facebook Page ID</label><input name="facebook_id" class="input" placeholder="ID da página" value="<%= mktConfig.facebook_id||'' %>"></div>
+              <button type="submit" class="btn btn-primario" style="width:100%;margin-top:8px">💾 Salvar</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+              <div style="width:40px;height:40px;border-radius:10px;background:#25d366;display:flex;align-items:center;justify-content:center;font-size:20px">📱</div>
+              <div><div style="font-weight:700">WhatsApp</div><div style="font-size:12px;color:var(--texto2)">W-API</div></div>
+              <span style="margin-left:auto;background:#dcfce7;color:#166534;padding:2px 8px;border-radius:20px;font-size:11px">✅ Conectado</span>
+            </div>
+            <p style="font-size:13px;color:var(--texto2)">Integração W-API já configurada no sistema. Pronta para envio em massa.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Novo Post -->
+<div class="modal-overlay" id="modal-novo-post" style="display:none">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <span class="modal-titulo">✏️ Novo Post</span>
+      <button class="icon-btn" onclick="fecharModal('modal-novo-post')">✕</button>
+    </div>
+    <form action="/marketing/posts" method="POST" enctype="multipart/form-data">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo"><label class="label">Título</label><input name="titulo" class="input" placeholder="Título do post" required></div>
+        <div class="campo"><label class="label">Conteúdo / Legenda</label><textarea name="conteudo" class="input" rows="4" placeholder="Escreva a legenda do post..."></textarea></div>
+        <div class="campo"><label class="label">Imagem</label><input type="file" name="imagem" class="input" accept="image/*"></div>
+        <div class="campo">
+          <label class="label">Redes Sociais</label>
+          <div style="display:flex;gap:12px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" name="redes" value="instagram"> 📸 Instagram</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" name="redes" value="facebook"> 👍 Facebook</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" name="redes" value="whatsapp"> 📱 WhatsApp</label>
+          </div>
+        </div>
+        <div class="campo"><label class="label">Agendar para (opcional)</label><input type="datetime-local" name="agendado_para" class="input"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-novo-post')">Cancelar</button>
+        <button type="submit" name="acao" value="rascunho" class="btn">💾 Rascunho</button>
+        <button type="submit" name="acao" value="agendar" class="btn btn-primario">📅 Agendar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal WhatsApp em Massa -->
+<div class="modal-overlay" id="modal-wpp-massa" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">📱 WhatsApp em Massa</span>
+      <button class="icon-btn" onclick="fecharModal('modal-wpp-massa')">✕</button>
+    </div>
+    <form action="/marketing/whatsapp-massa" method="POST">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo"><label class="label">Destinatários</label>
+          <select name="destinatarios" class="input">
+            <option value="todos">Todos (Ligantes + Diretivos)</option>
+            <option value="ligantes">Somente Ligantes</option>
+            <option value="diretivos">Somente Diretivos</option>
+          </select>
+        </div>
+        <div class="campo"><label class="label">Mensagem</label><textarea name="mensagem" class="input" rows="5" placeholder="Digite a mensagem..."></textarea></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-wpp-massa')">Cancelar</button>
+        <button type="submit" class="btn btn-primario" onclick="return confirm('Enviar para todos?')">📤 Enviar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+function showTab(id) {
+  document.querySelectorAll('.mkt-section').forEach(s=>s.classList.remove('ativo'));
+  document.querySelectorAll('.mkt-tab').forEach(t=>t.classList.remove('ativo'));
+  document.getElementById('tab-'+id).classList.add('ativo');
+  event.target.classList.add('ativo');
+}
+function filtrarPosts(status) {
+  document.querySelectorAll('.post-item').forEach(p=>{
+    p.style.display = status==='todos'||p.dataset.status===status ? '' : 'none';
+  });
+  document.querySelectorAll('[id^="f-"]').forEach(b=>b.style.background='');
+  document.getElementById('f-'+status).style.background='var(--cor-primaria)';
+  document.getElementById('f-'+status).style.color='white';
+}
+function previewWpp(txt) { document.getElementById('wpp-preview-text').textContent = txt||'Sua mensagem aqui...'; }
+function editarPost(id) { window.location='/marketing/'+id+'/editar'; }
+function usarMidia(id, nome) { alert('Mídia "'+nome+'" selecionada!'); }
+</script>
+</body>
+</html>
