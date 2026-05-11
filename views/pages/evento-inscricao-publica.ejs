@@ -4,16 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= evento.nome %> — LAURO</title>
-  <meta property="og:title" content="<%= evento.nome %>">
-  <meta property="og:description" content="<%= (evento.descricao||'').replace(/<[^>]*>/g,'').substring(0,160) %>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
     :root{
       --primary:<%= evento.cor_tema||'#1a3d2b' %>;
-      --primary-light:<%= evento.cor_tema||'#1a3d2b' %>22;
-      --white:#ffffff;
+      --primary-rgb:<%= (evento.cor_tema||'#1a3d2b').replace('#','') %>;
+      --white:#fff;
       --gray-50:#f9fafb;
       --gray-100:#f3f4f6;
       --gray-200:#e5e7eb;
@@ -21,123 +19,139 @@
       --gray-600:#4b5563;
       --gray-800:#1f2937;
       --gray-900:#111827;
-      --radius:12px;
-      --shadow:0 1px 3px rgba(0,0,0,.1),0 4px 20px rgba(0,0,0,.08);
-      --shadow-lg:0 10px 40px rgba(0,0,0,.15);
     }
-    body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-900);line-height:1.6}
-    
-    /* NAV */
-    nav{background:var(--white);border-bottom:1px solid var(--gray-200);position:sticky;top:0;z-index:100;backdrop-filter:blur(10px)}
-    .nav-inner{max-width:1100px;margin:0 auto;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between}
-    .nav-logo{display:flex;align-items:center;gap:10px}
-    .nav-logo img{height:36px;width:auto;object-fit:contain}
-    .nav-logo-text{font-weight:800;font-size:18px;color:var(--primary)}
-    .nav-links{display:flex;gap:24px;align-items:center}
-    .nav-link{font-size:14px;font-weight:500;color:var(--gray-600);text-decoration:none;transition:.2s}
-    .nav-link:hover{color:var(--primary)}
-    .nav-cta{background:var(--primary);color:white;padding:8px 20px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;transition:.2s}
-    .nav-cta:hover{opacity:.9;transform:translateY(-1px)}
+    body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-900)}
 
-    /* HERO */
-    .hero{position:relative;overflow:hidden;background:var(--gray-900)}
-    .hero-banner{width:100%;height:420px;object-fit:cover;display:block;opacity:.7}
-    .hero-no-banner{width:100%;height:340px;background:linear-gradient(135deg,var(--primary) 0%,var(--primary)99 100%);display:flex;align-items:center;justify-content:center}
-    .hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.2) 0%,rgba(0,0,0,.7) 100%)}
-    .hero-content{position:absolute;bottom:0;left:0;right:0;padding:40px;max-width:1100px;margin:0 auto}
-    .hero-wrap{max-width:1100px;margin:0 auto;position:relative;height:100%}
-    .tipo-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;color:white;margin-bottom:14px;letter-spacing:.3px}
-    .hero h1{font-size:clamp(24px,4vw,42px);font-weight:900;color:white;line-height:1.15;margin-bottom:16px;text-align:justify}
-    .hero-desc{font-size:15px;color:rgba(255,255,255,.85);line-height:1.7;max-width:680px;text-align:justify}
-    .hero-meta{display:flex;flex-wrap:wrap;gap:16px;margin-top:24px}
-    .hero-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:8px 14px;color:white;font-size:13px}
-    .hero-chip-icon{font-size:16px}
+    /* NAV */
+    nav{background:var(--white);border-bottom:1px solid var(--gray-200);position:sticky;top:0;z-index:100}
+    .nav-inner{max-width:1100px;margin:0 auto;padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between}
+    .nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
+    .nav-logo-img{height:34px;width:auto}
+    .nav-logo-text{font-weight:800;font-size:17px;color:var(--primary)}
+    .nav-links{display:flex;gap:20px;align-items:center}
+    .nav-link{font-size:13px;font-weight:500;color:var(--gray-600);text-decoration:none}
+    .nav-link:hover{color:var(--primary)}
+    .nav-cta{background:var(--primary);color:white;padding:7px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none}
+
+    /* BANNER */
+    .banner-wrap{width:100%;max-height:420px;overflow:hidden;background:var(--gray-900)}
+    .banner-img{width:100%;max-height:420px;object-fit:cover;display:block}
+    .banner-placeholder{width:100%;height:280px;background:linear-gradient(135deg,var(--primary),#000);display:flex;align-items:center;justify-content:center;color:white;font-size:48px}
+
+    /* TITULO ABAIXO DO BANNER */
+    .titulo-wrap{background:var(--white);border-bottom:1px solid var(--gray-200);padding:28px 0 20px}
+    .titulo-inner{max-width:1100px;margin:0 auto;padding:0 24px}
+    .tipo-chip{display:inline-flex;align-items:center;gap:6px;background:var(--gray-100);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--gray-600);margin-bottom:10px}
+    .titulo-inner h1{font-size:clamp(20px,3.5vw,32px);font-weight:800;color:var(--gray-900);line-height:1.2;text-align:justify}
+    .titulo-meta{display:flex;flex-wrap:wrap;gap:16px;margin-top:14px}
+    .titulo-chip{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--gray-600);font-weight:500}
 
     /* LAYOUT */
-    .page-wrap{max-width:1100px;margin:0 auto;padding:32px 24px 60px}
-    .main-grid{display:grid;grid-template-columns:1fr 360px;gap:28px;align-items:start}
-    @media(max-width:900px){.main-grid{grid-template-columns:1fr}.sidebar{order:-1}}
+    .page-wrap{max-width:1100px;margin:0 auto;padding:28px 24px 80px}
+    .main-grid{display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start}
+    @media(max-width:860px){.main-grid{grid-template-columns:1fr}.sidebar{order:-1}}
 
     /* CARDS */
-    .card{background:var(--white);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px}
-    .card-header{padding:20px 24px;border-bottom:1px solid var(--gray-100)}
-    .card-header h2{font-size:16px;font-weight:700;color:var(--gray-900)}
-    .card-header p{font-size:13px;color:var(--gray-600);margin-top:2px}
-    .card-body{padding:24px}
+    .card{background:var(--white);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.08),0 2px 12px rgba(0,0,0,.05);overflow:hidden;margin-bottom:18px}
+    .card-hd{padding:18px 22px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:10px}
+    .card-hd h2{font-size:15px;font-weight:700;color:var(--gray-900)}
+    .card-hd p{font-size:12px;color:var(--gray-400);margin-top:1px}
+    .card-bd{padding:20px 22px}
 
     /* LOTES */
-    .lote{border:2px solid var(--gray-200);border-radius:12px;padding:18px 20px;margin-bottom:10px;cursor:pointer;transition:all .2s;position:relative;background:var(--white)}
-    .lote:hover{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-light)}
-    .lote.ativo{border-color:var(--primary);background:var(--primary-light);box-shadow:0 0 0 4px var(--primary-light)}
-    .lote-check{position:absolute;top:16px;right:16px;width:22px;height:22px;border-radius:50%;border:2px solid var(--gray-300);transition:.2s;display:flex;align-items:center;justify-content:center}
-    .lote.ativo .lote-check{background:var(--primary);border-color:var(--primary);color:white;font-size:12px}
-    .lote-nome{font-weight:700;font-size:15px;color:var(--gray-900);padding-right:30px}
-    .lote-preco{font-size:22px;font-weight:900;color:var(--primary);margin-top:4px}
-    .lote-info{font-size:12px;color:var(--gray-400);margin-top:4px}
-    .badge-free{display:inline-block;background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
+    .lote{border:2px solid var(--gray-200);border-radius:12px;padding:16px 18px;margin-bottom:10px;cursor:pointer;transition:all .2s;position:relative;background:var(--white)}
+    .lote:hover{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 15%,transparent)}
+    .lote.ativo{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 6%,white)}
+    .lote-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+    .lote-left{flex:1}
+    .lote-nome{font-weight:700;font-size:15px;color:var(--gray-900)}
+    .lote-info{font-size:12px;color:var(--gray-400);margin-top:3px}
+    .lote-preco{font-size:22px;font-weight:900;color:var(--primary);white-space:nowrap}
+    .badge-free{background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;display:inline-block}
+    .lote-check{width:22px;height:22px;border-radius:50%;border:2px solid var(--gray-300);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;transition:.2s}
+    .lote.ativo .lote-check{background:var(--primary);border-color:var(--primary);color:white}
 
-    /* FORM */
-    .campo{margin-bottom:18px}
-    .campo label{display:block;font-size:13px;font-weight:600;color:var(--gray-800);margin-bottom:6px}
-    .req{color:#ef4444;margin-left:2px}
-    .input{width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;font-family:'Inter',sans-serif;transition:.2s;background:var(--white);color:var(--gray-900)}
-    .input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
-    .input-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    /* QUANTIDADE */
+    .qty-wrap{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--gray-100)}
+    .qty-btn{width:32px;height:32px;border-radius:8px;border:1.5px solid var(--gray-200);background:var(--white);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--gray-700);transition:.2s}
+    .qty-btn:hover{border-color:var(--primary);color:var(--primary)}
+    .qty-num{font-size:16px;font-weight:700;min-width:24px;text-align:center}
+    .qty-label{font-size:12px;color:var(--gray-400);margin-left:4px}
+
+    /* CUPOM */
+    .cupom-wrap{display:flex;gap:8px;margin-top:14px}
+    .cupom-input{flex:1;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif}
+    .cupom-input:focus{outline:none;border-color:var(--primary)}
+    .cupom-btn{padding:9px 16px;background:var(--gray-100);border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;color:var(--gray-700)}
+    .cupom-btn:hover{background:var(--primary);color:white;border-color:var(--primary)}
+    .cupom-ok{background:#dcfce7;color:#166534;border-color:#86efac}
+    .cupom-erro{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+
+    /* PARTICIPANTES */
+    .participante-bloco{border:1.5px solid var(--gray-200);border-radius:10px;padding:16px;margin-bottom:12px;position:relative}
+    .participante-titulo{font-size:13px;font-weight:700;color:var(--gray-700);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+    .participante-num{width:22px;height:22px;background:var(--primary);color:white;border-radius:50%;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
+
+    /* CAMPOS FORM */
+    .campo{margin-bottom:14px}
+    .campo label{display:block;font-size:12px;font-weight:600;color:var(--gray-700);margin-bottom:5px}
+    .req{color:#ef4444}
+    .input{width:100%;padding:10px 13px;border:1.5px solid var(--gray-200);border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;transition:.2s}
+    .input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 12%,transparent)}
+    .input-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     @media(max-width:500px){.input-grid{grid-template-columns:1fr}}
-    .btn-submit{width:100%;padding:16px;background:var(--primary);color:white;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;transition:.2s;font-family:'Inter',sans-serif;letter-spacing:.3px;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px}
-    .btn-submit:hover{opacity:.92;transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.2)}
-    .btn-submit:active{transform:translateY(0)}
-    .secure-msg{text-align:center;font-size:12px;color:var(--gray-400);margin-top:10px;display:flex;align-items:center;justify-content:center;gap:4px}
+
+    /* FORM ANIMADO */
+    .form-section{overflow:hidden;transition:max-height .4s ease,opacity .4s ease;max-height:0;opacity:0}
+    .form-section.visivel{max-height:2000px;opacity:1}
+
+    /* SUBMIT */
+    .btn-submit{width:100%;padding:15px;background:var(--primary);color:white;border:none;border-radius:11px;font-size:15px;font-weight:700;cursor:pointer;transition:.2s;font-family:'Inter',sans-serif;margin-top:10px}
+    .btn-submit:hover{opacity:.92;transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.2)}
+    .secure{text-align:center;font-size:12px;color:var(--gray-400);margin-top:8px}
 
     /* SIDEBAR */
-    .sidebar-card{background:var(--white);border-radius:16px;box-shadow:var(--shadow);padding:22px;margin-bottom:16px}
-    .sidebar-title{font-size:14px;font-weight:700;color:var(--gray-900);margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--gray-100)}
-    .info-item{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
-    .info-icon{width:36px;height:36px;border-radius:10px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
-    .info-label{font-size:11px;color:var(--gray-400);margin-bottom:1px;font-weight:500;text-transform:uppercase;letter-spacing:.4px}
-    .info-val{font-weight:600;color:var(--gray-900);font-size:14px}
-    .info-sub{font-size:12px;color:var(--gray-600);margin-top:1px}
-    .org-box{background:var(--gray-50);border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;margin-top:16px}
-    .org-logo{width:42px;height:42px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--primary);display:flex;align-items:center;justify-content:center}
+    .sidebar-card{background:var(--white);border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,.08),0 2px 12px rgba(0,0,0,.05);padding:20px;margin-bottom:16px}
+    .sidebar-title{font-size:13px;font-weight:700;color:var(--gray-900);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--gray-100)}
+    .info-item{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px}
+    .info-icon{width:34px;height:34px;border-radius:9px;background:var(--gray-100);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+    .info-label{font-size:10px;color:var(--gray-400);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+    .info-val{font-weight:600;font-size:13px;color:var(--gray-900);margin-top:1px}
+    .info-sub{font-size:11px;color:var(--gray-600);margin-top:1px}
+    .org-box{background:var(--gray-50);border-radius:10px;padding:12px;display:flex;align-items:center;gap:10px;margin-top:14px}
+    .org-logo{width:38px;height:38px;border-radius:9px;overflow:hidden;background:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .org-logo img{width:100%;height:100%;object-fit:contain}
-    .org-name{font-weight:700;font-size:14px;color:var(--gray-900)}
-    .org-sub{font-size:12px;color:var(--gray-600)}
 
-    /* RESUMO LOTE SIDEBAR */
-    .lote-resumo{background:var(--primary-light);border:1.5px solid var(--primary);border-radius:12px;padding:16px}
-    .lote-resumo-nome{font-weight:700;font-size:14px;color:var(--primary)}
-    .lote-resumo-preco{font-size:26px;font-weight:900;color:var(--primary);margin-top:4px}
+    /* RESUMO SIDEBAR */
+    .resumo-box{background:color-mix(in srgb,var(--primary) 8%,white);border:1.5px solid var(--primary);border-radius:10px;padding:14px}
+    .resumo-nome{font-weight:700;font-size:13px;color:var(--primary)}
+    .resumo-preco{font-size:24px;font-weight:900;color:var(--primary)}
+    .resumo-qty{font-size:12px;color:var(--gray-600);margin-top:2px}
+    .btn-inscrever-side{display:flex;align-items:center;justify-content:center;margin-top:12px;padding:12px;background:var(--primary);color:white;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px}
 
     /* CONTATO */
-    .contato-links{display:flex;flex-direction:column;gap:10px}
-    .contato-link{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;border:1.5px solid var(--gray-200);text-decoration:none;color:var(--gray-800);font-size:13px;font-weight:500;transition:.2s}
-    .contato-link:hover{border-color:var(--primary);background:var(--primary-light);color:var(--primary)}
-    .contato-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
-    .contato-form-input{width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;margin-bottom:10px;transition:.2s}
-    .contato-form-input:focus{outline:none;border-color:var(--primary)}
-    .btn-contato{width:100%;padding:11px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
+    .contato-link{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:9px;border:1.5px solid var(--gray-200);text-decoration:none;color:var(--gray-800);font-size:13px;font-weight:500;margin-bottom:8px;transition:.2s}
+    .contato-link:hover{border-color:var(--primary);background:color-mix(in srgb,var(--primary) 5%,white)}
+    .c-icon{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+    .form-contato-input{width:100%;padding:9px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;margin-bottom:8px}
+    .form-contato-input:focus{outline:none;border-color:var(--primary)}
+    .btn-contato{width:100%;padding:10px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
 
     /* SUCESSO */
-    .sucesso-wrap{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:40px 24px}
-    .sucesso-box{background:var(--white);border-radius:24px;box-shadow:var(--shadow-lg);padding:48px 36px;text-align:center;max-width:500px;width:100%}
-    .sucesso-anim{width:80px;height:80px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 24px;animation:pop .4s ease}
+    .sucesso-wrap{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:40px 20px}
+    .sucesso-box{background:var(--white);border-radius:20px;box-shadow:0 4px 40px rgba(0,0,0,.12);padding:44px 32px;text-align:center;max-width:480px;width:100%}
+    .sucesso-icon{width:72px;height:72px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 20px;animation:pop .4s ease}
     @keyframes pop{0%{transform:scale(0)}80%{transform:scale(1.1)}100%{transform:scale(1)}}
-    .sucesso-box h2{font-size:26px;font-weight:800;margin-bottom:8px}
-    .sucesso-box p{color:var(--gray-600);font-size:15px;line-height:1.6}
-    .codigo-box{background:var(--gray-900);color:#10b981;font-family:monospace;font-size:16px;padding:14px 20px;border-radius:10px;margin:20px auto;display:inline-block;letter-spacing:2px}
-    .instrucao{background:var(--gray-50);border-radius:12px;padding:16px;margin-top:20px;font-size:13px;color:var(--gray-600);text-align:left}
-    .instrucao li{margin-bottom:6px;padding-left:4px}
+    .codigo-box{background:var(--gray-900);color:#10b981;font-family:monospace;font-size:15px;padding:12px 20px;border-radius:9px;margin:18px auto;display:inline-block;letter-spacing:2px}
+
+    /* WHATSAPP FLOAT */
+    .wpp-float{position:fixed;bottom:24px;right:24px;z-index:999;width:56px;height:56px;background:#25d366;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(37,211,102,.4);text-decoration:none;transition:.2s}
+    .wpp-float:hover{transform:scale(1.1);box-shadow:0 6px 28px rgba(37,211,102,.5)}
+    .wpp-float svg{width:30px;height:30px;fill:white}
 
     /* FOOTER */
-    footer{background:var(--gray-900);color:rgba(255,255,255,.6);text-align:center;padding:24px;font-size:13px;margin-top:40px}
+    footer{background:var(--gray-900);color:rgba(255,255,255,.5);text-align:center;padding:22px;font-size:12px;margin-top:40px}
     footer strong{color:white}
-
-    /* ANIMATIONS */
-    @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-    .fade-up{animation:fadeUp .5s ease forwards}
-    .delay-1{animation-delay:.1s;opacity:0}
-    .delay-2{animation-delay:.2s;opacity:0}
-    .delay-3{animation-delay:.3s;opacity:0}
   </style>
 </head>
 <body>
@@ -145,14 +159,14 @@
 <!-- NAV -->
 <nav>
   <div class="nav-inner">
-    <div class="nav-logo">
+    <a href="/" class="nav-logo">
       <% if (config && config.org_logo) { %>
-      <img src="<%= config.org_logo %>" alt="LAURO">
+      <img src="<%= config.org_logo %>" class="nav-logo-img" alt="LAURO">
       <% } else { %>
-      <div style="width:36px;height:36px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:16px">L</div>
+      <div style="width:34px;height:34px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:15px">L</div>
       <% } %>
       <span class="nav-logo-text">LAURO</span>
-    </div>
+    </a>
     <div class="nav-links">
       <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" class="nav-link">Instagram</a>
       <a href="#contato" class="nav-link">Contato</a>
@@ -162,57 +176,41 @@
 </nav>
 
 <% if (sucesso) { %>
-<!-- SUCESSO -->
 <div class="sucesso-wrap">
-  <div class="sucesso-box fade-up">
-    <div class="sucesso-anim">✓</div>
-    <h2>Inscrição Confirmada!</h2>
-    <p>Sua inscrição foi realizada com sucesso. Verifique seu email para mais detalhes.</p>
+  <div class="sucesso-box">
+    <div class="sucesso-icon">✓</div>
+    <h2 style="font-size:22px;font-weight:800;margin-bottom:8px">Inscrição Realizada!</h2>
+    <p style="color:var(--gray-600);font-size:14px;line-height:1.6">Sua inscrição foi confirmada. Verifique seu email.</p>
     <div class="codigo-box"><%= codigoInscricao %></div>
-    <div class="instrucao">
-      <strong style="color:var(--gray-800);display:block;margin-bottom:8px">Próximos passos:</strong>
-      <ul style="list-style:none">
-        <li>✉️ Verifique seu email de confirmação</li>
-        <li>📱 Salve seu código de inscrição</li>
-        <li>📅 Anote a data e local do evento</li>
-        <li>✅ Apresente o código no check-in</li>
-      </ul>
-    </div>
-    <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:20px;padding:12px 24px;background:var(--primary);color:white;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px">
-      Seguir no Instagram →
-    </a>
+    <p style="font-size:12px;color:var(--gray-400);margin-top:4px">Apresente este código no check-in</p>
+    <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:20px;padding:12px 22px;background:var(--primary);color:white;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px">Seguir no Instagram →</a>
   </div>
 </div>
-
 <% } else { %>
 
-<!-- HERO -->
-<div class="hero">
+<!-- BANNER -->
+<div class="banner-wrap">
   <% if (evento.banner_chave) { %>
-  <img src="/eventos/<%= evento.id %>/banner" class="hero-banner" alt="Banner">
-  <div class="hero-overlay"></div>
-  <div style="position:absolute;inset:0;max-width:1100px;margin:0 auto;padding:0 40px;display:flex;align-items:flex-end;padding-bottom:40px">
+  <img src="/eventos/<%= evento.id %>/banner" class="banner-img" alt="Banner">
   <% } else { %>
-  <div class="hero-no-banner">
-  <div style="max-width:1100px;margin:0 auto;padding:0 40px;width:100%">
+  <div class="banner-placeholder">📅</div>
   <% } %>
-    <div class="fade-up">
-      <div class="tipo-badge">
-        <% if(evento.tipo_evento==='online'){%>💻 Evento Online<%}else if(evento.tipo_evento==='hibrido'){%>🔀 Evento Híbrido<%}else{%>📍 Evento Presencial<%}%>
-      </div>
-      <h1><%= evento.nome %></h1>
-      <% if (evento.descricao) { %><div class="hero-desc"><%- (evento.descricao||'').replace(/<[^>]*>/g,'').substring(0,200) %></div><% } %>
-      <div class="hero-meta">
-        <% if (evento.data_inicio) { %>
-        <div class="hero-chip"><span class="hero-chip-icon">📅</span><span><strong><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}) %></strong></span></div>
-        <% } %>
-        <% if (evento.local && evento.tipo_evento !== 'online') { %>
-        <div class="hero-chip"><span class="hero-chip-icon">📍</span><span><%= evento.local %></span></div>
-        <% } %>
-        <% if (evento.tipo_evento === 'online') { %>
-        <div class="hero-chip"><span class="hero-chip-icon">💻</span><span>Acesso Online</span></div>
-        <% } %>
-      </div>
+</div>
+
+<!-- TÍTULO ABAIXO DO BANNER -->
+<div class="titulo-wrap">
+  <div class="titulo-inner">
+    <div class="tipo-chip">
+      <% if(evento.tipo_evento==='online'){%>💻 Online<%}else if(evento.tipo_evento==='hibrido'){%>🔀 Híbrido<%}else{%>📍 Presencial<%}%>
+    </div>
+    <h1><%= evento.nome %></h1>
+    <div class="titulo-meta">
+      <% if (evento.data_inicio) { %>
+      <div class="titulo-chip">📅 <strong><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}) %></strong></div>
+      <% } %>
+      <% if (evento.local && evento.tipo_evento !== 'online') { %>
+      <div class="titulo-chip">📍 <span><%= evento.local %></span></div>
+      <% } %>
     </div>
   </div>
 </div>
@@ -221,142 +219,150 @@
 <div class="page-wrap">
   <div class="main-grid">
 
-    <!-- Coluna Esquerda -->
+    <!-- COLUNA ESQUERDA -->
     <div>
 
-      <!-- Sobre o Evento -->
+      <!-- Sobre -->
       <% if (evento.descricao) { %>
-      <div class="card fade-up delay-1">
-        <div class="card-header"><h2>Sobre o Evento</h2></div>
-        <div class="card-body" style="text-align:justify;font-size:14px;line-height:1.8;color:var(--gray-700)">
-          <%- evento.descricao %>
-        </div>
+      <div class="card">
+        <div class="card-hd"><h2>Sobre o Evento</h2></div>
+        <div class="card-bd" style="font-size:14px;line-height:1.8;color:var(--gray-700);text-align:justify"><%- evento.descricao %></div>
       </div>
       <% } %>
 
-      <!-- Lotes -->
+      <!-- Ingressos -->
       <% if (lotes.length > 0) { %>
-      <div class="card fade-up delay-1" id="inscricao">
-        <div class="card-header">
-          <h2>Ingressos Disponíveis</h2>
-          <p>Selecione o ingresso desejado</p>
-        </div>
-        <div class="card-body">
+      <div class="card" id="inscricao">
+        <div class="card-hd"><div><h2>🎫 Ingressos</h2><p>Selecione e escolha a quantidade</p></div></div>
+        <div class="card-bd">
           <% lotes.forEach((l, i) => { %>
-          <div class="lote <%= i===0?'ativo':'' %>" onclick="selecionarLote(<%= l.id %>, this)">
-            <div class="lote-check"><%= i===0?'✓':'' %></div>
-            <div class="lote-nome"><%= l.nome %></div>
-            <% if (parseFloat(l.preco) === 0) { %>
-            <span class="badge-free">GRATUITO</span>
-            <% } else { %>
-            <div class="lote-preco">R$ <%= Number(l.preco).toFixed(2) %></div>
+          <div class="lote <%= i===0?'ativo':'' %>" id="lote-<%= l.id %>" onclick="selecionarLote(<%= l.id %>, this)">
+            <div class="lote-top">
+              <div class="lote-left">
+                <div class="lote-nome"><%= l.nome %></div>
+                <% if (l.data_fim) { %><div class="lote-info">Até <%= new Date(l.data_fim).toLocaleDateString('pt-BR') %></div><% } %>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px">
+                <div>
+                  <% if (parseFloat(l.preco) === 0) { %>
+                  <span class="badge-free">GRATUITO</span>
+                  <% } else { %>
+                  <div class="lote-preco">R$ <%= Number(l.preco).toFixed(2) %></div>
+                  <% } %>
+                </div>
+                <div class="lote-check"><%= i===0?'✓':'' %></div>
+              </div>
+            </div>
+            <% if (i===0) { %>
+            <div class="qty-wrap" id="qty-wrap-<%= l.id %>">
+              <button type="button" class="qty-btn" onclick="event.stopPropagation();alterarQty(-1)">−</button>
+              <span class="qty-num" id="qty-num">1</span>
+              <button type="button" class="qty-btn" onclick="event.stopPropagation();alterarQty(1)">+</button>
+              <span class="qty-label">ingresso(s)</span>
+            </div>
             <% } %>
-            <% if (l.data_fim) { %><div class="lote-info">Disponível até <%= new Date(l.data_fim).toLocaleDateString('pt-BR') %></div><% } %>
           </div>
           <% }) %>
+
+          <!-- Cupom -->
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--gray-100)">
+            <div style="font-size:13px;font-weight:600;color:var(--gray-700);margin-bottom:8px">🏷️ Cupom de Desconto</div>
+            <div class="cupom-wrap">
+              <input type="text" id="cupom-input" class="cupom-input" placeholder="Digite seu cupom..." oninput="this.value=this.value.toUpperCase()">
+              <button type="button" class="cupom-btn" onclick="aplicarCupom()">Aplicar</button>
+            </div>
+            <div id="cupom-msg" style="font-size:12px;margin-top:6px;display:none"></div>
+          </div>
         </div>
       </div>
       <% } %>
 
-      <!-- Formulário -->
-      <div class="card fade-up delay-2">
-        <div class="card-header">
-          <h2>Dados para Inscrição</h2>
-          <p>Preencha seus dados para confirmar a inscrição</p>
-        </div>
-        <div class="card-body">
-          <form action="/inscricao/<%= evento.id %>" method="POST">
-            <input type="hidden" name="lote_id" id="lote_selecionado" value="<%= lotes[0]?.id %>">
+      <!-- Formulário animado -->
+      <div class="form-section" id="form-section">
+        <div class="card">
+          <div class="card-hd"><div><h2>📝 Dados dos Participantes</h2><p>Preencha os dados de cada participante</p></div></div>
+          <div class="card-bd">
+            <form action="/inscricao/<%= evento.id %>" method="POST" id="form-inscricao">
+              <input type="hidden" name="lote_id" id="lote_selecionado" value="<%= lotes[0]?.id %>">
+              <input type="hidden" name="quantidade" id="campo-qty" value="1">
+              <input type="hidden" name="cupom" id="campo-cupom" value="">
 
-            <div class="input-grid">
-              <div class="campo" style="grid-column:1/-1">
-                <label>Nome Completo <span class="req">*</span></label>
-                <input name="nome" class="input" required placeholder="Seu nome completo">
+              <div id="participantes-wrap">
+                <!-- Participante 1 -->
+                <div class="participante-bloco" id="part-1">
+                  <div class="participante-titulo"><div class="participante-num">1</div> Participante 1</div>
+                  <div class="input-grid">
+                    <div class="campo" style="grid-column:1/-1">
+                      <label>Nome Completo <span class="req">*</span></label>
+                      <input name="nome" class="input" required placeholder="Nome completo">
+                    </div>
+                    <div class="campo">
+                      <label>Email <span class="req">*</span></label>
+                      <input name="email" class="input" type="email" required placeholder="email@exemplo.com">
+                    </div>
+                    <div class="campo">
+                      <label>WhatsApp</label>
+                      <input name="whatsapp" class="input" placeholder="+595 99 999 9999">
+                    </div>
+                    <div class="campo">
+                      <label>CPF</label>
+                      <input name="cpf" class="input" placeholder="000.000.000-00">
+                    </div>
+                    <div class="campo">
+                      <label>Instituição</label>
+                      <input name="instituicao" class="input" placeholder="Universidade / Empresa">
+                    </div>
+                  </div>
+                  <% if (campos && campos.length > 0) { %>
+                  <% campos.forEach(campo => { %>
+                  <div class="campo">
+                    <label><%= campo.label %><% if(campo.obrigatorio){%><span class="req"> *</span><%}%></label>
+                    <% if (campo.tipo === 'select') { %>
+                    <select name="campo_<%= campo.id %>" class="input" <%= campo.obrigatorio?'required':'' %>>
+                      <option value="">Selecione...</option>
+                      <% (campo.opcoes||'').split('\n').filter(o=>o.trim()).forEach(op=>{ %><option value="<%= op.trim() %>"><%= op.trim() %></option><% }) %>
+                    </select>
+                    <% } else if (campo.tipo === 'textarea') { %>
+                    <textarea name="campo_<%= campo.id %>" class="input" rows="3" <%= campo.obrigatorio?'required':'' %>></textarea>
+                    <% } else { %>
+                    <input type="<%= campo.tipo==='email'?'email':campo.tipo==='number'?'number':'text' %>" name="campo_<%= campo.id %>" class="input" <%= campo.obrigatorio?'required':'' %>>
+                    <% } %>
+                  </div>
+                  <% }) %>
+                  <% } %>
+                </div>
               </div>
-              <div class="campo">
-                <label>Email <span class="req">*</span></label>
-                <input name="email" class="input" type="email" required placeholder="seu@email.com">
-              </div>
-              <div class="campo">
-                <label>WhatsApp</label>
-                <input name="whatsapp" class="input" placeholder="+595 (99) 99999-9999">
-              </div>
-              <div class="campo">
-                <label>CPF</label>
-                <input name="cpf" class="input" placeholder="000.000.000-00">
-              </div>
-              <div class="campo">
-                <label>Instituição</label>
-                <input name="instituicao" class="input" placeholder="Universidade / Empresa">
-              </div>
-            </div>
 
-            <!-- Campos customizados -->
-            <% if (campos && campos.length > 0) { %>
-            <% campos.forEach(campo => { %>
-            <div class="campo">
-              <label><%= campo.label %><% if(campo.obrigatorio){%><span class="req"> *</span><%}%></label>
-              <% if (campo.tipo === 'select') { %>
-              <select name="campo_<%= campo.id %>" class="input" <%= campo.obrigatorio?'required':'' %>>
-                <option value="">Selecione...</option>
-                <% (campo.opcoes||'').split('\n').filter(o=>o.trim()).forEach(op=>{ %><option value="<%= op.trim() %>"><%= op.trim() %></option><% }) %>
-              </select>
-              <% } else if (campo.tipo === 'textarea') { %>
-              <textarea name="campo_<%= campo.id %>" class="input" rows="3" <%= campo.obrigatorio?'required':'' %>></textarea>
-              <% } else if (campo.tipo === 'radio') { %>
-              <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
-                <% (campo.opcoes||'').split('\n').filter(o=>o.trim()).forEach(op=>{ %>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:400;padding:10px 14px;border:1.5px solid var(--gray-200);border-radius:8px;transition:.2s" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--gray-200)'">
-                  <input type="radio" name="campo_<%= campo.id %>" value="<%= op.trim() %>" <%= campo.obrigatorio?'required':'' %> style="accent-color:var(--primary)"> <%= op.trim() %>
-                </label>
-                <% }) %>
-              </div>
-              <% } else if (campo.tipo === 'checkbox') { %>
-              <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
-                <% (campo.opcoes||'').split('\n').filter(o=>o.trim()).forEach(op=>{ %>
-                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:400">
-                  <input type="checkbox" name="campo_<%= campo.id %>[]" value="<%= op.trim() %>" style="accent-color:var(--primary);width:16px;height:16px"> <%= op.trim() %>
-                </label>
-                <% }) %>
-              </div>
-              <% } else { %>
-              <input type="<%= campo.tipo==='email'?'email':campo.tipo==='number'?'number':'text' %>" name="campo_<%= campo.id %>" class="input" <%= campo.obrigatorio?'required':'' %> placeholder="<%= campo.label %>">
-              <% } %>
-            </div>
-            <% }) %>
-            <% } %>
-
-            <button type="submit" class="btn-submit">Confirmar Inscrição →</button>
-            <div class="secure-msg">🔒 Seus dados são protegidos e não serão compartilhados</div>
-          </form>
+              <button type="submit" class="btn-submit" id="btn-submit">Confirmar Inscrição →</button>
+              <div class="secure">🔒 Seus dados estão protegidos</div>
+            </form>
+          </div>
         </div>
       </div>
 
       <!-- Contato -->
-      <div class="card fade-up delay-3" id="contato">
-        <div class="card-header"><h2>Entre em Contato</h2><p>Dúvidas? Nossa equipe está pronta para ajudar</p></div>
-        <div class="card-body">
-          <div class="contato-links" style="margin-bottom:20px">
-            <a href="mailto:lauroucpcde@lauroucpcde.com" class="contato-link">
-              <div class="contato-icon" style="background:#fee2e2">✉️</div>
-              <div><div style="font-size:11px;color:var(--gray-400);margin-bottom:1px">Email</div>lauroucpcde@lauroucpcde.com</div>
-            </a>
-            <a href="https://wa.me/595994225753" target="_blank" class="contato-link">
-              <div class="contato-icon" style="background:#dcfce7">📱</div>
-              <div><div style="font-size:11px;color:var(--gray-400);margin-bottom:1px">WhatsApp</div>+595 994 225 753</div>
-            </a>
-            <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" class="contato-link">
-              <div class="contato-icon" style="background:#fce7f3">📸</div>
-              <div><div style="font-size:11px;color:var(--gray-400);margin-bottom:1px">Instagram</div>@lauroucp.cde</div>
-            </a>
-          </div>
-          <div style="border-top:1px solid var(--gray-100);padding-top:20px">
-            <p style="font-size:13px;font-weight:600;color:var(--gray-800);margin-bottom:12px">Enviar mensagem</p>
+      <div class="card" id="contato">
+        <div class="card-hd"><div><h2>💬 Contato</h2><p>Fale com nossa equipe</p></div></div>
+        <div class="card-bd">
+          <a href="mailto:lauroucpcde@lauroucpcde.com" class="contato-link">
+            <div class="c-icon" style="background:#fee2e2">✉️</div>
+            <div><div style="font-size:10px;color:var(--gray-400);font-weight:600">EMAIL</div>lauroucpcde@lauroucpcde.com</div>
+          </a>
+          <a href="https://wa.me/595994225753" target="_blank" class="contato-link">
+            <div class="c-icon" style="background:#dcfce7">📱</div>
+            <div><div style="font-size:10px;color:var(--gray-400);font-weight:600">WHATSAPP</div>+595 994 225 753</div>
+          </a>
+          <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" class="contato-link">
+            <div class="c-icon" style="background:#fce7f3">📸</div>
+            <div><div style="font-size:10px;color:var(--gray-400);font-weight:600">INSTAGRAM</div>@lauroucp.cde</div>
+          </a>
+          <div style="border-top:1px solid var(--gray-100);padding-top:16px;margin-top:8px">
+            <p style="font-size:13px;font-weight:600;margin-bottom:10px">Enviar mensagem</p>
             <form action="/contato-evento/<%= evento.id %>" method="POST">
-              <input name="nome" class="contato-form-input" placeholder="Seu nome" required>
-              <input name="email" type="email" class="contato-form-input" placeholder="Seu email" required>
-              <textarea name="mensagem" class="contato-form-input" rows="3" placeholder="Sua mensagem..." required style="resize:vertical"></textarea>
-              <button type="submit" class="btn-contato">Enviar Mensagem</button>
+              <input name="nome" class="form-contato-input" placeholder="Seu nome" required>
+              <input name="email" type="email" class="form-contato-input" placeholder="Seu email" required>
+              <textarea name="mensagem" class="form-contato-input" rows="3" placeholder="Sua mensagem..." style="resize:vertical" required></textarea>
+              <button type="submit" class="btn-contato">Enviar →</button>
             </form>
           </div>
         </div>
@@ -365,88 +371,69 @@
 
     <!-- SIDEBAR -->
     <div class="sidebar">
-
-      <!-- Resumo do Evento -->
-      <div class="sidebar-card fade-up delay-1">
-        <div class="sidebar-title">Informações do Evento</div>
+      <div class="sidebar-card">
+        <div class="sidebar-title">Informações</div>
         <% if (evento.data_inicio) { %>
         <div class="info-item">
           <div class="info-icon">📅</div>
-          <div>
-            <div class="info-label">Data de Início</div>
-            <div class="info-val"><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}) %></div>
-            <div class="info-sub"><%= new Date(evento.data_inicio).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) %> h</div>
-          </div>
+          <div><div class="info-label">Data</div><div class="info-val"><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}) %></div><div class="info-sub"><%= new Date(evento.data_inicio).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) %> h</div></div>
         </div>
         <% } %>
         <% if (evento.data_fim) { %>
         <div class="info-item">
           <div class="info-icon">🏁</div>
-          <div>
-            <div class="info-label">Término</div>
-            <div class="info-val"><%= new Date(evento.data_fim).toLocaleDateString('pt-BR',{day:'2-digit',month:'long'}) %></div>
-            <div class="info-sub"><%= new Date(evento.data_fim).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) %> h</div>
-          </div>
+          <div><div class="info-label">Término</div><div class="info-val"><%= new Date(evento.data_fim).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) %> h</div></div>
         </div>
         <% } %>
-        <% if (evento.tipo_evento) { %>
         <div class="info-item">
           <div class="info-icon"><%= evento.tipo_evento==='online'?'💻':evento.tipo_evento==='hibrido'?'🔀':'📍' %></div>
-          <div>
-            <div class="info-label">Modalidade</div>
-            <div class="info-val"><%= evento.tipo_evento==='online'?'Online':evento.tipo_evento==='hibrido'?'Híbrido':'Presencial' %></div>
-          </div>
+          <div><div class="info-label">Modalidade</div><div class="info-val"><%= evento.tipo_evento==='online'?'Online':evento.tipo_evento==='hibrido'?'Híbrido':'Presencial' %></div></div>
         </div>
-        <% } %>
         <% if (evento.local && evento.tipo_evento !== 'online') { %>
         <div class="info-item">
           <div class="info-icon">📍</div>
-          <div>
-            <div class="info-label">Local</div>
-            <div class="info-val"><%= evento.local %></div>
-            <% if(evento.endereco){%><div class="info-sub"><%= evento.endereco %></div><%}%>
-          </div>
+          <div><div class="info-label">Local</div><div class="info-val"><%= evento.local %></div><% if(evento.endereco){%><div class="info-sub"><%= evento.endereco %></div><%}%></div>
         </div>
         <% } %>
         <div class="org-box">
           <div class="org-logo">
-            <% if (config && config.org_logo) { %>
-            <img src="<%= config.org_logo %>" alt="LAURO">
-            <% } else { %>
-            <span style="color:white;font-weight:800;font-size:16px">L</span>
-            <% } %>
+            <% if (config && config.org_logo) { %><img src="<%= config.org_logo %>" alt="LAURO"><% } else { %><span style="color:white;font-weight:800;font-size:15px">L</span><% } %>
           </div>
-          <div>
-            <div class="org-name">LAURO</div>
-            <div class="org-sub">Liga Académica de Urología</div>
-          </div>
+          <div><div style="font-weight:700;font-size:13px">LAURO</div><div style="font-size:11px;color:var(--gray-600)">Liga Académica de Urología</div></div>
         </div>
       </div>
 
-      <!-- Ingresso Selecionado -->
+      <!-- Resumo Ingresso -->
       <% if (lotes.length > 0) { %>
-      <div class="sidebar-card fade-up delay-2">
+      <div class="sidebar-card">
         <div class="sidebar-title">Ingresso Selecionado</div>
-        <div class="lote-resumo">
-          <div class="lote-resumo-nome" id="resumo-nome"><%= lotes[0]?.nome %></div>
-          <div class="lote-resumo-preco" id="resumo-preco"><%= parseFloat(lotes[0]?.preco||0)===0?'Gratuito':'R$ '+Number(lotes[0]?.preco||0).toFixed(2) %></div>
+        <div class="resumo-box">
+          <div class="resumo-nome" id="resumo-nome"><%= lotes[0]?.nome %></div>
+          <div class="resumo-preco" id="resumo-preco"><%= parseFloat(lotes[0]?.preco||0)===0?'Gratuito':'R$ '+Number(lotes[0]?.preco||0).toFixed(2) %></div>
+          <div class="resumo-qty" id="resumo-qty">1 ingresso</div>
         </div>
-        <a href="#inscricao" class="btn-submit" style="display:flex;margin-top:14px;text-decoration:none;text-align:center;justify-content:center">Inscrever-se Agora</a>
+        <a href="#form-section" class="btn-inscrever-side" onclick="mostrarForm()">Preencher Dados →</a>
       </div>
       <% } %>
 
-      <!-- Redes Sociais -->
-      <div class="sidebar-card fade-up delay-3">
-        <div class="sidebar-title">Siga a LAURO</div>
+      <!-- Instagram -->
+      <div class="sidebar-card">
         <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" style="display:flex;align-items:center;gap:12px;padding:12px;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);border-radius:10px;text-decoration:none;color:white">
           <div style="font-size:24px">📸</div>
-          <div><div style="font-weight:700;font-size:14px">@lauroucp.cde</div><div style="font-size:12px;opacity:.85">Siga no Instagram</div></div>
+          <div><div style="font-weight:700;font-size:13px">@lauroucp.cde</div><div style="font-size:11px;opacity:.85">Siga no Instagram</div></div>
         </a>
       </div>
     </div>
   </div>
 </div>
 <% } %>
+
+<!-- WHATSAPP FLOAT -->
+<a href="https://wa.me/595994225753" target="_blank" class="wpp-float" title="Fale conosco no WhatsApp">
+  <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+  </svg>
+</a>
 
 <footer>
   <strong>LAURO</strong> — Liga Académica de Urología · Universidad Central del Paraguay<br>
@@ -455,17 +442,105 @@
 
 <script>
 const lotesData = <%- JSON.stringify(lotes) %>;
+let qtyAtual = 1;
+let loteSelecionadoId = <%= lotes[0]?.id || 'null' %>;
+let precoBase = <%= parseFloat(lotes[0]?.preco||0) %>;
+let desconto = 0;
+
 function selecionarLote(id, el) {
-  document.querySelectorAll('.lote').forEach(e=>{e.classList.remove('ativo');e.querySelector('.lote-check').textContent='';});
+  document.querySelectorAll('.lote').forEach(e=>{
+    e.classList.remove('ativo');
+    const chk=e.querySelector('.lote-check');
+    if(chk)chk.textContent='';
+    const qw=e.querySelector('.qty-wrap');
+    if(qw)qw.remove();
+  });
   el.classList.add('ativo');
-  el.querySelector('.lote-check').textContent='✓';
+  const chk=el.querySelector('.lote-check');
+  if(chk)chk.textContent='✓';
   document.getElementById('lote_selecionado').value=id;
+  loteSelecionadoId=id;
   const l=lotesData.find(x=>x.id==id);
-  if(l){
-    document.getElementById('resumo-nome').textContent=l.nome;
-    document.getElementById('resumo-preco').textContent=parseFloat(l.preco)===0?'Gratuito':'R$ '+parseFloat(l.preco).toFixed(2);
+  precoBase=l?parseFloat(l.preco):0;
+  // Adiciona qty
+  if(!el.querySelector('.qty-wrap')){
+    const qw=document.createElement('div');
+    qw.className='qty-wrap';
+    qw.id='qty-wrap-'+id;
+    qw.innerHTML='<button type="button" class="qty-btn" onclick="event.stopPropagation();alterarQty(-1)">−</button><span class="qty-num" id="qty-num">'+qtyAtual+'</span><button type="button" class="qty-btn" onclick="event.stopPropagation();alterarQty(1)">+</button><span class="qty-label">ingresso(s)</span>';
+    el.appendChild(qw);
+  }
+  atualizarResumo(l);
+}
+
+function alterarQty(delta) {
+  qtyAtual = Math.max(1, Math.min(10, qtyAtual + delta));
+  const el=document.getElementById('qty-num');
+  if(el)el.textContent=qtyAtual;
+  document.getElementById('campo-qty').value=qtyAtual;
+  const l=lotesData.find(x=>x.id==loteSelecionadoId);
+  atualizarResumo(l);
+  atualizarParticipantes();
+}
+
+function atualizarResumo(l) {
+  const nome=l?l.nome:'';
+  const preco=precoBase*(1-desconto)*qtyAtual;
+  document.getElementById('resumo-nome').textContent=nome;
+  document.getElementById('resumo-preco').textContent=preco===0?'Gratuito':'R$ '+preco.toFixed(2);
+  document.getElementById('resumo-qty').textContent=qtyAtual+' ingresso'+(qtyAtual>1?'s':'');
+}
+
+function atualizarParticipantes() {
+  const wrap=document.getElementById('participantes-wrap');
+  const atual=wrap.querySelectorAll('.participante-bloco').length;
+  if(qtyAtual>atual){
+    for(let i=atual+1;i<=qtyAtual;i++){
+      const div=document.createElement('div');
+      div.className='participante-bloco';
+      div.id='part-'+i;
+      div.innerHTML='<div class="participante-titulo"><div class="participante-num">'+i+'</div> Participante '+i+'</div><div class="input-grid"><div class="campo" style="grid-column:1/-1"><label>Nome Completo <span class="req">*</span></label><input name="nome_'+i+'" class="input" required placeholder="Nome completo"></div><div class="campo"><label>Email <span class="req">*</span></label><input name="email_'+i+'" class="input" type="email" required placeholder="email@exemplo.com"></div><div class="campo"><label>WhatsApp</label><input name="whatsapp_'+i+'" class="input" placeholder="+595 99 999 9999"></div></div>';
+      wrap.appendChild(div);
+    }
+  } else {
+    for(let i=atual;i>qtyAtual;i--){
+      const el=document.getElementById('part-'+i);
+      if(el)el.remove();
+    }
   }
 }
+
+function mostrarForm() {
+  const fs=document.getElementById('form-section');
+  fs.classList.add('visivel');
+  setTimeout(()=>fs.scrollIntoView({behavior:'smooth',block:'start'}),100);
+}
+
+function aplicarCupom() {
+  const cod=document.getElementById('cupom-input').value.trim();
+  const msg=document.getElementById('cupom-msg');
+  if(!cod){msg.style.display='none';return;}
+  // Simulação - integrar com backend
+  fetch('/eventos/<%= evento.id %>/cupom?cod='+encodeURIComponent(cod))
+    .then(r=>r.json())
+    .then(d=>{
+      msg.style.display='block';
+      if(d.ok){
+        desconto=d.desconto||0;
+        msg.textContent='✅ Cupom aplicado! '+Math.round(desconto*100)+'% de desconto';
+        msg.className='cupom-ok';
+        document.getElementById('campo-cupom').value=cod;
+        const l=lotesData.find(x=>x.id==loteSelecionadoId);
+        atualizarResumo(l);
+      } else {
+        msg.textContent='❌ Cupom inválido ou expirado';
+        msg.className='cupom-erro';
+      }
+    }).catch(()=>{msg.textContent='❌ Erro ao verificar cupom';msg.style.display='block';msg.className='cupom-erro';});
+}
+
+// Mostra form ao clicar em inscrever
+document.querySelector('a[href="#form-section"]')?.addEventListener('click', mostrarForm);
 </script>
 </body>
 </html>
