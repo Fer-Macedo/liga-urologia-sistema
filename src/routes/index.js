@@ -2498,7 +2498,7 @@ router.post('/lista-assinaturas', requireAuth, async (req, res) => {
 async function getPessoasLista() {
   const [ligR, dirR] = await Promise.all([
     query('SELECT nome, rg, catraca FROM ligantes WHERE ativo=1 ORDER BY nome'),
-    query('SELECT nome, rg, NULL as catraca FROM diretivos WHERE ativo=1 ORDER BY nome')
+    query('SELECT nome, rg, catraca FROM diretivos WHERE ativo=1 ORDER BY nome')
   ]);
   const todas = [...ligR.rows, ...dirR.rows];
   todas.sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
