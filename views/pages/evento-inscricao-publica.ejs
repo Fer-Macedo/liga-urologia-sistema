@@ -215,6 +215,19 @@
   </div>
 </div>
 
+<!-- GRUPO WHATSAPP -->
+<% if (evento.wpp_grupo) { %>
+<div style="background:#25d366;padding:12px 0">
+  <div style="max-width:1100px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+    <div style="display:flex;align-items:center;gap:10px;color:white">
+      <span style="font-size:20px">📱</span>
+      <span style="font-weight:600;font-size:14px">Participe do grupo do WhatsApp do evento e fique por dentro de tudo!</span>
+    </div>
+    <a href="<%= evento.wpp_grupo %>" target="_blank" style="background:white;color:#25d366;padding:8px 20px;border-radius:8px;font-weight:700;font-size:14px;text-decoration:none;white-space:nowrap">📲 Entrar no Grupo</a>
+  </div>
+</div>
+<% } %>
+
 <!-- MAIN -->
 <div class="page-wrap">
   <div class="main-grid">
@@ -333,6 +346,24 @@
                 </div>
               </div>
 
+              <!-- TERMOS -->
+              <% if (evento.termos_texto) { %>
+              <div style="background:var(--gray-50);border:1.5px solid var(--gray-200);border-radius:10px;padding:14px;margin-top:16px;margin-bottom:14px">
+                <div style="font-size:13px;font-weight:700;color:var(--gray-800);margin-bottom:8px">📜 Termos e Condições</div>
+                <div style="max-height:150px;overflow-y:auto;font-size:12px;color:var(--gray-600);line-height:1.6;white-space:pre-wrap;margin-bottom:12px"><%= evento.termos_texto %></div>
+                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13px;color:var(--gray-800)">
+                  <input type="checkbox" name="aceite_termos" required style="margin-top:2px;accent-color:var(--primary);width:16px;height:16px;flex-shrink:0">
+                  <span>Li e concordo com os <strong>Termos de Compra e Participação</strong> <span style="color:#ef4444">*</span></span>
+                </label>
+              </div>
+              <% } %>
+              <!-- LGPD -->
+              <div style="margin-bottom:14px">
+                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13px;color:var(--gray-800)">
+                  <input type="checkbox" name="aceite_lgpd" required style="margin-top:2px;accent-color:var(--primary);width:16px;height:16px;flex-shrink:0">
+                  <span>Li e aceito a <strong>Política de Privacidade e tratamento de dados (LGPD)</strong> — Meus dados serão usados exclusivamente para gestão deste evento. <span style="color:#ef4444">*</span></span>
+                </label>
+              </div>
               <button type="submit" class="btn-submit" id="btn-submit">Confirmar Inscrição →</button>
               <div class="secure">🔒 Seus dados estão protegidos</div>
             </form>
@@ -413,6 +444,16 @@
           <div class="resumo-qty" id="resumo-qty">1 ingresso</div>
         </div>
         <a href="#form-section" class="btn-inscrever-side" onclick="mostrarForm()">Preencher Dados →</a>
+      </div>
+      <% } %>
+
+      <!-- Grupo WhatsApp -->
+      <% if (evento.wpp_grupo) { %>
+      <div class="sidebar-card">
+        <a href="<%= evento.wpp_grupo %>" target="_blank" style="display:flex;align-items:center;gap:12px;padding:14px;background:#25d366;border-radius:10px;text-decoration:none;color:white">
+          <div style="font-size:26px">📱</div>
+          <div><div style="font-weight:700;font-size:14px">Grupo do Evento</div><div style="font-size:12px;opacity:.85">Entrar no WhatsApp</div></div>
+        </a>
       </div>
       <% } %>
 
