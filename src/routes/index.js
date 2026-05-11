@@ -2859,7 +2859,8 @@ router.get('/eventos/:id', requireAuth, async (req, res) => {
   if (!evR.rows[0]) { req.session.erro=['Evento não encontrado']; return res.redirect('/eventos'); }
   const stats = await getEventoStats(req.params.id);
   const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem', [req.params.id]);
-  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows });
+  const cuponsR = await query('SELECT * FROM evento_cupons WHERE evento_id=$1 ORDER BY criado_em DESC', [req.params.id]);
+  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows, cupons: cuponsR.rows });
 });
 
 router.post('/eventos/:id/editar', requireAuth, async (req, res) => {
@@ -3111,17 +3112,26 @@ router.post('/contato-evento/:id', async (req, res) => {
 
 
 router.get('/eventos/:id/cupom', async (req, res) => {
-  // Implementação futura — por enquanto retorna inválido
-  res.json({ok: false, msg: 'Cupom inválido'});
+  try {
+    const cod = req.query.cod?.toUpperCase();
+    if (!cod) return res.json({ok:false});
+    const r = await query('SELECT * FROM evento_cupons WHERE evento_id=$1 AND codigo=$2 AND ativo=true', [req.params.id, cod]);
+    const cupom = r.rows[0];
+    if (!cupom) return res.json({ok:false, msg:'Cupom inválido'});
+    if (cupom.usos_atual >= cupom.usos_max) return res.json({ok:false, msg:'Cupom esgotado'});
+    const desconto = cupom.tipo==='percentual' ? parseFloat(cupom.valor)/100 : null;
+    res.json({ok:true, desconto, tipo: cupom.tipo, valor: cupom.valor});
+  } catch(e) { res.json({ok:false}); }
 });
 
 
 // CONFIGURAÇÕES AVANÇADAS DO EVENTO
 router.post('/eventos/:id/avancado', requireAuth, async (req, res) => {
   const {email_inscricao, email_confirmacao, notif_email, wpp_grupo, inscricao_gratuita_auto, inscricao_unica, termos_texto} = req.body;
-  await query('UPDATE eventos SET email_inscricao=$1,email_confirmacao=$2,notif_email=$3,wpp_grupo=$4,inscricao_gratuita_auto=$5,inscricao_unica=$6,termos_texto=$7 WHERE id=$8',
-    [email_inscricao||null, email_confirmacao||null, notif_email||null, wpp_grupo||null,
-     inscricao_gratuita_auto==='true', inscricao_unica==='true', termos_texto||null, req.params.id]);
+  const {lgpd_texto} = req.body;
+  await query('UPDATE eventos SET email_inscricao=$1,email_confirmacao=$2,wpp_grupo=$3,inscricao_gratuita_auto=$4,inscricao_unica=$5,termos_texto=$6,lgpd_texto=$7 WHERE id=$8',
+    [email_inscricao||null, email_confirmacao||null, wpp_grupo||null,
+     inscricao_gratuita_auto==='true', inscricao_unica==='true', termos_texto||null, lgpd_texto||null, req.params.id]);
   req.session.msg = ['Configurações avançadas salvas!'];
   res.redirect('/eventos/' + req.params.id);
 });
@@ -3200,6 +3210,52 @@ router.post('/eventos/:id/patrocinadores/:pid/deletar', requireAuth, async (req,
   await query('DELETE FROM evento_patrocinadores WHERE id=$1', [req.params.pid]);
   req.session.msg = ['Patrocinador removido!'];
   res.redirect('/eventos/' + req.params.id);
+});
+
+
+// CUPONS
+router.post('/eventos/:id/cupons', requireAuth, async (req, res) => {
+  const {codigo, tipo, valor, usos_max} = req.body;
+  try {
+    await query('INSERT INTO evento_cupons (evento_id,codigo,tipo,valor,usos_max) VALUES ($1,$2,$3,$4,$5)',
+      [req.params.id, codigo.toUpperCase(), tipo||'percentual', parseFloat(valor)||100, parseInt(usos_max)||1]);
+    req.session.msg = ['Cupom criado!'];
+  } catch(e) { req.session.erro = ['Código já existe!']; }
+  res.redirect('/eventos/' + req.params.id);
+});
+
+router.post('/eventos/:id/cupons/:cid/deletar', requireAuth, async (req, res) => {
+  await query('DELETE FROM evento_cupons WHERE id=$1', [req.params.cid]);
+  req.session.msg = ['Cupom excluído!'];
+  res.redirect('/eventos/' + req.params.id);
+});
+
+router.post('/eventos/:id/cupons/gerar-ligantes', requireAuth, async (req, res) => {
+  const {prefixo} = req.body;
+  const pref = (prefixo||'LAURO').toUpperCase().replace(/[^A-Z0-9]/g,'');
+  const [ligR, dirR] = await Promise.all([
+    query('SELECT nome FROM ligantes WHERE ativo=1'),
+    query('SELECT nome FROM diretivos WHERE ativo=1')
+  ]);
+  const pessoas = [...ligR.rows, ...dirR.rows];
+  let criados = 0;
+  for (const p of pessoas) {
+    const parte = p.nome.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'').substring(0,8);
+    const codigo = pref + parte + Math.floor(Math.random()*100);
+    try {
+      await query('INSERT INTO evento_cupons (evento_id,codigo,tipo,valor,usos_max) VALUES ($1,$2,$3,$4,$5)',
+        [req.params.id, codigo, 'percentual', 100, 1]);
+      criados++;
+    } catch(e) {}
+  }
+  req.session.msg = [criados + ' cupons gerados!'];
+  res.redirect('/eventos/' + req.params.id);
+});
+
+// Fix: usa cupom ao inscrever
+router.post('/eventos/:id/inscricoes/:iid/usar-cupom', async (req, res) => {
+  const {cod} = req.body;
+  await query('UPDATE evento_cupons SET usos_atual=usos_atual+1 WHERE codigo=$1 AND evento_id=$2', [cod, req.params.id]);
 });
 
 module.exports = router;
