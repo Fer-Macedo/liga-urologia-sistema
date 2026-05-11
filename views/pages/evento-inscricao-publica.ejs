@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= evento.nome %> — Inscrição</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; background:#f0f4f8; color:#1a202c; }
+    .hero { background:linear-gradient(135deg,#1a3d2b,#2e8b7a); color:white; padding:40px 20px; text-align:center; }
+    .hero h1 { font-size:28px; font-weight:800; margin-bottom:8px; }
+    .hero p { opacity:.85; font-size:15px; }
+    .container { max-width:720px; margin:0 auto; padding:30px 20px; }
+    .card { background:white; border-radius:16px; padding:24px; margin-bottom:20px; box-shadow:0 2px 12px rgba(0,0,0,.08); }
+    .info-row { display:flex; gap:8px; align-items:center; margin-bottom:10px; font-size:14px; color:#4a5568; }
+    .lote-opt { border:2px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:10px; cursor:pointer; transition:.2s; }
+    .lote-opt:hover { border-color:#2e8b7a; }
+    .lote-opt.selecionado { border-color:#1a3d2b; background:#f0fdf4; }
+    .lote-nome { font-weight:700; font-size:15px; }
+    .lote-preco { font-size:20px; font-weight:800; color:#1a3d2b; }
+    .lote-info { font-size:12px; color:#718096; margin-top:3px; }
+    .campo { margin-bottom:16px; }
+    .label { display:block; font-size:13px; font-weight:600; margin-bottom:6px; color:#374151; }
+    .input { width:100%; padding:10px 14px; border:2px solid #e2e8f0; border-radius:8px; font-size:14px; transition:.2s; }
+    .input:focus { outline:none; border-color:#2e8b7a; }
+    .btn-inscrever { width:100%; padding:14px; background:#1a3d2b; color:white; border:none; border-radius:10px; font-size:16px; font-weight:700; cursor:pointer; margin-top:8px; }
+    .btn-inscrever:hover { background:#2e8b7a; }
+    .badge { padding:4px 12px; border-radius:20px; font-size:12px; font-weight:700; display:inline-block; }
+    .vagas-bar { height:8px; background:#e2e8f0; border-radius:4px; overflow:hidden; margin-top:6px; }
+    .vagas-fill { height:100%; background:#1a3d2b; border-radius:4px; }
+    .sucesso { text-align:center; padding:40px 20px; }
+    .sucesso-icon { font-size:64px; margin-bottom:16px; }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <h1>🎪 <%= evento.nome %></h1>
+    <p><%= evento.descricao || '' %></p>
+  </div>
+
+  <div class="container">
+    <% if (sucesso) { %>
+    <div class="card sucesso">
+      <div class="sucesso-icon">🎉</div>
+      <h2 style="font-size:22px;font-weight:800;margin-bottom:8px">Inscrição Realizada!</h2>
+      <p style="color:#4a5568">Você receberá um email de confirmação em breve. Guarde seu QR Code!</p>
+      <% if (qrcode) { %><div style="margin-top:20px"><img src="<%= qrcode %>" style="width:200px;height:200px"></div><% } %>
+    </div>
+    <% } else { %>
+
+    <!-- Info do Evento -->
+    <div class="card">
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:14px">📋 Informações</h2>
+      <div class="info-row">📅 <strong><%= evento.data_inicio ? new Date(evento.data_inicio).toLocaleString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—' %></strong></div>
+      <div class="info-row">📍 <span><%= evento.local||'—' %><% if(evento.endereco){%> — <%= evento.endereco %><%}%></span></div>
+      <div class="info-row">👥 <span><%= evento.total_inscritos||0 %> de <%= evento.vagas_total %> vagas preenchidas</span></div>
+      <div class="vagas-bar"><div class="vagas-fill" style="width:<%= evento.vagas_total>0?Math.min(100,Math.round((evento.total_inscritos||0)/evento.vagas_total*100)):0 %>%"></div></div>
+    </div>
+
+    <!-- Lotes -->
+    <div class="card">
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:14px">🎫 Selecione o Ingresso</h2>
+      <% lotes.forEach((l,i) => { %>
+      <div class="lote-opt <%= i===0?'selecionado':'' %>" onclick="selecionarLote(<%= l.id %>,this)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="lote-nome"><%= l.nome %></div>
+            <div class="lote-info"><%= l.inscritos||0 %> / <%= l.vagas %> inscritos<% if(l.data_fim){%> • Até <%= new Date(l.data_fim).toLocaleDateString('pt-BR') %><%}%></div>
+          </div>
+          <div class="lote-preco"><%= Number(l.preco)===0?'Gratuito':'R$ '+Number(l.preco).toFixed(2) %></div>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+
+    <!-- Formulário -->
+    <div class="card">
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:14px">📝 Seus Dados</h2>
+      <form action="/inscricao/<%= evento.id %>" method="POST">
+        <input type="hidden" name="lote_id" id="lote_selecionado" value="<%= lotes[0]?.id %>">
+        <div class="campo"><label class="label">Nome Completo *</label><input name="nome" class="input" required placeholder="Seu nome completo"></div>
+        <div class="campo"><label class="label">Email *</label><input name="email" class="input" type="email" required placeholder="seu@email.com"></div>
+        <div class="campo"><label class="label">WhatsApp</label><input name="whatsapp" class="input" placeholder="+55 (99) 99999-9999"></div>
+        <div class="campo"><label class="label">CPF</label><input name="cpf" class="input" placeholder="000.000.000-00"></div>
+        <div class="campo"><label class="label">Instituição</label><input name="instituicao" class="input" placeholder="Universidade / Empresa"></div>
+        <button type="submit" class="btn-inscrever">🎪 Confirmar Inscrição</button>
+      </form>
+    </div>
+    <% } %>
+  </div>
+
+<script>
+function selecionarLote(id, el) {
+  document.querySelectorAll('.lote-opt').forEach(e=>e.classList.remove('selecionado'));
+  el.classList.add('selecionado');
+  document.getElementById('lote_selecionado').value = id;
+}
+</script>
+</body>
+</html>
