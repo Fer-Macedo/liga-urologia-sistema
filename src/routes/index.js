@@ -3094,4 +3094,10 @@ router.post('/contato-evento/:id', async (req, res) => {
   } catch(e) { res.send('<script>alert("Erro ao enviar. Tente novamente.");history.back();</script>'); }
 });
 
+
+router.get('/eventos/:id/cupom', async (req, res) => {
+  // Implementação futura — por enquanto retorna inválido
+  res.json({ok: false, msg: 'Cupom inválido'});
+});
+
 module.exports = router;
