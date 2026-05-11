@@ -2476,4 +2476,98 @@ router.post('/carta-cobranca/:id/deletar', requireAuth, async (req, res) => {
   res.redirect('/carta-cobranca');
 });
 
+
+// LISTA DE ASSINATURAS
+
+router.get('/lista-assinaturas', requireAuth, async (req, res) => {
+  const config = await getConfig();
+  const msg = req.session.msg || []; req.session.msg = [];
+  const erro = req.session.erro || []; req.session.erro = [];
+  const r = await query('SELECT * FROM listas_assinaturas ORDER BY criado_em DESC');
+  res.render('pages/lista-assinaturas', { config, usuario: req.session.usuario, msg, erro, listas: r.rows });
+});
+
+router.post('/lista-assinaturas', requireAuth, async (req, res) => {
+  const { nome, data_evento, descricao } = req.body;
+  await query('INSERT INTO listas_assinaturas (nome, data_evento, descricao, criado_por) VALUES ($1,$2,$3,$4)',
+    [nome, data_evento || null, descricao || null, req.session.usuario.id]);
+  req.session.msg = ['Lista criada!'];
+  res.redirect('/lista-assinaturas');
+});
+
+async function getPessoasLista() {
+  const [ligR, dirR] = await Promise.all([
+    query('SELECT nome, rg, catraca FROM ligantes WHERE ativo=1 ORDER BY nome'),
+    query('SELECT nome, rg, NULL as catraca FROM diretivos WHERE ativo=1 ORDER BY nome')
+  ]);
+  const todas = [...ligR.rows, ...dirR.rows];
+  todas.sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+  return todas;
+}
+
+async function gerarHTMLLista(lista, config) {
+  const { imagemBase64 } = require('../services/desligamento');
+  const timbrado = config.timbrado_b64 || null;
+  const pessoas = await getPessoasLista();
+  const d = lista.data_evento ? new Date(lista.data_evento).toLocaleDateString('pt-BR') : '___/___/______';
+  const linhas = pessoas.map((p, i) => `<tr><td style="text-align:center;padding:5px 4px;border:1px solid #333">${i+1}</td><td style="padding:5px 8px;border:1px solid #333">${p.nome}</td><td style="text-align:center;padding:5px 4px;border:1px solid #333">${p.rg||'—'}</td><td style="text-align:center;padding:5px 4px;border:1px solid #333">${p.catraca||'—'}</td><td style="padding:5px 4px;border:1px solid #333">&nbsp;</td></tr>`).join('');
+  const bgHtml = timbrado ? `<div style="position:fixed;top:0;left:0;width:210mm;height:297mm;z-index:0"><img src="${timbrado}" style="width:210mm;height:297mm;display:block"></div>` : '';
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',serif;font-size:10pt;color:#000;width:210mm}table{width:100%;border-collapse:collapse;font-size:9pt}th{background:#1a3d2b;color:white;padding:5px 4px;border:1px solid #333;text-align:center}tr:nth-child(even){background:rgba(0,0,0,0.03)}</style></head><body>${bgHtml}<div style="position:relative;z-index:1;padding:45mm 18mm 30mm 18mm"><div style="text-align:center;font-size:13pt;font-weight:bold;text-transform:uppercase;margin-bottom:4px">Lista de Presença e Assinaturas</div><div style="text-align:center;font-size:10pt;margin-bottom:14px">${lista.nome} — ${d}${lista.descricao?'<br><small>'+lista.descricao+'</small>':''}</div><table><thead><tr><th style="width:5%">#</th><th style="width:37%">Nome Completo</th><th style="width:16%">RG</th><th style="width:16%">Catraca</th><th style="width:26%">Assinatura</th></tr></thead><tbody>${linhas}</tbody></table></div></body></html>`;
+}
+
+router.get('/lista-assinaturas/:id/visualizar', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT * FROM listas_assinaturas WHERE id=$1', [req.params.id]);
+    if (!r.rows[0]) return res.status(404).send('Nao encontrado');
+    const config = await getConfig();
+    const { imagemBase64 } = require('../services/desligamento');
+    config.timbrado_b64 = await imagemBase64(config.timbrado_chave);
+    const html = await gerarHTMLLista(r.rows[0], config);
+    res.send(html);
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
+router.get('/lista-assinaturas/:id/imprimir', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT * FROM listas_assinaturas WHERE id=$1', [req.params.id]);
+    if (!r.rows[0]) return res.status(404).send('Nao encontrado');
+    const config = await getConfig();
+    const { imagemBase64 } = require('../services/desligamento');
+    config.timbrado_b64 = await imagemBase64(config.timbrado_chave);
+    let html = await gerarHTMLLista(r.rows[0], config);
+    html = html.replace('</body>', '<script>window.onload=function(){window.print()}</script></body>');
+    res.send(html);
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
+router.post('/lista-assinaturas/:id/upload-assinada', requireAuth, async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.single('pdf_assinado')(req, res, async (err) => {
+      if (!req.file) { req.session.erro=['Nenhum arquivo.']; return res.redirect('/lista-assinaturas'); }
+      const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'listas-assinadas');
+      await query('UPDATE listas_assinaturas SET pdf_assinado_chave=$1, status=$2 WHERE id=$3', [r.chave, 'assinado', req.params.id]);
+      req.session.msg = ['Lista assinada enviada!'];
+      res.redirect('/lista-assinaturas');
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/lista-assinaturas'); }
+});
+
+router.get('/lista-assinaturas/:id/assinada', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT pdf_assinado_chave FROM listas_assinaturas WHERE id=$1', [req.params.id]);
+    const chave = r.rows[0]?.pdf_assinado_chave;
+    if (!chave) return res.status(404).send('Nao encontrado');
+    const { getUrlAssinada } = require('../services/desligamento');
+    const url = await getUrlAssinada(chave);
+    res.redirect(url);
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
+router.post('/lista-assinaturas/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
+  await query('DELETE FROM listas_assinaturas WHERE id=$1', [req.params.id]);
+  req.session.msg = ['Lista excluida!'];
+  res.redirect('/lista-assinaturas');
+});
+
 module.exports = router;
