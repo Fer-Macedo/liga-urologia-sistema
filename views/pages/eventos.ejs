@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eventos — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+    .ev-tabs { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
+    .ev-tab { padding:8px 18px; border-radius:8px; border:2px solid var(--borda); background:var(--card); cursor:pointer; font-weight:600; font-size:13px; transition:all .2s; }
+    .ev-tab.ativo { background:var(--cor-primaria); color:white; border-color:var(--cor-primaria); }
+    .ev-section { display:none; }
+    .ev-section.ativo { display:block; }
+    .evento-card { background:var(--card); border:1px solid var(--borda); border-radius:12px; overflow:hidden; transition:.2s; }
+    .evento-card:hover { box-shadow:0 4px 20px rgba(0,0,0,.08); }
+    .evento-banner { width:100%; height:160px; object-fit:cover; background:linear-gradient(135deg,var(--cor-primaria),#6366f1); display:flex; align-items:center; justify-content:center; color:white; font-size:40px; }
+    .evento-body { padding:16px; }
+    .evento-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
+    .badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+    .badge-rascunho { background:#f3f4f6;color:#6b7280; }
+    .badge-ativo { background:#dcfce7;color:#166534; }
+    .badge-encerrado { background:#fee2e2;color:#991b1b; }
+    .badge-cancelado { background:#fef3c7;color:#92400e; }
+    .stat-mini { display:flex; gap:16px; flex-wrap:wrap; margin-top:10px; }
+    .stat-mini-item { text-align:center; }
+    .stat-mini-num { font-size:20px; font-weight:700; color:var(--cor-primaria); }
+    .stat-mini-label { font-size:11px; color:var(--texto2); }
+    .inscricao-row { display:grid; grid-template-columns:1fr 1fr auto; gap:12px; align-items:center; padding:10px; border-bottom:1px solid var(--borda); }
+    .qr-container { text-align:center; padding:20px; }
+    .progress-bar { height:6px; background:var(--borda); border-radius:3px; overflow:hidden; margin-top:6px; }
+    .progress-fill { height:100%; background:var(--cor-primaria); border-radius:3px; transition:.3s; }
+    .lote-card { background:var(--fundo); border:1px solid var(--borda); border-radius:8px; padding:12px; margin-bottom:8px; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'eventos' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">🎪 Eventos</h1>
+      <div class="topbar-acoes">
+        <button class="btn btn-primario" onclick="abrirModal('modal-novo-evento')">+ Novo Evento</button>
+      </div>
+    </div>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
+
+      <div class="ev-tabs">
+        <button class="ev-tab ativo" onclick="showTab('lista')">📋 Todos os Eventos</button>
+        <button class="ev-tab" onclick="showTab('ativos')">🟢 Ativos</button>
+        <button class="ev-tab" onclick="showTab('relatorio')">📊 Relatórios</button>
+      </div>
+
+      <!-- LISTA -->
+      <div class="ev-section ativo" id="tab-lista">
+        <% if (eventos.length === 0) { %>
+        <div style="text-align:center;padding:60px;color:var(--texto2)">
+          <div style="font-size:48px;margin-bottom:12px">🎪</div>
+          <p>Nenhum evento criado ainda.</p>
+          <button class="btn btn-primario" style="margin-top:12px" onclick="abrirModal('modal-novo-evento')">+ Criar Primeiro Evento</button>
+        </div>
+        <% } %>
+        <div class="evento-grid">
+          <% eventos.forEach(ev => { %>
+          <div class="evento-card">
+            <% if (ev.banner_chave) { %>
+            <img src="/eventos/<%= ev.id %>/banner" class="evento-banner" alt="Banner">
+            <% } else { %>
+            <div class="evento-banner">🎪</div>
+            <% } %>
+            <div class="evento-body">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+                <h3 style="font-size:15px;font-weight:700;flex:1"><%= ev.nome %></h3>
+                <span class="badge badge-<%= ev.status %>"><%= ev.status==='ativo'?'🟢 Ativo':ev.status==='encerrado'?'🔴 Encerrado':ev.status==='cancelado'?'⚫ Cancelado':'⚪ Rascunho' %></span>
+              </div>
+              <div style="font-size:12px;color:var(--texto2);margin-bottom:4px">📅 <%= ev.data_inicio ? new Date(ev.data_inicio).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—' %></div>
+              <div style="font-size:12px;color:var(--texto2);margin-bottom:10px">📍 <%= ev.local || '—' %></div>
+              <div class="progress-bar"><div class="progress-fill" style="width:<%= ev.vagas_total>0?Math.min(100,Math.round((ev.total_inscritos||0)/ev.vagas_total*100)):0 %>%"></div></div>
+              <div style="font-size:11px;color:var(--texto2);margin-top:3px"><%= ev.total_inscritos||0 %> / <%= ev.vagas_total %> inscritos</div>
+              <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
+                <a href="/eventos/<%= ev.id %>" class="btn" style="font-size:11px;padding:4px 8px">⚙️ Gerenciar</a>
+                <a href="/eventos/<%= ev.id %>/inscricoes" class="btn" style="font-size:11px;padding:4px 8px;background:#6366f1;color:white">👥 Inscritos</a>
+                <a href="/inscricao/<%= ev.id %>" target="_blank" class="btn" style="font-size:11px;padding:4px 8px;background:#059669;color:white">🔗 Página</a>
+                <% if (usuario.perfil==='admin'||usuario.perfil==='presidencia') { %>
+                <form method="POST" action="/eventos/<%= ev.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir evento?')"><button type="submit" class="btn" style="font-size:11px;padding:4px 8px;color:var(--vermelho)">🗑</button></form>
+                <% } %>
+              </div>
+            </div>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <!-- ATIVOS -->
+      <div class="ev-section" id="tab-ativos">
+        <% const ativos = eventos.filter(e=>e.status==='ativo'); %>
+        <% if (ativos.length === 0) { %><p style="color:var(--texto2)">Nenhum evento ativo.</p><% } %>
+        <div class="evento-grid">
+          <% ativos.forEach(ev => { %>
+          <div class="evento-card">
+            <div class="evento-body">
+              <h3 style="font-size:15px;font-weight:700;margin-bottom:6px"><%= ev.nome %></h3>
+              <div style="font-size:12px;color:var(--texto2)">📅 <%= ev.data_inicio ? new Date(ev.data_inicio).toLocaleDateString('pt-BR') : '—' %></div>
+              <div class="stat-mini">
+                <div class="stat-mini-item"><div class="stat-mini-num"><%= ev.total_inscritos||0 %></div><div class="stat-mini-label">Inscritos</div></div>
+                <div class="stat-mini-item"><div class="stat-mini-num"><%= ev.total_pagos||0 %></div><div class="stat-mini-label">Pagos</div></div>
+                <div class="stat-mini-item"><div class="stat-mini-num">R$ <%= Number(ev.receita||0).toFixed(2) %></div><div class="stat-mini-label">Receita</div></div>
+              </div>
+              <div style="display:flex;gap:6px;margin-top:12px">
+                <a href="/eventos/<%= ev.id %>/checkin" class="btn btn-primario" style="font-size:11px;padding:4px 10px">✅ Check-in</a>
+                <a href="/eventos/<%= ev.id %>/inscricoes" class="btn" style="font-size:11px;padding:4px 10px">👥 Inscritos</a>
+              </div>
+            </div>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+
+      <!-- RELATÓRIOS -->
+      <div class="ev-section" id="tab-relatorio">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:20px">
+          <div class="card" style="text-align:center"><div style="font-size:28px;font-weight:700;color:var(--cor-primaria)"><%= eventos.length %></div><div style="font-size:12px;color:var(--texto2)">Total de Eventos</div></div>
+          <div class="card" style="text-align:center"><div style="font-size:28px;font-weight:700;color:#059669"><%= totalInscritos %></div><div style="font-size:12px;color:var(--texto2)">Total de Inscrições</div></div>
+          <div class="card" style="text-align:center"><div style="font-size:28px;font-weight:700;color:#6366f1">R$ <%= Number(totalReceita).toFixed(2) %></div><div style="font-size:12px;color:var(--texto2)">Receita Total</div></div>
+          <div class="card" style="text-align:center"><div style="font-size:28px;font-weight:700;color:#f59e0b"><%= totalCheckins %></div><div style="font-size:12px;color:var(--texto2)">Check-ins</div></div>
+        </div>
+        <div class="card">
+          <div class="card-titulo">📋 Resumo por Evento</div>
+          <table class="tabela">
+            <thead><tr><th>Evento</th><th>Data</th><th>Inscritos</th><th>Pagos</th><th>Check-ins</th><th>Receita</th><th>Status</th></tr></thead>
+            <tbody>
+              <% eventos.forEach(ev => { %>
+              <tr>
+                <td><strong><%= ev.nome %></strong></td>
+                <td><%= ev.data_inicio ? new Date(ev.data_inicio).toLocaleDateString('pt-BR') : '—' %></td>
+                <td><%= ev.total_inscritos||0 %></td>
+                <td><%= ev.total_pagos||0 %></td>
+                <td><%= ev.total_checkins||0 %></td>
+                <td>R$ <%= Number(ev.receita||0).toFixed(2) %></td>
+                <td><span class="badge badge-<%= ev.status %>"><%= ev.status %></span></td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Novo Evento -->
+<div class="modal-overlay" id="modal-novo-evento" style="display:none">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <span class="modal-titulo">🎪 Novo Evento</span>
+      <button class="icon-btn" onclick="fecharModal('modal-novo-evento')">✕</button>
+    </div>
+    <form action="/eventos" method="POST" enctype="multipart/form-data">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="campo" style="grid-column:1/-1"><label class="label">Nome do Evento *</label><input name="nome" class="input" placeholder="Ex: Congresso de Urologia 2026" required></div>
+        <div class="campo" style="grid-column:1/-1"><label class="label">Descrição</label><textarea name="descricao" class="input" rows="3" placeholder="Descrição do evento..."></textarea></div>
+        <div class="campo"><label class="label">Data/Hora Início</label><input type="datetime-local" name="data_inicio" class="input"></div>
+        <div class="campo"><label class="label">Data/Hora Fim</label><input type="datetime-local" name="data_fim" class="input"></div>
+        <div class="campo"><label class="label">Local</label><input name="local" class="input" placeholder="Nome do local"></div>
+        <div class="campo"><label class="label">Total de Vagas</label><input type="number" name="vagas_total" class="input" value="100" min="1"></div>
+        <div class="campo" style="grid-column:1/-1"><label class="label">Endereço</label><input name="endereco" class="input" placeholder="Endereço completo"></div>
+        <div class="campo" style="grid-column:1/-1"><label class="label">Banner (imagem)</label><input type="file" name="banner" class="input" accept="image/*"></div>
+        <div class="campo"><label class="label">Status</label>
+          <select name="status" class="input">
+            <option value="rascunho">⚪ Rascunho</option>
+            <option value="ativo">🟢 Ativo</option>
+          </select>
+        </div>
+        <div class="campo"><label class="label">Inscrições Públicas?</label>
+          <select name="publico" class="input">
+            <option value="true">✅ Sim — página pública</option>
+            <option value="false">❌ Não — somente interno</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-novo-evento')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">🎪 Criar Evento</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+function showTab(id) {
+  document.querySelectorAll('.ev-section').forEach(s=>s.classList.remove('ativo'));
+  document.querySelectorAll('.ev-tab').forEach(t=>t.classList.remove('ativo'));
+  document.getElementById('tab-'+id).classList.add('ativo');
+  event.target.classList.add('ativo');
+}
+</script>
+</body>
+</html>
