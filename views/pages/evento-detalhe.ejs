@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= evento.nome %> — Gerenciar</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+    .lote-card { background:var(--fundo); border:1px solid var(--borda); border-radius:8px; padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
+    .badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
+    .tab-nav { display:flex; gap:8px; margin-bottom:20px; border-bottom:2px solid var(--borda); padding-bottom:0; }
+    .tab-btn { padding:10px 16px; border:none; background:none; cursor:pointer; font-weight:600; font-size:13px; color:var(--texto2); border-bottom:2px solid transparent; margin-bottom:-2px; }
+    .tab-btn.ativo { color:var(--cor-primaria); border-bottom-color:var(--cor-primaria); }
+    .tab-content { display:none; }
+    .tab-content.ativo { display:block; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'eventos' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">⚙️ <%= evento.nome %></h1>
+      <div class="topbar-acoes">
+        <a href="/eventos" class="btn">← Voltar</a>
+        <a href="/inscricao/<%= evento.id %>" target="_blank" class="btn" style="background:#059669;color:white">🔗 Página Pública</a>
+        <a href="/eventos/<%= evento.id %>/checkin" class="btn btn-primario">✅ Check-in</a>
+      </div>
+    </div>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
+
+      <!-- Stats -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-bottom:20px">
+        <div class="card" style="text-align:center"><div style="font-size:24px;font-weight:700;color:var(--cor-primaria)"><%= stats.total %></div><div style="font-size:12px;color:var(--texto2)">Inscritos</div></div>
+        <div class="card" style="text-align:center"><div style="font-size:24px;font-weight:700;color:#059669"><%= stats.confirmados %></div><div style="font-size:12px;color:var(--texto2)">Confirmados</div></div>
+        <div class="card" style="text-align:center"><div style="font-size:24px;font-weight:700;color:#6366f1"><%= stats.checkins %></div><div style="font-size:12px;color:var(--texto2)">Check-ins</div></div>
+        <div class="card" style="text-align:center"><div style="font-size:24px;font-weight:700;color:#f59e0b">R$ <%= Number(stats.receita||0).toFixed(2) %></div><div style="font-size:12px;color:var(--texto2)">Receita</div></div>
+        <div class="card" style="text-align:center"><div style="font-size:24px;font-weight:700;color:#dc2626"><%= evento.vagas_total - stats.total %></div><div style="font-size:12px;color:var(--texto2)">Vagas livres</div></div>
+      </div>
+
+      <div class="tab-nav">
+        <button class="tab-btn ativo" onclick="showTab('info')">📋 Informações</button>
+        <button class="tab-btn" onclick="showTab('lotes')">🎫 Lotes</button>
+        <button class="tab-btn" onclick="showTab('inscritos')">👥 Inscritos</button>
+        <button class="tab-btn" onclick="showTab('pagamentos')">💰 Pagamentos</button>
+        <button class="tab-btn" onclick="showTab('certificados')">🏆 Certificados</button>
+      </div>
+
+      <!-- INFO -->
+      <div class="tab-content ativo" id="tab-info">
+        <div class="card">
+          <div class="card-titulo">✏️ Editar Evento</div>
+          <form action="/eventos/<%= evento.id %>/editar" method="POST" enctype="multipart/form-data">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+              <div class="campo" style="grid-column:1/-1"><label class="label">Nome</label><input name="nome" class="input" value="<%= evento.nome %>" required></div>
+              <div class="campo" style="grid-column:1/-1"><label class="label">Descrição</label><textarea name="descricao" class="input" rows="4"><%= evento.descricao||'' %></textarea></div>
+              <div class="campo"><label class="label">Data/Hora Início</label><input type="datetime-local" name="data_inicio" class="input" value="<%= evento.data_inicio ? new Date(evento.data_inicio).toISOString().slice(0,16) : '' %>"></div>
+              <div class="campo"><label class="label">Data/Hora Fim</label><input type="datetime-local" name="data_fim" class="input" value="<%= evento.data_fim ? new Date(evento.data_fim).toISOString().slice(0,16) : '' %>"></div>
+              <div class="campo"><label class="label">Local</label><input name="local" class="input" value="<%= evento.local||'' %>"></div>
+              <div class="campo"><label class="label">Total de Vagas</label><input type="number" name="vagas_total" class="input" value="<%= evento.vagas_total %>"></div>
+              <div class="campo" style="grid-column:1/-1"><label class="label">Endereço</label><input name="endereco" class="input" value="<%= evento.endereco||'' %>"></div>
+              <div class="campo"><label class="label">Status</label>
+                <select name="status" class="input">
+                  <option value="rascunho" <%= evento.status==='rascunho'?'selected':'' %>>⚪ Rascunho</option>
+                  <option value="ativo" <%= evento.status==='ativo'?'selected':'' %>>🟢 Ativo</option>
+                  <option value="encerrado" <%= evento.status==='encerrado'?'selected':'' %>>🔴 Encerrado</option>
+                  <option value="cancelado" <%= evento.status==='cancelado'?'selected':'' %>>⚫ Cancelado</option>
+                </select>
+              </div>
+              <div class="campo"><label class="label">Inscrições Públicas</label>
+                <select name="publico" class="input">
+                  <option value="true" <%= evento.publico?'selected':'' %>>✅ Sim</option>
+                  <option value="false" <%= !evento.publico?'selected':'' %>>❌ Não</option>
+                </select>
+              </div>
+              <div class="campo" style="grid-column:1/-1"><label class="label">Novo Banner</label><input type="file" name="banner" class="input" accept="image/*"></div>
+            </div>
+            <div style="margin-top:16px"><button type="submit" class="btn btn-primario">💾 Salvar</button></div>
+          </form>
+        </div>
+      </div>
+
+      <!-- LOTES -->
+      <div class="tab-content" id="tab-lotes">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-titulo">🎫 Lotes de Ingressos</div>
+          <% lotes.forEach(l => { %>
+          <div class="lote-card">
+            <div>
+              <div style="font-weight:600"><%= l.nome %></div>
+              <div style="font-size:12px;color:var(--texto2)">R$ <%= Number(l.preco).toFixed(2) %> • <%= l.vagas %> vagas • <%= l.inscritos||0 %> inscritos</div>
+              <% if (l.data_inicio) { %><div style="font-size:11px;color:var(--texto2)">📅 <%= new Date(l.data_inicio).toLocaleDateString('pt-BR') %> até <%= new Date(l.data_fim).toLocaleDateString('pt-BR') %></div><% } %>
+            </div>
+            <form method="POST" action="/eventos/<%= evento.id %>/lotes/<%= l.id %>/deletar" onsubmit="return confirm('Excluir lote?')">
+              <button type="submit" class="btn" style="font-size:11px;padding:4px 8px;color:var(--vermelho)">🗑</button>
+            </form>
+          </div>
+          <% }) %>
+          <% if (lotes.length === 0) { %><p style="color:var(--texto2);font-size:13px">Nenhum lote criado.</p><% } %>
+        </div>
+        <div class="card">
+          <div class="card-titulo">+ Novo Lote</div>
+          <form action="/eventos/<%= evento.id %>/lotes" method="POST">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+              <div class="campo"><label class="label">Nome do Lote</label><input name="nome" class="input" placeholder="Ex: Lote 1 — Early Bird" required></div>
+              <div class="campo"><label class="label">Preço (R$)</label><input type="number" step="0.01" name="preco" class="input" value="0" min="0"></div>
+              <div class="campo"><label class="label">Vagas</label><input type="number" name="vagas" class="input" value="50" min="1"></div>
+              <div class="campo"><label class="label">Início</label><input type="date" name="data_inicio" class="input"></div>
+              <div class="campo"><label class="label">Fim</label><input type="date" name="data_fim" class="input"></div>
+              <div class="campo" style="display:flex;align-items:flex-end"><button type="submit" class="btn btn-primario" style="width:100%">+ Adicionar</button></div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- INSCRITOS -->
+      <div class="tab-content" id="tab-inscritos">
+        <div style="display:flex;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+          <div style="display:flex;gap:8px">
+            <a href="/eventos/<%= evento.id %>/inscricoes/exportar" class="btn">📥 Exportar PDF</a>
+            <button class="btn" onclick="abrirModal('modal-inscricao-manual')">+ Inscrição Manual</button>
+          </div>
+          <input type="text" placeholder="Buscar inscrito..." class="input" style="width:220px" oninput="buscarInscrito(this.value)">
+        </div>
+        <div class="card">
+          <table class="tabela" id="tabela-inscritos">
+            <thead><tr><th>#</th><th>Nome</th><th>Email</th><th>WhatsApp</th><th>Lote</th><th>Status</th><th>Check-in</th><th>Ações</th></tr></thead>
+            <tbody>
+              <% inscricoes.forEach(i => { %>
+              <tr class="inscrito-row">
+                <td><%= i.id %></td>
+                <td><strong><%= i.nome %></strong></td>
+                <td><%= i.email %></td>
+                <td><%= i.whatsapp||'—' %></td>
+                <td><%= i.lote_nome||'—' %></td>
+                <td>
+                  <% if(i.status==='confirmado'){%><span class="badge" style="background:#dcfce7;color:#166534">✅ Confirmado</span>
+                  <%}else if(i.status==='pendente'){%><span class="badge" style="background:#fef3c7;color:#92400e">⏳ Pendente</span>
+                  <%}else{%><span class="badge" style="background:#fee2e2;color:#991b1b">❌ Cancelado</span><%}%>
+                </td>
+                <td><%= i.checkin_em ? '✅ ' + new Date(i.checkin_em).toLocaleTimeString('pt-BR') : '—' %></td>
+                <td>
+                  <div style="display:flex;gap:4px">
+                    <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/confirmar" style="display:inline"><button type="submit" class="btn" style="font-size:10px;padding:3px 6px;background:#059669;color:white">✅</button></form>
+                    <a href="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/certificado" class="btn" style="font-size:10px;padding:3px 6px;background:#6366f1;color:white">🏆</a>
+                    <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')"><button type="submit" class="btn" style="font-size:10px;padding:3px 6px;color:var(--vermelho)">🗑</button></form>
+                  </div>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PAGAMENTOS -->
+      <div class="tab-content" id="tab-pagamentos">
+        <div class="card">
+          <div class="card-titulo">💰 Pagamentos</div>
+          <table class="tabela">
+            <thead><tr><th>Inscrito</th><th>Valor</th><th>Método</th><th>Status</th><th>Pago em</th><th>Ações</th></tr></thead>
+            <tbody>
+              <% pagamentos.forEach(pg => { %>
+              <tr>
+                <td><strong><%= pg.inscrito_nome %></strong></td>
+                <td>R$ <%= Number(pg.valor).toFixed(2) %></td>
+                <td><%= pg.metodo||'—' %></td>
+                <td>
+                  <% if(pg.status==='pago'){%><span class="badge" style="background:#dcfce7;color:#166534">✅ Pago</span>
+                  <%}else{%><span class="badge" style="background:#fef3c7;color:#92400e">⏳ Pendente</span><%}%>
+                </td>
+                <td><%= pg.pago_em ? new Date(pg.pago_em).toLocaleDateString('pt-BR') : '—' %></td>
+                <td>
+                  <% if(pg.status!=='pago'){%>
+                  <form method="POST" action="/eventos/<%= evento.id %>/pagamentos/<%= pg.id %>/confirmar" style="display:inline"><button type="submit" class="btn" style="font-size:11px;padding:4px 8px;background:#059669;color:white">✅ Confirmar</button></form>
+                  <%}%>
+                  <% if(pg.comprovante_chave){%><a href="/eventos/pagamentos/<%= pg.id %>/comprovante" target="_blank" class="btn" style="font-size:11px;padding:4px 8px">📄</a><%}%>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CERTIFICADOS -->
+      <div class="tab-content" id="tab-certificados">
+        <div class="card">
+          <div class="card-titulo">🏆 Emitir Certificados em Massa</div>
+          <p style="font-size:13px;color:var(--texto2);margin-bottom:16px">Emite certificados para todos os inscritos com check-in realizado.</p>
+          <form method="POST" action="/eventos/<%= evento.id %>/certificados/emitir-todos">
+            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+              <div class="campo"><label class="label">Carga Horária (horas)</label><input type="number" name="carga_horaria" class="input" style="width:120px" value="4" min="1"></div>
+              <div style="margin-top:20px"><button type="submit" class="btn btn-primario" onclick="return confirm('Emitir para todos com check-in?')">🏆 Emitir Todos</button></div>
+            </div>
+          </form>
+        </div>
+        <div class="card" style="margin-top:16px">
+          <div class="card-titulo">📋 Certificados Emitidos</div>
+          <table class="tabela">
+            <thead><tr><th>Inscrito</th><th>Emitido em</th><th>Ações</th></tr></thead>
+            <tbody>
+              <% certificados.forEach(cert => { %>
+              <tr>
+                <td><%= cert.inscrito_nome %></td>
+                <td><%= new Date(cert.emitido_em).toLocaleDateString('pt-BR') %></td>
+                <td><a href="/eventos/certificados/<%= cert.id %>/download" target="_blank" class="btn" style="font-size:11px;padding:4px 8px;background:#6366f1;color:white">📥 Baixar</a></td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal Inscrição Manual -->
+<div class="modal-overlay" id="modal-inscricao-manual" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">+ Inscrição Manual</span>
+      <button class="icon-btn" onclick="fecharModal('modal-inscricao-manual')">✕</button>
+    </div>
+    <form action="/eventos/<%= evento.id %>/inscricoes/manual" method="POST">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="campo"><label class="label">Nome *</label><input name="nome" class="input" required></div>
+        <div class="campo"><label class="label">Email *</label><input name="email" class="input" type="email" required></div>
+        <div class="campo"><label class="label">WhatsApp</label><input name="whatsapp" class="input"></div>
+        <div class="campo"><label class="label">CPF</label><input name="cpf" class="input"></div>
+        <div class="campo"><label class="label">Lote</label>
+          <select name="lote_id" class="input">
+            <% lotes.forEach(l => { %><option value="<%= l.id %>"><%= l.nome %> — R$ <%= Number(l.preco).toFixed(2) %></option><% }) %>
+          </select>
+        </div>
+        <div class="campo"><label class="label">Status</label>
+          <select name="status" class="input">
+            <option value="confirmado">✅ Confirmado</option>
+            <option value="pendente">⏳ Pendente</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-inscricao-manual')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">+ Inscrever</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+function showTab(id) {
+  document.querySelectorAll('.tab-content').forEach(s=>s.classList.remove('ativo'));
+  document.querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('ativo'));
+  document.getElementById('tab-'+id).classList.add('ativo');
+  event.target.classList.add('ativo');
+}
+function buscarInscrito(q) {
+  document.querySelectorAll('.inscrito-row').forEach(r=>{
+    r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>
