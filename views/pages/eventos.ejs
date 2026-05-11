@@ -166,6 +166,25 @@
         <div class="campo"><label class="label">Total de Vagas</label><input type="number" name="vagas_total" class="input" value="100" min="1"></div>
         <div class="campo" style="grid-column:1/-1"><label class="label">Endereço</label><input name="endereco" class="input" placeholder="Endereço completo"></div>
         <div class="campo" style="grid-column:1/-1"><label class="label">Banner (imagem)</label><input type="file" name="banner" class="input" accept="image/*"></div>
+        <div class="campo"><label class="label">Tipo de Evento</label>
+          <select name="tipo_evento" class="input">
+            <option value="presencial">📍 Presencial</option>
+            <option value="online">💻 Online</option>
+            <option value="hibrido">🔀 Híbrido</option>
+          </select>
+        </div>
+        <div class="campo"><label class="label">Cor Tema</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+            <div onclick="setCor('#1a3d2b'" style="width:26px;height:26px;border-radius:6px;background:#1a3d2b;cursor:pointer"></div>
+            <div onclick="setCor('#1a56db'" style="width:26px;height:26px;border-radius:6px;background:#1a56db;cursor:pointer"></div>
+            <div onclick="setCor('#7c3aed'" style="width:26px;height:26px;border-radius:6px;background:#7c3aed;cursor:pointer"></div>
+            <div onclick="setCor('#dc2626'" style="width:26px;height:26px;border-radius:6px;background:#dc2626;cursor:pointer"></div>
+            <div onclick="setCor('#ea580c'" style="width:26px;height:26px;border-radius:6px;background:#ea580c;cursor:pointer"></div>
+            <div onclick="setCor('#0891b2'" style="width:26px;height:26px;border-radius:6px;background:#0891b2;cursor:pointer"></div>
+            <input type="color" onchange="setCor(this.value)" style="width:26px;height:26px;border:none;border-radius:6px;cursor:pointer;padding:0">
+          </div>
+          <input type="text" name="cor_tema" id="cor-nova" class="input" value="#1a3d2b" style="max-width:120px">
+        </div>
         <div class="campo"><label class="label">Status</label>
           <select name="status" class="input">
             <option value="rascunho">⚪ Rascunho</option>
