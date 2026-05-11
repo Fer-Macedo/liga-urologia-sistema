@@ -1,204 +1,321 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= evento.nome %> — Inscrição</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= evento.nome %> — LAURO</title>
+  <meta property="og:title" content="<%= evento.nome %>">
+  <meta property="og:description" content="<%= (evento.descricao||'').replace(/<[^>]*>/g,'').substring(0,160) %>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     *{margin:0;padding:0;box-sizing:border-box}
-    :root{--verde:#1a3d2b;--teal:#2e8b7a;--light:#f0fdf4;--gray:#6b7280;--border:#e5e7eb}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f8fafc;color:#111827;min-height:100vh}
-    .hero{background:linear-gradient(135deg,var(--verde) 0%,var(--teal) 100%);color:white;padding:0;position:relative;overflow:hidden}
-    .hero-bg{position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")}
-    .hero-content{position:relative;z-index:1;padding:50px 24px 40px}
-    .hero-banner{width:100%;max-height:300px;object-fit:cover;display:block}
-    .hero-tag{display:inline-block;background:rgba(255,255,255,.2);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.3);border-radius:20px;padding:4px 14px;font-size:12px;font-weight:600;margin-bottom:16px;letter-spacing:.5px}
-    .hero h1{font-size:clamp(22px,5vw,36px);font-weight:800;line-height:1.2;margin-bottom:12px}
-    .hero-desc{font-size:15px;opacity:.85;line-height:1.6;max-width:600px}
-    .hero-meta{display:flex;flex-wrap:wrap;gap:20px;margin-top:24px}
-    .hero-meta-item{display:flex;align-items:center;gap:8px;font-size:14px;opacity:.9}
-    .hero-meta-icon{width:32px;height:32px;background:rgba(255,255,255,.2);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
-    .container{max-width:780px;margin:0 auto;padding:0 16px}
-    .layout-grid{display:grid;grid-template-columns:1fr 340px;gap:24px;margin-top:-20px;padding-bottom:40px}
-    @media(max-width:768px){.layout-grid{grid-template-columns:1fr}}
-    .card{background:white;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);overflow:hidden;margin-bottom:16px}
-    .card-head{padding:20px 24px 0;border-bottom:1px solid var(--border);padding-bottom:16px;margin-bottom:20px}
-    .card-head h2{font-size:16px;font-weight:700;color:#111827}
-    .card-body{padding:20px 24px}
-    .lote{border:2px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:10px;cursor:pointer;transition:all .2s;position:relative}
-    .lote:hover{border-color:var(--teal);background:#f0fdf4}
-    .lote.ativo{border-color:var(--verde);background:#f0fdf4}
-    .lote.ativo::after{content:'✓';position:absolute;top:12px;right:16px;width:24px;height:24px;background:var(--verde);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
-    .lote-top{display:flex;justify-content:space-between;align-items:flex-start}
-    .lote-nome{font-weight:700;font-size:15px;color:#111827}
-    .lote-preco{font-size:20px;font-weight:800;color:var(--verde)}
-    .lote-info{font-size:12px;color:var(--gray);margin-top:4px}
-    .badge-gratuito{background:#dcfce7;color:#166534;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700}
+    :root{
+      --primary:<%= evento.cor_tema||'#1a3d2b' %>;
+      --primary-light:<%= evento.cor_tema||'#1a3d2b' %>22;
+      --white:#ffffff;
+      --gray-50:#f9fafb;
+      --gray-100:#f3f4f6;
+      --gray-200:#e5e7eb;
+      --gray-400:#9ca3af;
+      --gray-600:#4b5563;
+      --gray-800:#1f2937;
+      --gray-900:#111827;
+      --radius:12px;
+      --shadow:0 1px 3px rgba(0,0,0,.1),0 4px 20px rgba(0,0,0,.08);
+      --shadow-lg:0 10px 40px rgba(0,0,0,.15);
+    }
+    body{font-family:'Inter',sans-serif;background:var(--gray-50);color:var(--gray-900);line-height:1.6}
+    
+    /* NAV */
+    nav{background:var(--white);border-bottom:1px solid var(--gray-200);position:sticky;top:0;z-index:100;backdrop-filter:blur(10px)}
+    .nav-inner{max-width:1100px;margin:0 auto;padding:0 24px;height:60px;display:flex;align-items:center;justify-content:space-between}
+    .nav-logo{display:flex;align-items:center;gap:10px}
+    .nav-logo img{height:36px;width:auto;object-fit:contain}
+    .nav-logo-text{font-weight:800;font-size:18px;color:var(--primary)}
+    .nav-links{display:flex;gap:24px;align-items:center}
+    .nav-link{font-size:14px;font-weight:500;color:var(--gray-600);text-decoration:none;transition:.2s}
+    .nav-link:hover{color:var(--primary)}
+    .nav-cta{background:var(--primary);color:white;padding:8px 20px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none;transition:.2s}
+    .nav-cta:hover{opacity:.9;transform:translateY(-1px)}
+
+    /* HERO */
+    .hero{position:relative;overflow:hidden;background:var(--gray-900)}
+    .hero-banner{width:100%;height:420px;object-fit:cover;display:block;opacity:.7}
+    .hero-no-banner{width:100%;height:340px;background:linear-gradient(135deg,var(--primary) 0%,var(--primary)99 100%);display:flex;align-items:center;justify-content:center}
+    .hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.2) 0%,rgba(0,0,0,.7) 100%)}
+    .hero-content{position:absolute;bottom:0;left:0;right:0;padding:40px;max-width:1100px;margin:0 auto}
+    .hero-wrap{max-width:1100px;margin:0 auto;position:relative;height:100%}
+    .tipo-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.15);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;color:white;margin-bottom:14px;letter-spacing:.3px}
+    .hero h1{font-size:clamp(24px,4vw,42px);font-weight:900;color:white;line-height:1.15;margin-bottom:16px;text-align:justify}
+    .hero-desc{font-size:15px;color:rgba(255,255,255,.85);line-height:1.7;max-width:680px;text-align:justify}
+    .hero-meta{display:flex;flex-wrap:wrap;gap:16px;margin-top:24px}
+    .hero-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.2);border-radius:10px;padding:8px 14px;color:white;font-size:13px}
+    .hero-chip-icon{font-size:16px}
+
+    /* LAYOUT */
+    .page-wrap{max-width:1100px;margin:0 auto;padding:32px 24px 60px}
+    .main-grid{display:grid;grid-template-columns:1fr 360px;gap:28px;align-items:start}
+    @media(max-width:900px){.main-grid{grid-template-columns:1fr}.sidebar{order:-1}}
+
+    /* CARDS */
+    .card{background:var(--white);border-radius:16px;box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px}
+    .card-header{padding:20px 24px;border-bottom:1px solid var(--gray-100)}
+    .card-header h2{font-size:16px;font-weight:700;color:var(--gray-900)}
+    .card-header p{font-size:13px;color:var(--gray-600);margin-top:2px}
+    .card-body{padding:24px}
+
+    /* LOTES */
+    .lote{border:2px solid var(--gray-200);border-radius:12px;padding:18px 20px;margin-bottom:10px;cursor:pointer;transition:all .2s;position:relative;background:var(--white)}
+    .lote:hover{border-color:var(--primary);box-shadow:0 0 0 4px var(--primary-light)}
+    .lote.ativo{border-color:var(--primary);background:var(--primary-light);box-shadow:0 0 0 4px var(--primary-light)}
+    .lote-check{position:absolute;top:16px;right:16px;width:22px;height:22px;border-radius:50%;border:2px solid var(--gray-300);transition:.2s;display:flex;align-items:center;justify-content:center}
+    .lote.ativo .lote-check{background:var(--primary);border-color:var(--primary);color:white;font-size:12px}
+    .lote-nome{font-weight:700;font-size:15px;color:var(--gray-900);padding-right:30px}
+    .lote-preco{font-size:22px;font-weight:900;color:var(--primary);margin-top:4px}
+    .lote-info{font-size:12px;color:var(--gray-400);margin-top:4px}
+    .badge-free{display:inline-block;background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
+
+    /* FORM */
     .campo{margin-bottom:18px}
-    .label{display:block;font-size:13px;font-weight:600;color:#374151;margin-bottom:6px}
-    .label .req{color:#ef4444;margin-left:2px}
-    .input{width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;font-size:14px;transition:.2s;background:white;color:#111827}
-    .input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(46,139,122,.1)}
-    select.input{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center}
-    .btn-submit{width:100%;padding:16px;background:linear-gradient(135deg,var(--verde),var(--teal));color:white;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;transition:.2s;letter-spacing:.3px;margin-top:8px}
-    .btn-submit:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(26,61,43,.3)}
-    .sidebar-card{background:white;border-radius:16px;box-shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);padding:20px;position:sticky;top:20px}
-    .sidebar-title{font-size:14px;font-weight:700;color:#111827;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--border)}
-    .info-item{display:flex;gap:10px;align-items:flex-start;margin-bottom:12px;font-size:13px}
-    .info-icon{width:30px;height:30px;background:var(--light);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
-    .info-label{font-size:11px;color:var(--gray);margin-bottom:1px}
-    .info-val{font-weight:600;color:#111827}
-    .org-badge{display:flex;align-items:center;gap:10px;padding:12px;background:var(--light);border-radius:10px;margin-top:16px}
-    .org-logo{width:36px;height:36px;border-radius:8px;background:var(--verde);display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:14px}
-    .sucesso-page{min-height:80vh;display:flex;align-items:center;justify-content:center}
-    .sucesso-box{text-align:center;max-width:480px;padding:40px 24px}
-    .sucesso-icon{width:80px;height:80px;background:linear-gradient(135deg,#059669,#2e8b7a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 20px}
-    .sucesso-box h2{font-size:24px;font-weight:800;margin-bottom:8px}
-    .qr-box{background:#f8fafc;border:1px solid var(--border);border-radius:12px;padding:20px;margin-top:20px;display:inline-block}
-    .codigo{font-family:monospace;font-size:13px;background:#111827;color:#10b981;padding:8px 16px;border-radius:8px;margin-top:8px;display:inline-block}
-    .step-indicator{display:flex;gap:8px;margin-bottom:24px}
-    .step{flex:1;height:4px;border-radius:2px;background:var(--border);transition:.3s}
-    .step.ativo{background:var(--verde)}
-    .step.concluido{background:var(--teal)}
-    @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
-    .fade-in{animation:fadeIn .3s ease}
-    .checkmark{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--verde);color:white;font-size:10px;margin-right:6px}
+    .campo label{display:block;font-size:13px;font-weight:600;color:var(--gray-800);margin-bottom:6px}
+    .req{color:#ef4444;margin-left:2px}
+    .input{width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;font-family:'Inter',sans-serif;transition:.2s;background:var(--white);color:var(--gray-900)}
+    .input:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-light)}
+    .input-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    @media(max-width:500px){.input-grid{grid-template-columns:1fr}}
+    .btn-submit{width:100%;padding:16px;background:var(--primary);color:white;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;transition:.2s;font-family:'Inter',sans-serif;letter-spacing:.3px;margin-top:8px;display:flex;align-items:center;justify-content:center;gap:8px}
+    .btn-submit:hover{opacity:.92;transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.2)}
+    .btn-submit:active{transform:translateY(0)}
+    .secure-msg{text-align:center;font-size:12px;color:var(--gray-400);margin-top:10px;display:flex;align-items:center;justify-content:center;gap:4px}
+
+    /* SIDEBAR */
+    .sidebar-card{background:var(--white);border-radius:16px;box-shadow:var(--shadow);padding:22px;margin-bottom:16px}
+    .sidebar-title{font-size:14px;font-weight:700;color:var(--gray-900);margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--gray-100)}
+    .info-item{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
+    .info-icon{width:36px;height:36px;border-radius:10px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+    .info-label{font-size:11px;color:var(--gray-400);margin-bottom:1px;font-weight:500;text-transform:uppercase;letter-spacing:.4px}
+    .info-val{font-weight:600;color:var(--gray-900);font-size:14px}
+    .info-sub{font-size:12px;color:var(--gray-600);margin-top:1px}
+    .org-box{background:var(--gray-50);border-radius:12px;padding:14px;display:flex;align-items:center;gap:12px;margin-top:16px}
+    .org-logo{width:42px;height:42px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--primary);display:flex;align-items:center;justify-content:center}
+    .org-logo img{width:100%;height:100%;object-fit:contain}
+    .org-name{font-weight:700;font-size:14px;color:var(--gray-900)}
+    .org-sub{font-size:12px;color:var(--gray-600)}
+
+    /* RESUMO LOTE SIDEBAR */
+    .lote-resumo{background:var(--primary-light);border:1.5px solid var(--primary);border-radius:12px;padding:16px}
+    .lote-resumo-nome{font-weight:700;font-size:14px;color:var(--primary)}
+    .lote-resumo-preco{font-size:26px;font-weight:900;color:var(--primary);margin-top:4px}
+
+    /* CONTATO */
+    .contato-links{display:flex;flex-direction:column;gap:10px}
+    .contato-link{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;border:1.5px solid var(--gray-200);text-decoration:none;color:var(--gray-800);font-size:13px;font-weight:500;transition:.2s}
+    .contato-link:hover{border-color:var(--primary);background:var(--primary-light);color:var(--primary)}
+    .contato-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+    .contato-form-input{width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:'Inter',sans-serif;margin-bottom:10px;transition:.2s}
+    .contato-form-input:focus{outline:none;border-color:var(--primary)}
+    .btn-contato{width:100%;padding:11px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif}
+
+    /* SUCESSO */
+    .sucesso-wrap{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:40px 24px}
+    .sucesso-box{background:var(--white);border-radius:24px;box-shadow:var(--shadow-lg);padding:48px 36px;text-align:center;max-width:500px;width:100%}
+    .sucesso-anim{width:80px;height:80px;background:var(--primary);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 24px;animation:pop .4s ease}
+    @keyframes pop{0%{transform:scale(0)}80%{transform:scale(1.1)}100%{transform:scale(1)}}
+    .sucesso-box h2{font-size:26px;font-weight:800;margin-bottom:8px}
+    .sucesso-box p{color:var(--gray-600);font-size:15px;line-height:1.6}
+    .codigo-box{background:var(--gray-900);color:#10b981;font-family:monospace;font-size:16px;padding:14px 20px;border-radius:10px;margin:20px auto;display:inline-block;letter-spacing:2px}
+    .instrucao{background:var(--gray-50);border-radius:12px;padding:16px;margin-top:20px;font-size:13px;color:var(--gray-600);text-align:left}
+    .instrucao li{margin-bottom:6px;padding-left:4px}
+
+    /* FOOTER */
+    footer{background:var(--gray-900);color:rgba(255,255,255,.6);text-align:center;padding:24px;font-size:13px;margin-top:40px}
+    footer strong{color:white}
+
+    /* ANIMATIONS */
+    @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+    .fade-up{animation:fadeUp .5s ease forwards}
+    .delay-1{animation-delay:.1s;opacity:0}
+    .delay-2{animation-delay:.2s;opacity:0}
+    .delay-3{animation-delay:.3s;opacity:0}
   </style>
 </head>
 <body>
 
-<% if (sucesso) { %>
-<div class="sucesso-page fade-in">
-  <div class="sucesso-box">
-    <div class="sucesso-icon">🎉</div>
-    <h2>Inscrição Realizada!</h2>
-    <p style="color:var(--gray);font-size:15px;line-height:1.6">Sua inscrição foi recebida com sucesso. Você receberá um email de confirmação em breve.</p>
-    <div class="qr-box">
-      <div style="font-size:12px;color:var(--gray);margin-bottom:6px">Seu código de inscrição</div>
-      <div class="codigo"><%= codigoInscricao %></div>
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo">
+      <% if (config && config.org_logo) { %>
+      <img src="<%= config.org_logo %>" alt="LAURO">
+      <% } else { %>
+      <div style="width:36px;height:36px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:800;font-size:16px">L</div>
+      <% } %>
+      <span class="nav-logo-text">LAURO</span>
     </div>
-    <div style="margin-top:20px;font-size:13px;color:var(--gray)">Apresente este código no dia do evento para o check-in.</div>
-    <a href="/" style="display:inline-block;margin-top:24px;padding:12px 24px;background:var(--verde);color:white;border-radius:10px;text-decoration:none;font-weight:600">Voltar ao início</a>
+    <div class="nav-links">
+      <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" class="nav-link">Instagram</a>
+      <a href="#contato" class="nav-link">Contato</a>
+      <a href="#inscricao" class="nav-cta">Inscrever-se</a>
+    </div>
+  </div>
+</nav>
+
+<% if (sucesso) { %>
+<!-- SUCESSO -->
+<div class="sucesso-wrap">
+  <div class="sucesso-box fade-up">
+    <div class="sucesso-anim">✓</div>
+    <h2>Inscrição Confirmada!</h2>
+    <p>Sua inscrição foi realizada com sucesso. Verifique seu email para mais detalhes.</p>
+    <div class="codigo-box"><%= codigoInscricao %></div>
+    <div class="instrucao">
+      <strong style="color:var(--gray-800);display:block;margin-bottom:8px">Próximos passos:</strong>
+      <ul style="list-style:none">
+        <li>✉️ Verifique seu email de confirmação</li>
+        <li>📱 Salve seu código de inscrição</li>
+        <li>📅 Anote a data e local do evento</li>
+        <li>✅ Apresente o código no check-in</li>
+      </ul>
+    </div>
+    <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:20px;padding:12px 24px;background:var(--primary);color:white;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px">
+      Seguir no Instagram →
+    </a>
   </div>
 </div>
+
 <% } else { %>
 
+<!-- HERO -->
 <div class="hero">
   <% if (evento.banner_chave) { %>
   <img src="/eventos/<%= evento.id %>/banner" class="hero-banner" alt="Banner">
+  <div class="hero-overlay"></div>
+  <div style="position:absolute;inset:0;max-width:1100px;margin:0 auto;padding:0 40px;display:flex;align-items:flex-end;padding-bottom:40px">
+  <% } else { %>
+  <div class="hero-no-banner">
+  <div style="max-width:1100px;margin:0 auto;padding:0 40px;width:100%">
   <% } %>
-  <div class="hero-content">
-    <div class="hero-tag">🎪 Evento</div>
-    <h1><%= evento.nome %></h1>
-    <% if (evento.descricao) { %><div class="hero-desc"><%- evento.descricao %></div><% } %>
-    <div class="hero-meta">
-      <% if (evento.data_inicio) { %>
-      <div class="hero-meta-item">
-        <div class="hero-meta-icon">📅</div>
-        <div><div style="font-size:11px;opacity:.7">Data</div><strong><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}) %></strong></div>
+    <div class="fade-up">
+      <div class="tipo-badge">
+        <% if(evento.tipo_evento==='online'){%>💻 Evento Online<%}else if(evento.tipo_evento==='hibrido'){%>🔀 Evento Híbrido<%}else{%>📍 Evento Presencial<%}%>
       </div>
-      <% } %>
-      <% if (evento.local) { %>
-      <div class="hero-meta-item">
-        <div class="hero-meta-icon">📍</div>
-        <div><div style="font-size:11px;opacity:.7">Local</div><strong><%= evento.local %></strong></div>
+      <h1><%= evento.nome %></h1>
+      <% if (evento.descricao) { %><div class="hero-desc"><%- (evento.descricao||'').replace(/<[^>]*>/g,'').substring(0,200) %></div><% } %>
+      <div class="hero-meta">
+        <% if (evento.data_inicio) { %>
+        <div class="hero-chip"><span class="hero-chip-icon">📅</span><span><strong><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}) %></strong></span></div>
+        <% } %>
+        <% if (evento.local && evento.tipo_evento !== 'online') { %>
+        <div class="hero-chip"><span class="hero-chip-icon">📍</span><span><%= evento.local %></span></div>
+        <% } %>
+        <% if (evento.tipo_evento === 'online') { %>
+        <div class="hero-chip"><span class="hero-chip-icon">💻</span><span>Acesso Online</span></div>
+        <% } %>
       </div>
-      <% } %>
     </div>
   </div>
 </div>
 
-<div class="container">
-  <form action="/inscricao/<%= evento.id %>" method="POST" id="form-inscricao">
-    <input type="hidden" name="lote_id" id="lote_selecionado" value="<%= lotes[0]?.id %>">
+<!-- MAIN -->
+<div class="page-wrap">
+  <div class="main-grid">
 
-    <div class="layout-grid">
-      <!-- Coluna Principal -->
-      <div>
-        <!-- Lotes -->
-        <% if (lotes.length > 0) { %>
-        <div class="card fade-in">
-          <div class="card-head"><h2>🎫 Selecione seu Ingresso</h2></div>
-          <div class="card-body">
-            <% lotes.forEach((l, i) => { %>
-            <div class="lote <%= i===0?'ativo':'' %>" onclick="selecionarLote(<%= l.id %>, this)">
-              <div class="lote-top">
-                <div>
-                  <div class="lote-nome"><%= l.nome %></div>
-                  <div class="lote-info">
-                    <% if (l.data_inicio) { %>📅 até <%= new Date(l.data_fim).toLocaleDateString('pt-BR') %><% } %>
-                  </div>
-                </div>
-                <div style="text-align:right">
-                  <% if (parseFloat(l.preco) === 0) { %>
-                  <span class="badge-gratuito">GRATUITO</span>
-                  <% } else { %>
-                  <div class="lote-preco">R$ <%= Number(l.preco).toFixed(2) %></div>
-                  <% } %>
-                </div>
-              </div>
-            </div>
-            <% }) %>
-          </div>
+    <!-- Coluna Esquerda -->
+    <div>
+
+      <!-- Sobre o Evento -->
+      <% if (evento.descricao) { %>
+      <div class="card fade-up delay-1">
+        <div class="card-header"><h2>Sobre o Evento</h2></div>
+        <div class="card-body" style="text-align:justify;font-size:14px;line-height:1.8;color:var(--gray-700)">
+          <%- evento.descricao %>
         </div>
-        <% } %>
+      </div>
+      <% } %>
 
-        <!-- Dados -->
-        <div class="card fade-in">
-          <div class="card-head"><h2>📝 Seus Dados</h2></div>
-          <div class="card-body">
-            <div class="step-indicator">
-              <div class="step ativo"></div>
-              <div class="step"></div>
-              <div class="step"></div>
-            </div>
+      <!-- Lotes -->
+      <% if (lotes.length > 0) { %>
+      <div class="card fade-up delay-1" id="inscricao">
+        <div class="card-header">
+          <h2>Ingressos Disponíveis</h2>
+          <p>Selecione o ingresso desejado</p>
+        </div>
+        <div class="card-body">
+          <% lotes.forEach((l, i) => { %>
+          <div class="lote <%= i===0?'ativo':'' %>" onclick="selecionarLote(<%= l.id %>, this)">
+            <div class="lote-check"><%= i===0?'✓':'' %></div>
+            <div class="lote-nome"><%= l.nome %></div>
+            <% if (parseFloat(l.preco) === 0) { %>
+            <span class="badge-free">GRATUITO</span>
+            <% } else { %>
+            <div class="lote-preco">R$ <%= Number(l.preco).toFixed(2) %></div>
+            <% } %>
+            <% if (l.data_fim) { %><div class="lote-info">Disponível até <%= new Date(l.data_fim).toLocaleDateString('pt-BR') %></div><% } %>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+      <% } %>
 
-            <!-- Campos padrão -->
-            <div class="campo">
-              <label class="label">Nome Completo <span class="req">*</span></label>
-              <input name="nome" class="input" required placeholder="Seu nome completo">
-            </div>
-            <div class="campo">
-              <label class="label">Email <span class="req">*</span></label>
-              <input name="email" class="input" type="email" required placeholder="seu@email.com">
-            </div>
-            <div class="campo">
-              <label class="label">WhatsApp</label>
-              <input name="whatsapp" class="input" placeholder="+55 (99) 99999-9999">
-            </div>
-            <div class="campo">
-              <label class="label">CPF</label>
-              <input name="cpf" class="input" placeholder="000.000.000-00">
-            </div>
-            <div class="campo">
-              <label class="label">Instituição</label>
-              <input name="instituicao" class="input" placeholder="Universidade / Empresa">
+      <!-- Formulário -->
+      <div class="card fade-up delay-2">
+        <div class="card-header">
+          <h2>Dados para Inscrição</h2>
+          <p>Preencha seus dados para confirmar a inscrição</p>
+        </div>
+        <div class="card-body">
+          <form action="/inscricao/<%= evento.id %>" method="POST">
+            <input type="hidden" name="lote_id" id="lote_selecionado" value="<%= lotes[0]?.id %>">
+
+            <div class="input-grid">
+              <div class="campo" style="grid-column:1/-1">
+                <label>Nome Completo <span class="req">*</span></label>
+                <input name="nome" class="input" required placeholder="Seu nome completo">
+              </div>
+              <div class="campo">
+                <label>Email <span class="req">*</span></label>
+                <input name="email" class="input" type="email" required placeholder="seu@email.com">
+              </div>
+              <div class="campo">
+                <label>WhatsApp</label>
+                <input name="whatsapp" class="input" placeholder="+595 (99) 99999-9999">
+              </div>
+              <div class="campo">
+                <label>CPF</label>
+                <input name="cpf" class="input" placeholder="000.000.000-00">
+              </div>
+              <div class="campo">
+                <label>Instituição</label>
+                <input name="instituicao" class="input" placeholder="Universidade / Empresa">
+              </div>
             </div>
 
             <!-- Campos customizados -->
             <% if (campos && campos.length > 0) { %>
             <% campos.forEach(campo => { %>
             <div class="campo">
-              <label class="label"><%= campo.label %><% if(campo.obrigatorio){%><span class="req"> *</span><%}%></label>
+              <label><%= campo.label %><% if(campo.obrigatorio){%><span class="req"> *</span><%}%></label>
               <% if (campo.tipo === 'select') { %>
               <select name="campo_<%= campo.id %>" class="input" <%= campo.obrigatorio?'required':'' %>>
                 <option value="">Selecione...</option>
                 <% (campo.opcoes||'').split('\n').filter(o=>o.trim()).forEach(op=>{ %><option value="<%= op.trim() %>"><%= op.trim() %></option><% }) %>
               </select>
               <% } else if (campo.tipo === 'textarea') { %>
-              <textarea name="campo_<%= campo.id %>" class="input" rows="3" <%= campo.obrigatorio?'required':'' %> placeholder="<%= campo.label %>..."></textarea>
+              <textarea name="campo_<%= campo.id %>" class="input" rows="3" <%= campo.obrigatorio?'required':'' %>></textarea>
               <% } else if (campo.tipo === 'radio') { %>
-              <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
+              <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
                 <% (campo.opcoes||'').split('\n').filter(o=>o.trim()).forEach(op=>{ %>
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
-                  <input type="radio" name="campo_<%= campo.id %>" value="<%= op.trim() %>" <%= campo.obrigatorio?'required':'' %>> <%= op.trim() %>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:400;padding:10px 14px;border:1.5px solid var(--gray-200);border-radius:8px;transition:.2s" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--gray-200)'">
+                  <input type="radio" name="campo_<%= campo.id %>" value="<%= op.trim() %>" <%= campo.obrigatorio?'required':'' %> style="accent-color:var(--primary)"> <%= op.trim() %>
                 </label>
                 <% }) %>
               </div>
               <% } else if (campo.tipo === 'checkbox') { %>
               <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
                 <% (campo.opcoes||'').split('\n').filter(o=>o.trim()).forEach(op=>{ %>
-                <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px">
-                  <input type="checkbox" name="campo_<%= campo.id %>[]" value="<%= op.trim() %>"> <%= op.trim() %>
+                <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:400">
+                  <input type="checkbox" name="campo_<%= campo.id %>[]" value="<%= op.trim() %>" style="accent-color:var(--primary);width:16px;height:16px"> <%= op.trim() %>
                 </label>
                 <% }) %>
               </div>
@@ -209,73 +326,146 @@
             <% }) %>
             <% } %>
 
-            <button type="submit" class="btn-submit">🎪 Confirmar Inscrição →</button>
-            <p style="text-align:center;font-size:12px;color:var(--gray);margin-top:12px">🔒 Seus dados estão seguros e não serão compartilhados.</p>
-          </div>
+            <button type="submit" class="btn-submit">Confirmar Inscrição →</button>
+            <div class="secure-msg">🔒 Seus dados são protegidos e não serão compartilhados</div>
+          </form>
         </div>
       </div>
 
-      <!-- Sidebar -->
-      <div>
-        <div class="sidebar-card">
-          <div class="sidebar-title">📋 Resumo do Evento</div>
-          <% if (evento.data_inicio) { %>
-          <div class="info-item">
-            <div class="info-icon">📅</div>
-            <div><div class="info-label">Data e Hora</div><div class="info-val"><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}) %></div><div class="info-val" style="font-size:12px;color:var(--gray)"><%= new Date(evento.data_inicio).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) %> h</div></div>
+      <!-- Contato -->
+      <div class="card fade-up delay-3" id="contato">
+        <div class="card-header"><h2>Entre em Contato</h2><p>Dúvidas? Nossa equipe está pronta para ajudar</p></div>
+        <div class="card-body">
+          <div class="contato-links" style="margin-bottom:20px">
+            <a href="mailto:lauroucpcde@lauroucpcde.com" class="contato-link">
+              <div class="contato-icon" style="background:#fee2e2">✉️</div>
+              <div><div style="font-size:11px;color:var(--gray-400);margin-bottom:1px">Email</div>lauroucpcde@lauroucpcde.com</div>
+            </a>
+            <a href="https://wa.me/595994225753" target="_blank" class="contato-link">
+              <div class="contato-icon" style="background:#dcfce7">📱</div>
+              <div><div style="font-size:11px;color:var(--gray-400);margin-bottom:1px">WhatsApp</div>+595 994 225 753</div>
+            </a>
+            <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" class="contato-link">
+              <div class="contato-icon" style="background:#fce7f3">📸</div>
+              <div><div style="font-size:11px;color:var(--gray-400);margin-bottom:1px">Instagram</div>@lauroucp.cde</div>
+            </a>
           </div>
-          <% } %>
-          <% if (evento.data_fim) { %>
-          <div class="info-item">
-            <div class="info-icon">🏁</div>
-            <div><div class="info-label">Término</div><div class="info-val"><%= new Date(evento.data_fim).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) %> h</div></div>
-          </div>
-          <% } %>
-          <% if (evento.local) { %>
-          <div class="info-item">
-            <div class="info-icon">📍</div>
-            <div><div class="info-label">Local</div><div class="info-val"><%= evento.local %></div><% if(evento.endereco){%><div style="font-size:11px;color:var(--gray);margin-top:2px"><%= evento.endereco %></div><%}%></div>
-          </div>
-          <% } %>
-          <div class="org-badge">
-            <div class="org-logo">L</div>
-            <div><div style="font-size:11px;color:var(--gray)">Organizado por</div><div style="font-weight:700;font-size:13px">LAURO</div></div>
+          <div style="border-top:1px solid var(--gray-100);padding-top:20px">
+            <p style="font-size:13px;font-weight:600;color:var(--gray-800);margin-bottom:12px">Enviar mensagem</p>
+            <form action="/contato-evento/<%= evento.id %>" method="POST">
+              <input name="nome" class="contato-form-input" placeholder="Seu nome" required>
+              <input name="email" type="email" class="contato-form-input" placeholder="Seu email" required>
+              <textarea name="mensagem" class="contato-form-input" rows="3" placeholder="Sua mensagem..." required style="resize:vertical"></textarea>
+              <button type="submit" class="btn-contato">Enviar Mensagem</button>
+            </form>
           </div>
         </div>
-
-        <% if (lotes.length > 0) { %>
-        <div class="sidebar-card" style="margin-top:16px" id="resumo-lote">
-          <div class="sidebar-title">🎫 Ingresso Selecionado</div>
-          <div id="lote-resumo-nome" style="font-weight:700;font-size:15px"><%= lotes[0]?.nome %></div>
-          <div id="lote-resumo-preco" style="font-size:22px;font-weight:800;color:var(--verde);margin-top:4px"><%= parseFloat(lotes[0]?.preco||0)===0?'Gratuito':'R$ '+Number(lotes[0]?.preco||0).toFixed(2) %></div>
-        </div>
-        <% } %>
       </div>
     </div>
-  </form>
-</div>
 
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+      <!-- Resumo do Evento -->
+      <div class="sidebar-card fade-up delay-1">
+        <div class="sidebar-title">Informações do Evento</div>
+        <% if (evento.data_inicio) { %>
+        <div class="info-item">
+          <div class="info-icon">📅</div>
+          <div>
+            <div class="info-label">Data de Início</div>
+            <div class="info-val"><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}) %></div>
+            <div class="info-sub"><%= new Date(evento.data_inicio).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) %> h</div>
+          </div>
+        </div>
+        <% } %>
+        <% if (evento.data_fim) { %>
+        <div class="info-item">
+          <div class="info-icon">🏁</div>
+          <div>
+            <div class="info-label">Término</div>
+            <div class="info-val"><%= new Date(evento.data_fim).toLocaleDateString('pt-BR',{day:'2-digit',month:'long'}) %></div>
+            <div class="info-sub"><%= new Date(evento.data_fim).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) %> h</div>
+          </div>
+        </div>
+        <% } %>
+        <% if (evento.tipo_evento) { %>
+        <div class="info-item">
+          <div class="info-icon"><%= evento.tipo_evento==='online'?'💻':evento.tipo_evento==='hibrido'?'🔀':'📍' %></div>
+          <div>
+            <div class="info-label">Modalidade</div>
+            <div class="info-val"><%= evento.tipo_evento==='online'?'Online':evento.tipo_evento==='hibrido'?'Híbrido':'Presencial' %></div>
+          </div>
+        </div>
+        <% } %>
+        <% if (evento.local && evento.tipo_evento !== 'online') { %>
+        <div class="info-item">
+          <div class="info-icon">📍</div>
+          <div>
+            <div class="info-label">Local</div>
+            <div class="info-val"><%= evento.local %></div>
+            <% if(evento.endereco){%><div class="info-sub"><%= evento.endereco %></div><%}%>
+          </div>
+        </div>
+        <% } %>
+        <div class="org-box">
+          <div class="org-logo">
+            <% if (config && config.org_logo) { %>
+            <img src="<%= config.org_logo %>" alt="LAURO">
+            <% } else { %>
+            <span style="color:white;font-weight:800;font-size:16px">L</span>
+            <% } %>
+          </div>
+          <div>
+            <div class="org-name">LAURO</div>
+            <div class="org-sub">Liga Académica de Urología</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ingresso Selecionado -->
+      <% if (lotes.length > 0) { %>
+      <div class="sidebar-card fade-up delay-2">
+        <div class="sidebar-title">Ingresso Selecionado</div>
+        <div class="lote-resumo">
+          <div class="lote-resumo-nome" id="resumo-nome"><%= lotes[0]?.nome %></div>
+          <div class="lote-resumo-preco" id="resumo-preco"><%= parseFloat(lotes[0]?.preco||0)===0?'Gratuito':'R$ '+Number(lotes[0]?.preco||0).toFixed(2) %></div>
+        </div>
+        <a href="#inscricao" class="btn-submit" style="display:flex;margin-top:14px;text-decoration:none;text-align:center;justify-content:center">Inscrever-se Agora</a>
+      </div>
+      <% } %>
+
+      <!-- Redes Sociais -->
+      <div class="sidebar-card fade-up delay-3">
+        <div class="sidebar-title">Siga a LAURO</div>
+        <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" style="display:flex;align-items:center;gap:12px;padding:12px;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);border-radius:10px;text-decoration:none;color:white">
+          <div style="font-size:24px">📸</div>
+          <div><div style="font-weight:700;font-size:14px">@lauroucp.cde</div><div style="font-size:12px;opacity:.85">Siga no Instagram</div></div>
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
 <% } %>
+
+<footer>
+  <strong>LAURO</strong> — Liga Académica de Urología · Universidad Central del Paraguay<br>
+  <span style="margin-top:4px;display:block">lauroucpcde@lauroucpcde.com · +595 994 225 753</span>
+</footer>
 
 <script>
 const lotesData = <%- JSON.stringify(lotes) %>;
 function selecionarLote(id, el) {
-  document.querySelectorAll('.lote').forEach(e=>e.classList.remove('ativo'));
+  document.querySelectorAll('.lote').forEach(e=>{e.classList.remove('ativo');e.querySelector('.lote-check').textContent='';});
   el.classList.add('ativo');
-  document.getElementById('lote_selecionado').value = id;
-  const lote = lotesData.find(l=>l.id==id);
-  if (lote) {
-    document.getElementById('lote-resumo-nome').textContent = lote.nome;
-    document.getElementById('lote-resumo-preco').textContent = parseFloat(lote.preco)===0?'Gratuito':'R$ '+parseFloat(lote.preco).toFixed(2);
+  el.querySelector('.lote-check').textContent='✓';
+  document.getElementById('lote_selecionado').value=id;
+  const l=lotesData.find(x=>x.id==id);
+  if(l){
+    document.getElementById('resumo-nome').textContent=l.nome;
+    document.getElementById('resumo-preco').textContent=parseFloat(l.preco)===0?'Gratuito':'R$ '+parseFloat(l.preco).toFixed(2);
   }
 }
-// Progress steps
-const inputs = document.querySelectorAll('.input');
-const steps = document.querySelectorAll('.step');
-inputs.forEach(inp => {
-  inp.addEventListener('focus', ()=>{ steps[0].classList.add('concluido'); steps[1].classList.add('ativo'); });
-  inp.addEventListener('blur', ()=>{ if(inp.value) steps[1].classList.add('concluido'); });
-});
 </script>
 </body>
 </html>
