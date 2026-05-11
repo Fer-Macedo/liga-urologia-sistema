@@ -353,7 +353,7 @@
                 <div style="max-height:150px;overflow-y:auto;font-size:12px;color:var(--gray-600);line-height:1.6;white-space:pre-wrap;margin-bottom:12px"><%= evento.termos_texto %></div>
                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;font-size:13px;color:var(--gray-800)">
                   <input type="checkbox" name="aceite_termos" required style="margin-top:2px;accent-color:var(--primary);width:16px;height:16px;flex-shrink:0">
-                  <span>Li e concordo com os <strong>Termos de Compra e Participação</strong> <span style="color:#ef4444">*</span></span>
+                  <span>Li e concordo com os <strong><a href="#" onclick="document.getElementById('modal-termos').style.display='flex';return false" style="color:var(--primary)">Termos de Compra e Participação</a></strong> <span style="color:#ef4444">*</span></span>
                 </label>
               </div>
               <% } %>
@@ -370,6 +370,58 @@
           </div>
         </div>
       </div>
+
+      <!-- PROGRAMAÇÃO -->
+      <% if (programacao && programacao.length > 0) { %>
+      <div class="card">
+        <div class="card-hd"><div><h2>🗓️ Programação</h2><p>Agenda completa do evento</p></div></div>
+        <div class="card-bd">
+          <% programacao.forEach(p => { %>
+          <div style="border-left:3px solid var(--primary);padding:10px 14px;margin-bottom:10px;background:var(--gray-50);border-radius:0 8px 8px 0">
+            <div style="font-weight:700;font-size:14px"><%= p.titulo %></div>
+            <div style="font-size:12px;color:var(--primary);font-weight:600;margin-top:2px">⏰ <%= p.horario %><% if(p.local){%> · 📍 <%= p.local %><%}%></div>
+            <% if(p.descricao){%><div style="font-size:12px;color:var(--gray-600);margin-top:4px"><%= p.descricao %></div><%}%>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+      <% } %>
+
+      <!-- PALESTRANTES -->
+      <% if (palestrantes && palestrantes.length > 0) { %>
+      <div class="card">
+        <div class="card-hd"><div><h2>🎤 Palestrantes</h2></div></div>
+        <div class="card-bd">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px">
+          <% palestrantes.forEach(p => { %>
+          <div style="border:1.5px solid var(--gray-200);border-radius:12px;padding:16px;text-align:center">
+            <% if(p.foto_chave){%><img src="/eventos/palestrantes/<%= p.id %>/foto" style="width:70px;height:70px;border-radius:50%;object-fit:cover;margin:0 auto 10px;display:block"><%}else{%><div style="width:70px;height:70px;border-radius:50%;background:var(--gray-100);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:28px">🎤</div><%}%>
+            <div style="font-weight:700;font-size:14px"><%= p.nome %></div>
+            <% if(p.instituicao){%><div style="font-size:12px;color:var(--primary);margin-top:2px"><%= p.instituicao %></div><%}%>
+            <% if(p.bio){%><div style="font-size:12px;color:var(--gray-600);margin-top:6px;text-align:justify"><%= p.bio.substring(0,120) %><%= p.bio.length>120?'...':'' %></div><%}%>
+          </div>
+          <% }) %>
+          </div>
+        </div>
+      </div>
+      <% } %>
+
+      <!-- PATROCINADORES -->
+      <% if (patrocinadores && patrocinadores.length > 0) { %>
+      <div class="card">
+        <div class="card-hd"><div><h2>🤝 Patrocinadores</h2></div></div>
+        <div class="card-bd">
+          <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:center">
+          <% patrocinadores.forEach(p => { %>
+            <% if(p.url){%><a href="<%= p.url %>" target="_blank" style="text-decoration:none"><%}%>
+            <% if(p.logo_chave){%><img src="/eventos/patrocinadores/<%= p.id %>/logo" style="height:50px;object-fit:contain;border:1px solid var(--gray-200);border-radius:8px;padding:4px" title="<%= p.nome %>">
+            <%}else{%><div style="padding:8px 16px;border:1px solid var(--gray-200);border-radius:8px;font-weight:600;font-size:13px"><%= p.nome %></div><%}%>
+            <% if(p.url){%></a><%}%>
+          <% }) %>
+          </div>
+        </div>
+      </div>
+      <% } %>
 
       <!-- Contato -->
       <div class="card" id="contato">
@@ -464,6 +516,22 @@
           <div><div style="font-weight:700;font-size:13px">@lauroucp.cde</div><div style="font-size:11px;opacity:.85">Siga no Instagram</div></div>
         </a>
       </div>
+    </div>
+  </div>
+</div>
+<% } %>
+
+<!-- Modal Termos -->
+<% if (evento.termos_texto) { %>
+<div id="modal-termos" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:20px" onclick="if(event.target===this)this.style.display='none'">
+  <div style="background:white;border-radius:16px;max-width:600px;width:100%;max-height:80vh;overflow:hidden;display:flex;flex-direction:column">
+    <div style="padding:20px 24px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center">
+      <h3 style="font-weight:700;font-size:16px">📜 Termos e Condições</h3>
+      <button onclick="document.getElementById('modal-termos').style.display='none'" style="border:none;background:none;font-size:20px;cursor:pointer;color:#6b7280">✕</button>
+    </div>
+    <div style="padding:20px 24px;overflow-y:auto;font-size:13px;line-height:1.7;color:#374151;white-space:pre-wrap"><%= evento.termos_texto %></div>
+    <div style="padding:16px 24px;border-top:1px solid #e5e7eb;text-align:right">
+      <button onclick="document.getElementById('modal-termos').style.display='none'" style="background:var(--primary);color:white;border:none;padding:10px 24px;border-radius:8px;font-weight:600;cursor:pointer">Entendi</button>
     </div>
   </div>
 </div>
