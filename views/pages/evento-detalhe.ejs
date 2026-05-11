@@ -46,6 +46,7 @@
         <button class="tab-btn" onclick="showTab('inscritos')">👥 Inscritos</button>
         <button class="tab-btn" onclick="showTab('pagamentos')">💰 Pagamentos</button>
         <button class="tab-btn" onclick="showTab('certificados')">🏆 Certificados</button>
+        <button class="tab-btn" onclick="showTab('campos')">⚙️ Campos</button>
       </div>
 
       <!-- INFO -->
@@ -75,7 +76,7 @@
                   <option value="false" <%= !evento.publico?'selected':'' %>>❌ Não</option>
                 </select>
               </div>
-              <div class="campo" style="grid-column:1/-1"><label class="label">Novo Banner</label><input type="file" name="banner" class="input" accept="image/*"></div>
+              <div class="campo" style="grid-column:1/-1"><label class="label">Novo Banner <span style="font-size:11px;color:var(--texto2);font-weight:400">(Dimensão ideal: 1200×400px — proporção 3:1)</span></label><input type="file" name="banner" class="input" accept="image/*"><% if(evento.banner_chave){%><div style="margin-top:8px"><img src="/eventos/<%= evento.id %>/banner" style="max-width:300px;border-radius:8px;border:1px solid var(--borda)"></div><%}%></div>
             </div>
             <div style="margin-top:16px"><button type="submit" class="btn btn-primario">💾 Salvar</button></div>
           </form>
@@ -93,9 +94,12 @@
               <div style="font-size:12px;color:var(--texto2)">R$ <%= Number(l.preco).toFixed(2) %> • <%= l.vagas %> vagas • <%= l.inscritos||0 %> inscritos</div>
               <% if (l.data_inicio) { %><div style="font-size:11px;color:var(--texto2)">📅 <%= new Date(l.data_inicio).toLocaleDateString('pt-BR') %> até <%= new Date(l.data_fim).toLocaleDateString('pt-BR') %></div><% } %>
             </div>
-            <form method="POST" action="/eventos/<%= evento.id %>/lotes/<%= l.id %>/deletar" onsubmit="return confirm('Excluir lote?')">
-              <button type="submit" class="btn" style="font-size:11px;padding:4px 8px;color:var(--vermelho)">🗑</button>
-            </form>
+<div style="display:flex;gap:6px">
+              <button onclick="editarLote(<%= l.id %>,'<%= l.nome %>',<%= l.preco %>,<%= l.vagas %>,'<%= l.data_inicio?''+new Date(l.data_inicio).toISOString().slice(0,16)+'':"" %>','<%= l.data_fim?''+new Date(l.data_fim).toISOString().slice(0,16)+'':"" %>')" class="btn" style="font-size:11px;padding:4px 8px;background:#0891b2;color:white">✏️</button>
+              <form method="POST" action="/eventos/<%= evento.id %>/lotes/<%= l.id %>/deletar" onsubmit="return confirm('Excluir lote?')">
+                <button type="submit" class="btn" style="font-size:11px;padding:4px 8px;color:var(--vermelho)">🗑</button>
+              </form>
+            </div>
           </div>
           <% }) %>
           <% if (lotes.length === 0) { %><p style="color:var(--texto2);font-size:13px">Nenhum lote criado.</p><% } %>
@@ -107,8 +111,8 @@
               <div class="campo"><label class="label">Nome do Lote</label><input name="nome" class="input" placeholder="Ex: Lote 1 — Early Bird" required></div>
               <div class="campo"><label class="label">Preço (R$)</label><input type="number" step="0.01" name="preco" class="input" value="0" min="0"></div>
               <div class="campo"><label class="label">Vagas</label><input type="number" name="vagas" class="input" value="50" min="1"></div>
-              <div class="campo"><label class="label">Início</label><input type="date" name="data_inicio" class="input"></div>
-              <div class="campo"><label class="label">Fim</label><input type="date" name="data_fim" class="input"></div>
+              <div class="campo"><label class="label">Data/Hora Início</label><input type="datetime-local" name="data_inicio" class="input"></div>
+              <div class="campo"><label class="label">Data/Hora Fim</label><input type="datetime-local" name="data_fim" class="input"></div>
               <div class="campo" style="display:flex;align-items:flex-end"><button type="submit" class="btn btn-primario" style="width:100%">+ Adicionar</button></div>
             </div>
           </form>
@@ -217,7 +221,57 @@
   </main>
 </div>
 
-<!-- Modal Inscrição Manual -->
+      <!-- CAMPOS -->
+      <div class="tab-content" id="tab-campos">
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-titulo">⚙️ Campos Customizados do Formulário</div>
+          <p style="font-size:13px;color:var(--texto2);margin-bottom:16px">Além dos campos padrão (Nome, Email, WhatsApp, CPF, Instituição), você pode adicionar campos extras.</p>
+          <% campos.forEach(campo => { %>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border:1px solid var(--borda);border-radius:8px;margin-bottom:8px">
+            <div>
+              <span style="font-weight:600"><%= campo.label %></span>
+              <span style="font-size:11px;color:var(--texto2);margin-left:8px">(<%= campo.tipo %>)<%= campo.obrigatorio ? '  • obrigatório' : ''%></span>
+            </div>
+            <form method="POST" action="/eventos/<%= evento.id %>/campos/<%= campo.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')">
+              <button type="submit" class="btn" style="font-size:11px;padding:3px 8px;color:var(--vermelho)">🗑</button>
+            </form>
+          </div>
+          <% }) %>
+          <% if(campos.length===0){%><p style="color:var(--texto2);font-size:13px">Nenhum campo extra.</p><%}%>
+        </div>
+        <div class="card">
+          <div class="card-titulo">+ Adicionar Campo</div>
+          <form action="/eventos/<%= evento.id %>/campos" method="POST">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="campo"><label class="label">Nome do Campo</label><input name="label" class="input" placeholder="Ex: Semestre, Turma, Dia preferido" required></div>
+              <div class="campo"><label class="label">Tipo</label>
+                <select name="tipo" class="input" onchange="mostrarOpcoes(this.value)">
+                  <option value="text">Texto livre</option>
+                  <option value="email">Email</option>
+                  <option value="number">Número</option>
+                  <option value="select">Lista suspensa</option>
+                  <option value="radio">Múltipla escolha (radio)</option>
+                  <option value="checkbox">Caixas de seleção</option>
+                  <option value="textarea">Texto longo</option>
+                </select>
+              </div>
+              <div class="campo" id="div-opcoes" style="grid-column:1/-1;display:none">
+                <label class="label">Opções (uma por linha)</label>
+                <textarea name="opcoes" class="input" rows="4" placeholder="Opção 1&#10;Opção 2&#10;Opção 3"></textarea>
+              </div>
+              <div class="campo"><label class="label">Obrigatório?</label>
+                <select name="obrigatorio" class="input">
+                  <option value="false">Não</option>
+                  <option value="true">Sim</option>
+                </select>
+              </div>
+              <div class="campo" style="display:flex;align-items:flex-end"><button type="submit" class="btn btn-primario" style="width:100%">+ Adicionar</button></div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Modal Inscrição Manual -->
 <div class="modal-overlay" id="modal-inscricao-manual" style="display:none">
   <div class="modal">
     <div class="modal-header">
@@ -251,6 +305,29 @@
 </div>
 
 <script src="/js/app.js"></script>
+
+<!-- Modal Editar Lote -->
+<div class="modal-overlay" id="modal-editar-lote" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">✏️ Editar Lote</span>
+      <button class="icon-btn" onclick="fecharModal('modal-editar-lote')">✕</button>
+    </div>
+    <form id="form-editar-lote" action="" method="POST">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        <div class="campo"><label class="label">Nome</label><input id="el-nome" name="nome" class="input" required></div>
+        <div class="campo"><label class="label">Preço (R$)</label><input id="el-preco" type="number" step="0.01" name="preco" class="input"></div>
+        <div class="campo"><label class="label">Vagas</label><input id="el-vagas" type="number" name="vagas" class="input"></div>
+        <div class="campo"><label class="label">Data/Hora Início</label><input id="el-inicio" type="datetime-local" name="data_inicio" class="input"></div>
+        <div class="campo"><label class="label">Data/Hora Fim</label><input id="el-fim" type="datetime-local" name="data_fim" class="input"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-editar-lote')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">💾 Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
 <script>
 function showTab(id) {
   document.querySelectorAll('.tab-content').forEach(s=>s.classList.remove('ativo'));
@@ -262,6 +339,20 @@ function buscarInscrito(q) {
   document.querySelectorAll('.inscrito-row').forEach(r=>{
     r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
   });
+}
+</script>
+<script>
+function editarLote(id,nome,preco,vagas,inicio,fim) {
+  document.getElementById('el-nome').value=nome;
+  document.getElementById('el-preco').value=preco;
+  document.getElementById('el-vagas').value=vagas;
+  document.getElementById('el-inicio').value=inicio;
+  document.getElementById('el-fim').value=fim;
+  document.getElementById('form-editar-lote').action='/eventos/'+window.location.pathname.split('/')[2]+'/lotes/'+id+'/editar';
+  abrirModal('modal-editar-lote');
+}
+function mostrarOpcoes(tipo) {
+  document.getElementById('div-opcoes').style.display=['select','radio','checkbox'].includes(tipo)?'':'none';
 }
 </script>
 </body>
