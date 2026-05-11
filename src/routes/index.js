@@ -2613,4 +2613,188 @@ router.post('/lista-assinaturas/:id/deletar', requireAuth, requireAdmin, async (
   res.redirect('/lista-assinaturas');
 });
 
+
+// MARKETING
+
+async function getMktConfig() {
+  const r = await query('SELECT chave,valor FROM marketing_config');
+  const cfg = {};
+  r.rows.forEach(row => cfg[row.chave] = row.valor);
+  return cfg;
+}
+
+router.get('/marketing', requireAuth, async (req, res) => {
+  const config = await getConfig();
+  const msg = req.session.msg || []; req.session.msg = [];
+  const erro = req.session.erro || []; req.session.erro = [];
+  const [postsR, midiasR] = await Promise.all([
+    query('SELECT * FROM marketing_posts ORDER BY criado_em DESC'),
+    query('SELECT * FROM marketing_midias ORDER BY criado_em DESC')
+  ]);
+  const mktConfig = await getMktConfig();
+  const posts = postsR.rows;
+  const total = posts.length || 1;
+  const igPct = Math.round(posts.filter(p=>(p.redes||[]).includes('instagram')).length/total*100);
+  const fbPct = Math.round(posts.filter(p=>(p.redes||[]).includes('facebook')).length/total*100);
+  const waPct = Math.round(posts.filter(p=>(p.redes||[]).includes('whatsapp')).length/total*100);
+  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct });
+});
+
+router.post('/marketing/posts', requireAuth, async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.single('imagem')(req, res, async (err) => {
+      const { titulo, conteudo, agendado_para, acao } = req.body;
+      const redes = Array.isArray(req.body.redes) ? req.body.redes : (req.body.redes ? [req.body.redes] : []);
+      let imagemChave = null;
+      if (req.file) {
+        const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'marketing');
+        imagemChave = r.chave;
+      }
+      const status = acao === 'agendar' && agendado_para ? 'agendado' : 'rascunho';
+      await query('INSERT INTO marketing_posts (titulo,conteudo,imagem_chave,redes,status,agendado_para,criado_por) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [titulo, conteudo, imagemChave, redes, status, agendado_para||null, req.session.usuario.id]);
+      req.session.msg = [status==='agendado' ? 'Post agendado!' : 'Rascunho salvo!'];
+      res.redirect('/marketing');
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing'); }
+});
+
+router.post('/marketing/:id/publicar', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT * FROM marketing_posts WHERE id=$1', [req.params.id]);
+    const post = r.rows[0];
+    if (!post) { req.session.erro=['Post não encontrado']; return res.redirect('/marketing'); }
+    const mktConfig = await getMktConfig();
+    const redes = post.redes || [];
+    const erros = [];
+
+    // Instagram
+    if (redes.includes('instagram') && mktConfig.instagram_token && mktConfig.instagram_id) {
+      try {
+        const axios = require('axios');
+        const mediaRes = await axios.post(`https://graph.facebook.com/v18.0/${mktConfig.instagram_id}/media`, {
+          caption: post.conteudo, access_token: mktConfig.instagram_token
+        });
+        await axios.post(`https://graph.facebook.com/v18.0/${mktConfig.instagram_id}/media_publish`, {
+          creation_id: mediaRes.data.id, access_token: mktConfig.instagram_token
+        });
+      } catch(e) { erros.push('Instagram: ' + e.message); }
+    }
+
+    // Facebook
+    if (redes.includes('facebook') && mktConfig.facebook_token && mktConfig.facebook_id) {
+      try {
+        const axios = require('axios');
+        await axios.post(`https://graph.facebook.com/v18.0/${mktConfig.facebook_id}/feed`, {
+          message: post.conteudo, access_token: mktConfig.facebook_token
+        });
+      } catch(e) { erros.push('Facebook: ' + e.message); }
+    }
+
+    // WhatsApp
+    if (redes.includes('whatsapp')) {
+      try {
+        const wapi = require('axios');
+        const pessoas = await query('SELECT whatsapp FROM ligantes WHERE ativo=1 AND whatsapp IS NOT NULL UNION SELECT whatsapp FROM diretivos WHERE ativo=1 AND whatsapp IS NOT NULL');
+        for (const p of pessoas.rows) {
+          if (p.whatsapp) {
+            await wapi.post(`${process.env.WAPI_URL}/send-text`, {
+              phone: p.whatsapp.replace(/\D/g,''), message: post.conteudo
+            }, { headers: { Authorization: process.env.WAPI_TOKEN } }).catch(()=>{});
+          }
+        }
+      } catch(e) { erros.push('WhatsApp: ' + e.message); }
+    }
+
+    const novoStatus = erros.length === 0 ? 'publicado' : 'erro';
+    await query('UPDATE marketing_posts SET status=$1, publicado_em=NOW() WHERE id=$2', [novoStatus, req.params.id]);
+    req.session.msg = erros.length===0 ? ['Post publicado!'] : ['Publicado com erros: ' + erros.join(', ')];
+    res.redirect('/marketing');
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing'); }
+});
+
+router.post('/marketing/:id/deletar', requireAuth, async (req, res) => {
+  await query('DELETE FROM marketing_posts WHERE id=$1', [req.params.id]);
+  req.session.msg = ['Post excluído!'];
+  res.redirect('/marketing');
+});
+
+router.post('/marketing/midias/upload', requireAuth, async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.single('midia')(req, res, async (err) => {
+      if (!req.file) { req.session.erro=['Nenhum arquivo.']; return res.redirect('/marketing?tab=midias'); }
+      const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'marketing-midias');
+      await query('INSERT INTO marketing_midias (nome,chave,tipo,criado_por) VALUES ($1,$2,$3,$4)',
+        [req.body.nome||req.file.originalname, r.chave, req.file.mimetype, req.session.usuario.id]);
+      req.session.msg = ['Mídia enviada!'];
+      res.redirect('/marketing');
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing'); }
+});
+
+router.get('/marketing/midias/:id/img', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT chave FROM marketing_midias WHERE id=$1', [req.params.id]);
+    if (!r.rows[0]) return res.status(404).send('');
+    const { getUrlAssinada } = require('../services/desligamento');
+    const url = await getUrlAssinada(r.rows[0].chave);
+    res.redirect(url);
+  } catch(e) { res.status(500).send(''); }
+});
+
+router.post('/marketing/midias/:id/deletar', requireAuth, async (req, res) => {
+  await query('DELETE FROM marketing_midias WHERE id=$1', [req.params.id]);
+  req.session.msg = ['Mídia excluída!'];
+  res.redirect('/marketing');
+});
+
+router.post('/marketing/config/instagram', requireAuth, requireAdmin, async (req, res) => {
+  const { instagram_token, instagram_id } = req.body;
+  await query('INSERT INTO marketing_config (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', ['instagram_token', instagram_token]);
+  await query('INSERT INTO marketing_config (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', ['instagram_id', instagram_id]);
+  req.session.msg = ['Configuração Instagram salva!'];
+  res.redirect('/marketing');
+});
+
+router.post('/marketing/config/facebook', requireAuth, requireAdmin, async (req, res) => {
+  const { facebook_token, facebook_id } = req.body;
+  await query('INSERT INTO marketing_config (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', ['facebook_token', facebook_token]);
+  await query('INSERT INTO marketing_config (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', ['facebook_id', facebook_id]);
+  req.session.msg = ['Configuração Facebook salva!'];
+  res.redirect('/marketing');
+});
+
+router.post('/marketing/whatsapp-massa', requireAuth, async (req, res) => {
+  try {
+    const { destinatarios, mensagem } = req.body;
+    if (!mensagem) { req.session.erro=['Mensagem obrigatória!']; return res.redirect('/marketing'); }
+    let pessoas = [];
+    if (destinatarios === 'ligantes' || destinatarios === 'todos') {
+      const r = await query('SELECT nome, whatsapp FROM ligantes WHERE ativo=1 AND whatsapp IS NOT NULL');
+      pessoas = [...pessoas, ...r.rows];
+    }
+    if (destinatarios === 'diretivos' || destinatarios === 'todos') {
+      const r = await query('SELECT nome, whatsapp FROM diretivos WHERE ativo=1 AND whatsapp IS NOT NULL');
+      pessoas = [...pessoas, ...r.rows];
+    }
+    const axios = require('axios');
+    let enviados = 0, erros = 0;
+    for (const p of pessoas) {
+      if (!p.whatsapp) continue;
+      try {
+        await axios.post(process.env.WAPI_URL + '/send-text', {
+          phone: p.whatsapp.replace(/\D/g,'') + '@c.us',
+          message: mensagem.replace('{nome}', p.nome)
+        }, { headers: { Authorization: 'Bearer ' + process.env.WAPI_TOKEN } });
+        enviados++;
+        await new Promise(r=>setTimeout(r,500));
+      } catch(e) { erros++; }
+    }
+    req.session.msg = [`WhatsApp enviado! ${enviados} enviados, ${erros} erros.`];
+    res.redirect('/marketing');
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing'); }
+});
+
 module.exports = router;
