@@ -2846,7 +2846,7 @@ router.get('/eventos/:id', requireAuth, async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg || []; req.session.msg = [];
   const erro = req.session.erro || []; req.session.erro = [];
-  const [evR, lotesR, inscrR, pgR, certR] = await Promise.all([
+  const [evR, lotesR, inscrR, pgR, certR, progR, palesR, patrocR] = await Promise.all([
     query('SELECT * FROM eventos WHERE id=$1', [req.params.id]),
     query('SELECT l.*, (SELECT COUNT(*) FROM evento_inscricoes WHERE lote_id=l.id) as inscritos FROM evento_lotes l WHERE l.evento_id=$1 ORDER BY l.ordem', [req.params.id]),
     query('SELECT i.*, l.nome as lote_nome FROM evento_inscricoes i LEFT JOIN evento_lotes l ON l.id=i.lote_id WHERE i.evento_id=$1 ORDER BY i.criado_em DESC', [req.params.id]),
