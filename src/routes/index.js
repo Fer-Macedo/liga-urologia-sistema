@@ -546,15 +546,19 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
       const partes = referencia.split('-');
       const inscricaoId = partes[2];
       if (inscricaoId) {
-        await query(
-          "UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1 AND status!='confirmado'",
+        const upd = await query(
+          "UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1 AND status!='confirmado' RETURNING id",
           [inscricaoId]
         );
         await query(
           "UPDATE evento_pagamentos SET status='pago', pago_em=NOW(), pagbank_order_id=$1 WHERE inscricao_id=$2 AND status!='pago'",
           [orderId, inscricaoId]
         );
-        console.log('PagBank ingresso confirmado — insc:', inscricaoId, orderId);
+        // Enviar email de confirmação apenas se acabou de confirmar (evita duplicado)
+        if (upd.rowCount > 0) {
+          await enviarEmailConfirmacaoEvento(inscricaoId);
+          console.log('PagBank ingresso confirmado via webhook — insc:', inscricaoId, orderId);
+        }
       }
     }
 
