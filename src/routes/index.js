@@ -2255,50 +2255,327 @@ router.get('/inscricao/:id', async (req, res) => {
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
+// INSCRIÇÕES — POST: salva dados e redireciona para pagamento
 router.post('/inscricao/:id', async (req, res) => {
   try {
-    const {nome, email, whatsapp, cpf, instituicao, lote_id} = req.body;
-    const evR = await query('SELECT * FROM eventos WHERE id=$1',[req.params.id]);
-    if (!evR.rows[0]) return res.status(404).send('Evento não encontrado');
-    const loteR = await query('SELECT * FROM evento_lotes WHERE id=$1',[lote_id]);
-    const lote = loteR.rows[0];
-    const qrcode = 'LAURO-' + req.params.id + '-' + Date.now();
-    const inscR = await query('INSERT INTO evento_inscricoes (evento_id,lote_id,nome,email,whatsapp,cpf,instituicao,status,qrcode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
-      [req.params.id, lote_id||null, nome, email, whatsapp||null, cpf||null, instituicao||null, lote&&parseFloat(lote.preco)===0?'confirmado':'pendente', qrcode]);
+    const { nome, email, whatsapp, cpf, instituicao, lote_id } = req.body;
+    if (!nome || !email) return res.status(400).send('Nome e e-mail são obrigatórios.');
 
-    // ── PIX via PagBank para ingressos pagos
-    let pixData = null;
-    if (lote && parseFloat(lote.preco) > 0) {
-      pixData = await criarPixEvento({
-        inscricao: { id: inscR.rows[0].id, nome, email, cpf },
-        lote,
-        eventoNome: evR.rows[0].nome
+    const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
+    if (!evR.rows[0]) return res.status(404).send('Evento não encontrado');
+    const evento = evR.rows[0];
+
+    const loteR = await query('SELECT * FROM evento_lotes WHERE id=$1', [lote_id]);
+    const lote = loteR.rows[0];
+
+    const qrcode = 'LAURO-' + req.params.id + '-' + Date.now();
+    const ehGratuito = !lote || parseFloat(lote.preco) === 0;
+
+    const inscR = await query(
+      'INSERT INTO evento_inscricoes (evento_id,lote_id,nome,email,whatsapp,cpf,instituicao,status,qrcode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
+      [req.params.id, lote_id||null, nome, email, whatsapp||null, cpf||null, instituicao||null, ehGratuito ? 'confirmado' : 'pendente', qrcode]
+    );
+    const inscricaoId = inscR.rows[0].id;
+
+    // Evento gratuito → confirma direto, envia email e mostra confirmação
+    if (ehGratuito) {
+      await enviarEmailConfirmacaoEvento(inscricaoId);
+      const config = await getConfig();
+      const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem', [req.params.id]);
+      const [progR, palesR, patrocR] = await Promise.all([
+        query('SELECT * FROM evento_programacao WHERE evento_id=$1 ORDER BY ordem', [req.params.id]),
+        query('SELECT * FROM evento_palestrantes WHERE evento_id=$1 ORDER BY ordem', [req.params.id]),
+        query('SELECT * FROM evento_patrocinadores WHERE evento_id=$1 ORDER BY ordem', [req.params.id])
+      ]);
+      return res.render('pages/evento-inscricao-publica', {
+        evento, lotes: loteR.rows, sucesso: true, qrcode, campos: camposR.rows,
+        codigoInscricao: qrcode, config, programacao: progR.rows,
+        palestrantes: palesR.rows, patrocinadores: patrocR.rows, pixData: null
       });
-      await query('INSERT INTO evento_pagamentos (inscricao_id,valor,metodo,status,pagbank_order_id,pix_copia_cola,pix_qr_image) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-        [inscR.rows[0].id, lote.preco, 'pix', 'pendente', pixData?.order_id||null, pixData?.pix_copia_cola||null, pixData?.pix_qr_image||null]);
     }
 
-    // Email de confirmação
-    const nodemailer = require('nodemailer');
-    const config = await getConfig();
-    const transporter = nodemailer.createTransport({ host:process.env.EMAIL_HOST, port:process.env.EMAIL_PORT, auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS} });
-    const ev2 = evR.rows[0];
-    const textoExtra = ev2.email_inscricao || '';
-    const wppGrupo = ev2.wpp_grupo ? `<div style="margin:20px 0;text-align:center"><a href="${ev2.wpp_grupo}" style="background:#25d366;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">📱 ENTRAR NO GRUPO DO EVENTO NO WHATSAPP</a></div>` : '';
-    const pixHtml = pixData?.pix_copia_cola ? `<div style="margin:20px 0;padding:16px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px"><p style="font-weight:bold;color:#166534;margin-bottom:8px">💳 Pagamento via PIX</p><p style="font-size:13px;color:#374151;margin-bottom:8px">Copie o código abaixo para pagar:</p><code style="display:block;background:#fff;padding:10px;border-radius:4px;font-size:11px;word-break:break-all;border:1px solid #d1d5db">${pixData.pix_copia_cola}</code></div>` : '';
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER, to: email,
-      subject: 'Inscrição realizada — ' + ev2.nome,
-      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px"><h2 style="color:#1a3d2b">Olá, ${nome}!</h2><p>Sua inscrição no evento <strong>${ev2.nome}</strong> foi recebida com sucesso.</p><p><strong>Status:</strong> ${lote&&parseFloat(lote.preco)===0?'✅ Confirmada':'⏳ Aguardando pagamento'}</p><p><strong>Seu código:</strong> <code style="background:#f3f4f6;padding:4px 8px;border-radius:4px">${qrcode}</code></p>${pixHtml}${textoExtra?`<hr><div style="margin-top:16px">${textoExtra.replace(/\n/g,'<br>')}</div>`:''}${wppGrupo}<hr><p style="font-size:12px;color:#6b7280">LAURO — Liga Académica de Urología</p></div>`
-    }).catch(()=>{});
-    if (ev2.notif_email) { await transporter.sendMail({ from:process.env.EMAIL_USER, to:ev2.notif_email, subject:'🔔 Nova inscrição — '+ev2.nome, html:`<p>Nova inscrição recebida:<br><strong>${nome}</strong> (${email})</p>` }).catch(()=>{}); }
+    // Evento pago → gerar PIX, salvar no banco e redirecionar para /pagamento/:inscricaoId
+    const pixData = await criarPixEvento({
+      inscricao: { id: inscricaoId, nome, email, cpf },
+      lote,
+      eventoNome: evento.nome
+    });
 
-    const [evR2, lotesR] = await Promise.all([query('SELECT * FROM eventos WHERE id=$1',[req.params.id]), query('SELECT * FROM evento_lotes WHERE evento_id=$1 ORDER BY ordem',[req.params.id])]);
-    const camposR2 = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem',[req.params.id]);
-    const cfgPub2 = await getConfig();
-    res.render('pages/evento-inscricao-publica', { evento: evR2.rows[0], lotes: lotesR.rows, sucesso: true, qrcode: null, campos: camposR2.rows, codigoInscricao: qrcode, config: cfgPub2, pixData });
-  } catch(e) { res.status(500).send('Erro: '+e.message); }
+    await query(
+      `INSERT INTO evento_pagamentos (inscricao_id, valor, metodo, status, pagbank_order_id, pix_copia_cola, pix_qr_image)
+       VALUES ($1, $2, 'pix', 'pendente', $3, $4, $5)`,
+      [inscricaoId, lote.preco, pixData?.order_id||null, pixData?.pix_copia_cola||null, pixData?.pix_qr_image||null]
+    );
+
+    res.redirect('/pagamento/' + inscricaoId);
+
+  } catch(e) {
+    console.error('POST /inscricao erro:', e.message);
+    res.status(500).send('Erro ao processar inscrição: ' + e.message);
+  }
 });
+
+// ─── PAGAMENTO DE EVENTOS ─────────────────────────────────────────────────────
+
+// Página de pagamento (PIX + Cartão)
+router.get('/pagamento/:inscricaoId', async (req, res) => {
+  try {
+    const inscR = await query(
+      'SELECT i.*, e.nome as evento_nome FROM evento_inscricoes i JOIN eventos e ON e.id=i.evento_id WHERE i.id=$1',
+      [req.params.inscricaoId]
+    );
+    const inscricao = inscR.rows[0];
+    if (!inscricao) return res.status(404).send('Inscrição não encontrada.');
+    if (inscricao.status === 'confirmado') return res.redirect('/pagamento/' + req.params.inscricaoId + '/confirmado');
+
+    const [evR, loteR, pgR] = await Promise.all([
+      query('SELECT * FROM eventos WHERE id=$1', [inscricao.evento_id]),
+      query('SELECT * FROM evento_lotes WHERE id=$1', [inscricao.lote_id]),
+      query('SELECT * FROM evento_pagamentos WHERE inscricao_id=$1 ORDER BY criado_em DESC LIMIT 1', [inscricao.id])
+    ]);
+
+    const pagamento = pgR.rows[0];
+    const pixData = pagamento ? {
+      pix_copia_cola: pagamento.pix_copia_cola || null,
+      pix_qr_image:   pagamento.pix_qr_image   || null,
+      order_id:       pagamento.pagbank_order_id || null
+    } : null;
+
+    const config = await getConfig();
+    res.render('pages/evento-pagamento', {
+      config, evento: evR.rows[0], inscricao, lote: loteR.rows[0], pixData, qrcode: inscricao.qrcode
+    });
+  } catch(e) {
+    console.error('GET /pagamento erro:', e.message);
+    res.status(500).send('Erro: ' + e.message);
+  }
+});
+
+// Polling de status (PIX) — chamado pelo front a cada 4s
+router.get('/pagamento/:inscricaoId/status', async (req, res) => {
+  try {
+    const r = await query(
+      `SELECT i.status, p.pagbank_order_id
+       FROM evento_inscricoes i
+       LEFT JOIN evento_pagamentos p ON p.inscricao_id=i.id
+       WHERE i.id=$1 ORDER BY p.criado_em DESC LIMIT 1`,
+      [req.params.inscricaoId]
+    );
+    const row = r.rows[0];
+    if (!row) return res.json({ pago: false });
+    if (row.status === 'confirmado') return res.json({ pago: true });
+
+    // Consulta em tempo real no PagBank
+    if (row.pagbank_order_id) {
+      const result = await consultarPagamento(row.pagbank_order_id);
+      if (result.ok && result.status === 'PAID') {
+        await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1", [req.params.inscricaoId]);
+        await query("UPDATE evento_pagamentos SET status='pago', pago_em=NOW() WHERE inscricao_id=$1", [req.params.inscricaoId]);
+        await enviarEmailConfirmacaoEvento(req.params.inscricaoId);
+        return res.json({ pago: true });
+      }
+    }
+    res.json({ pago: false });
+  } catch(e) {
+    console.error('Status polling erro:', e.message);
+    res.json({ pago: false });
+  }
+});
+
+// Pagamento via Cartão de Crédito
+router.post('/pagamento/:inscricaoId/cartao', async (req, res) => {
+  try {
+    const { num, nome, mes, ano, cvv, cpf, parcelas } = req.body;
+
+    const inscR = await query(
+      'SELECT i.*, e.nome as evento_nome FROM evento_inscricoes i JOIN eventos e ON e.id=i.evento_id WHERE i.id=$1',
+      [req.params.inscricaoId]
+    );
+    const inscricao = inscR.rows[0];
+    if (!inscricao) return res.json({ ok: false, erro: 'Inscrição não encontrada.' });
+
+    const loteR = await query('SELECT * FROM evento_lotes WHERE id=$1', [inscricao.lote_id]);
+    const lote = loteR.rows[0];
+
+    const axios = require('axios');
+    const isProd = (process.env.PAGBANK_ENV || 'sandbox') === 'production';
+    const BASE_URL = isProd ? 'https://api.pagseguro.com' : 'https://sandbox.api.pagseguro.com';
+    const TOKEN = process.env.PAGBANK_TOKEN;
+
+    const valorCents = Math.round(parseFloat(lote.preco) * 100);
+    const referencia = 'evento-insc-' + inscricao.id;
+    const cpfLimpo = (cpf || '').replace(/\D/g, '') || '12345678909';
+
+    const { data } = await axios.post(
+      BASE_URL + '/orders',
+      {
+        reference_id: referencia,
+        customer: {
+          name: inscricao.nome,
+          email: inscricao.email || 'inscrito@ligaurologia.com.br',
+          tax_id: cpfLimpo
+        },
+        items: [{
+          name: ('Ingresso — ' + inscricao.evento_nome + ' — ' + lote.nome).substring(0, 100),
+          quantity: 1,
+          unit_amount: valorCents
+        }],
+        charges: [{
+          reference_id: referencia,
+          description: ('Ingresso — ' + inscricao.evento_nome).substring(0, 64),
+          amount: { value: valorCents, currency: 'BRL' },
+          payment_method: {
+            type: 'CREDIT_CARD',
+            installments: parseInt(parcelas) || 1,
+            capture: true,
+            card: {
+              number: num,
+              exp_month: String(mes).padStart(2, '0'),
+              exp_year: String(ano),
+              security_code: cvv,
+              holder: { name: nome }
+            }
+          }
+        }],
+        notification_urls: [(process.env.APP_URL || 'https://liga-urologia.onrender.com') + '/webhook/pagbank']
+      },
+      { headers: { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json' }, timeout: 20000 }
+    );
+
+    const charges = data.charges || [];
+    const aprovado = charges.some(c => c.status === 'PAID' || c.status === 'AUTHORIZED');
+
+    if (aprovado) {
+      await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1", [req.params.inscricaoId]);
+      await query(
+        `INSERT INTO evento_pagamentos (inscricao_id, valor, metodo, status, pagbank_order_id, pago_em)
+         VALUES ($1,$2,'cartao','pago',$3,NOW())
+         ON CONFLICT DO NOTHING`,
+        [req.params.inscricaoId, lote.preco, data.id]
+      );
+      await enviarEmailConfirmacaoEvento(req.params.inscricaoId);
+      return res.json({ ok: true });
+    }
+
+    const motivoCharge = charges[0];
+    const motivo = motivoCharge ? (motivoCharge.payment_response?.message || motivoCharge.status || 'Recusado') : 'Pagamento não aprovado';
+    console.error('PagBank cartão recusado:', motivo);
+    res.json({ ok: false, erro: traduzirRecusaCartao(motivo) });
+
+  } catch(e) {
+    const detail = e.response ? JSON.stringify(e.response.data).substring(0, 300) : e.message;
+    console.error('PagBank cartão ERRO:', detail);
+    res.json({ ok: false, erro: 'Erro ao processar cartão. Verifique os dados e tente novamente.' });
+  }
+});
+
+// Página de confirmação (já pago)
+router.get('/pagamento/:inscricaoId/confirmado', async (req, res) => {
+  try {
+    const r = await query(
+      'SELECT i.*, e.nome as evento_nome, e.cor_tema, e.banner_chave, e.local, e.data_inicio FROM evento_inscricoes i JOIN eventos e ON e.id=i.evento_id WHERE i.id=$1',
+      [req.params.inscricaoId]
+    );
+    const inscricao = r.rows[0];
+    if (!inscricao) return res.status(404).send('Não encontrado.');
+    const config = await getConfig();
+    res.render('pages/evento-confirmado', { config, inscricao });
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
+// ─── HELPERS PAGAMENTO ────────────────────────────────────────────────────────
+
+async function enviarEmailConfirmacaoEvento(inscricaoId) {
+  try {
+    const r = await query(
+      `SELECT i.*, e.nome as evento_nome, e.email_inscricao, e.wpp_grupo, e.notif_email,
+              e.data_inicio, e.local, e.cor_tema
+       FROM evento_inscricoes i JOIN eventos e ON e.id=i.evento_id WHERE i.id=$1`,
+      [inscricaoId]
+    );
+    const insc = r.rows[0];
+    if (!insc || !insc.email) return;
+
+    const config = await getConfig();
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT,
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+    });
+
+    const cor = insc.cor_tema || '#1a3d2b';
+    const textoExtra = insc.email_inscricao || '';
+    const dataStr = insc.data_inicio
+      ? new Date(insc.data_inicio).toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric', timeZone:'UTC' })
+      : '';
+    const wppBtn = insc.wpp_grupo
+      ? `<div style="text-align:center;margin:24px 0"><a href="${insc.wpp_grupo}" style="background:#25d366;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">📱 Entrar no grupo do evento</a></div>`
+      : '';
+
+    const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;background:#f4f4f4;padding:24px;margin:0">
+<div style="max-width:580px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)">
+  <div style="background:${cor};padding:28px 32px">
+    <h1 style="color:#fff;margin:0;font-size:22px">${config.org_nome || 'Liga Acadêmica de Urologia'}</h1>
+    <p style="color:rgba(255,255,255,.75);margin:4px 0 0;font-size:13px">Confirmação de inscrição</p>
+  </div>
+  <div style="padding:32px">
+    <h2 style="font-size:20px;margin:0 0 8px;color:#1a1f18">✅ Inscrição confirmada!</h2>
+    <p style="color:#555;margin:0 0 24px;line-height:1.6">
+      Olá, <strong>${insc.nome.split(' ')[0]}</strong>! Seu pagamento foi aprovado e sua inscrição em
+      <strong>${insc.evento_nome}</strong> está confirmada.
+    </p>
+    <div style="background:#f8f9f6;border-radius:10px;padding:20px;margin-bottom:24px">
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:14px">
+        <span style="color:#6b7280">Evento</span><strong>${insc.evento_nome}</strong>
+      </div>
+      ${dataStr ? `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:14px"><span style="color:#6b7280">Data</span><strong>${dataStr}</strong></div>` : ''}
+      ${insc.local ? `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:14px"><span style="color:#6b7280">Local</span><strong>${insc.local}</strong></div>` : ''}
+      <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px">
+        <span style="color:#6b7280">Código de inscrição</span>
+        <code style="background:#f0fdf4;color:#166534;padding:2px 8px;border-radius:4px;font-weight:700">${insc.qrcode}</code>
+      </div>
+    </div>
+    ${textoExtra ? `<div style="margin-bottom:24px;color:#444;font-size:14px;line-height:1.7">${textoExtra.replace(/\n/g,'<br>')}</div>` : ''}
+    ${wppBtn}
+    <p style="font-size:12px;color:#9ca3af;margin-top:24px;padding-top:16px;border-top:1px solid #f3f4f6">
+      ${config.org_nome || 'Liga Acadêmica de Urologia'} · Dúvidas? Responda este e-mail.
+    </p>
+  </div>
+</div></body></html>`;
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: insc.email,
+      subject: '✅ Inscrição confirmada — ' + insc.evento_nome,
+      html
+    });
+
+    if (insc.notif_email) {
+      await transporter.sendMail({
+        from: process.env.EMAIL_USER,
+        to: insc.notif_email,
+        subject: '🔔 Pagamento confirmado — ' + insc.nome + ' | ' + insc.evento_nome,
+        html: `<p>Pagamento confirmado:<br><strong>${insc.nome}</strong> (${insc.email})<br>Evento: ${insc.evento_nome}</p>`
+      }).catch(() => {});
+    }
+
+    console.log('Email confirmação enviado:', insc.email);
+  } catch(e) {
+    console.error('enviarEmailConfirmacaoEvento ERRO:', e.message);
+  }
+}
+
+function traduzirRecusaCartao(msg) {
+  const m = (msg || '').toLowerCase();
+  if (m.includes('insufficient') || m.includes('saldo')) return 'Saldo insuficiente no cartão.';
+  if (m.includes('expired') || m.includes('expir')) return 'Cartão expirado.';
+  if (m.includes('security') || m.includes('cvv') || m.includes('cvc')) return 'CVV inválido.';
+  if (m.includes('invalid') || m.includes('inválid')) return 'Dados do cartão inválidos.';
+  if (m.includes('blocked') || m.includes('bloqueado')) return 'Cartão bloqueado. Contate seu banco.';
+  if (m.includes('limit') || m.includes('limite')) return 'Limite do cartão excedido.';
+  return 'Pagamento não aprovado. Verifique os dados ou tente outro cartão.';
+}
+
 
 router.post('/eventos/:id/inscricoes/manual', requireAuth, async (req, res) => {
   const {nome,email,whatsapp,cpf,lote_id,status} = req.body;
