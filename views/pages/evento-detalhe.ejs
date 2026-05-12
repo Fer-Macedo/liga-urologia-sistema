@@ -26,6 +26,9 @@
     .grid-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
     @media(max-width:600px){.grid-2,.grid-3{grid-template-columns:1fr}}
     .stat-box { background:var(--card); border:1px solid var(--borda); border-radius:10px; padding:16px; text-align:center; }
+    .cupom-row-item { background:var(--fundo); border:1px solid var(--borda); border-radius:8px; padding:10px 14px; margin-bottom:8px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; }
+    .cupom-codigo { font-family:monospace; font-size:15px; font-weight:700; color:var(--cor-primaria); background:var(--card); border:1px dashed var(--borda); padding:4px 10px; border-radius:6px; letter-spacing:2px; }
+    .email-massa-box { background:var(--fundo); border:2px solid var(--borda); border-radius:10px; padding:18px; margin-bottom:16px; }
   </style>
 </head>
 <body>
@@ -54,17 +57,17 @@
       </div>
 
       <div class="tab-nav">
-        <button class="tab-btn ativo" onclick="showTab('info')">📋 Info</button>
-        <button class="tab-btn" onclick="showTab('lotes')">🎫 Lotes</button>
-        <button class="tab-btn" onclick="showTab('campos')">📝 Campos</button>
-        <button class="tab-btn" onclick="showTab('inscritos')">👥 Inscritos</button>
-        <button class="tab-btn" onclick="showTab('pagamentos')">💰 Pagamentos</button>
-        <button class="tab-btn" onclick="showTab('programacao')">🗓️ Programação</button>
-        <button class="tab-btn" onclick="showTab('palestrantes')">🎤 Palestrantes</button>
-        <button class="tab-btn" onclick="showTab('patrocinadores')">🤝 Patrocinadores</button>
-        <button class="tab-btn" onclick="showTab('certificados')">🏆 Certificados</button>
-        <button class="tab-btn" onclick="showTab('avancado')">🔧 Avançado</button>
-        <button class="tab-btn" onclick="showTab('cupons')">🏷️ Cupons</button>
+        <button class="tab-btn ativo" onclick="showTab('info',this)">📋 Info</button>
+        <button class="tab-btn" onclick="showTab('lotes',this)">🎫 Lotes</button>
+        <button class="tab-btn" onclick="showTab('campos',this)">📝 Campos</button>
+        <button class="tab-btn" onclick="showTab('inscritos',this)">👥 Inscritos</button>
+        <button class="tab-btn" onclick="showTab('pagamentos',this)">💰 Pagamentos</button>
+        <button class="tab-btn" onclick="showTab('programacao',this)">🗓️ Programação</button>
+        <button class="tab-btn" onclick="showTab('palestrantes',this)">🎤 Palestrantes</button>
+        <button class="tab-btn" onclick="showTab('patrocinadores',this)">🤝 Patrocinadores</button>
+        <button class="tab-btn" onclick="showTab('cupons',this)">🏷️ Cupons</button>
+        <button class="tab-btn" onclick="showTab('certificados',this)">🏆 Certificados</button>
+        <button class="tab-btn" onclick="showTab('avancado',this)">🔧 Avançado</button>
       </div>
 
       <!-- INFO -->
@@ -83,7 +86,8 @@
               <div class="campo"><label class="label">Data/Hora Fim</label><input type="datetime-local" name="data_fim" class="input" value="<%= evento.data_fim?new Date(evento.data_fim).toISOString().slice(0,16):'' %>"></div>
               <div class="campo"><label class="label">Local</label><input name="local" class="input" value="<%= evento.local||'' %>"></div>
               <div class="campo"><label class="label">Total de Vagas</label><input type="number" name="vagas_total" class="input" value="<%= evento.vagas_total %>"></div>
-              <div class="campo" style="grid-column:1/-1"><label class="label">Endereço</label><input name="endereco" class="input" value="<%= evento.endereco||'' %>"></div>
+              <div class="campo"><label class="label">Endereço</label><input name="endereco" class="input" value="<%= evento.endereco||'' %>"></div>
+              <div class="campo"><label class="label">Carga Horária (h) para Certificado</label><input type="number" name="carga_horaria" class="input" value="<%= evento.carga_horaria||'' %>" placeholder="Ex: 4"></div>
               <div class="campo"><label class="label">Tipo</label>
                 <select name="tipo_evento" class="input">
                   <option value="presencial" <%= evento.tipo_evento==='presencial'?'selected':'' %>>📍 Presencial</option>
@@ -169,7 +173,7 @@
       <div class="tab-content" id="tab-campos">
         <div class="card" style="margin-bottom:16px">
           <div class="card-titulo">📝 Campos do Formulário de Inscrição</div>
-          <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Campos padrão sempre incluídos: Nome, Email, WhatsApp, Data de Nascimento, RG/CI, Catraca, Semestre e Turma. Adicione campos extras abaixo.</p>
+          <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Campos padrão: Nome, Email, WhatsApp, Data de Nascimento, RG/CI, Semestre e Turma. Para alunos UCP aparece Catraca; para externos aparece Instituição. Adicione campos extras abaixo.</p>
           <% if(campos.length===0){%><p style="color:var(--texto2);font-size:13px">Nenhum campo extra adicionado.</p><%}%>
           <% campos.forEach(campo => { %>
           <div class="campo-card">
@@ -195,10 +199,10 @@
                   <option value="textarea">📄 Caixa de texto</option>
                   <option value="email">📧 Email</option>
                   <option value="number">🔢 Número</option>
-                  <option value="select">📋 Lista suspensa (Dropdown)</option>
-                  <option value="radio">🔘 Múltipla escolha (Radio)</option>
+                  <option value="select">📋 Lista suspensa</option>
+                  <option value="radio">🔘 Múltipla escolha</option>
                   <option value="checkbox">☑️ Caixas de seleção</option>
-                  <option value="file">📎 Anexar arquivo/foto</option>
+                  <option value="file">📎 Anexar arquivo</option>
                   <option value="date">📅 Data</option>
                 </select>
               </div>
@@ -222,6 +226,24 @@
 
       <!-- INSCRITOS -->
       <div class="tab-content" id="tab-inscritos">
+        <!-- EMAIL EM MASSA -->
+        <div class="email-massa-box">
+          <div style="font-weight:700;font-size:14px;margin-bottom:12px">📧 Email em Massa para Inscritos</div>
+          <form action="/eventos/<%= evento.id %>/email-massa" method="POST">
+            <div class="grid-2" style="margin-bottom:10px">
+              <div class="campo"><label class="label">Assunto</label><input name="assunto" class="input" required placeholder="Ex: Atualização sobre o evento..."></div>
+              <div class="campo"><label class="label">Enviar para</label>
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 0">
+                  <input type="checkbox" name="apenas_confirmados" id="ap-conf" style="width:16px;height:16px;accent-color:var(--cor-primaria)">
+                  <label for="ap-conf" style="font-size:13px;cursor:pointer">Apenas confirmados</label>
+                </div>
+              </div>
+              <div class="campo" style="grid-column:1/-1"><label class="label">Mensagem</label><textarea name="mensagem" class="input" rows="4" required placeholder="Digite a mensagem para os inscritos..."></textarea></div>
+            </div>
+            <button type="submit" class="btn btn-primario" onclick="return confirm('Enviar email para todos os inscritos selecionados?')">📧 Enviar Email em Massa</button>
+          </form>
+        </div>
+
         <div style="display:flex;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
           <div style="display:flex;gap:8px">
             <a href="/eventos/<%= evento.id %>/inscricoes/exportar" class="btn">📥 Exportar</a>
@@ -237,12 +259,13 @@
               <tr class="inscrito-row">
                 <td><%= i.id %></td>
                 <td><strong><%= i.nome %></strong></td>
-                <td><%= i.email %></td>
+                <td style="font-size:12px"><%= i.email %></td>
                 <td><%= i.lote_nome||'—' %></td>
                 <td><span class="badge" style="background:<%= i.status==='confirmado'?'#dcfce7':i.status==='pendente'?'#fef3c7':'#fee2e2' %>;color:<%= i.status==='confirmado'?'#166534':i.status==='pendente'?'#92400e':'#991b1b' %>"><%= i.status %></span></td>
                 <td><%= i.checkin_em?'✅ '+new Date(i.checkin_em).toLocaleTimeString('pt-BR'):'—' %></td>
                 <td>
-                  <div style="display:flex;gap:4px">
+                  <div style="display:flex;gap:4px;flex-wrap:wrap">
+                    <button onclick="editarInscrito(<%= i.id %>,'<%= i.nome.replace(/'/g,"\\'") %>','<%= i.email %>','<%= i.whatsapp||'' %>','<%= i.cpf||'' %>','<%= i.instituicao||'' %>','<%= i.status %>')" class="btn" style="font-size:10px;padding:3px 7px;background:#0891b2;color:white">✏️</button>
                     <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/confirmar" style="display:inline"><button class="btn" style="font-size:10px;padding:3px 7px;background:#059669;color:white">✅</button></form>
                     <a href="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/certificado" class="btn" style="font-size:10px;padding:3px 7px;background:#6366f1;color:white">🏆</a>
                     <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')"><button class="btn" style="font-size:10px;padding:3px 7px;color:var(--vermelho)">🗑</button></form>
@@ -348,7 +371,7 @@
       <div class="tab-content" id="tab-patrocinadores">
         <div class="card" style="margin-bottom:16px">
           <div class="card-titulo">🤝 Patrocinadores</div>
-          <p style="font-size:13px;color:var(--texto2);margin-bottom:12px">Logos de patrocinadores aparecem na página pública do evento com link para o site.</p>
+          <p style="font-size:13px;color:var(--texto2);margin-bottom:12px">Logos aparecem na página pública com link para o site. Se não houver patrocinadores, a seção não aparece.</p>
           <% if(patrocinadores.length===0){%><p style="color:var(--texto2);font-size:13px">Nenhum patrocinador adicionado.</p><%}%>
           <% patrocinadores.forEach(p => { %>
           <div class="patroc-card">
@@ -373,13 +396,87 @@
         </div>
       </div>
 
+      <!-- CUPONS -->
+      <div class="tab-content" id="tab-cupons">
+        <!-- Gerar para ligantes/diretivos -->
+        <div class="card" style="margin-bottom:16px;border:2px solid #d1fae5">
+          <div class="card-titulo">🎟️ Enviar Cupons de Isenção 100% para Ligantes / Diretivos</div>
+          <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Gera 1 cupom individual por pessoa (100% desconto) e envia via WhatsApp e/ou e-mail. Para <strong>ligantes</strong>: apenas os que estão em dia. Para <strong>diretivos</strong>: todos (não pagam mensalidade).</p>
+          <form action="/eventos/<%= evento.id %>/cupons/gerar-ligantes" method="POST">
+            <div class="grid-2" style="margin-bottom:12px">
+              <div class="campo"><label class="label">Prefixo do código (ex: LAURO)</label><input name="prefixo" class="input" value="LAURO" maxlength="8" style="text-transform:uppercase"></div>
+              <div class="campo"><label class="label">Enviar para</label>
+                <select name="destino" class="input">
+                  <option value="ligantes">Ligantes em dia</option>
+                  <option value="diretivos">Diretivos</option>
+                  <option value="todos">Todos (ligantes em dia + diretivos)</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:flex;gap:20px;margin-bottom:14px;flex-wrap:wrap">
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                <input type="checkbox" name="enviar_wpp" style="width:16px;height:16px;accent-color:#059669"> Enviar via WhatsApp
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer">
+                <input type="checkbox" name="enviar_email" style="width:16px;height:16px;accent-color:#059669"> Enviar por Email
+              </label>
+            </div>
+            <button type="submit" class="btn btn-primario" onclick="return confirm('Gerar e enviar cupons? Isso pode demorar alguns minutos.')">🚀 Gerar e Enviar Cupons</button>
+          </form>
+        </div>
+
+        <!-- Criar cupom manual -->
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-titulo">+ Criar Cupom Manual</div>
+          <form action="/eventos/<%= evento.id %>/cupons" method="POST">
+            <div class="grid-3">
+              <div class="campo"><label class="label">Código</label><input name="codigo" class="input" placeholder="EX: DESCONTO20" required style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+              <div class="campo"><label class="label">Tipo</label>
+                <select name="tipo" class="input">
+                  <option value="percentual">% Percentual</option>
+                  <option value="fixo">R$ Valor fixo</option>
+                </select>
+              </div>
+              <div class="campo"><label class="label">Valor (% ou R$)</label><input type="number" name="valor" class="input" value="100" min="1" max="100" step="0.01"></div>
+              <div class="campo"><label class="label">Usos máximos</label><input type="number" name="usos_max" class="input" value="1" min="1"></div>
+              <div class="campo" style="display:flex;align-items:flex-end"><button type="submit" class="btn btn-primario" style="width:100%">+ Criar Cupom</button></div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Lista de cupons -->
+        <div class="card">
+          <div class="card-titulo">🏷️ Cupons Criados (<%= cupons.length %>)</div>
+          <% if(cupons.length===0){%><p style="color:var(--texto2);font-size:13px">Nenhum cupom criado ainda.</p><%}%>
+          <% cupons.forEach(c => { %>
+          <div class="cupom-row-item">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <span class="cupom-codigo"><%= c.codigo %></span>
+              <div>
+                <div style="font-size:12px;font-weight:600;color:var(--texto1)">
+                  <%= c.tipo==='percentual' ? c.valor+'% desconto' : 'R$ '+Number(c.valor).toFixed(2)+' desconto' %>
+                </div>
+                <div style="font-size:11px;color:var(--texto2)">
+                  Usos: <%= c.usos_atual||0 %>/<%= c.usos_max %>
+                  <span style="margin-left:8px;background:<%= c.ativo?'#dcfce7':'#fee2e2' %>;color:<%= c.ativo?'#166534':'#991b1b' %>;padding:2px 6px;border-radius:4px;font-weight:700"><%= c.ativo?'ATIVO':'INATIVO' %></span>
+                </div>
+              </div>
+            </div>
+            <form method="POST" action="/eventos/<%= evento.id %>/cupons/<%= c.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir cupom?')">
+              <button type="submit" class="btn" style="font-size:11px;padding:3px 8px;color:var(--vermelho)">🗑</button>
+            </form>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+
       <!-- CERTIFICADOS -->
       <div class="tab-content" id="tab-certificados">
         <div class="card" style="margin-bottom:16px">
           <div class="card-titulo">🏆 Emitir Certificados</div>
           <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Emite certificados para todos os inscritos com check-in realizado.</p>
           <form method="POST" action="/eventos/<%= evento.id %>/certificados/emitir-todos" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-            <div class="campo"><label class="label">Carga Horária (h)</label><input type="number" name="carga_horaria" class="input" style="width:100px" value="4" min="1"></div>
+            <div class="campo"><label class="label">Carga Horária (h)</label><input type="number" name="carga_horaria" class="input" style="width:100px" value="<%= evento.carga_horaria||4 %>" min="1"></div>
             <div style="margin-top:18px"><button type="submit" class="btn btn-primario" onclick="return confirm('Emitir para todos com check-in?')">🏆 Emitir Todos</button></div>
           </form>
         </div>
@@ -390,7 +487,7 @@
             <tbody>
               <% certificados.forEach(cert => { %>
               <tr><td><%= cert.inscrito_nome %></td><td><%= new Date(cert.emitido_em).toLocaleDateString('pt-BR') %></td>
-              <td><a href="/eventos/certificados/<%= cert.id %>/download" target="_blank" class="btn" style="font-size:11px;padding:4px 8px;background:#6366f1;color:white">📥 Baixar</a></td></tr>
+              <td><a href="/eventos/<%= evento.id %>/inscricoes/<%= cert.inscricao_id %>/certificado" target="_blank" class="btn" style="font-size:11px;padding:4px 8px;background:#6366f1;color:white">🏆 Ver</a></td></tr>
               <% }) %>
             </tbody>
           </table>
@@ -402,13 +499,11 @@
         <form action="/eventos/<%= evento.id %>/avancado" method="POST">
           <div class="card" style="margin-bottom:16px">
             <div class="card-titulo">📧 E-mails Personalizados</div>
-            <div class="campo"><label class="label">Texto adicional — E-mail de inscrição realizada</label><textarea name="email_inscricao" class="input" rows="8" placeholder="Texto enviado após o participante se inscrever..."><%= evento.email_inscricao||'' %></textarea></div>
-            <div class="campo"><label class="label">Texto adicional — E-mail de confirmação</label><textarea name="email_confirmacao" class="input" rows="8" placeholder="Texto enviado após confirmação do pagamento..."><%= evento.email_confirmacao||'' %></textarea></div>
-            
+            <div class="campo"><label class="label">Texto do e-mail de confirmação de inscrição (enviado após pagamento confirmado)</label><textarea name="email_inscricao" class="input" rows="8" placeholder="Este texto será incluído no email de confirmação enviado ao participante após o pagamento..."><%= evento.email_inscricao||'' %></textarea></div>
           </div>
           <div class="card" style="margin-bottom:16px">
             <div class="card-titulo">📱 Grupo WhatsApp do Evento</div>
-            <div class="campo"><label class="label">Link do grupo WhatsApp</label><input name="wpp_grupo" class="input" value="<%= evento.wpp_grupo||'' %>" placeholder="https://chat.whatsapp.com/..."><span style="font-size:11px;color:var(--texto2)">Aparece na página pública e nos emails.</span></div>
+            <div class="campo"><label class="label">Link do grupo WhatsApp</label><input name="wpp_grupo" class="input" value="<%= evento.wpp_grupo||'' %>" placeholder="https://chat.whatsapp.com/..."><span style="font-size:11px;color:var(--texto2)">Aparece na página pública e no email de confirmação.</span></div>
           </div>
           <div class="card" style="margin-bottom:16px">
             <div class="card-titulo">⚙️ Configurações de Inscrição</div>
@@ -428,12 +523,17 @@
             </div>
           </div>
           <div class="card" style="margin-bottom:16px">
-            <div class="card-titulo">📜 Termos e Condições / LGPD</div>
-            <div class="campo"><label class="label">Texto dos Termos de Participação</label><textarea name="termos_texto" class="input" rows="10" placeholder="Termos e condições de participação..."><%= evento.termos_texto||'' %></textarea><span style="font-size:11px;color:var(--texto2)">Aparece na página pública para aceite obrigatório.</span></div>
+            <div class="card-titulo">📜 Termos e Condições de Participação</div>
+            <div class="campo"><label class="label">Texto dos Termos</label><textarea name="termos_texto" class="input" rows="8" placeholder="Termos e condições de participação..."><%= evento.termos_texto||'' %></textarea><span style="font-size:11px;color:var(--texto2)">Aparece na página pública para aceite obrigatório.</span></div>
+          </div>
+          <div class="card" style="margin-bottom:16px">
+            <div class="card-titulo">🔒 Política de Privacidade e LGPD</div>
+            <div class="campo"><label class="label">Texto da Política de Privacidade</label><textarea name="lgpd_texto" class="input" rows="10" placeholder="Informe como os dados dos participantes serão utilizados...&#10;&#10;Ex: Os dados coletados serão utilizados exclusivamente para fins de organização do evento e comunicação com os participantes..."><%= evento.lgpd_texto||'' %></textarea><span style="font-size:11px;color:var(--texto2)">Exibido quando o participante clicar em "Política de Privacidade e LGPD" na página de inscrição. Se vazio, é exibido um texto padrão.</span></div>
           </div>
           <button type="submit" class="btn btn-primario">💾 Salvar Configurações</button>
         </form>
       </div>
+
     </div>
   </main>
 </div>
@@ -476,17 +576,56 @@
   </div>
 </div>
 
+<!-- Modal Editar Inscrito -->
+<div class="modal-overlay" id="modal-editar-inscrito" style="display:none">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-titulo">✏️ Editar Inscrito</span><button class="icon-btn" onclick="fecharModal('modal-editar-inscrito')">✕</button></div>
+    <form id="form-editar-inscrito" action="" method="POST">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="campo"><label class="label">Nome *</label><input id="ei-nome" name="nome" class="input" required></div>
+        <div class="campo"><label class="label">Email *</label><input id="ei-email" name="email" class="input" type="email" required></div>
+        <div class="campo"><label class="label">WhatsApp</label><input id="ei-wpp" name="whatsapp" class="input"></div>
+        <div class="campo"><label class="label">CPF</label><input id="ei-cpf" name="cpf" class="input"></div>
+        <div class="campo"><label class="label">Instituição</label><input id="ei-inst" name="instituicao" class="input"></div>
+        <div class="campo"><label class="label">Status</label>
+          <select id="ei-status" name="status" class="input">
+            <option value="pendente">⏳ Pendente</option>
+            <option value="confirmado">✅ Confirmado</option>
+            <option value="cancelado">❌ Cancelado</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-editar-inscrito')">Cancelar</button><button type="submit" class="btn btn-primario">💾 Salvar</button></div>
+    </form>
+  </div>
+</div>
+
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <script src="/js/app.js"></script>
 <script>
 const quill = new Quill('#editor-desc', {theme:'snow',modules:{toolbar:[[{'header':[1,2,3,false]}],['bold','italic','underline'],[{'color':[]},{'background':[]}],[{'align':[]}],['link'],['clean']]}});
 
-function showTab(id) {
+function showTab(id, btn) {
   document.querySelectorAll('.tab-content').forEach(s=>s.classList.remove('ativo'));
   document.querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('ativo'));
   document.getElementById('tab-'+id).classList.add('ativo');
-  event.target.classList.add('ativo');
+  if(btn) btn.classList.add('ativo');
+  // Verificar URL para tab inicial
+  const url = new URL(window.location);
+  url.searchParams.set('tab', id);
+  history.replaceState(null, '', url);
 }
+
+// Restaurar tab da URL
+window.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get('tab');
+  if (tab) {
+    const btn = document.querySelector(`.tab-btn[onclick*="'${tab}'"]`);
+    if (btn) showTab(tab, btn);
+  }
+});
+
 function buscarInscrito(q) {
   document.querySelectorAll('.inscrito-row').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(q.toLowerCase())?'':'none';});
 }
@@ -498,6 +637,16 @@ function editarLote(id,nome,preco,vagas,inicio,fim) {
   document.getElementById('el-fim').value=fim;
   document.getElementById('form-editar-lote').action='/eventos/'+<%= evento.id %>+'/lotes/'+id+'/editar';
   abrirModal('modal-editar-lote');
+}
+function editarInscrito(id, nome, email, wpp, cpf, inst, status) {
+  document.getElementById('ei-nome').value = nome;
+  document.getElementById('ei-email').value = email;
+  document.getElementById('ei-wpp').value = wpp;
+  document.getElementById('ei-cpf').value = cpf;
+  document.getElementById('ei-inst').value = inst;
+  document.getElementById('ei-status').value = status;
+  document.getElementById('form-editar-inscrito').action = '/eventos/<%= evento.id %>/inscricoes/' + id + '/editar';
+  abrirModal('modal-editar-inscrito');
 }
 function mostrarOpcoes(tipo) {
   document.getElementById('div-opcoes').style.display=['select','radio','checkbox'].includes(tipo)?'block':'none';
