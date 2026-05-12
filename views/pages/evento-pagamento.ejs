@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pagamento — <%= evento.nome %></title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cor: <%= evento.cor_tema || '#1a3d2b' %>;
+      --cor2: <%= evento.cor_tema ? evento.cor_tema + 'dd' : '#1a3d2b' %>;
+      --bg: #f7f8f5;
+      --card: #ffffff;
+      --border: #e4e8e1;
+      --text: #1a1f18;
+      --muted: #6b7566;
+      --pix: #32bcad;
+      --card-pay: #5a67d8;
+      --success: #22c55e;
+      --radius: 16px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Sora', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: var(--cor);
+      padding: 18px 24px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .header-logo {
+      width: 38px; height: 38px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .header-info h1 { color: #fff; font-size: 15px; font-weight: 600; }
+    .header-info p  { color: rgba(255,255,255,0.65); font-size: 12px; }
+
+    /* ── LAYOUT ── */
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 32px 20px 60px;
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 24px;
+    }
+    @media (max-width: 720px) {
+      .container { grid-template-columns: 1fr; }
+      .sidebar { order: -1; }
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 18px 22px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .card-header h2 { font-size: 15px; font-weight: 600; }
+    .card-body { padding: 22px; }
+
+    /* ── STEPS ── */
+    .steps {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-bottom: 28px;
+    }
+    .step {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 13px; color: var(--muted);
+    }
+    .step.active { color: var(--cor); font-weight: 600; }
+    .step.done { color: var(--success); }
+    .step-num {
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700;
+    }
+    .step.active .step-num { background: var(--cor); color: #fff; }
+    .step.done .step-num { background: var(--success); color: #fff; }
+    .step-line { flex: 1; height: 2px; background: var(--border); margin: 0 8px; min-width: 20px; }
+    .step-line.done { background: var(--success); }
+
+    /* ── MÉTODO TABS ── */
+    .method-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .method-tab {
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all .2s;
+      text-align: center;
+      background: var(--card);
+    }
+    .method-tab:hover { border-color: var(--cor); }
+    .method-tab.active-pix { border-color: var(--pix); background: #f0fdfb; }
+    .method-tab.active-card { border-color: var(--card-pay); background: #f0f1ff; }
+    .method-tab .icon { font-size: 28px; margin-bottom: 6px; }
+    .method-tab .label { font-size: 13px; font-weight: 600; color: var(--text); }
+    .method-tab .sublabel { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ── PIX BLOCK ── */
+    #pix-block { display: none; }
+    #pix-block.show { display: block; }
+
+    .pix-timer {
+      display: flex; align-items: center; justify-content: space-between;
+      background: #f0fdfb;
+      border: 1px solid #a7f3d0;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 20px;
+    }
+    .pix-timer-left { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #065f46; }
+    .pix-timer-count { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; color: var(--pix); }
+
+    .pix-qr-wrap {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 16px; margin-bottom: 20px;
+    }
+    .pix-qr-img {
+      width: 200px; height: 200px;
+      border: 3px solid var(--pix);
+      border-radius: 12px;
+      object-fit: contain;
+      background: #fff;
+    }
+    .pix-qr-placeholder {
+      width: 200px; height: 200px;
+      border: 3px dashed var(--border);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 8px;
+      color: var(--muted); font-size: 13px;
+    }
+
+    .pix-copy-label { font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+    .pix-copy-wrap {
+      display: flex; gap: 8px;
+    }
+    .pix-copy-input {
+      flex: 1;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #f9faf7;
+      color: var(--text);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+    .btn-copy {
+      padding: 10px 16px;
+      background: var(--pix);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity .2s;
+      white-space: nowrap;
+    }
+    .btn-copy:hover { opacity: .85; }
+    .btn-copy.copied { background: var(--success); }
+
+    .pix-status {
+      margin-top: 20px;
+      padding: 14px 16px;
+      border-radius: 10px;
+      background: #fefce8;
+      border: 1px solid #fde68a;
+      display: flex; align-items: center; gap: 10px;
+      font-size: 13px; color: #78350f;
+    }
+    .pix-status .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: #fbbf24;
+      animation: pulse 1.2s infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50% { opacity:.5; transform:scale(1.3); }
+    }
+
+    /* ── CARTÃO BLOCK ── */
+    #card-block { display: none; }
+    #card-block.show { display: block; }
+
+    .card-form-grid {
+      display: grid; gap: 14px;
+    }
+    .field-group { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .5px; }
+    .field input, .field select {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: 'Sora', sans-serif;
+      font-size: 14px;
+      color: var(--text);
+      background: #fff;
+      transition: border-color .2s;
+      outline: none;
+    }
+    .field input:focus, .field select:focus { border-color: var(--card-pay); }
+    .field input.mono { font-family: 'JetBrains Mono', monospace; letter-spacing: 2px; }
+
+    .card-preview {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      border-radius: 14px;
+      padding: 22px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+      min-height: 130px;
+    }
+    .card-preview::before {
+      content: '';
+      position: absolute; top: -30px; right: -30px;
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+    }
+    .card-preview-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px; color: #fff;
+      letter-spacing: 4px;
+      margin-bottom: 16px;
+    }
+    .card-preview-row { display: flex; justify-content: space-between; align-items: flex-end; }
+    .card-preview-label { font-size: 9px; color: rgba(255,255,255,.5); text-transform: uppercase; margin-bottom: 2px; }
+    .card-preview-val { font-size: 13px; color: #fff; font-weight: 500; }
+
+    .btn-pagar {
+      width: 100%;
+      padding: 14px;
+      background: var(--card-pay);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-family: 'Sora', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity .2s, transform .1s;
+      margin-top: 8px;
+    }
+    .btn-pagar:hover { opacity: .9; }
+    .btn-pagar:active { transform: scale(.98); }
+    .btn-pagar:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── SUCESSO ── */
+    #sucesso-block { display: none; }
+    #sucesso-block.show { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 32px 22px; }
+    .sucesso-icon {
+      width: 80px; height: 80px;
+      background: #dcfce7;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+      margin-bottom: 20px;
+      animation: popIn .5s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    #sucesso-block h2 { font-size: 20px; font-weight: 700; color: var(--success); margin-bottom: 8px; }
+    #sucesso-block p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+    .sucesso-codigo {
+      margin: 16px 0;
+      padding: 10px 20px;
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: #166534;
+      font-weight: 600;
+    }
+
+    /* ── SIDEBAR ── */
+    .sidebar {}
+    .resumo-evento { padding: 0; }
+    .resumo-banner {
+      width: 100%; height: 140px;
+      object-fit: cover;
+      background: var(--cor);
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,.4); font-size: 32px;
+    }
+    .resumo-banner img { width: 100%; height: 140px; object-fit: cover; }
+    .resumo-info { padding: 18px 20px; }
+    .resumo-nome { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+    .resumo-sub { font-size: 12px; color: var(--muted); margin-bottom: 16px; }
+    .resumo-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .resumo-row:last-child { border-bottom: none; }
+    .resumo-row .key { color: var(--muted); }
+    .resumo-row .val { font-weight: 600; }
+    .resumo-total { font-size: 16px !important; }
+    .resumo-total .val { color: var(--cor); font-size: 20px; }
+
+    .seguro-badge {
+      margin-top: 16px;
+      padding: 10px 14px;
+      background: #f0fdf4;
+      border: 1px solid #bbf7d0;
+      border-radius: 8px;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; color: #166534;
+    }
+
+    /* ── ERRO ── */
+    .erro-msg {
+      display: none;
+      background: #fef2f2; border: 1px solid #fecaca;
+      border-radius: 8px; padding: 12px 16px;
+      font-size: 13px; color: #dc2626;
+      margin-top: 12px;
+    }
+    .erro-msg.show { display: block; }
+
+    /* ── LOADING ── */
+    .loading-overlay {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.4);
+      z-index: 999;
+      align-items: center; justify-content: center;
+      flex-direction: column; gap: 16px;
+    }
+    .loading-overlay.show { display: flex; }
+    .spinner {
+      width: 48px; height: 48px;
+      border: 4px solid rgba(255,255,255,.2);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-overlay p { color: #fff; font-size: 14px; font-weight: 500; }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-logo">🏥</div>
+  <div class="header-info">
+    <h1><%= config.org_nome || 'Liga Acadêmica de Urologia' %></h1>
+    <p>Pagamento seguro</p>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <p id="loading-txt">Processando pagamento…</p>
+</div>
+
+<div class="container">
+  <!-- COLUNA PRINCIPAL -->
+  <div>
+    <!-- STEPS -->
+    <div class="steps" style="margin-bottom:24px">
+      <div class="step done">
+        <div class="step-num">✓</div>
+        <span>Dados</span>
+      </div>
+      <div class="step-line done"></div>
+      <div class="step active" id="step2">
+        <div class="step-num">2</div>
+        <span>Pagamento</span>
+      </div>
+      <div class="step-line" id="line3"></div>
+      <div class="step" id="step3">
+        <div class="step-num">3</div>
+        <span>Confirmação</span>
+      </div>
+    </div>
+
+    <!-- CARD PAGAMENTO -->
+    <div class="card" id="payment-card">
+      <div class="card-header">
+        <span style="font-size:18px">💳</span>
+        <h2>Escolha a forma de pagamento</h2>
+      </div>
+      <div class="card-body">
+
+        <!-- MÉTODO TABS -->
+        <div class="method-tabs">
+          <div class="method-tab" id="tab-pix" onclick="selectMethod('pix')">
+            <div class="icon">⚡</div>
+            <div class="label">PIX</div>
+            <div class="sublabel">Aprovação imediata</div>
+          </div>
+          <div class="method-tab" id="tab-card" onclick="selectMethod('card')">
+            <div class="icon">💳</div>
+            <div class="label">Cartão de Crédito</div>
+            <div class="sublabel">Até 12x</div>
+          </div>
+        </div>
+
+        <!-- PIX BLOCK -->
+        <div id="pix-block">
+          <% if (pixData && pixData.pix_copia_cola) { %>
+            <!-- Timer -->
+            <div class="pix-timer">
+              <div class="pix-timer-left">⏱ Expira em</div>
+              <div class="pix-timer-count" id="timer">15:00</div>
+            </div>
+
+            <!-- QR Code -->
+            <div class="pix-qr-wrap">
+              <% if (pixData.pix_qr_image) { %>
+                <img class="pix-qr-img" src="<%= pixData.pix_qr_image %>" alt="QR Code PIX" id="qr-img">
+              <% } else { %>
+                <div class="pix-qr-placeholder">
+                  <span style="font-size:40px">📱</span>
+                  <span>QR Code PIX</span>
+                  <span style="font-size:11px">Use o código abaixo</span>
+                </div>
+              <% } %>
+            </div>
+
+            <!-- Copia e cola -->
+            <div class="pix-copy-label">Código PIX copia e cola</div>
+            <div class="pix-copy-wrap">
+              <input class="pix-copy-input" id="pix-code" value="<%= pixData.pix_copia_cola %>" readonly onclick="this.select()">
+              <button class="btn-copy" id="btn-copy" onclick="copiarPix()">Copiar</button>
+            </div>
+
+            <!-- Status aguardando -->
+            <div class="pix-status" id="pix-status-box">
+              <div class="dot"></div>
+              <span>Aguardando pagamento… verificando automaticamente</span>
+            </div>
+
+          <% } else { %>
+            <div style="text-align:center;padding:32px;color:var(--muted)">
+              <div style="font-size:40px;margin-bottom:12px">⚠️</div>
+              <p style="font-size:14px">Não foi possível gerar o PIX.<br>Tente o cartão de crédito ou entre em contato.</p>
+            </div>
+          <% } %>
+        </div>
+
+        <!-- CARTÃO BLOCK -->
+        <div id="card-block">
+          <!-- Preview do cartão -->
+          <div class="card-preview">
+            <div class="card-preview-num" id="prev-num">•••• •••• •••• ••••</div>
+            <div class="card-preview-row">
+              <div>
+                <div class="card-preview-label">Titular</div>
+                <div class="card-preview-val" id="prev-nome">SEU NOME</div>
+              </div>
+              <div>
+                <div class="card-preview-label">Validade</div>
+                <div class="card-preview-val" id="prev-exp">MM/AA</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card-form-grid">
+            <div class="field">
+              <label>Número do Cartão</label>
+              <input type="text" id="cc-num" class="mono" maxlength="19" placeholder="0000 0000 0000 0000" oninput="fmtCartao(this)" autocomplete="cc-number">
+            </div>
+            <div class="field">
+              <label>Titular do Cartão</label>
+              <input type="text" id="cc-nome" placeholder="NOME COMO NO CARTÃO" oninput="fmtNome(this)" autocomplete="cc-name" style="text-transform:uppercase">
+            </div>
+            <div class="field-group">
+              <div class="field">
+                <label>Validade</label>
+                <input type="text" id="cc-exp" class="mono" maxlength="5" placeholder="MM/AA" oninput="fmtExp(this)" autocomplete="cc-exp">
+              </div>
+              <div class="field">
+                <label>CVV</label>
+                <input type="text" id="cc-cvv" class="mono" maxlength="4" placeholder="•••" autocomplete="cc-csc">
+              </div>
+            </div>
+            <div class="field">
+              <label>CPF do Titular</label>
+              <input type="text" id="cc-cpf" class="mono" maxlength="14" placeholder="000.000.000-00" oninput="fmtCpf(this)">
+            </div>
+            <div class="field">
+              <label>Parcelas</label>
+              <select id="cc-parcelas">
+                <option value="1">1x de R$ <%= parseFloat(lote.preco).toFixed(2).replace('.',',') %> (sem juros)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="erro-msg" id="card-erro"></div>
+
+          <button class="btn-pagar" onclick="pagarCartao()" id="btn-pagar">
+            🔒 Pagar R$ <%= parseFloat(lote.preco).toFixed(2).replace('.',',') %>
+          </button>
+        </div>
+
+      </div><!-- card-body -->
+    </div><!-- card -->
+
+    <!-- SUCESSO -->
+    <div class="card" id="sucesso-card" style="display:none">
+      <div id="sucesso-block" class="show">
+        <div class="sucesso-icon">✅</div>
+        <h2>Pagamento confirmado!</h2>
+        <p>Sua inscrição em <strong><%= evento.nome %></strong> está confirmada.<br>Enviamos o e-mail de confirmação para você.</p>
+        <div class="sucesso-codigo" id="sucesso-codigo"><%= qrcode %></div>
+        <p style="font-size:12px;color:var(--muted)">Guarde seu código de inscrição para o check-in no evento.</p>
+      </div>
+    </div>
+
+  </div><!-- col principal -->
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="card resumo-evento">
+      <% if (evento.banner_chave) { %>
+        <img src="/eventos/<%= evento.id %>/banner" alt="Banner" style="width:100%;height:140px;object-fit:cover">
+      <% } else { %>
+        <div class="resumo-banner" style="background:var(--cor);display:flex;align-items:center;justify-content:center;font-size:40px">🏥</div>
+      <% } %>
+      <div class="resumo-info">
+        <div class="resumo-nome"><%= evento.nome %></div>
+        <div class="resumo-sub">
+          <% if (evento.data_inicio) { %>
+            📅 <%= new Date(evento.data_inicio).toLocaleDateString('pt-BR', {day:'2-digit',month:'long',year:'numeric',timeZone:'UTC'}) %>
+          <% } %>
+          <% if (evento.local) { %> &nbsp;·&nbsp; 📍 <%= evento.local %><% } %>
+        </div>
+
+        <div class="resumo-row">
+          <span class="key">Inscrito</span>
+          <span class="val"><%= inscricao.nome %></span>
+        </div>
+        <div class="resumo-row">
+          <span class="key">Lote</span>
+          <span class="val"><%= lote.nome %></span>
+        </div>
+        <div class="resumo-row resumo-total">
+          <span class="key">Total</span>
+          <span class="val">R$ <%= parseFloat(lote.preco).toFixed(2).replace('.',',') %></span>
+        </div>
+
+        <div class="seguro-badge">
+          🔒 Pagamento seguro via PagBank
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- container -->
+
+<script>
+  const INSCRICAO_ID = '<%= inscricao.id %>';
+  const TEM_PIX = <%= pixData && pixData.pix_copia_cola ? 'true' : 'false' %>;
+  let pollingInterval = null;
+  let timerInterval = null;
+  let segundos = 15 * 60; // 15 minutos
+
+  // ── MÉTODO
+  function selectMethod(m) {
+    document.getElementById('tab-pix').className = 'method-tab' + (m==='pix' ? ' active-pix' : '');
+    document.getElementById('tab-card').className = 'method-tab' + (m==='card' ? ' active-card' : '');
+    document.getElementById('pix-block').className = 'show' === 'show' && m==='pix' ? 'show' : '';
+    document.getElementById('card-block').className = m==='card' ? 'show' : '';
+
+    if (m === 'pix') {
+      document.getElementById('pix-block').classList.add('show');
+      document.getElementById('card-block').classList.remove('show');
+      if (TEM_PIX) iniciarPolling();
+    } else {
+      document.getElementById('card-block').classList.add('show');
+      document.getElementById('pix-block').classList.remove('show');
+      pararPolling();
+    }
+  }
+
+  // Iniciar com PIX se disponível
+  window.onload = function() {
+    if (TEM_PIX) {
+      selectMethod('pix');
+      iniciarTimer();
+    } else {
+      selectMethod('card');
+    }
+  };
+
+  // ── TIMER
+  function iniciarTimer() {
+    timerInterval = setInterval(function() {
+      segundos--;
+      if (segundos <= 0) { clearInterval(timerInterval); document.getElementById('timer').textContent = '00:00'; return; }
+      const m = Math.floor(segundos / 60);
+      const s = segundos % 60;
+      document.getElementById('timer').textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    }, 1000);
+  }
+
+  // ── COPIAR PIX
+  function copiarPix() {
+    const input = document.getElementById('pix-code');
+    navigator.clipboard.writeText(input.value).then(function() {
+      const btn = document.getElementById('btn-copy');
+      btn.textContent = '✓ Copiado!';
+      btn.classList.add('copied');
+      setTimeout(function() { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
+    }).catch(function() {
+      input.select(); document.execCommand('copy');
+    });
+  }
+
+  // ── POLLING STATUS PIX
+  function iniciarPolling() {
+    if (pollingInterval) return;
+    pollingInterval = setInterval(verificarPagamento, 4000);
+  }
+  function pararPolling() {
+    if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
+  }
+
+  async function verificarPagamento() {
+    try {
+      const r = await fetch('/pagamento/' + INSCRICAO_ID + '/status');
+      const data = await r.json();
+      if (data.pago) {
+        pararPolling();
+        clearInterval(timerInterval);
+        mostrarSucesso();
+      }
+    } catch(e) { /* silencioso */ }
+  }
+
+  // ── SUCESSO
+  function mostrarSucesso() {
+    document.getElementById('payment-card').style.display = 'none';
+    document.getElementById('sucesso-card').style.display = 'block';
+    // Atualizar steps
+    document.getElementById('step2').className = 'step done';
+    document.getElementById('step2').querySelector('.step-num').textContent = '✓';
+    document.getElementById('line3').className = 'step-line done';
+    document.getElementById('step3').className = 'step active';
+  }
+
+  // ── FORMATOS CARTÃO
+  function fmtCartao(el) {
+    let v = el.value.replace(/\D/g,'').substring(0,16);
+    el.value = v.replace(/(\d{4})(?=\d)/g,'$1 ');
+    document.getElementById('prev-num').textContent = (v + '................').substring(0,16).replace(/(\d{4})(?=\d)/g,'$1 ') || '•••• •••• •••• ••••';
+  }
+  function fmtNome(el) {
+    el.value = el.value.toUpperCase();
+    document.getElementById('prev-nome').textContent = el.value || 'SEU NOME';
+  }
+  function fmtExp(el) {
+    let v = el.value.replace(/\D/g,'');
+    if (v.length >= 2) v = v.substring(0,2) + '/' + v.substring(2,4);
+    el.value = v;
+    document.getElementById('prev-exp').textContent = el.value || 'MM/AA';
+  }
+  function fmtCpf(el) {
+    let v = el.value.replace(/\D/g,'').substring(0,11);
+    v = v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2');
+    el.value = v;
+  }
+
+  // ── PAGAR CARTÃO
+  async function pagarCartao() {
+    const num = document.getElementById('cc-num').value.replace(/\D/g,'');
+    const nome = document.getElementById('cc-nome').value.trim();
+    const exp = document.getElementById('cc-exp').value;
+    const cvv = document.getElementById('cc-cvv').value.replace(/\D/g,'');
+    const cpf = document.getElementById('cc-cpf').value.replace(/\D/g,'');
+    const parcelas = document.getElementById('cc-parcelas').value;
+
+    const erro = document.getElementById('card-erro');
+    erro.className = 'erro-msg';
+
+    if (num.length < 13) return mostrarErro('Número do cartão inválido.');
+    if (nome.length < 3) return mostrarErro('Digite o nome como está no cartão.');
+    if (exp.length < 5) return mostrarErro('Validade inválida.');
+    if (cvv.length < 3) return mostrarErro('CVV inválido.');
+    if (cpf.length < 11) return mostrarErro('CPF do titular inválido.');
+
+    const [mesStr, anoStr] = exp.split('/');
+    const mes = parseInt(mesStr);
+    const ano = 2000 + parseInt(anoStr);
+
+    document.getElementById('loading').classList.add('show');
+    document.getElementById('loading-txt').textContent = 'Processando cartão…';
+    document.getElementById('btn-pagar').disabled = true;
+
+    try {
+      const r = await fetch('/pagamento/' + INSCRICAO_ID + '/cartao', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ num, nome, mes, ano, cvv, cpf, parcelas })
+      });
+      const data = await r.json();
+      document.getElementById('loading').classList.remove('show');
+
+      if (data.ok) {
+        mostrarSucesso();
+      } else {
+        document.getElementById('btn-pagar').disabled = false;
+        mostrarErro(data.erro || 'Pagamento recusado. Verifique os dados e tente novamente.');
+      }
+    } catch(e) {
+      document.getElementById('loading').classList.remove('show');
+      document.getElementById('btn-pagar').disabled = false;
+      mostrarErro('Erro de conexão. Tente novamente.');
+    }
+  }
+
+  function mostrarErro(msg) {
+    const el = document.getElementById('card-erro');
+    el.textContent = '⚠️ ' + msg;
+    el.className = 'erro-msg show';
+  }
+</script>
+</body>
+</html>
