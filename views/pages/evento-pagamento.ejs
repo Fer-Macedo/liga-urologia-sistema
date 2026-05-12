@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pagamento — <%= evento.nome %></title>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     :root {
       --cor: <%= evento.cor_tema || '#1a3d2b' %>;
@@ -438,17 +439,16 @@
               <div class="pix-timer-count" id="timer">15:00</div>
             </div>
 
-            <!-- QR Code -->
+            <!-- QR Code gerado no navegador -->
             <div class="pix-qr-wrap">
-              <% if (pixData.pix_qr_image) { %>
-                <img class="pix-qr-img" src="<%= pixData.pix_qr_image %>" alt="QR Code PIX" id="qr-img">
-              <% } else { %>
-                <div class="pix-qr-placeholder">
-                  <span style="font-size:40px">📱</span>
-                  <span>QR Code PIX</span>
-                  <span style="font-size:11px">Use o código abaixo</span>
-                </div>
-              <% } %>
+              <div id="qr-canvas" style="
+                width:200px;height:200px;
+                border:3px solid var(--pix);
+                border-radius:12px;
+                background:#fff;
+                display:flex;align-items:center;justify-content:center;
+                overflow:hidden;
+              "></div>
             </div>
 
             <!-- Copia e cola -->
@@ -583,11 +583,12 @@
 </div><!-- container -->
 
 <script>
+  const PIX_TEXTO = '<%= pixData && pixData.pix_copia_cola ? pixData.pix_copia_cola.replace(/'/g, "\\'") : "" %>';
   const INSCRICAO_ID = '<%= inscricao.id %>';
   const TEM_PIX = <%= pixData && pixData.pix_copia_cola ? 'true' : 'false' %>;
   let pollingInterval = null;
   let timerInterval = null;
-  let segundos = 15 * 60; // 15 minutos
+  let segundos = 15 * 60;
 
   // ── MÉTODO
   function selectMethod(m) {
@@ -607,8 +608,21 @@
     }
   }
 
-  // Iniciar com PIX se disponível
   window.onload = function() {
+    // Gerar QR Code PIX no navegador
+    if (TEM_PIX && PIX_TEXTO && document.getElementById('qr-canvas')) {
+      try {
+        new QRCode(document.getElementById('qr-canvas'), {
+          text: PIX_TEXTO,
+          width: 194,
+          height: 194,
+          colorDark: '#1a3d2b',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } catch(e) { console.warn('QRCode erro:', e); }
+    }
+
     if (TEM_PIX) {
       selectMethod('pix');
       iniciarTimer();
