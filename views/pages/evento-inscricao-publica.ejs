@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= evento.nome %> — LAURO</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
       --p: <%= evento.cor_tema||'#1d4ed8' %>;
@@ -29,7 +29,7 @@
     .nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
     .nav-logo-mark{width:34px;height:34px;border-radius:9px;background:var(--p);display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .nav-logo-mark svg{width:18px;height:18px;fill:white}
-    .nav-logo-txt{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:22px;color:var(--p);letter-spacing:.5px;font-style:italic}
+    .nav-logo-txt{font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:26px;color:var(--p);letter-spacing:2px;font-style:normal}
     .nav-links{display:flex;gap:6px;align-items:center}
     .nav-a{font-size:13px;font-weight:500;color:var(--ink2);text-decoration:none;padding:6px 12px;border-radius:7px;transition:background .18s,color .18s}
     .nav-a:hover{background:var(--sur3);color:var(--ink)}
@@ -50,7 +50,7 @@
     .title-in{max-width:1160px;margin:0 auto;padding:0 28px}
     .event-tag{display:inline-flex;align-items:center;gap:6px;background:var(--p-light);color:var(--p);border:1px solid color-mix(in srgb,var(--p) 20%,transparent);border-radius:20px;padding:4px 12px;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:12px}
     .event-tag svg{width:12px;height:12px;fill:currentColor}
-    .title-in h1{font-family:'Cormorant Garamond',serif;font-size:clamp(22px,4vw,38px);font-weight:700;color:var(--ink);line-height:1.2;letter-spacing:-.5px;margin-bottom:14px}
+    .title-in h1{font-family:'Plus Jakarta Sans',sans-serif;font-size:clamp(20px,3.5vw,34px);font-weight:800;color:var(--ink);line-height:1.2;letter-spacing:-.5px;margin-bottom:14px}
     .title-meta{display:flex;flex-wrap:wrap;gap:20px}
     .t-chip{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink2);font-weight:500}
     .t-chip-icon{width:28px;height:28px;border-radius:7px;background:var(--sur3);display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -209,7 +209,7 @@
     .resumo-card::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.07)}
     .resumo-eyebrow{font-size:10px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px}
     .resumo-nome{font-weight:700;font-size:17px;position:relative;z-index:1;line-height:1.3}
-    .resumo-preco{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:700;margin-top:8px;position:relative;z-index:1;letter-spacing:-.5px}
+    .resumo-preco{font-family:'Inter',sans-serif;font-size:36px;font-weight:900;margin-top:8px;position:relative;z-index:1;letter-spacing:-1px;line-height:1}
     .resumo-divider{height:1px;background:rgba(255,255,255,.18);margin:14px 0;position:relative;z-index:1}
     .resumo-btn{display:flex;align-items:center;justify-content:center;gap:8px;padding:13px;background:white;color:var(--p);border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;transition:all .2s;cursor:pointer;border:none;width:100%;font-family:'Inter',sans-serif;position:relative;z-index:1}
     .resumo-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.2)}
@@ -272,7 +272,7 @@
     .suc-icon{width:76px;height:76px;background:var(--p);border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 22px;animation:popIn .5s cubic-bezier(.34,1.56,.64,1)}
     .suc-icon svg{width:38px;height:38px;fill:white}
     @keyframes popIn{0%{transform:scale(0);opacity:0}100%{transform:scale(1);opacity:1}}
-    .suc-title{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:700;color:var(--ink);margin-bottom:10px}
+    .suc-title{font-family:'Plus Jakarta Sans',sans-serif;font-size:26px;font-weight:700;color:var(--ink);margin-bottom:10px}
     .suc-sub{font-size:14px;color:var(--ink2);line-height:1.6;margin-bottom:22px}
     .suc-cod{background:var(--sur3);border:1px solid var(--bdr);border-radius:10px;padding:14px 20px;font-family:'DM Mono',monospace;font-size:15px;font-weight:600;color:var(--p);margin-bottom:8px;letter-spacing:2px}
     .suc-cod-lbl{font-size:11px;color:var(--ink4);margin-bottom:24px}
@@ -291,7 +291,7 @@
     .alerta-dup{max-width:640px;margin:32px auto;background:#fff;border:2px solid #fca5a5;border-radius:16px;padding:28px 32px;text-align:center;box-shadow:var(--sh-lg)}
     .alerta-dup-icon{width:64px;height:64px;background:#fee2e2;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
     .alerta-dup-icon svg{width:32px;height:32px;fill:#dc2626}
-    .alerta-dup h2{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:#111827;margin-bottom:10px}
+    .alerta-dup h2{font-family:'Plus Jakarta Sans',sans-serif;font-size:22px;font-weight:700;color:#111827;margin-bottom:10px}
     .alerta-dup p{font-size:13px;color:#6b7280;line-height:1.7;margin-bottom:22px}
     .alerta-dup-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
     .alerta-btn-p{background:var(--p);color:white;padding:11px 24px;border-radius:9px;text-decoration:none;font-weight:700;font-size:13px;transition:opacity .15s}
@@ -323,7 +323,7 @@
           </svg>
         <% } %>
       </div>
-      <span class="nav-logo-txt" style="font-family:'Cormorant Garamond',serif;font-weight:700;font-size:22px;color:var(--p);letter-spacing:.5px;font-style:italic">LAURO</span>
+      <span class="nav-logo-txt" style="font-family:'Bebas Neue',sans-serif;font-weight:400;font-size:26px;color:var(--p);letter-spacing:2px">LAURO</span>
     </a>
     <div class="nav-links">
       <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" class="nav-a">Instagram</a>
