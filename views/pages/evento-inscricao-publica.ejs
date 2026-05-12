@@ -17,8 +17,7 @@
     }
     body{font-family:'Inter',sans-serif;background:var(--g50);color:var(--g900);line-height:1.6}
 
-    /* NAV */
-    nav{background:var(--w);border-bottom:1px solid var(--g200);position:sticky;top:0;z-index:100;backdrop-filter:blur(10px)}
+    nav{background:var(--w);border-bottom:1px solid var(--g200);position:sticky;top:0;z-index:100}
     .nav-in{max-width:1200px;margin:0 auto;padding:0 24px;height:58px;display:flex;align-items:center;justify-content:space-between}
     .nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none}
     .nav-logo img{height:32px;object-fit:contain}
@@ -29,31 +28,25 @@
     .nav-cta{background:var(--p);color:white;padding:8px 20px;border-radius:8px;font-size:13px;font-weight:700;text-decoration:none;transition:.2s}
     .nav-cta:hover{opacity:.88;transform:translateY(-1px)}
 
-    /* BANNER */
     .banner-wrap{width:100%;overflow:hidden;background:var(--g900);max-height:440px}
     .banner-img{width:100%;max-height:440px;object-fit:cover;display:block}
     .banner-ph{height:280px;background:linear-gradient(135deg,var(--p),#000);display:flex;align-items:center;justify-content:center;color:white;font-size:56px}
 
-    /* TITULO */
     .title-wrap{background:var(--w);border-bottom:1px solid var(--g200);padding:24px 0 20px}
     .title-in{max-width:1200px;margin:0 auto;padding:0 24px}
     .tipo-chip{display:inline-flex;align-items:center;gap:6px;background:var(--g100);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;color:var(--g600);margin-bottom:10px}
-    .title-in h1{font-size:clamp(20px,3.5vw,34px);font-weight:900;color:var(--g900);line-height:1.2;text-align:left}
+    .title-in h1{font-size:clamp(20px,3.5vw,34px);font-weight:900;color:var(--g900);line-height:1.2}
     .title-meta{display:flex;flex-wrap:wrap;gap:14px;margin-top:12px}
     .t-chip{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--g600);font-weight:500}
 
-    /* WPP BANNER */
     .wpp-banner{background:linear-gradient(90deg,#128c7e,#25d366);padding:12px 0}
     .wpp-in{max-width:1200px;margin:0 auto;padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
-    .wpp-btn{background:white;color:#128c7e;padding:8px 20px;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:.2s}
-    .wpp-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+    .wpp-btn{background:white;color:#128c7e;padding:8px 20px;border-radius:8px;font-weight:700;font-size:13px;text-decoration:none;display:flex;align-items:center;gap:6px;white-space:nowrap}
 
-    /* LAYOUT */
     .wrap{max-width:1200px;margin:0 auto;padding:28px 24px 80px}
-    .grid{display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start}
+    .grid{display:grid;grid-template-columns:1fr 380px;gap:24px;align-items:start}
     @media(max-width:900px){.grid{grid-template-columns:1fr}.sidebar{order:-1}}
 
-    /* CARD */
     .card{background:var(--w);border-radius:16px;box-shadow:var(--sh);overflow:hidden;margin-bottom:18px}
     .card-hd{padding:18px 22px;border-bottom:1px solid var(--g100);display:flex;align-items:center;justify-content:space-between}
     .card-hd h2{font-size:15px;font-weight:700;color:var(--g900)}
@@ -68,22 +61,19 @@
     .lote-info{font-size:12px;color:var(--g400);margin-top:3px}
     .lote-preco{font-size:22px;font-weight:900;color:var(--p);white-space:nowrap}
     .badge-free{background:#dcfce7;color:#166534;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
-    .lote-radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--g300);flex-shrink:0;transition:.2s;display:flex;align-items:center;justify-content:center}
+    .lote-radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--g200);flex-shrink:0;transition:.2s;display:flex;align-items:center;justify-content:center}
     .lote.sel .lote-radio{border-color:var(--p);background:var(--p)}
     .lote.sel .lote-radio::after{content:'';width:8px;height:8px;border-radius:50%;background:white}
 
-    /* QTY */
     .qty-row{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--g100)}
     .qty-btn{width:34px;height:34px;border-radius:9px;border:1.5px solid var(--g200);background:var(--w);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--g700);transition:.2s;line-height:1}
     .qty-btn:hover{border-color:var(--p);color:var(--p)}
     .qty-n{font-size:18px;font-weight:800;min-width:28px;text-align:center}
     .qty-lbl{font-size:12px;color:var(--g400)}
 
-    /* BTN PROSSEGUIR */
     .btn-prox{width:100%;padding:15px;background:var(--p);color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:14px;font-family:'Inter',sans-serif;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px}
     .btn-prox:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.2)}
 
-    /* CUPOM */
     .cupom-row{display:flex;gap:8px;margin-top:12px}
     .cupom-in{flex:1;padding:10px 12px;border:1.5px solid var(--g200);border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;transition:.2s}
     .cupom-in:focus{outline:none;border-color:var(--p)}
@@ -92,9 +82,8 @@
     .cupom-ok{font-size:12px;color:#166534;background:#dcfce7;padding:6px 10px;border-radius:7px;margin-top:6px}
     .cupom-err{font-size:12px;color:#991b1b;background:#fee2e2;padding:6px 10px;border-radius:7px;margin-top:6px}
 
-    /* FORM SECTION */
     .form-sec{overflow:hidden;max-height:0;opacity:0;transition:max-height .5s cubic-bezier(.4,0,.2,1),opacity .4s ease}
-    .form-sec.open{max-height:3000px;opacity:1}
+    .form-sec.open{max-height:5000px;opacity:1}
     .part-bloco{border:1.5px solid var(--g200);border-radius:12px;padding:18px;margin-bottom:14px}
     .part-tit{font-size:13px;font-weight:700;color:var(--g700);margin-bottom:14px;display:flex;align-items:center;gap:8px}
     .part-num{width:22px;height:22px;background:var(--p);color:white;border-radius:50%;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
@@ -103,13 +92,23 @@
     .req{color:#ef4444}
     .inp{width:100%;padding:10px 13px;border:1.5px solid var(--g200);border-radius:9px;font-size:13px;font-family:'Inter',sans-serif;transition:.2s;background:var(--w)}
     .inp:focus{outline:none;border-color:var(--p);box-shadow:0 0 0 3px var(--p10)}
+    .inp:required:invalid{border-color:var(--g200)}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
     @media(max-width:500px){.grid2{grid-template-columns:1fr}}
     .btn-sub{width:100%;padding:16px;background:var(--p);color:white;border:none;border-radius:12px;font-size:16px;font-weight:700;cursor:pointer;transition:.2s;font-family:'Inter',sans-serif;margin-top:10px}
     .btn-sub:hover{opacity:.9;transform:translateY(-1px);box-shadow:0 8px 24px rgba(0,0,0,.2)}
     .secure{text-align:center;font-size:12px;color:var(--g400);margin-top:8px;display:flex;align-items:center;justify-content:center;gap:4px}
 
-    /* ACCORDION PROGRAMAÇÃO */
+    /* TIPO PARTICIPANTE */
+    .tipo-participante{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+    .tipo-opt{border:2px solid var(--g200);border-radius:10px;padding:12px 14px;cursor:pointer;transition:.2s;text-align:center}
+    .tipo-opt:hover{border-color:var(--p)}
+    .tipo-opt.sel{border-color:var(--p);background:var(--p10)}
+    .tipo-opt .tipo-icon{font-size:22px;margin-bottom:4px}
+    .tipo-opt .tipo-label{font-size:13px;font-weight:700;color:var(--g900)}
+    .tipo-opt .tipo-sub{font-size:11px;color:var(--g600);margin-top:2px}
+
+    /* PROGRAMAÇÃO */
     .prog-acc{border:1.5px solid var(--g200);border-radius:12px;overflow:hidden;margin-bottom:8px}
     .prog-hd{padding:14px 16px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:.2s;user-select:none}
     .prog-hd:hover{background:var(--g50)}
@@ -123,18 +122,18 @@
     .prog-body.open{max-height:200px}
     .prog-desc{padding:12px 16px;font-size:13px;color:var(--g600);line-height:1.6}
 
-    /* PALESTRANTES */
-    .pales-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
-    .pales-card{border:1.5px solid var(--g200);border-radius:12px;padding:16px;text-align:center;cursor:pointer;transition:.2s}
-    .pales-card:hover{border-color:var(--p);box-shadow:0 0 0 3px var(--p10)}
+    /* PALESTRANTES — foto maior e quadrada */
+    .pales-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px}
+    .pales-card{border:1.5px solid var(--g200);border-radius:14px;padding:18px 14px;text-align:center;cursor:pointer;transition:.2s;overflow:hidden}
+    .pales-card:hover{border-color:var(--p);box-shadow:0 0 0 3px var(--p10);transform:translateY(-2px)}
     .pales-card.open{border-color:var(--p);background:var(--p10)}
-    .pales-foto{width:70px;height:70px;border-radius:50%;object-fit:cover;margin:0 auto 10px;display:block;border:2px solid var(--g200)}
-    .pales-ph{width:70px;height:70px;border-radius:50%;background:var(--g100);display:flex;align-items:center;justify-content:center;margin:0 auto 10px;font-size:28px}
-    .pales-nome{font-weight:700;font-size:13px;color:var(--g900)}
-    .pales-inst{font-size:11px;color:var(--p);margin-top:2px}
+    .pales-foto{width:110px;height:110px;border-radius:18px;object-fit:cover;margin:0 auto 12px;display:block;border:3px solid var(--p);box-shadow:0 4px 14px rgba(0,0,0,.12)}
+    .pales-ph{width:110px;height:110px;border-radius:18px;background:var(--g100);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:44px;border:3px solid var(--g200)}
+    .pales-nome{font-weight:700;font-size:14px;color:var(--g900);line-height:1.3}
+    .pales-inst{font-size:12px;color:var(--p);margin-top:4px;font-weight:500}
     .pales-bio-wrap{max-height:0;overflow:hidden;transition:max-height .3s ease}
-    .pales-bio-wrap.open{max-height:300px}
-    .pales-bio{padding:12px 0;font-size:13px;color:var(--g600);line-height:1.6;text-align:left;border-top:1px solid var(--g200);margin-top:10px}
+    .pales-bio-wrap.open{max-height:400px}
+    .pales-bio{padding:12px 0 4px;font-size:13px;color:var(--g600);line-height:1.6;text-align:left;border-top:1px solid var(--g200);margin-top:10px}
 
     /* CONTATO */
     .contato-btns{display:flex;flex-direction:column;gap:10px}
@@ -170,21 +169,23 @@
     .resumo-btn{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:14px;padding:12px;background:white;color:var(--p);border-radius:10px;font-weight:700;font-size:14px;text-decoration:none;transition:.2s;cursor:pointer;border:none;width:100%;font-family:'Inter',sans-serif}
     .resumo-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.2)}
 
-    /* SOCIAL SIDEBAR */
+    /* SOCIAL */
     .social-row{display:flex;flex-direction:column;gap:10px}
     .s-wpp{display:flex;align-items:center;gap:12px;padding:13px 16px;background:linear-gradient(135deg,#128c7e,#25d366);border-radius:12px;text-decoration:none;color:white;font-weight:700;font-size:14px;transition:.2s}
     .s-wpp:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(37,211,102,.3)}
     .s-ig{display:flex;align-items:center;gap:12px;padding:13px 16px;background:linear-gradient(135deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);border-radius:12px;text-decoration:none;color:white;font-weight:700;font-size:14px;transition:.2s}
     .s-ig:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(225,48,108,.3)}
+    .s-yt{display:flex;align-items:center;gap:12px;padding:13px 16px;background:linear-gradient(135deg,#c4302b,#ff0000);border-radius:12px;text-decoration:none;color:white;font-weight:700;font-size:14px;transition:.2s}
+    .s-yt:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(255,0,0,.3)}
     .s-icon{width:36px;height:36px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .s-icon svg{width:24px;height:24px;fill:white}
 
-    /* PATROCINADORES SIDEBAR */
-    .patroc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .patroc-item{border:1.5px solid var(--g200);border-radius:10px;padding:10px;display:flex;align-items:center;justify-content:center;min-height:60px;transition:.2s}
+    /* PATROCINADORES SIDEBAR — maior */
+    .patroc-grid{display:grid;grid-template-columns:1fr;gap:12px}
+    .patroc-item{border:1.5px solid var(--g200);border-radius:12px;padding:14px;display:flex;align-items:center;justify-content:center;min-height:80px;transition:.2s}
     .patroc-item:hover{border-color:var(--p);box-shadow:0 0 0 2px var(--p10)}
-    .patroc-item img{max-height:40px;max-width:100%;object-fit:contain}
-    .patroc-nome{font-size:12px;font-weight:600;color:var(--g700);text-align:center}
+    .patroc-item img{max-height:60px;max-width:100%;object-fit:contain}
+    .patroc-nome{font-size:13px;font-weight:600;color:var(--g700);text-align:center}
 
     /* TERMOS */
     .termo-check{display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;font-size:13px;color:var(--g800)}
@@ -194,7 +195,7 @@
     /* MODAL */
     .modal-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center;padding:20px}
     .modal-wrap.open{display:flex}
-    .modal-box{background:white;border-radius:16px;max-width:600px;width:100%;max-height:80vh;overflow:hidden;display:flex;flex-direction:column;animation:mUp .3s ease}
+    .modal-box{background:white;border-radius:16px;max-width:640px;width:100%;max-height:82vh;overflow:hidden;display:flex;flex-direction:column;animation:mUp .3s ease}
     @keyframes mUp{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
     .modal-hd{padding:18px 22px;border-bottom:1px solid var(--g200);display:flex;justify-content:space-between;align-items:center}
     .modal-hd h3{font-weight:700;font-size:15px}
@@ -210,7 +211,6 @@
     @keyframes pop{0%{transform:scale(0)}80%{transform:scale(1.1)}100%{transform:scale(1)}}
     .suc-cod{background:var(--g900);color:#10b981;font-family:monospace;font-size:15px;padding:12px 20px;border-radius:9px;margin:18px auto;display:inline-block;letter-spacing:2px}
 
-    /* WPP FLOAT */
     .wpp-float{position:fixed;bottom:24px;right:24px;z-index:998;width:56px;height:56px;background:#25d366;border-radius:50%;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(37,211,102,.4);text-decoration:none;transition:.2s}
     .wpp-float:hover{transform:scale(1.1)}
     .wpp-float svg{width:28px;height:28px;fill:white}
@@ -240,7 +240,7 @@
   <div class="suc-box">
     <div class="suc-icon">✓</div>
     <h2 style="font-size:22px;font-weight:800;margin-bottom:8px">Inscrição Realizada!</h2>
-    <p style="color:var(--g600);font-size:14px;line-height:1.6">Sua inscrição foi confirmada. Verifique seu email para o ticket com QR Code.</p>
+    <p style="color:var(--g600);font-size:14px;line-height:1.6">Sua inscrição foi confirmada. Verifique seu email para mais informações.</p>
     <div class="suc-cod"><%= codigoInscricao %></div>
     <p style="font-size:12px;color:var(--g400)">Apresente este código no check-in</p>
     <% if(evento.wpp_grupo){%><a href="<%= evento.wpp_grupo %>" target="_blank" style="display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:12px 22px;background:#25d366;color:white;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px">📱 Entrar no Grupo do Evento</a><%}%>
@@ -270,8 +270,14 @@
 <% if(evento.wpp_grupo){%>
 <div class="wpp-banner">
   <div class="wpp-in">
-    <div style="color:white;font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px"><svg style="width:20px;height:20px;fill:white;flex-shrink:0" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>Participe do grupo oficial do evento no WhatsApp</div>
-    <a href="<%= evento.wpp_grupo %>" target="_blank" class="wpp-btn"><svg style="width:16px;height:16px;fill:#128c7e" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg> Entrar no Grupo</a>
+    <div style="color:white;font-weight:600;font-size:14px;display:flex;align-items:center;gap:8px">
+      <svg style="width:20px;height:20px;fill:white;flex-shrink:0" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Participe do grupo oficial do evento no WhatsApp
+    </div>
+    <a href="<%= evento.wpp_grupo %>" target="_blank" class="wpp-btn">
+      <svg style="width:16px;height:16px;fill:#128c7e" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Entrar no Grupo
+    </a>
   </div>
 </div>
 <%}%>
@@ -292,7 +298,7 @@
       <!-- INGRESSOS -->
       <% if(lotes.length>0){%>
       <div class="card" id="inscricao">
-        <div class="card-hd"><div><h2>🎫 Ingressos</h2><p style="font-size:12px;color:var(--g400)">Selecione e escolha a quantidade</p></div></div>
+        <div class="card-hd"><div><h2>🎫 Ingressos</h2><p style="font-size:12px;color:var(--g400)">Selecione o ingresso desejado</p></div></div>
         <div class="card-bd">
           <% lotes.forEach((l,i)=>{%>
           <div class="lote <%= i===0?'sel':'' %>" id="lote-<%= l.id %>" onclick="selLote(<%= l.id %>,this)">
@@ -306,16 +312,9 @@
                 <div class="lote-radio"></div>
               </div>
             </div>
-            <% if(i===0){%>
-            <div class="qty-row" id="qty-<%= l.id %>">
-              <button type="button" class="qty-btn" onclick="event.stopPropagation();chgQty(-1)">−</button>
-              <span class="qty-n" id="qty-n">1</span>
-              <button type="button" class="qty-btn" onclick="event.stopPropagation();chgQty(1)">+</button>
-              <span class="qty-lbl">ingresso(s)</span>
-            </div>
-            <%}%>
           </div>
           <%})%>
+
           <!-- CUPOM -->
           <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--g100)">
             <div style="font-size:13px;font-weight:600;color:var(--g700);margin-bottom:8px">🏷️ Cupom de Desconto</div>
@@ -325,7 +324,7 @@
             </div>
             <div id="cupom-msg" style="display:none"></div>
           </div>
-          <!-- BTN PROSSEGUIR -->
+
           <button class="btn-prox" onclick="abrirForm()">Prosseguir com a Inscrição →</button>
         </div>
       </div>
@@ -334,76 +333,116 @@
       <!-- FORMULÁRIO ANIMADO -->
       <div class="form-sec" id="form-sec">
         <div class="card">
-          <div class="card-hd"><div><h2>📝 Dados dos Participantes</h2><p style="font-size:12px;color:var(--g400)">Preencha os dados de cada participante</p></div></div>
+          <div class="card-hd"><div><h2>📝 Dados do Participante</h2><p style="font-size:12px;color:var(--g400)">Preencha todos os dados obrigatórios</p></div></div>
           <div class="card-bd">
             <form action="/inscricao/<%= evento.id %>" method="POST" id="form-ins">
               <input type="hidden" name="lote_id" id="lote-sel" value="<%= lotes[0]?.id %>">
-              <input type="hidden" name="quantidade" id="campo-qty" value="1">
               <input type="hidden" name="cupom" id="campo-cupom" value="">
-              <div id="parts-wrap">
-                <div class="part-bloco" id="part-1">
-                  <div class="part-tit"><div class="part-num">1</div>Participante 1</div>
-                  <div class="grid2">
-                    <div class="campo" style="grid-column:1/-1"><label>Nome Completo <span class="req">*</span></label><input name="nome" class="inp" required placeholder="Nome completo"></div>
-                    <div class="campo"><label>Email <span class="req">*</span></label><input name="email" class="inp" type="email" required placeholder="email@exemplo.com"></div>
-                    <div class="campo"><label>WhatsApp</label>
-                      <div style="display:flex;gap:6px">
-                        <select name="whatsapp_pais" class="inp" style="max-width:88px">
-                          <option value="+595">🇵🇾 +595</option>
-                          <option value="+55">🇧🇷 +55</option>
-                          <option value="+54">🇦🇷 +54</option>
-                          <option value="+598">🇺🇾 +598</option>
-                          <option value="+1">🇺🇸 +1</option>
-                        </select>
-                        <input name="whatsapp" class="inp" placeholder="99 999 9999" style="flex:1">
-                      </div>
-                    </div>
-                    <div class="campo"><label>Data de Nascimento</label><input type="date" name="data_nascimento" class="inp"></div>
-                    <div class="campo"><label>RG / CI</label><input name="rg" class="inp" placeholder="Número do documento"></div>
-                    <div class="campo"><label>Catraca</label><input name="catraca" class="inp" placeholder="Número da catraca"></div>
-                    <div class="campo"><label>Semestre</label>
-                      <select name="semestre" class="inp">
-                        <option value="">Selecione...</option>
-                        <% for(let s=1;s<=10;s++){%><option value="<%= s %>º"><%= s %>º Semestre</option><%}%>
-                      </select>
-                    </div>
-                    <div class="campo"><label>Turma</label>
-                      <select name="turma" class="inp">
-                        <option value="">Selecione...</option>
-                        <% 'ABCDEFGHIJKLMNOP'.split('').forEach(t=>{%><option value="<%= t %>">Turma <%= t %></option><%})%>
-                      </select>
-                    </div>
+              <input type="hidden" name="tipo_participante" id="campo-tipo" value="ucp">
+
+              <!-- TIPO DE PARTICIPANTE -->
+              <div style="margin-bottom:16px">
+                <div style="font-size:13px;font-weight:600;color:var(--g700);margin-bottom:10px">Você é:</div>
+                <div class="tipo-participante">
+                  <div class="tipo-opt sel" id="opt-ucp" onclick="selectTipo('ucp')">
+                    <div class="tipo-icon">🎓</div>
+                    <div class="tipo-label">Aluno UCP</div>
+                    <div class="tipo-sub">Universidad Central del Paraguay</div>
                   </div>
-                  <% if(campos&&campos.length>0){campos.forEach(campo=>{%>
-                  <div class="campo">
-                    <label><%= campo.label %><% if(campo.obrigatorio){%><span class="req"> *</span><%}%></label>
-                    <% if(campo.tipo==='select'){%>
-                    <select name="campo_<%= campo.id %>" class="inp" <%= campo.obrigatorio?'required':'' %>><option value="">Selecione...</option><% (campo.opcoes||'').split('\n').filter(o=>o.trim()).forEach(op=>{%><option value="<%= op.trim() %>"><%= op.trim() %></option><%})%></select>
-                    <%}else if(campo.tipo==='textarea'){%><textarea name="campo_<%= campo.id %>" class="inp" rows="3" <%= campo.obrigatorio?'required':'' %>></textarea>
-                    <%}else if(campo.tipo==='file'){%><input type="file" name="campo_<%= campo.id %>" class="inp" <%= campo.obrigatorio?'required':'' %>>
-                    <%}else{%><input type="<%= campo.tipo==='email'?'email':campo.tipo==='number'?'number':campo.tipo==='date'?'date':'text' %>" name="campo_<%= campo.id %>" class="inp" <%= campo.obrigatorio?'required':'' %>><%}%>
+                  <div class="tipo-opt" id="opt-externo" onclick="selectTipo('externo')">
+                    <div class="tipo-icon">🌐</div>
+                    <div class="tipo-label">Externo</div>
+                    <div class="tipo-sub">Outra instituição</div>
                   </div>
-                  <%})}%>
                 </div>
               </div>
+
+              <div class="part-bloco">
+                <div class="grid2">
+                  <div class="campo" style="grid-column:1/-1">
+                    <label>Nome Completo <span class="req">*</span></label>
+                    <input name="nome" class="inp" required placeholder="Seu nome completo">
+                  </div>
+                  <div class="campo">
+                    <label>Email <span class="req">*</span></label>
+                    <input name="email" class="inp" type="email" required placeholder="email@exemplo.com">
+                  </div>
+                  <div class="campo">
+                    <label>WhatsApp <span class="req">*</span></label>
+                    <div style="display:flex;gap:6px">
+                      <select name="whatsapp_pais" class="inp" style="max-width:88px">
+                        <option value="+595">🇵🇾 +595</option>
+                        <option value="+55">🇧🇷 +55</option>
+                        <option value="+54">🇦🇷 +54</option>
+                        <option value="+598">🇺🇾 +598</option>
+                        <option value="+1">🇺🇸 +1</option>
+                      </select>
+                      <input name="whatsapp" class="inp" placeholder="99 999 9999" required style="flex:1">
+                    </div>
+                  </div>
+                  <div class="campo">
+                    <label>Data de Nascimento <span class="req">*</span></label>
+                    <input type="date" name="data_nascimento" class="inp" required>
+                  </div>
+                  <div class="campo">
+                    <label>RG / CI <span class="req">*</span></label>
+                    <input name="rg" class="inp" required placeholder="Número do documento">
+                  </div>
+
+                  <!-- CATRACA — só para alunos UCP -->
+                  <div class="campo" id="campo-catraca">
+                    <label>Catraca UCP <span class="req">*</span></label>
+                    <input name="catraca" id="inp-catraca" class="inp" required placeholder="Número da catraca">
+                  </div>
+
+                  <!-- INSTITUIÇÃO — só para externos -->
+                  <div class="campo" id="campo-instituicao" style="display:none">
+                    <label>Instituição <span class="req">*</span></label>
+                    <input name="instituicao" id="inp-instituicao" class="inp" placeholder="Nome da sua universidade/instituição">
+                  </div>
+
+                  <div class="campo">
+                    <label>Semestre <span class="req">*</span></label>
+                    <select name="semestre" class="inp" required>
+                      <option value="">Selecione...</option>
+                      <% for(let s=1;s<=10;s++){%><option value="<%= s %>º"><%= s %>º Semestre</option><%}%>
+                    </select>
+                  </div>
+                  <div class="campo">
+                    <label>Turma <span class="req">*</span></label>
+                    <select name="turma" class="inp" required>
+                      <option value="">Selecione...</option>
+                      <% 'ABCDEFGHIJKLMNOP'.split('').forEach(t=>{%><option value="<%= t %>">Turma <%= t %></option><%})%>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- CAMPOS EXTRAS -->
+                <% if(campos&&campos.length>0){campos.forEach(campo=>{%>
+                <div class="campo">
+                  <label><%= campo.label %><% if(campo.obrigatorio){%><span class="req"> *</span><%}%></label>
+                  <% if(campo.tipo==='select'){%>
+                  <select name="campo_<%= campo.id %>" class="inp" <%= campo.obrigatorio?'required':'' %>><option value="">Selecione...</option><% (campo.opcoes||'').split('\n').filter(o=>o.trim()).forEach(op=>{%><option value="<%= op.trim() %>"><%= op.trim() %></option><%})%></select>
+                  <%}else if(campo.tipo==='textarea'){%><textarea name="campo_<%= campo.id %>" class="inp" rows="3" <%= campo.obrigatorio?'required':'' %>></textarea>
+                  <%}else{%><input type="<%= campo.tipo==='email'?'email':campo.tipo==='number'?'number':campo.tipo==='date'?'date':'text' %>" name="campo_<%= campo.id %>" class="inp" <%= campo.obrigatorio?'required':'' %>><%}%>
+                </div>
+                <%})}%>
+              </div>
+
               <!-- TERMOS -->
-              <% if(evento.termos_texto){%>
               <div style="background:var(--g50);border:1.5px solid var(--g200);border-radius:10px;padding:14px;margin-top:14px">
+                <% if(evento.termos_texto){%>
                 <div class="termo-check">
                   <input type="checkbox" name="aceite_termos" required>
                   <span>Li e concordo com os <span class="termo-link" onclick="abrirModal('modal-termos')">Termos de Compra e Participação</span> <span class="req">*</span></span>
                 </div>
+                <%}%>
                 <div class="termo-check">
                   <input type="checkbox" name="aceite_lgpd" required>
                   <span>Li e aceito a <span class="termo-link" onclick="abrirModal('modal-lgpd')">Política de Privacidade e LGPD</span> <span class="req">*</span></span>
                 </div>
               </div>
-              <%}else{%>
-              <div class="termo-check" style="margin-top:14px">
-                <input type="checkbox" name="aceite_lgpd" required>
-                <span>Li e aceito a <span class="termo-link" onclick="abrirModal('modal-lgpd')">Política de Privacidade e LGPD</span> <span class="req">*</span></span>
-              </div>
-              <%}%>
+
               <button type="submit" class="btn-sub">Confirmar Inscrição →</button>
               <div class="secure">🔒 Seus dados estão protegidos</div>
             </form>
@@ -426,9 +465,7 @@
               <% if(p.descricao){%><span class="prog-arrow">▼</span><%}%>
             </div>
             <% if(p.descricao){%>
-            <div class="prog-body" id="prog-<%= i %>">
-              <div class="prog-desc"><%= p.descricao %></div>
-            </div>
+            <div class="prog-body" id="prog-<%= i %>"><div class="prog-desc"><%= p.descricao %></div></div>
             <%}%>
           </div>
           <%})%>
@@ -444,7 +481,11 @@
           <div class="pales-grid">
             <% palestrantes.forEach((p,i)=>{%>
             <div class="pales-card" id="pales-<%= i %>" onclick="togPales(<%= i %>)">
-              <% if(p.foto_chave){%><img src="/eventos/palestrantes/<%= p.id %>/foto" class="pales-foto"><%}else{%><div class="pales-ph">🎤</div><%}%>
+              <% if(p.foto_chave){%>
+              <img src="/eventos/palestrantes/<%= p.id %>/foto" class="pales-foto" alt="<%= p.nome %>">
+              <%}else{%>
+              <div class="pales-ph">🎤</div>
+              <%}%>
               <div class="pales-nome"><%= p.nome %></div>
               <% if(p.instituicao){%><div class="pales-inst"><%= p.instituicao %></div><%}%>
               <% if(p.bio){%>
@@ -497,7 +538,6 @@
         <div class="resumo-label">Ingresso Selecionado</div>
         <div class="resumo-nome" id="res-nome"><%= lotes[0]?.nome %></div>
         <div class="resumo-preco" id="res-preco"><%= parseFloat(lotes[0]?.preco||0)===0?'Gratuito':'R$ '+Number(lotes[0]?.preco||0).toFixed(2) %></div>
-        <div class="resumo-qty" id="res-qty">1 ingresso</div>
         <button class="resumo-btn" onclick="abrirForm()">Garantir Minha Vaga →</button>
       </div>
       <%}%>
@@ -505,38 +545,63 @@
       <!-- INFO -->
       <div class="s-card">
         <div class="s-title">Informações</div>
+
         <% if(evento.data_inicio){%>
-        <div class="info-it"><div class="i-icon">📅</div><div><div class="i-lbl">Data</div><div class="i-val"><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}) %></div><div class="i-sub"><%= new Date(evento.data_inicio).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) %> h</div></div></div>
+        <div class="info-it">
+          <div class="i-icon">📅</div>
+          <div>
+            <div class="i-lbl">Data</div>
+            <div class="i-val"><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}) %></div>
+          </div>
+        </div>
         <%}%>
-        <% if(evento.data_fim){%>
-        <div class="info-it"><div class="i-icon">🏁</div><div><div class="i-lbl">Término</div><div class="i-val"><%= new Date(evento.data_fim).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) %> h</div></div></div>
+
+        <% if(evento.data_inicio){%>
+        <div class="info-it">
+          <div class="i-icon">⏰</div>
+          <div>
+            <div class="i-lbl">Início</div>
+            <div class="i-val"><%= new Date(evento.data_inicio).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) %> h</div>
+          </div>
+        </div>
         <%}%>
-        <div class="info-it"><div class="i-icon"><%= evento.tipo_evento==='online'?'💻':evento.tipo_evento==='hibrido'?'🔀':'📍' %></div><div><div class="i-lbl">Modalidade</div><div class="i-val"><%= evento.tipo_evento==='online'?'Online':evento.tipo_evento==='hibrido'?'Híbrido':'Presencial' %></div></div></div>
+
+        <div class="info-it">
+          <div class="i-icon"><%= evento.tipo_evento==='online'?'💻':evento.tipo_evento==='hibrido'?'🔀':'📍' %></div>
+          <div>
+            <div class="i-lbl">Modalidade</div>
+            <div class="i-val"><%= evento.tipo_evento==='online'?'Online':evento.tipo_evento==='hibrido'?'Híbrido':'Presencial' %></div>
+          </div>
+        </div>
+
         <% if(evento.local&&evento.tipo_evento!=='online'){%>
-        <div class="info-it"><div class="i-icon">📍</div><div><div class="i-lbl">Local</div><div class="i-val"><%= evento.local %></div><% if(evento.endereco){%><div class="i-sub"><%= evento.endereco %></div><%}%></div></div>
+        <div class="info-it">
+          <div class="i-icon">📍</div>
+          <div>
+            <div class="i-lbl">Local</div>
+            <div class="i-val"><%= evento.local %></div>
+            <% if(evento.endereco){%><div class="i-sub"><%= evento.endereco %></div><%}%>
+          </div>
+        </div>
         <%}%>
+
+        <% if(evento.carga_horaria){%>
+        <div class="info-it">
+          <div class="i-icon">🏆</div>
+          <div>
+            <div class="i-lbl">Certificado</div>
+            <div class="i-val"><%= evento.carga_horaria %> horas</div>
+          </div>
+        </div>
+        <%}%>
+
         <div class="org-box">
           <div class="org-logo"><% if(config&&config.org_logo){%><img src="<%= config.org_logo %>" alt="LAURO"><%}else{%><span style="color:white;font-weight:800;font-size:14px">L</span><%}%></div>
           <div><div style="font-weight:700;font-size:13px">LAURO</div><div style="font-size:11px;color:var(--g600)">Liga Académica de Urología</div></div>
         </div>
       </div>
 
-      <!-- SOCIAL -->
-      <div class="s-card">
-        <div class="s-title">Siga a LAURO</div>
-        <div class="social-row">
-          <a href="https://wa.me/595994225753" target="_blank" class="s-wpp">
-            <div class="s-icon"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
-            <div><div style="font-size:11px;opacity:.8">Atendimento via</div><div style="font-weight:700">WhatsApp</div></div>
-          </a>
-          <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" class="s-ig">
-            <div class="s-icon"><svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></div>
-            <div><div style="font-size:11px;opacity:.8">Siga no</div><div style="font-weight:700">@lauroucp.cde</div></div>
-          </a>
-        </div>
-      </div>
-
-      <!-- PATROCINADORES -->
+      <!-- PATROCINADORES — só aparece se tiver -->
       <% if(patrocinadores&&patrocinadores.length>0){%>
       <div class="s-card">
         <div class="s-title">Patrocinadores</div>
@@ -550,12 +615,33 @@
       </div>
       <%}%>
 
+      <!-- SOCIAL -->
+      <div class="s-card">
+        <div class="s-title">Siga a LAURO</div>
+        <div class="social-row">
+          <a href="https://wa.me/595994225753" target="_blank" class="s-wpp">
+            <div class="s-icon"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
+            <div><div style="font-size:11px;opacity:.8">Atendimento via</div><div style="font-weight:700">WhatsApp</div></div>
+          </a>
+          <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" class="s-ig">
+            <div class="s-icon"><svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></div>
+            <div><div style="font-size:11px;opacity:.8">Siga no</div><div style="font-weight:700">@lauroucp.cde</div></div>
+          </a>
+          <a href="https://www.youtube.com/@LAUROUCPCDE" target="_blank" class="s-yt">
+            <div class="s-icon">
+              <svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+            </div>
+            <div><div style="font-size:11px;opacity:.8">Assista no</div><div style="font-weight:700">YouTube</div></div>
+          </a>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
 <%}%>
 
-<!-- MODAIS TERMOS -->
+<!-- MODAL TERMOS -->
 <% if(evento.termos_texto){%>
 <div class="modal-wrap" id="modal-termos" onclick="if(event.target===this)fecharModal('modal-termos')">
   <div class="modal-box">
@@ -565,15 +651,43 @@
   </div>
 </div>
 <%}%>
-<% if(evento.lgpd_texto){%>
+
+<!-- MODAL LGPD -->
 <div class="modal-wrap" id="modal-lgpd" onclick="if(event.target===this)fecharModal('modal-lgpd')">
   <div class="modal-box">
     <div class="modal-hd"><h3>🔒 Política de Privacidade e LGPD</h3><button class="modal-close" onclick="fecharModal('modal-lgpd')">✕</button></div>
-    <div class="modal-body"><%= evento.lgpd_texto %></div>
+    <div class="modal-body">
+      <% if(evento.lgpd_texto){ %>
+        <%= evento.lgpd_texto %>
+      <% } else { %>
+Liga Académica de Urología — LAURO
+Política de Privacidade e Proteção de Dados (LGPD)
+
+1. RESPONSÁVEL PELO TRATAMENTO
+A Liga Académica de Urología (LAURO), vinculada à Universidad Central del Paraguay, é a responsável pelo tratamento dos dados pessoais coletados neste formulário.
+
+2. DADOS COLETADOS
+Coletamos: nome completo, e-mail, telefone/WhatsApp, data de nascimento, documento de identidade (RG/CI), número de catraca (alunos UCP), semestre, turma e instituição de ensino.
+
+3. FINALIDADE DO TRATAMENTO
+Os dados são utilizados exclusivamente para: (a) processamento e confirmação de inscrição no evento; (b) envio de comunicações relacionadas ao evento; (c) emissão de certificados de participação; (d) controle de acesso (check-in) no dia do evento.
+
+4. COMPARTILHAMENTO
+Os dados não serão comercializados, cedidos ou compartilhados com terceiros, exceto quando necessário para a realização do evento (ex: plataformas de pagamento) ou por obrigação legal.
+
+5. PRAZO DE RETENÇÃO
+Os dados serão mantidos pelo período necessário para as finalidades descritas e por até 5 anos para fins de comprovação de participação e emissão de certificados.
+
+6. DIREITOS DO TITULAR
+Você tem direito a: acesso, correção, exclusão, portabilidade e revogação do consentimento. Solicite pelo e-mail: lauroucpcde@lauroucpcde.com
+
+7. CONSENTIMENTO
+Ao marcar esta opção, você consente com o tratamento dos seus dados conforme descrito nesta política.
+      <% } %>
+    </div>
     <div class="modal-ft"><button class="modal-ok" onclick="fecharModal('modal-lgpd')">Entendi</button></div>
   </div>
 </div>
-<%}%>
 
 <!-- WPP FLOAT -->
 <a href="https://wa.me/595994225753" target="_blank" class="wpp-float" title="Fale conosco">
@@ -586,94 +700,122 @@
 </footer>
 
 <script>
-const lotesData=<%- JSON.stringify(lotes) %>;
-let qty=1,loteId=<%= lotes[0]?.id||'null' %>,precoBase=<%= parseFloat(lotes[0]?.preco||0) %>,desconto=0;
+const lotesData = <%- JSON.stringify(lotes) %>;
+let loteId = <%= lotes[0]?.id||'null' %>;
+let precoBase = <%= parseFloat(lotes[0]?.preco||0) %>;
+let desconto = 0;
+let tipoParticipante = 'ucp';
 
-function selLote(id,el){
-  document.querySelectorAll('.lote').forEach(e=>{e.classList.remove('sel');const q=e.querySelector('.qty-row');if(q)q.remove();});
-  el.classList.add('sel');
-  document.getElementById('lote-sel').value=id;
-  loteId=id;
-  const l=lotesData.find(x=>x.id==id);
-  precoBase=l?parseFloat(l.preco):0;
-  if(!el.querySelector('.qty-row')){
-    const qw=document.createElement('div');qw.className='qty-row';qw.id='qty-'+id;
-    qw.innerHTML='<button type="button" class="qty-btn" onclick="event.stopPropagation();chgQty(-1)">−</button><span class="qty-n" id="qty-n">'+qty+'</span><button type="button" class="qty-btn" onclick="event.stopPropagation();chgQty(1)">+</button><span class="qty-lbl">ingresso(s)</span>';
-    el.appendChild(qw);
+// TIPO PARTICIPANTE
+function selectTipo(tipo) {
+  tipoParticipante = tipo;
+  document.getElementById('campo-tipo').value = tipo;
+  document.getElementById('opt-ucp').classList.toggle('sel', tipo === 'ucp');
+  document.getElementById('opt-externo').classList.toggle('sel', tipo === 'externo');
+
+  const camCatraca = document.getElementById('campo-catraca');
+  const camInstit  = document.getElementById('campo-instituicao');
+  const inpCatraca = document.getElementById('inp-catraca');
+  const inpInstit  = document.getElementById('inp-instituicao');
+
+  if (tipo === 'ucp') {
+    camCatraca.style.display = 'block';
+    camInstit.style.display  = 'none';
+    inpCatraca.required = true;
+    inpInstit.required  = false;
+    inpInstit.value = '';
+  } else {
+    camCatraca.style.display = 'none';
+    camInstit.style.display  = 'block';
+    inpCatraca.required = false;
+    inpInstit.required  = true;
+    inpCatraca.value = '';
   }
+}
+
+// SELECIONAR LOTE
+function selLote(id, el) {
+  document.querySelectorAll('.lote').forEach(e => e.classList.remove('sel'));
+  el.classList.add('sel');
+  document.getElementById('lote-sel').value = id;
+  loteId = id;
+  const l = lotesData.find(x => x.id == id);
+  precoBase = l ? parseFloat(l.preco) : 0;
   updRes(l);
 }
 
-function chgQty(d){
-  qty=Math.max(1,Math.min(10,qty+d));
-  const el=document.getElementById('qty-n');if(el)el.textContent=qty;
-  document.getElementById('campo-qty').value=qty;
-  updParts();
-  const l=lotesData.find(x=>x.id==loteId);updRes(l);
+function updRes(l) {
+  if (!document.getElementById('res-nome')) return;
+  const p = precoBase * (1 - desconto);
+  document.getElementById('res-nome').textContent = l ? l.nome : '';
+  document.getElementById('res-preco').textContent = p === 0 ? 'Gratuito' : 'R$ ' + p.toFixed(2);
 }
 
-function updRes(l){
-  if(!document.getElementById('res-nome'))return;
-  const p=precoBase*(1-desconto)*qty;
-  document.getElementById('res-nome').textContent=l?l.nome:'';
-  document.getElementById('res-preco').textContent=p===0?'Gratuito':'R$ '+p.toFixed(2);
-  document.getElementById('res-qty').textContent=qty+' ingresso'+(qty>1?'s':'');
-}
-
-function updParts(){
-  const wrap=document.getElementById('parts-wrap');
-  const cur=wrap.querySelectorAll('.part-bloco').length;
-  if(qty>cur){
-    for(let i=cur+1;i<=qty;i++){
-      const d=document.createElement('div');d.className='part-bloco';d.id='part-'+i;
-      d.innerHTML='<div class="part-tit"><div class="part-num">'+i+'</div>Participante '+i+'</div><div class="grid2"><div class="campo" style="grid-column:1/-1"><label>Nome Completo *</label><input name="nome_'+i+'" class="inp" required placeholder="Nome completo"></div><div class="campo"><label>Email *</label><input name="email_'+i+'" class="inp" type="email" required placeholder="email@exemplo.com"></div><div class="campo"><label>WhatsApp</label><input name="whatsapp_'+i+'" class="inp" placeholder="99 999 9999"></div></div>';
-      wrap.appendChild(d);
-    }
-  }else{for(let i=cur;i>qty;i--){const e=document.getElementById('part-'+i);if(e)e.remove();}}
-}
-
-function abrirForm(){
-  const fs=document.getElementById('form-sec');
+// ABRIR FORM
+function abrirForm() {
+  const fs = document.getElementById('form-sec');
   fs.classList.add('open');
-  setTimeout(()=>fs.scrollIntoView({behavior:'smooth',block:'start'}),100);
+  setTimeout(() => fs.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
 }
 
-function aplicarCupom(){
-  const cod=document.getElementById('cupom-in').value.trim();
-  const msg=document.getElementById('cupom-msg');
-  if(!cod){msg.style.display='none';return;}
-  fetch('/eventos/<%= evento.id %>/cupom?cod='+encodeURIComponent(cod))
-    .then(r=>r.json()).then(d=>{
-      msg.style.display='block';
-      if(d.ok){desconto=d.desconto||0;msg.className='cupom-ok';msg.textContent='✅ Cupom aplicado! '+Math.round(desconto*100)+'% de desconto';document.getElementById('campo-cupom').value=cod;const l=lotesData.find(x=>x.id==loteId);updRes(l);}
-      else{msg.className='cupom-err';msg.textContent='❌ Cupom inválido ou expirado';}
-    }).catch(()=>{msg.className='cupom-err';msg.textContent='❌ Erro ao verificar';msg.style.display='block';});
+// CUPOM
+function aplicarCupom() {
+  const cod = document.getElementById('cupom-in').value.trim();
+  const msg = document.getElementById('cupom-msg');
+  if (!cod) { msg.style.display = 'none'; return; }
+  fetch('/eventos/<%= evento.id %>/cupom?cod=' + encodeURIComponent(cod))
+    .then(r => r.json()).then(d => {
+      msg.style.display = 'block';
+      if (d.ok) {
+        desconto = d.desconto || 0;
+        msg.className = 'cupom-ok';
+        msg.textContent = '✅ Cupom aplicado! ' + Math.round(desconto * 100) + '% de desconto';
+        document.getElementById('campo-cupom').value = cod;
+        const l = lotesData.find(x => x.id == loteId);
+        updRes(l);
+      } else {
+        msg.className = 'cupom-err';
+        msg.textContent = '❌ ' + (d.msg || 'Cupom inválido ou expirado');
+      }
+    }).catch(() => {
+      document.getElementById('cupom-msg').className = 'cupom-err';
+      document.getElementById('cupom-msg').textContent = '❌ Erro ao verificar';
+      document.getElementById('cupom-msg').style.display = 'block';
+    });
 }
 
-function togProg(el,i){
-  const body=document.getElementById('prog-'+i);
-  if(!body)return;
-  const open=body.classList.toggle('open');
-  el.classList.toggle('open',open);
+// PROGRAMAÇÃO
+function togProg(el, i) {
+  const body = document.getElementById('prog-' + i);
+  if (!body) return;
+  const open = body.classList.toggle('open');
+  el.classList.toggle('open', open);
 }
 
-function togPales(i){
-  const card=document.getElementById('pales-'+i);
-  const bio=document.getElementById('pbio-'+i);
-  if(!bio)return;
-  const open=bio.classList.toggle('open');
-  card.classList.toggle('open',open);
+// PALESTRANTES
+function togPales(i) {
+  const card = document.getElementById('pales-' + i);
+  const bio  = document.getElementById('pbio-' + i);
+  if (!bio) return;
+  const open = bio.classList.toggle('open');
+  card.classList.toggle('open', open);
 }
 
-function togForm(){
-  const f=document.getElementById('c-form');
-  const a=document.getElementById('form-arrow');
-  const open=f.classList.toggle('open');
-  if(a)a.style.transform=open?'rotate(180deg)':'';
+// CONTATO FORM
+function togForm() {
+  const f = document.getElementById('c-form');
+  const a = document.getElementById('form-arrow');
+  const open = f.classList.toggle('open');
+  if (a) a.style.transform = open ? 'rotate(180deg)' : '';
 }
 
-function abrirModal(id){document.getElementById(id)?.classList.add('open');}
-function fecharModal(id){document.getElementById(id)?.classList.remove('open');}
+// MODAIS
+function abrirModal(id) { document.getElementById(id)?.classList.add('open'); }
+function fecharModal(id) { document.getElementById(id)?.classList.remove('open'); }
+
+// Init
+const l0 = lotesData.find(x => x.id == loteId);
+updRes(l0);
 </script>
 </body>
 </html>
