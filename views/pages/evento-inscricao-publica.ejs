@@ -95,7 +95,7 @@
     .lote-nome{font-weight:700;font-size:14px;color:var(--ink)}
     .lote-info{font-size:11px;color:var(--ink4);margin-top:3px}
     .lote-preco-wrap{text-align:right;flex-shrink:0}
-    .lote-preco{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:var(--p);white-space:nowrap;line-height:1}
+    .lote-preco{font-family:'Inter',sans-serif;font-size:22px;font-weight:800;color:var(--p);white-space:nowrap;line-height:1;letter-spacing:-.5px}
     .lote-preco-sub{font-size:10px;color:var(--ink4);margin-top:3px}
     .badge-free{background:#dcfce7;color:#15803d;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
     .lote-radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--bdr2);flex-shrink:0;transition:all .2s;display:flex;align-items:center;justify-content:center;margin-top:3px}
@@ -506,7 +506,7 @@
               </div>
             </div>
             <!-- SELETOR DE QUANTIDADE -->
-            <div class="lote-qty" id="qty-row-<%= l.id %>" style="<%= i===0?'':'display:none' %>" onclick="event.stopPropagation()">
+            <div class="lote-qty" id="qty-row-<%= l.id %>" style="display:none" onclick="event.stopPropagation()">
               <span class="lote-qty-label">Quantidade de ingressos</span>
               <div class="qty-ctrl">
                 <button class="qty-btn" onclick="mudaQty(<%= l.id %>,-1)" id="qty-minus-<%= l.id %>" disabled>−</button>
@@ -811,11 +811,23 @@ function selLote(id,el){
     if(inp) inp.value=1;
     var minus=document.getElementById('qty-minus-'+l.id);
     if(minus) minus.disabled=true;
+    var plus=document.getElementById('qty-plus-'+l.id);
+    if(plus) plus.disabled=false;
   });
   const l=lotesData.find(x=>x.id==id);
   precoBase=l?parseFloat(l.preco):0;
   updRes(l);
 }
+
+// Inicializar mostrando o qty-row do primeiro lote
+window.addEventListener('DOMContentLoaded',function(){
+  if(lotesData.length>0){
+    var first=lotesData[0];
+    var row=document.getElementById('qty-row-'+first.id);
+    if(row) row.style.display='flex';
+    updRes(first);
+  }
+});
 
 function mudaQty(id,delta){
   var inp=document.getElementById('qty-'+id);
