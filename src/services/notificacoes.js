@@ -59,34 +59,38 @@ async function getConfig() {
   } catch(e) { return {}; }
 }
 
+// ─── HTML DE COBRANÇA ─────────────────────────────────────────────────────────
+// Suporta PIX copia-e-cola (PagBank) e link de checkout para cartão
+
 function htmlCobranca(opts) {
-  const titulo = opts.titulo || '';
-  const mensagem = opts.mensagem || '';
-  const linkCartao = opts.linkCartao || null;
-  const pixCode = opts.pixCode || null;
-  const pixBase64 = opts.pixBase64 || null;
-  const orgNome = opts.orgNome || 'Liga Academica de Urologia';
-  const orgCor = opts.orgCor || '#1a56db';
-  const orgLogo = opts.orgLogo || null;
+  const titulo      = opts.titulo      || '';
+  const mensagem    = opts.mensagem    || '';
+  const linkCartao  = opts.linkCartao  || null;
+  const pixCode     = opts.pixCode     || null;   // copia-e-cola PagBank
+  const orgNome     = opts.orgNome     || 'Liga Academica de Urologia';
+  const orgCor      = opts.orgCor      || '#1a56db';
+  const orgLogo     = opts.orgLogo     || null;
 
   const cabecalho = orgLogo
     ? '<div style="background:' + orgCor + ';padding:20px 32px;text-align:center"><img src="' + orgLogo + '" alt="' + orgNome + '" style="max-height:70px;max-width:200px;object-fit:contain;display:inline-block"></div>'
     : '<div style="background:' + orgCor + ';padding:24px 32px"><h1 style="color:white;margin:0;font-size:20px;font-family:Arial,sans-serif">' + orgNome + '</h1></div>';
 
+  // Seção PIX — código copia-e-cola gerado pelo PagBank
   const secaoPix = pixCode
     ? '<div style="background:#f0faf0;border:2px solid #22c55e;border-radius:8px;padding:20px;margin:16px 0;text-align:center">'
-      + '<p style="margin:0 0 12px;font-weight:bold;color:#166534;font-size:15px">💚 Pagar com PIX</p>'
-      + (pixBase64 ? '<img src="data:image/png;base64,' + pixBase64 + '" alt="QR Code PIX" style="width:180px;height:180px;border:2px solid #22c55e;border-radius:8px;margin:0 auto 12px;display:block">' : '')
-      + '<p style="margin:0 0 6px;font-size:12px;color:#166534;font-weight:600">📋 Pix Copia e Cola:</p>'
-      + '<div style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:10px;margin:0 0 8px;font-size:10px;word-break:break-all;font-family:monospace;color:#166534;text-align:left">' + pixCode + '</div>'
-      + '<p style="margin:0;font-size:11px;color:#166534">Abra seu banco → Pix → Copia e Cola → cole o código acima</p>'
+      + '<p style="margin:0 0 12px;font-weight:bold;color:#166534;font-size:15px">⚡ Pagar com PIX</p>'
+      + '<p style="margin:0 0 10px;font-size:13px;color:#374151">Abra o app do seu banco → PIX → Pix Copia e Cola → cole o código abaixo:</p>'
+      + '<div style="background:#dcfce7;border:1px solid #86efac;border-radius:6px;padding:12px;margin:0 0 10px;font-size:11px;word-break:break-all;font-family:monospace;color:#166534;text-align:left">' + pixCode + '</div>'
+      + '<p style="margin:0;font-size:11px;color:#6b7280">O código também foi enviado em mensagem separada no WhatsApp para facilitar a cópia.</p>'
       + '</div>'
     : '';
 
+  // Seção Cartão — link de checkout PagBank
   const secaoCartao = linkCartao
     ? '<div style="background:#eff6ff;border:2px solid #3b82f6;border-radius:8px;padding:20px;margin:16px 0;text-align:center">'
       + '<p style="margin:0 0 12px;font-weight:bold;color:#1e40af;font-size:15px">💳 Pagar com Cartão de Crédito</p>'
-      + '<a href="' + linkCartao + '" style="display:inline-block;background:#1e40af;color:white;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px">💳 Pagar com cartão</a>'
+      + '<p style="margin:0 0 14px;font-size:13px;color:#374151">Clique no botão abaixo para pagar com cartão de forma segura:</p>'
+      + '<a href="' + linkCartao + '" style="display:inline-block;background:#1e40af;color:white;padding:13px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:15px">💳 Pagar com Cartão</a>'
       + '</div>'
     : '';
 
@@ -101,41 +105,47 @@ function htmlCobranca(opts) {
     + secaoCartao
     + '</div>'
     + '<div style="padding:14px 32px;border-top:1px solid #e5e7eb;background:#f9fafb;text-align:center">'
-    + '<p style="color:#9ca3af;font-size:12px;margin:0">Mensagem automática — ' + orgNome + '</p>'
+    + '<p style="color:#9ca3af;font-size:12px;margin:0">Mensagem automática — ' + orgNome + ' · Powered by PagBank</p>'
     + '</div></div></body></html>';
 }
 
 function preencherTemplate(tpl, dados) {
   return (tpl || '')
-    .replace(/{nome}/g, dados.nome || '')
-    .replace(/{dias}/g, dados.dias || '')
-    .replace(/{data}/g, dados.data || '')
-    .replace(/{valor_desc}/g, dados.valor_desc || '')
+    .replace(/{nome}/g,        dados.nome        || '')
+    .replace(/{dias}/g,        dados.dias        || '')
+    .replace(/{data}/g,        dados.data        || '')
+    .replace(/{valor_desc}/g,  dados.valor_desc  || '')
     .replace(/{valor_cheio}/g, dados.valor_cheio || '')
-    .replace(/{link}/g, dados.link || '');
+    .replace(/{link}/g,        dados.link        || '');
 }
 
-async function notificarCobranca(opts) {
-  const membro = opts.membro;
-  const cobranca = opts.cobranca;
-  const tipo = opts.tipo;
-  const config = opts.config || await getConfig();
+// ─── NOTIFICAR COBRANÇA ───────────────────────────────────────────────────────
+// Usa campos PagBank: pix_copia_cola, checkout_link (pagbank_link)
+// Compatível com cobranças antigas do MP (sem PIX/link — só envia o texto)
 
-  const orgNome = config.org_nome || 'Liga Academica de Urologia';
-  const orgCor = config.org_cor || '#1a56db';
-  const orgLogo = config.org_logo || null;
-  const pixCode = cobranca.pix_qr_code || null;
-  const pixBase64 = cobranca.pix_qr_code_base64 || null;
-  const linkCartao = cobranca.pagbank_link || null;
+async function notificarCobranca(opts) {
+  const membro   = opts.membro;
+  const cobranca = opts.cobranca;
+  const tipo     = opts.tipo;
+  const config   = opts.config || await getConfig();
+
+  const orgNome  = config.org_nome || 'Liga Academica de Urologia';
+  const orgCor   = config.org_cor  || '#1a56db';
+  const orgLogo  = config.org_logo || null;
+
+  // ── Campos PagBank (novos) — com fallback para campos antigos do MP
+  const pixCode    = cobranca.pix_copia_cola  || null;   // PagBank
+  const linkCartao = cobranca.checkout_link   ||         // PagBank
+                     cobranca.pagbank_link    || null;   // fallback
 
   const venc = new Date(cobranca.data_vencimento + 'T12:00:00');
   const diffDias = Math.ceil((venc - new Date()) / (1000 * 60 * 60 * 24));
 
   const dados = {
-    nome: membro.nome.split(' ')[0],
-    dias: Math.abs(diffDias),
-    data: venc.toLocaleDateString('pt-BR'),
-    valor_desc: 'R$ ' + Number(cobranca.valor_desconto).toFixed(2).replace('.', ','),
+    nome:        membro.nome.split(' ')[0],
+    dias:        Math.abs(diffDias),
+    data:        venc.toLocaleDateString('pt-BR'),
+    valor_desc:  'R$ ' + Number(cobranca.valor_desconto).toFixed(2).replace('.', ','),
     valor_cheio: 'R$ ' + Number(cobranca.valor_cheio).toFixed(2).replace('.', ','),
   };
 
@@ -144,87 +154,129 @@ async function notificarCobranca(opts) {
     dia: 'HOJE: último dia com desconto! — ' + orgNome,
     pos: 'Mensalidade em atraso — ' + orgNome
   };
+
   const tituloMap = {
-    pre: 'Sua mensalidade vence em ' + dados.dias + ' dias!',
-    dia: 'Hoje é o último dia com desconto!',
-    pos: 'Mensalidade em atraso'
+    pre: '⚠️ Sua mensalidade vence em ' + dados.dias + ' dias!',
+    dia: '⏰ Hoje é o último dia com desconto!',
+    pos: '❗ Mensalidade em atraso'
   };
 
-  const cabWpp = '*' + orgNome + '* 🏥\n\n';
+  const cabWpp    = '*' + orgNome + '* 🏥\n\n';
   const cartaoWpp = linkCartao ? '💳 *Cartão:* ' + linkCartao + '\n\n' : '';
 
-  const msg1Map = {
-    pre: cabWpp + 'Olá, *' + dados.nome + '*! 👋\n\n'
+  const msgWppMap = {
+    pre: cabWpp
+      + 'Olá, *' + dados.nome + '*! 👋\n\n'
       + '⚠️ Sua mensalidade vence em *' + dados.dias + ' dias* (' + dados.data + ').\n\n'
-      + '💰 Com desconto: *' + dados.valor_desc + '* | Sem desconto: ' + dados.valor_cheio + '\n\n'
-      + (pixCode ? '💚 *PIX:* O código será enviado na mensagem seguinte.\n\n' : '')
+      + '💰 Com desconto: *' + dados.valor_desc + '*\n'
+      + '💰 Sem desconto: ' + dados.valor_cheio + '\n\n'
+      + (pixCode ? '⚡ *PIX:* Código enviado na mensagem seguinte — é só copiar!\n\n' : '')
       + cartaoWpp
       + 'Dúvidas? Estamos à disposição! 😊',
 
-    dia: cabWpp + 'Olá, *' + dados.nome + '*! 👋\n\n'
+    dia: cabWpp
+      + 'Olá, *' + dados.nome + '*! 👋\n\n'
       + '⏰ *HOJE* é o último dia com desconto!\n\n'
-      + '💰 Com desconto: *' + dados.valor_desc + '* | Sem desconto: ' + dados.valor_cheio + '\n\n'
-      + (pixCode ? '💚 *PIX:* O código será enviado na mensagem seguinte.\n\n' : '')
+      + '💰 Com desconto: *' + dados.valor_desc + '*\n'
+      + '💰 Sem desconto: ' + dados.valor_cheio + '\n\n'
+      + (pixCode ? '⚡ *PIX:* Código enviado na mensagem seguinte — é só copiar!\n\n' : '')
       + cartaoWpp
       + 'Não perca o desconto! 🙏',
 
-    pos: cabWpp + 'Olá, *' + dados.nome + '*!\n\n'
+    pos: cabWpp
+      + 'Olá, *' + dados.nome + '*!\n\n'
       + '❗ Sua mensalidade está *em atraso* desde ' + dados.data + '.\n\n'
       + '💰 Valor: *' + dados.valor_cheio + '*\n\n'
-      + (pixCode ? '💚 *PIX:* O código será enviado na mensagem seguinte.\n\n' : '')
+      + (pixCode ? '⚡ *PIX:* Código enviado na mensagem seguinte — é só copiar!\n\n' : '')
       + cartaoWpp
       + 'Por favor, regularize sua situação. 🙏'
   };
 
+  // ── WhatsApp
   if (membro.whatsapp) {
     let wppOk = false;
-    // Mensagem 1 — principal
-    const r1 = await enviarWhatsApp(membro.whatsapp, msg1Map[tipo] || '');
+
+    // Mensagem 1 — principal com instruções
+    const r1 = await enviarWhatsApp(membro.whatsapp, msgWppMap[tipo] || '');
     if (r1.ok) wppOk = true;
 
-    // Mensagem 2 — apenas o codigo PIX (sozinho para facil copia)
+    // Mensagem 2 — só o código PIX (facilita copiar no celular)
     if (pixCode) {
-      await new Promise(res => setTimeout(res, 2000));
+      await new Promise(res => setTimeout(res, 2500));
       await enviarWhatsApp(membro.whatsapp, pixCode);
     }
 
-    await query('INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
-      [membro.id, cobranca.id, tipo, 'whatsapp', wppOk ? 'ok' : 'erro']);
+    await query(
+      'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
+      [membro.id, cobranca.id, tipo, 'whatsapp', wppOk ? 'ok' : 'erro']
+    );
   }
 
+  // ── Email
   if (membro.email) {
     const msgHtml = htmlCobranca({
-      titulo: tituloMap[tipo] || '',
-      mensagem: 'Prezado(a) ' + dados.nome + ', segue abaixo as opções para pagamento da sua mensalidade.',
-      linkCartao, pixCode, pixBase64, orgNome, orgCor, orgLogo
+      titulo:     tituloMap[tipo] || '',
+      mensagem:   'Prezado(a) ' + dados.nome + ', segue abaixo as opções para pagamento da sua mensalidade de ' + dados.valor_desc + ' (com desconto de pontualidade).',
+      linkCartao,
+      pixCode,
+      orgNome,
+      orgCor,
+      orgLogo
     });
-    const r = await enviarEmail({ para: membro.email, assunto: assuntoMap[tipo] || '', html: msgHtml, texto: msg1Map[tipo] || '' });
-    await query('INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
-      [membro.id, cobranca.id, tipo, 'email', r.ok ? 'ok' : 'erro']);
+
+    const r = await enviarEmail({
+      para:    membro.email,
+      assunto: assuntoMap[tipo] || '',
+      html:    msgHtml,
+      texto:   msgWppMap[tipo] || ''
+    });
+
+    await query(
+      'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
+      [membro.id, cobranca.id, tipo, 'email', r.ok ? 'ok' : 'erro']
+    );
   }
 }
+
+// ─── NOTIFICAR ANIVERSÁRIO ────────────────────────────────────────────────────
 
 async function notificarAniversario(opts) {
   const membro = opts.membro;
   const config = opts.config || await getConfig();
   const orgNome = config.org_nome || 'Liga Academica de Urologia';
-  const orgCor = config.org_cor || '#1a56db';
+  const orgCor  = config.org_cor  || '#1a56db';
   const orgLogo = config.org_logo || null;
-  const tpl = config.msg_aniversario || 'Parabens pelo seu aniversario, {nome}! 🎉';
+  const tpl = config.msg_aniversario || 'Parabéns pelo seu aniversário, {nome}! 🎉';
   const msg = preencherTemplate(tpl, { nome: membro.nome.split(' ')[0] });
 
   const msgWpp = '🎂 *' + orgNome + '*\n\nOlá, *' + membro.nome.split(' ')[0] + '*!\n\n' + msg + '\n\nCom carinho de toda a equipe! 💙';
 
   if (membro.whatsapp) {
     const r = await enviarWhatsApp(membro.whatsapp, msgWpp);
-    await query('INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
-      [membro.id, null, 'aniversario', 'whatsapp', r.ok ? 'ok' : 'erro']);
+    await query(
+      'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
+      [membro.id, null, 'aniversario', 'whatsapp', r.ok ? 'ok' : 'erro']
+    );
   }
+
   if (membro.email) {
-    const html = htmlCobranca({ titulo: '🎂 Feliz Aniversário, ' + membro.nome.split(' ')[0] + '!', mensagem: msg, linkCartao: null, pixCode: null, pixBase64: null, orgNome, orgCor, orgLogo });
-    const r = await enviarEmail({ para: membro.email, assunto: 'Feliz Aniversário! 🎉 — ' + orgNome, html, texto: msgWpp });
-    await query('INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
-      [membro.id, null, 'aniversario', 'email', r.ok ? 'ok' : 'erro']);
+    const html = htmlCobranca({
+      titulo:    '🎂 Feliz Aniversário, ' + membro.nome.split(' ')[0] + '!',
+      mensagem:  msg,
+      linkCartao: null,
+      pixCode:    null,
+      orgNome, orgCor, orgLogo
+    });
+    const r = await enviarEmail({
+      para:    membro.email,
+      assunto: 'Feliz Aniversário! 🎉 — ' + orgNome,
+      html,
+      texto:   msgWpp
+    });
+    await query(
+      'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
+      [membro.id, null, 'aniversario', 'email', r.ok ? 'ok' : 'erro']
+    );
   }
 }
 
