@@ -360,7 +360,17 @@
               <div class="campo"><label class="label">Nome *</label><input name="nome" class="input" required></div>
               <div class="campo"><label class="label">Instituição</label><input name="instituicao" class="input"></div>
               <div class="campo" style="grid-column:1/-1"><label class="label">Bio</label><textarea name="bio" class="input" rows="3"></textarea></div>
-              <div class="campo"><label class="label">Foto</label><input type="file" name="foto" class="input" accept="image/*"></div>
+              <div class="campo" style="grid-column:1/-1">
+                <label class="label">Foto do Palestrante</label>
+                <div style="background:#fffbeb;border:1.5px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:12px;color:#92400e;display:flex;align-items:center;gap:8px">
+                  <span style="font-size:18px">📐</span>
+                  <div>
+                    <strong>Tamanho recomendado: 400 × 400 px</strong> (quadrada, proporção 1:1)<br>
+                    Formatos aceitos: JPG, PNG · Tamanho máximo: 2 MB · A foto aparece em destaque na página pública
+                  </div>
+                </div>
+                <input type="file" name="foto" class="input" accept="image/*">
+              </div>
             </div>
             <button type="submit" class="btn btn-primario" style="margin-top:8px">+ Adicionar</button>
           </form>
