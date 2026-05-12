@@ -375,7 +375,7 @@
           <% if(patrocinadores.length===0){%><p style="color:var(--texto2);font-size:13px">Nenhum patrocinador adicionado.</p><%}%>
           <% patrocinadores.forEach(p => { %>
           <div class="patroc-card">
-            <% if(p.logo_chave){%><img src="/eventos/patrocinadores/<%= p.id %>/logo" style="height:40px;object-fit:contain;border-radius:4px"><% }else{ %><div style="width:40px;height:40px;background:var(--borda);border-radius:4px;display:flex;align-items:center;justify-content:center">🤝</div><%}%>
+            <% if(p.logo_chave){%><img src="/eventos/patrocinadores/<%= p.id %>/logo" style="height:60px;max-width:160px;object-fit:contain;border-radius:4px"><% }else{ %><div style="width:60px;height:60px;background:var(--borda);border-radius:4px;display:flex;align-items:center;justify-content:center">🤝</div><%}%>
             <div style="flex:1"><div style="font-weight:600"><%= p.nome %></div><div style="font-size:11px;color:var(--texto2)"><%= p.url||'' %></div></div>
             <form method="POST" action="/eventos/<%= evento.id %>/patrocinadores/<%= p.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')">
               <button type="submit" class="btn" style="font-size:11px;padding:3px 8px;color:var(--vermelho)">🗑</button>
@@ -389,7 +389,17 @@
             <div class="grid-2">
               <div class="campo"><label class="label">Nome *</label><input name="nome" class="input" required></div>
               <div class="campo"><label class="label">Website/URL</label><input name="url" class="input" placeholder="https://..."></div>
-              <div class="campo" style="grid-column:1/-1"><label class="label">Logo</label><input type="file" name="logo" class="input" accept="image/*"></div>
+              <div class="campo" style="grid-column:1/-1">
+                <label class="label">Logo do Patrocinador</label>
+                <div style="background:#fffbeb;border:1.5px solid #fcd34d;border-radius:8px;padding:10px 14px;margin-bottom:8px;font-size:12px;color:#92400e;display:flex;align-items:center;gap:8px">
+                  <span style="font-size:18px">📐</span>
+                  <div>
+                    <strong>Tamanho recomendado: 400 × 200 px</strong> (proporção 2:1)<br>
+                    Formatos aceitos: PNG (fundo transparente preferencial), JPG, SVG · Tamanho máximo: 2 MB
+                  </div>
+                </div>
+                <input type="file" name="logo" class="input" accept="image/*">
+              </div>
             </div>
             <button type="submit" class="btn btn-primario" style="margin-top:8px">+ Adicionar</button>
           </form>
