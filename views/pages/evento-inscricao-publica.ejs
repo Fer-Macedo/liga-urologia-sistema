@@ -105,11 +105,11 @@
     /* QUANTIDADE INGRESSO */
     .lote-qty{display:flex;align-items:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--bdr)}
     .lote-qty-label{font-size:12px;color:var(--ink3);font-weight:500;flex:1}
-    .qty-ctrl{display:flex;align-items:center;gap:0;border:1.5px solid var(--bdr);border-radius:8px;overflow:hidden;background:var(--sur)}
-    .qty-btn{width:34px;height:34px;border:none;background:transparent;cursor:pointer;font-size:18px;font-weight:300;color:var(--ink2);display:flex;align-items:center;justify-content:center;transition:background .15s;user-select:none;font-family:'Inter',sans-serif}
-    .qty-btn:hover{background:var(--sur3)}
+    .qty-ctrl{display:flex;align-items:center;gap:0;border:2px solid var(--p);border-radius:9px;overflow:hidden;background:var(--sur)}
+    .qty-btn{width:36px;height:36px;border:none;background:var(--p);cursor:pointer;font-size:20px;font-weight:400;color:white;display:flex;align-items:center;justify-content:center;transition:opacity .15s;user-select:none;font-family:'Inter',sans-serif;flex-shrink:0}
+    .qty-btn:hover{opacity:.85}
     .qty-btn:disabled{opacity:.35;cursor:not-allowed}
-    .qty-num{width:38px;height:34px;text-align:center;font-size:14px;font-weight:700;color:var(--ink);border:none;border-left:1px solid var(--bdr);border-right:1px solid var(--bdr);background:white;font-family:'Inter',sans-serif;pointer-events:none}
+    .qty-num{width:44px;height:36px;text-align:center;font-size:15px;font-weight:800;color:var(--p);border:none;border-left:2px solid var(--p);border-right:2px solid var(--p);background:white;font-family:'Inter',sans-serif;pointer-events:none}
     .cupom-sec{margin-top:16px;padding-top:16px;border-top:1px solid var(--bdr)}
     .cupom-lbl{font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:8px}
     .cupom-row{display:flex;gap:8px}
@@ -797,6 +797,8 @@ const lotesData=<%- JSON.stringify(lotes) %>;
 let loteId=<%= lotes[0]?.id||'null' %>,precoBase=<%= parseFloat(lotes[0]?.preco||0) %>,desconto=0,quantidade=1;
 
 function selLote(id,el){
+  // forçar string para comparação consistente
+  id = String(id);
   document.querySelectorAll('.lote').forEach(e=>e.classList.remove('sel'));
   el.classList.add('sel');
   document.getElementById('lote-sel').value=id;
@@ -805,16 +807,17 @@ function selLote(id,el){
   document.getElementById('campo-qty').value=1;
   // mostrar seletor de qtd apenas no lote selecionado
   lotesData.forEach(function(l){
-    var row=document.getElementById('qty-row-'+l.id);
-    if(row) row.style.display=l.id==id?'flex':'none';
-    var inp=document.getElementById('qty-'+l.id);
+    var lid=String(l.id);
+    var row=document.getElementById('qty-row-'+lid);
+    if(row) row.style.display=(lid===id)?'flex':'none';
+    var inp=document.getElementById('qty-'+lid);
     if(inp) inp.value=1;
-    var minus=document.getElementById('qty-minus-'+l.id);
+    var minus=document.getElementById('qty-minus-'+lid);
     if(minus) minus.disabled=true;
-    var plus=document.getElementById('qty-plus-'+l.id);
+    var plus=document.getElementById('qty-plus-'+lid);
     if(plus) plus.disabled=false;
   });
-  const l=lotesData.find(x=>x.id==id);
+  const l=lotesData.find(x=>String(x.id)===id);
   precoBase=l?parseFloat(l.preco):0;
   updRes(l);
 }
@@ -823,13 +826,15 @@ function selLote(id,el){
 window.addEventListener('DOMContentLoaded',function(){
   if(lotesData.length>0){
     var first=lotesData[0];
-    var row=document.getElementById('qty-row-'+first.id);
+    var firstId=String(first.id);
+    var row=document.getElementById('qty-row-'+firstId);
     if(row) row.style.display='flex';
     updRes(first);
   }
 });
 
 function mudaQty(id,delta){
+  id=String(id);
   var inp=document.getElementById('qty-'+id);
   if(!inp)return;
   var val=parseInt(inp.value)||1;
@@ -839,7 +844,7 @@ function mudaQty(id,delta){
   document.getElementById('campo-qty').value=val;
   document.getElementById('qty-minus-'+id).disabled=val<=1;
   document.getElementById('qty-plus-'+id).disabled=val>=10;
-  const l=lotesData.find(x=>x.id==id);
+  const l=lotesData.find(x=>String(x.id)===id);
   updRes(l);
 }
 
@@ -874,22 +879,6 @@ function selectTipo(tipo){
   const ic=document.getElementById('inp-catraca'),ii=document.getElementById('inp-instituicao');
   if(tipo==='ucp'){cc.style.display='block';ci.style.display='none';ic.required=true;ii.required=false;ii.value='';}
   else{cc.style.display='none';ci.style.display='block';ic.required=false;ic.value='';ii.required=true;}
-}
-function selLote(id,el){
-  document.querySelectorAll('.lote').forEach(e=>e.classList.remove('sel'));
-  el.classList.add('sel');
-  document.getElementById('lote-sel').value=id;
-  loteId=id;
-  const l=lotesData.find(x=>x.id==id);
-  precoBase=l?parseFloat(l.preco):0;
-  updRes(l);
-}
-function updRes(l){
-  const rn=document.getElementById('res-nome'),rp=document.getElementById('res-preco');
-  if(!rn)return;
-  const p=precoBase*(1-desconto);
-  rn.textContent=l?l.nome:'';
-  rp.textContent=p===0?'Gratuito':'R$ '+p.toFixed(2);
 }
 function abrirForm(){
   const fs=document.getElementById('form-sec');
