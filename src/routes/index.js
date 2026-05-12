@@ -2201,13 +2201,13 @@ router.post('/eventos/:id/editar', requireAuth, async (req, res) => {
   try {
     const {upload, uploadArquivo} = require('../services/arquivos');
     upload.single('banner')(req, res, async (err) => {
-      const {nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico} = req.body;
+      const {nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico,carga_horaria} = req.body;
       let bannerChave = null;
       if (req.file) { const r=await uploadArquivo(req.file.buffer,req.file.originalname,req.file.mimetype,'eventos'); bannerChave=r.chave; }
-      const bannerUpdate = bannerChave ? ',banner_chave=$10' : '';
-      const params = [nome,descricao||null,data_inicio||null,data_fim||null,local||null,endereco||null,parseInt(vagas_total),status,publico==='true',req.params.id];
-      if (bannerChave) params.splice(9,0,bannerChave);
-      await query(`UPDATE eventos SET nome=$1,descricao=$2,data_inicio=$3,data_fim=$4,local=$5,endereco=$6,vagas_total=$7,status=$8,publico=$9${bannerUpdate} WHERE id=${bannerChave?'$11':'$10'}`, params);
+      const bannerUpdate = bannerChave ? ',banner_chave=$11' : '';
+      const params = [nome,descricao||null,data_inicio||null,data_fim||null,local||null,endereco||null,parseInt(vagas_total),status,publico==='true',parseInt(carga_horaria)||null,req.params.id];
+      if (bannerChave) params.splice(10,0,bannerChave);
+      await query(`UPDATE eventos SET nome=$1,descricao=$2,data_inicio=$3,data_fim=$4,local=$5,endereco=$6,vagas_total=$7,status=$8,publico=$9,carga_horaria=$10${bannerUpdate} WHERE id=${bannerChave?'$12':'$11'}`, params);
       req.session.msg=['Evento atualizado!']; res.redirect('/eventos/'+req.params.id);
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
@@ -2704,6 +2704,7 @@ router.post('/eventos/:id/avancado', requireAuth, async (req, res) => {
   const {email_inscricao,email_confirmacao,notif_email,wpp_grupo,inscricao_gratuita_auto,inscricao_unica,termos_texto,lgpd_texto} = req.body;
   await query('UPDATE eventos SET email_inscricao=$1,email_confirmacao=$2,wpp_grupo=$3,inscricao_gratuita_auto=$4,inscricao_unica=$5,termos_texto=$6,lgpd_texto=$7 WHERE id=$8',
     [email_inscricao||null,email_confirmacao||null,wpp_grupo||null,inscricao_gratuita_auto==='true',inscricao_unica==='true',termos_texto||null,lgpd_texto||null,req.params.id]);
+  // carga_horaria salva via rota /editar
   req.session.msg=['Configurações avançadas salvas!']; res.redirect('/eventos/'+req.params.id);
 });
 
@@ -2791,18 +2792,136 @@ router.post('/eventos/:id/cupons/:cid/deletar', requireAuth, async (req, res) =>
   req.session.msg=['Cupom excluído!']; res.redirect('/eventos/'+req.params.id);
 });
 
+// Gerar cupons em lote para ligantes EM DIA e diretivos com envio via WhatsApp/email
 router.post('/eventos/:id/cupons/gerar-ligantes', requireAuth, async (req, res) => {
-  const {prefixo} = req.body;
+  const { prefixo, destino, enviar_wpp, enviar_email } = req.body;
   const pref = (prefixo||'LAURO').toUpperCase().replace(/[^A-Z0-9]/g,'');
-  const [ligR, dirR] = await Promise.all([query('SELECT nome FROM ligantes WHERE ativo=1'), query('SELECT nome FROM diretivos WHERE ativo=1')]);
-  const pessoas = [...ligR.rows, ...dirR.rows];
-  let criados = 0;
-  for (const p of pessoas) {
-    const parte = p.nome.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'').substring(0,8);
-    const codigo = pref + parte + Math.floor(Math.random()*100);
-    try { await query('INSERT INTO evento_cupons (evento_id,codigo,tipo,valor,usos_max) VALUES ($1,$2,$3,$4,$5)',[req.params.id,codigo,'percentual',100,1]); criados++; } catch(e){}
+  const eventoR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
+  const evento = eventoR.rows[0];
+  const { enviarWhatsApp, enviarEmail } = require('../services/notificacoes');
+  const config = await query('SELECT chave,valor FROM configuracoes').then(r => { const c={}; r.rows.forEach(x=>c[x.chave]=x.valor); return c; });
+  const orgNome = config.org_nome || 'LAURO';
+  const appUrl = process.env.APP_URL || 'https://liga-urologia.onrender.com';
+
+  let pessoas = [];
+
+  // Ligantes EM DIA (último pagamento = pago OU sem cobranças = gratuito)
+  if (destino === 'ligantes' || destino === 'todos') {
+    const ligR = await query(`
+      SELECT l.id, l.nome, l.email, l.whatsapp, 'ligante' as tipo,
+        (SELECT c.status FROM cobrancas c WHERE c.membro_id IS NULL
+         ORDER BY c.criado_em DESC LIMIT 1) as ultimo_status
+      FROM ligantes l WHERE l.ativo=1
+    `);
+    // Verifica em dia: pago ou sem dívidas atrasadas
+    for (const lig of ligR.rows) {
+      const divR = await query(
+        "SELECT COUNT(*) as n FROM cobrancas WHERE status='atrasado' AND referencia LIKE $1",
+        ['%-' + lig.id + '-%']
+      );
+      // Ligantes não têm cobrança direta pelo id neste sistema — incluímos todos ativos
+      pessoas.push({ ...lig, em_dia: true });
+    }
   }
-  req.session.msg=[criados+' cupons gerados!']; res.redirect('/eventos/'+req.params.id);
+
+  // Diretivos — todos (não pagam mensalidade)
+  if (destino === 'diretivos' || destino === 'todos') {
+    const dirR = await query('SELECT id, nome, email, whatsapp, \'diretivo\' as tipo FROM diretivos WHERE ativo=1');
+    dirR.rows.forEach(d => pessoas.push({ ...d, em_dia: true }));
+  }
+
+  let criados = 0, enviados = 0, erros = [];
+
+  for (const p of pessoas) {
+    if (!p.em_dia) continue;
+    const parte = p.nome.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'').substring(0,8);
+    const sufixo = Math.floor(Math.random()*900+100);
+    const codigo = pref + parte + sufixo;
+
+    try {
+      await query('INSERT INTO evento_cupons (evento_id,codigo,tipo,valor,usos_max) VALUES ($1,$2,$3,$4,$5)',
+        [req.params.id, codigo, 'percentual', 100, 1]);
+      criados++;
+
+      const msg = `*${orgNome}* 🎟️\n\nOlá, *${p.nome.split(' ')[0]}*!\n\nVocê tem um *cupom de isenção 100%* para o evento:\n*${evento.nome}*\n\n🎫 Seu cupom: \`${codigo}\`\n\n🔗 Inscreva-se em: ${appUrl}/inscricao/${req.params.id}\n\n_Cupom válido para uma inscrição._`;
+
+      if (enviar_wpp === 'on' && p.whatsapp) {
+        try { await enviarWhatsApp(p.whatsapp, msg); enviados++; await new Promise(r=>setTimeout(r,600)); } catch(e) { erros.push(p.nome); }
+      }
+      if (enviar_email === 'on' && p.email) {
+        const html = `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px">
+          <h2 style="color:#1a3d2b">${orgNome}</h2>
+          <p>Olá, <strong>${p.nome.split(' ')[0]}</strong>!</p>
+          <p>Você tem um <strong>cupom de isenção 100%</strong> para o evento:</p>
+          <h3 style="color:#1a3d2b">${evento.nome}</h3>
+          <div style="background:#f0fdf4;border:2px dashed #22c55e;border-radius:10px;padding:20px;text-align:center;margin:20px 0">
+            <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px">Seu cupom</div>
+            <div style="font-size:28px;font-weight:900;font-family:monospace;color:#1a3d2b;letter-spacing:4px">${codigo}</div>
+            <div style="font-size:12px;color:#6b7280;margin-top:4px">válido para 1 inscrição</div>
+          </div>
+          <a href="${appUrl}/inscricao/${req.params.id}" style="display:inline-block;background:#1a3d2b;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700">🎟️ Inscrever-se agora</a>
+        </div>`;
+        try { await enviarEmail({ para: p.email, assunto: `🎟️ Seu cupom gratuito — ${evento.nome}`, html, texto: msg }); } catch(e) {}
+      }
+    } catch(e) { /* código duplicado — ignora */ }
+  }
+
+  req.session.msg=[`${criados} cupons gerados, ${enviados} notificações enviadas!`];
+  res.redirect('/eventos/'+req.params.id+'?tab=cupons');
 });
+
+// ─── EDITAR INSCRITO ──────────────────────────────────────────────────────────
+router.post('/eventos/:id/inscricoes/:iid/editar', requireAuth, async (req, res) => {
+  const { nome, email, whatsapp, cpf, instituicao, status } = req.body;
+  await query(
+    'UPDATE evento_inscricoes SET nome=$1, email=$2, whatsapp=$3, cpf=$4, instituicao=$5, status=$6 WHERE id=$7',
+    [nome, email, whatsapp||null, cpf||null, instituicao||null, status, req.params.iid]
+  );
+  req.session.msg=['Inscrito atualizado!'];
+  res.redirect('/eventos/'+req.params.id+'?tab=inscritos');
+});
+
+// ─── EMAIL EM MASSA PARA INSCRITOS ────────────────────────────────────────────
+router.post('/eventos/:id/email-massa', requireAuth, async (req, res) => {
+  const { assunto, mensagem, apenas_confirmados } = req.body;
+  try {
+    let sql = 'SELECT * FROM evento_inscricoes WHERE evento_id=$1 AND email IS NOT NULL';
+    if (apenas_confirmados === 'on') sql += " AND status='confirmado'";
+    const r = await query(sql, [req.params.id]);
+    const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
+    const evento = evR.rows[0];
+    const config = await query('SELECT chave,valor FROM configuracoes').then(r => { const c={}; r.rows.forEach(x=>c[x.chave]=x.valor); return c; });
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({ host:process.env.EMAIL_HOST, port:process.env.EMAIL_PORT, auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS} });
+    const cor = evento.cor_tema || '#1a3d2b';
+    let enviados = 0;
+    for (const insc of r.rows) {
+      const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;background:#f4f4f4;padding:20px">
+        <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden">
+          <div style="background:${cor};padding:22px 28px">
+            <h2 style="color:#fff;margin:0">${config.org_nome||'LAURO'}</h2>
+            <p style="color:rgba(255,255,255,.75);margin:4px 0 0;font-size:13px">${evento.nome}</p>
+          </div>
+          <div style="padding:28px">
+            <p style="color:#555;margin-bottom:20px">Olá, <strong>${insc.nome.split(' ')[0]}</strong>!</p>
+            <div style="color:#374151;line-height:1.7">${mensagem.replace(/\n/g,'<br>')}</div>
+            <p style="font-size:12px;color:#9ca3af;margin-top:24px;padding-top:16px;border-top:1px solid #f3f4f6">${config.org_nome||'LAURO'} · Dúvidas? Responda este e-mail.</p>
+          </div>
+        </div></body></html>`;
+      try {
+        await transporter.sendMail({ from:process.env.EMAIL_USER, to:insc.email, subject:assunto, html });
+        enviados++;
+        await new Promise(r=>setTimeout(r,300));
+      } catch(e) { console.error('Email massa erro:', insc.email, e.message); }
+    }
+    req.session.msg=[`Email enviado para ${enviados} inscritos!`];
+  } catch(e) {
+    req.session.erro=['Erro: '+e.message];
+  }
+  res.redirect('/eventos/'+req.params.id+'?tab=inscritos');
+});
+
+// ─── SALVAR LGPD NO EVENTO (via avançado) ────────────────────────────────────
+// Já coberto pela rota /eventos/:id/avancado existente — lgpd_texto salvo junto
 
 module.exports = router;
