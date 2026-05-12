@@ -43,7 +43,7 @@ const crypto = require('crypto');
 const dayjs = require('dayjs');
 const { query } = require('../models/database');
 const { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria, requirePermissao } = require('../middleware/auth');
-const { criarCobranca, consultarPagamento } = require('../services/mercadopago');
+const { criarCobranca, consultarPagamento, criarPixEvento, processarWebhook } = require('../services/pagbank');
 const { notificarCobranca } = require('../services/notificacoes');
 
 // ─── LOG DE ATIVIDADES ───────────────────────────────────────────────────────
@@ -520,6 +520,33 @@ router.post('/webhook/mercadopago', express.raw({ type: '*/*' }), async (req, re
       }
     }
   } catch (e) { console.error('MP Webhook erro:', e.message); }
+  res.sendStatus(200);
+});// ─── WEBHOOK PAGBANK ─────────────────────────────────────────────────────────
+router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) => {
+  try {
+    let body;
+    try { body = JSON.parse(req.body.toString()); }
+    catch (e) { return res.sendStatus(200); }
+    console.log('PagBank Webhook:', JSON.stringify(body).substring(0, 300));
+    const { orderId, referencia, pago } = processarWebhook(body);
+    if (!referencia) return res.sendStatus(200);
+    if (pago && referencia.startsWith('mensalidade-')) {
+      const r = await query(
+        "UPDATE cobrancas SET status='pago', data_pagamento=NOW(), pagbank_charge_id=$1 WHERE referencia=$2 AND status!='pago'",
+        [orderId, referencia]
+      );
+      if (r.rowCount > 0) console.log('PagBank mensalidade confirmada:', referencia);
+    }
+    if (pago && referencia.startsWith('evento-insc-')) {
+      const partes = referencia.split('-');
+      const inscricaoId = partes[2];
+      if (inscricaoId) {
+        await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1 AND status!='confirmado'", [inscricaoId]);
+        await query("UPDATE evento_pagamentos SET status='pago', pago_em=NOW(), pagbank_order_id=$1 WHERE inscricao_id=$2 AND status!='pago'", [orderId, inscricaoId]);
+        console.log('PagBank ingresso confirmado — insc:', inscricaoId);
+      }
+    }
+  } catch (e) { console.error('PagBank Webhook erro:', e.message); }
   res.sendStatus(200);
 });
 
