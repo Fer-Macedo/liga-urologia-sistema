@@ -411,10 +411,6 @@ router.post('/configuracoes/logo-url', requireAuth, requireAdmin, async (req, re
 
 // ─── USUÁRIOS ──────────────────────────────────────────────────────────────────
 
-
-
-
-
 router.post('/usuarios/:id/toggle', requireAuth, requireAdmin, async (req, res) => {
   const r = await query('SELECT * FROM usuarios WHERE id=$1', [req.params.id]);
   const u = r.rows[0];
@@ -492,21 +488,20 @@ router.post('/meu-email', requireAuth, async (req, res) => {
   res.redirect('/dashboard');
 });
 
-// ─── WEBHOOK PAGBANK ──────────────────────────────────────────────────────────
+// ─── WEBHOOK MERCADO PAGO (mantido para pagamentos existentes) ────────────────
 
 router.post('/webhook/mercadopago', express.raw({ type: '*/*' }), async (req, res) => {
   try {
     let body;
-    try { body = JSON.parse(req.body.toString()); } 
+    try { body = JSON.parse(req.body.toString()); }
     catch (e) { return res.sendStatus(200); }
 
     console.log('MP Webhook:', JSON.stringify(body).substring(0, 200));
 
-    // Notificacao de pagamento
     if (body.type === 'payment' && body.data?.id) {
       const paymentId = body.data.id;
-      const { consultarPagamento } = require('../services/mercadopago');
-      const result = await consultarPagamento(paymentId);
+      const { consultarPagamento: consultarMP } = require('../services/mercadopago');
+      const result = await consultarMP(paymentId);
 
       if (result.ok && result.status === 'approved') {
         const ref = result.data.external_reference;
@@ -521,36 +516,51 @@ router.post('/webhook/mercadopago', express.raw({ type: '*/*' }), async (req, re
     }
   } catch (e) { console.error('MP Webhook erro:', e.message); }
   res.sendStatus(200);
-});// ─── WEBHOOK PAGBANK ─────────────────────────────────────────────────────────
+});
+
+// ─── WEBHOOK PAGBANK ──────────────────────────────────────────────────────────
+
 router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) => {
   try {
     let body;
     try { body = JSON.parse(req.body.toString()); }
     catch (e) { return res.sendStatus(200); }
-    console.log('PagBank Webhook:', JSON.stringify(body).substring(0, 300));
-    const { orderId, referencia, pago } = processarWebhook(body);
+
+    console.log('PagBank Webhook recebido:', JSON.stringify(body).substring(0, 300));
+
+    const { orderId, referencia, status, pago } = processarWebhook(body);
+
     if (!referencia) return res.sendStatus(200);
+
+    // Pagamento de MENSALIDADE
     if (pago && referencia.startsWith('mensalidade-')) {
       const r = await query(
-        "UPDATE cobrancas SET status='pago', data_pagamento=NOW(), pagbank_charge_id=$1 WHERE referencia=$2 AND status!='pago'",
+        "UPDATE cobrancas SET status='pago', data_pagamento=NOW(), pagbank_charge_id=$1 WHERE referencia=$2 AND status!='pago' RETURNING id",
         [orderId, referencia]
       );
-      if (r.rowCount > 0) console.log('PagBank mensalidade confirmada:', referencia);
+      if (r.rowCount > 0) console.log('PagBank mensalidade confirmada:', referencia, orderId);
     }
+
+    // Pagamento de INGRESSO DE EVENTO
     if (pago && referencia.startsWith('evento-insc-')) {
       const partes = referencia.split('-');
       const inscricaoId = partes[2];
       if (inscricaoId) {
-        await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1 AND status!='confirmado'", [inscricaoId]);
-        await query("UPDATE evento_pagamentos SET status='pago', pago_em=NOW(), pagbank_order_id=$1 WHERE inscricao_id=$2 AND status!='pago'", [orderId, inscricaoId]);
-        console.log('PagBank ingresso confirmado — insc:', inscricaoId);
+        await query(
+          "UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1 AND status!='confirmado'",
+          [inscricaoId]
+        );
+        await query(
+          "UPDATE evento_pagamentos SET status='pago', pago_em=NOW(), pagbank_order_id=$1 WHERE inscricao_id=$2 AND status!='pago'",
+          [orderId, inscricaoId]
+        );
+        console.log('PagBank ingresso confirmado — insc:', inscricaoId, orderId);
       }
     }
+
   } catch (e) { console.error('PagBank Webhook erro:', e.message); }
   res.sendStatus(200);
 });
-
-
 
 // ─── FREQUÊNCIA ───────────────────────────────────────────────────────────────
 
@@ -696,7 +706,6 @@ router.get('/frequencia/relatorio/:turmaId', requireAuth, requireSecretaria, asy
     [req.params.turmaId]
   );
 
-  // Busca presencas de cada membro por atividade
   const presencasDetalhe = {};
   for (const at of atividades.rows) {
     const pr = await query('SELECT membro_id, presente FROM presencas WHERE atividade_id=$1', [at.id]);
@@ -725,7 +734,6 @@ router.get('/frequencia/relatorio/:turmaId', requireAuth, requireSecretaria, asy
       + '<td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:' + cor + ';font-weight:bold">' + status + '</td></tr>';
   }).join('');
 
-  // Tabela de atividades com presencas por membro coloridas
   let linhasAtividades = '';
   for (const m of membros.rows) {
     let cols = '<td style="padding:8px;border:1px solid #e5e7eb;font-weight:600">' + m.nome + '</td>';
@@ -781,7 +789,6 @@ router.post('/frequencia/turma/:id/enviar', requireAuth, requireSecretaria, asyn
   const turmaR = await query('SELECT * FROM turmas WHERE id=$1', [req.params.id]);
   const turma = turmaR.rows[0];
 
-  // Filtra por membros selecionados (se nenhum, envia para todos)
   const membrosSelecionados = [].concat(req.body.membros_ids || []);
 
   let sqlFiltro = '';
@@ -798,7 +805,6 @@ router.post('/frequencia/turma/:id/enviar', requireAuth, requireSecretaria, asyn
      FROM turma_membros tm JOIN membros m ON m.id=tm.membro_id WHERE tm.turma_id=$1` + sqlFiltro, params
   );
   const orgNome = config.org_nome || 'Liga Academica de Urologia';
-  const orgLogo = config.org_logo || null;
   let enviados = 0;
   for (const m of membros.rows) {
     const pct = m.total_atividades > 0 ? Math.round((m.presencas / m.total_atividades) * 100) : 0;
@@ -815,12 +821,10 @@ router.post('/frequencia/turma/:id/enviar', requireAuth, requireSecretaria, asyn
 
 // ─── PERMISSÕES DE USUÁRIO ────────────────────────────────────────────────────
 
-// Sobrescreve rota GET /usuarios para incluir permissoes
 router.get('/usuarios', requireAuth, requirePermissao('usuarios'), async (req, res) => {
   const config = await getConfig();
   const r = await query('SELECT id,nome,email,perfil,ativo,criado_em FROM usuarios ORDER BY criado_em');
 
-  // Busca permissoes de todos os usuarios
   const permR = await query('SELECT usuario_id, modulo FROM usuario_permissoes');
   const permissoesUsuarios = {};
   permR.rows.forEach(function(row) {
@@ -835,61 +839,39 @@ router.get('/usuarios', requireAuth, requirePermissao('usuarios'), async (req, r
   });
 });
 
-// Salvar permissoes
 router.post('/usuarios/:id/permissoes', requireAuth, requireAdmin, async (req, res) => {
   const userId = req.params.id;
   const modulos = [].concat(req.body.modulos || []);
-
-  // Remove permissoes antigas
   await query('DELETE FROM usuario_permissoes WHERE usuario_id=$1', [userId]);
-
-  // Insere novas permissoes
   for (const modulo of modulos) {
-    await query(
-      'INSERT INTO usuario_permissoes (usuario_id,modulo) VALUES ($1,$2) ON CONFLICT DO NOTHING',
-      [userId, modulo]
-    );
+    await query('INSERT INTO usuario_permissoes (usuario_id,modulo) VALUES ($1,$2) ON CONFLICT DO NOTHING', [userId, modulo]);
   }
-
   req.flash('msg', 'Permissões atualizadas!');
   res.redirect('/usuarios');
 });
 
-// Criar usuario com permissoes iniciais
 router.post('/usuarios', requireAuth, requireAdmin, async (req, res) => {
   const { nome, email, senha, perfil } = req.body;
   const modulosInicial = [].concat(req.body.modulos_inicial || []);
   const hash = bcrypt.hashSync(senha, 10);
-
   try {
-    const r = await query(
-      'INSERT INTO usuarios (nome,email,senha,perfil) VALUES ($1,$2,$3,$4) RETURNING id',
-      [nome, email, hash, perfil]
-    );
+    const r = await query('INSERT INTO usuarios (nome,email,senha,perfil) VALUES ($1,$2,$3,$4) RETURNING id', [nome, email, hash, perfil]);
     const novoId = r.rows[0].id;
-
-    // Se nao vieram modulos, usa padrao do perfil
     const PADRAO = {
       secretaria:  ['dashboard', 'frequencia', 'aniversarios'],
       financeiro:  ['dashboard', 'membros', 'cobrancas', 'aniversarios', 'notificacoes'],
       visualizador:['dashboard']
     };
     const perms = modulosInicial.length > 0 ? modulosInicial : (PADRAO[perfil] || ['dashboard']);
-
     for (const modulo of perms) {
-      await query(
-        'INSERT INTO usuario_permissoes (usuario_id,modulo) VALUES ($1,$2) ON CONFLICT DO NOTHING',
-        [novoId, modulo]
-      );
+      await query('INSERT INTO usuario_permissoes (usuario_id,modulo) VALUES ($1,$2) ON CONFLICT DO NOTHING', [novoId, modulo]);
     }
-
     req.flash('msg', 'Usuário ' + nome + ' criado com sucesso!');
   } catch (e) {
     req.flash('erro', 'E-mail já cadastrado.');
   }
   res.redirect('/usuarios');
 });
-
 
 // ─── WEBHOOK WHATSAPP — LAURO ─────────────────────────────────────────────────
 router.post('/webhook/whatsapp', async (req, res) => {
@@ -909,10 +891,8 @@ router.post('/webhook/whatsapp', async (req, res) => {
   res.sendStatus(200);
 });
 
-
 // ─── DIRETIVOS ────────────────────────────────────────────────────────────────
 
-// Formulário público de cadastro (sem login)
 router.get('/cadastro-diretivo', async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg || []; req.session.msg = [];
@@ -945,26 +925,21 @@ router.post('/cadastro-diretivo', async (req, res) => {
   }
 });
 
-// Painel de diretivos (com login)
 router.get('/diretivos', requireAuth, requireSecretaria, async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg || []; req.session.msg = [];
   const erro = req.session.erro || []; req.session.erro = [];
   const r = await query('SELECT * FROM diretivos WHERE ativo=1 ORDER BY cargo, nome');
   res.render('pages/diretivos', {
-    config, msg, erro,
-    diretivos: r.rows,
-    usuario: req.session.usuario,
+    config, msg, erro, diretivos: r.rows, usuario: req.session.usuario,
     appUrl: process.env.APP_URL || 'https://liga-urologia.onrender.com'
   });
 });
 
 router.post('/diretivos', requireAuth, requireSecretaria, async (req, res) => {
   const { nome, rg, cpf, email, whatsapp, cargo, semestre_turma, data_nascimento, onde_reside, disponibilidade } = req.body;
-  await query(
-    'INSERT INTO diretivos (nome,rg,cpf,email,whatsapp,cargo,semestre_turma,data_nascimento,onde_reside,disponibilidade) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
-    [nome,rg,cpf,email,whatsapp,cargo,semestre_turma,data_nascimento||null,onde_reside,disponibilidade]
-  );
+  await query('INSERT INTO diretivos (nome,rg,cpf,email,whatsapp,cargo,semestre_turma,data_nascimento,onde_reside,disponibilidade) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+    [nome,rg,cpf,email,whatsapp,cargo,semestre_turma,data_nascimento||null,onde_reside,disponibilidade]);
   req.session.msg = ['Diretivo cadastrado com sucesso!'];
   res.redirect('/diretivos');
 });
@@ -992,8 +967,6 @@ router.post('/diretivos/:id/toggle', requireAuth, requireAdmin, async (req, res)
   res.redirect('/diretivos');
 });
 
-
-
 // ─── FREQUÊNCIA DIRETIVOS ─────────────────────────────────────────────────────
 
 router.get('/frequencia-diretivos', requireAuth, requireSecretaria, async (req, res) => {
@@ -1004,17 +977,10 @@ router.get('/frequencia-diretivos', requireAuth, requireSecretaria, async (req, 
   const turmasR = await query('SELECT * FROM diretivo_turmas WHERE ativo=1 ORDER BY nome');
   const turmas = turmasR.rows;
 
-  let turmaAtual = null;
-  let atividades = [];
-  let membrosFrequencia = [];
-  let resumo = { aptos:0, risco:0, inaptos:0 };
-  let todosDiretivos = [];
+  let turmaAtual = null, atividades = [], membrosFrequencia = [], resumo = { aptos:0, risco:0, inaptos:0 }, todosDiretivos = [];
 
   const turmaId = req.query.turma;
-  if (turmaId) {
-    const tR = await query('SELECT * FROM diretivo_turmas WHERE id=$1', [turmaId]);
-    turmaAtual = tR.rows[0] || null;
-  }
+  if (turmaId) { const tR = await query('SELECT * FROM diretivo_turmas WHERE id=$1', [turmaId]); turmaAtual = tR.rows[0] || null; }
   if (!turmaAtual && turmas.length > 0) turmaAtual = turmas[0];
 
   const todosR = await query('SELECT id, nome FROM diretivos WHERE ativo=1 ORDER BY nome');
@@ -1025,28 +991,22 @@ router.get('/frequencia-diretivos', requireAuth, requireSecretaria, async (req, 
       `SELECT a.*, 
         (SELECT COUNT(*) FROM diretivo_presencas p WHERE p.atividade_id=a.id AND p.presente=1) as presentes,
         (SELECT COUNT(*) FROM diretivo_turma_membros tm WHERE tm.turma_id=a.turma_id) as total_membros
-       FROM diretivo_atividades a WHERE a.turma_id=$1 ORDER BY a.data_atividade DESC`,
-      [turmaAtual.id]
+       FROM diretivo_atividades a WHERE a.turma_id=$1 ORDER BY a.data_atividade DESC`, [turmaAtual.id]
     );
     for (const at of atR.rows) {
       const mR = await query(
         `SELECT d.id as diretivo_id, d.nome, COALESCE(p.presente,0) as presente
-         FROM diretivo_turma_membros tm
-         JOIN diretivos d ON d.id=tm.diretivo_id
+         FROM diretivo_turma_membros tm JOIN diretivos d ON d.id=tm.diretivo_id
          LEFT JOIN diretivo_presencas p ON p.atividade_id=$1 AND p.diretivo_id=d.id
-         WHERE tm.turma_id=$2 ORDER BY d.nome`,
-        [at.id, turmaAtual.id]
+         WHERE tm.turma_id=$2 ORDER BY d.nome`, [at.id, turmaAtual.id]
       );
-      at.membros = mR.rows;
-      atividades.push(at);
+      at.membros = mR.rows; atividades.push(at);
     }
-
     const mfR = await query(
       `SELECT d.id as membro_id, d.nome, d.cargo, tm.data_entrada,
         (SELECT COUNT(*) FROM diretivo_atividades a WHERE a.turma_id=$1) as total_atividades,
         (SELECT COUNT(*) FROM diretivo_presencas p JOIN diretivo_atividades a ON a.id=p.atividade_id WHERE a.turma_id=$1 AND p.diretivo_id=d.id AND p.presente=1) as presencas
-       FROM diretivo_turma_membros tm JOIN diretivos d ON d.id=tm.diretivo_id WHERE tm.turma_id=$1 ORDER BY d.nome`,
-      [turmaAtual.id]
+       FROM diretivo_turma_membros tm JOIN diretivos d ON d.id=tm.diretivo_id WHERE tm.turma_id=$1 ORDER BY d.nome`, [turmaAtual.id]
     );
     membrosFrequencia = mfR.rows;
     membrosFrequencia.forEach(m => {
@@ -1064,8 +1024,7 @@ router.get('/frequencia-diretivos', requireAuth, requireSecretaria, async (req, 
 
 router.post('/frequencia-diretivos/turma', requireAuth, requireSecretaria, async (req, res) => {
   const { nome, data_inicio, data_fim } = req.body;
-  await query('INSERT INTO diretivo_turmas (nome,data_inicio,data_fim) VALUES ($1,$2,$3)',
-    [nome, data_inicio, data_fim||null]);
+  await query('INSERT INTO diretivo_turmas (nome,data_inicio,data_fim) VALUES ($1,$2,$3)', [nome, data_inicio, data_fim||null]);
   req.session.msg = ['Turma criada com sucesso!'];
   res.redirect('/frequencia-diretivos');
 });
@@ -1073,15 +1032,9 @@ router.post('/frequencia-diretivos/turma', requireAuth, requireSecretaria, async
 router.post('/frequencia-diretivos/atividade', requireAuth, requireSecretaria, async (req, res) => {
   const turma_id = req.body.turma_id_sel || req.body.turma_id;
   const { tipo, descricao, data_atividade } = req.body;
-  const r = await query(
-    'INSERT INTO diretivo_atividades (turma_id,tipo,descricao,data_atividade) VALUES ($1,$2,$3,$4) RETURNING id',
-    [turma_id, tipo, descricao, data_atividade]
-  );
+  const r = await query('INSERT INTO diretivo_atividades (turma_id,tipo,descricao,data_atividade) VALUES ($1,$2,$3,$4) RETURNING id', [turma_id, tipo, descricao, data_atividade]);
   const membros = await query('SELECT diretivo_id FROM diretivo_turma_membros WHERE turma_id=$1', [turma_id]);
-  for (const m of membros.rows) {
-    await query('INSERT INTO diretivo_presencas (atividade_id,diretivo_id,presente) VALUES ($1,$2,0) ON CONFLICT DO NOTHING',
-      [r.rows[0].id, m.diretivo_id]);
-  }
+  for (const m of membros.rows) { await query('INSERT INTO diretivo_presencas (atividade_id,diretivo_id,presente) VALUES ($1,$2,0) ON CONFLICT DO NOTHING', [r.rows[0].id, m.diretivo_id]); }
   req.session.msg = ['Atividade criada!'];
   res.redirect('/frequencia-diretivos?turma=' + turma_id);
 });
@@ -1093,10 +1046,7 @@ router.post('/frequencia-diretivos/atividade/:id/presenca', requireAuth, require
   const membros = await query('SELECT diretivo_id FROM diretivo_turma_membros WHERE turma_id=$1', [at.turma_id]);
   const presentes = [].concat(req.body.presentes || []).map(Number);
   for (const m of membros.rows) {
-    await query(
-      'INSERT INTO diretivo_presencas (atividade_id,diretivo_id,presente) VALUES ($1,$2,$3) ON CONFLICT (atividade_id,diretivo_id) DO UPDATE SET presente=$3',
-      [at.id, m.diretivo_id, presentes.includes(m.diretivo_id) ? 1 : 0]
-    );
+    await query('INSERT INTO diretivo_presencas (atividade_id,diretivo_id,presente) VALUES ($1,$2,$3) ON CONFLICT (atividade_id,diretivo_id) DO UPDATE SET presente=$3', [at.id, m.diretivo_id, presentes.includes(m.diretivo_id) ? 1 : 0]);
   }
   req.session.msg = ['Presenças salvas!'];
   res.redirect('/frequencia-diretivos?turma=' + at.turma_id);
@@ -1113,20 +1063,15 @@ router.post('/frequencia-diretivos/atividade/:id/deletar', requireAuth, requireS
 
 router.post('/frequencia-diretivos/turma/:id/adicionar-membro', requireAuth, requireSecretaria, async (req, res) => {
   const { diretivo_id, data_entrada } = req.body;
-  await query('INSERT INTO diretivo_turma_membros (turma_id,diretivo_id,data_entrada) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING',
-    [req.params.id, diretivo_id, data_entrada]);
+  await query('INSERT INTO diretivo_turma_membros (turma_id,diretivo_id,data_entrada) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING', [req.params.id, diretivo_id, data_entrada]);
   const ats = await query('SELECT id FROM diretivo_atividades WHERE turma_id=$1', [req.params.id]);
-  for (const at of ats.rows) {
-    await query('INSERT INTO diretivo_presencas (atividade_id,diretivo_id,presente) VALUES ($1,$2,0) ON CONFLICT DO NOTHING',
-      [at.id, diretivo_id]);
-  }
+  for (const at of ats.rows) { await query('INSERT INTO diretivo_presencas (atividade_id,diretivo_id,presente) VALUES ($1,$2,0) ON CONFLICT DO NOTHING', [at.id, diretivo_id]); }
   req.session.msg = ['Diretivo adicionado à turma!'];
   res.redirect('/frequencia-diretivos?turma=' + req.params.id);
 });
 
 router.post('/frequencia-diretivos/turma/:id/remover-membro', requireAuth, requireSecretaria, async (req, res) => {
-  await query('DELETE FROM diretivo_turma_membros WHERE turma_id=$1 AND diretivo_id=$2',
-    [req.params.id, req.body.diretivo_id]);
+  await query('DELETE FROM diretivo_turma_membros WHERE turma_id=$1 AND diretivo_id=$2', [req.params.id, req.body.diretivo_id]);
   req.session.msg = ['Diretivo removido da turma!'];
   res.redirect('/frequencia-diretivos?turma=' + req.params.id);
 });
@@ -1136,89 +1081,22 @@ router.get('/frequencia-diretivos/relatorio/:turmaId', requireAuth, requireSecre
   const turmaR = await query('SELECT * FROM diretivo_turmas WHERE id=$1', [req.params.turmaId]);
   const turma = turmaR.rows[0];
   if (!turma) return res.redirect('/frequencia-diretivos');
-
-  const membros = await query(
-    `SELECT d.id, d.nome, d.cargo,
-      (SELECT COUNT(*) FROM diretivo_atividades a WHERE a.turma_id=$1) as total_atividades,
-      (SELECT COUNT(*) FROM diretivo_presencas p JOIN diretivo_atividades a ON a.id=p.atividade_id WHERE a.turma_id=$1 AND p.diretivo_id=d.id AND p.presente=1) as presencas
-     FROM diretivo_turma_membros tm JOIN diretivos d ON d.id=tm.diretivo_id WHERE tm.turma_id=$1 ORDER BY d.nome`,
-    [req.params.turmaId]
-  );
-  const atividades = await query(
-    'SELECT id, tipo, descricao, data_atividade FROM diretivo_atividades WHERE turma_id=$1 ORDER BY data_atividade',
-    [req.params.turmaId]
-  );
+  const membros = await query(`SELECT d.id, d.nome, d.cargo, (SELECT COUNT(*) FROM diretivo_atividades a WHERE a.turma_id=$1) as total_atividades, (SELECT COUNT(*) FROM diretivo_presencas p JOIN diretivo_atividades a ON a.id=p.atividade_id WHERE a.turma_id=$1 AND p.diretivo_id=d.id AND p.presente=1) as presencas FROM diretivo_turma_membros tm JOIN diretivos d ON d.id=tm.diretivo_id WHERE tm.turma_id=$1 ORDER BY d.nome`, [req.params.turmaId]);
+  const atividades = await query('SELECT id, tipo, descricao, data_atividade FROM diretivo_atividades WHERE turma_id=$1 ORDER BY data_atividade', [req.params.turmaId]);
   const pd = {};
-  for (const at of atividades.rows) {
-    const pr = await query('SELECT diretivo_id, presente FROM diretivo_presencas WHERE atividade_id=$1', [at.id]);
-    pd[at.id] = {};
-    pr.rows.forEach(p => { pd[at.id][p.diretivo_id] = p.presente; });
-  }
-
+  for (const at of atividades.rows) { const pr = await query('SELECT diretivo_id, presente FROM diretivo_presencas WHERE atividade_id=$1', [at.id]); pd[at.id] = {}; pr.rows.forEach(p => { pd[at.id][p.diretivo_id] = p.presente; }); }
   const orgNome = config.org_nome || 'Liga Urologia';
   const orgCor = config.org_cor || '#1a56db';
   const orgLogo = config.org_logo || null;
   const logoHtml = orgLogo ? '<div style="text-align:center;margin-bottom:16px"><img src="' + orgLogo + '" style="max-height:90px;object-fit:contain"></div>' : '';
-
-  let linhasMembros = membros.rows.map(m => {
-    const pct = m.total_atividades > 0 ? Math.round((m.presencas/m.total_atividades)*100) : 0;
-    const faltas = Number(m.total_atividades) - Number(m.presencas);
-    const status = pct>=75?'APTO':pct>=50?'EM RISCO':'NAO APTO';
-    const cor = pct>=75?'#22c55e':pct>=50?'#f59e0b':'#ef4444';
-    return '<tr><td style="padding:10px;border:1px solid #e5e7eb">' + m.nome + '</td>'
-      + '<td style="padding:10px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280">' + (m.cargo||'') + '</td>'
-      + '<td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:#22c55e;font-weight:600">' + m.presencas + '</td>'
-      + '<td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:#ef4444;font-weight:600">' + faltas + '</td>'
-      + '<td style="padding:10px;border:1px solid #e5e7eb;text-align:center">' + m.total_atividades + '</td>'
-      + '<td style="padding:10px;border:1px solid #e5e7eb;text-align:center"><strong>' + pct + '%</strong></td>'
-      + '<td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:' + cor + ';font-weight:bold">' + status + '</td></tr>';
-  }).join('');
-
-  let headerAt = '<th style="padding:10px;background:'+orgCor+';color:white;text-align:left;min-width:150px">Membro</th>'
-    + '<th style="padding:10px;background:'+orgCor+';color:white;text-align:left">Cargo</th>';
-  for (const at of atividades.rows) {
-    const dt = new Date(at.data_atividade).toLocaleDateString('pt-BR',{timeZone:'UTC'});
-    headerAt += '<th style="padding:8px;background:'+orgCor+';color:white;text-align:center;font-size:11px;min-width:80px">'+dt+'<br>'+at.tipo+'<br>'+at.descricao.substring(0,12)+'</th>';
-  }
+  let linhasMembros = membros.rows.map(m => { const pct = m.total_atividades > 0 ? Math.round((m.presencas/m.total_atividades)*100) : 0; const faltas = Number(m.total_atividades) - Number(m.presencas); const status = pct>=75?'APTO':pct>=50?'EM RISCO':'NAO APTO'; const cor = pct>=75?'#22c55e':pct>=50?'#f59e0b':'#ef4444'; return '<tr><td style="padding:10px;border:1px solid #e5e7eb">' + m.nome + '</td><td style="padding:10px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280">' + (m.cargo||'') + '</td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:#22c55e;font-weight:600">' + m.presencas + '</td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:#ef4444;font-weight:600">' + faltas + '</td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center">' + m.total_atividades + '</td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center"><strong>' + pct + '%</strong></td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:' + cor + ';font-weight:bold">' + status + '</td></tr>'; }).join('');
+  let headerAt = '<th style="padding:10px;background:'+orgCor+';color:white;text-align:left;min-width:150px">Membro</th><th style="padding:10px;background:'+orgCor+';color:white;text-align:left">Cargo</th>';
+  for (const at of atividades.rows) { const dt = new Date(at.data_atividade).toLocaleDateString('pt-BR',{timeZone:'UTC'}); headerAt += '<th style="padding:8px;background:'+orgCor+';color:white;text-align:center;font-size:11px;min-width:80px">'+dt+'<br>'+at.tipo+'<br>'+at.descricao.substring(0,12)+'</th>'; }
   let linhasAt = '';
-  for (const m of membros.rows) {
-    let cols = '<td style="padding:8px;border:1px solid #e5e7eb;font-weight:600">' + m.nome + '</td>'
-      + '<td style="padding:8px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280">' + (m.cargo||'') + '</td>';
-    for (const at of atividades.rows) {
-      const presente = pd[at.id] && pd[at.id][m.id] ? 1 : 0;
-      cols += '<td style="padding:8px;border:1px solid #e5e7eb;text-align:center;background:'+(presente?'#dcfce7':'#fee2e2')+';color:'+(presente?'#166534':'#991b1b')+';font-weight:600">'+(presente?'SIM':'NAO')+'</td>';
-    }
-    linhasAt += '<tr>' + cols + '</tr>';
-  }
-
-  const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório Diretivos</title>'
-    + '<style>body{font-family:Arial,sans-serif;padding:30px}table{width:100%;border-collapse:collapse}h3{color:'+orgCor+'}@media print{.no-print{display:none}}</style>'
-    + '</head><body>'
-    + '<div class="no-print" style="margin-bottom:20px"><button onclick="window.print()" style="background:'+orgCor+';color:white;border:none;padding:10px 24px;border-radius:6px;cursor:pointer">Imprimir / Salvar PDF</button></div>'
-    + logoHtml
-    + '<div style="text-align:center;padding-bottom:16px;border-bottom:3px solid '+orgCor+';margin-bottom:24px">'
-    + '<h1 style="margin:0 0 6px;color:'+orgCor+'">Relatório de Frequência — Diretivos</h1>'
-    + '<p style="margin:0;color:#6b7280">Turma: <strong>'+turma.nome+'</strong> | Total atividades: <strong>'+atividades.rows.length+'</strong> | Mínimo 75% | '+new Date().toLocaleString('pt-BR')+'</p>'
-    + '</div>'
-    + '<h3>Resumo por diretivo</h3>'
-    + '<table><thead><tr>'
-    + '<th style="padding:10px;background:'+orgCor+';color:white;text-align:left">Nome</th>'
-    + '<th style="padding:10px;background:'+orgCor+';color:white;text-align:left">Cargo</th>'
-    + '<th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Presenças</th>'
-    + '<th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Faltas</th>'
-    + '<th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Total</th>'
-    + '<th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Frequência</th>'
-    + '<th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Status</th>'
-    + '</tr></thead><tbody>'+linhasMembros+'</tbody></table>'
-    + '<br><h3>Presenças por atividade</h3>'
-    + '<div style="overflow-x:auto"><table><thead><tr>'+headerAt+'</tr></thead><tbody>'+linhasAt+'</tbody></table></div>'
-    + '</body></html>';
-
+  for (const m of membros.rows) { let cols = '<td style="padding:8px;border:1px solid #e5e7eb;font-weight:600">' + m.nome + '</td><td style="padding:8px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280">' + (m.cargo||'') + '</td>'; for (const at of atividades.rows) { const presente = pd[at.id] && pd[at.id][m.id] ? 1 : 0; cols += '<td style="padding:8px;border:1px solid #e5e7eb;text-align:center;background:'+(presente?'#dcfce7':'#fee2e2')+';color:'+(presente?'#166534':'#991b1b')+';font-weight:600">'+(presente?'SIM':'NAO')+'</td>'; } linhasAt += '<tr>' + cols + '</tr>'; }
+  const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório Diretivos</title><style>body{font-family:Arial,sans-serif;padding:30px}table{width:100%;border-collapse:collapse}h3{color:'+orgCor+'}@media print{.no-print{display:none}}</style></head><body><div class="no-print" style="margin-bottom:20px"><button onclick="window.print()" style="background:'+orgCor+';color:white;border:none;padding:10px 24px;border-radius:6px;cursor:pointer">Imprimir / Salvar PDF</button></div>'+logoHtml+'<div style="text-align:center;padding-bottom:16px;border-bottom:3px solid '+orgCor+';margin-bottom:24px"><h1 style="margin:0 0 6px;color:'+orgCor+'">Relatório de Frequência — Diretivos</h1><p style="margin:0;color:#6b7280">Turma: <strong>'+turma.nome+'</strong> | Total atividades: <strong>'+atividades.rows.length+'</strong> | Mínimo 75% | '+new Date().toLocaleString('pt-BR')+'</p></div><h3>Resumo por diretivo</h3><table><thead><tr><th style="padding:10px;background:'+orgCor+';color:white;text-align:left">Nome</th><th style="padding:10px;background:'+orgCor+';color:white;text-align:left">Cargo</th><th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Presenças</th><th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Faltas</th><th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Total</th><th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Frequência</th><th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Status</th></tr></thead><tbody>'+linhasMembros+'</tbody></table><br><h3>Presenças por atividade</h3><div style="overflow-x:auto"><table><thead><tr>'+headerAt+'</tr></thead><tbody>'+linhasAt+'</tbody></table></div></body></html>';
   res.send(html);
 });
-
-
-
 
 // ─── LOG DE ATIVIDADES — Painel ──────────────────────────────────────────────
 
@@ -1229,34 +1107,17 @@ router.get('/auditoria', requireAuth, requireAdmin, async (req, res) => {
   const offset = (pagina - 1) * limite;
   const filtroUsuario = req.query.usuario || '';
   const filtroAcao = req.query.acao || '';
-
   let where = 'WHERE 1=1';
   const params = [];
   if (filtroUsuario) { params.push('%'+filtroUsuario+'%'); where += ' AND u.nome ILIKE $'+params.length; }
   if (filtroAcao) { params.push(filtroAcao); where += ' AND l.acao = $'+params.length; }
-
   params.push(limite); params.push(offset);
-  const r = await query(`
-    SELECT l.*, u.nome as usuario_nome, u.email as usuario_email, u.perfil
-    FROM log_atividades l
-    LEFT JOIN usuarios u ON l.usuario_id = u.id
-    ${where}
-    ORDER BY l.criado_em DESC
-    LIMIT $${params.length-1} OFFSET $${params.length}
-  `, params);
-
+  const r = await query(`SELECT l.*, u.nome as usuario_nome, u.email as usuario_email, u.perfil FROM log_atividades l LEFT JOIN usuarios u ON l.usuario_id = u.id ${where} ORDER BY l.criado_em DESC LIMIT $${params.length-1} OFFSET $${params.length}`, params);
   const total = await query(`SELECT COUNT(*) FROM log_atividades l LEFT JOIN usuarios u ON l.usuario_id = u.id ${where}`, params.slice(0,-2));
-
-  res.render('pages/auditoria', {
-    config, usuario: req.session.usuario,
-    logs: r.rows,
-    pagina, limite,
-    total: parseInt(total.rows[0].count),
-    filtroUsuario, filtroAcao
-  });
+  res.render('pages/auditoria', { config, usuario: req.session.usuario, logs: r.rows, pagina, limite, total: parseInt(total.rows[0].count), filtroUsuario, filtroAcao });
 });
 
-// ─── ARQUIVOS — Cloudflare R2 com Pastas ─────────────────────────────────────
+// ─── ARQUIVOS ─────────────────────────────────────────────────────────────────
 
 router.get('/arquivos', requireAuth, async (req, res) => {
   const config = await getConfig();
@@ -1264,21 +1125,13 @@ router.get('/arquivos', requireAuth, async (req, res) => {
   const erro = req.session.erro || []; req.session.erro = [];
   const pastaId = req.query.pasta || null;
   const lixeiraMode = req.query.lixeira === '1';
-
   const [pastasR, arquivosR, lixeiraR] = await Promise.all([
     query('SELECT * FROM arquivo_pastas WHERE lixeira=0 OR lixeira IS NULL ORDER BY nome'),
-    lixeiraMode
-      ? query('SELECT * FROM arquivos WHERE lixeira=1 ORDER BY criado_em DESC')
-      : pastaId
-        ? query('SELECT * FROM arquivos WHERE pasta_id=$1 AND (lixeira=0 OR lixeira IS NULL) ORDER BY nome_original', [pastaId])
-        : query('SELECT * FROM arquivos WHERE pasta_id IS NULL AND (lixeira=0 OR lixeira IS NULL) ORDER BY nome_original'),
+    lixeiraMode ? query('SELECT * FROM arquivos WHERE lixeira=1 ORDER BY criado_em DESC') : pastaId ? query('SELECT * FROM arquivos WHERE pasta_id=$1 AND (lixeira=0 OR lixeira IS NULL) ORDER BY nome_original', [pastaId]) : query('SELECT * FROM arquivos WHERE pasta_id IS NULL AND (lixeira=0 OR lixeira IS NULL) ORDER BY nome_original'),
     query('SELECT COUNT(*) n FROM arquivos WHERE lixeira=1')
   ]);
-
   const todasPastas = pastasR.rows;
   let pastaAtual = pastaId ? todasPastas.find(p => p.id == pastaId) || null : null;
-
-  // Formata tamanho
   const arquivos = arquivosR.rows.map(a => {
     const kb = (a.tamanho || 0) / 1024;
     a.tamanho_fmt = kb < 1024 ? kb.toFixed(0) + ' KB' : (kb/1024).toFixed(1) + ' MB';
@@ -1287,14 +1140,8 @@ router.get('/arquivos', requireAuth, async (req, res) => {
     a.icone = a.tipo === 'google' ? '🔗' : (icons[ext] || '📄');
     return a;
   });
-
-  res.render('pages/arquivos', {
-    config, usuario: req.session.usuario, msg, erro,
-    todasPastas, pastas: todasPastas, pastaAtual, arquivos,
-    lixeiraMode, lixeiraCount: parseInt(lixeiraR.rows[0].n)
-  });
+  res.render('pages/arquivos', { config, usuario: req.session.usuario, msg, erro, todasPastas, pastas: todasPastas, pastaAtual, arquivos, lixeiraMode, lixeiraCount: parseInt(lixeiraR.rows[0].n) });
 });
-
 
 router.get('/cadastro-ligante', async (req, res) => {
   const config = await getConfig();
@@ -1311,44 +1158,17 @@ router.post('/cadastro-ligante', async (req, res) => {
       const form = req.body;
       const campos = ['nome','data_nascimento','sexo','email','whatsapp','rg','semestre','turma','porque_lauro','apresentacao'];
       const faltando = campos.filter(c => !form[c] || form[c].trim() === '');
-      if (faltando.length > 0) {
-        req.session.erro = ['Preencha todos os campos obrigatórios.'];
-        return res.render('pages/cadastro-ligante-publico', { config, msg: [], erro: req.session.erro, form });
-      }
-
+      if (faltando.length > 0) { req.session.erro = ['Preencha todos os campos obrigatórios.']; return res.render('pages/cadastro-ligante-publico', { config, msg: [], erro: req.session.erro, form }); }
       let foto_chave = null;
-      if (req.file) {
-        const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'ligantes');
-        foto_chave = r.chave;
-      }
-
-      await query(`INSERT INTO ligantes (
-        nome, data_nascimento, sexo, email, email_alternativo, whatsapp, rg, cpf,
-        semestre, turma, catraca, orcid, tem_formacao, qual_formacao,
-        habilidades, aceita_cargo, qual_cargo, contribuicao_grupo,
-        ideia_inovadora, tema_interesse, porque_lauro, apresentacao,
-        foto_chave, criado_em
-      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,NOW())`,
-      [
-        form.nome, form.data_nascimento, form.sexo, form.email, form.email_alternativo||null,
-        form.whatsapp, form.rg, form.cpf||null, form.semestre, form.turma,
-        form.catraca||null, form.orcid||null, form.tem_formacao||null, form.qual_formacao||null,
-        form.habilidades||null, form.aceita_cargo||null, form.qual_cargo||null,
-        form.contribuicao_grupo||null, form.ideia_inovadora||null, form.tema_interesse||null,
-        form.porque_lauro, form.apresentacao, foto_chave
-      ]);
-
+      if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'ligantes'); foto_chave = r.chave; }
+      await query(`INSERT INTO ligantes (nome, data_nascimento, sexo, email, email_alternativo, whatsapp, rg, cpf, semestre, turma, catraca, orcid, tem_formacao, qual_formacao, habilidades, aceita_cargo, qual_cargo, contribuicao_grupo, ideia_inovadora, tema_interesse, porque_lauro, apresentacao, foto_chave, criado_em) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,NOW())`,
+      [form.nome, form.data_nascimento, form.sexo, form.email, form.email_alternativo||null, form.whatsapp, form.rg, form.cpf||null, form.semestre, form.turma, form.catraca||null, form.orcid||null, form.tem_formacao||null, form.qual_formacao||null, form.habilidades||null, form.aceita_cargo||null, form.qual_cargo||null, form.contribuicao_grupo||null, form.ideia_inovadora||null, form.tema_interesse||null, form.porque_lauro, form.apresentacao, foto_chave]);
       req.session.msg = ['Cadastro realizado com sucesso! Bem-vindo(a) à LAURO! 🎉'];
       res.redirect('/cadastro-ligante');
     });
-  } catch(e) {
-    console.error('Erro cadastro ligante:', e.message);
-    req.session.erro = ['Erro ao salvar cadastro. Tente novamente.'];
-    res.redirect('/cadastro-ligante');
-  }
+  } catch(e) { console.error('Erro cadastro ligante:', e.message); req.session.erro = ['Erro ao salvar cadastro. Tente novamente.']; res.redirect('/cadastro-ligante'); }
 });
 
-// Lista de ligantes (interno)
 router.get('/ligantes', requireAuth, async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg||[]; req.session.msg = [];
@@ -1370,8 +1190,6 @@ router.post('/ligantes/:id/toggle', requireAuth, async (req, res) => {
   res.redirect('/ligantes');
 });
 
-
-
 router.get('/ligantes/:id/foto', requireAuth, async (req, res) => {
   try {
     const r = await query('SELECT foto_chave FROM ligantes WHERE id=$1', [req.params.id]);
@@ -1385,58 +1203,32 @@ router.get('/ligantes/:id/foto', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).send('Erro'); }
 });
 
-
-
 // ─── DESLIGAMENTOS ────────────────────────────────────────────────────────────
 
 router.get('/desligamentos', requireAuth, async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg || []; req.session.msg = [];
   const erro = req.session.erro || []; req.session.erro = [];
-
   const [deslig, membros, ligR] = await Promise.all([
     query(`SELECT d.*, COALESCE(m.nome,l.nome) as membro_nome, COALESCE(m.email,l.email) as membro_email FROM desligamentos d LEFT JOIN membros m ON m.id=d.membro_id LEFT JOIN ligantes l ON l.id=d.ligante_id ORDER BY d.criado_em DESC`),
     query(`SELECT id, nome, cargo FROM membros WHERE ativo=1 ORDER BY nome`),
     query(`SELECT id, nome, email, turma, semestre, rg, catraca FROM ligantes ORDER BY nome`)
   ]);
-
-  res.render('pages/desligamentos', { config, usuario: req.session.usuario, msg, erro,
-    desligamentos: deslig.rows, membros: membros.rows, ligantes: ligR.rows });
+  res.render('pages/desligamentos', { config, usuario: req.session.usuario, msg, erro, desligamentos: deslig.rows, membros: membros.rows, ligantes: ligR.rows });
 });
 
 router.post('/desligamentos/configurar', requireAuth, requireAdmin, async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
-    upload.fields([
-      { name: 'timbrado', maxCount: 1 },
-      { name: 'assinatura_presidente', maxCount: 1 },
-      { name: 'assinatura_secretario', maxCount: 1 }
-    ])(req, res, async (err) => {
+    upload.fields([{name:'timbrado',maxCount:1},{name:'assinatura_presidente',maxCount:1},{name:'assinatura_secretario',maxCount:1}])(req, res, async (err) => {
       const campos = ['presidente_nome', 'secretario_nome'];
-      for (const campo of campos) {
-        if (req.body[campo]) {
-          await query('INSERT INTO configuracoes (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', [campo, req.body[campo]]);
-        }
-      }
-      const arquivos_cfg = [
-        { field: 'timbrado', chave_cfg: 'timbrado_chave', pasta: 'timbrado' },
-        { field: 'assinatura_presidente', chave_cfg: 'assinatura_presidente_chave', pasta: 'assinaturas' },
-        { field: 'assinatura_secretario', chave_cfg: 'assinatura_secretario_chave', pasta: 'assinaturas' }
-      ];
-      for (const a of arquivos_cfg) {
-        if (req.files && req.files[a.field] && req.files[a.field][0]) {
-          const file = req.files[a.field][0];
-          const r = await uploadArquivo(file.buffer, file.originalname, file.mimetype, a.pasta);
-          await query('INSERT INTO configuracoes (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', [a.chave_cfg, r.chave]);
-        }
-      }
+      for (const campo of campos) { if (req.body[campo]) { await query('INSERT INTO configuracoes (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', [campo, req.body[campo]]); } }
+      const arquivos_cfg = [{field:'timbrado',chave_cfg:'timbrado_chave',pasta:'timbrado'},{field:'assinatura_presidente',chave_cfg:'assinatura_presidente_chave',pasta:'assinaturas'},{field:'assinatura_secretario',chave_cfg:'assinatura_secretario_chave',pasta:'assinaturas'}];
+      for (const a of arquivos_cfg) { if (req.files && req.files[a.field] && req.files[a.field][0]) { const file = req.files[a.field][0]; const r = await uploadArquivo(file.buffer, file.originalname, file.mimetype, a.pasta); await query('INSERT INTO configuracoes (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', [a.chave_cfg, r.chave]); } }
       req.session.msg = ['Configurações salvas com sucesso!'];
       res.redirect('/desligamentos');
     });
-  } catch(e) {
-    req.session.erro = ['Erro ao salvar configurações: ' + e.message];
-    res.redirect('/desligamentos');
-  }
+  } catch(e) { req.session.erro = ['Erro ao salvar configurações: ' + e.message]; res.redirect('/desligamentos'); }
 });
 
 router.post('/desligamentos', requireAuth, async (req, res) => {
@@ -1444,17 +1236,11 @@ router.post('/desligamentos', requireAuth, async (req, res) => {
     const { membro_id, ligante_id, data_solicitacao, motivo, tipo_membro } = req.body;
     const mid = membro_id && membro_id !== '' && membro_id !== 'null' ? parseInt(membro_id) : null;
     const lid = ligante_id && ligante_id !== '' && ligante_id !== 'null' ? parseInt(ligante_id) : null;
-    await query(
-      'INSERT INTO desligamentos (membro_id, ligante_id, data_solicitacao, motivo, tipo_membro, criado_por) VALUES ($1,$2,$3,$4,$5,$6)',
-      [mid, lid, data_solicitacao || new Date(), motivo || null, tipo_membro || 'LIGANTE', req.session.usuario.id]
-    );
+    await query('INSERT INTO desligamentos (membro_id, ligante_id, data_solicitacao, motivo, tipo_membro, criado_por) VALUES ($1,$2,$3,$4,$5,$6)', [mid, lid, data_solicitacao || new Date(), motivo || null, tipo_membro || 'LIGANTE', req.session.usuario.id]);
     await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_CRIADO', 'Desligamento criado', req);
     req.session.msg = ['Documento de desligamento criado! Clique em 📧 para enviar por email.'];
     res.redirect('/desligamentos');
-  } catch(e) {
-    req.session.erro = ['Erro ao criar desligamento: ' + e.message];
-    res.redirect('/desligamentos');
-  }
+  } catch(e) { req.session.erro = ['Erro ao criar desligamento: ' + e.message]; res.redirect('/desligamentos'); }
 });
 
 router.get('/desligamentos/:id/visualizar', requireAuth, async (req, res) => {
@@ -1463,103 +1249,61 @@ router.get('/desligamentos/:id/visualizar', requireAuth, async (req, res) => {
     if (!rd.rows[0]) return res.status(404).send('Não encontrado');
     const desl = rd.rows[0];
     let pessoa = {};
-    if (desl.membro_id) {
-      const rm = await query('SELECT * FROM membros WHERE id=$1', [desl.membro_id]);
-      pessoa = rm.rows[0] || {};
-    } else if (desl.ligante_id) {
-      const rl = await query('SELECT * FROM ligantes WHERE id=$1', [desl.ligante_id]);
-      pessoa = rl.rows[0] || {};
-    }
+    if (desl.membro_id) { const rm = await query('SELECT * FROM membros WHERE id=$1', [desl.membro_id]); pessoa = rm.rows[0] || {}; }
+    else if (desl.ligante_id) { const rl = await query('SELECT * FROM ligantes WHERE id=$1', [desl.ligante_id]); pessoa = rl.rows[0] || {}; }
     const d = { ...desl, ...pessoa };
-
     const config = await getConfig();
     const { gerarHTMLDesligamento, imagemBase64 } = require('../services/desligamento');
-
-    // Carrega imagens em base64 para funcionar no HTML sem problemas de CORS/expiração
     config.timbrado_b64 = await imagemBase64(config.timbrado_chave);
     config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
-
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
     res.send(html);
-  } catch(e) {
-    res.status(500).send('Erro: ' + e.message);
-  }
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
 router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
   try {
     const rd = await query('SELECT * FROM desligamentos WHERE id=$1', [req.params.id]);
-    if (!rd.rows[0]) { req.session.erro = ['Nao encontrado.']; return res.redirect('/desligamentos'); }
+    if (!rd.rows[0]) { req.session.erro=['Nao encontrado.']; return res.redirect('/desligamentos'); }
     const desl = rd.rows[0];
     let pessoa = {};
-    if (desl.membro_id) { const rm = await query('SELECT * FROM membros WHERE id=$1', [desl.membro_id]); pessoa = rm.rows[0] || {}; }
-    else if (desl.ligante_id) { const rl = await query('SELECT * FROM ligantes WHERE id=$1', [desl.ligante_id]); pessoa = rl.rows[0] || {}; }
-    const d = { ...desl, ...pessoa };
-    if (!d.email) { req.session.erro = ['Email nao cadastrado.']; return res.redirect('/desligamentos'); }
+    if (desl.membro_id) { const rm = await query('SELECT * FROM membros WHERE id=$1',[desl.membro_id]); pessoa=rm.rows[0]||{}; }
+    else if (desl.ligante_id) { const rl = await query('SELECT * FROM ligantes WHERE id=$1',[desl.ligante_id]); pessoa=rl.rows[0]||{}; }
+    const d = {...desl,...pessoa};
+    if (!d.email) { req.session.erro=['Email nao cadastrado.']; return res.redirect('/desligamentos'); }
     const config = await getConfig();
     const { gerarHTMLDesligamento, imagemBase64 } = require('../services/desligamento');
     config.timbrado_b64 = await imagemBase64(config.timbrado_chave);
     config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
-    // Gera PDF com puppeteer
     const htmlPdf = require('html-pdf-node');
     const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
     const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT,
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
-    });
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: d.email,
-      subject: 'Carta de Rescisión — Liga Académica de Urología LAURO',
-      html: `<p>Estimado/a <strong>${d.nome}</strong>,</p>
-<p>Adjunto encontrará su Carta de Rescisión de la Liga Académica de Urología - LAURO.</p>
-<p><strong>Instrucciones:</strong></p>
-<ol>
-<li>Imprima el documento adjunto</li>
-<li>Firme en el espacio indicado</li>
-<li>Escanee o fotografíe el documento firmado</li>
-<li><strong>Responda este mismo email</strong> con el documento firmado adjunto</li>
-</ol>
-<p>Atentamente,<br>Secretaría — LAURO<br>Liga Académica de Urología</p>`,
-      attachments: [{ filename: 'carta-rescision-LAURO.pdf', content: pdfBuffer, contentType: 'application/pdf' }]
-    });
+    const transporter = nodemailer.createTransport({ host:process.env.EMAIL_HOST, port:process.env.EMAIL_PORT, auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS} });
+    await transporter.sendMail({ from:process.env.EMAIL_USER, to:d.email, subject:'Carta de Rescisión — Liga Académica de Urología LAURO', html:`<p>Estimado/a <strong>${d.nome}</strong>,</p><p>Adjunto encontrará su Carta de Rescisión de la Liga Académica de Urología - LAURO.</p><ol><li>Imprima el documento adjunto</li><li>Firme en el espacio indicado</li><li>Escanee o fotografíe el documento firmado</li><li><strong>Responda este mismo email</strong> con el documento firmado adjunto</li></ol><p>Atentamente,<br>Secretaría — LAURO<br>Liga Académica de Urología</p>`, attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}] });
     await query('UPDATE desligamentos SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', req.params.id]);
     await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_ENVIADO', 'Email enviado para: ' + d.email, req);
     req.session.msg = ['Email enviado com sucesso para ' + d.email + '!'];
     res.redirect('/desligamentos');
-  } catch(e) {
-    req.session.erro = ['Erro ao enviar email: ' + e.message];
-    res.redirect('/desligamentos');
-  }
+  } catch(e) { req.session.erro=['Erro ao enviar email: ' + e.message]; res.redirect('/desligamentos'); }
 });
 
 router.post('/desligamentos/:id/assinado', requireAuth, async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
     upload.single('pdf_assinado')(req, res, async (err) => {
-      if (!req.file) { req.session.erro = ['Nenhum arquivo enviado.']; return res.redirect('/desligamentos'); }
+      if (!req.file) { req.session.erro=['Nenhum arquivo enviado.']; return res.redirect('/desligamentos'); }
       const r = await uploadArquivo(req.file.buffer, 'desligamento-assinado-' + req.params.id + '.pdf', req.file.mimetype, 'desligamentos');
-      await query('UPDATE desligamentos SET pdf_assinado_chave=$1, status=$2, assinado_em=NOW() WHERE id=$3',
-        [r.chave, 'assinado', req.params.id]);
-
-      // Marca membro como desligado
+      await query('UPDATE desligamentos SET pdf_assinado_chave=$1, status=$2, assinado_em=NOW() WHERE id=$3', [r.chave, 'assinado', req.params.id]);
       const d = await query('SELECT membro_id FROM desligamentos WHERE id=$1', [req.params.id]);
-      if (d.rows[0]) {
-        await query('UPDATE membros SET ativo=0, status=$1 WHERE id=$2', ['desligado', d.rows[0].membro_id]);
-      }
-
+      if (d.rows[0]) { await query('UPDATE membros SET ativo=0, status=$1 WHERE id=$2', ['desligado', d.rows[0].membro_id]); }
       await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_ASSINADO', 'Documento assinado anexado', req);
       req.session.msg = ['Documento assinado anexado e membro marcado como desligado!'];
       res.redirect('/desligamentos');
     });
-  } catch(e) {
-    req.session.erro = ['Erro: ' + e.message];
-    res.redirect('/desligamentos');
-  }
+  } catch(e) { req.session.erro=['Erro: ' + e.message]; res.redirect('/desligamentos'); }
 });
 
 router.get('/desligamentos/:id/assinado', requireAuth, async (req, res) => {
@@ -1573,15 +1317,12 @@ router.get('/desligamentos/:id/assinado', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).send('Erro'); }
 });
 
-
-
 router.get('/ligantes/:id/editar', requireAuth, async (req, res) => {
   const config = await getConfig();
   const r = await query('SELECT * FROM ligantes WHERE id=$1', [req.params.id]);
   const ligante = r.rows[0];
-  if (!ligante) { req.session.erro = ['Ligante não encontrado.']; return res.redirect('/ligantes'); }
-  res.render('pages/ligante-editar', { config, usuario: req.session.usuario, ligante,
-    msg: req.session.msg||[], erro: req.session.erro||[] });
+  if (!ligante) { req.session.erro=['Ligante não encontrado.']; return res.redirect('/ligantes'); }
+  res.render('pages/ligante-editar', { config, usuario: req.session.usuario, ligante, msg: req.session.msg||[], erro: req.session.erro||[] });
   req.session.msg = []; req.session.erro = [];
 });
 
@@ -1589,17 +1330,16 @@ router.post('/ligantes/:id/editar', requireAuth, async (req, res) => {
   try {
     const {upload,uploadArquivo}=require('../services/arquivos');
     upload.single('foto')(req,res,async(err)=>{
-      const b=req.body;
-      let fk=null;
+      const b=req.body; let fk=null;
       if(req.file){const r=await uploadArquivo(req.file.buffer,req.file.originalname,req.file.mimetype,'ligantes');fk=r.chave;}
       const fu=fk?',foto_chave=$24':'';
       const p=[b.nome,b.data_nascimento||null,b.sexo,b.email,b.email_alternativo||null,b.whatsapp,b.rg,b.cpf||null,b.semestre,b.turma,b.catraca||null,b.orcid||null,b.tem_formacao||null,b.qual_formacao||null,b.habilidades||null,b.aceita_cargo||null,b.qual_cargo||null,b.contribuicao_grupo||null,b.ideia_inovadora||null,b.tema_interesse||null,b.porque_lauro,b.apresentacao,req.params.id];
       if(fk)p.push(fk);
       await query('UPDATE ligantes SET nome=$1,data_nascimento=$2,sexo=$3,email=$4,email_alternativo=$5,whatsapp=$6,rg=$7,cpf=$8,semestre=$9,turma=$10,catraca=$11,orcid=$12,tem_formacao=$13,qual_formacao=$14,habilidades=$15,aceita_cargo=$16,qual_cargo=$17,contribuicao_grupo=$18,ideia_inovadora=$19,tema_interesse=$20,porque_lauro=$21,apresentacao=$22'+fu+' WHERE id=$23',p);
       await logAtividade(req.session.usuario.id,'LIGANTE_EDITADO','Ligante editado: '+b.nome,req);
-      req.session.msg=['Ligante atualizado!'];res.redirect('/ligantes');
+      req.session.msg=['Ligante atualizado!']; res.redirect('/ligantes');
     });
-  }catch(e){req.session.erro=[e.message];res.redirect('/ligantes');}
+  } catch(e){req.session.erro=[e.message];res.redirect('/ligantes');}
 });
 
 router.post('/ligantes/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
@@ -1610,24 +1350,18 @@ router.post('/ligantes/:id/deletar', requireAuth, requireAdmin, async (req, res)
   res.redirect('/ligantes');
 });
 
-
-
 router.post('/desligamentos/:id/substituir', requireAuth, async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
     upload.single('pdf_assinado')(req, res, async (err) => {
-      if (!req.file) { req.session.erro = ['Nenhum arquivo enviado.']; return res.redirect('/desligamentos'); }
+      if (!req.file) { req.session.erro=['Nenhum arquivo enviado.']; return res.redirect('/desligamentos'); }
       const r = await uploadArquivo(req.file.buffer, 'desligamento-assinado-' + req.params.id + '.pdf', req.file.mimetype, 'desligamentos');
-      await query('UPDATE desligamentos SET pdf_assinado_chave=$1, status=$2, assinado_em=NOW() WHERE id=$3',
-        [r.chave, 'assinado', req.params.id]);
+      await query('UPDATE desligamentos SET pdf_assinado_chave=$1, status=$2, assinado_em=NOW() WHERE id=$3', [r.chave, 'assinado', req.params.id]);
       await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_SUBSTITUIDO', 'Documento substituido ID: ' + req.params.id, req);
       req.session.msg = ['Documento substituído com sucesso!'];
       res.redirect('/desligamentos');
     });
-  } catch(e) {
-    req.session.erro = ['Erro: ' + e.message];
-    res.redirect('/desligamentos');
-  }
+  } catch(e) { req.session.erro=['Erro: ' + e.message]; res.redirect('/desligamentos'); }
 });
 
 router.post('/desligamentos/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
@@ -1636,73 +1370,30 @@ router.post('/desligamentos/:id/deletar', requireAuth, requireAdmin, async (req,
     await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_DELETADO', 'Desligamento apagado ID: ' + req.params.id, req);
     req.session.msg = ['Desligamento apagado com sucesso!'];
     res.redirect('/desligamentos');
-  } catch(e) {
-    req.session.erro = ['Erro: ' + e.message];
-    res.redirect('/desligamentos');
-  }
+  } catch(e) { req.session.erro=['Erro: ' + e.message]; res.redirect('/desligamentos'); }
 });
-
-
 
 // ─── RELATÓRIO LIGANTES ───────────────────────────────────────────────────────
 router.get('/ligantes/relatorio', requireAuth, async (req, res) => {
   const config = await getConfig();
   const q = req.query;
-
-  const filtros = {
-    status:       q.status       || 'todos',
-    sexo:         q.sexo         || 'todos',
-    semestre:     q.semestre     || 'todos',
-    turma:        q.turma        || 'todos',
-    aceita_cargo: q.aceita_cargo || 'todos',
-    tem_formacao: q.tem_formacao || 'todos',
-    ordem:        q.ordem        || 'nome',
-    colunas:      q.colunas ? (Array.isArray(q.colunas) ? q.colunas : [q.colunas]) : ['nome','email','whatsapp','semestre','turma','rg','catraca','status']
-  };
-
+  const filtros = { status: q.status||'todos', sexo: q.sexo||'todos', semestre: q.semestre||'todos', turma: q.turma||'todos', aceita_cargo: q.aceita_cargo||'todos', tem_formacao: q.tem_formacao||'todos', ordem: q.ordem||'nome', colunas: q.colunas ? (Array.isArray(q.colunas) ? q.colunas : [q.colunas]) : ['nome','email','whatsapp','semestre','turma','rg','catraca','status'] };
   let where = [];
-  if (filtros.status === 'ativo')    where.push("ativo = 1");
-  if (filtros.status === 'inativo')  where.push("ativo = 0");
-  if (filtros.sexo !== 'todos')      where.push(`sexo = '${filtros.sexo.replace(/'/g,"''")}'`);
-  if (filtros.semestre !== 'todos')  where.push(`semestre = '${filtros.semestre.replace(/'/g,"''")}'`);
-  if (filtros.turma !== 'todos')     where.push(`turma = '${filtros.turma.replace(/'/g,"''")}'`);
+  if (filtros.status === 'ativo') where.push("ativo = 1");
+  if (filtros.status === 'inativo') where.push("ativo = 0");
+  if (filtros.sexo !== 'todos') where.push(`sexo = '${filtros.sexo.replace(/'/g,"''")}'`);
+  if (filtros.semestre !== 'todos') where.push(`semestre = '${filtros.semestre.replace(/'/g,"''")}'`);
+  if (filtros.turma !== 'todos') where.push(`turma = '${filtros.turma.replace(/'/g,"''")}'`);
   if (filtros.aceita_cargo !== 'todos') where.push(`aceita_cargo = '${filtros.aceita_cargo.replace(/'/g,"''")}'`);
   if (filtros.tem_formacao !== 'todos') where.push(`tem_formacao = '${filtros.tem_formacao.replace(/'/g,"''")}'`);
-
-  const ordens = {
-    nome: 'nome ASC', nome_desc: 'nome DESC',
-    idade: 'data_nascimento DESC', idade_desc: 'data_nascimento ASC',
-    semestre: 'semestre ASC', turma: 'turma ASC', criado_em: 'criado_em DESC'
-  };
+  const ordens = { nome:'nome ASC', nome_desc:'nome DESC', idade:'data_nascimento DESC', idade_desc:'data_nascimento ASC', semestre:'semestre ASC', turma:'turma ASC', criado_em:'criado_em DESC' };
   const orderBy = ordens[filtros.ordem] || 'nome ASC';
   const sql = `SELECT * FROM ligantes ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY ${orderBy}`;
-
-  const [r, todos] = await Promise.all([query(sql), query('SELECT DISTINCT semestre FROM ligantes WHERE semestre IS NOT NULL ORDER BY semestre'), ]);
-  const turmasR = await query('SELECT DISTINCT turma FROM ligantes WHERE turma IS NOT NULL ORDER BY turma');
-  const semestresR = await query('SELECT DISTINCT semestre FROM ligantes WHERE semestre IS NOT NULL ORDER BY semestre');
-
-  const labelColuna = (col) => ({
-    nome:'Nome', email:'E-mail', whatsapp:'WhatsApp', sexo:'Sexo',
-    data_nascimento:'Nascimento', semestre:'Semestre', turma:'Turma',
-    catraca:'Catraca', rg:'RG/CI', cpf:'CPF', orcid:'ORCID',
-    tem_formacao:'Formação', aceita_cargo:'Aceita cargo',
-    habilidades:'Habilidades', status:'Status', criado_em:'Cadastro'
-  }[col] || col);
-
-  res.render('pages/ligantes-relatorio', {
-    config, usuario: req.session.usuario,
-    ligantes: r.rows,
-    filtros,
-    semestres: semestresR.rows.map(x => x.semestre).filter(Boolean),
-    turmas: turmasR.rows.map(x => x.turma).filter(Boolean),
-    colunasVisiveis: filtros.colunas,
-    labelColuna,
-    msg: req.session.msg||[], erro: req.session.erro||[]
-  });
+  const [r, semestresR, turmasR] = await Promise.all([query(sql), query('SELECT DISTINCT semestre FROM ligantes WHERE semestre IS NOT NULL ORDER BY semestre'), query('SELECT DISTINCT turma FROM ligantes WHERE turma IS NOT NULL ORDER BY turma')]);
+  const labelColuna = (col) => ({nome:'Nome',email:'E-mail',whatsapp:'WhatsApp',sexo:'Sexo',data_nascimento:'Nascimento',semestre:'Semestre',turma:'Turma',catraca:'Catraca',rg:'RG/CI',cpf:'CPF',orcid:'ORCID',tem_formacao:'Formação',aceita_cargo:'Aceita cargo',habilidades:'Habilidades',status:'Status',criado_em:'Cadastro'}[col] || col);
+  res.render('pages/ligantes-relatorio', { config, usuario: req.session.usuario, ligantes: r.rows, filtros, semestres: semestresR.rows.map(x=>x.semestre).filter(Boolean), turmas: turmasR.rows.map(x=>x.turma).filter(Boolean), colunasVisiveis: filtros.colunas, labelColuna, msg: req.session.msg||[], erro: req.session.erro||[] });
   req.session.msg = []; req.session.erro = [];
 });
-
-
 
 // ─── ARQUIVOS FINANCEIROS ─────────────────────────────────────────────────────
 
@@ -1711,26 +1402,19 @@ router.get('/financeiro-arquivos', requireAuth, async (req, res) => {
   const msg = req.session.msg||[]; req.session.msg=[];
   const erro = req.session.erro||[]; req.session.erro=[];
   const pastaAtual = req.query.pasta || null;
-
   const [pastasR, arquivosR] = await Promise.all([
     query('SELECT * FROM financeiro_pastas ORDER BY nome'),
     query('SELECT * FROM financeiro_arquivos WHERE pasta_id' + (pastaAtual ? '=$1 ORDER BY criado_em DESC' : ' IS NULL ORDER BY criado_em DESC'), pastaAtual ? [pastaAtual] : [])
   ]);
-
-  res.render('pages/financeiro-arquivos', {
-    config, usuario: req.session.usuario, msg, erro,
-    pastas: pastasR.rows, arquivos: arquivosR.rows, pastaAtual
-  });
+  res.render('pages/financeiro-arquivos', { config, usuario: req.session.usuario, msg, erro, pastas: pastasR.rows, arquivos: arquivosR.rows, pastaAtual });
 });
 
 router.post('/financeiro-arquivos/pasta', requireAuth, async (req, res) => {
   const { nome, pai_id } = req.body;
   const pasta_id = pai_id && pai_id !== '' ? pai_id : null;
-  await query('INSERT INTO financeiro_pastas (nome, pai_id, criado_por) VALUES ($1,$2,$3)',
-    [nome, pasta_id, req.session.usuario.id]);
+  await query('INSERT INTO financeiro_pastas (nome, pai_id, criado_por) VALUES ($1,$2,$3)', [nome, pasta_id, req.session.usuario.id]);
   req.session.msg = ['Pasta criada com sucesso!'];
-  const url = pasta_id ? '/financeiro-arquivos?pasta=' + pasta_id : '/financeiro-arquivos';
-  res.redirect(url);
+  res.redirect(pasta_id ? '/financeiro-arquivos?pasta=' + pasta_id : '/financeiro-arquivos');
 });
 
 router.post('/financeiro-arquivos/upload', requireAuth, async (req, res) => {
@@ -1739,36 +1423,20 @@ router.post('/financeiro-arquivos/upload', requireAuth, async (req, res) => {
     upload.array('arquivos', 20)(req, res, async (err) => {
       if (!req.files || req.files.length===0) { req.session.erro=['Nenhum arquivo.']; return res.redirect('/financeiro-arquivos'); }
       const pasta_id = req.body.pasta_id && req.body.pasta_id !== '' ? req.body.pasta_id : null;
-      for (const file of req.files) {
-        const nome = req.body.nome || file.originalname;
-        const r = await uploadArquivo(file.buffer, file.originalname, file.mimetype, 'financeiro');
-        await query('INSERT INTO financeiro_arquivos (nome,tipo,chave_r2,mimetype,tamanho,pasta_id,enviado_por) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-          [nome, 'upload', r.chave, file.mimetype, file.size, pasta_id, req.session.usuario.id]);
-      }
+      for (const file of req.files) { const nome = req.body.nome || file.originalname; const r = await uploadArquivo(file.buffer, file.originalname, file.mimetype, 'financeiro'); await query('INSERT INTO financeiro_arquivos (nome,tipo,chave_r2,mimetype,tamanho,pasta_id,enviado_por) VALUES ($1,$2,$3,$4,$5,$6,$7)', [nome, 'upload', r.chave, file.mimetype, file.size, pasta_id, req.session.usuario.id]); }
       req.session.msg = ['Arquivo enviado com sucesso!'];
       res.redirect('/financeiro-arquivos' + (pasta_id ? '?pasta='+pasta_id : ''));
     });
-  } catch(e) {
-    req.session.erro = ['Erro: ' + e.message];
-    res.redirect('/financeiro-arquivos');
-  }
+  } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/financeiro-arquivos'); }
 });
 
 router.post('/financeiro-arquivos/google', requireAuth, async (req, res) => {
   const { nome, google_url, google_tipo, pasta_id } = req.body;
   const pid = pasta_id && pasta_id !== '' ? pasta_id : null;
-
-  // Gera URL de embed
   let embed = google_url;
-  if (google_url.includes('docs.google.com')) {
-    embed = google_url.replace(/\/edit.*$/, '/edit?embedded=true&rm=minimal');
-  } else if (google_url.includes('drive.google.com/file')) {
-    const m = google_url.match(/\/d\/([^/]+)/);
-    if (m) embed = 'https://drive.google.com/file/d/' + m[1] + '/preview';
-  }
-
-  await query('INSERT INTO financeiro_arquivos (nome,tipo,google_url,google_embed,pasta_id,enviado_por) VALUES ($1,$2,$3,$4,$5,$6)',
-    [nome, 'google', google_url, embed, pid, req.session.usuario.id]);
+  if (google_url.includes('docs.google.com')) embed = google_url.replace(/\/edit.*$/, '/edit?embedded=true&rm=minimal');
+  else if (google_url.includes('drive.google.com/file')) { const m = google_url.match(/\/d\/([^/]+)/); if (m) embed = 'https://drive.google.com/file/d/' + m[1] + '/preview'; }
+  await query('INSERT INTO financeiro_arquivos (nome,tipo,google_url,google_embed,pasta_id,enviado_por) VALUES ($1,$2,$3,$4,$5,$6)', [nome, 'google', google_url, embed, pid, req.session.usuario.id]);
   req.session.msg = ['Link do Google adicionado!'];
   res.redirect('/financeiro-arquivos' + (pid ? '?pasta='+pid : ''));
 });
@@ -1779,12 +1447,7 @@ router.get('/financeiro-arquivos/:id/visualizar', requireAuth, async (req, res) 
     const a = r.rows[0];
     if (!a || !a.chave_r2) return res.status(404).send('Não encontrado');
     const { getUrlAssinada } = require('../services/desligamento');
-    const url = await getUrlAssinada(a.chave_r2);
-    if (a.mimetype && (a.mimetype.includes('image') || a.mimetype.includes('pdf'))) {
-      res.redirect(url);
-    } else {
-      res.redirect(url);
-    }
+    res.redirect(await getUrlAssinada(a.chave_r2));
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
@@ -1794,8 +1457,7 @@ router.get('/financeiro-arquivos/:id/download', requireAuth, async (req, res) =>
     const a = r.rows[0];
     if (!a || !a.chave_r2) return res.status(404).send('Não encontrado');
     const { getUrlAssinada } = require('../services/desligamento');
-    const url = await getUrlAssinada(a.chave_r2);
-    res.redirect(url);
+    res.redirect(await getUrlAssinada(a.chave_r2));
   } catch(e) { res.status(500).send('Erro'); }
 });
 
@@ -1814,35 +1476,21 @@ router.post('/financeiro-pastas/:id/deletar', requireAuth, async (req, res) => {
   res.redirect('/financeiro-arquivos');
 });
 
-
-
 router.post('/financeiro-arquivos/deletar-multiplos', requireAuth, async (req, res) => {
   try {
     const ids = req.body.ids ? (Array.isArray(req.body.ids) ? req.body.ids : [req.body.ids]) : [];
     const pasta_id = req.body.pasta_id || null;
-    for (const id of ids) {
-      await query('DELETE FROM financeiro_arquivos WHERE id=$1', [id]);
-    }
+    for (const id of ids) { await query('DELETE FROM financeiro_arquivos WHERE id=$1', [id]); }
     req.session.msg = [ids.length + ' arquivo(s) excluído(s)!'];
     res.redirect('/financeiro-arquivos' + (pasta_id ? '?pasta=' + pasta_id : ''));
-  } catch(e) {
-    req.session.erro = ['Erro: ' + e.message];
-    res.redirect('/financeiro-arquivos');
-  }
+  } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/financeiro-arquivos'); }
 });
 
-
-
-// Mover arquivo para pasta
 router.post('/financeiro-arquivos/:id/mover', requireAuth, async (req, res) => {
-  try {
-    const pasta_id = req.body.pasta_id || null;
-    await query('UPDATE financeiro_arquivos SET pasta_id=$1 WHERE id=$2', [pasta_id, req.params.id]);
-    res.json({ ok: true });
-  } catch(e) { res.status(500).json({ erro: e.message }); }
+  try { await query('UPDATE financeiro_arquivos SET pasta_id=$1 WHERE id=$2', [req.body.pasta_id||null, req.params.id]); res.json({ ok: true }); }
+  catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
-// Mover pasta para outra pasta
 router.post('/financeiro-pastas/:id/mover', requireAuth, async (req, res) => {
   try {
     const pai_id = req.body.pai_id || null;
@@ -1852,21 +1500,13 @@ router.post('/financeiro-pastas/:id/mover', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
-
-
-// Arquivos — novas rotas
 router.post('/arquivos/google', requireAuth, async (req, res) => {
   const { nome, google_url, pasta_id } = req.body;
   const pid = pasta_id && pasta_id !== '' ? pasta_id : null;
   let embed = google_url;
-  if (google_url && google_url.includes('docs.google.com')) {
-    embed = google_url.replace(/\/edit.*$/, '/edit?embedded=true&rm=minimal');
-  } else if (google_url && google_url.includes('drive.google.com/file')) {
-    const m = google_url.match(/\/d\/([^/]+)/);
-    if (m) embed = 'https://drive.google.com/file/d/' + m[1] + '/preview';
-  }
-  await query('INSERT INTO arquivos (nome_original, tipo, google_url, google_embed, pasta_id, enviado_por) VALUES ($1,$2,$3,$4,$5,$6)',
-    [nome, 'google', google_url, embed, pid, req.session.usuario.id]);
+  if (google_url && google_url.includes('docs.google.com')) embed = google_url.replace(/\/edit.*$/, '/edit?embedded=true&rm=minimal');
+  else if (google_url && google_url.includes('drive.google.com/file')) { const m = google_url.match(/\/d\/([^/]+)/); if (m) embed = 'https://drive.google.com/file/d/' + m[1] + '/preview'; }
+  await query('INSERT INTO arquivos (nome_original, tipo, google_url, google_embed, pasta_id, enviado_por) VALUES ($1,$2,$3,$4,$5,$6)', [nome, 'google', google_url, embed, pid, req.session.usuario.id]);
   req.session.msg = ['Link Google adicionado!'];
   res.redirect('/arquivos' + (pid ? '?pasta=' + pid : ''));
 });
@@ -1877,48 +1517,28 @@ router.post('/arquivos/:id/renomear', requireAuth, async (req, res) => {
 });
 
 router.post('/arquivos/:id/mover', requireAuth, async (req, res) => {
-  const pid = req.body.pasta_id || null;
-  await query('UPDATE arquivos SET pasta_id=$1 WHERE id=$2', [pid, req.params.id]);
+  await query('UPDATE arquivos SET pasta_id=$1 WHERE id=$2', [req.body.pasta_id||null, req.params.id]);
   res.json({ ok: true });
 });
 
 router.post('/arquivos/pasta/:id/mover', requireAuth, async (req, res) => {
-  const pid = req.body.pasta_pai_id || null;
-  await query('UPDATE arquivo_pastas SET pasta_pai_id=$1 WHERE id=$2', [pid, req.params.id]);
+  await query('UPDATE arquivo_pastas SET pasta_pai_id=$1 WHERE id=$2', [req.body.pasta_pai_id||null, req.params.id]);
   res.json({ ok: true });
 });
 
-router.post('/arquivos/:id/lixeira', requireAuth, async (req, res) => {
-  await query('UPDATE arquivos SET lixeira=1 WHERE id=$1', [req.params.id]);
-  res.json({ ok: true });
-});
-
-router.post('/arquivos/:id/restaurar', requireAuth, async (req, res) => {
-  await query('UPDATE arquivos SET lixeira=0 WHERE id=$1', [req.params.id]);
-  res.json({ ok: true });
-});
-
-router.post('/arquivos/lixeira/esvaziar', requireAuth, requireAdmin, async (req, res) => {
-  await query('DELETE FROM arquivos WHERE lixeira=1');
-  res.json({ ok: true });
-});
-
-router.post('/arquivos/pasta/:id/lixeira', requireAuth, async (req, res) => {
-  await query('UPDATE arquivo_pastas SET lixeira=1 WHERE id=$1', [req.params.id]);
-  res.json({ ok: true });
-});
+router.post('/arquivos/:id/lixeira', requireAuth, async (req, res) => { await query('UPDATE arquivos SET lixeira=1 WHERE id=$1', [req.params.id]); res.json({ ok: true }); });
+router.post('/arquivos/:id/restaurar', requireAuth, async (req, res) => { await query('UPDATE arquivos SET lixeira=0 WHERE id=$1', [req.params.id]); res.json({ ok: true }); });
+router.post('/arquivos/lixeira/esvaziar', requireAuth, requireAdmin, async (req, res) => { await query('DELETE FROM arquivos WHERE lixeira=1'); res.json({ ok: true }); });
+router.post('/arquivos/pasta/:id/lixeira', requireAuth, async (req, res) => { await query('UPDATE arquivo_pastas SET lixeira=1 WHERE id=$1', [req.params.id]); res.json({ ok: true }); });
 
 router.post('/arquivos/pasta/:id/editar', requireAuth, async (req, res) => {
   const { nome, icone, cor } = req.body;
-  await query('UPDATE arquivo_pastas SET nome=$1, icone=$2, cor=$3 WHERE id=$4',
-    [nome, icone || '📁', cor || null, req.params.id]);
+  await query('UPDATE arquivo_pastas SET nome=$1, icone=$2, cor=$3 WHERE id=$4', [nome, icone||'📁', cor||null, req.params.id]);
   req.session.msg = ['Pasta atualizada!'];
   const pasta = await query('SELECT pasta_pai_id FROM arquivo_pastas WHERE id=$1', [req.params.id]);
   const pid = pasta.rows[0]?.pasta_pai_id;
   res.redirect('/arquivos' + (pid ? '?pasta=' + pid : '?pasta=' + req.params.id));
 });
-
-
 
 router.get("/arquivos/:id/visualizar", requireAuth, async (req, res) => {
   try {
@@ -1927,8 +1547,7 @@ router.get("/arquivos/:id/visualizar", requireAuth, async (req, res) => {
     if (!a) return res.status(404).send("Nao encontrado");
     if (a.tipo === "google" && a.google_embed) return res.redirect(a.google_embed);
     const { getUrlAssinada } = require("../services/desligamento");
-    const url = await getUrlAssinada(a.chave_r2);
-    res.redirect(url);
+    res.redirect(await getUrlAssinada(a.chave_r2));
   } catch(e) { res.status(500).send("Erro: " + e.message); }
 });
 
@@ -1938,8 +1557,7 @@ router.get("/arquivos/:id/download", requireAuth, async (req, res) => {
     const a = r.rows[0];
     if (!a || !a.chave_r2) return res.status(404).send("Nao encontrado");
     const { getUrlAssinada } = require("../services/desligamento");
-    const url = await getUrlAssinada(a.chave_r2);
-    res.redirect(url);
+    res.redirect(await getUrlAssinada(a.chave_r2));
   } catch(e) { res.status(500).send("Erro"); }
 });
 
@@ -1955,10 +1573,8 @@ router.post("/arquivos/:id/substituir", requireAuth, async (req, res) => {
     upload.single("arquivo")(req, res, async (err) => {
       if (!req.file) { req.session.erro = ["Sem arquivo"]; return res.redirect("/arquivos"); }
       const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, "liga");
-      await query("UPDATE arquivos SET chave_r2=$1,mimetype=$2,tamanho=$3,nome_original=$4 WHERE id=$5",
-        [r.chave, req.file.mimetype, req.file.size, req.file.originalname, req.params.id]);
-      req.session.msg = ["Substituido!"];
-      res.redirect("/arquivos");
+      await query("UPDATE arquivos SET chave_r2=$1,mimetype=$2,tamanho=$3,nome_original=$4 WHERE id=$5", [r.chave, req.file.mimetype, req.file.size, req.file.originalname, req.params.id]);
+      req.session.msg = ["Substituido!"]; res.redirect("/arquivos");
     });
   } catch(e) { req.session.erro = [e.message]; res.redirect("/arquivos"); }
 });
@@ -1970,66 +1586,43 @@ router.post("/arquivos/upload", requireAuth, async (req, res) => {
       if (!req.file) return res.status(400).json({ erro: "Sem arquivo" });
       const pid = req.body.pasta_id || null;
       const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, "liga");
-      await query("INSERT INTO arquivos (nome_original,chave_r2,mimetype,tamanho,pasta_id,enviado_por,ativo) VALUES ($1,$2,$3,$4,$5,$6,1)",
-        [req.file.originalname, r.chave, req.file.mimetype, req.file.size, pid||null, req.session.usuario.id]);
+      await query("INSERT INTO arquivos (nome_original,chave_r2,mimetype,tamanho,pasta_id,enviado_por,ativo) VALUES ($1,$2,$3,$4,$5,$6,1)", [req.file.originalname, r.chave, req.file.mimetype, req.file.size, pid||null, req.session.usuario.id]);
       res.json({ ok: true });
     });
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
-
-// ─── GOOGLE DRIVE INTEGRATION ─────────────────────────────────────────────────
-
 router.get("/google/auth", requireAuth, requireAdmin, (req, res) => {
   const { getAuthUrl } = require("../services/google-drive");
-  const url = getAuthUrl();
-  res.redirect(url);
+  res.redirect(getAuthUrl());
 });
 
 router.get("/google/callback", requireAuth, async (req, res) => {
   try {
     const { getTokens } = require("../services/google-drive");
     const tokens = await getTokens(req.query.code);
-    // Salva tokens nas configuracoes
-    await query("INSERT INTO configuracoes (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2",
-      ["google_tokens", JSON.stringify(tokens)]);
+    await query("INSERT INTO configuracoes (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2", ["google_tokens", JSON.stringify(tokens)]);
     req.session.msg = ["Google Drive conectado com sucesso!"];
     res.redirect("/configuracoes");
-  } catch(e) {
-    req.session.erro = ["Erro ao conectar Google Drive: " + e.message];
-    res.redirect("/configuracoes");
-  }
+  } catch(e) { req.session.erro = ["Erro ao conectar Google Drive: " + e.message]; res.redirect("/configuracoes"); }
 });
 
 router.post("/arquivos/upload-drive", requireAuth, async (req, res) => {
   try {
     const { upload } = require("../services/arquivos");
     const { uploadParaDrive } = require("../services/google-drive");
-
     upload.single("arquivo")(req, res, async (err) => {
       if (!req.file) return res.status(400).json({ erro: "Sem arquivo" });
-
-      // Busca tokens do Google
       const tokensR = await query("SELECT valor FROM configuracoes WHERE chave='google_tokens'");
       if (!tokensR.rows[0]) return res.status(400).json({ erro: "Google Drive nao conectado. Va em Configuracoes e conecte." });
-
       const tokens = JSON.parse(tokensR.rows[0].valor);
       const pasta_id = req.body.pasta_id || null;
-
-      // Faz upload para o Google Drive
       const result = await uploadParaDrive(tokens, req.file.buffer, req.file.originalname, req.file.mimetype);
-
-      // Salva referencia no banco
-      await query("INSERT INTO arquivos (nome_original, tipo, google_url, google_embed, pasta_id, enviado_por, ativo) VALUES ($1,$2,$3,$4,$5,$6,1)",
-        [req.file.originalname, "google", result.webViewLink, result.embedUrl, pasta_id||null, req.session.usuario.id]);
-
+      await query("INSERT INTO arquivos (nome_original, tipo, google_url, google_embed, pasta_id, enviado_por, ativo) VALUES ($1,$2,$3,$4,$5,$6,1)", [req.file.originalname, "google", result.webViewLink, result.embedUrl, pasta_id||null, req.session.usuario.id]);
       res.json({ ok: true, embedUrl: result.embedUrl });
     });
-  } catch(e) {
-    res.status(500).json({ erro: e.message });
-  }
+  } catch(e) { res.status(500).json({ erro: e.message }); }
 });
-
 
 router.get("/arquivos/:id/url", requireAuth, async (req, res) => {
   try {
@@ -2037,11 +1630,9 @@ router.get("/arquivos/:id/url", requireAuth, async (req, res) => {
     const a = r.rows[0];
     if (!a || !a.chave_r2) return res.status(404).json({ erro: "Nao encontrado" });
     const { getUrlAssinada } = require("../services/desligamento");
-    const url = await getUrlAssinada(a.chave_r2);
-    res.json({ url });
+    res.json({ url: await getUrlAssinada(a.chave_r2) });
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
-
 
 router.get('/financeiro-arquivos/:id/url', requireAuth, async (req, res) => {
   try {
@@ -2049,11 +1640,9 @@ router.get('/financeiro-arquivos/:id/url', requireAuth, async (req, res) => {
     const a = r.rows[0];
     if (!a || !a.chave_r2) return res.status(404).json({ erro: 'Nao encontrado' });
     const { getUrlAssinada } = require('../services/desligamento');
-    const url = await getUrlAssinada(a.chave_r2);
-    res.json({ url });
+    res.json({ url: await getUrlAssinada(a.chave_r2) });
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
-
 
 router.get('/desligamentos/:id/imprimir', requireAuth, async (req, res) => {
   try {
@@ -2061,9 +1650,9 @@ router.get('/desligamentos/:id/imprimir', requireAuth, async (req, res) => {
     if (!rd.rows[0]) return res.status(404).send('Nao encontrado');
     const desl = rd.rows[0];
     let pessoa = {};
-    if (desl.membro_id) { const rm = await query('SELECT * FROM membros WHERE id=$1', [desl.membro_id]); pessoa = rm.rows[0] || {}; }
-    else if (desl.ligante_id) { const rl = await query('SELECT * FROM ligantes WHERE id=$1', [desl.ligante_id]); pessoa = rl.rows[0] || {}; }
-    const d = { ...desl, ...pessoa };
+    if (desl.membro_id) { const rm = await query('SELECT * FROM membros WHERE id=$1',[desl.membro_id]); pessoa=rm.rows[0]||{}; }
+    else if (desl.ligante_id) { const rl = await query('SELECT * FROM ligantes WHERE id=$1',[desl.ligante_id]); pessoa=rl.rows[0]||{}; }
+    const d = {...desl,...pessoa};
     const config = await getConfig();
     const { gerarHTMLDesligamento, imagemBase64 } = require('../services/desligamento');
     config.timbrado_b64 = await imagemBase64(config.timbrado_chave);
@@ -2075,13 +1664,11 @@ router.get('/desligamentos/:id/imprimir', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
-
 router.post('/desligamentos/:id/reenviar', requireAuth, async (req, res) => {
   try {
-    const rd = await query('SELECT * FROM desligamentos WHERE id=$1', [req.params.id]);
+    const rd = await query('SELECT * FROM desligamentos WHERE id=$1',[req.params.id]);
     if (!rd.rows[0]) { req.session.erro=['Nao encontrado.']; return res.redirect('/desligamentos'); }
-    const desl = rd.rows[0];
-    let pessoa = {};
+    const desl = rd.rows[0]; let pessoa = {};
     if (desl.membro_id) { const rm = await query('SELECT * FROM membros WHERE id=$1',[desl.membro_id]); pessoa=rm.rows[0]||{}; }
     else if (desl.ligante_id) { const rl = await query('SELECT * FROM ligantes WHERE id=$1',[desl.ligante_id]); pessoa=rl.rows[0]||{}; }
     const d = {...desl,...pessoa};
@@ -2096,18 +1683,11 @@ router.post('/desligamentos/:id/reenviar', requireAuth, async (req, res) => {
     const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
     const nodemailer = require('nodemailer');
     const transporter = nodemailer.createTransport({host:process.env.EMAIL_HOST,port:process.env.EMAIL_PORT,auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS}});
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER, to: d.email,
-      subject: 'Carta de Rescisión — LAURO (Reenvío)',
-      html: `<p>Estimado/a <strong>${d.nome}</strong>,</p><p>Reenviamos su Carta de Rescisión de la LAURO.</p><ol><li>Imprima el documento</li><li>Firme en el espacio indicado</li><li>Escanee el documento firmado</li><li><strong>Responda este mismo email</strong> con el documento firmado adjunto</li></ol><p>Atentamente,<br>Secretaría — LAURO</p>`,
-      attachments: [{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}]
-    });
+    await transporter.sendMail({ from:process.env.EMAIL_USER, to:d.email, subject:'Carta de Rescisión — LAURO (Reenvío)', html:`<p>Estimado/a <strong>${d.nome}</strong>,</p><p>Reenviamos su Carta de Rescisión de la LAURO.</p><ol><li>Imprima el documento</li><li>Firme en el espacio indicado</li><li>Escanee el documento firmado</li><li><strong>Responda este mismo email</strong> con el documento firmado adjunto</li></ol><p>Atentamente,<br>Secretaría — LAURO</p>`, attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}] });
     await query('UPDATE desligamentos SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', req.params.id]);
-    req.session.msg=['Email reenviado para '+d.email+'!'];
-    res.redirect('/desligamentos');
+    req.session.msg=['Email reenviado para '+d.email+'!']; res.redirect('/desligamentos');
   } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/desligamentos'); }
 });
-
 
 // ─── DESVINCULAÇÕES ────────────────────────────────────────────────────────────
 
@@ -2129,25 +1709,11 @@ router.post('/desvinculacoes', requireAuth, async (req, res) => {
       const { ligante_id, data_solicitacao, motivo, num_advertencias } = req.body;
       const lid = ligante_id && ligante_id !== '' ? parseInt(ligante_id) : null;
       let adv1=null, adv2=null, adv3=null;
-      if (req.files && req.files.adv1 && req.files.adv1[0]) {
-        const f = req.files.adv1[0];
-        const r = await uploadArquivo(f.buffer, f.originalname, f.mimetype, 'advertencias');
-        adv1 = r.chave;
+      for (const [key, varName] of [['adv1', 'adv1'],['adv2','adv2'],['adv3','adv3']]) {
+        if (req.files && req.files[key] && req.files[key][0]) { const f=req.files[key][0]; const r=await uploadArquivo(f.buffer,f.originalname,f.mimetype,'advertencias'); if(key==='adv1')adv1=r.chave; else if(key==='adv2')adv2=r.chave; else adv3=r.chave; }
       }
-      if (req.files && req.files.adv2 && req.files.adv2[0]) {
-        const f = req.files.adv2[0];
-        const r = await uploadArquivo(f.buffer, f.originalname, f.mimetype, 'advertencias');
-        adv2 = r.chave;
-      }
-      if (req.files && req.files.adv3 && req.files.adv3[0]) {
-        const f = req.files.adv3[0];
-        const r = await uploadArquivo(f.buffer, f.originalname, f.mimetype, 'advertencias');
-        adv3 = r.chave;
-      }
-      await query('INSERT INTO desvinculacoes (ligante_id, data_solicitacao, motivo, num_advertencias, adv1_chave, adv2_chave, adv3_chave, criado_por) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
-        [lid, data_solicitacao || new Date(), motivo || null, parseInt(num_advertencias)||3, adv1, adv2, adv3, req.session.usuario.id]);
-      req.session.msg = ['Desvinculação criada!'];
-      res.redirect('/desvinculacoes');
+      await query('INSERT INTO desvinculacoes (ligante_id, data_solicitacao, motivo, num_advertencias, adv1_chave, adv2_chave, adv3_chave, criado_por) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [lid, data_solicitacao||new Date(), motivo||null, parseInt(num_advertencias)||3, adv1, adv2, adv3, req.session.usuario.id]);
+      req.session.msg = ['Desvinculação criada!']; res.redirect('/desvinculacoes');
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/desvinculacoes'); }
 });
@@ -2158,13 +1724,11 @@ router.get('/desvinculacoes/:id/adv/:num', requireAuth, async (req, res) => {
     const chave = r.rows[0]?.chave;
     if (!chave) return res.status(404).send('Não encontrado');
     const { getUrlAssinada } = require('../services/desligamento');
-    const url = await getUrlAssinada(chave);
-    res.redirect(url);
+    res.redirect(await getUrlAssinada(chave));
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
 async function gerarHTMLDesvinculacao(ligante, config, data) {
-  const { imagemBase64 } = require('../services/desligamento');
   const timbrado = config.timbrado_b64 || null;
   const presidenteSrc = config.assinatura_presidente_b64 || null;
   const secretarioSrc = config.assinatura_secretario_b64 || null;
@@ -2173,71 +1737,7 @@ async function gerarHTMLDesvinculacao(ligante, config, data) {
   const d = new Date(data);
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const dataStr = d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Times New Roman',serif; font-size:11pt; color:#000; }
-.pagina { width:210mm; height:297mm; position:relative; overflow:hidden; }
-.bg { position:absolute; top:0; left:0; width:210mm; height:297mm; z-index:0; }
-.bg img { width:210mm; height:297mm; display:block; }
-.texto { position:absolute; top:52mm; left:22mm; width:166mm; height:203mm; z-index:1; display:flex; flex-direction:column; }
-.titulo { font-size:11pt; font-weight:bold; margin-bottom:10px; }
-.corpo { text-align:justify; line-height:1.5; flex:1; }
-.corpo p { margin-bottom:7px; }
-.corpo ul { margin:5px 0 7px 20px; }
-.corpo ul li { margin-bottom:3px; }
-.assinaturas { display:flex; flex-direction:column; gap:10px; align-items:center; }
-.assinatura-bloco { text-align:center; width:70%; }
-.assinatura-img-wrap { height:50px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:3px; }
-.assinatura-img { max-height:50px; max-width:130px; object-fit:contain; }
-.linha { border-top:1.5px solid #000; width:90%; margin:0 auto 3px; }
-.assinatura-nome { font-weight:bold; font-size:8.5pt; text-transform:uppercase; }
-.assinatura-cargo { font-size:8pt; margin-top:2px; }
-</style>
-</head>
-<body>
-<div class="pagina">
-  <div class="bg">${timbrado ? `<img src="${timbrado}">` : ''}</div>
-  <div class="texto">
-    <div class="titulo">Liga Académica de Urología - LAURO<br>Universidad Central del Paraguay</div>
-    <div class="corpo">
-      <p>Ciudad del Este, ${dataStr}.</p>
-      <p>Al(la) Sr(a). <strong>${ligante.nome}</strong></p>
-      <p><strong>Asunto: Carta de desvinculación de la Liga Académica de Urología - LAURO</strong></p>
-      <p>Estimado(a) ${ligante.nome.split(' ')[0]},</p>
-      <p>De acuerdo con el Estatuto y el Reglamento Interno de la Liga Académica de Urología, los miembros (ligantes) deben cumplir con criterios indispensables para mantener su condición de activos, entre ellos:</p>
-      <ul>
-        <li>Participación regular en las actividades de la Liga;</li>
-        <li>Estar en posesión del uniforme de la Liga;</li>
-        <li>Estar al día con las mensualidades, según lo estipulado en el contrato firmado en la entrevista de ingreso.</li>
-      </ul>
-      <p>Sin embargo, tras la evaluación y registro, se constató que Vd. no cumplió con dichos criterios durante el período de su participación. Señalamos que, a lo largo del proceso, se emitieron ${ligante.num_advertencias || 3} advertencia(s) por escrito, las cuales no fueron debidamente atendidas.</p>
-      <p>En vista de lo expuesto y en conformidad con nuestras normas estatutarias y reglamentarias, comunicamos que, a partir de esta fecha, Vd. queda desvinculado(a) de la Liga Académica de Urología.</p>
-      <p>Agradecemos la colaboración prestada hasta el momento y nos ponemos a disposición para cualquier aclaración que sea necesaria.</p>
-      <p>Atentamente,</p>
-    </div>
-    <div class="assinaturas">
-      <div class="assinatura-bloco">
-        <div class="assinatura-img-wrap">${presidenteSrc ? `<img src="${presidenteSrc}" class="assinatura-img">` : ''}</div>
-        <div class="linha"></div>
-        <div class="assinatura-nome">${nomePresidente}</div>
-        <div class="assinatura-cargo">PRESIDENTE — LAURO</div>
-      </div>
-      <div class="assinatura-bloco">
-        <div class="assinatura-img-wrap">${secretarioSrc ? `<img src="${secretarioSrc}" class="assinatura-img">` : ''}</div>
-        <div class="linha"></div>
-        <div class="assinatura-nome">${nomeSecretario}</div>
-        <div class="assinatura-cargo">SECRETÁRIO — LAURO</div>
-      </div>
-    </div>
-  </div>
-</div>
-</body>
-</html>`;
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',serif;font-size:11pt;color:#000}.pagina{width:210mm;height:297mm;position:relative;overflow:hidden}.bg{position:absolute;top:0;left:0;width:210mm;height:297mm;z-index:0}.bg img{width:210mm;height:297mm;display:block}.texto{position:absolute;top:52mm;left:22mm;width:166mm;height:203mm;z-index:1;display:flex;flex-direction:column}.titulo{font-size:11pt;font-weight:bold;margin-bottom:10px}.corpo{text-align:justify;line-height:1.5;flex:1}.corpo p{margin-bottom:7px}.corpo ul{margin:5px 0 7px 20px}.corpo ul li{margin-bottom:3px}.assinaturas{display:flex;flex-direction:column;gap:10px;align-items:center}.assinatura-bloco{text-align:center;width:70%}.assinatura-img-wrap{height:50px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:3px}.assinatura-img{max-height:50px;max-width:130px;object-fit:contain}.linha{border-top:1.5px solid #000;width:90%;margin:0 auto 3px}.assinatura-nome{font-weight:bold;font-size:8.5pt;text-transform:uppercase}.assinatura-cargo{font-size:8pt;margin-top:2px}</style></head><body><div class="pagina"><div class="bg">${timbrado?`<img src="${timbrado}">`:''}</div><div class="texto"><div class="titulo">Liga Académica de Urología - LAURO<br>Universidad Central del Paraguay</div><div class="corpo"><p>Ciudad del Este, ${dataStr}.</p><p>Al(la) Sr(a). <strong>${ligante.nome}</strong></p><p><strong>Asunto: Carta de desvinculación de la Liga Académica de Urología - LAURO</strong></p><p>Estimado(a) ${ligante.nome.split(' ')[0]},</p><p>De acuerdo con el Estatuto y el Reglamento Interno de la Liga Académica de Urología, los miembros (ligantes) deben cumplir con criterios indispensables para mantener su condición de activos, entre ellos:</p><ul><li>Participación regular en las actividades de la Liga;</li><li>Estar en posesión del uniforme de la Liga;</li><li>Estar al día con las mensualidades, según lo estipulado en el contrato firmado en la entrevista de ingreso.</li></ul><p>Sin embargo, tras la evaluación y registro, se constató que Vd. no cumplió con dichos criterios durante el período de su participación. Señalamos que, a lo largo del proceso, se emitieron ${ligante.num_advertencias||3} advertencia(s) por escrito, las cuales no fueron debidamente atendidas.</p><p>En vista de lo expuesto y en conformidad con nuestras normas estatutarias y reglamentarias, comunicamos que, a partir de esta fecha, Vd. queda desvinculado(a) de la Liga Académica de Urología.</p><p>Agradecemos la colaboración prestada hasta el momento y nos ponemos a disposición para cualquier aclaración que sea necesaria.</p><p>Atentamente,</p></div><div class="assinaturas"><div class="assinatura-bloco"><div class="assinatura-img-wrap">${presidenteSrc?`<img src="${presidenteSrc}" class="assinatura-img">`:''}</div><div class="linha"></div><div class="assinatura-nome">${nomePresidente}</div><div class="assinatura-cargo">PRESIDENTE — LAURO</div></div><div class="assinatura-bloco"><div class="assinatura-img-wrap">${secretarioSrc?`<img src="${secretarioSrc}" class="assinatura-img">`:''}</div><div class="linha"></div><div class="assinatura-nome">${nomeSecretario}</div><div class="assinatura-cargo">SECRETÁRIO — LAURO</div></div></div></div></div></body></html>`;
 }
 
 async function prepararConfigDesvinc(config) {
@@ -2252,12 +1752,10 @@ router.get('/desvinculacoes/:id/visualizar', requireAuth, async (req, res) => {
   try {
     const rd = await query('SELECT * FROM desvinculacoes WHERE id=$1', [req.params.id]);
     if (!rd.rows[0]) return res.status(404).send('Não encontrado');
-    const desl = rd.rows[0];
-    const rl = await query('SELECT * FROM ligantes WHERE id=$1', [desl.ligante_id]);
-    const ligante = {...(rl.rows[0] || {}), num_advertencias: desl.num_advertencias || 3};
+    const rl = await query('SELECT * FROM ligantes WHERE id=$1', [rd.rows[0].ligante_id]);
+    const ligante = {...(rl.rows[0]||{}), num_advertencias: rd.rows[0].num_advertencias||3};
     const config = await prepararConfigDesvinc(await getConfig());
-    const html = await gerarHTMLDesvinculacao(ligante, config, desl.data_solicitacao);
-    res.send(html);
+    res.send(await gerarHTMLDesvinculacao(ligante, config, rd.rows[0].data_solicitacao));
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
@@ -2266,7 +1764,7 @@ router.get('/desvinculacoes/:id/imprimir', requireAuth, async (req, res) => {
     const rd = await query('SELECT * FROM desvinculacoes WHERE id=$1', [req.params.id]);
     if (!rd.rows[0]) return res.status(404).send('Não encontrado');
     const rl = await query('SELECT * FROM ligantes WHERE id=$1', [rd.rows[0].ligante_id]);
-    const ligante = {...(rl.rows[0] || {}), num_advertencias: rd.rows[0].num_advertencias || 3};
+    const ligante = {...(rl.rows[0]||{}), num_advertencias: rd.rows[0].num_advertencias||3};
     const config = await prepararConfigDesvinc(await getConfig());
     let html = await gerarHTMLDesvinculacao(ligante, config, rd.rows[0].data_solicitacao);
     html = html.replace('</body>', '<script>window.onload=function(){window.print()}</script></body>');
@@ -2278,26 +1776,19 @@ async function enviarEmailDesvinc(id, req, res, reenvio) {
   try {
     const rd = await query('SELECT * FROM desvinculacoes WHERE id=$1', [id]);
     if (!rd.rows[0]) { req.session.erro=['Não encontrado.']; return res.redirect('/desvinculacoes'); }
-    const desl = rd.rows[0];
-    const rl = await query('SELECT * FROM ligantes WHERE id=$1', [desl.ligante_id]);
-    const ligante = rl.rows[0] || {};
+    const rl = await query('SELECT * FROM ligantes WHERE id=$1', [rd.rows[0].ligante_id]);
+    const ligante = rl.rows[0]||{};
     if (!ligante.email) { req.session.erro=['Email não cadastrado.']; return res.redirect('/desvinculacoes'); }
     const config = await prepararConfigDesvinc(await getConfig());
-    const html = await gerarHTMLDesvinculacao(ligante, config, desl.data_solicitacao);
+    const html = await gerarHTMLDesvinculacao(ligante, config, rd.rows[0].data_solicitacao);
     const htmlPdf = require('html-pdf-node');
     const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
     const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({ host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT, auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS } });
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER, to: ligante.email,
-      subject: 'Carta de Desvinculación — Liga Académica de Urología LAURO' + (reenvio ? ' (Reenvío)' : ''),
-      html: `<p>Estimado(a) <strong>${ligante.nome}</strong>,</p><p>Adjunto encontrará su Carta de Desvinculación de la Liga Académica de Urología - LAURO.</p><p>En caso de dudas, responda este mismo email.</p><p>Atentamente,<br>Secretaría — LAURO</p>`,
-      attachments: [{ filename: 'carta-desvinculacion-LAURO.pdf', content: pdfBuffer, contentType: 'application/pdf' }]
-    });
+    const transporter = nodemailer.createTransport({ host:process.env.EMAIL_HOST, port:process.env.EMAIL_PORT, auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS} });
+    await transporter.sendMail({ from:process.env.EMAIL_USER, to:ligante.email, subject:'Carta de Desvinculación — Liga Académica de Urología LAURO'+(reenvio?' (Reenvío)':''), html:`<p>Estimado(a) <strong>${ligante.nome}</strong>,</p><p>Adjunto encontrará su Carta de Desvinculación de la Liga Académica de Urología - LAURO.</p><p>En caso de dudas, responda este mismo email.</p><p>Atentamente,<br>Secretaría — LAURO</p>`, attachments:[{filename:'carta-desvinculacion-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}] });
     await query('UPDATE desvinculacoes SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', id]);
-    req.session.msg = ['Email enviado para ' + ligante.email + '!'];
-    res.redirect('/desvinculacoes');
-  } catch(e) { req.session.erro=['Erro: ' + e.message]; res.redirect('/desvinculacoes'); }
+    req.session.msg = ['Email enviado para ' + ligante.email + '!']; res.redirect('/desvinculacoes');
+  } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/desvinculacoes'); }
 }
 
 router.post('/desvinculacoes/:id/enviar', requireAuth, (req, res) => enviarEmailDesvinc(req.params.id, req, res, false));
@@ -2305,37 +1796,25 @@ router.post('/desvinculacoes/:id/reenviar', requireAuth, (req, res) => enviarEma
 
 router.post('/desvinculacoes/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
   await query('DELETE FROM desvinculacoes WHERE id=$1', [req.params.id]);
-  req.session.msg = ['Desvinculação excluída!'];
-  res.redirect('/desvinculacoes');
+  req.session.msg = ['Desvinculação excluída!']; res.redirect('/desvinculacoes');
 });
-
 
 router.post('/desvinculacoes/:id/editar', requireAuth, async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
     upload.fields([{name:'adv1'},{name:'adv2'},{name:'adv3'}])(req, res, async (err) => {
       const { num_advertencias } = req.body;
-      let updates = ['num_advertencias=$1'];
-      let vals = [parseInt(num_advertencias)||3];
-      let idx = 2;
+      let updates = ['num_advertencias=$1']; let vals = [parseInt(num_advertencias)||3]; let idx = 2;
       for (const num of [1,2,3]) {
         const key = 'adv'+num;
-        if (req.files && req.files[key] && req.files[key][0]) {
-          const f = req.files[key][0];
-          const r = await uploadArquivo(f.buffer, f.originalname, f.mimetype, 'advertencias');
-          updates.push('adv'+num+'_chave=$'+idx);
-          vals.push(r.chave);
-          idx++;
-        }
+        if (req.files && req.files[key] && req.files[key][0]) { const f=req.files[key][0]; const r=await uploadArquivo(f.buffer,f.originalname,f.mimetype,'advertencias'); updates.push('adv'+num+'_chave=$'+idx); vals.push(r.chave); idx++; }
       }
       vals.push(req.params.id);
       await query('UPDATE desvinculacoes SET '+updates.join(',')+' WHERE id=$'+idx, vals);
-      req.session.msg = ['Desvinculação atualizada!'];
-      res.redirect('/desvinculacoes');
+      req.session.msg = ['Desvinculação atualizada!']; res.redirect('/desvinculacoes');
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/desvinculacoes'); }
 });
-
 
 // ─── CARTA DE COBRANÇA ────────────────────────────────────────────────────────
 
@@ -2348,59 +1827,7 @@ function gerarHTMLCartaCobranca(pessoa, config, carta) {
   const dataStr = d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
   const mesRef = carta.mes_referencia || '___________';
   const venc = carta.vencimento ? new Date(carta.vencimento).toLocaleDateString('es-PY') : '___________';
-
-  return `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<style>
-* { margin:0; padding:0; box-sizing:border-box; }
-body { font-family:'Times New Roman',serif; font-size:11pt; color:#000; }
-.pagina { width:210mm; height:297mm; position:relative; overflow:hidden; }
-.bg { position:absolute; top:0; left:0; width:210mm; height:297mm; z-index:0; }
-.bg img { width:210mm; height:297mm; display:block; }
-.texto { position:absolute; top:52mm; left:22mm; width:166mm; height:203mm; z-index:1; display:flex; flex-direction:column; }
-.titulo { font-size:13pt; font-weight:bold; text-align:center; margin-bottom:6px; text-transform:uppercase; }
-.subtitulo { font-size:11pt; font-weight:bold; text-align:center; margin-bottom:14px; text-transform:uppercase; }
-.corpo { text-align:justify; line-height:1.55; flex:1; }
-.corpo p { margin-bottom:8px; }
-.assinaturas { display:flex; flex-direction:column; gap:10px; align-items:center; margin-top:10px; }
-.assinatura-bloco { text-align:center; width:70%; }
-.assinatura-img-wrap { height:50px; display:flex; align-items:flex-end; justify-content:center; margin-bottom:3px; }
-.assinatura-img { max-height:50px; max-width:130px; object-fit:contain; }
-.linha { border-top:1.5px solid #000; width:90%; margin:0 auto 3px; }
-.assinatura-nome { font-weight:bold; font-size:8.5pt; text-transform:uppercase; }
-.assinatura-cargo { font-size:8pt; margin-top:2px; }
-</style>
-</head>
-<body>
-<div class="pagina">
-  <div class="bg">${timbrado ? `<img src="${timbrado}">` : ''}</div>
-  <div class="texto">
-    <div class="titulo">Carta de Cobro — LAURO</div>
-    <div class="subtitulo">Pago Mensual Vencido</div>
-    <div class="corpo">
-      <p>Ciudad del Este/PY, ${dataStr}.</p>
-      <p>Estimado/a señor/a <strong>${pessoa.nome || '___________'}</strong>,</p>
-      <p>Esperamos que este mensaje le encuentre bien.</p>
-      <p>Nos ponemos en contacto con usted en nombre de LAURO – Liga Académica de Urología para recordarle que su cuota de membresía está vencida. Como ya le informamos, las cuotas de membresía vencen el día 15 de cada mes.</p>
-      <p>Hasta la fecha, no hemos recibido el pago de la cuota mensual correspondiente al mes de <strong>${mesRef}</strong>, cuyo vencimiento fue el <strong>${venc}</strong>. Solicitamos amablemente que se abone la deuda lo antes posible para evitar cualquier restricción en la participación en las actividades de la Liga.</p>
-      <p>Si ya ha realizado el pago, ignore este mensaje o, si es posible, envíenos el comprobante de pago para su verificación.</p>
-      <p>Estamos a su disposición para responder cualquier pregunta o proporcionar aclaraciones.</p>
-      <p>Atentamente,</p>
-    </div>
-    <div class="assinaturas">
-      <div class="assinatura-bloco">
-        <div class="assinatura-img-wrap">${financeiroSrc ? `<img src="${financeiroSrc}" class="assinatura-img">` : ''}</div>
-        <div class="linha"></div>
-        <div class="assinatura-nome">${nomeFinanceiro}</div>
-        <div class="assinatura-cargo">Director(a) Financiero(a)<br>LAURO – Liga Académica de Urología</div>
-      </div>
-    </div>
-  </div>
-</div>
-</body>
-</html>`;
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',serif;font-size:11pt;color:#000}.pagina{width:210mm;height:297mm;position:relative;overflow:hidden}.bg{position:absolute;top:0;left:0;width:210mm;height:297mm;z-index:0}.bg img{width:210mm;height:297mm;display:block}.texto{position:absolute;top:52mm;left:22mm;width:166mm;height:203mm;z-index:1;display:flex;flex-direction:column}.titulo{font-size:13pt;font-weight:bold;text-align:center;margin-bottom:6px;text-transform:uppercase}.subtitulo{font-size:11pt;font-weight:bold;text-align:center;margin-bottom:14px;text-transform:uppercase}.corpo{text-align:justify;line-height:1.55;flex:1}.corpo p{margin-bottom:8px}.assinaturas{display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:10px}.assinatura-bloco{text-align:center;width:70%}.assinatura-img-wrap{height:50px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:3px}.assinatura-img{max-height:50px;max-width:130px;object-fit:contain}.linha{border-top:1.5px solid #000;width:90%;margin:0 auto 3px}.assinatura-nome{font-weight:bold;font-size:8.5pt;text-transform:uppercase}.assinatura-cargo{font-size:8pt;margin-top:2px}</style></head><body><div class="pagina"><div class="bg">${timbrado?`<img src="${timbrado}">`:''}</div><div class="texto"><div class="titulo">Carta de Cobro — LAURO</div><div class="subtitulo">Pago Mensual Vencido</div><div class="corpo"><p>Ciudad del Este/PY, ${dataStr}.</p><p>Estimado/a señor/a <strong>${pessoa.nome||'___________'}</strong>,</p><p>Esperamos que este mensaje le encuentre bien.</p><p>Nos ponemos en contacto con usted en nombre de LAURO – Liga Académica de Urología para recordarle que su cuota de membresía está vencida. Como ya le informamos, las cuotas de membresía vencen el día 15 de cada mes.</p><p>Hasta la fecha, no hemos recibido el pago de la cuota mensual correspondiente al mes de <strong>${mesRef}</strong>, cuyo vencimiento fue el <strong>${venc}</strong>. Solicitamos amablemente que se abone la deuda lo antes posible para evitar cualquier restricción en la participación en las actividades de la Liga.</p><p>Si ya ha realizado el pago, ignore este mensaje o, si es posible, envíenos el comprobante de pago para su verificación.</p><p>Estamos a su disposición para responder cualquier pregunta o proporcionar aclaraciones.</p><p>Atentamente,</p></div><div class="assinaturas"><div class="assinatura-bloco"><div class="assinatura-img-wrap">${financeiroSrc?`<img src="${financeiroSrc}" class="assinatura-img">`:''}</div><div class="linha"></div><div class="assinatura-nome">${nomeFinanceiro}</div><div class="assinatura-cargo">Director(a) Financiero(a)<br>LAURO – Liga Académica de Urología</div></div></div></div></div></body></html>`;
 }
 
 async function prepararConfigCobranca(config) {
@@ -2412,20 +1839,15 @@ async function prepararConfigCobranca(config) {
 
 async function buscarPessoaCarta(carta) {
   let pessoa = {};
-  if (carta.membro_id) {
-    const r = await query('SELECT * FROM membros WHERE id=$1', [carta.membro_id]);
-    pessoa = r.rows[0] || {};
-  } else if (carta.ligante_id) {
-    const r = await query('SELECT * FROM ligantes WHERE id=$1', [carta.ligante_id]);
-    pessoa = r.rows[0] || {};
-  }
+  if (carta.membro_id) { const r = await query('SELECT * FROM membros WHERE id=$1',[carta.membro_id]); pessoa=r.rows[0]||{}; }
+  else if (carta.ligante_id) { const r = await query('SELECT * FROM ligantes WHERE id=$1',[carta.ligante_id]); pessoa=r.rows[0]||{}; }
   return pessoa;
 }
 
 router.get('/carta-cobranca', requireAuth, async (req, res) => {
   const config = await getConfig();
-  const msg = req.session.msg || []; req.session.msg = [];
-  const erro = req.session.erro || []; req.session.erro = [];
+  const msg = req.session.msg||[]; req.session.msg=[];
+  const erro = req.session.erro||[]; req.session.erro=[];
   const [cartasR, membrosR, ligantesR] = await Promise.all([
     query(`SELECT c.*, COALESCE(m.nome,l.nome) as pessoa_nome, COALESCE(m.email,l.email) as pessoa_email FROM cartas_cobranca c LEFT JOIN membros m ON m.id=c.membro_id LEFT JOIN ligantes l ON l.id=c.ligante_id ORDER BY c.criado_em DESC`),
     query('SELECT id,nome,email FROM membros WHERE ativo=1 ORDER BY nome'),
@@ -2438,95 +1860,73 @@ router.post('/carta-cobranca', requireAuth, async (req, res) => {
   const { membro_id, ligante_id, mes_referencia, vencimento } = req.body;
   const mid = membro_id && membro_id !== '' ? parseInt(membro_id) : null;
   const lid = ligante_id && ligante_id !== '' ? parseInt(ligante_id) : null;
-  await query('INSERT INTO cartas_cobranca (membro_id, ligante_id, mes_referencia, vencimento, criado_por) VALUES ($1,$2,$3,$4,$5)',
-    [mid, lid, mes_referencia, vencimento || null, req.session.usuario.id]);
-  req.session.msg = ['Carta criada!'];
-  res.redirect('/carta-cobranca');
+  await query('INSERT INTO cartas_cobranca (membro_id,ligante_id,mes_referencia,vencimento,criado_por) VALUES ($1,$2,$3,$4,$5)', [mid,lid,mes_referencia,vencimento||null,req.session.usuario.id]);
+  req.session.msg = ['Carta criada!']; res.redirect('/carta-cobranca');
 });
 
 router.get('/carta-cobranca/:id/visualizar', requireAuth, async (req, res) => {
   try {
     const r = await query('SELECT * FROM cartas_cobranca WHERE id=$1', [req.params.id]);
     if (!r.rows[0]) return res.status(404).send('Nao encontrado');
-    const carta = r.rows[0];
-    const pessoa = await buscarPessoaCarta(carta);
     const config = await prepararConfigCobranca(await getConfig());
-    const html = gerarHTMLCartaCobranca(pessoa, config, carta);
-    res.send(html);
-  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+    res.send(gerarHTMLCartaCobranca(await buscarPessoaCarta(r.rows[0]), config, r.rows[0]));
+  } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
 router.get('/carta-cobranca/:id/imprimir', requireAuth, async (req, res) => {
   try {
     const r = await query('SELECT * FROM cartas_cobranca WHERE id=$1', [req.params.id]);
     if (!r.rows[0]) return res.status(404).send('Nao encontrado');
-    const carta = r.rows[0];
-    const pessoa = await buscarPessoaCarta(carta);
     const config = await prepararConfigCobranca(await getConfig());
-    let html = gerarHTMLCartaCobranca(pessoa, config, carta);
+    let html = gerarHTMLCartaCobranca(await buscarPessoaCarta(r.rows[0]), config, r.rows[0]);
     html = html.replace('</body>', '<script>window.onload=function(){window.print()}</script></body>');
     res.send(html);
-  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+  } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
 async function enviarCartaCobranca(id, req, res, reenvio) {
   try {
     const r = await query('SELECT * FROM cartas_cobranca WHERE id=$1', [id]);
     if (!r.rows[0]) { req.session.erro=['Nao encontrado.']; return res.redirect('/carta-cobranca'); }
-    const carta = r.rows[0];
-    const pessoa = await buscarPessoaCarta(carta);
+    const pessoa = await buscarPessoaCarta(r.rows[0]);
     if (!pessoa.email) { req.session.erro=['Email nao cadastrado.']; return res.redirect('/carta-cobranca'); }
     const config = await prepararConfigCobranca(await getConfig());
-    const html = gerarHTMLCartaCobranca(pessoa, config, carta);
+    const html = gerarHTMLCartaCobranca(pessoa, config, r.rows[0]);
     const htmlPdf = require('html-pdf-node');
     const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
     const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({ host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT, auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS } });
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER, to: pessoa.email,
-      subject: 'Carta de Cobro — LAURO' + (reenvio ? ' (Reenvío)' : ''),
-      html: `<p>Estimado(a) <strong>${pessoa.nome}</strong>,</p><p>Adjunto encontrará su Carta de Cobro de la Liga Académica de Urología - LAURO.</p><p>Si ya realizó el pago, por favor envíenos el comprobante respondiendo este email.</p><p>Atentamente,<br>Dirección Financiera — LAURO</p>`,
-      attachments: [{ filename: 'carta-cobro-LAURO.pdf', content: pdfBuffer, contentType: 'application/pdf' }]
-    });
+    const transporter = nodemailer.createTransport({ host:process.env.EMAIL_HOST, port:process.env.EMAIL_PORT, auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS} });
+    await transporter.sendMail({ from:process.env.EMAIL_USER, to:pessoa.email, subject:'Carta de Cobro — LAURO'+(reenvio?' (Reenvío)':''), html:`<p>Estimado(a) <strong>${pessoa.nome}</strong>,</p><p>Adjunto encontrará su Carta de Cobro de la Liga Académica de Urología - LAURO.</p><p>Si ya realizó el pago, por favor envíenos el comprobante respondiendo este email.</p><p>Atentamente,<br>Dirección Financiera — LAURO</p>`, attachments:[{filename:'carta-cobro-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}] });
     await query('UPDATE cartas_cobranca SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', id]);
-    req.session.msg = ['Email enviado para ' + pessoa.email + '!'];
-    res.redirect('/carta-cobranca');
-  } catch(e) { req.session.erro=['Erro: ' + e.message]; res.redirect('/carta-cobranca'); }
+    req.session.msg = ['Email enviado para '+pessoa.email+'!']; res.redirect('/carta-cobranca');
+  } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/carta-cobranca'); }
 }
 
 router.post('/carta-cobranca/:id/enviar', requireAuth, (req, res) => enviarCartaCobranca(req.params.id, req, res, false));
 router.post('/carta-cobranca/:id/reenviar', requireAuth, (req, res) => enviarCartaCobranca(req.params.id, req, res, true));
-
 router.post('/carta-cobranca/:id/deletar', requireAuth, async (req, res) => {
   await query('DELETE FROM cartas_cobranca WHERE id=$1', [req.params.id]);
-  req.session.msg = ['Carta excluída!'];
-  res.redirect('/carta-cobranca');
+  req.session.msg = ['Carta excluída!']; res.redirect('/carta-cobranca');
 });
 
-
-// LISTA DE ASSINATURAS
+// ─── LISTA DE ASSINATURAS ─────────────────────────────────────────────────────
 
 router.get('/lista-assinaturas', requireAuth, async (req, res) => {
   const config = await getConfig();
-  const msg = req.session.msg || []; req.session.msg = [];
-  const erro = req.session.erro || []; req.session.erro = [];
+  const msg = req.session.msg||[]; req.session.msg=[];
+  const erro = req.session.erro||[]; req.session.erro=[];
   const r = await query('SELECT * FROM listas_assinaturas ORDER BY criado_em DESC');
   res.render('pages/lista-assinaturas', { config, usuario: req.session.usuario, msg, erro, listas: r.rows });
 });
 
 router.post('/lista-assinaturas', requireAuth, async (req, res) => {
   const { nome, data_evento, descricao } = req.body;
-  await query('INSERT INTO listas_assinaturas (nome, data_evento, descricao, criado_por) VALUES ($1,$2,$3,$4)',
-    [nome, data_evento || null, descricao || null, req.session.usuario.id]);
-  req.session.msg = ['Lista criada!'];
-  res.redirect('/lista-assinaturas');
+  await query('INSERT INTO listas_assinaturas (nome,data_evento,descricao,criado_por) VALUES ($1,$2,$3,$4)', [nome, data_evento||null, descricao||null, req.session.usuario.id]);
+  req.session.msg = ['Lista criada!']; res.redirect('/lista-assinaturas');
 });
 
 async function getPessoasLista() {
-  const [ligR, dirR] = await Promise.all([
-    query('SELECT nome, rg, catraca FROM ligantes WHERE ativo=1 ORDER BY nome'),
-    query('SELECT nome, rg, catraca FROM diretivos WHERE ativo=1 ORDER BY nome')
-  ]);
+  const [ligR, dirR] = await Promise.all([query('SELECT nome, rg, catraca FROM ligantes WHERE ativo=1 ORDER BY nome'), query('SELECT nome, rg, catraca FROM diretivos WHERE ativo=1 ORDER BY nome')]);
   const todas = [...ligR.rows, ...dirR.rows];
   todas.sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   return todas;
@@ -2545,40 +1945,15 @@ async function gerarHTMLLista(lista, config) {
   const d = lista.data_evento ? new Date(lista.data_evento).toLocaleDateString('es-PY') : '___/___/______';
   const LINHAS_POR_PAGINA = 32;
   const paginas = [];
-  for (let i = 0; i < pessoas.length; i += LINHAS_POR_PAGINA) {
-    paginas.push(pessoas.slice(i, i + LINHAS_POR_PAGINA));
-  }
+  for (let i = 0; i < pessoas.length; i += LINHAS_POR_PAGINA) { paginas.push(pessoas.slice(i, i + LINHAS_POR_PAGINA)); }
   if (paginas.length === 0) paginas.push([]);
-
   const bgHtml = timbrado ? `<img src="${timbrado}" style="position:fixed;top:0;left:0;width:210mm;height:297mm;z-index:0;display:block">` : '';
-
   const paginasHtml = paginas.map((grupo, pi) => {
     const linhas = grupo.map((p, i) => `<tr><td style="text-align:center;padding:4px 3px;border:1px solid #555">${pi*LINHAS_POR_PAGINA+i+1}</td><td style="padding:4px 6px;border:1px solid #555">${p.nome}</td><td style="text-align:center;padding:4px 3px;border:1px solid #555">${p.rg||'—'}</td><td style="text-align:center;padding:4px 3px;border:1px solid #555">${p.catraca||'—'}</td><td style="padding:4px 3px;border:1px solid #555">&nbsp;</td></tr>`).join('');
     const isUltima = pi === paginas.length - 1;
-    const assinaturasHtml = isUltima ? `
-      <div style="display:flex;justify-content:space-around;margin-top:20px;gap:10px">
-        <div style="text-align:center;flex:1">
-          <div style="height:45px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:3px">${presidenteSrc ? `<img src="${presidenteSrc}" style="max-height:45px;max-width:120px;object-fit:contain">` : ''}</div>
-          <div style="border-top:1.5px solid #000;width:90%;margin:0 auto 3px"></div>
-          <div style="font-weight:bold;font-size:8pt;text-transform:uppercase">${nomePresidente}</div>
-          <div style="font-size:7.5pt">PRESIDENTE</div>
-        </div>
-        <div style="text-align:center;flex:1">
-          <div style="height:45px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:3px">${viceSrc ? `<img src="${viceSrc}" style="max-height:45px;max-width:120px;object-fit:contain">` : ''}</div>
-          <div style="border-top:1.5px solid #000;width:90%;margin:0 auto 3px"></div>
-          <div style="font-weight:bold;font-size:8pt;text-transform:uppercase">${nomeVice}</div>
-          <div style="font-size:7.5pt">VICE-PRESIDENTE</div>
-        </div>
-        <div style="text-align:center;flex:1">
-          <div style="height:45px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:3px">${secretarioSrc ? `<img src="${secretarioSrc}" style="max-height:45px;max-width:120px;object-fit:contain">` : ''}</div>
-          <div style="border-top:1.5px solid #000;width:90%;margin:0 auto 3px"></div>
-          <div style="font-weight:bold;font-size:8pt;text-transform:uppercase">${nomeSecretario}</div>
-          <div style="font-size:7.5pt">SECRETÁRIO</div>
-        </div>
-      </div>` : '';
+    const assinaturasHtml = isUltima ? `<div style="display:flex;justify-content:space-around;margin-top:20px;gap:10px"><div style="text-align:center;flex:1"><div style="height:45px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:3px">${presidenteSrc?`<img src="${presidenteSrc}" style="max-height:45px;max-width:120px;object-fit:contain">`:''}</div><div style="border-top:1.5px solid #000;width:90%;margin:0 auto 3px"></div><div style="font-weight:bold;font-size:8pt;text-transform:uppercase">${nomePresidente}</div><div style="font-size:7.5pt">PRESIDENTE</div></div><div style="text-align:center;flex:1"><div style="height:45px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:3px">${viceSrc?`<img src="${viceSrc}" style="max-height:45px;max-width:120px;object-fit:contain">`:''}</div><div style="border-top:1.5px solid #000;width:90%;margin:0 auto 3px"></div><div style="font-weight:bold;font-size:8pt;text-transform:uppercase">${nomeVice}</div><div style="font-size:7.5pt">VICE-PRESIDENTE</div></div><div style="text-align:center;flex:1"><div style="height:45px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:3px">${secretarioSrc?`<img src="${secretarioSrc}" style="max-height:45px;max-width:120px;object-fit:contain">`:''}</div><div style="border-top:1.5px solid #000;width:90%;margin:0 auto 3px"></div><div style="font-weight:bold;font-size:8pt;text-transform:uppercase">${nomeSecretario}</div><div style="font-size:7.5pt">SECRETÁRIO</div></div></div>` : '';
     return `<div style="position:relative;width:210mm;min-height:297mm;page-break-after:always">${bgHtml}<div style="position:relative;z-index:1;padding:45mm 18mm 25mm 18mm"><div style="text-align:center;font-size:12pt;font-weight:bold;text-transform:uppercase;margin-bottom:3px">Lista de Presencia y Firmas</div><div style="text-align:center;font-size:9.5pt;margin-bottom:12px">${lista.nome} — ${d}${lista.descricao?'<br><small>'+lista.descricao+'</small>':''}</div><table style="width:100%;border-collapse:collapse;font-size:8.5pt"><thead><tr><th style="width:5%;background:#1a3d2b;color:white;padding:5px 3px;border:1px solid #333;text-align:center">#</th><th style="width:36%;background:#1a3d2b;color:white;padding:5px 6px;border:1px solid #333">Nombre Completo</th><th style="width:16%;background:#1a3d2b;color:white;padding:5px 3px;border:1px solid #333;text-align:center">RG</th><th style="width:16%;background:#1a3d2b;color:white;padding:5px 3px;border:1px solid #333;text-align:center">Catraca</th><th style="width:27%;background:#1a3d2b;color:white;padding:5px 3px;border:1px solid #333;text-align:center">Firma</th></tr></thead><tbody>${linhas}</tbody></table>${assinaturasHtml}</div></div>`;
   }).join('');
-
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',serif;color:#000}@media print{.pagina{page-break-after:always}}</style></head><body>${paginasHtml}</body></html>`;
 }
 
@@ -2592,8 +1967,7 @@ router.get('/lista-assinaturas/:id/visualizar', requireAuth, async (req, res) =>
     config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
     config.assinatura_vicepresidente_b64 = await imagemBase64(config.assinatura_vicepresidente_chave);
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
-    const html = await gerarHTMLLista(r.rows[0], config);
-    res.send(html);
+    res.send(await gerarHTMLLista(r.rows[0], config));
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
@@ -2617,8 +1991,7 @@ router.post('/lista-assinaturas/:id/upload-assinada', requireAuth, async (req, r
       if (!req.file) { req.session.erro=['Nenhum arquivo.']; return res.redirect('/lista-assinaturas'); }
       const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'listas-assinadas');
       await query('UPDATE listas_assinaturas SET pdf_assinado_chave=$1, status=$2 WHERE id=$3', [r.chave, 'assinado', req.params.id]);
-      req.session.msg = ['Lista assinada enviada!'];
-      res.redirect('/lista-assinaturas');
+      req.session.msg = ['Lista assinada enviada!']; res.redirect('/lista-assinaturas');
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/lista-assinaturas'); }
 });
@@ -2629,38 +2002,29 @@ router.get('/lista-assinaturas/:id/assinada', requireAuth, async (req, res) => {
     const chave = r.rows[0]?.pdf_assinado_chave;
     if (!chave) return res.status(404).send('Nao encontrado');
     const { getUrlAssinada } = require('../services/desligamento');
-    const url = await getUrlAssinada(chave);
-    res.redirect(url);
+    res.redirect(await getUrlAssinada(chave));
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
 router.post('/lista-assinaturas/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
   await query('DELETE FROM listas_assinaturas WHERE id=$1', [req.params.id]);
-  req.session.msg = ['Lista excluida!'];
-  res.redirect('/lista-assinaturas');
+  req.session.msg = ['Lista excluida!']; res.redirect('/lista-assinaturas');
 });
 
-
-// MARKETING
+// ─── MARKETING ────────────────────────────────────────────────────────────────
 
 async function getMktConfig() {
   const r = await query('SELECT chave,valor FROM marketing_config');
-  const cfg = {};
-  r.rows.forEach(row => cfg[row.chave] = row.valor);
-  return cfg;
+  const cfg = {}; r.rows.forEach(row => cfg[row.chave] = row.valor); return cfg;
 }
 
 router.get('/marketing', requireAuth, async (req, res) => {
   const config = await getConfig();
-  const msg = req.session.msg || []; req.session.msg = [];
-  const erro = req.session.erro || []; req.session.erro = [];
-  const [postsR, midiasR] = await Promise.all([
-    query('SELECT * FROM marketing_posts ORDER BY criado_em DESC'),
-    query('SELECT * FROM marketing_midias ORDER BY criado_em DESC')
-  ]);
+  const msg = req.session.msg||[]; req.session.msg=[];
+  const erro = req.session.erro||[]; req.session.erro=[];
+  const [postsR, midiasR] = await Promise.all([query('SELECT * FROM marketing_posts ORDER BY criado_em DESC'), query('SELECT * FROM marketing_midias ORDER BY criado_em DESC')]);
   const mktConfig = await getMktConfig();
-  const posts = postsR.rows;
-  const total = posts.length || 1;
+  const posts = postsR.rows; const total = posts.length||1;
   const igPct = Math.round(posts.filter(p=>(p.redes||[]).includes('instagram')).length/total*100);
   const fbPct = Math.round(posts.filter(p=>(p.redes||[]).includes('facebook')).length/total*100);
   const waPct = Math.round(posts.filter(p=>(p.redes||[]).includes('whatsapp')).length/total*100);
@@ -2674,15 +2038,10 @@ router.post('/marketing/posts', requireAuth, async (req, res) => {
       const { titulo, conteudo, agendado_para, acao } = req.body;
       const redes = Array.isArray(req.body.redes) ? req.body.redes : (req.body.redes ? [req.body.redes] : []);
       let imagemChave = null;
-      if (req.file) {
-        const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'marketing');
-        imagemChave = r.chave;
-      }
+      if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'marketing'); imagemChave = r.chave; }
       const status = acao === 'agendar' && agendado_para ? 'agendado' : 'rascunho';
-      await query('INSERT INTO marketing_posts (titulo,conteudo,imagem_chave,redes,status,agendado_para,criado_por) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-        [titulo, conteudo, imagemChave, redes, status, agendado_para||null, req.session.usuario.id]);
-      req.session.msg = [status==='agendado' ? 'Post agendado!' : 'Rascunho salvo!'];
-      res.redirect('/marketing');
+      await query('INSERT INTO marketing_posts (titulo,conteudo,imagem_chave,redes,status,agendado_para,criado_por) VALUES ($1,$2,$3,$4,$5,$6,$7)', [titulo, conteudo, imagemChave, redes, status, agendado_para||null, req.session.usuario.id]);
+      req.session.msg = [status==='agendado'?'Post agendado!':'Rascunho salvo!']; res.redirect('/marketing');
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing'); }
 });
@@ -2695,56 +2054,28 @@ router.post('/marketing/:id/publicar', requireAuth, async (req, res) => {
     const mktConfig = await getMktConfig();
     const redes = post.redes || [];
     const erros = [];
-
-    // Instagram
     if (redes.includes('instagram') && mktConfig.instagram_token && mktConfig.instagram_id) {
-      try {
-        const axios = require('axios');
-        const mediaRes = await axios.post(`https://graph.facebook.com/v18.0/${mktConfig.instagram_id}/media`, {
-          caption: post.conteudo, access_token: mktConfig.instagram_token
-        });
-        await axios.post(`https://graph.facebook.com/v18.0/${mktConfig.instagram_id}/media_publish`, {
-          creation_id: mediaRes.data.id, access_token: mktConfig.instagram_token
-        });
-      } catch(e) { erros.push('Instagram: ' + e.message); }
+      try { const axios=require('axios'); const mediaRes=await axios.post(`https://graph.facebook.com/v18.0/${mktConfig.instagram_id}/media`,{caption:post.conteudo,access_token:mktConfig.instagram_token}); await axios.post(`https://graph.facebook.com/v18.0/${mktConfig.instagram_id}/media_publish`,{creation_id:mediaRes.data.id,access_token:mktConfig.instagram_token}); } catch(e){erros.push('Instagram: '+e.message);}
     }
-
-    // Facebook
     if (redes.includes('facebook') && mktConfig.facebook_token && mktConfig.facebook_id) {
-      try {
-        const axios = require('axios');
-        await axios.post(`https://graph.facebook.com/v18.0/${mktConfig.facebook_id}/feed`, {
-          message: post.conteudo, access_token: mktConfig.facebook_token
-        });
-      } catch(e) { erros.push('Facebook: ' + e.message); }
+      try { const axios=require('axios'); await axios.post(`https://graph.facebook.com/v18.0/${mktConfig.facebook_id}/feed`,{message:post.conteudo,access_token:mktConfig.facebook_token}); } catch(e){erros.push('Facebook: '+e.message);}
     }
-
-    // WhatsApp
     if (redes.includes('whatsapp')) {
       try {
-        const wapi = require('axios');
-        const pessoas = await query('SELECT whatsapp FROM ligantes WHERE ativo=1 AND whatsapp IS NOT NULL UNION SELECT whatsapp FROM diretivos WHERE ativo=1 AND whatsapp IS NOT NULL');
-        for (const p of pessoas.rows) {
-          if (p.whatsapp) {
-            await wapi.post(`${process.env.WAPI_URL}/send-text`, {
-              phone: p.whatsapp.replace(/\D/g,''), message: post.conteudo
-            }, { headers: { Authorization: process.env.WAPI_TOKEN } }).catch(()=>{});
-          }
-        }
-      } catch(e) { erros.push('WhatsApp: ' + e.message); }
+        const wapi=require('axios');
+        const pessoas=await query('SELECT whatsapp FROM ligantes WHERE ativo=1 AND whatsapp IS NOT NULL UNION SELECT whatsapp FROM diretivos WHERE ativo=1 AND whatsapp IS NOT NULL');
+        for (const p of pessoas.rows) { if(p.whatsapp){await wapi.post(`${process.env.WAPI_URL}/send-text`,{phone:p.whatsapp.replace(/\D/g,''),message:post.conteudo},{headers:{Authorization:process.env.WAPI_TOKEN}}).catch(()=>{});} }
+      } catch(e){erros.push('WhatsApp: '+e.message);}
     }
-
-    const novoStatus = erros.length === 0 ? 'publicado' : 'erro';
-    await query('UPDATE marketing_posts SET status=$1, publicado_em=NOW() WHERE id=$2', [novoStatus, req.params.id]);
-    req.session.msg = erros.length===0 ? ['Post publicado!'] : ['Publicado com erros: ' + erros.join(', ')];
+    await query('UPDATE marketing_posts SET status=$1, publicado_em=NOW() WHERE id=$2', [erros.length===0?'publicado':'erro', req.params.id]);
+    req.session.msg = erros.length===0?['Post publicado!']:['Publicado com erros: '+erros.join(', ')];
     res.redirect('/marketing');
   } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing'); }
 });
 
 router.post('/marketing/:id/deletar', requireAuth, async (req, res) => {
   await query('DELETE FROM marketing_posts WHERE id=$1', [req.params.id]);
-  req.session.msg = ['Post excluído!'];
-  res.redirect('/marketing');
+  req.session.msg = ['Post excluído!']; res.redirect('/marketing');
 });
 
 router.post('/marketing/midias/upload', requireAuth, async (req, res) => {
@@ -2753,10 +2084,8 @@ router.post('/marketing/midias/upload', requireAuth, async (req, res) => {
     upload.single('midia')(req, res, async (err) => {
       if (!req.file) { req.session.erro=['Nenhum arquivo.']; return res.redirect('/marketing?tab=midias'); }
       const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'marketing-midias');
-      await query('INSERT INTO marketing_midias (nome,chave,tipo,criado_por) VALUES ($1,$2,$3,$4)',
-        [req.body.nome||req.file.originalname, r.chave, req.file.mimetype, req.session.usuario.id]);
-      req.session.msg = ['Mídia enviada!'];
-      res.redirect('/marketing');
+      await query('INSERT INTO marketing_midias (nome,chave,tipo,criado_por) VALUES ($1,$2,$3,$4)', [req.body.nome||req.file.originalname, r.chave, req.file.mimetype, req.session.usuario.id]);
+      req.session.msg = ['Mídia enviada!']; res.redirect('/marketing');
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing'); }
 });
@@ -2766,31 +2095,27 @@ router.get('/marketing/midias/:id/img', requireAuth, async (req, res) => {
     const r = await query('SELECT chave FROM marketing_midias WHERE id=$1', [req.params.id]);
     if (!r.rows[0]) return res.status(404).send('');
     const { getUrlAssinada } = require('../services/desligamento');
-    const url = await getUrlAssinada(r.rows[0].chave);
-    res.redirect(url);
+    res.redirect(await getUrlAssinada(r.rows[0].chave));
   } catch(e) { res.status(500).send(''); }
 });
 
 router.post('/marketing/midias/:id/deletar', requireAuth, async (req, res) => {
   await query('DELETE FROM marketing_midias WHERE id=$1', [req.params.id]);
-  req.session.msg = ['Mídia excluída!'];
-  res.redirect('/marketing');
+  req.session.msg = ['Mídia excluída!']; res.redirect('/marketing');
 });
 
 router.post('/marketing/config/instagram', requireAuth, requireAdmin, async (req, res) => {
   const { instagram_token, instagram_id } = req.body;
   await query('INSERT INTO marketing_config (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', ['instagram_token', instagram_token]);
   await query('INSERT INTO marketing_config (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', ['instagram_id', instagram_id]);
-  req.session.msg = ['Configuração Instagram salva!'];
-  res.redirect('/marketing');
+  req.session.msg = ['Configuração Instagram salva!']; res.redirect('/marketing');
 });
 
 router.post('/marketing/config/facebook', requireAuth, requireAdmin, async (req, res) => {
   const { facebook_token, facebook_id } = req.body;
   await query('INSERT INTO marketing_config (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', ['facebook_token', facebook_token]);
   await query('INSERT INTO marketing_config (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', ['facebook_id', facebook_id]);
-  req.session.msg = ['Configuração Facebook salva!'];
-  res.redirect('/marketing');
+  req.session.msg = ['Configuração Facebook salva!']; res.redirect('/marketing');
 });
 
 router.post('/marketing/whatsapp-massa', requireAuth, async (req, res) => {
@@ -2798,32 +2123,17 @@ router.post('/marketing/whatsapp-massa', requireAuth, async (req, res) => {
     const { destinatarios, mensagem } = req.body;
     if (!mensagem) { req.session.erro=['Mensagem obrigatória!']; return res.redirect('/marketing'); }
     let pessoas = [];
-    if (destinatarios === 'ligantes' || destinatarios === 'todos') {
-      const r = await query('SELECT nome, whatsapp FROM ligantes WHERE ativo=1 AND whatsapp IS NOT NULL');
-      pessoas = [...pessoas, ...r.rows];
-    }
-    if (destinatarios === 'diretivos' || destinatarios === 'todos') {
-      const r = await query('SELECT nome, whatsapp FROM diretivos WHERE ativo=1 AND whatsapp IS NOT NULL');
-      pessoas = [...pessoas, ...r.rows];
-    }
+    if (destinatarios==='ligantes'||destinatarios==='todos') { const r=await query('SELECT nome,whatsapp FROM ligantes WHERE ativo=1 AND whatsapp IS NOT NULL'); pessoas=[...pessoas,...r.rows]; }
+    if (destinatarios==='diretivos'||destinatarios==='todos') { const r=await query('SELECT nome,whatsapp FROM diretivos WHERE ativo=1 AND whatsapp IS NOT NULL'); pessoas=[...pessoas,...r.rows]; }
     const axios = require('axios');
-    let enviados = 0, erros = 0;
+    let enviados=0, erros=0;
     for (const p of pessoas) {
       if (!p.whatsapp) continue;
-      try {
-        await axios.post(process.env.WAPI_URL + '/send-text', {
-          phone: p.whatsapp.replace(/\D/g,'') + '@c.us',
-          message: mensagem.replace('{nome}', p.nome)
-        }, { headers: { Authorization: 'Bearer ' + process.env.WAPI_TOKEN } });
-        enviados++;
-        await new Promise(r=>setTimeout(r,500));
-      } catch(e) { erros++; }
+      try { await axios.post(process.env.WAPI_URL+'/send-text',{phone:p.whatsapp.replace(/\D/g,'')+'@c.us',message:mensagem.replace('{nome}',p.nome)},{headers:{Authorization:'Bearer '+process.env.WAPI_TOKEN}}); enviados++; await new Promise(r=>setTimeout(r,500)); } catch(e){erros++;}
     }
-    req.session.msg = [`WhatsApp enviado! ${enviados} enviados, ${erros} erros.`];
-    res.redirect('/marketing');
+    req.session.msg=[`WhatsApp enviado! ${enviados} enviados, ${erros} erros.`]; res.redirect('/marketing');
   } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing'); }
 });
-
 
 // ─── EVENTOS ──────────────────────────────────────────────────────────────────
 
@@ -2839,14 +2149,9 @@ async function getEventoStats(eventoId) {
 
 router.get('/eventos', requireAuth, async (req, res) => {
   const config = await getConfig();
-  const msg = req.session.msg || []; req.session.msg = [];
-  const erro = req.session.erro || []; req.session.erro = [];
-  const r = await query(`SELECT e.*, 
-    (SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=e.id) as total_inscritos,
-    (SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=e.id AND checkin_em IS NOT NULL) as total_checkins,
-    (SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=e.id AND status='confirmado') as total_pagos,
-    (SELECT COALESCE(SUM(p.valor),0) FROM evento_pagamentos p JOIN evento_inscricoes i ON i.id=p.inscricao_id WHERE i.evento_id=e.id AND p.status='pago') as receita
-    FROM eventos e ORDER BY e.criado_em DESC`);
+  const msg = req.session.msg||[]; req.session.msg=[];
+  const erro = req.session.erro||[]; req.session.erro=[];
+  const r = await query(`SELECT e.*, (SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=e.id) as total_inscritos, (SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=e.id AND checkin_em IS NOT NULL) as total_checkins, (SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=e.id AND status='confirmado') as total_pagos, (SELECT COALESCE(SUM(p.valor),0) FROM evento_pagamentos p JOIN evento_inscricoes i ON i.id=p.inscricao_id WHERE i.evento_id=e.id AND p.status='pago') as receita FROM eventos e ORDER BY e.criado_em DESC`);
   const totalInscritos = r.rows.reduce((a,b)=>a+parseInt(b.total_inscritos||0),0);
   const totalReceita = r.rows.reduce((a,b)=>a+parseFloat(b.receita||0),0);
   const totalCheckins = r.rows.reduce((a,b)=>a+parseInt(b.total_checkins||0),0);
@@ -2857,36 +2162,34 @@ router.post('/eventos', requireAuth, async (req, res) => {
   try {
     const {upload, uploadArquivo} = require('../services/arquivos');
     upload.single('banner')(req, res, async (err) => {
-      const {nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico} = req.body;
+      const {nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico,cor_tema,tipo_evento} = req.body;
       let bannerChave = null;
-      if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'eventos'); bannerChave = r.chave; }
-      const {cor_tema, tipo_evento} = req.body;
+      if (req.file) { const r=await uploadArquivo(req.file.buffer,req.file.originalname,req.file.mimetype,'eventos'); bannerChave=r.chave; }
       await query('INSERT INTO eventos (nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico,banner_chave,cor_tema,tipo_evento,criado_por) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
-        [nome, descricao||null, data_inicio||null, data_fim||null, local||null, endereco||null, parseInt(vagas_total)||100, status||'rascunho', publico==='true', bannerChave, cor_tema||'#1a3d2b', tipo_evento||'presencial', req.session.usuario.id]);
-      req.session.msg = ['Evento criado!'];
-      res.redirect('/eventos');
+        [nome,descricao||null,data_inicio||null,data_fim||null,local||null,endereco||null,parseInt(vagas_total)||100,status||'rascunho',publico==='true',bannerChave,cor_tema||'#1a3d2b',tipo_evento||'presencial',req.session.usuario.id]);
+      req.session.msg=['Evento criado!']; res.redirect('/eventos');
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos'); }
 });
 
 router.get('/eventos/:id', requireAuth, async (req, res) => {
   const config = await getConfig();
-  const msg = req.session.msg || []; req.session.msg = [];
-  const erro = req.session.erro || []; req.session.erro = [];
+  const msg = req.session.msg||[]; req.session.msg=[];
+  const erro = req.session.erro||[]; req.session.erro=[];
   const [evR, lotesR, inscrR, pgR, certR, progR, palesR, patrocR] = await Promise.all([
-    query('SELECT * FROM eventos WHERE id=$1', [req.params.id]),
-    query('SELECT l.*, (SELECT COUNT(*) FROM evento_inscricoes WHERE lote_id=l.id) as inscritos FROM evento_lotes l WHERE l.evento_id=$1 ORDER BY l.ordem', [req.params.id]),
-    query('SELECT i.*, l.nome as lote_nome FROM evento_inscricoes i LEFT JOIN evento_lotes l ON l.id=i.lote_id WHERE i.evento_id=$1 ORDER BY i.criado_em DESC', [req.params.id]),
-    query('SELECT p.*, i.nome as inscrito_nome FROM evento_pagamentos p JOIN evento_inscricoes i ON i.id=p.inscricao_id WHERE i.evento_id=$1 ORDER BY p.criado_em DESC', [req.params.id]),
-    query('SELECT c.*, i.nome as inscrito_nome FROM evento_certificados c JOIN evento_inscricoes i ON i.id=c.inscricao_id WHERE i.evento_id=$1 ORDER BY c.emitido_em DESC', [req.params.id]),
-    query('SELECT * FROM evento_programacao WHERE evento_id=$1 ORDER BY ordem', [req.params.id]),
-    query('SELECT * FROM evento_palestrantes WHERE evento_id=$1 ORDER BY ordem', [req.params.id]),
-    query('SELECT * FROM evento_patrocinadores WHERE evento_id=$1 ORDER BY ordem', [req.params.id])
+    query('SELECT * FROM eventos WHERE id=$1',[req.params.id]),
+    query('SELECT l.*, (SELECT COUNT(*) FROM evento_inscricoes WHERE lote_id=l.id) as inscritos FROM evento_lotes l WHERE l.evento_id=$1 ORDER BY l.ordem',[req.params.id]),
+    query('SELECT i.*, l.nome as lote_nome FROM evento_inscricoes i LEFT JOIN evento_lotes l ON l.id=i.lote_id WHERE i.evento_id=$1 ORDER BY i.criado_em DESC',[req.params.id]),
+    query('SELECT p.*, i.nome as inscrito_nome FROM evento_pagamentos p JOIN evento_inscricoes i ON i.id=p.inscricao_id WHERE i.evento_id=$1 ORDER BY p.criado_em DESC',[req.params.id]),
+    query('SELECT c.*, i.nome as inscrito_nome FROM evento_certificados c JOIN evento_inscricoes i ON i.id=c.inscricao_id WHERE i.evento_id=$1 ORDER BY c.emitido_em DESC',[req.params.id]),
+    query('SELECT * FROM evento_programacao WHERE evento_id=$1 ORDER BY ordem',[req.params.id]),
+    query('SELECT * FROM evento_palestrantes WHERE evento_id=$1 ORDER BY ordem',[req.params.id]),
+    query('SELECT * FROM evento_patrocinadores WHERE evento_id=$1 ORDER BY ordem',[req.params.id])
   ]);
   if (!evR.rows[0]) { req.session.erro=['Evento não encontrado']; return res.redirect('/eventos'); }
   const stats = await getEventoStats(req.params.id);
-  const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem', [req.params.id]);
-  const cuponsR = await query('SELECT * FROM evento_cupons WHERE evento_id=$1 ORDER BY criado_em DESC', [req.params.id]);
+  const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem',[req.params.id]);
+  const cuponsR = await query('SELECT * FROM evento_cupons WHERE evento_id=$1 ORDER BY criado_em DESC',[req.params.id]);
   res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows, cupons: cuponsR.rows });
 });
 
@@ -2896,393 +2199,329 @@ router.post('/eventos/:id/editar', requireAuth, async (req, res) => {
     upload.single('banner')(req, res, async (err) => {
       const {nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico} = req.body;
       let bannerChave = null;
-      if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'eventos'); bannerChave = r.chave; }
+      if (req.file) { const r=await uploadArquivo(req.file.buffer,req.file.originalname,req.file.mimetype,'eventos'); bannerChave=r.chave; }
       const bannerUpdate = bannerChave ? ',banner_chave=$10' : '';
-      const params = [nome, descricao||null, data_inicio||null, data_fim||null, local||null, endereco||null, parseInt(vagas_total), status, publico==='true', req.params.id];
-      if (bannerChave) params.splice(9, 0, bannerChave);
+      const params = [nome,descricao||null,data_inicio||null,data_fim||null,local||null,endereco||null,parseInt(vagas_total),status,publico==='true',req.params.id];
+      if (bannerChave) params.splice(9,0,bannerChave);
       await query(`UPDATE eventos SET nome=$1,descricao=$2,data_inicio=$3,data_fim=$4,local=$5,endereco=$6,vagas_total=$7,status=$8,publico=$9${bannerUpdate} WHERE id=${bannerChave?'$11':'$10'}`, params);
-      req.session.msg = ['Evento atualizado!'];
-      res.redirect('/eventos/' + req.params.id);
+      req.session.msg=['Evento atualizado!']; res.redirect('/eventos/'+req.params.id);
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
 });
 
 router.post('/eventos/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
-  await query('DELETE FROM eventos WHERE id=$1', [req.params.id]);
-  req.session.msg = ['Evento excluído!'];
-  res.redirect('/eventos');
+  await query('DELETE FROM eventos WHERE id=$1',[req.params.id]);
+  req.session.msg=['Evento excluído!']; res.redirect('/eventos');
 });
 
 router.get('/eventos/:id/banner', async (req, res) => {
   try {
-    const r = await query('SELECT banner_chave FROM eventos WHERE id=$1', [req.params.id]);
+    const r = await query('SELECT banner_chave FROM eventos WHERE id=$1',[req.params.id]);
     if (!r.rows[0]?.banner_chave) return res.status(404).send('');
     const {getUrlAssinada} = require('../services/desligamento');
-    const url = await getUrlAssinada(r.rows[0].banner_chave);
-    res.redirect(url);
+    res.redirect(await getUrlAssinada(r.rows[0].banner_chave));
   } catch(e) { res.status(500).send(''); }
 });
 
-// LOTES
 router.post('/eventos/:id/lotes', requireAuth, async (req, res) => {
-  const {nome, preco, vagas, data_inicio, data_fim} = req.body;
-  const ordem = await query('SELECT COUNT(*) FROM evento_lotes WHERE evento_id=$1', [req.params.id]);
+  const {nome,preco,vagas,data_inicio,data_fim} = req.body;
+  const ordem = await query('SELECT COUNT(*) FROM evento_lotes WHERE evento_id=$1',[req.params.id]);
   await query('INSERT INTO evento_lotes (evento_id,nome,preco,vagas,data_inicio,data_fim,ordem) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-    [req.params.id, nome, parseFloat(preco)||0, parseInt(vagas)||50, data_inicio||null, data_fim||null, parseInt(ordem.rows[0].count)+1]);
-  req.session.msg = ['Lote criado!'];
-  res.redirect('/eventos/' + req.params.id);
+    [req.params.id,nome,parseFloat(preco)||0,parseInt(vagas)||50,data_inicio||null,data_fim||null,parseInt(ordem.rows[0].count)+1]);
+  req.session.msg=['Lote criado!']; res.redirect('/eventos/'+req.params.id);
 });
 
 router.post('/eventos/:id/lotes/:lid/deletar', requireAuth, async (req, res) => {
-  await query('DELETE FROM evento_lotes WHERE id=$1', [req.params.lid]);
-  req.session.msg = ['Lote excluído!'];
-  res.redirect('/eventos/' + req.params.id);
+  await query('DELETE FROM evento_lotes WHERE id=$1',[req.params.lid]);
+  req.session.msg=['Lote excluído!']; res.redirect('/eventos/'+req.params.id);
 });
 
 // INSCRIÇÕES - Página Pública
 router.get('/inscricao/:id', async (req, res) => {
   try {
     const [evR, lotesR] = await Promise.all([
-      query(`SELECT e.*, (SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=e.id) as total_inscritos FROM eventos e WHERE id=$1 AND status='ativo'`, [req.params.id]),
-      query('SELECT l.*, (SELECT COUNT(*) FROM evento_inscricoes WHERE lote_id=l.id) as inscritos FROM evento_lotes l WHERE l.evento_id=$1 ORDER BY l.ordem', [req.params.id])
+      query(`SELECT e.*, (SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=e.id) as total_inscritos FROM eventos e WHERE id=$1 AND status='ativo'`,[req.params.id]),
+      query('SELECT l.*, (SELECT COUNT(*) FROM evento_inscricoes WHERE lote_id=l.id) as inscritos FROM evento_lotes l WHERE l.evento_id=$1 ORDER BY l.ordem',[req.params.id])
     ]);
     if (!evR.rows[0]) return res.status(404).send('Evento não encontrado ou encerrado.');
-    const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem', [req.params.id]);
-    const [progPubR, palesPubR, patrocPubR] = await Promise.all([query('SELECT * FROM evento_programacao WHERE evento_id=$1 ORDER BY ordem',[req.params.id]),query('SELECT * FROM evento_palestrantes WHERE evento_id=$1 ORDER BY ordem',[req.params.id]),query('SELECT * FROM evento_patrocinadores WHERE evento_id=$1 ORDER BY ordem',[req.params.id])]);
+    const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem',[req.params.id]);
+    const [progPubR, palesPubR, patrocPubR] = await Promise.all([
+      query('SELECT * FROM evento_programacao WHERE evento_id=$1 ORDER BY ordem',[req.params.id]),
+      query('SELECT * FROM evento_palestrantes WHERE evento_id=$1 ORDER BY ordem',[req.params.id]),
+      query('SELECT * FROM evento_patrocinadores WHERE evento_id=$1 ORDER BY ordem',[req.params.id])
+    ]);
     const cfgPub = await getConfig();
-    res.render('pages/evento-inscricao-publica', { evento: evR.rows[0], lotes: lotesR.rows, sucesso: false, qrcode: null, campos: camposR.rows, codigoInscricao: null, config: cfgPub, programacao: progPubR.rows, palestrantes: palesPubR.rows, patrocinadores: patrocPubR.rows });
+    res.render('pages/evento-inscricao-publica', { evento: evR.rows[0], lotes: lotesR.rows, sucesso: false, qrcode: null, campos: camposR.rows, codigoInscricao: null, config: cfgPub, programacao: progPubR.rows, palestrantes: palesPubR.rows, patrocinadores: patrocPubR.rows, pixData: null });
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
 router.post('/inscricao/:id', async (req, res) => {
   try {
     const {nome, email, whatsapp, cpf, instituicao, lote_id} = req.body;
-    const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
+    const evR = await query('SELECT * FROM eventos WHERE id=$1',[req.params.id]);
     if (!evR.rows[0]) return res.status(404).send('Evento não encontrado');
-    const loteR = await query('SELECT * FROM evento_lotes WHERE id=$1', [lote_id]);
+    const loteR = await query('SELECT * FROM evento_lotes WHERE id=$1',[lote_id]);
     const lote = loteR.rows[0];
     const qrcode = 'LAURO-' + req.params.id + '-' + Date.now();
     const inscR = await query('INSERT INTO evento_inscricoes (evento_id,lote_id,nome,email,whatsapp,cpf,instituicao,status,qrcode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
       [req.params.id, lote_id||null, nome, email, whatsapp||null, cpf||null, instituicao||null, lote&&parseFloat(lote.preco)===0?'confirmado':'pendente', qrcode]);
+
+    // ── PIX via PagBank para ingressos pagos
+    let pixData = null;
     if (lote && parseFloat(lote.preco) > 0) {
-      await query('INSERT INTO evento_pagamentos (inscricao_id,valor,metodo,status) VALUES ($1,$2,$3,$4)', [inscR.rows[0].id, lote.preco, 'pix', 'pendente']);
+      pixData = await criarPixEvento({
+        inscricao: { id: inscR.rows[0].id, nome, email, cpf },
+        lote,
+        eventoNome: evR.rows[0].nome
+      });
+      await query('INSERT INTO evento_pagamentos (inscricao_id,valor,metodo,status,pagbank_order_id,pix_copia_cola,pix_qr_image) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [inscR.rows[0].id, lote.preco, 'pix', 'pendente', pixData?.order_id||null, pixData?.pix_copia_cola||null, pixData?.pix_qr_image||null]);
     }
+
+    // Email de confirmação
     const nodemailer = require('nodemailer');
     const config = await getConfig();
     const transporter = nodemailer.createTransport({ host:process.env.EMAIL_HOST, port:process.env.EMAIL_PORT, auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS} });
     const ev2 = evR.rows[0];
     const textoExtra = ev2.email_inscricao || '';
     const wppGrupo = ev2.wpp_grupo ? `<div style="margin:20px 0;text-align:center"><a href="${ev2.wpp_grupo}" style="background:#25d366;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">📱 ENTRAR NO GRUPO DO EVENTO NO WHATSAPP</a></div>` : '';
+    const pixHtml = pixData?.pix_copia_cola ? `<div style="margin:20px 0;padding:16px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px"><p style="font-weight:bold;color:#166534;margin-bottom:8px">💳 Pagamento via PIX</p><p style="font-size:13px;color:#374151;margin-bottom:8px">Copie o código abaixo para pagar:</p><code style="display:block;background:#fff;padding:10px;border-radius:4px;font-size:11px;word-break:break-all;border:1px solid #d1d5db">${pixData.pix_copia_cola}</code></div>` : '';
     await transporter.sendMail({
       from: process.env.EMAIL_USER, to: email,
       subject: 'Inscrição realizada — ' + ev2.nome,
-      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px"><h2 style="color:#1a3d2b">Olá, ${nome}!</h2><p>Sua inscrição no evento <strong>${ev2.nome}</strong> foi recebida com sucesso.</p><p><strong>Status:</strong> ${lote&&parseFloat(lote.preco)===0?'✅ Confirmada':'⏳ Aguardando pagamento'}</p><p><strong>Seu código:</strong> <code style="background:#f3f4f6;padding:4px 8px;border-radius:4px">${qrcode}</code></p>${textoExtra?`<hr><div style="margin-top:16px">${textoExtra.replace(/\n/g,'<br>')}</div>`:''}${wppGrupo}<hr><p style="font-size:12px;color:#6b7280">LAURO — Liga Académica de Urología</p></div>`
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px"><h2 style="color:#1a3d2b">Olá, ${nome}!</h2><p>Sua inscrição no evento <strong>${ev2.nome}</strong> foi recebida com sucesso.</p><p><strong>Status:</strong> ${lote&&parseFloat(lote.preco)===0?'✅ Confirmada':'⏳ Aguardando pagamento'}</p><p><strong>Seu código:</strong> <code style="background:#f3f4f6;padding:4px 8px;border-radius:4px">${qrcode}</code></p>${pixHtml}${textoExtra?`<hr><div style="margin-top:16px">${textoExtra.replace(/\n/g,'<br>')}</div>`:''}${wppGrupo}<hr><p style="font-size:12px;color:#6b7280">LAURO — Liga Académica de Urología</p></div>`
     }).catch(()=>{});
-    // Notifica admin
-    if (ev2.notif_email) {
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER, to: ev2.notif_email,
-        subject: '🔔 Nova inscrição — ' + ev2.nome,
-        html: `<p>Nova inscrição recebida:<br><strong>${nome}</strong> (${email})</p>`
-      }).catch(()=>{});
-    }
-    const [evR2, lotesR] = await Promise.all([
-      query('SELECT * FROM eventos WHERE id=$1', [req.params.id]),
-      query('SELECT * FROM evento_lotes WHERE evento_id=$1 ORDER BY ordem', [req.params.id])
-    ]);
-    const camposR2 = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem', [req.params.id]);
+    if (ev2.notif_email) { await transporter.sendMail({ from:process.env.EMAIL_USER, to:ev2.notif_email, subject:'🔔 Nova inscrição — '+ev2.nome, html:`<p>Nova inscrição recebida:<br><strong>${nome}</strong> (${email})</p>` }).catch(()=>{}); }
+
+    const [evR2, lotesR] = await Promise.all([query('SELECT * FROM eventos WHERE id=$1',[req.params.id]), query('SELECT * FROM evento_lotes WHERE evento_id=$1 ORDER BY ordem',[req.params.id])]);
+    const camposR2 = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem',[req.params.id]);
     const cfgPub2 = await getConfig();
-    res.render('pages/evento-inscricao-publica', { evento: evR2.rows[0], lotes: lotesR.rows, sucesso: true, qrcode: null, campos: camposR2.rows, codigoInscricao: qrcode, config: cfgPub2 });
+    res.render('pages/evento-inscricao-publica', { evento: evR2.rows[0], lotes: lotesR.rows, sucesso: true, qrcode: null, campos: camposR2.rows, codigoInscricao: qrcode, config: cfgPub2, pixData });
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
-// INSCRIÇÕES - Admin
-router.get('/eventos/:id/inscricoes', requireAuth, async (req, res) => {
-  res.redirect('/eventos/' + req.params.id);
-});
-
 router.post('/eventos/:id/inscricoes/manual', requireAuth, async (req, res) => {
-  const {nome, email, whatsapp, cpf, lote_id, status} = req.body;
+  const {nome,email,whatsapp,cpf,lote_id,status} = req.body;
   const qrcode = 'LAURO-' + req.params.id + '-' + Date.now();
   await query('INSERT INTO evento_inscricoes (evento_id,lote_id,nome,email,whatsapp,cpf,status,qrcode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
-    [req.params.id, lote_id||null, nome, email, whatsapp||null, cpf||null, status||'confirmado', qrcode]);
-  req.session.msg = ['Inscrição manual adicionada!'];
-  res.redirect('/eventos/' + req.params.id);
+    [req.params.id,lote_id||null,nome,email,whatsapp||null,cpf||null,status||'confirmado',qrcode]);
+  req.session.msg=['Inscrição manual adicionada!']; res.redirect('/eventos/'+req.params.id);
 });
 
 router.post('/eventos/:id/inscricoes/:iid/confirmar', requireAuth, async (req, res) => {
-  await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1", [req.params.iid]);
-  req.session.msg = ['Inscrição confirmada!'];
-  res.redirect('/eventos/' + req.params.id);
+  await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1",[req.params.iid]);
+  req.session.msg=['Inscrição confirmada!']; res.redirect('/eventos/'+req.params.id);
 });
 
 router.post('/eventos/:id/inscricoes/:iid/deletar', requireAuth, async (req, res) => {
-  await query('DELETE FROM evento_inscricoes WHERE id=$1', [req.params.iid]);
-  req.session.msg = ['Inscrição excluída!'];
-  res.redirect('/eventos/' + req.params.id);
+  await query('DELETE FROM evento_inscricoes WHERE id=$1',[req.params.iid]);
+  req.session.msg=['Inscrição excluída!']; res.redirect('/eventos/'+req.params.id);
 });
 
-// CHECK-IN
 router.get('/eventos/:id/checkin', requireAuth, async (req, res) => {
   const config = await getConfig();
-  const msg = req.session.msg || []; req.session.msg = [];
+  const msg = req.session.msg||[]; req.session.msg=[];
   const [evR, inscrR] = await Promise.all([
-    query('SELECT * FROM eventos WHERE id=$1', [req.params.id]),
-    query('SELECT i.*, l.nome as lote_nome FROM evento_inscricoes i LEFT JOIN evento_lotes l ON l.id=i.lote_id WHERE i.evento_id=$1 ORDER BY i.nome', [req.params.id])
+    query('SELECT * FROM eventos WHERE id=$1',[req.params.id]),
+    query('SELECT i.*, l.nome as lote_nome FROM evento_inscricoes i LEFT JOIN evento_lotes l ON l.id=i.lote_id WHERE i.evento_id=$1 ORDER BY i.nome',[req.params.id])
   ]);
   const stats = await getEventoStats(req.params.id);
-  res.render('pages/evento-checkin', { config, usuario: req.session.usuario, msg, erro: [], evento: evR.rows[0], inscricoes: inscrR.rows, stats });
+  res.render('pages/evento-checkin', { config, usuario: req.session.usuario, msg, erro:[], evento: evR.rows[0], inscricoes: inscrR.rows, stats });
 });
 
 router.post('/eventos/:id/checkin/buscar', requireAuth, async (req, res) => {
   try {
     const {busca} = req.body;
     const r = await query("SELECT * FROM evento_inscricoes WHERE evento_id=$1 AND (LOWER(nome) LIKE $2 OR qrcode=$3) LIMIT 1",
-      [req.params.id, '%'+busca.toLowerCase()+'%', busca]);
+      [req.params.id,'%'+busca.toLowerCase()+'%',busca]);
     if (!r.rows[0]) return res.json({ok:false, msg:'Inscrito não encontrado'});
     if (r.rows[0].checkin_em) return res.json({ok:false, msg:'Check-in já realizado por '+r.rows[0].nome});
-    await query('UPDATE evento_inscricoes SET checkin_em=NOW() WHERE id=$1', [r.rows[0].id]);
+    await query('UPDATE evento_inscricoes SET checkin_em=NOW() WHERE id=$1',[r.rows[0].id]);
     res.json({ok:true, msg:'✅ Check-in realizado: '+r.rows[0].nome});
   } catch(e) { res.json({ok:false, msg:'Erro: '+e.message}); }
 });
 
 router.post('/eventos/:id/inscricoes/:iid/checkin', requireAuth, async (req, res) => {
-  await query('UPDATE evento_inscricoes SET checkin_em=NOW() WHERE id=$1', [req.params.iid]);
-  req.session.msg = ['Check-in realizado!'];
-  res.redirect('/eventos/' + req.params.id + '/checkin');
+  await query('UPDATE evento_inscricoes SET checkin_em=NOW() WHERE id=$1',[req.params.iid]);
+  req.session.msg=['Check-in realizado!']; res.redirect('/eventos/'+req.params.id+'/checkin');
 });
 
-// PAGAMENTOS
 router.post('/eventos/:id/pagamentos/:pid/confirmar', requireAuth, async (req, res) => {
-  await query("UPDATE evento_pagamentos SET status='pago', pago_em=NOW() WHERE id=$1", [req.params.pid]);
-  await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=(SELECT inscricao_id FROM evento_pagamentos WHERE id=$1)", [req.params.pid]);
-  req.session.msg = ['Pagamento confirmado!'];
-  res.redirect('/eventos/' + req.params.id);
+  await query("UPDATE evento_pagamentos SET status='pago', pago_em=NOW() WHERE id=$1",[req.params.pid]);
+  await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=(SELECT inscricao_id FROM evento_pagamentos WHERE id=$1)",[req.params.pid]);
+  req.session.msg=['Pagamento confirmado!']; res.redirect('/eventos/'+req.params.id);
 });
 
-// CERTIFICADOS
 router.get('/eventos/:id/inscricoes/:iid/certificado', requireAuth, async (req, res) => {
   try {
-    const [inscR, evR, configR] = await Promise.all([
-      query('SELECT * FROM evento_inscricoes WHERE id=$1', [req.params.iid]),
-      query('SELECT * FROM eventos WHERE id=$1', [req.params.id]),
-      getConfig()
-    ]);
-    const insc = inscR.rows[0]; const ev = evR.rows[0]; const config = configR;
+    const [inscR, evR, config] = await Promise.all([query('SELECT * FROM evento_inscricoes WHERE id=$1',[req.params.iid]), query('SELECT * FROM eventos WHERE id=$1',[req.params.id]), getConfig()]);
+    const insc=inscR.rows[0]; const ev=evR.rows[0];
     const {imagemBase64} = require('../services/desligamento');
     config.timbrado_b64 = await imagemBase64(config.timbrado_chave);
     config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const dataEv = ev.data_inicio ? new Date(ev.data_inicio).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}) : '';
-    const timbrado = config.timbrado_b64 || null;
-    const presidenteSrc = config.assinatura_presidente_b64 || null;
-    const secretarioSrc = config.assinatura_secretario_b64 || null;
-    const nomePresidente = (config.presidente_nome || 'PRESIDENTE').toUpperCase();
-    const nomeSecretario = (config.secretario_nome || 'SECRETÁRIO').toUpperCase();
-    const bgHtml = timbrado ? `<div style="position:fixed;top:0;left:0;width:210mm;height:297mm;z-index:0"><img src="${timbrado}" style="width:210mm;height:297mm;display:block"></div>` : '';
+    const timbrado=config.timbrado_b64||null; const presidenteSrc=config.assinatura_presidente_b64||null; const secretarioSrc=config.assinatura_secretario_b64||null;
+    const nomePresidente=(config.presidente_nome||'PRESIDENTE').toUpperCase(); const nomeSecretario=(config.secretario_nome||'SECRETÁRIO').toUpperCase();
+    const bgHtml = timbrado?`<div style="position:fixed;top:0;left:0;width:210mm;height:297mm;z-index:0"><img src="${timbrado}" style="width:210mm;height:297mm;display:block"></div>`:'';
     const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',serif;color:#000;width:210mm}</style></head><body>${bgHtml}<div style="position:relative;z-index:1;width:210mm;min-height:297mm;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40mm 25mm;text-align:center"><div style="font-size:11pt;color:#666;margin-bottom:8px;text-transform:uppercase;letter-spacing:3px">Liga Académica de Urología — LAURO</div><div style="font-size:28pt;font-weight:bold;color:#1a3d2b;margin:20px 0;text-transform:uppercase;letter-spacing:2px">Certificado</div><div style="font-size:12pt;margin-bottom:16px">Certificamos que</div><div style="font-size:20pt;font-weight:bold;border-bottom:2px solid #1a3d2b;padding-bottom:8px;margin-bottom:16px">${insc.nome}</div><div style="font-size:12pt;line-height:1.8">participou do evento<br><strong style="font-size:14pt">${ev.nome}</strong><br>realizado em ${dataEv}<br>com carga horária de <strong>4 horas</strong></div><div style="display:flex;justify-content:space-around;margin-top:50px;width:100%"><div style="text-align:center"><div style="height:50px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:4px">${presidenteSrc?`<img src="${presidenteSrc}" style="max-height:50px">`:''}</div><div style="border-top:1.5px solid #000;width:160px;margin:0 auto 4px"></div><div style="font-size:9pt;font-weight:bold">${nomePresidente}</div><div style="font-size:8pt">PRESIDENTE</div></div><div style="text-align:center"><div style="height:50px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:4px">${secretarioSrc?`<img src="${secretarioSrc}" style="max-height:50px">`:''}</div><div style="border-top:1.5px solid #000;width:160px;margin:0 auto 4px"></div><div style="font-size:9pt;font-weight:bold">${nomeSecretario}</div><div style="font-size:8pt">SECRETÁRIO</div></div></div></div><script>window.onload=function(){window.print()}</script></body></html>`;
-    const certR2 = await query('INSERT INTO evento_certificados (inscricao_id) VALUES ($1) ON CONFLICT DO NOTHING RETURNING id', [insc.id]);
+    await query('INSERT INTO evento_certificados (inscricao_id) VALUES ($1) ON CONFLICT DO NOTHING RETURNING id',[insc.id]);
     res.send(html);
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
 router.post('/eventos/:id/certificados/emitir-todos', requireAuth, async (req, res) => {
-  const inscritos = await query("SELECT id FROM evento_inscricoes WHERE evento_id=$1 AND checkin_em IS NOT NULL", [req.params.id]);
-  for (const i of inscritos.rows) {
-    await query('INSERT INTO evento_certificados (inscricao_id) VALUES ($1) ON CONFLICT DO NOTHING', [i.id]);
-  }
-  req.session.msg = ['Certificados emitidos para '+inscritos.rows.length+' participantes!'];
-  res.redirect('/eventos/' + req.params.id);
+  const inscritos = await query("SELECT id FROM evento_inscricoes WHERE evento_id=$1 AND checkin_em IS NOT NULL",[req.params.id]);
+  for (const i of inscritos.rows) { await query('INSERT INTO evento_certificados (inscricao_id) VALUES ($1) ON CONFLICT DO NOTHING',[i.id]); }
+  req.session.msg=['Certificados emitidos para '+inscritos.rows.length+' participantes!']; res.redirect('/eventos/'+req.params.id);
 });
 
-
-// CAMPOS CUSTOMIZADOS
 router.post('/eventos/:id/campos', requireAuth, async (req, res) => {
-  const {label, tipo, opcoes, obrigatorio} = req.body;
-  const ord = await query('SELECT COUNT(*) FROM evento_campos WHERE evento_id=$1', [req.params.id]);
+  const {label,tipo,opcoes,obrigatorio} = req.body;
+  const ord = await query('SELECT COUNT(*) FROM evento_campos WHERE evento_id=$1',[req.params.id]);
   await query('INSERT INTO evento_campos (evento_id,label,tipo,opcoes,obrigatorio,ordem) VALUES ($1,$2,$3,$4,$5,$6)',
-    [req.params.id, label, tipo||'text', opcoes||null, obrigatorio==='true', parseInt(ord.rows[0].count)+1]);
-  req.session.msg = ['Campo adicionado!'];
-  res.redirect('/eventos/' + req.params.id);
+    [req.params.id,label,tipo||'text',opcoes||null,obrigatorio==='true',parseInt(ord.rows[0].count)+1]);
+  req.session.msg=['Campo adicionado!']; res.redirect('/eventos/'+req.params.id);
 });
 
 router.post('/eventos/:id/campos/:cid/deletar', requireAuth, async (req, res) => {
-  await query('DELETE FROM evento_campos WHERE id=$1', [req.params.cid]);
-  req.session.msg = ['Campo removido!'];
-  res.redirect('/eventos/' + req.params.id);
+  await query('DELETE FROM evento_campos WHERE id=$1',[req.params.cid]);
+  req.session.msg=['Campo removido!']; res.redirect('/eventos/'+req.params.id);
 });
 
-// EDITAR LOTE
 router.post('/eventos/:id/lotes/:lid/editar', requireAuth, async (req, res) => {
-  const {nome, preco, vagas, data_inicio, data_fim} = req.body;
+  const {nome,preco,vagas,data_inicio,data_fim} = req.body;
   await query('UPDATE evento_lotes SET nome=$1,preco=$2,vagas=$3,data_inicio=$4,data_fim=$5 WHERE id=$6',
-    [nome, parseFloat(preco)||0, parseInt(vagas), data_inicio||null, data_fim||null, req.params.lid]);
-  req.session.msg = ['Lote atualizado!'];
-  res.redirect('/eventos/' + req.params.id);
+    [nome,parseFloat(preco)||0,parseInt(vagas),data_inicio||null,data_fim||null,req.params.lid]);
+  req.session.msg=['Lote atualizado!']; res.redirect('/eventos/'+req.params.id);
 });
-
 
 router.post('/contato-evento/:id', async (req, res) => {
   try {
-    const {nome, email, mensagem} = req.body;
+    const {nome,email,mensagem} = req.body;
     const nodemailer = require('nodemailer');
     const transporter = nodemailer.createTransport({ host:process.env.EMAIL_HOST, port:process.env.EMAIL_PORT, auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS} });
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: 'lauroucpcde@lauroucpcde.com',
-      subject: 'Contato via evento — ' + nome,
-      html: '<p><strong>Nome:</strong> '+nome+'</p><p><strong>Email:</strong> '+email+'</p><p><strong>Mensagem:</strong><br>'+mensagem+'</p>'
-    });
+    await transporter.sendMail({ from:process.env.EMAIL_USER, to:'lauroucpcde@lauroucpcde.com', subject:'Contato via evento — '+nome, html:'<p><strong>Nome:</strong> '+nome+'</p><p><strong>Email:</strong> '+email+'</p><p><strong>Mensagem:</strong><br>'+mensagem+'</p>' });
     res.send('<script>alert("Mensagem enviada! Entraremos em contato em breve.");history.back();</script>');
   } catch(e) { res.send('<script>alert("Erro ao enviar. Tente novamente.");history.back();</script>'); }
 });
-
 
 router.get('/eventos/:id/cupom', async (req, res) => {
   try {
     const cod = req.query.cod?.toUpperCase();
     if (!cod) return res.json({ok:false});
-    const r = await query('SELECT * FROM evento_cupons WHERE evento_id=$1 AND codigo=$2 AND ativo=true', [req.params.id, cod]);
+    const r = await query('SELECT * FROM evento_cupons WHERE evento_id=$1 AND codigo=$2 AND ativo=true',[req.params.id,cod]);
     const cupom = r.rows[0];
     if (!cupom) return res.json({ok:false, msg:'Cupom inválido'});
     if (cupom.usos_atual >= cupom.usos_max) return res.json({ok:false, msg:'Cupom esgotado'});
     const desconto = cupom.tipo==='percentual' ? parseFloat(cupom.valor)/100 : null;
-    res.json({ok:true, desconto, tipo: cupom.tipo, valor: cupom.valor});
+    res.json({ok:true, desconto, tipo:cupom.tipo, valor:cupom.valor});
   } catch(e) { res.json({ok:false}); }
 });
 
-
-// CONFIGURAÇÕES AVANÇADAS DO EVENTO
 router.post('/eventos/:id/avancado', requireAuth, async (req, res) => {
-  const {email_inscricao, email_confirmacao, notif_email, wpp_grupo, inscricao_gratuita_auto, inscricao_unica, termos_texto} = req.body;
-  const {lgpd_texto} = req.body;
+  const {email_inscricao,email_confirmacao,notif_email,wpp_grupo,inscricao_gratuita_auto,inscricao_unica,termos_texto,lgpd_texto} = req.body;
   await query('UPDATE eventos SET email_inscricao=$1,email_confirmacao=$2,wpp_grupo=$3,inscricao_gratuita_auto=$4,inscricao_unica=$5,termos_texto=$6,lgpd_texto=$7 WHERE id=$8',
-    [email_inscricao||null, email_confirmacao||null, wpp_grupo||null,
-     inscricao_gratuita_auto==='true', inscricao_unica==='true', termos_texto||null, lgpd_texto||null, req.params.id]);
-  req.session.msg = ['Configurações avançadas salvas!'];
-  res.redirect('/eventos/' + req.params.id);
+    [email_inscricao||null,email_confirmacao||null,wpp_grupo||null,inscricao_gratuita_auto==='true',inscricao_unica==='true',termos_texto||null,lgpd_texto||null,req.params.id]);
+  req.session.msg=['Configurações avançadas salvas!']; res.redirect('/eventos/'+req.params.id);
 });
 
-
-// PROGRAMAÇÃO
 router.post('/eventos/:id/programacao', requireAuth, async (req, res) => {
-  const {horario, titulo, descricao, local} = req.body;
-  const ord = await query('SELECT COUNT(*) FROM evento_programacao WHERE evento_id=$1', [req.params.id]);
+  const {horario,titulo,descricao,local} = req.body;
+  const ord = await query('SELECT COUNT(*) FROM evento_programacao WHERE evento_id=$1',[req.params.id]);
   await query('INSERT INTO evento_programacao (evento_id,horario,titulo,descricao,local,ordem) VALUES ($1,$2,$3,$4,$5,$6)',
-    [req.params.id, horario, titulo, descricao||null, local||null, parseInt(ord.rows[0].count)+1]);
-  req.session.msg = ['Item adicionado!'];
-  res.redirect('/eventos/' + req.params.id);
-});
-router.post('/eventos/:id/programacao/:pid/deletar', requireAuth, async (req, res) => {
-  await query('DELETE FROM evento_programacao WHERE id=$1', [req.params.pid]);
-  req.session.msg = ['Item removido!'];
-  res.redirect('/eventos/' + req.params.id);
+    [req.params.id,horario,titulo,descricao||null,local||null,parseInt(ord.rows[0].count)+1]);
+  req.session.msg=['Item adicionado!']; res.redirect('/eventos/'+req.params.id);
 });
 
-// PALESTRANTES
+router.post('/eventos/:id/programacao/:pid/deletar', requireAuth, async (req, res) => {
+  await query('DELETE FROM evento_programacao WHERE id=$1',[req.params.pid]);
+  req.session.msg=['Item removido!']; res.redirect('/eventos/'+req.params.id);
+});
+
 router.post('/eventos/:id/palestrantes', requireAuth, async (req, res) => {
   try {
-    const {upload, uploadArquivo} = require('../services/arquivos');
+    const {upload,uploadArquivo} = require('../services/arquivos');
     upload.single('foto')(req, res, async (err) => {
-      const {nome, bio, instituicao} = req.body;
-      let fotoChave = null;
-      if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'palestrantes'); fotoChave = r.chave; }
-      const ord = await query('SELECT COUNT(*) FROM evento_palestrantes WHERE evento_id=$1', [req.params.id]);
+      const {nome,bio,instituicao} = req.body; let fotoChave=null;
+      if (req.file) { const r=await uploadArquivo(req.file.buffer,req.file.originalname,req.file.mimetype,'palestrantes'); fotoChave=r.chave; }
+      const ord = await query('SELECT COUNT(*) FROM evento_palestrantes WHERE evento_id=$1',[req.params.id]);
       await query('INSERT INTO evento_palestrantes (evento_id,nome,bio,instituicao,foto_chave,ordem) VALUES ($1,$2,$3,$4,$5,$6)',
-        [req.params.id, nome, bio||null, instituicao||null, fotoChave, parseInt(ord.rows[0].count)+1]);
-      req.session.msg = ['Palestrante adicionado!'];
-      res.redirect('/eventos/' + req.params.id);
+        [req.params.id,nome,bio||null,instituicao||null,fotoChave,parseInt(ord.rows[0].count)+1]);
+      req.session.msg=['Palestrante adicionado!']; res.redirect('/eventos/'+req.params.id);
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
 });
+
 router.get('/eventos/palestrantes/:id/foto', async (req, res) => {
   try {
-    const r = await query('SELECT foto_chave FROM evento_palestrantes WHERE id=$1', [req.params.id]);
+    const r = await query('SELECT foto_chave FROM evento_palestrantes WHERE id=$1',[req.params.id]);
     if (!r.rows[0]?.foto_chave) return res.status(404).send('');
     const {getUrlAssinada} = require('../services/desligamento');
     res.redirect(await getUrlAssinada(r.rows[0].foto_chave));
   } catch(e) { res.status(500).send(''); }
 });
+
 router.post('/eventos/:id/palestrantes/:pid/deletar', requireAuth, async (req, res) => {
-  await query('DELETE FROM evento_palestrantes WHERE id=$1', [req.params.pid]);
-  req.session.msg = ['Palestrante removido!'];
-  res.redirect('/eventos/' + req.params.id);
+  await query('DELETE FROM evento_palestrantes WHERE id=$1',[req.params.pid]);
+  req.session.msg=['Palestrante removido!']; res.redirect('/eventos/'+req.params.id);
 });
 
-// PATROCINADORES
 router.post('/eventos/:id/patrocinadores', requireAuth, async (req, res) => {
   try {
-    const {upload, uploadArquivo} = require('../services/arquivos');
+    const {upload,uploadArquivo} = require('../services/arquivos');
     upload.single('logo')(req, res, async (err) => {
-      const {nome, url} = req.body;
-      let logoChave = null;
-      if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'patrocinadores'); logoChave = r.chave; }
-      const ord = await query('SELECT COUNT(*) FROM evento_patrocinadores WHERE evento_id=$1', [req.params.id]);
+      const {nome,url} = req.body; let logoChave=null;
+      if (req.file) { const r=await uploadArquivo(req.file.buffer,req.file.originalname,req.file.mimetype,'patrocinadores'); logoChave=r.chave; }
+      const ord = await query('SELECT COUNT(*) FROM evento_patrocinadores WHERE evento_id=$1',[req.params.id]);
       await query('INSERT INTO evento_patrocinadores (evento_id,nome,url,logo_chave,ordem) VALUES ($1,$2,$3,$4,$5)',
-        [req.params.id, nome, url||null, logoChave, parseInt(ord.rows[0].count)+1]);
-      req.session.msg = ['Patrocinador adicionado!'];
-      res.redirect('/eventos/' + req.params.id);
+        [req.params.id,nome,url||null,logoChave,parseInt(ord.rows[0].count)+1]);
+      req.session.msg=['Patrocinador adicionado!']; res.redirect('/eventos/'+req.params.id);
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
 });
+
 router.get('/eventos/patrocinadores/:id/logo', async (req, res) => {
   try {
-    const r = await query('SELECT logo_chave FROM evento_patrocinadores WHERE id=$1', [req.params.id]);
+    const r = await query('SELECT logo_chave FROM evento_patrocinadores WHERE id=$1',[req.params.id]);
     if (!r.rows[0]?.logo_chave) return res.status(404).send('');
     const {getUrlAssinada} = require('../services/desligamento');
     res.redirect(await getUrlAssinada(r.rows[0].logo_chave));
   } catch(e) { res.status(500).send(''); }
 });
+
 router.post('/eventos/:id/patrocinadores/:pid/deletar', requireAuth, async (req, res) => {
-  await query('DELETE FROM evento_patrocinadores WHERE id=$1', [req.params.pid]);
-  req.session.msg = ['Patrocinador removido!'];
-  res.redirect('/eventos/' + req.params.id);
+  await query('DELETE FROM evento_patrocinadores WHERE id=$1',[req.params.pid]);
+  req.session.msg=['Patrocinador removido!']; res.redirect('/eventos/'+req.params.id);
 });
 
-
-// CUPONS
 router.post('/eventos/:id/cupons', requireAuth, async (req, res) => {
-  const {codigo, tipo, valor, usos_max} = req.body;
+  const {codigo,tipo,valor,usos_max} = req.body;
   try {
     await query('INSERT INTO evento_cupons (evento_id,codigo,tipo,valor,usos_max) VALUES ($1,$2,$3,$4,$5)',
-      [req.params.id, codigo.toUpperCase(), tipo||'percentual', parseFloat(valor)||100, parseInt(usos_max)||1]);
-    req.session.msg = ['Cupom criado!'];
-  } catch(e) { req.session.erro = ['Código já existe!']; }
-  res.redirect('/eventos/' + req.params.id);
+      [req.params.id,codigo.toUpperCase(),tipo||'percentual',parseFloat(valor)||100,parseInt(usos_max)||1]);
+    req.session.msg=['Cupom criado!'];
+  } catch(e) { req.session.erro=['Código já existe!']; }
+  res.redirect('/eventos/'+req.params.id);
 });
 
 router.post('/eventos/:id/cupons/:cid/deletar', requireAuth, async (req, res) => {
-  await query('DELETE FROM evento_cupons WHERE id=$1', [req.params.cid]);
-  req.session.msg = ['Cupom excluído!'];
-  res.redirect('/eventos/' + req.params.id);
+  await query('DELETE FROM evento_cupons WHERE id=$1',[req.params.cid]);
+  req.session.msg=['Cupom excluído!']; res.redirect('/eventos/'+req.params.id);
 });
 
 router.post('/eventos/:id/cupons/gerar-ligantes', requireAuth, async (req, res) => {
   const {prefixo} = req.body;
   const pref = (prefixo||'LAURO').toUpperCase().replace(/[^A-Z0-9]/g,'');
-  const [ligR, dirR] = await Promise.all([
-    query('SELECT nome FROM ligantes WHERE ativo=1'),
-    query('SELECT nome FROM diretivos WHERE ativo=1')
-  ]);
+  const [ligR, dirR] = await Promise.all([query('SELECT nome FROM ligantes WHERE ativo=1'), query('SELECT nome FROM diretivos WHERE ativo=1')]);
   const pessoas = [...ligR.rows, ...dirR.rows];
   let criados = 0;
   for (const p of pessoas) {
     const parte = p.nome.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'').substring(0,8);
     const codigo = pref + parte + Math.floor(Math.random()*100);
-    try {
-      await query('INSERT INTO evento_cupons (evento_id,codigo,tipo,valor,usos_max) VALUES ($1,$2,$3,$4,$5)',
-        [req.params.id, codigo, 'percentual', 100, 1]);
-      criados++;
-    } catch(e) {}
+    try { await query('INSERT INTO evento_cupons (evento_id,codigo,tipo,valor,usos_max) VALUES ($1,$2,$3,$4,$5)',[req.params.id,codigo,'percentual',100,1]); criados++; } catch(e){}
   }
-  req.session.msg = [criados + ' cupons gerados!'];
-  res.redirect('/eventos/' + req.params.id);
-});
-
-// Fix: usa cupom ao inscrever
-router.post('/eventos/:id/inscricoes/:iid/usar-cupom', async (req, res) => {
-  const {cod} = req.body;
-  await query('UPDATE evento_cupons SET usos_atual=usos_atual+1 WHERE codigo=$1 AND evento_id=$2', [cod, req.params.id]);
+  req.session.msg=[criados+' cupons gerados!']; res.redirect('/eventos/'+req.params.id);
 });
 
 module.exports = router;
