@@ -287,6 +287,17 @@
     .wpp-float:hover{transform:scale(1.1);box-shadow:0 8px 28px rgba(37,211,102,.5)}
     .wpp-float svg{width:26px;height:26px;fill:white}
 
+    /* ALERTA DUPLICATA */
+    .alerta-dup{max-width:640px;margin:32px auto;background:#fff;border:2px solid #fca5a5;border-radius:16px;padding:28px 32px;text-align:center;box-shadow:var(--sh-lg)}
+    .alerta-dup-icon{width:64px;height:64px;background:#fee2e2;border-radius:16px;display:flex;align-items:center;justify-content:center;margin:0 auto 18px}
+    .alerta-dup-icon svg{width:32px;height:32px;fill:#dc2626}
+    .alerta-dup h2{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:700;color:#111827;margin-bottom:10px}
+    .alerta-dup p{font-size:13px;color:#6b7280;line-height:1.7;margin-bottom:22px}
+    .alerta-dup-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+    .alerta-btn-p{background:var(--p);color:white;padding:11px 24px;border-radius:9px;text-decoration:none;font-weight:700;font-size:13px;transition:opacity .15s}
+    .alerta-btn-p:hover{opacity:.88}
+    .alerta-btn-s{background:var(--sur3);color:var(--ink2);padding:11px 24px;border-radius:9px;text-decoration:none;font-weight:600;font-size:13px;border:1px solid var(--bdr)}
+
     footer{background:var(--ink);color:rgba(255,255,255,.45);text-align:center;padding:28px 20px;font-size:12px;margin-top:40px}
     footer strong{color:rgba(255,255,255,.85)}
     footer a{color:rgba(255,255,255,.5);text-decoration:none;transition:color .18s}
@@ -321,6 +332,22 @@
     </div>
   </div>
 </nav>
+
+<% if(typeof erro !== 'undefined' && erro){ %>
+<div class="wrap" style="padding-top:32px;padding-bottom:0">
+  <div class="alerta-dup">
+    <div class="alerta-dup-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+    </div>
+    <h2>Inscrição já realizada</h2>
+    <p><%= erro %></p>
+    <div class="alerta-dup-btns">
+      <a href="/inscricao/<%= evento.id %>" class="alerta-btn-s">Voltar ao evento</a>
+      <a href="mailto:lauroucpcde@lauroucpcde.com" class="alerta-btn-p">Entrar em contato</a>
+    </div>
+  </div>
+</div>
+<% } %>
 
 <% if(sucesso){ %>
 <div class="suc-wrap">
