@@ -81,18 +81,26 @@
     .card-hd p{font-size:11px;color:var(--ink3);margin-top:1px}
     .card-bd{padding:22px 26px}
 
-    /* LOTES */
-    .lote{border:1.5px solid var(--bdr);border-radius:var(--r);padding:16px 18px;margin-bottom:10px;cursor:pointer;transition:border-color .2s,box-shadow .2s,background .2s}
+    /* LOTES — estilo premium com barra lateral */
+    .lote{border:1.5px solid var(--bdr);border-radius:var(--r);padding:16px 18px;margin-bottom:10px;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+    .lote::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--bdr);transition:background .2s;border-radius:4px 0 0 4px}
     .lote:hover{border-color:var(--p);box-shadow:0 0 0 3px var(--p-light)}
-    .lote.sel{border-color:var(--p);background:var(--p-light);box-shadow:0 0 0 3px color-mix(in srgb,var(--p) 12%,transparent)}
-    .lote-top{display:flex;justify-content:space-between;align-items:center;gap:12px}
-    .lote-nome{font-weight:700;font-size:15px;color:var(--ink)}
-    .lote-info{font-size:11px;color:var(--ink3);margin-top:3px}
-    .lote-preco{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:var(--p);white-space:nowrap}
-    .badge-free{background:#dcfce7;color:#15803d;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;letter-spacing:.3px}
-    .lote-radio{width:20px;height:20px;border-radius:50%;border:2px solid var(--bdr2);flex-shrink:0;transition:all .2s;display:flex;align-items:center;justify-content:center}
+    .lote:hover::before{background:var(--p)}
+    .lote.sel{border-color:var(--p);background:var(--p-light);box-shadow:0 0 0 3px color-mix(in srgb,var(--p) 10%,transparent)}
+    .lote.sel::before{background:var(--p)}
+    .lote-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+    .lote-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px}
+    .lote-badge-pop{background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe}
+    .lote-badge-hot{background:#fff7ed;color:#c2410c;border:1px solid #fed7aa;display:inline-flex;align-items:center;gap:5px}
+    .lote-nome{font-weight:700;font-size:14px;color:var(--ink)}
+    .lote-info{font-size:11px;color:var(--ink4);margin-top:3px}
+    .lote-preco-wrap{text-align:right;flex-shrink:0}
+    .lote-preco{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:700;color:var(--p);white-space:nowrap;line-height:1}
+    .lote-preco-sub{font-size:10px;color:var(--ink4);margin-top:3px}
+    .badge-free{background:#dcfce7;color:#15803d;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700}
+    .lote-radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--bdr2);flex-shrink:0;transition:all .2s;display:flex;align-items:center;justify-content:center;margin-top:3px}
     .lote.sel .lote-radio{border-color:var(--p);background:var(--p)}
-    .lote.sel .lote-radio::after{content:'';width:8px;height:8px;border-radius:50%;background:white}
+    .lote.sel .lote-radio::after{content:'';width:6px;height:6px;border-radius:50%;background:white}
 
     /* CUPOM */
     .cupom-sec{margin-top:16px;padding-top:16px;border-top:1px solid var(--bdr)}
@@ -442,14 +450,23 @@
             <div class="lote-top">
               <div style="flex:1">
                 <% if(i===0){ %><span class="lote-badge lote-badge-pop">Mais Popular</span><% } %>
-                <% if(l.vagas_restantes&&l.vagas_restantes<=10){ %><span class="lote-badge lote-badge-hot">🔥 Últimas vagas</span><% } %>
+                <% if(l.vagas_restantes&&l.vagas_restantes<=10){ %>
+                <span class="lote-badge lote-badge-hot">
+                  <svg style="width:10px;height:10px;fill:#c2410c" viewBox="0 0 24 24"><path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67z"/></svg>
+                  Últimas vagas
+                </span>
+                <% } %>
                 <div class="lote-nome"><%= l.nome %></div>
                 <% if(l.data_fim){ %><div class="lote-info">Disponível até <%= new Date(l.data_fim).toLocaleDateString('pt-BR') %></div><% } %>
               </div>
               <div style="display:flex;align-items:flex-start;gap:10px">
-                <% if(parseFloat(l.preco)===0){ %><span class="badge-free">Gratuito</span>
+                <% if(parseFloat(l.preco)===0){ %>
+                  <span class="badge-free">Gratuito</span>
                 <% } else { %>
-                <div><div class="lote-preco">R$ <%= Number(l.preco).toFixed(2) %></div></div>
+                <div class="lote-preco-wrap">
+                  <div class="lote-preco">R$ <%= Number(l.preco).toFixed(2) %></div>
+                  <div class="lote-preco-sub">por participante</div>
+                </div>
                 <% } %>
                 <div class="lote-radio"></div>
               </div>
