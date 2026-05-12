@@ -2262,7 +2262,7 @@ router.get('/inscricao/:id', async (req, res) => {
 // INSCRIÇÕES — POST: salva dados e redireciona para pagamento
 router.post('/inscricao/:id', async (req, res) => {
   try {
-    const { nome, email, whatsapp, cpf, instituicao, lote_id } = req.body;
+    const { nome, email, whatsapp, rg, cpf, instituicao, lote_id, tipo_participante, catraca, semestre, turma } = req.body;
     if (!nome || !email) return res.status(400).send('Nome e e-mail são obrigatórios.');
 
     const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
@@ -2272,12 +2272,44 @@ router.post('/inscricao/:id', async (req, res) => {
     const loteR = await query('SELECT * FROM evento_lotes WHERE id=$1', [lote_id]);
     const lote = loteR.rows[0];
 
+    // ── VALIDAÇÃO DE DUPLICATA — email OU rg já cadastrado neste evento
+    const emailNorm = (email || '').toLowerCase().trim();
+    const rgNorm    = (rg || '').replace(/\D/g, '').trim();
+
+    const dupEmail = await query(
+      "SELECT id FROM evento_inscricoes WHERE evento_id=$1 AND LOWER(TRIM(email))=$2 AND status != 'cancelado'",
+      [req.params.id, emailNorm]
+    );
+    const dupRg = rgNorm ? await query(
+      "SELECT id FROM evento_inscricoes WHERE evento_id=$1 AND REGEXP_REPLACE(rg,'[^0-9]','','g')=$2 AND status != 'cancelado'",
+      [req.params.id, rgNorm]
+    ) : { rows: [] };
+
+    if (dupEmail.rows.length > 0 || dupRg.rows.length > 0) {
+      const motivo = dupEmail.rows.length > 0 ? 'e-mail' : 'RG/CI';
+      const config = await getConfig();
+      const [camposR, progR, palesR, patrocR, lotesR] = await Promise.all([
+        query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem', [req.params.id]),
+        query('SELECT * FROM evento_programacao WHERE evento_id=$1 ORDER BY ordem', [req.params.id]),
+        query('SELECT * FROM evento_palestrantes WHERE evento_id=$1 ORDER BY ordem', [req.params.id]),
+        query('SELECT * FROM evento_patrocinadores WHERE evento_id=$1 ORDER BY ordem', [req.params.id]),
+        query('SELECT * FROM evento_lotes WHERE evento_id=$1 AND ativo=true ORDER BY ordem', [req.params.id])
+      ]);
+      return res.render('pages/evento-inscricao-publica', {
+        evento, lotes: lotesR.rows, sucesso: false, qrcode: null,
+        codigoInscricao: null, config, programacao: progR.rows,
+        palestrantes: palesR.rows, patrocinadores: patrocR.rows, pixData: null,
+        campos: camposR.rows,
+        erro: `Já existe uma inscrição neste evento com este ${motivo}. Cada participante pode se inscrever apenas uma vez para garantir a unicidade do certificado.`
+      });
+    }
+
     const qrcode = 'LAURO-' + req.params.id + '-' + Date.now();
     const ehGratuito = !lote || parseFloat(lote.preco) === 0;
 
     const inscR = await query(
-      'INSERT INTO evento_inscricoes (evento_id,lote_id,nome,email,whatsapp,cpf,instituicao,status,qrcode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
-      [req.params.id, lote_id||null, nome, email, whatsapp||null, cpf||null, instituicao||null, ehGratuito ? 'confirmado' : 'pendente', qrcode]
+      'INSERT INTO evento_inscricoes (evento_id,lote_id,nome,email,whatsapp,rg,cpf,instituicao,tipo_participante,catraca,semestre,turma,status,qrcode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id',
+      [req.params.id, lote_id||null, nome, emailNorm, whatsapp||null, rg||null, cpf||null, instituicao||null, tipo_participante||'externo', catraca||null, semestre||null, turma||null, ehGratuito ? 'confirmado' : 'pendente', qrcode]
     );
     const inscricaoId = inscR.rows[0].id;
 
@@ -2294,13 +2326,13 @@ router.post('/inscricao/:id', async (req, res) => {
       return res.render('pages/evento-inscricao-publica', {
         evento, lotes: loteR.rows, sucesso: true, qrcode, campos: camposR.rows,
         codigoInscricao: qrcode, config, programacao: progR.rows,
-        palestrantes: palesR.rows, patrocinadores: patrocR.rows, pixData: null
+        palestrantes: palesR.rows, patrocinadores: patrocR.rows, pixData: null, erro: null
       });
     }
 
     // Evento pago → gerar PIX, salvar no banco e redirecionar para /pagamento/:inscricaoId
     const pixData = await criarPixEvento({
-      inscricao: { id: inscricaoId, nome, email, cpf },
+      inscricao: { id: inscricaoId, nome, email: emailNorm, cpf },
       lote,
       eventoNome: evento.nome
     });
