@@ -93,7 +93,11 @@
 <!-- LOGIN -->
 <div class="login-overlay" id="login-overlay">
   <div class="login-card">
-    <div class="login-logo">L</div>
+    <div class="login-logo" style="background:white;padding:6px">
+      <% if (config.org_logo) { %>
+        <img src="<%= config.org_logo %>" alt="<%= config.org_nome %>" style="width:100%;height:100%;object-fit:contain;border-radius:12px">
+      <% } else { %>L<% } %>
+    </div>
     <div class="login-titulo"><%= presenca.evento_nome %></div>
     <div class="login-sub">Para acessar a transmissão, confirme sua identidade com o email cadastrado na inscrição.</div>
     <input type="email" class="login-input" id="login-email" placeholder="Seu email de inscrição" autocomplete="email">
@@ -105,7 +109,11 @@
 <!-- HEADER -->
 <div class="header" id="main-header" style="display:none">
   <div style="display:flex;align-items:center;gap:12px">
-    <div class="header-logo">L</div>
+    <div class="header-logo" style="background:white;padding:4px">
+      <% if (config.org_logo) { %>
+        <img src="<%= config.org_logo %>" alt="<%= config.org_nome %>" style="width:100%;height:100%;object-fit:contain;border-radius:8px">
+      <% } else { %>L<% } %>
+    </div>
     <div>
       <div class="header-evento"><%= presenca.evento_nome %></div>
       <div class="header-nome">Olá, <strong id="nome-exibido"></strong></div>
