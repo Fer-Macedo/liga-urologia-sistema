@@ -696,96 +696,51 @@ router.get('/frequencia/relatorio/:turmaId', requireAuth, requireSecretaria, asy
   const turmaR = await query('SELECT * FROM turmas WHERE id=$1', [req.params.turmaId]);
   const turma = turmaR.rows[0];
   if (!turma) return res.redirect('/frequencia');
-
   const membros = await query(
-    `SELECT m.nome, m.email, tm.data_entrada,
-      (SELECT COUNT(*) FROM atividades a WHERE a.turma_id=$1) as total_atividades,
-      (SELECT COUNT(*) FROM presencas p JOIN atividades a ON a.id=p.atividade_id WHERE a.turma_id=$1 AND p.membro_id=m.id AND p.presente=1) as presencas
-     FROM turma_membros tm JOIN membros m ON m.id=tm.membro_id WHERE tm.turma_id=$1 ORDER BY m.nome`,
+    `SELECT m.id, m.nome, m.email, (SELECT COUNT(*) FROM atividades a WHERE a.turma_id=$1) as total_atividades, (SELECT COUNT(*) FROM presencas p JOIN atividades a ON a.id=p.atividade_id WHERE a.turma_id=$1 AND p.membro_id=m.id AND p.presente=1) as presencas FROM turma_membros tm JOIN membros m ON m.id=tm.membro_id WHERE tm.turma_id=$1 ORDER BY m.nome`,
     [req.params.turmaId]
   );
-
-  const atividades = await query(
-    'SELECT id, tipo, descricao, data_atividade FROM atividades WHERE turma_id=$1 ORDER BY data_atividade',
-    [req.params.turmaId]
-  );
-
-  const presencasDetalhe = {};
+  const atividades = await query('SELECT id, tipo, descricao, data_atividade FROM atividades WHERE turma_id=$1 ORDER BY data_atividade', [req.params.turmaId]);
+  const pd = {};
   for (const at of atividades.rows) {
     const pr = await query('SELECT membro_id, presente FROM presencas WHERE atividade_id=$1', [at.id]);
-    presencasDetalhe[at.id] = {};
-    pr.rows.forEach(p => { presencasDetalhe[at.id][p.membro_id] = p.presente; });
+    pd[at.id] = {};
+    pr.rows.forEach(p => { pd[at.id][p.membro_id] = p.presente; });
   }
-
   const orgNome = config.org_nome || 'Liga Academica de Urologia';
   const orgCor = config.org_cor || '#1a56db';
   const orgLogo = config.org_logo || null;
-
-  const logoHtml = orgLogo
-    ? '<img src="' + orgLogo + '" alt="' + orgNome + '" style="max-height:80px;max-width:220px;object-fit:contain">'
-    : '<h2 style="margin:0;color:' + orgCor + '">' + orgNome + '</h2>';
-
+  const logoHtml = orgLogo ? `<img src="${orgLogo}" style="max-height:56px;object-fit:contain">` : `<span style="font-size:20px;font-weight:800;color:${orgCor}">${orgNome}</span>`;
+  const aptos = membros.rows.filter(m => m.total_atividades > 0 && (m.presencas/m.total_atividades)*100 >= 75).length;
+  const risco = membros.rows.filter(m => m.total_atividades > 0 && (m.presencas/m.total_atividades)*100 >= 50 && (m.presencas/m.total_atividades)*100 < 75).length;
+  const inaptos = membros.rows.length - aptos - risco;
+  const dataInicio = turma.data_inicio ? new Date(turma.data_inicio+'T12:00:00').toLocaleDateString('pt-BR') : '';
+  const dataFim = turma.data_fim ? new Date(turma.data_fim+'T12:00:00').toLocaleDateString('pt-BR') : '';
   let linhasMembros = membros.rows.map(m => {
-    const pct = m.total_atividades > 0 ? Math.round((m.presencas / m.total_atividades) * 100) : 0;
-    const faltas = m.total_atividades - m.presencas;
-    const status = pct >= 75 ? 'APTO' : pct >= 50 ? 'EM RISCO' : 'NÃO APTO';
-    const cor = pct >= 75 ? '#22c55e' : pct >= 50 ? '#f59e0b' : '#ef4444';
-    return '<tr><td style="padding:10px;border:1px solid #e5e7eb">' + m.nome + '</td>'
-      + '<td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:#22c55e;font-weight:600">' + m.presencas + '</td>'
-      + '<td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:#ef4444;font-weight:600">' + faltas + '</td>'
-      + '<td style="padding:10px;border:1px solid #e5e7eb;text-align:center">' + m.total_atividades + '</td>'
-      + '<td style="padding:10px;border:1px solid #e5e7eb;text-align:center"><strong>' + pct + '%</strong></td>'
-      + '<td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:' + cor + ';font-weight:bold">' + status + '</td></tr>';
+    const pct = m.total_atividades > 0 ? Math.round((m.presencas/m.total_atividades)*100) : 0;
+    const faltas = Number(m.total_atividades) - Number(m.presencas);
+    const status = pct>=75?'Apto':pct>=50?'Em risco':'Nao apto';
+    const corS = pct>=75?'#166534':pct>=50?'#92400e':'#991b1b';
+    const bgS = pct>=75?'#dcfce7':pct>=50?'#fef3c7':'#fee2e2';
+    const barC = pct>=75?'#10b981':pct>=50?'#f59e0b':'#ef4444';
+    return `<tr><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;font-weight:600">${m.nome}</td><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:center;color:#10b981;font-weight:700">${m.presencas}</td><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:center;color:#ef4444;font-weight:700">${faltas}</td><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:center;color:#64748b">${m.total_atividades}</td><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:center"><div style="display:flex;align-items:center;gap:8px;justify-content:center"><div style="width:80px;height:6px;background:#e2e8f0;border-radius:3px"><div style="width:${pct}%;height:100%;background:${barC};border-radius:3px"></div></div><span style="font-weight:700">${pct}%</span></div></td><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:center"><span style="background:${bgS};color:${corS};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700">${status}</span></td></tr>`;
   }).join('');
-
-  let linhasAtividades = '';
-  for (const m of membros.rows) {
-    let cols = '<td style="padding:8px;border:1px solid #e5e7eb;font-weight:600">' + m.nome + '</td>';
-    for (const at of atividades.rows) {
-      const presente = presencasDetalhe[at.id] && presencasDetalhe[at.id][m.id] ? 1 : 0;
-      const bg = presente ? '#dcfce7' : '#fee2e2';
-      const texto = presente ? '✅' : '❌';
-      cols += '<td style="padding:8px;border:1px solid #e5e7eb;text-align:center;background:' + bg + '">' + texto + '</td>';
-    }
-    linhasAtividades += '<tr>' + cols + '</tr>';
-  }
-
-  let headerAtividades = '<th style="padding:10px;background:'+orgCor+';color:white;text-align:left;min-width:160px">Membro</th>';
+  let headerAt = `<th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b">Ligante</th>`;
   for (const at of atividades.rows) {
-    const data = new Date(at.data_atividade).toLocaleDateString('pt-BR',{timeZone:'UTC'});
-    headerAtividades += '<th style="padding:8px;background:'+orgCor+';color:white;text-align:center;font-size:11px;min-width:90px"><strong>' + data + '</strong><br><span style="font-weight:400;font-size:10px">' + at.tipo + '</span><br><span style="font-weight:400;font-size:10px">' + at.descricao.substring(0,15) + '</span></th>';
+    const dt = new Date(at.data_atividade).toLocaleDateString('pt-BR',{timeZone:'UTC',day:'2-digit',month:'2-digit'});
+    headerAt += `<th style="padding:10px 8px;text-align:center;font-size:10px;font-weight:700;color:#64748b;min-width:70px">${dt}<br><span style="font-weight:400;opacity:.7">${at.tipo.substring(0,10)}</span></th>`;
   }
-
-  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
-    <title>Relatório — ${turma.nome}</title>
-    <style>body{font-family:Arial,sans-serif;padding:30px;color:#111}table{width:100%;border-collapse:collapse}@media print{.no-print{display:none}}h3{color:#1a56db}</style>
-    </head><body>
-    <div class="no-print" style="margin-bottom:20px">
-      <button onclick="window.print()" style="background:#1a56db;color:white;border:none;padding:10px 24px;border-radius:6px;cursor:pointer;font-size:14px">🖨️ Imprimir / Salvar PDF</button>
-    </div>
-    <div style="text-align:center;margin-bottom:24px;padding-bottom:16px;border-bottom:3px solid #1a56db">
-      ${logoHtml}
-      <h1 style="margin:12px 0 4px;font-size:20px">Relatório de Frequência</h1>
-      <p style="margin:0;color:#6b7280">Turma: <strong>${turma.nome}</strong> &nbsp;|&nbsp; Período: ${new Date(turma.data_inicio).toLocaleDateString('pt-BR',{timeZone:'UTC'})} ${turma.data_fim ? '— '+new Date(turma.data_fim+'T12:00:00').toLocaleDateString('pt-BR') : ''}</p>
-      <p style="margin:4px 0 0;color:#6b7280">Total de atividades: <strong>${atividades.rows.length}</strong> &nbsp;|&nbsp; Critério: <strong>mínimo 75% de presença</strong> &nbsp;|&nbsp; Gerado em: ${new Date().toLocaleString('pt-BR')}</p>
-    </div>
-    <h3>📋 Resumo por membro</h3>
-    <table><thead><tr>
-      <th style="padding:10px;background:#1a56db;color:white;text-align:left">Membro</th>
-      <th style="padding:10px;background:#1a56db;color:white;text-align:center">✅ Presenças</th>
-      <th style="padding:10px;background:#1a56db;color:white;text-align:center">❌ Faltas</th>
-      <th style="padding:10px;background:#1a56db;color:white;text-align:center">Total</th>
-      <th style="padding:10px;background:#1a56db;color:white;text-align:center">Frequência</th>
-      <th style="padding:10px;background:#1a56db;color:white;text-align:center">Status</th>
-    </tr></thead><tbody>${linhasMembros}</tbody></table>
-    <br><h3>📅 Presenças por atividade</h3>
-    <div style="overflow-x:auto">
-    <table><thead><tr>${headerAtividades}</tr></thead><tbody>${linhasAtividades}</tbody></table>
-    </div>
-    </body></html>`;
-
-  res.send(html);
-});
+  let linhasAt = '';
+  for (const m of membros.rows) {
+    let cols = `<td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;font-weight:600;font-size:13px">${m.nome}</td>`;
+    for (const at of atividades.rows) {
+      const presente = pd[at.id] && pd[at.id][m.id] ? 1 : 0;
+      cols += presente
+        ? `<td style="padding:10px 8px;border-bottom:1px solid #f1f5f9;text-align:center;background:#f0fdf4"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></td>`
+        : `<td style="padding:10px 8px;border-bottom:1px solid #f1f5f9;text-align:center;background:#fff1f2"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></td>`;
+    }
+    linhasAt += `<tr>${cols}</tr>`;
+  }
 
 router.post('/frequencia/turma/:id/enviar', requireAuth, requireSecretaria, async (req, res) => {
   const config = await getConfig();
