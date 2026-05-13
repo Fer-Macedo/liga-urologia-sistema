@@ -1,16 +1,23 @@
 <%
 // views/partials/sidebar.ejs
 // Sidebar do painel — Liga Acadêmica de Urologia (LAURO)
-// Variável esperada: paginaAtual (string)
 const pa = typeof paginaAtual !== 'undefined' ? paginaAtual : '';
 const usuarioPerfil = (typeof usuario !== 'undefined' && usuario && usuario.perfil) ? usuario.perfil : 'visualizador';
+const orgLogo = (typeof config !== 'undefined' && config && config.org_logo) ? config.org_logo : null;
+const orgNome = (typeof config !== 'undefined' && config && config.org_nome) ? config.org_nome : 'LAURO';
 %>
 <aside class="sidebar">
 
   <div class="sidebar-brand">
-    <div class="sidebar-brand-logo">LU</div>
+    <% if (orgLogo) { %>
+      <div class="sidebar-brand-logo sidebar-brand-logo--img">
+        <img src="<%= orgLogo %>" alt="<%= orgNome %>">
+      </div>
+    <% } else { %>
+      <div class="sidebar-brand-logo">LU</div>
+    <% } %>
     <div class="sidebar-brand-text">
-      <strong><%= (typeof config !== 'undefined' && config && config.org_nome) ? config.org_nome : 'LAURO' %></strong>
+      <strong><%= orgNome %></strong>
       <span>Painel Interno</span>
     </div>
   </div>
