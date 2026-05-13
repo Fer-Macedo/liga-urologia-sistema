@@ -1,80 +1,127 @@
+<%
+// views/partials/sidebar.ejs
+// Sidebar do painel — Liga Acadêmica de Urologia (LAURO)
+const pa = typeof paginaAtual !== 'undefined' ? paginaAtual : '';
+const usuarioPerfil = (typeof usuario !== 'undefined' && usuario && usuario.perfil) ? usuario.perfil : 'visualizador';
+%>
 <aside class="sidebar">
-  <div class="logo-area">
-    <div class="logo-box">
-      <% if (config.org_logo) { %>
-        <img src="<%= config.org_logo %>" alt="Logo" class="logo-img" style="width:100%;height:auto;max-height:60px;object-fit:contain;border-radius:8px">
-      <% } else { %>
-        <div class="logo-icone">LU</div>
-        <div class="logo-texto"><%= config.org_nome || 'Liga Acadêmica de Urologia' %></div>
-      <% } %>
+
+  <div class="sidebar-brand">
+    <div class="sidebar-brand-logo">LU</div>
+    <div class="sidebar-brand-text">
+      <strong><%= (typeof config !== 'undefined' && config && config.org_nome) ? config.org_nome : 'LAURO' %></strong>
+      <span>Painel Interno</span>
     </div>
   </div>
-  <nav class="nav">
-    <a href="/dashboard" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'dashboard' ? 'ativo' : '' %>">
-      <span class="nav-icone">▦</span> Dashboard
-    </a>
-    <a href="/membros" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'membros' ? 'ativo' : '' %>">
-      <span class="nav-icone">◎</span> Membros
-    </a>
-    <a href="/diretivos" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'diretivos' ? 'ativo' : '' %>">
-      <span class="nav-icone">🏛</span> Diretivos
-    </a>
-    <a href="/ligantes" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'ligantes' ? 'ativo' : '' %>">
-      <span class="nav-icone">🎓</span> Ligantes
-    </a>
-    <a href="/arquivos" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'arquivos' ? 'ativo' : '' %>">
-      <span class="nav-icone">📁</span> Arquivos
-    </a>
-    <a href="/frequencia" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'frequencia' ? 'ativo' : '' %>">
-      <span class="nav-icone">◉</span> Frequência Membros
-    </a>
-    <a href="/frequencia-diretivos" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'frequencia-diretivos' ? 'ativo' : '' %>">
-      <span class="nav-icone">◉</span> Frequência Diretivos
-    </a>
-    <a href="/desligamentos" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'desligamentos' ? 'ativo' : '' %>">
-      <span class="nav-icone">📋</span> Desligamentos
-    </a>
-    <a href="/desvinculacoes" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'desvinculacoes' ? 'ativo' : '' %>">
-      <span class="nav-icone">✂️</span> Desvinculações
-    </a>
-    <a href="/lista-assinaturas" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'lista-assinaturas' ? 'ativo' : '' %>">
-      <span class="nav-icone">✍️</span> Lista de Assinaturas
-    </a>
-    <a href="/marketing" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'marketing' ? 'ativo' : '' %>">
-      <span class="nav-icone">📣</span> Marketing
-    </a>
-    <a href="/eventos" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'eventos' ? 'ativo' : '' %>">
-      <span class="nav-icone">🎪</span> Eventos
-    </a>
-    <a href="/cobrancas" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'cobrancas' ? 'ativo' : '' %>">
-      <span class="nav-icone">◈</span> Cobranças
-    </a>
-    <a href="/aniversarios" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'aniversarios' ? 'ativo' : '' %>">
-      <span class="nav-icone">◆</span> Aniversários
-    </a>
-    <% const u = typeof usuario !== 'undefined' ? usuario : (typeof usuarioLogado !== 'undefined' ? usuarioLogado : null); %>
-    <% if (u && (u.perfil === 'admin' || u.perfil === 'presidencia')) { %>
-    <a href="/auditoria" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'auditoria' ? 'ativo' : '' %>">
-      <span class="nav-icone">🔍</span> Auditoria
-    </a>
-    <% } %>
-    <% if (u && u.perfil === 'admin') { %>
-    <a href="/notificacoes" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'notificacoes' ? 'ativo' : '' %>">
-      <span class="nav-icone">◉</span> Notificações
-    </a>
-    <a href="/configuracoes" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'configuracoes' ? 'ativo' : '' %>">
-      <span class="nav-icone">✦</span> Configurações
-    </a>
-    <a href="/usuarios" class="nav-item <%= typeof paginaAtual !== 'undefined' && paginaAtual === 'usuarios' ? 'ativo' : '' %>">
-      <span class="nav-icone">◎</span> Usuários
-    </a>
-    <% } %>
-  </nav>
-  <div class="sidebar-rodape">
-    <div class="usuario-info">
-      <div class="usuario-nome"><%= u?.nome || '' %></div>
-      <div class="usuario-perfil"><%= u?.perfil || '' %></div>
+
+  <nav class="sidebar-nav">
+
+    <div class="nav-group">
+      <div class="nav-group-title">Visão geral</div>
+      <a href="/dashboard" class="nav-item <%= pa === 'dashboard' ? 'ativo' : '' %>">
+        <span class="nav-icon">📊</span><span>Dashboard</span>
+      </a>
     </div>
-    <a href="/logout" class="btn-sair">Sair</a>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Pessoas</div>
+      <a href="/ligantes" class="nav-item <%= pa === 'ligantes' ? 'ativo' : '' %>">
+        <span class="nav-icon">🎓</span><span>Ligantes</span>
+      </a>
+      <a href="/diretivos" class="nav-item <%= pa === 'diretivos' ? 'ativo' : '' %>">
+        <span class="nav-icon">👔</span><span>Diretivos</span>
+      </a>
+      <a href="/membros" class="nav-item <%= pa === 'membros' ? 'ativo' : '' %>">
+        <span class="nav-icon">👥</span><span>Membros</span>
+      </a>
+      <a href="/aniversarios" class="nav-item <%= pa === 'aniversarios' ? 'ativo' : '' %>">
+        <span class="nav-icon">🎂</span><span>Aniversários</span>
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Acadêmico</div>
+      <a href="/frequencia" class="nav-item <%= pa === 'frequencia' ? 'ativo' : '' %>">
+        <span class="nav-icon">✅</span><span>Frequência Ligantes</span>
+      </a>
+      <a href="/frequencia-diretivos" class="nav-item <%= pa === 'frequencia-diretivos' ? 'ativo' : '' %>">
+        <span class="nav-icon">📋</span><span>Frequência Diretivos</span>
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Eventos</div>
+      <a href="/eventos" class="nav-item <%= pa === 'eventos' ? 'ativo' : '' %>">
+        <span class="nav-icon">🎟️</span><span>Eventos</span>
+      </a>
+      <a href="/lista-assinaturas" class="nav-item <%= pa === 'lista-assinaturas' ? 'ativo' : '' %>">
+        <span class="nav-icon">✍️</span><span>Listas de Assinatura</span>
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Financeiro</div>
+      <a href="/cobrancas" class="nav-item <%= pa === 'cobrancas' ? 'ativo' : '' %>">
+        <span class="nav-icon">💰</span><span>Cobranças</span>
+      </a>
+      <a href="/carta-cobranca" class="nav-item <%= pa === 'carta-cobranca' ? 'ativo' : '' %>">
+        <span class="nav-icon">📨</span><span>Cartas de Cobrança</span>
+      </a>
+      <a href="/financeiro-arquivos" class="nav-item <%= pa === 'financeiro-arquivos' ? 'ativo' : '' %>">
+        <span class="nav-icon">🗂️</span><span>Arquivos Financeiros</span>
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Gestão</div>
+      <a href="/desligamentos" class="nav-item <%= pa === 'desligamentos' ? 'ativo' : '' %>">
+        <span class="nav-icon">📤</span><span>Desligamentos</span>
+      </a>
+      <a href="/desvinculacoes" class="nav-item <%= pa === 'desvinculacoes' ? 'ativo' : '' %>">
+        <span class="nav-icon">🔗</span><span>Desvinculações</span>
+      </a>
+      <a href="/arquivos" class="nav-item <%= pa === 'arquivos' ? 'ativo' : '' %>">
+        <span class="nav-icon">📁</span><span>Arquivos</span>
+      </a>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Comunicação</div>
+      <a href="/marketing" class="nav-item <%= pa === 'marketing' ? 'ativo' : '' %>">
+        <span class="nav-icon">📣</span><span>Marketing</span>
+      </a>
+      <a href="/notificacoes" class="nav-item <%= pa === 'notificacoes' ? 'ativo' : '' %>">
+        <span class="nav-icon">🔔</span><span>Notificações</span>
+      </a>
+    </div>
+
+    <% if (usuarioPerfil === 'admin') { %>
+    <div class="nav-group">
+      <div class="nav-group-title">Administração</div>
+      <a href="/usuarios" class="nav-item <%= pa === 'usuarios' ? 'ativo' : '' %>">
+        <span class="nav-icon">🛡️</span><span>Usuários</span>
+      </a>
+      <a href="/auditoria" class="nav-item <%= pa === 'auditoria' ? 'ativo' : '' %>">
+        <span class="nav-icon">🔍</span><span>Auditoria</span>
+      </a>
+      <a href="/configuracoes" class="nav-item <%= pa === 'configuracoes' ? 'ativo' : '' %>">
+        <span class="nav-icon">⚙️</span><span>Configurações</span>
+      </a>
+    </div>
+    <% } %>
+
+  </nav>
+
+  <div class="sidebar-footer">
+    <% if (typeof usuario !== 'undefined' && usuario) { %>
+      <div class="sidebar-user">
+        <div class="sidebar-user-avatar"><%= (usuario.nome || '?').substring(0,1).toUpperCase() %></div>
+        <div class="sidebar-user-info">
+          <strong><%= (usuario.nome || '').split(' ')[0] %></strong>
+          <span><%= usuario.perfil %></span>
+        </div>
+      </div>
+    <% } %>
+    <a href="/logout" class="sidebar-logout">Sair</a>
   </div>
 </aside>
