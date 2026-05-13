@@ -3056,6 +3056,96 @@ router.post('/eventos/:id/inscricoes/:iid/editar', requireAuth, async (req, res)
 });
 
 // ─── EMAIL EM MASSA PARA INSCRITOS ────────────────────────────────────────────
+router.post('/eventos/:id/campos/ordem', requireAuth, async (req, res) => {
+  try {
+    const { campos } = req.body;
+    const lista = JSON.parse(campos);
+    for (let i = 0; i < lista.length; i++) {
+      await query(
+        'INSERT INTO evento_campos_ordem (evento_id, campo, ordem) VALUES ($1,$2,$3) ON CONFLICT (evento_id,campo) DO UPDATE SET ordem=$3',
+        [req.params.id, lista[i], i + 1]
+      );
+    }
+    res.json({ ok: true });
+  } catch(e) { res.json({ ok: false, msg: e.message }); }
+});
+
+router.get('/eventos/:id/mala-direta/historico', requireAuth, async (req, res) => {
+  try {
+    const r = await query(
+      'SELECT e.*, u.nome as enviado_por_nome FROM mala_direta_envios e LEFT JOIN usuarios u ON u.id=e.enviado_por WHERE e.evento_id=$1 ORDER BY e.criado_em DESC',
+      [req.params.id]
+    );
+    res.json({ ok: true, envios: r.rows });
+  } catch(e) { res.json({ ok: false }); }
+});
+
+router.get('/eventos/:id/mala-direta/:envio_id/logs', requireAuth, async (req, res) => {
+  try {
+    const r = await query(
+      'SELECT * FROM mala_direta_logs WHERE envio_id=$1 ORDER BY criado_em',
+      [req.params.envio_id]
+    );
+    res.json({ ok: true, logs: r.rows });
+  } catch(e) { res.json({ ok: false }); }
+});
+
+router.post('/eventos/:id/mala-direta', requireAuth, async (req, res) => {
+  const { assunto, conteudo_html, destinatarios } = req.body;
+  try {
+    const config = await getConfig();
+    const orgNome = config.org_nome || 'Liga Academica de Urologia';
+    const orgCor = config.org_cor || '#1a56db';
+    const orgLogo = config.org_logo || null;
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT,
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+    });
+    let where = "WHERE evento_id=$1 AND email IS NOT NULL";
+    const params = [req.params.id];
+    if (destinatarios === 'confirmados') where += " AND status='confirmado'";
+    else if (destinatarios === 'pendentes') where += " AND status='pendente'";
+    const r = await query('SELECT * FROM evento_inscricoes '+where, params);
+    const envioR = await query(
+      'INSERT INTO mala_direta_envios (evento_id,assunto,conteudo_html,destinatarios,enviado_por) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+      [req.params.id, assunto, conteudo_html, destinatarios, req.session.usuario.id]
+    );
+    const envioId = envioR.rows[0].id;
+    const logoHtml = orgLogo
+      ? '<img src="'+orgLogo+'" style="max-height:56px;max-width:180px;object-fit:contain;display:block;margin:0 auto" alt="'+orgNome+'">'
+      : '<span style="font-size:20px;font-weight:800;color:white">'+orgNome+'</span>';
+    let enviados = 0, erros = 0;
+    for (const insc of r.rows) {
+      const conteudo = conteudo_html.replace(/\{nome\}/g, insc.nome.split(' ')[0]);
+      const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>'
+        +'<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,sans-serif">'
+        +'<table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px"><tr><td align="center">'
+        +'<table width="100%" style="max-width:600px;background:white;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08)">'
+        +'<tr><td style="background:linear-gradient(135deg,'+orgCor+','+orgCor+'cc);padding:32px;text-align:center">'+logoHtml
+        +'<div style="color:rgba(255,255,255,.85);font-size:13px;margin-top:8px">'+orgNome+'</div></td></tr>'
+        +'<tr><td style="padding:36px 40px;font-size:15px;color:#374151;line-height:1.8">'
+        +'<p style="margin:0 0 20px;font-size:16px">Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p>'
+        +conteudo
+        +'</td></tr>'
+        +'<tr><td style="padding:20px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center">'
+        +'<p style="margin:0;font-size:12px;color:#94a3b8">'+orgNome+' &bull; Esta mensagem foi enviada pela secretaria</p>'
+        +'</td></tr></table></td></tr></table></body></html>';
+      let status = 'enviado';
+      try {
+        await transporter.sendMail({ from: orgNome+' <'+process.env.EMAIL_USER+'>', to: insc.email, subject: assunto, html });
+        enviados++;
+        await new Promise(r => setTimeout(r, 200));
+      } catch(e) { status = 'erro'; erros++; }
+      await query('INSERT INTO mala_direta_logs (envio_id,inscricao_id,email,nome,status) VALUES ($1,$2,$3,$4,$5)',
+        [envioId, insc.id, insc.email, insc.nome, status]);
+    }
+    await query('UPDATE mala_direta_envios SET total_enviados=$1,total_erros=$2 WHERE id=$3',[enviados,erros,envioId]);
+    req.flash('msg', 'Email enviado para '+enviados+' inscritos!');
+  } catch(e) { req.flash('erro','Erro: '+e.message); }
+  res.redirect('/eventos/'+req.params.id+'?tab=mala-direta');
+});
+
 router.post('/eventos/:id/mala-direta', requireAuth, async (req, res) => {
   const { assunto, conteudo_html, destinatarios } = req.body;
   try {
