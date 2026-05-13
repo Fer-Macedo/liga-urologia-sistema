@@ -2,13 +2,159 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Membros — <%= config.org_nome %></title>
+  <title>Cadastro Financeiro — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
   <style>
     :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
-    .phone-wrap { display:flex; gap:8px; }
-    .phone-pais { width:170px; flex-shrink:0; }
-    .phone-numero { flex:1; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 14px;
+      padding: 20px 22px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .stat-card.azul::before  { background: linear-gradient(90deg,#1a56db,#06b6d4); }
+    .stat-card.verde::before { background: linear-gradient(90deg,#10b981,#34d399); }
+    .stat-card.amr::before   { background: linear-gradient(90deg,#f59e0b,#fbbf24); }
+    .stat-card.verm::before  { background: linear-gradient(90deg,#ef4444,#f87171); }
+    .stat-num {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -.02em;
+      margin-bottom: 4px;
+    }
+    .stat-card.azul  .stat-num { color: #1a56db; }
+    .stat-card.verde .stat-num { color: #10b981; }
+    .stat-card.amr   .stat-num { color: #f59e0b; }
+    .stat-card.verm  .stat-num { color: #ef4444; }
+    .stat-lab {
+      font-size: 11.5px;
+      color: var(--texto2);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .filtros-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .table-moderna {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .table-moderna table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .table-moderna thead th {
+      background: var(--fundo);
+      padding: 12px 16px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--texto2);
+      text-align: left;
+      border-bottom: 1px solid var(--borda);
+    }
+    .table-moderna tbody tr {
+      border-bottom: 1px solid var(--borda);
+      transition: background .15s;
+    }
+    .table-moderna tbody tr:last-child { border-bottom: none; }
+    .table-moderna tbody tr:hover { background: var(--fundo); }
+    .table-moderna tbody td {
+      padding: 13px 16px;
+      font-size: 13.5px;
+      color: var(--texto);
+      vertical-align: middle;
+    }
+
+    .membro-cell {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .avatar {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--cor-primaria), #6366f1);
+      color: white;
+      font-size: 12px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-family: 'Outfit', sans-serif;
+    }
+    .membro-nome {
+      font-weight: 600;
+      font-size: 13.5px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge-verde  { background: #dcfce7; color: #166534; }
+    .badge-verm   { background: #fee2e2; color: #991b1b; }
+    .badge-amr    { background: #fef3c7; color: #92400e; }
+    .badge-cinza  { background: var(--fundo); color: var(--texto2); border: 1px solid var(--borda); }
+
+    .btn-acoes {
+      display: flex;
+      gap: 6px;
+    }
+    .acao-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--borda);
+      background: var(--card);
+      color: var(--texto2);
+      text-decoration: none;
+      transition: all .15s ease;
+      font-size: 14px;
+    }
+    .acao-btn:hover {
+      background: var(--fundo);
+      border-color: var(--cor-primaria);
+      color: var(--cor-primaria);
+    }
+
+    /* MODAL */
+    .phone-wrap { display: flex; gap: 8px; }
+    .phone-pais { width: 180px; flex-shrink: 0; }
+    .phone-numero { flex: 1; }
   </style>
 </head>
 <body>
@@ -16,45 +162,102 @@
   <%- include('../partials/sidebar', { paginaAtual: 'membros' }) %>
   <main class="main">
     <div class="topbar">
-      <h1 class="page-titulo">Membros</h1>
-      <button class="btn btn-primario" onclick="abrirModal('modal-membro')">+ Cadastrar membro</button>
+      <h1 class="page-titulo">Cadastro Financeiro</h1>
+      <div class="topbar-acoes">
+        <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-membro')">+ Novo cadastro</button>
+      </div>
     </div>
+
     <div class="content">
       <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
       <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
 
-      <div class="filtro-bar">
-        <a href="/membros" class="filtro-btn <%= filtro==='todos'?'ativo':'' %>">Todos (<%= membros.length %>)</a>
-        <a href="/membros?filtro=ativos" class="filtro-btn <%= filtro==='ativos'?'ativo':'' %>">Ativos</a>
-        <a href="/membros?filtro=inativos" class="filtro-btn <%= filtro==='inativos'?'ativo':'' %>">Inativos</a>
+      <!-- STATS -->
+      <%
+        const total = membros.length;
+        const ativos = membros.filter(m => m.ativo).length;
+        const emDia = membros.filter(m => m.ultimo_status === 'pago').length;
+        const atrasados = membros.filter(m => m.ultimo_status === 'atrasado').length;
+      %>
+      <div class="stats-row">
+        <div class="stat-card azul">
+          <div class="stat-num"><%= total %></div>
+          <div class="stat-lab">Total cadastros</div>
+        </div>
+        <div class="stat-card verde">
+          <div class="stat-num"><%= ativos %></div>
+          <div class="stat-lab">Ativos</div>
+        </div>
+        <div class="stat-card verde">
+          <div class="stat-num"><%= emDia %></div>
+          <div class="stat-lab">Em dia</div>
+        </div>
+        <div class="stat-card verm">
+          <div class="stat-num"><%= atrasados %></div>
+          <div class="stat-lab">Atrasados</div>
+        </div>
       </div>
 
-      <div class="table-wrap">
-        <table class="table">
-          <thead><tr>
-            <th>Nome</th><th>WhatsApp</th><th>E-mail</th><th>Mensalidade</th><th>Vencimento</th><th>Status</th><th>Ações</th>
-          </tr></thead>
-          <tbody>
+      <!-- FILTROS -->
+      <div class="filtros-row">
+        <a href="/membros" class="btn btn-sm" style="<%= filtro==='todos' ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">Todos</a>
+        <a href="/membros?filtro=ativos" class="btn btn-sm" style="<%= filtro==='ativos' ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">Ativos</a>
+        <a href="/membros?filtro=inativos" class="btn btn-sm" style="<%= filtro==='inativos' ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">Inativos</a>
+        <input type="text" class="input" placeholder="Buscar por nome ou e-mail..."
+          id="busca" oninput="buscar(this.value)"
+          style="margin-left:auto;width:280px;font-size:13px;padding:7px 12px">
+        <span id="contador" style="font-size:13px;color:var(--texto2)"><%= membros.length %> cadastros</span>
+      </div>
+
+      <!-- TABELA -->
+      <div class="table-moderna">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>WhatsApp</th>
+              <th>E-mail</th>
+              <th>Mensalidade</th>
+              <th>Vencimento</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="tabela-body">
             <% if (membros.length === 0) { %>
-              <tr><td colspan="7" style="text-align:center;padding:30px;color:#888">Nenhum membro cadastrado ainda</td></tr>
+              <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--texto2)">Nenhum cadastro encontrado</td></tr>
             <% } %>
             <% membros.forEach(m => { %>
-            <tr>
-              <td><div class="membro-cell"><div class="avatar"><%= m.nome.substring(0,2).toUpperCase() %></div><%= m.nome %></div></td>
-              <td><%= m.whatsapp ? '+' + m.whatsapp.replace(/\D/g,'') : '—' %></td>
-              <td><%= m.email || '—' %></td>
-              <td>R$ <%= Number(m.mensalidade).toFixed(2).replace('.',',') %></td>
-              <td>Dia <%= m.dia_vencimento %></td>
+            <tr data-busca="<%= (m.nome + ' ' + (m.email||'')).toLowerCase() %>">
               <td>
-                <% if (!m.ativo) { %><span class="badge cinza">Inativo</span>
-                <% } else if (m.ultimo_status === 'atrasado') { %><span class="badge vermelho">Atrasado</span>
-                <% } else if (m.ultimo_status === 'pago') { %><span class="badge verde">Em dia</span>
-                <% } else { %><span class="badge amarelo">Pendente</span><% } %>
+                <div class="membro-cell">
+                  <div class="avatar"><%= m.nome.substring(0,2).toUpperCase() %></div>
+                  <span class="membro-nome"><%= m.nome %></span>
+                </div>
+              </td>
+              <td style="color:var(--texto2)"><%= m.whatsapp ? '+' + m.whatsapp.replace(/\D/g,'') : '—' %></td>
+              <td style="color:var(--texto2)"><%= m.email || '—' %></td>
+              <td style="font-weight:600">R$ <%= Number(m.mensalidade).toFixed(2).replace('.',',') %></td>
+              <td style="color:var(--texto2)">Dia <%= m.dia_vencimento %></td>
+              <td>
+                <% if (!m.ativo) { %>
+                  <span class="badge badge-cinza">Inativo</span>
+                <% } else if (m.ultimo_status === 'atrasado') { %>
+                  <span class="badge badge-verm">Atrasado</span>
+                <% } else if (m.ultimo_status === 'pago') { %>
+                  <span class="badge badge-verde">Em dia</span>
+                <% } else { %>
+                  <span class="badge badge-amr">Pendente</span>
+                <% } %>
               </td>
               <td>
                 <div class="btn-acoes">
-                  <a href="/membros/<%= m.id %>/editar" class="icon-btn" title="Editar">✏</a>
-                  <a href="/cobrancas?membro=<%= m.id %>" class="icon-btn" title="Ver cobranças">◈</a>
+                  <a href="/membros/<%= m.id %>/editar" class="acao-btn" title="Editar">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </a>
+                  <a href="/cobrancas?membro=<%= m.id %>" class="acao-btn" title="Ver cobranças">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                  </a>
                 </div>
               </td>
             </tr>
@@ -66,18 +269,18 @@
   </main>
 </div>
 
-<!-- Modal cadastro de membro -->
+<!-- MODAL CADASTRAR -->
 <div class="modal-overlay" id="modal-membro" style="display:none">
-  <div class="modal">
+  <div class="modal" style="max-width:580px">
     <div class="modal-header">
-      <span class="modal-titulo">Cadastrar novo membro</span>
+      <span class="modal-titulo">Novo cadastro financeiro</span>
       <button class="icon-btn" onclick="fecharModal('modal-membro')">✕</button>
     </div>
     <form action="/membros" method="POST" id="formNovoMembro">
       <div class="form-grid">
         <div class="campo full">
           <label class="label">Nome completo *</label>
-          <input name="nome" class="input" required placeholder="Dr. Nome Sobrenome">
+          <input name="nome" class="input" required placeholder="Nome Sobrenome">
         </div>
         <div class="campo">
           <label class="label">CPF</label>
@@ -95,24 +298,19 @@
           <label class="label">WhatsApp</label>
           <div class="phone-wrap">
             <select id="novoPaisCodigo" class="input phone-pais" onchange="atualizarNovoWhatsapp()">
-              <option value="55">🇧🇷 Brasil (+55)</option>
-              <option value="595">🇵🇾 Paraguai (+595)</option>
-              <option value="54">🇦🇷 Argentina (+54)</option>
-              <option value="598">🇺🇾 Uruguai (+598)</option>
-              <option value="591">🇧🇴 Bolívia (+591)</option>
-              <option value="56">🇨🇱 Chile (+56)</option>
-              <option value="57">🇨🇴 Colômbia (+57)</option>
-              <option value="51">🇵🇪 Peru (+51)</option>
-              <option value="58">🇻🇪 Venezuela (+58)</option>
-              <option value="1">🇺🇸 EUA/Canadá (+1)</option>
-              <option value="351">🇵🇹 Portugal (+351)</option>
-              <option value="34">🇪🇸 Espanha (+34)</option>
-              <option value="39">🇮🇹 Itália (+39)</option>
-              <option value="49">🇩🇪 Alemanha (+49)</option>
-              <option value="33">🇫🇷 França (+33)</option>
-              <option value="44">🇬🇧 Reino Unido (+44)</option>
-              <option value="81">🇯🇵 Japão (+81)</option>
-              <option value="outro">🌍 Outro país</option>
+              <option value="55">Brasil (+55)</option>
+              <option value="595">Paraguai (+595)</option>
+              <option value="54">Argentina (+54)</option>
+              <option value="598">Uruguai (+598)</option>
+              <option value="591">Bolívia (+591)</option>
+              <option value="56">Chile (+56)</option>
+              <option value="57">Colômbia (+57)</option>
+              <option value="51">Peru (+51)</option>
+              <option value="58">Venezuela (+58)</option>
+              <option value="1">EUA/Canadá (+1)</option>
+              <option value="351">Portugal (+351)</option>
+              <option value="34">Espanha (+34)</option>
+              <option value="outro">Outro país</option>
             </select>
             <input id="novoNumeroWhatsapp" class="input phone-numero"
               placeholder="DDD + número"
@@ -140,7 +338,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-membro')">Cancelar</button>
-        <button type="submit" class="btn btn-primario">Salvar membro</button>
+        <button type="submit" class="btn btn-primario">Salvar cadastro</button>
       </div>
     </form>
   </div>
@@ -148,18 +346,26 @@
 
 <script src="/js/app.js"></script>
 <script>
+function buscar(termo) {
+  const t = termo.toLowerCase().trim();
+  let vis = 0;
+  document.querySelectorAll('#tabela-body tr[data-busca]').forEach(row => {
+    const ok = !t || row.dataset.busca.includes(t);
+    row.style.display = ok ? '' : 'none';
+    if (ok) vis++;
+  });
+  document.getElementById('contador').textContent = vis + ' cadastros';
+}
+
 function atualizarNovoWhatsapp() {
   const pais = document.getElementById('novoPaisCodigo').value;
   const numero = document.getElementById('novoNumeroWhatsapp').value.replace(/\D/g,'');
   const preview = document.getElementById('novoPreviewWhatsapp');
   const hidden = document.getElementById('novoWhatsappFinal');
-
   if (pais === 'outro') {
-    document.getElementById('novoNumeroWhatsapp').placeholder = 'Código do país + número completo';
     hidden.value = numero;
     preview.textContent = numero ? 'Número: +' + numero : '';
   } else {
-    document.getElementById('novoNumeroWhatsapp').placeholder = 'DDD + número';
     const completo = pais + numero;
     hidden.value = completo;
     preview.textContent = numero ? 'Número: +' + completo : '';
@@ -170,4 +376,5 @@ document.getElementById('formNovoMembro').addEventListener('submit', function() 
   atualizarNovoWhatsapp();
 });
 </script>
-</body></html>
+</body>
+</html>
