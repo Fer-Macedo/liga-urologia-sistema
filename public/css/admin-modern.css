@@ -1,8 +1,11 @@
 /* ============================================================
    LIGA UROLOGIA — Modernização do Painel Interno
    admin-modern.css
+   Adiciona estilo moderno por cima do style.css existente,
+   sem quebrar nenhuma classe legada.
    ============================================================ */
 
+/* ---------- TIPOGRAFIA & FONTES ---------- */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
 body {
@@ -18,7 +21,10 @@ body {
   letter-spacing: -.01em;
 }
 
-/* SIDEBAR moderna */
+/* ============================================================
+   SIDEBAR — visual moderno
+   ============================================================ */
+
 .sidebar {
   background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
   color: #e2e8f0;
@@ -33,6 +39,7 @@ body {
   border: none;
 }
 
+/* Marca da liga */
 .sidebar-brand {
   display: flex;
   align-items: center;
@@ -73,6 +80,7 @@ body {
   margin-top: 1px;
 }
 
+/* Nav */
 .sidebar-nav {
   flex: 1;
   padding: 14px 12px;
@@ -123,6 +131,7 @@ body {
   flex-shrink: 0;
 }
 
+/* Footer da sidebar */
 .sidebar-footer {
   border-top: 1px solid rgba(255,255,255,.08);
   padding: 14px 16px;
@@ -180,7 +189,10 @@ body {
   color: white;
 }
 
-/* TOPBAR */
+/* ============================================================
+   TOPBAR & CONTEÚDO
+   ============================================================ */
+
 .topbar {
   background: var(--card, #ffffff);
   border-bottom: 1px solid var(--borda, #e6e9f2);
@@ -197,7 +209,10 @@ body {
   padding: 24px 28px;
 }
 
-/* CARDS */
+/* ============================================================
+   CARDS
+   ============================================================ */
+
 .freq-card,
 .stat-card {
   border-radius: 14px !important;
@@ -209,7 +224,10 @@ body {
   box-shadow: 0 6px 18px rgba(15,23,42,.06) !important;
 }
 
-/* BOTÕES */
+/* ============================================================
+   BOTÕES — refinamento
+   ============================================================ */
+
 .btn {
   border-radius: 9px !important;
   font-family: 'Plus Jakarta Sans', sans-serif !important;
@@ -228,6 +246,7 @@ body {
   box-shadow: 0 6px 18px rgba(30, 58, 138, .32) !important;
 }
 
+/* Filtros / tabs - refino */
 .filtro-btn {
   border-radius: 9px !important;
   font-weight: 600 !important;
@@ -239,7 +258,10 @@ body {
   box-shadow: 0 3px 10px rgba(30, 58, 138, .22) !important;
 }
 
-/* ALERTAS */
+/* ============================================================
+   ALERTAS
+   ============================================================ */
+
 .alerta {
   border-radius: 12px !important;
   border: 1px solid transparent !important;
@@ -256,7 +278,10 @@ body {
   border-color: #fecaca !important;
 }
 
-/* MODAL */
+/* ============================================================
+   MODAL — visual mais leve
+   ============================================================ */
+
 .modal-overlay {
   background: rgba(15, 23, 42, .55) !important;
   backdrop-filter: blur(3px);
@@ -271,7 +296,10 @@ body {
   to   { opacity: 1; transform: scale(1); }
 }
 
-/* INPUTS */
+/* ============================================================
+   INPUTS
+   ============================================================ */
+
 .input {
   border-radius: 9px !important;
   border: 1px solid var(--borda-strong, #d4d9e6) !important;
@@ -284,7 +312,10 @@ body {
   box-shadow: 0 0 0 4px rgba(30, 58, 138, .10) !important;
 }
 
-/* BADGES */
+/* ============================================================
+   BADGES
+   ============================================================ */
+
 .badge {
   border-radius: 999px !important;
   padding: 3px 10px !important;
@@ -293,7 +324,10 @@ body {
   letter-spacing: .02em;
 }
 
-/* RESPONSIVO */
+/* ============================================================
+   RESPONSIVO
+   ============================================================ */
+
 @media (max-width: 960px) {
   .sidebar-brand-text { display: none; }
   .sidebar-brand-logo { margin: 0 auto; }
