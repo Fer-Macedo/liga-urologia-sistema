@@ -71,9 +71,10 @@ function htmlCobranca(opts) {
   const orgCor=opts.orgCor||'#1a56db';
   const orgLogo=opts.orgLogo||null;
   const corEsc='#0a1f5c';
-  const isPos=titulo.includes('atraso');
-  const isDia=titulo.includes('HOJE')||titulo.includes('ltimo dia');
-  const isPre=!isPos&&!isDia;
+  const tipoCob=opts.tipoCob||'pre';
+  const isPos=tipoCob==='pos';
+  const isDia=tipoCob==='dia';
+  const isPre=tipoCob==='pre';
   const faixaCor=isPos?'#b91c1c':isDia?'#b45309':orgCor;
   const faixaBg=isPos?'#fef2f2':isDia?'#fffbeb':'#eff6ff';
   const faixaLabel=isPos?'MENSALIDADE EM ATRASO':isDia?'VENCIMENTO HOJE':'LEMBRETE DE COBRANCA';
@@ -97,12 +98,12 @@ function htmlCobranca(opts) {
      +'<p style="margin:0;font-size:11px;color:#6b7280">O codigo tambem foi enviado separadamente pelo WhatsApp para facilitar a copia.</p>'
      +'</div></div>'
     :'<div style="margin:0 0 16px;border-radius:12px;background:#f8fafc;border:1.5px solid #e2e8f0;padding:16px 20px">'
-     +'<p style="margin:0;font-size:12px;color:#64748b;line-height:1.6">Para pagamento via <strong>PIX</strong>, entre em contato com a secretaria financeira pelo WhatsApp.</p>'
+     +'<p style="margin:0;font-size:12px;color:#64748b;line-height:1.6">Para pagamento via <strong>PIX</strong>, entre em contato com a Diretoria Financeira pelo WhatsApp.</p>'
      +'</div>';
   const scartao=linkCartao
     ?'<div style="margin:0 0 16px;border-radius:12px;overflow:hidden;border:1.5px solid #bfdbfe"><div style="background:#1e3a8a;padding:12px 20px"><span style="color:white;font-weight:700;font-size:13px;letter-spacing:0.5px;text-transform:uppercase">Pagamento com Cartao de Credito</span></div><div style="background:#eff6ff;padding:20px;text-align:center"><p style="margin:0 0 16px;font-size:12px;color:#374151;line-height:1.6">Clique no botao abaixo para ser redirecionado ao ambiente seguro de pagamento:</p><a href="'+linkCartao+'" style="display:inline-block;background:'+orgCor+';color:white;padding:13px 40px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.5px;text-transform:uppercase">Pagar com Cartao</a><p style="margin:12px 0 0;font-size:10px;color:#94a3b8">Ambiente seguro — processado pelo PagBank</p></div></div>'
     :'';
-  return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f1f5f9"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px"><tr><td>'+cab+'</td></tr><tr><td style="background:white;padding:36px 40px"><div style="border-left:3px solid '+faixaCor+';padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:'+faixaCor+';letter-spacing:1.5px;text-transform:uppercase">'+faixaLabel+'</p><h2 style="margin:4px 0 0;font-size:18px;font-weight:700;color:#0f172a;line-height:1.3">'+titulo+'</h2></div><p style="margin:0 0 28px;font-size:14px;color:#475569;line-height:1.7">'+mensagem+'</p><div style="height:1px;background:#e2e8f0;margin:0 0 24px"></div><p style="margin:0 0 16px;font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:2px;text-transform:uppercase">Opcoes de pagamento</p>'+spix+scartao+'<div style="background:#f8fafc;border-radius:8px;padding:16px 20px;margin-top:8px;border:1px solid #e2e8f0"><p style="margin:0;font-size:12px;color:#64748b;line-height:1.7">Em caso de duvidas ou para confirmar o pagamento, entre em contato com a secretaria financeira respondendo este e-mail ou via WhatsApp.</p></div></td></tr><tr><td style="background:#0f172a;padding:24px 40px"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">'+orgNome+'</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">Mensagem automatica</p></td><td align="right"><p style="margin:0;color:rgba(255,255,255,0.3);font-size:9px;letter-spacing:1.5px;text-transform:uppercase">Powered by PagBank</p></td></tr></table></td></tr></table></td></tr></table></body></html>';
+  return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f1f5f9"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px"><tr><td>'+cab+'</td></tr><tr><td style="background:white;padding:36px 40px"><div style="border-left:3px solid '+faixaCor+';padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:'+faixaCor+';letter-spacing:1.5px;text-transform:uppercase">'+faixaLabel+'</p><h2 style="margin:4px 0 0;font-size:18px;font-weight:700;color:#0f172a;line-height:1.3">'+titulo+'</h2></div><p style="margin:0 0 28px;font-size:14px;color:#475569;line-height:1.7">'+mensagem+'</p><div style="height:1px;background:#e2e8f0;margin:0 0 24px"></div><p style="margin:0 0 16px;font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:2px;text-transform:uppercase">Opcoes de pagamento</p>'+spix+scartao+'<div style="background:#f8fafc;border-radius:8px;padding:16px 20px;margin-top:8px;border:1px solid #e2e8f0"><p style="margin:0;font-size:12px;color:#64748b;line-height:1.7">Em caso de duvidas ou para confirmar o pagamento, entre em contato com a Diretoria Financeira respondendo este e-mail ou via WhatsApp.</p></div></td></tr><tr><td style="background:#0f172a;padding:24px 40px"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">'+orgNome+'</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">Mensagem automatica</p></td><td align="right"><p style="margin:0;color:rgba(255,255,255,0.3);font-size:9px;letter-spacing:1.5px;text-transform:uppercase">Powered by PagBank</p></td></tr></table></td></tr></table></td></tr></table></body></html>';
 }
 
 function preencherTemplate(tpl, dados) {
@@ -212,12 +213,13 @@ async function notificarCobranca(opts) {
   if (membro.email) {
     const msgHtml = htmlCobranca({
       titulo:     tituloMap[tipo] || '',
-      mensagem:   'Prezado(a) ' + dados.nome + ', segue abaixo as opções para pagamento da sua mensalidade de ' + dados.valor_desc + ' (com desconto de pontualidade).',
+      mensagem:   'Prezado(a) ' + dados.nome + ', segue abaixo as opcoes para pagamento da sua mensalidade de ' + dados.valor_desc + ' (com desconto de pontualidade).',
       linkCartao,
       pixCode,
       orgNome,
       orgCor,
-      orgLogo
+      orgLogo,
+      tipoCob: tipo
     });
 
     const r = await enviarEmail({
