@@ -277,12 +277,21 @@ router.get('/membros/:id/editar', requireAuth, requireFinanceiro, async (req, re
 });
 
 router.post('/membros/:id/editar', requireAuth, requireFinanceiro, async (req, res) => {
-  const { nome, cpf, email, whatsapp, data_nascimento, dia_vencimento, mensalidade, desconto_pontualidade, ativo, observacoes } = req.body;
+  const { nome, cpf, email, whatsapp, data_nascimento, dia_vencimento, mensalidade, desconto_pontualidade, ativo, observacoes, motivo_inativacao } = req.body;
+  const membroAtual = await query('SELECT ativo FROM membros WHERE id=$1', [req.params.id]);
+  const eraAtivo = membroAtual.rows[0]?.ativo;
+  const novoAtivo = ativo ? 1 : 0;
   await query(
     'UPDATE membros SET nome=$1,cpf=$2,email=$3,whatsapp=$4,data_nascimento=$5,dia_vencimento=$6,mensalidade=$7,desconto_pontualidade=$8,ativo=$9,observacoes=$10 WHERE id=$11',
-    [nome, cpf||null, email||null, whatsapp||null, data_nascimento||null, parseInt(dia_vencimento)||5, parseFloat(mensalidade)||100, parseFloat(desconto_pontualidade)||10, ativo?1:0, observacoes||null, req.params.id]
+    [nome, cpf||null, email||null, whatsapp||null, data_nascimento||null, parseInt(dia_vencimento)||15, parseFloat(mensalidade)||100, parseFloat(desconto_pontualidade)||10, novoAtivo, observacoes||null, req.params.id]
   );
-  req.flash('msg', 'Membro atualizado!');
+  if (eraAtivo == 1 && novoAtivo === 0) {
+    await query("UPDATE cobrancas SET status='cancelado' WHERE membro_id=$1 AND status='pendente'", [req.params.id]);
+    if (motivo_inativacao) {
+      await query('INSERT INTO inativacoes_log (tipo, referencia_id, motivo, usuario_id) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING', ['membro', req.params.id, motivo_inativacao, req.session.usuario.id]).catch(()=>{});
+    }
+  }
+  req.flash('msg', novoAtivo === 0 ? 'Membro inativado e cobranças pendentes canceladas!' : 'Membro atualizado!');
   res.redirect('/membros');
 });
 
@@ -963,8 +972,13 @@ router.get('/diretivos/:id/foto', requireAuth, async (req, res) => {
 router.post('/diretivos/:id/toggle', requireAuth, requireAdmin, async (req, res) => {
   const r = await query('SELECT ativo FROM diretivos WHERE id=$1', [req.params.id]);
   const atual = r.rows[0]?.ativo;
-  await query('UPDATE diretivos SET ativo=$1 WHERE id=$2', [atual == 0 ? 1 : 0, req.params.id]);
-  req.session.msg = [atual == 0 ? 'Diretivo reativado!' : 'Diretivo desativado.'];
+  const novoStatus = atual == 0 ? 1 : 0;
+  const motivo = req.body.motivo || null;
+  await query('UPDATE diretivos SET ativo=$1 WHERE id=$2', [novoStatus, req.params.id]);
+  if (novoStatus === 0 && motivo) {
+    await query('INSERT INTO inativacoes_log (tipo, referencia_id, motivo, usuario_id) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING', ['diretivo', req.params.id, motivo, req.session.usuario.id]).catch(()=>{});
+  }
+  req.session.msg = [novoStatus == 1 ? 'Diretivo reativado!' : 'Diretivo inativado.'];
   res.redirect('/diretivos' + (req.query.status ? '?status=' + req.query.status : ''));
 });
 
@@ -1243,9 +1257,14 @@ router.get('/ligantes', requireAuth, async (req, res) => {
 router.post('/ligantes/:id/toggle', requireAuth, async (req, res) => {
   const r = await query('SELECT ativo FROM ligantes WHERE id=$1', [req.params.id]);
   const atual = r.rows[0]?.ativo;
-  await query('UPDATE ligantes SET ativo=$1 WHERE id=$2', [atual == 0 ? 1 : 0, req.params.id]);
-  await logAtividade(req.session.usuario.id, 'LIGANTE_STATUS', 'Status alterado ID: ' + req.params.id, req);
-  req.session.msg = ['Status atualizado com sucesso!'];
+  const novoStatus = atual == 0 ? 1 : 0;
+  const motivo = req.body.motivo || null;
+  await query('UPDATE ligantes SET ativo=$1 WHERE id=$2', [novoStatus, req.params.id]);
+  if (novoStatus === 0 && motivo) {
+    await query('INSERT INTO inativacoes_log (tipo, referencia_id, motivo, usuario_id) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING', ['ligante', req.params.id, motivo, req.session.usuario.id]).catch(()=>{});
+  }
+  await logAtividade(req.session.usuario.id, 'LIGANTE_STATUS', 'Status alterado ID: ' + req.params.id + (motivo ? ' — ' + motivo : ''), req);
+  req.session.msg = [novoStatus == 1 ? 'Ligante reativado!' : 'Ligante inativado.'];
   res.redirect('/ligantes');
 });
 
