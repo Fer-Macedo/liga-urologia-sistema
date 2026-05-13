@@ -1,26 +1,26 @@
 /* ============================================================
-   LIGA UROLOGIA — Painel Interno (v4)
-   admin-modern.css — correção scroll duplo da sidebar
+   LIGA UROLOGIA — Painel Interno (v5)
+   admin-modern.css — sidebar full-height + logo imagem
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
-/* RESET DE LARGURA */
 html, body {
   margin: 0 !important;
   padding: 0 !important;
   width: 100% !important;
   max-width: 100% !important;
-  min-height: 100vh !important;
   overflow-x: hidden;
 }
+
+html { height: 100% !important; }
 
 body {
   font-family: 'Plus Jakarta Sans', 'Outfit', system-ui, -apple-system, sans-serif !important;
   -webkit-font-smoothing: antialiased;
+  min-height: 100vh !important;
 }
 
-/* LAYOUT */
 .layout,
 body > .layout,
 div.layout {
@@ -31,6 +31,7 @@ div.layout {
   min-height: 100vh !important;
   margin: 0 !important;
   padding: 0 !important;
+  align-items: stretch !important;
 }
 
 .main,
@@ -69,10 +70,7 @@ div.content,
   box-sizing: border-box !important;
 }
 
-/* ============================================================
-   SIDEBAR — CORRIGIDA (sem scroll duplo)
-   ============================================================ */
-
+/* SIDEBAR - sticky top, altura 100vh */
 .sidebar,
 aside.sidebar {
   background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
@@ -86,28 +84,29 @@ aside.sidebar {
   max-width: 240px !important;
   flex-shrink: 0 !important;
   flex-grow: 0 !important;
-  height: 100vh !important;
-  max-height: 100vh !important;
-  position: sticky !important;
-  top: 0 !important;
-  overflow: hidden !important;  /* IMPORTANTE: sem scroll na sidebar inteira */
+  align-self: stretch !important;
   border: none !important;
   box-sizing: border-box !important;
+  position: sticky !important;
+  top: 0 !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
 }
 
-/* BRAND - fixo no topo */
 .sidebar-brand {
   display: flex !important;
   align-items: center;
   gap: 12px;
-  padding: 18px 16px;
+  padding: 16px 14px;
   border-bottom: 1px solid rgba(255,255,255,.08);
   flex-shrink: 0 !important;
+  background: rgba(0,0,0,0.15);
 }
 .sidebar-brand-logo {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
   background: linear-gradient(135deg, #2563eb, #06b6d4);
   display: grid;
   place-items: center;
@@ -117,13 +116,28 @@ aside.sidebar {
   color: white;
   box-shadow: 0 4px 14px rgba(37,99,235,.35);
   flex-shrink: 0;
+  overflow: hidden;
 }
+
+.sidebar-brand-logo--img {
+  background: white !important;
+  padding: 4px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.25) !important;
+}
+.sidebar-brand-logo--img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
 .sidebar-brand-text {
   display: flex;
   flex-direction: column;
   line-height: 1.2;
   min-width: 0;
   overflow: hidden;
+  flex: 1;
 }
 .sidebar-brand-text strong {
   font-family: 'Outfit', sans-serif;
@@ -142,7 +156,6 @@ aside.sidebar {
   margin-top: 1px;
 }
 
-/* NAV - área que rola */
 .sidebar-nav {
   flex: 1 1 auto !important;
   padding: 12px 10px !important;
@@ -151,13 +164,8 @@ aside.sidebar {
   min-height: 0 !important;
 }
 
-/* Scrollbar customizada (mais fina e discreta) */
-.sidebar-nav::-webkit-scrollbar {
-  width: 5px;
-}
-.sidebar-nav::-webkit-scrollbar-track {
-  background: transparent;
-}
+.sidebar-nav::-webkit-scrollbar { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
 .sidebar-nav::-webkit-scrollbar-thumb {
   background: rgba(255,255,255,0.08);
   border-radius: 4px;
@@ -209,12 +217,11 @@ aside.sidebar {
   flex-shrink: 0;
 }
 
-/* FOOTER - fixo embaixo */
 .sidebar-footer {
   border-top: 1px solid rgba(255,255,255,.08);
   padding: 12px 14px;
   flex-shrink: 0 !important;
-  background: rgba(0,0,0,0.2);
+  background: rgba(0,0,0,0.25);
 }
 .sidebar-user {
   display: flex;
@@ -271,7 +278,6 @@ aside.sidebar {
   color: white;
 }
 
-/* TOPBAR */
 .topbar,
 .main .topbar,
 .main > .topbar {
@@ -303,7 +309,6 @@ aside.sidebar {
   align-items: center;
 }
 
-/* CARDS */
 .freq-card,
 .stat-card {
   border-radius: 14px !important;
@@ -315,7 +320,6 @@ aside.sidebar {
   margin-bottom: 16px !important;
 }
 
-/* BOTÕES */
 .btn {
   border-radius: 9px !important;
   font-family: 'Plus Jakarta Sans', sans-serif !important;
@@ -341,7 +345,6 @@ aside.sidebar {
   color: white !important;
 }
 
-/* ALERTAS */
 .alerta {
   border-radius: 12px !important;
   border: 1px solid transparent !important;
@@ -357,7 +360,6 @@ aside.sidebar {
   border-color: #fecaca !important;
 }
 
-/* MODAL */
 .modal-overlay {
   background: rgba(15, 23, 42, .55) !important;
   backdrop-filter: blur(3px);
@@ -367,7 +369,6 @@ aside.sidebar {
   box-shadow: 0 20px 50px rgba(15,23,42,.18) !important;
 }
 
-/* INPUTS */
 .input {
   border-radius: 9px !important;
   font-family: 'Plus Jakarta Sans', sans-serif !important;
@@ -378,7 +379,6 @@ aside.sidebar {
   box-shadow: 0 0 0 4px rgba(30, 58, 138, .10) !important;
 }
 
-/* BADGES */
 .badge {
   border-radius: 999px !important;
   padding: 3px 10px !important;
@@ -386,17 +386,13 @@ aside.sidebar {
   font-weight: 700 !important;
 }
 
-/* STATS */
-.stat-card {
-  padding: 18px 22px !important;
-}
+.stat-card { padding: 18px 22px !important; }
 .stat-valor {
   font-family: 'Outfit', sans-serif !important;
   font-size: 32px !important;
   font-weight: 700 !important;
 }
 
-/* RESPONSIVO */
 @media (max-width: 768px) {
   .sidebar,
   aside.sidebar {
