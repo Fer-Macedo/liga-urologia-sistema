@@ -231,6 +231,10 @@
     .cor-dot { width: 26px; height: 26px; border-radius: 6px; cursor: pointer; border: 3px solid transparent; transition: .2s; }
     .cor-dot:hover { transform: scale(1.1); }
 
+    .campo-ord-item { display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--fundo);border-radius:8px;border:1px solid var(--borda);margin-bottom:6px;cursor:grab;transition:all .15s;gap:10px; }
+    .campo-ord-item:active { cursor:grabbing;opacity:.8; }
+    .campo-ord-item.drag-over { border-color:var(--cor-primaria);background:var(--card); }
+    .drag-handle { color:var(--texto2);cursor:grab;flex-shrink:0; }
     .email-massa-box {
       background: var(--fundo);
       border: 2px solid var(--borda);
@@ -412,44 +416,29 @@
       <!-- CAMPOS -->
       <div class="tab-content" id="tab-campos">
         <div class="section-card" style="margin-bottom:16px">
-          <div class="section-header">Campos padrão do formulário</div>
-          <div class="section-body">
-            <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Estes campos aparecem em todos os formulários e não podem ser removidos.</p>
-            <% const camposPadrao = ['Nome completo','Email','WhatsApp','Data de nascimento','RG / CI','Semestre','Turma','Catraca (UCP)','Instituição (externos)']; %>
-            <% camposPadrao.forEach(cp => { %>
-            <div class="campo-item">
-              <div><span style="font-weight:600"><%= cp %></span><span style="font-size:11px;color:var(--texto2);margin-left:8px;background:var(--borda);padding:2px 6px;border-radius:4px">padrão</span></div>
-              <span style="font-size:11px;color:#10b981;font-weight:600">Sempre visível</span>
-            </div>
-            <% }) %>
+          <div class="section-header">
+            Todos os campos
+            <button type="button" onclick="salvarOrdem()" class="btn-xs verde" id="btn-salvar-ordem" style="display:none">Salvar ordem</button>
           </div>
-        </div>
-        <div class="section-card" style="margin-bottom:16px">
-          <div class="section-header">Campos extras (<%= campos.length %>)</div>
           <div class="section-body">
-            <% if(campos.length===0){%><p style="color:var(--texto2);font-size:13px">Nenhum campo extra.</p><%}%>
-            <% campos.forEach((campo, idx) => { %>
-            <div class="campo-item">
-              <div>
-                <span style="font-weight:600"><%= campo.label %></span>
-                <span style="font-size:11px;color:var(--texto2);margin-left:8px;background:var(--borda);padding:2px 6px;border-radius:4px"><%= campo.tipo %></span>
-                <% if(campo.obrigatorio){%><span style="font-size:11px;color:#dc2626;margin-left:4px">obrigatório</span><%}%>
+            <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Arraste para reordenar. Campos padrão não podem ser excluídos.</p>
+            <div id="lista-campos-ord">
+              <% const camposPad=[{key:'nome',label:'Nome completo'},{key:'email',label:'Email'},{key:'whatsapp',label:'WhatsApp'},{key:'data_nascimento',label:'Data de nascimento'},{key:'rg',label:'RG / CI'},{key:'semestre',label:'Semestre'},{key:'turma',label:'Turma'},{key:'catraca',label:'Catraca (UCP)'},{key:'instituicao',label:'Instituição (externos)'}]; %>
+              <% const todosCampos=[...camposPad.map(c=>({...c,padrao:true})),...campos.map(c=>({key:'extra_'+c.id,label:c.label,padrao:false,id:c.id,tipo:c.tipo,obrigatorio:c.obrigatorio}))]; %>
+              <% todosCampos.forEach(c => { %>
+              <div class="campo-ord-item" data-key="<%= c.key %>">
+                <div style="display:flex;align-items:center;gap:10px;flex:1">
+                  <div class="drag-handle"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg></div>
+                  <span style="font-weight:600"><%= c.label %></span>
+                  <% if(c.padrao){ %><span style="font-size:10px;background:#eff6ff;color:#1e40af;padding:2px 7px;border-radius:4px;font-weight:700">padrão</span>
+                  <% }else{ %><span style="font-size:10px;background:var(--borda);color:var(--texto2);padding:2px 7px;border-radius:4px"><%= c.tipo %></span><% if(c.obrigatorio){%><span style="font-size:10px;color:#dc2626;margin-left:4px">obrig.</span><%}%><% } %>
+                </div>
+                <% if(!c.padrao){ %>
+                <form method="POST" action="/eventos/<%= evento.id %>/campos/<%= c.id %>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')"><button type="submit" class="btn-xs verm">Excluir</button></form>
+                <% }else{ %><span style="font-size:11px;color:#10b981;font-weight:600">fixo</span><% } %>
               </div>
-              <div style="display:flex;gap:4px">
-                <form method="POST" action="/eventos/<%= evento.id %>/campos/<%= campo.id %>/mover" style="display:inline">
-                  <input type="hidden" name="direcao" value="cima">
-                  <button type="submit" class="btn-xs" <%= idx===0?'disabled':'' %>>↑</button>
-                </form>
-                <form method="POST" action="/eventos/<%= evento.id %>/campos/<%= campo.id %>/mover" style="display:inline">
-                  <input type="hidden" name="direcao" value="baixo">
-                  <button type="submit" class="btn-xs" <%= idx===campos.length-1?'disabled':'' %>>↓</button>
-                </form>
-                <form method="POST" action="/eventos/<%= evento.id %>/campos/<%= campo.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')">
-                  <button type="submit" class="btn-xs verm">Excluir</button>
-                </form>
-              </div>
+              <% }) %>
             </div>
-            <% }) %>
           </div>
         </div>
         <div class="section-card">
@@ -457,7 +446,7 @@
           <div class="section-body">
             <form action="/eventos/<%= evento.id %>/campos" method="POST">
               <div class="grid-2">
-                <div class="campo"><label class="label">Nome do campo</label><input name="label" class="input" placeholder="Ex: Instituição..." required></div>
+                <div class="campo"><label class="label">Nome</label><input name="label" class="input" placeholder="Ex: Instituição..." required></div>
                 <div class="campo"><label class="label">Tipo</label>
                   <select name="tipo" class="input" onchange="mostrarOpcoes(this.value)">
                     <option value="text">Texto simples</option>
@@ -482,18 +471,17 @@
           </div>
         </div>
       </div>
-
       <!-- MALA DIRETA -->
       <div class="tab-content" id="tab-mala-direta">
-        <div class="section-card">
-          <div class="section-header">Composição do email</div>
+        <div class="section-card" style="margin-bottom:20px">
+          <div class="section-header">Compor email</div>
           <div class="section-body">
             <form action="/eventos/<%= evento.id %>/mala-direta" method="POST" id="form-mala">
               <input type="hidden" name="conteudo_html" id="mala-html">
               <div class="grid-2" style="margin-bottom:16px">
                 <div class="campo"><label class="label">Assunto *</label><input name="assunto" class="input" required placeholder="Ex: Informações importantes..."></div>
                 <div class="campo"><label class="label">Enviar para</label>
-                  <select name="destinatarios" class="input">
+                  <select name="destinatarios" class="input" id="sel-dest" onchange="atualizarContador()">
                     <option value="todos">Todos os inscritos</option>
                     <option value="confirmados">Apenas confirmados</option>
                     <option value="pendentes">Apenas pendentes</option>
@@ -501,24 +489,31 @@
                 </div>
               </div>
               <div class="campo" style="margin-bottom:16px">
-                <label class="label">Conteúdo do email</label>
-                <div style="font-size:11px;color:var(--texto2);margin-bottom:8px">Use <code>{nome}</code> para inserir o nome do participante automaticamente.</div>
-                <div id="editor-mala" style="height:320px;background:white;border-radius:8px"></div>
+                <label class="label">Conteúdo</label>
+                <div style="font-size:11px;color:var(--texto2);margin-bottom:6px">Use <code style="background:var(--fundo);padding:2px 5px;border-radius:4px">{nome}</code> para o nome do participante.</div>
+                <div id="editor-mala" style="height:300px;background:white;border-radius:8px"></div>
               </div>
-              <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:12px;color:#15803d;line-height:1.6">
-                O email sera enviado com a logomarca da liga no topo, saudacao personalizada e o conteudo acima, com rodape da organizacao.
+              <div style="background:linear-gradient(135deg,#eff6ff,#f0fdf4);border:1px solid #bfdbfe;border-radius:10px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:16px">
+                <div style="flex:1">
+                  <div style="font-size:13px;font-weight:700;color:#1e40af;margin-bottom:4px">Layout do email</div>
+                  <div style="font-size:12px;color:#3730a3;line-height:1.6">Cabeçalho colorido com logo da liga → "Olá, [Nome]!" → Seu conteúdo → Rodapé institucional.</div>
+                </div>
+                <div style="width:52px;height:52px;background:linear-gradient(135deg,var(--cor-primaria),#6366f1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                </div>
               </div>
               <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-                <div style="font-size:13px;color:var(--texto2)">
-                  Total: <strong><%= inscricoes.length %></strong> inscritos · Confirmados: <strong><%= inscricoes.filter(i=>i.status==='confirmado').length %></strong>
-                </div>
-                <button type="submit" class="btn btn-primario" onclick="document.getElementById('mala-html').value=quilMala.root.innerHTML;return confirm('Enviar emails?')">Enviar emails</button>
+                <div style="font-size:13px;color:var(--texto2)">Enviando para: <strong id="txt-contador-dest"><%= inscricoes.length %> inscritos</strong></div>
+                <button type="submit" class="btn btn-primario" onclick="document.getElementById('mala-html').value=quilMala.root.innerHTML;return confirm('Confirmar envio?')">Enviar emails</button>
               </div>
             </form>
           </div>
         </div>
+        <div class="section-card">
+          <div class="section-header">Histórico de envios</div>
+          <div id="historico-mala" style="padding:16px;text-align:center;color:var(--texto2);font-size:13px">Carregando...</div>
+        </div>
       </div>
-
       <!-- INSCRITOS -->
       <div class="tab-content" id="tab-inscritos">
         <div class="email-massa-box">
@@ -1036,6 +1031,10 @@
 <script>
 const quilMala = new Quill('#editor-mala', {
   theme: 'snow',
+  modules: { toolbar: [[{'font':[]},{'size':['small',false,'large','huge']}],['bold','italic','underline','strike'],[{'color':[]},{'background':[]}],[{'align':[]}],[{'list':'ordered'},{'list':'bullet'}],['link','image'],['clean']] }
+});
+const quilMala2 = quilMala; {
+  theme: 'snow',
   modules: { toolbar: [
     [{ 'font': [] }, { 'size': ['small', false, 'large', 'huge'] }],
     ['bold', 'italic', 'underline', 'strike'],
@@ -1062,6 +1061,8 @@ function showTab(id, btn) {
 }
 
 window.addEventListener('DOMContentLoaded', () => {
+  initDrag();
+  carregarHistorico();
   const tab = new URLSearchParams(window.location.search).get('tab');
   if (tab) {
     const btn = document.querySelector(`.tab-btn[onclick*="'${tab}'"]`);
@@ -1096,6 +1097,67 @@ function editarInscrito(id, nome, email, wpp, cpf, inst, status) {
   abrirModal('modal-editar-inscrito');
 }
 
+let dragSrc=null;
+function initDrag() {
+  const lista = document.getElementById('lista-campos-ord');
+  if (!lista) return;
+  lista.querySelectorAll('.campo-ord-item').forEach(item => {
+    item.setAttribute('draggable', true);
+    item.addEventListener('dragstart', () => { dragSrc=item; item.style.opacity='.5'; });
+    item.addEventListener('dragend', () => { item.style.opacity=''; lista.querySelectorAll('.campo-ord-item').forEach(i=>i.classList.remove('drag-over')); });
+    item.addEventListener('dragover', e => { e.preventDefault(); item.classList.add('drag-over'); });
+    item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+    item.addEventListener('drop', e => {
+      e.preventDefault(); item.classList.remove('drag-over');
+      if (dragSrc && dragSrc!==item) {
+        const its=[...lista.querySelectorAll('.campo-ord-item')];
+        if(its.indexOf(dragSrc)<its.indexOf(item)) item.after(dragSrc); else item.before(dragSrc);
+        document.getElementById('btn-salvar-ordem').style.display='';
+      }
+    });
+  });
+}
+function salvarOrdem() {
+  const keys=[...document.querySelectorAll('.campo-ord-item')].map(i=>i.dataset.key);
+  fetch('/eventos/<%= evento.id %>/campos/ordem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({campos:JSON.stringify(keys)})})
+    .then(r=>r.json()).then(d=>{ if(d.ok){document.getElementById('btn-salvar-ordem').style.display='none';alert('Ordem salva!');} });
+}
+const inscricoesMala=<%- JSON.stringify(inscricoes) %>;
+function atualizarContador() {
+  const dest=document.getElementById('sel-dest').value;
+  let n=inscricoesMala.length;
+  if(dest==='confirmados') n=inscricoesMala.filter(i=>i.status==='confirmado').length;
+  else if(dest==='pendentes') n=inscricoesMala.filter(i=>i.status==='pendente').length;
+  document.getElementById('txt-contador-dest').textContent=n+' inscritos';
+}
+function carregarHistorico() {
+  fetch('/eventos/<%= evento.id %>/mala-direta/historico').then(r=>r.json()).then(d=>{
+    const el=document.getElementById('historico-mala');
+    if(!d.ok||!d.envios.length){el.innerHTML='<div style="padding:20px;text-align:center;color:var(--texto2)">Nenhum email enviado ainda.</div>';return;}
+    el.innerHTML=d.envios.map(e=>{
+      const dt=new Date(e.criado_em).toLocaleString('pt-BR');
+      const tx=e.total_enviados>0?Math.round(e.total_enviados/(e.total_enviados+e.total_erros)*100):0;
+      return '<div style="padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">'
+        +'<div><div style="font-weight:600;font-size:13px">'+e.assunto+'</div>'
+        +'<div style="font-size:11px;color:var(--texto2);margin-top:3px">'+dt+' · '+e.destinatarios+'</div></div>'
+        +'<div style="display:flex;gap:10px;align-items:center">'
+        +'<span style="color:#10b981;font-weight:600;font-size:12px">'+e.total_enviados+' enviados</span>'
+        +(e.total_erros>0?'<span style="color:#ef4444;font-weight:600;font-size:12px">'+e.total_erros+' erros</span>':'')
+        +'<span style="background:#eff6ff;color:#1e40af;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700">'+tx+'% entrega</span>'
+        +'<button onclick="verLogs('+e.id+')" class="btn-xs">Detalhes</button></div></div>';
+    }).join('');
+  });
+}
+function verLogs(id){
+  fetch('/eventos/<%= evento.id %>/mala-direta/'+id+'/logs').then(r=>r.json()).then(d=>{
+    if(!d.ok)return;
+    const w=window.open('','_blank','width=700,height=500');
+    w.document.write('<html><head><title>Log</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}th,td{padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:left}th{background:#f8fafc;font-size:12px}</style></head><body><h3>Detalhes do envio</h3><table><thead><tr><th>Nome</th><th>Email</th><th>Status</th></tr></thead><tbody>'
+      +d.logs.map(l=>'<tr><td>'+l.nome+'</td><td>'+l.email+'</td><td style="color:'+(l.status==='enviado'?'#166534':'#991b1b')+'">'+l.status+'</td></tr>').join('')
+      +'</tbody></table></body></html>');
+    w.document.close();
+  });
+}
 function mostrarOpcoes(tipo) {
   document.getElementById('div-opcoes').style.display = ['select','radio','checkbox'].includes(tipo) ? 'block' : 'none';
 }
