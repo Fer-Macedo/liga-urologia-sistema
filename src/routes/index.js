@@ -968,11 +968,7 @@ router.post('/diretivos/:id/editar', requireAuth, requireSecretaria, async (req,
   res.redirect('/diretivos');
 });
 
-router.post('/diretivos/:id/toggle', requireAuth, requireAdmin, async (req, res) => {
-  await query('UPDATE diretivos SET ativo=0 WHERE id=$1', [req.params.id]);
-  req.session.msg = ['Diretivo removido.'];
-  res.redirect('/diretivos');
-});
+undefined
 
 // ─── FREQUÊNCIA DIRETIVOS ─────────────────────────────────────────────────────
 
