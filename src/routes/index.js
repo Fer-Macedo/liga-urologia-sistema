@@ -1198,12 +1198,15 @@ router.get('/ligantes', requireAuth, async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg||[]; req.session.msg = [];
   const erro = req.session.erro||[]; req.session.erro = [];
-  const r = await query('SELECT * FROM ligantes ORDER BY nome ASC');
+  const r = await query('SELECT * FROM ligantes ' + (req.query.status === 'inativos' ? 'WHERE ativo=0' : req.query.status === 'todos' ? '' : 'WHERE ativo=1') + ' ORDER BY nome ASC');
   const ligantes = r.rows;
-  const total = ligantes.length;
-  const ativos = ligantes.filter(l => l.ativo != 0).length;
-  const inativos = ligantes.filter(l => l.ativo == 0).length;
-  res.render('pages/ligantes', { config, usuario: req.session.usuario, ligantes, msg, erro, total, ativos, inativos });
+  const totR = await query('SELECT COUNT(*) t FROM ligantes');
+  const atvR = await query('SELECT COUNT(*) t FROM ligantes WHERE ativo=1');
+  const total = parseInt(totR.rows[0].t);
+  const ativos = parseInt(atvR.rows[0].t);
+  const inativos = total - ativos;
+  const sfL = req.query.status || 'ativos';
+  res.render('pages/ligantes', { config, usuario: req.session.usuario, ligantes, msg, erro, total, ativos, inativos, statusFiltro: sfL });
 });
 
 router.post('/ligantes/:id/toggle', requireAuth, async (req, res) => {
