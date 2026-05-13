@@ -290,6 +290,7 @@
         <button class="tab-btn" onclick="showTab('lotes',this)">Lotes</button>
         <button class="tab-btn" onclick="showTab('campos',this)">Campos</button>
         <button class="tab-btn" onclick="showTab('inscritos',this)">Inscritos</button>
+        <button class="tab-btn" onclick="showTab('mala-direta',this)">Mala Direta</button>
         <button class="tab-btn" onclick="showTab('pagamentos',this)">Pagamentos</button>
         <button class="tab-btn" onclick="showTab('financeiro',this)">Financeiro</button>
         <button class="tab-btn" onclick="showTab('online',this)">Online / Live</button>
@@ -411,20 +412,42 @@
       <!-- CAMPOS -->
       <div class="tab-content" id="tab-campos">
         <div class="section-card" style="margin-bottom:16px">
-          <div class="section-header">Campos do formulário</div>
+          <div class="section-header">Campos padrão do formulário</div>
           <div class="section-body">
-            <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Campos padrão: Nome, Email, WhatsApp, RG/CI, Semestre, Turma. Adicione campos extras abaixo.</p>
-            <% if(campos.length===0){%><p style="color:var(--texto2);font-size:13px">Nenhum campo extra adicionado.</p><%}%>
-            <% campos.forEach(campo => { %>
+            <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Estes campos aparecem em todos os formulários e não podem ser removidos.</p>
+            <% const camposPadrao = ['Nome completo','Email','WhatsApp','Data de nascimento','RG / CI','Semestre','Turma','Catraca (UCP)','Instituição (externos)']; %>
+            <% camposPadrao.forEach(cp => { %>
+            <div class="campo-item">
+              <div><span style="font-weight:600"><%= cp %></span><span style="font-size:11px;color:var(--texto2);margin-left:8px;background:var(--borda);padding:2px 6px;border-radius:4px">padrão</span></div>
+              <span style="font-size:11px;color:#10b981;font-weight:600">Sempre visível</span>
+            </div>
+            <% }) %>
+          </div>
+        </div>
+        <div class="section-card" style="margin-bottom:16px">
+          <div class="section-header">Campos extras (<%= campos.length %>)</div>
+          <div class="section-body">
+            <% if(campos.length===0){%><p style="color:var(--texto2);font-size:13px">Nenhum campo extra.</p><%}%>
+            <% campos.forEach((campo, idx) => { %>
             <div class="campo-item">
               <div>
                 <span style="font-weight:600"><%= campo.label %></span>
                 <span style="font-size:11px;color:var(--texto2);margin-left:8px;background:var(--borda);padding:2px 6px;border-radius:4px"><%= campo.tipo %></span>
                 <% if(campo.obrigatorio){%><span style="font-size:11px;color:#dc2626;margin-left:4px">obrigatório</span><%}%>
               </div>
-              <form method="POST" action="/eventos/<%= evento.id %>/campos/<%= campo.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir campo?')">
-                <button type="submit" class="btn-xs verm">Excluir</button>
-              </form>
+              <div style="display:flex;gap:4px">
+                <form method="POST" action="/eventos/<%= evento.id %>/campos/<%= campo.id %>/mover" style="display:inline">
+                  <input type="hidden" name="direcao" value="cima">
+                  <button type="submit" class="btn-xs" <%= idx===0?'disabled':'' %>>↑</button>
+                </form>
+                <form method="POST" action="/eventos/<%= evento.id %>/campos/<%= campo.id %>/mover" style="display:inline">
+                  <input type="hidden" name="direcao" value="baixo">
+                  <button type="submit" class="btn-xs" <%= idx===campos.length-1?'disabled':'' %>>↓</button>
+                </form>
+                <form method="POST" action="/eventos/<%= evento.id %>/campos/<%= campo.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')">
+                  <button type="submit" class="btn-xs verm">Excluir</button>
+                </form>
+              </div>
             </div>
             <% }) %>
           </div>
@@ -434,29 +457,62 @@
           <div class="section-body">
             <form action="/eventos/<%= evento.id %>/campos" method="POST">
               <div class="grid-2">
-                <div class="campo"><label class="label">Nome do campo</label><input name="label" class="input" placeholder="Ex: Instituição, Nível..." required></div>
+                <div class="campo"><label class="label">Nome do campo</label><input name="label" class="input" placeholder="Ex: Instituição..." required></div>
                 <div class="campo"><label class="label">Tipo</label>
                   <select name="tipo" class="input" onchange="mostrarOpcoes(this.value)">
                     <option value="text">Texto simples</option>
                     <option value="textarea">Caixa de texto</option>
-                    <option value="email">Email</option>
-                    <option value="number">Número</option>
                     <option value="select">Lista suspensa</option>
                     <option value="radio">Múltipla escolha</option>
-                    <option value="checkbox">Caixas de seleção</option>
                     <option value="date">Data</option>
                   </select>
                 </div>
                 <div class="campo" id="div-opcoes" style="grid-column:1/-1;display:none">
                   <label class="label">Opções (uma por linha)</label>
-                  <textarea name="opcoes" class="input" rows="4" placeholder="Opção 1&#10;Opção 2&#10;Opção 3"></textarea>
+                  <textarea name="opcoes" class="input" rows="3"></textarea>
                 </div>
                 <div class="campo"><label class="label">Obrigatório</label>
                   <select name="obrigatorio" class="input"><option value="false">Não</option><option value="true">Sim</option></select>
                 </div>
                 <div class="campo" style="display:flex;align-items:flex-end">
-                  <button type="submit" class="btn btn-primario" style="width:100%">Adicionar campo</button>
+                  <button type="submit" class="btn btn-primario" style="width:100%">Adicionar</button>
                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- MALA DIRETA -->
+      <div class="tab-content" id="tab-mala-direta">
+        <div class="section-card">
+          <div class="section-header">Composição do email</div>
+          <div class="section-body">
+            <form action="/eventos/<%= evento.id %>/mala-direta" method="POST" id="form-mala">
+              <input type="hidden" name="conteudo_html" id="mala-html">
+              <div class="grid-2" style="margin-bottom:16px">
+                <div class="campo"><label class="label">Assunto *</label><input name="assunto" class="input" required placeholder="Ex: Informações importantes..."></div>
+                <div class="campo"><label class="label">Enviar para</label>
+                  <select name="destinatarios" class="input">
+                    <option value="todos">Todos os inscritos</option>
+                    <option value="confirmados">Apenas confirmados</option>
+                    <option value="pendentes">Apenas pendentes</option>
+                  </select>
+                </div>
+              </div>
+              <div class="campo" style="margin-bottom:16px">
+                <label class="label">Conteúdo do email</label>
+                <div style="font-size:11px;color:var(--texto2);margin-bottom:8px">Use <code>{nome}</code> para inserir o nome do participante automaticamente.</div>
+                <div id="editor-mala" style="height:320px;background:white;border-radius:8px"></div>
+              </div>
+              <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;padding:14px 18px;margin-bottom:16px;font-size:12px;color:#15803d;line-height:1.6">
+                O email sera enviado com a logomarca da liga no topo, saudacao personalizada e o conteudo acima, com rodape da organizacao.
+              </div>
+              <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+                <div style="font-size:13px;color:var(--texto2)">
+                  Total: <strong><%= inscricoes.length %></strong> inscritos · Confirmados: <strong><%= inscricoes.filter(i=>i.status==='confirmado').length %></strong>
+                </div>
+                <button type="submit" class="btn btn-primario" onclick="document.getElementById('mala-html').value=quilMala.root.innerHTML;return confirm('Enviar emails?')">Enviar emails</button>
               </div>
             </form>
           </div>
@@ -978,6 +1034,18 @@
 <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
 <script src="/js/app.js"></script>
 <script>
+const quilMala = new Quill('#editor-mala', {
+  theme: 'snow',
+  modules: { toolbar: [
+    [{ 'font': [] }, { 'size': ['small', false, 'large', 'huge'] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'color': [] }, { 'background': [] }],
+    [{ 'align': [] }],
+    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+    ['link', 'image'],
+    ['clean']
+  ]}
+});
 const quill = new Quill('#editor-desc', {
   theme: 'snow',
   modules: { toolbar: [[{'header':[1,2,3,false]}],['bold','italic','underline'],[{'color':[]},{'background':[]}],[{'align':[]}],['link'],['clean']] }
