@@ -151,7 +151,7 @@
     <div class="info-strip">
       <div class="info-item"><div class="info-label">Tempo nesta sessão</div><div class="info-valor" id="tempo-sessao">00:00:00</div></div>
       <div class="info-item"><div class="info-label">Total acumulado</div><div class="info-valor" id="tempo-total">00:00:00</div></div>
-      <div class="info-item"><div class="info-label">Primeiro acesso</div><div class="info-valor" style="font-size:13px" id="primeiro-acesso">—</div></div>
+      <div class="info-item"><div class="info-label">Último acesso</div><div class="info-valor" style="font-size:13px" id="primeiro-acesso">—</div></div>
     </div>
 
     <!-- PATROCINADORES -->
@@ -230,15 +230,19 @@ const primeiroAcessoStr = '<%= presenca.primeiro_acesso ? new Date(presenca.prim
 const wapiNum = '<%= config.wapi_numero || "" %>';
 
 let online = true;
-let segundosSessao = 0;
-let segundosAcumulados = segundosIniciais;
+let segundosSessao = 0;        // tempo desta sessao (resetado a cada acesso)
+let segundosAcumulados = segundosIniciais; // historico anterior salvo no banco
+let pingCount = 0;
 
 function fmt(seg) {
+  seg = Math.max(0, Math.round(seg));
   return String(Math.floor(seg/3600)).padStart(2,'0')+':'+String(Math.floor((seg%3600)/60)).padStart(2,'0')+':'+String(seg%60).padStart(2,'0');
 }
 
 function atualizarUI() {
+  // Sessao: apenas o tempo desta conexao atual
   document.getElementById('tempo-sessao').textContent = fmt(segundosSessao);
+  // Total: historico do banco + tempo desta sessao
   document.getElementById('tempo-total').textContent = fmt(segundosAcumulados + segundosSessao);
 }
 
@@ -247,14 +251,38 @@ function validarAcesso() {
   const erro = document.getElementById('login-erro');
   if (!email) { erro.style.display='block'; erro.textContent='Digite seu email.'; return; }
   if (email !== emailInscrito) { erro.style.display='block'; return; }
+
   document.getElementById('login-overlay').style.display = 'none';
   document.getElementById('main-header').style.display = 'flex';
   document.getElementById('main-content').style.display = 'grid';
   document.getElementById('nome-exibido').textContent = nomeInscrito.split(' ')[0];
-  if (primeiroAcessoStr) document.getElementById('primeiro-acesso').textContent = primeiroAcessoStr;
-  setInterval(() => { if(online){ segundosSessao++; atualizarUI(); } }, 1000);
+
+  // Mostrar horario do ultimo acesso (ultimo_ping) ou primeiro acesso
+  const agora = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+  document.getElementById('primeiro-acesso').textContent = primeiroAcessoStr || agora;
+
+  // Contador local — so conta tempo desta sessao
   setInterval(() => {
-    if(online) fetch('/live/'+token+'/ping',{method:'POST'}).then(r=>r.json()).then(d=>{ if(d.ok){segundosAcumulados+=120;segundosSessao=Math.max(0,segundosSessao-120);} });
+    if (online) {
+      segundosSessao++;
+      atualizarUI();
+    }
+  }, 1000);
+
+  // Ping a cada 2 min — confirma presenca no banco
+  setInterval(() => {
+    if (online) {
+      pingCount++;
+      fetch('/live/'+token+'/ping', {method:'POST'})
+        .then(r=>r.json())
+        .then(d=>{
+          if (d.ok) {
+            // Banco confirmou 120s — move da sessao para acumulado
+            segundosAcumulados += 120;
+            segundosSessao = Math.max(0, segundosSessao - 120);
+          }
+        });
+    }
   }, 120000);
 }
 
