@@ -3,306 +3,276 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= presenca.evento_nome %> — Transmissão ao Vivo</title>
+  <title><%= presenca.evento_nome %> — Ao Vivo</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f172a; color: white; min-height: 100vh; }
+    :root { --cor: #1a56db; --fundo: #0f172a; --card: #1e293b; --borda: #334155; --texto: #f1f5f9; --texto2: #94a3b8; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--fundo); color: var(--texto); min-height: 100vh; }
 
-    .header {
-      background: #1e293b;
-      padding: 14px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid #334155;
-    }
-    .header-nome { font-size: 14px; font-weight: 600; color: #94a3b8; }
-    .header-evento { font-size: 16px; font-weight: 700; color: white; margin-top: 2px; }
+    /* LOGIN */
+    .login-overlay { position:fixed;inset:0;background:var(--fundo);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px; }
+    .login-card { background:var(--card);border:1px solid var(--borda);border-radius:20px;padding:40px 36px;max-width:420px;width:100%;text-align:center;box-shadow:0 24px 60px rgba(0,0,0,.4); }
+    .login-logo { width:72px;height:72px;background:linear-gradient(135deg,var(--cor),#6366f1);border-radius:18px;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:28px;font-weight:800;color:white; }
+    .login-titulo { font-size:20px;font-weight:700;margin-bottom:6px; }
+    .login-sub { font-size:13px;color:var(--texto2);margin-bottom:28px;line-height:1.6; }
+    .login-input { width:100%;padding:13px 16px;background:var(--fundo);border:1.5px solid var(--borda);border-radius:10px;color:var(--texto);font-size:15px;font-family:inherit;margin-bottom:12px;transition:border-color .15s; }
+    .login-input:focus { outline:none;border-color:var(--cor); }
+    .login-btn { width:100%;padding:14px;background:linear-gradient(135deg,var(--cor),#4f46e5);color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s; }
+    .login-btn:hover { opacity:.88; }
+    .login-erro { background:#fee2e2;color:#991b1b;padding:10px 14px;border-radius:8px;font-size:13px;margin-top:12px;display:none; }
 
-    .status-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 14px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .status-badge.online { background: #dcfce7; color: #166534; }
-    .status-badge.offline { background: #fee2e2; color: #991b1b; }
-    .status-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      animation: blink 1.5s infinite;
-    }
-    .status-badge.online .status-dot { background: #16a34a; }
-    .status-badge.offline .status-dot { background: #dc2626; animation: none; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+    /* HEADER */
+    .header { background:var(--card);border-bottom:1px solid var(--borda);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;position:sticky;top:0;z-index:100; }
+    .header-logo { width:40px;height:40px;background:linear-gradient(135deg,var(--cor),#6366f1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:white;flex-shrink:0; }
+    .header-evento { font-size:14px;font-weight:700; }
+    .header-nome { font-size:12px;color:var(--texto2); }
+    .live-badge { display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:#dc2626;border-radius:999px;font-size:11px;font-weight:700;color:white;text-transform:uppercase;letter-spacing:.06em; }
+    .live-dot { width:7px;height:7px;background:white;border-radius:50%;animation:blink 1.2s infinite; }
+    @keyframes blink { 0%,100%{opacity:1}50%{opacity:.3} }
+    .status-badge { display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700; }
+    .status-badge.on { background:#dcfce7;color:#166534; }
+    .status-badge.off { background:#fee2e2;color:#991b1b; }
 
-    .video-wrap {
-      position: relative;
-      width: 100%;
-      padding-top: 56.25%;
-      background: #000;
-    }
-    .video-wrap iframe {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      border: none;
-    }
-    .video-placeholder {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: #1e293b;
-      color: #94a3b8;
-    }
+    /* LAYOUT */
+    .main-grid { display:grid;grid-template-columns:1fr 360px;height:calc(100vh - 65px); }
+    .video-section { display:flex;flex-direction:column;overflow-y:auto; }
+    .video-wrap { position:relative;width:100%;padding-top:56.25%;background:#000;flex-shrink:0; }
+    .video-wrap iframe { position:absolute;top:0;left:0;width:100%;height:100%;border:none; }
+    .video-placeholder { position:absolute;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0f172a;color:var(--texto2);gap:12px;font-size:13px; }
 
-    .info-panel {
-      background: #1e293b;
-      padding: 20px;
-      border-top: 1px solid #334155;
-    }
-    .info-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-    .info-card {
-      background: #0f172a;
-      border-radius: 12px;
-      padding: 16px;
-      text-align: center;
-    }
-    .info-num {
-      font-size: 24px;
-      font-weight: 700;
-      font-family: 'Courier New', monospace;
-      color: #38bdf8;
-      margin-bottom: 4px;
-    }
-    .info-lab {
-      font-size: 11px;
-      color: #64748b;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .06em;
-    }
+    /* INFO STRIP */
+    .info-strip { background:var(--card);border-top:1px solid var(--borda);padding:14px 20px;display:flex;gap:24px;align-items:center;flex-wrap:wrap; }
+    .info-item { display:flex;flex-direction:column;gap:2px; }
+    .info-label { font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--texto2); }
+    .info-valor { font-size:16px;font-weight:700;font-family:'Courier New',monospace;color:#38bdf8; }
 
-    .progress-outer {
-      background: #0f172a;
-      border-radius: 8px;
-      height: 10px;
-      overflow: hidden;
-      margin-bottom: 8px;
-    }
-    .progress-inner {
-      height: 100%;
-      border-radius: 8px;
-      background: linear-gradient(90deg, #10b981, #34d399);
-      transition: width .5s ease;
-    }
-    .progress-label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      color: #64748b;
-      margin-bottom: 16px;
-    }
+    /* CHAT */
+    .chat-section { background:var(--card);border-left:1px solid var(--borda);display:flex;flex-direction:column; }
+    .chat-header { padding:14px 16px;border-bottom:1px solid var(--borda);font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px; }
+    .chat-iframe { flex:1;border:none;width:100%; }
 
-    .apto-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 20px;
-      border-radius: 10px;
-      font-size: 14px;
-      font-weight: 700;
-    }
-    .apto-badge.apto { background: #dcfce7; color: #166534; }
-    .apto-badge.risco { background: #fef3c7; color: #92400e; }
-    .apto-badge.inapto { background: #fee2e2; color: #991b1b; }
+    /* PATROCINADORES */
+    .patrocinadores-section { background:var(--card);border-top:1px solid var(--borda);padding:20px; }
+    .patrocinadores-titulo { font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--texto2);margin-bottom:14px;text-align:center; }
+    .patrocinadores-grid { display:flex;gap:12px;align-items:center;justify-content:center;flex-wrap:wrap; }
+    .patrocinador-item { background:#0f172a;border:1px solid var(--borda);border-radius:10px;padding:12px 20px;display:flex;align-items:center;justify-content:center;transition:border-color .15s;text-decoration:none; }
+    .patrocinador-item:hover { border-color:var(--cor); }
+    .patrocinador-item img { max-height:36px;max-width:110px;object-fit:contain;filter:brightness(0) invert(1);opacity:.7;transition:opacity .15s; }
+    .patrocinador-item:hover img { opacity:1; }
 
-    .aviso {
-      background: #1e3a5f;
-      border: 1px solid #1d4ed8;
-      border-radius: 10px;
-      padding: 14px 18px;
-      font-size: 13px;
-      color: #93c5fd;
-      line-height: 1.6;
-      margin-top: 16px;
-    }
+    /* FOOTER */
+    .footer { background:#0a0f1e;border-top:1px solid var(--borda);padding:16px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px; }
+    .btn-contato { display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;text-decoration:none;border:1px solid var(--borda);color:var(--texto);transition:all .15s;font-family:inherit;cursor:pointer;background:transparent; }
+    .btn-contato.wpp { border-color:#16a34a;color:#4ade80; }
+    .btn-contato.wpp:hover { background:#16a34a22; }
+    .btn-contato.email { border-color:var(--cor);color:#60a5fa; }
+    .btn-contato.email:hover { background:#1a56db22; }
+    .footer-redes { display:flex;gap:8px; }
+    .rede-btn { width:36px;height:36px;border-radius:8px;border:1px solid var(--borda);display:flex;align-items:center;justify-content:center;text-decoration:none;color:var(--texto2);transition:all .15s; }
+    .rede-btn:hover { border-color:var(--cor);color:var(--cor); }
 
-    @media (max-width: 600px) {
-      .info-grid { grid-template-columns: 1fr 1fr; }
-      .header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    /* MODAL */
+    .modal-bg { position:fixed;inset:0;background:rgba(15,23,42,.75);z-index:9997;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px); }
+    .modal-bg.aberto { display:flex; }
+    .modal-box { background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:28px;max-width:440px;width:100%; }
+    .modal-box h3 { font-size:17px;font-weight:700;margin-bottom:16px; }
+    .modal-input { width:100%;padding:11px 14px;background:var(--fundo);border:1.5px solid var(--borda);border-radius:8px;color:var(--texto);font-size:14px;font-family:inherit;margin-bottom:10px; }
+    .modal-input:focus { outline:none;border-color:var(--cor); }
+    .modal-footer { display:flex;gap:10px;justify-content:flex-end;margin-top:16px; }
+    .modal-btn { padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid var(--borda);color:var(--texto);background:transparent;transition:all .15s; }
+    .modal-btn.primario { background:linear-gradient(135deg,var(--cor),#4f46e5);border-color:transparent;color:white; }
+
+    @media(max-width:768px) {
+      .main-grid { grid-template-columns:1fr;height:auto; }
+      .chat-section { height:400px;border-left:none;border-top:1px solid var(--borda); }
     }
   </style>
 </head>
 <body>
 
-<div class="header">
-  <div>
-    <div class="header-nome">Olá, <%= presenca.nome.split(' ')[0] %> — sua presença está sendo registrada</div>
-    <div class="header-evento"><%= presenca.evento_nome %></div>
-  </div>
-  <div class="status-badge online" id="status-badge">
-    <div class="status-dot"></div>
-    <span id="status-txt">Online</span>
+<!-- LOGIN -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-card">
+    <div class="login-logo">L</div>
+    <div class="login-titulo"><%= presenca.evento_nome %></div>
+    <div class="login-sub">Para acessar a transmissão, confirme sua identidade com o email cadastrado na inscrição.</div>
+    <input type="email" class="login-input" id="login-email" placeholder="Seu email de inscrição" autocomplete="email">
+    <button class="login-btn" onclick="validarAcesso()">Entrar na transmissão</button>
+    <div class="login-erro" id="login-erro">Email não encontrado. Verifique e tente novamente.</div>
   </div>
 </div>
 
-<!-- VIDEO -->
-<div class="video-wrap">
-  <% if (presenca.youtube_url) {
-    let ytId = '';
-    const m = presenca.youtube_url.match(/(?:v=|youtu\.be\/|live\/)([a-zA-Z0-9_-]{11})/);
-    if (m) ytId = m[1];
-  %>
-    <% if (ytId) { %>
-      <iframe
-        src="https://www.youtube.com/embed/<%= ytId %>?autoplay=1&rel=0"
-        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-        allowfullscreen>
-      </iframe>
-    <% } else { %>
-      <div class="video-placeholder">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;color:#475569"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-        <p style="color:#475569">Link do YouTube indisponivel</p>
+<!-- HEADER -->
+<div class="header" id="main-header" style="display:none">
+  <div style="display:flex;align-items:center;gap:12px">
+    <div class="header-logo">L</div>
+    <div>
+      <div class="header-evento"><%= presenca.evento_nome %></div>
+      <div class="header-nome">Olá, <strong id="nome-exibido"></strong></div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="live-badge"><div class="live-dot"></div>Ao vivo</div>
+    <div class="status-badge on" id="status-badge">Conectado</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main-grid" id="main-content" style="display:none">
+
+  <div class="video-section">
+    <!-- VIDEO -->
+    <div class="video-wrap">
+      <% let ytId = '';
+        if (presenca.youtube_url) {
+          const m = presenca.youtube_url.match(/(?:v=|youtu\.be\/|live\/)([a-zA-Z0-9_-]{11})/);
+          if (m) ytId = m[1];
+        }
+      %>
+      <% if (ytId) { %>
+        <iframe src="https://www.youtube.com/embed/<%= ytId %>?autoplay=1&rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+      <% } else { %>
+        <div class="video-placeholder">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          <p>Transmissão não configurada</p>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- INFO -->
+    <div class="info-strip">
+      <div class="info-item"><div class="info-label">Tempo nesta sessão</div><div class="info-valor" id="tempo-sessao">00:00:00</div></div>
+      <div class="info-item"><div class="info-label">Total acumulado</div><div class="info-valor" id="tempo-total">00:00:00</div></div>
+      <div class="info-item"><div class="info-label">Primeiro acesso</div><div class="info-valor" style="font-size:13px" id="primeiro-acesso">—</div></div>
+    </div>
+
+    <!-- PATROCINADORES -->
+    <% if (typeof patrocinadores !== 'undefined' && patrocinadores && patrocinadores.length > 0) { %>
+    <div class="patrocinadores-section">
+      <div class="patrocinadores-titulo">Patrocinadores</div>
+      <div class="patrocinadores-grid">
+        <% patrocinadores.forEach(p => { %>
+        <a href="<%= p.url || '#' %>" target="_blank" class="patrocinador-item" title="<%= p.nome %>">
+          <% if (p.logo_chave) { %><img src="/eventos/patrocinadores/<%= p.id %>/logo" alt="<%= p.nome %>">
+          <% } else { %><span style="color:var(--texto2);font-size:13px;font-weight:600"><%= p.nome %></span><% } %>
+        </a>
+        <% }) %>
       </div>
-    <% } %>
-  <% } else { %>
-    <div class="video-placeholder">
-      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;color:#475569"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
-      <p style="color:#475569">Transmissao nao configurada</p>
     </div>
-  <% } %>
+    <% } %>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button onclick="abrirContato()" class="btn-contato email">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          Fale conosco
+        </button>
+        <a href="https://wa.me/55<%= config.wapi_numero || '' %>" target="_blank" class="btn-contato wpp">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 5.49 5.49l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16.92z"/></svg>
+          WhatsApp
+        </a>
+      </div>
+      <div class="footer-redes">
+        <a href="https://www.instagram.com/lauroucp.cde" target="_blank" class="rede-btn" title="Instagram">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+        </a>
+        <a href="https://www.youtube.com/@LAUROUCPCDE" target="_blank" class="rede-btn" title="YouTube">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22.54 6.42a2.78 2.78 0 0 0-1.95-1.96C18.88 4 12 4 12 4s-6.88 0-8.59.46a2.78 2.78 0 0 0-1.95 1.96A29 29 0 0 0 1 12a29 29 0 0 0 .46 5.58A2.78 2.78 0 0 0 3.41 19.6C5.12 20 12 20 12 20s6.88 0 8.59-.46a2.78 2.78 0 0 0 1.95-1.95A29 29 0 0 0 23 12a29 29 0 0 0-.46-5.58z"/><polygon points="9.75 15.02 15.5 12 9.75 8.98 9.75 15.02"/></svg>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="chat-section">
+    <div class="chat-header">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Chat ao vivo
+    </div>
+    <% if (ytId) { %>
+      <iframe class="chat-iframe" src="https://www.youtube.com/live_chat?v=<%= ytId %>&embed_domain=liga-urologia.onrender.com" allow="accelerometer; autoplay; clipboard-write; encrypted-media"></iframe>
+    <% } else { %>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--texto2);font-size:13px;padding:20px;text-align:center">Chat indisponível</div>
+    <% } %>
+  </div>
+
 </div>
 
-<!-- INFO PANEL -->
-<div class="info-panel">
-  <div class="info-grid">
-    <div class="info-card">
-      <div class="info-num" id="tempo-assistido">00:00:00</div>
-      <div class="info-lab">Tempo assistido</div>
+<!-- MODAL CONTATO -->
+<div class="modal-bg" id="modal-contato">
+  <div class="modal-box">
+    <h3>Fale conosco</h3>
+    <input type="text" class="modal-input" id="cont-nome" placeholder="Seu nome">
+    <input type="email" class="modal-input" id="cont-email" placeholder="Seu email">
+    <textarea class="modal-input" id="cont-msg" rows="4" placeholder="Sua mensagem..." style="resize:vertical"></textarea>
+    <div class="modal-footer">
+      <button class="modal-btn" onclick="fecharContato()">Cancelar</button>
+      <button class="modal-btn primario" onclick="enviarContato()">Enviar</button>
     </div>
-    <div class="info-card">
-      <div class="info-num" id="tempo-evento"><%= presenca.duracao_minutos ? Math.floor(presenca.duracao_minutos/60).toString().padStart(2,'0')+':'+((presenca.duracao_minutos%60).toString().padStart(2,'0'))+':00' : '--:--:--' %></div>
-      <div class="info-lab">Duração total</div>
-    </div>
-    <div class="info-card">
-      <div class="info-num" id="pct-assistido">0%</div>
-      <div class="info-lab">% assistido</div>
-    </div>
-  </div>
-
-  <div class="progress-outer">
-    <div class="progress-inner" id="progress-bar" style="width:0%"></div>
-  </div>
-  <div class="progress-label">
-    <span>0%</span>
-    <span>Meta: 75%</span>
-    <span>100%</span>
-  </div>
-
-  <div id="status-apto" class="apto-badge inapto" style="margin-bottom:16px">
-    Aguardando — continue assistindo
-  </div>
-
-  <div class="aviso">
-    Sua presença é registrada automaticamente a cada 2 minutos enquanto esta página estiver aberta.
-    Nao feche esta aba durante a transmissão. Se precisar sair temporariamente, retorne ao mesmo link.
-    Ao final, seu tempo total será calculado para emissão do certificado (mínimo 75% do evento).
   </div>
 </div>
 
 <script>
 const token = '<%= token %>';
-const duracaoSeg = <%= presenca.duracao_minutos ? presenca.duracao_minutos * 60 : 0 %>;
-let segundosAcumulados = <%= presenca.tempo_total_segundos || 0 %>;
-let segundosEstasSessao = 0;
-let online = true;
+const emailInscrito = '<%= presenca.email %>'.toLowerCase().trim();
+const nomeInscrito = '<%= presenca.nome %>';
+const segundosIniciais = <%= presenca.tempo_total_segundos || 0 %>;
+const primeiroAcessoStr = '<%= presenca.primeiro_acesso ? new Date(presenca.primeiro_acesso).toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"}) : "" %>';
+const wapiNum = '<%= config.wapi_numero || "" %>';
 
-function formatarTempo(seg) {
-  const h = Math.floor(seg / 3600);
-  const m = Math.floor((seg % 3600) / 60);
-  const s = seg % 60;
-  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+let online = true;
+let segundosSessao = 0;
+let segundosAcumulados = segundosIniciais;
+
+function fmt(seg) {
+  return String(Math.floor(seg/3600)).padStart(2,'0')+':'+String(Math.floor((seg%3600)/60)).padStart(2,'0')+':'+String(seg%60).padStart(2,'0');
 }
 
 function atualizarUI() {
-  const total = segundosAcumulados + segundosEstasSessao;
-  document.getElementById('tempo-assistido').textContent = formatarTempo(total);
-  const pct = duracaoSeg > 0 ? Math.min(100, Math.round(total / duracaoSeg * 100)) : 0;
-  document.getElementById('pct-assistido').textContent = pct + '%';
-  document.getElementById('progress-bar').style.width = pct + '%';
-
-  const badge = document.getElementById('status-apto');
-  if (pct >= 75) {
-    badge.className = 'apto-badge apto';
-    badge.textContent = 'Apto para certificado (' + pct + '%)';
-  } else if (pct >= 40) {
-    badge.className = 'apto-badge risco';
-    badge.textContent = 'Em progresso — ' + pct + '% (meta: 75%)';
-  } else {
-    badge.className = 'apto-badge inapto';
-    badge.textContent = 'Continue assistindo — ' + pct + '% (meta: 75%)';
-  }
+  document.getElementById('tempo-sessao').textContent = fmt(segundosSessao);
+  document.getElementById('tempo-total').textContent = fmt(segundosAcumulados + segundosSessao);
 }
 
-// Contador local a cada segundo
-setInterval(() => {
-  if (online) {
-    segundosEstasSessao++;
-    atualizarUI();
-  }
-}, 1000);
+function validarAcesso() {
+  const email = document.getElementById('login-email').value.toLowerCase().trim();
+  const erro = document.getElementById('login-erro');
+  if (!email) { erro.style.display='block'; erro.textContent='Digite seu email.'; return; }
+  if (email !== emailInscrito) { erro.style.display='block'; return; }
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('main-header').style.display = 'flex';
+  document.getElementById('main-content').style.display = 'grid';
+  document.getElementById('nome-exibido').textContent = nomeInscrito.split(' ')[0];
+  if (primeiroAcessoStr) document.getElementById('primeiro-acesso').textContent = primeiroAcessoStr;
+  setInterval(() => { if(online){ segundosSessao++; atualizarUI(); } }, 1000);
+  setInterval(() => {
+    if(online) fetch('/live/'+token+'/ping',{method:'POST'}).then(r=>r.json()).then(d=>{ if(d.ok){segundosAcumulados+=120;segundosSessao=Math.max(0,segundosSessao-120);} });
+  }, 120000);
+}
 
-// Ping a cada 2 minutos
-setInterval(() => {
-  if (online) {
-    fetch('/live/' + token + '/ping', { method: 'POST' })
-      .then(r => r.json())
-      .then(d => {
-        if (d.ok) {
-          segundosAcumulados += 120;
-          segundosEstasSessao = Math.max(0, segundosEstasSessao - 120);
-        }
-      })
-      .catch(() => {});
-  }
-}, 120000);
+document.getElementById('login-email').addEventListener('keypress', e => { if(e.key==='Enter') validarAcesso(); });
 
-// Detectar visibilidade da aba
 document.addEventListener('visibilitychange', () => {
-  const badge = document.getElementById('status-badge');
-  const txt = document.getElementById('status-txt');
-  if (document.hidden) {
-    online = false;
-    badge.className = 'status-badge offline';
-    txt.textContent = 'Aba oculta — pausado';
-    fetch('/live/' + token + '/sair', { method: 'POST' }).catch(() => {});
-  } else {
-    online = true;
-    badge.className = 'status-badge online';
-    txt.textContent = 'Online';
-    fetch('/live/' + token + '/ping', { method: 'POST' }).catch(() => {});
-  }
+  const b = document.getElementById('status-badge');
+  if (document.hidden) { online=false; b.className='status-badge off'; b.textContent='Pausado'; fetch('/live/'+token+'/sair',{method:'POST'}); }
+  else { online=true; b.className='status-badge on'; b.textContent='Conectado'; fetch('/live/'+token+'/ping',{method:'POST'}); }
 });
+window.addEventListener('beforeunload', () => navigator.sendBeacon('/live/'+token+'/sair'));
 
-// Ao fechar a aba
-window.addEventListener('beforeunload', () => {
-  navigator.sendBeacon('/live/' + token + '/sair');
-});
-
-atualizarUI();
+function abrirContato() {
+  document.getElementById('modal-contato').classList.add('aberto');
+  document.getElementById('cont-email').value = emailInscrito;
+  document.getElementById('cont-nome').value = nomeInscrito;
+}
+function fecharContato() { document.getElementById('modal-contato').classList.remove('aberto'); }
+function enviarContato() {
+  const msg = document.getElementById('cont-msg').value;
+  if (!msg.trim()) { alert('Digite sua mensagem.'); return; }
+  const txt = 'Contato via Live — *'+document.getElementById('cont-nome').value+'* ('+document.getElementById('cont-email').value+'): '+msg;
+  window.open('https://wa.me/55'+wapiNum+'?text='+encodeURIComponent(txt),'_blank');
+  fecharContato();
+}
+document.getElementById('modal-contato').addEventListener('click', e => { if(e.target===document.getElementById('modal-contato')) fecharContato(); });
 </script>
 </body>
 </html>
