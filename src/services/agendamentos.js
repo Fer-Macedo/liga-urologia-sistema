@@ -125,7 +125,7 @@ async function verificarPagamentos() {
 async function atualizarAtrasados() {
   const hoje = dayjs().format('YYYY-MM-DD');
   const r = await query(
-    "UPDATE cobrancas SET status='atrasado' WHERE status='pendente' AND data_vencimento < $1",
+    "UPDATE cobrancas SET status='atrasado' WHERE status='pendente' AND data_vencimento::date < $1::date",
     [hoje]
   );
   if (r.rowCount > 0) console.log(r.rowCount + ' cobranças marcadas como atrasadas');
@@ -141,7 +141,7 @@ async function enviarNotificacoes() {
   if (config.notif_pre_ativo === '1') {
     const em3 = hoje.add(3, 'day').format('YYYY-MM-DD');
     const r = await query(
-      "SELECT c.*, m.nome, m.email, m.whatsapp FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.data_vencimento=$1 AND c.status='pendente'",
+      "SELECT c.*, m.nome, m.email, m.whatsapp FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.data_vencimento::date=$1::date AND c.status='pendente'",
       [em3]
     );
     for (const cob of r.rows) {
@@ -167,7 +167,7 @@ async function enviarNotificacoes() {
   if (config.notif_pos1_ativo === '1') {
     const ontem = hoje.subtract(1, 'day').format('YYYY-MM-DD');
     const r = await query(
-      "SELECT c.*, m.nome, m.email, m.whatsapp FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.data_vencimento=$1 AND c.status IN ('pendente','atrasado')",
+      "SELECT c.*, m.nome, m.email, m.whatsapp FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.data_vencimento::date=$1::date AND c.status IN ('pendente','atrasado')",
       [ontem]
     );
     for (const cob of r.rows) {
