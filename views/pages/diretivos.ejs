@@ -415,5 +415,59 @@ function fecharModalClick(e, id) {
     document.getElementById(id).classList.remove('aberto');
 }
 </script>
+
+<div class="modal-overlay" id="modal-inativ-d" style="display:none">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <span class="modal-titulo">Inativar diretivo</span>
+      <button class="icon-btn" onclick="fecharModal('modal-inativ-d')">&#x2715;</button>
+    </div>
+    <p style="font-size:13px;color:var(--texto2);margin:0 0 16px;line-height:1.6">
+      Ao inativar, o diretivo nao receberao mais notificacoes do sistema.
+    </p>
+    <div class="campo" style="margin-bottom:12px">
+      <label class="label">Motivo *</label>
+      <select id="sel-motivo-d" class="input" onchange="atualizarMotivoD()">
+        <option value="">Selecione...</option>
+        <option>Desligamento voluntario</option>
+        <option>Conclusao de mandato</option>
+        <option>Conclusao de curso</option>
+        <option>Transferencia de instituicao</option>
+        <option>Desempenho insatisfatorio</option>
+        <option>Outro</option>
+      </select>
+    </div>
+    <div id="outro-d" style="display:none;margin-bottom:12px">
+      <label class="label">Especifique *</label>
+      <textarea id="txt-outro-d" class="input" rows="2" oninput="atualizarMotivoD()"></textarea>
+    </div>
+    <form id="form-inativ-d" action="" method="POST">
+      <input type="hidden" name="motivo" id="motivo-d">
+      <div class="modal-footer" style="padding:0;margin-top:8px">
+        <button type="button" class="btn" onclick="fecharModal('modal-inativ-d')">Cancelar</button>
+        <button type="submit" class="btn btn-primario" onclick="return validarD()"
+          style="background:linear-gradient(135deg,#dc2626,#b91c1c)">Confirmar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function abrirInativD(id){
+  document.getElementById('form-inativ-d').action='/diretivos/'+id+'/toggle';
+  document.getElementById('sel-motivo-d').value='';
+  document.getElementById('motivo-d').value='';
+  document.getElementById('outro-d').style.display='none';
+  abrirModal('modal-inativ-d');
+}
+function atualizarMotivoD(){
+  const s=document.getElementById('sel-motivo-d').value;
+  document.getElementById('outro-d').style.display=s==='Outro'?'':'none';
+  document.getElementById('motivo-d').value=s==='Outro'?document.getElementById('txt-outro-d').value:s;
+}
+function validarD(){
+  if(!document.getElementById('motivo-d').value){alert('Informe o motivo.');return false;}
+  return true;
+}
+</script>
 </body>
 </html>
