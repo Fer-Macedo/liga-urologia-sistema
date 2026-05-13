@@ -273,8 +273,8 @@
       <!-- FILTROS -->
       <div class="filtros-row">
         <input type="text" class="input" placeholder="Buscar por nome ou cargo..."
-          id="busca" oninput="filtrar()" style="flex:1;max-width:380px">
-        <select class="input" id="filtro-cargo" onchange="filtrar()" style="width:220px">
+          id="busca" oninput="filtrar()" style="flex:1;max-width:340px">
+        <select class="input" id="filtro-cargo" onchange="filtrar()" style="width:210px">
           <option value="">Todos os cargos</option>
           <option>Presidente(a)</option>
           <option>Vice-presidente(a)</option>
@@ -289,6 +289,25 @@
           <option>Diretor(a) de Marketing</option>
           <option>Vice Diretor(a) de Marketing</option>
         </select>
+        <!-- Filtro de status — redireciona para backend -->
+        <div style="display:flex;gap:4px">
+          <% const sf = typeof statusFiltro !== 'undefined' ? statusFiltro : 'ativos'; %>
+          <a href="/diretivos?status=ativos"
+            class="btn btn-sm"
+            style="<%= sf === 'ativos' || !sf ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">
+            Ativos
+          </a>
+          <a href="/diretivos?status=inativos"
+            class="btn btn-sm"
+            style="<%= sf === 'inativos' ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">
+            Inativos
+          </a>
+          <a href="/diretivos?status=todos"
+            class="btn btn-sm"
+            style="<%= sf === 'todos' ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">
+            Todos
+          </a>
+        </div>
         <span id="contador" style="font-size:13px;color:var(--texto2)"><%= diretivos.length %> diretivos</span>
       </div>
 
@@ -347,18 +366,32 @@
             <% } %>
           </div>
 
+          <% if (d.ativo == 0) { %>
+            <div style="position:absolute;top:12px;right:12px;background:#fee2e2;color:#991b1b;font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:999px">
+              Inativo
+            </div>
+          <% } %>
+
           <div class="card-acoes">
             <button class="btn btn-primario btn-sm" onclick="abrirVisualizar(<%= d.id %>)">Ver detalhes</button>
             <button class="btn btn-sm" onclick="abrirEditar(<%= d.id %>)">Editar</button>
             <form action="/diretivos/<%= d.id %>/toggle" method="POST" style="display:inline;margin:0;margin-left:auto">
-              <button type="submit" class="btn-danger-soft"
-                onclick="return confirm('Desativar <%= d.nome.replace(/'/g,"\\'") %>?')"
-                title="Desativar">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
-                  <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
-                </svg>
-              </button>
+              <% if (d.ativo == 0) { %>
+                <button type="submit" class="btn btn-sm"
+                  style="color:#16a34a;border:1px solid #bbf7d0;background:#f0fdf4"
+                  onclick="return confirm('Reativar <%= d.nome.replace(/'/g,"\\'") %>?')">
+                  Reativar
+                </button>
+              <% } else { %>
+                <button type="submit" class="btn-danger-soft"
+                  onclick="return confirm('Desativar <%= d.nome.replace(/'/g,"\\'") %>?')"
+                  title="Desativar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
+                    <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
+                  </svg>
+                </button>
+              <% } %>
             </form>
           </div>
         </div>
