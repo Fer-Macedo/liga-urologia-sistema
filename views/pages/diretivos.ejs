@@ -261,8 +261,8 @@
           <div class="lab">Presidência</div>
         </div>
         <div class="stat-mini amr">
-          <div class="num"><%= diretivos.filter(d => d.cargo && d.cargo.startsWith('Diretor')).length %></div>
-          <div class="lab">Diretores</div>
+          <div class="num"><%= diretivos.filter(d => d.cargo && (d.cargo.startsWith('Diretor') || d.cargo.startsWith('Secretário') || d.cargo.startsWith('Secretaria'))).length %></div>
+          <div class="lab">Diretores e Secretaria</div>
         </div>
         <div class="stat-mini roxo">
           <div class="num"><%= diretivos.filter(d => d.cargo && d.cargo.startsWith('Vice Dir')).length %></div>
@@ -550,7 +550,25 @@ function abrirVisualizar(id) {
   if (!d) return;
   document.getElementById('vis-titulo').textContent = d.nome;
 
-  document.getElementById('tab-dados').innerHTML = `
+  const fotoHtml = l.foto_chave ? `
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding:16px;background:var(--fundo);border-radius:12px;border:1px solid var(--borda)">
+      <img src="/diretivos/${l.id}/foto"
+        style="width:72px;height:72px;border-radius:12px;object-fit:cover;border:2px solid var(--borda);flex-shrink:0"
+        alt="Foto de ${l.nome}">
+      <div>
+        <div style="font-weight:700;font-size:14px;margin-bottom:6px">${l.nome.split(' ')[0]}</div>
+        <a href="/diretivos/${l.id}/foto" target="_blank"
+          style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white;border-radius:9px;font-size:12.5px;font-weight:600;text-decoration:none">
+          ⬇️ Baixar foto
+        </a>
+        <div style="font-size:11px;color:var(--texto2);margin-top:5px">Abre em nova aba para salvar</div>
+      </div>
+    </div>` : `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:14px 16px;background:var(--fundo);border-radius:12px;border:1px solid var(--borda);color:var(--texto2);font-size:13px">
+      👤 <span>Este diretivo não anexou foto no cadastro.</span>
+    </div>`;
+
+  document.getElementById('tab-dados').innerHTML = fotoHtml + `
     <div class="detalhe-grid">
       ${campo('Nome completo', d.nome, true)}
       ${campo('E-mail', d.email)}
