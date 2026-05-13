@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard — <%= config.org_nome || 'Liga Urologia' %></title>
   <link rel="stylesheet" href="/css/style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/admin-modern.css">
   <style>
     :root {
       --cor-primaria: <%= config.org_cor || '#1a56db' %>;
@@ -19,36 +19,59 @@
       --roxo: #8b5cf6;
       --roxo-light: #8b5cf615;
     }
-    * { font-family: 'Inter', sans-serif; }
 
-    /* TOPBAR */
-    .topbar {
-      background: linear-gradient(135deg, var(--cor-primaria) 0%, #1e40af 100%);
-      padding: 20px 28px;
-      border-radius: 16px;
-      margin-bottom: 24px;
+    /* HERO — saudação moderna */
+    .dash-hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, var(--cor-primaria) 100%);
+      padding: 28px 32px;
+      border-radius: 18px;
+      margin-bottom: 22px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      box-shadow: 0 4px 20px rgba(26,86,219,0.3);
+      gap: 20px;
+      flex-wrap: wrap;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, .15);
+      position: relative;
+      overflow: hidden;
     }
-    .topbar-left h1 {
+    .dash-hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -10%;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(6,182,212,.18), transparent 70%);
+      pointer-events: none;
+    }
+    .dash-hero-left { position: relative; z-index: 1; }
+    .dash-hero h1 {
       color: white;
-      font-size: 22px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 26px;
       font-weight: 700;
-      margin: 0 0 4px;
+      margin: 0 0 6px;
+      letter-spacing: -.02em;
     }
-    .topbar-left p {
+    .dash-hero p {
       color: rgba(255,255,255,0.75);
-      font-size: 13px;
+      font-size: 14px;
       margin: 0;
     }
-    .topbar-acoes { display: flex; gap: 10px; align-items: center; }
-    .btn-perfil {
-      background: rgba(255,255,255,0.15);
-      border: 1px solid rgba(255,255,255,0.3);
+    .dash-hero-actions {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+      flex-wrap: wrap;
+    }
+    .btn-hero-ghost {
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.18);
       color: white;
-      padding: 8px 16px;
+      padding: 9px 16px;
       border-radius: 10px;
       cursor: pointer;
       font-size: 13px;
@@ -56,43 +79,55 @@
       display: flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.2s;
+      transition: all 0.18s ease;
+      text-decoration: none;
+      font-family: inherit;
     }
-    .btn-perfil:hover { background: rgba(255,255,255,0.25); }
-    .btn-gerar {
+    .btn-hero-ghost:hover {
+      background: rgba(255,255,255,0.18);
+      transform: translateY(-1px);
+    }
+    .btn-hero-primary {
       background: white;
-      color: var(--cor-primaria);
+      color: #0f172a;
       border: none;
-      padding: 8px 18px;
+      padding: 9px 18px;
       border-radius: 10px;
       cursor: pointer;
       font-size: 13px;
-      font-weight: 600;
+      font-weight: 700;
       text-decoration: none;
       display: flex;
       align-items: center;
       gap: 6px;
-      transition: all 0.2s;
+      transition: all 0.18s ease;
+      box-shadow: 0 4px 14px rgba(0,0,0,.12);
     }
-    .btn-gerar:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-hero-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(0,0,0,.16);
+    }
 
     /* STATS */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 16px;
-      margin-bottom: 24px;
+      margin-bottom: 22px;
     }
     .stat-card-novo {
       background: var(--card);
-      border-radius: 16px;
+      border-radius: 14px;
       padding: 20px;
       border: 1px solid var(--borda);
       position: relative;
       overflow: hidden;
       transition: transform 0.2s, box-shadow 0.2s;
     }
-    .stat-card-novo:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+    .stat-card-novo:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    }
     .stat-card-novo::before {
       content: '';
       position: absolute;
@@ -116,43 +151,114 @@
     .verde .stat-icone { background: var(--verde-light); }
     .amarelo .stat-icone { background: var(--amarelo-light); }
     .vermelho .stat-icone { background: var(--vermelho-light); }
-    .stat-label-novo { font-size: 12px; font-weight: 500; color: var(--texto2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-    .stat-valor-novo { font-size: 32px; font-weight: 800; margin-bottom: 4px; line-height: 1; }
+    .stat-label-novo {
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--texto2);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 6px;
+    }
+    .stat-valor-novo {
+      font-family: 'Outfit', sans-serif;
+      font-size: 30px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      line-height: 1;
+      letter-spacing: -.02em;
+    }
     .azul .stat-valor-novo { color: var(--cor-primaria); }
     .verde .stat-valor-novo { color: var(--verde); }
     .amarelo .stat-valor-novo { color: var(--amarelo); }
     .vermelho .stat-valor-novo { color: var(--vermelho); }
     .stat-sub-novo { font-size: 12px; color: var(--texto2); font-weight: 500; }
 
-    /* GRID INFERIOR */
-    .bottom-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; }
+    /* ACESSO RÁPIDO */
+    .quick-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+    .quick-card {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 12px;
+      padding: 16px 14px;
+      text-align: center;
+      text-decoration: none;
+      transition: all .18s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .quick-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--cor-primaria);
+      box-shadow: 0 8px 18px rgba(26, 86, 219, .12);
+    }
+    .quick-icone {
+      width: 42px; height: 42px;
+      border-radius: 11px;
+      display: grid; place-items: center;
+      font-size: 20px;
+      background: linear-gradient(135deg, var(--cor-primaria-light), var(--cor-primaria-light));
+    }
+    .quick-card.alt-1 .quick-icone { background: linear-gradient(135deg, #06b6d420, #06b6d410); }
+    .quick-card.alt-2 .quick-icone { background: linear-gradient(135deg, var(--verde-light), var(--verde-light)); }
+    .quick-card.alt-3 .quick-icone { background: linear-gradient(135deg, var(--amarelo-light), var(--amarelo-light)); }
+    .quick-card.alt-4 .quick-icone { background: linear-gradient(135deg, var(--roxo-light), var(--roxo-light)); }
+    .quick-card.alt-5 .quick-icone { background: linear-gradient(135deg, #ec489920, #ec489910); }
+    .quick-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--texto);
+    }
 
-    /* CARD */
+    /* GRID INFERIOR */
+    .bottom-grid {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 18px;
+    }
+
+    /* CARD MODERNO */
     .card-moderno {
       background: var(--card);
       border: 1px solid var(--borda);
-      border-radius: 16px;
+      border-radius: 14px;
       overflow: hidden;
     }
     .card-header {
-      padding: 18px 20px;
+      padding: 16px 20px;
       border-bottom: 1px solid var(--borda);
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
-    .card-titulo { font-size: 15px; font-weight: 700; color: var(--texto); }
-    .card-link { font-size: 12px; color: var(--cor-primaria); text-decoration: none; font-weight: 500; }
+    .card-titulo {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--texto);
+    }
+    .card-link {
+      font-size: 12px;
+      color: var(--cor-primaria);
+      text-decoration: none;
+      font-weight: 600;
+    }
     .card-link:hover { text-decoration: underline; }
 
-    /* TABELA MODERNA */
+    /* TABELA */
     .table-moderna { width: 100%; border-collapse: collapse; }
     .table-moderna thead th {
       padding: 10px 16px;
-      font-size: 11px;
-      font-weight: 600;
+      font-size: 10.5px;
+      font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.8px;
       color: var(--texto2);
       background: var(--fundo);
       text-align: left;
@@ -165,7 +271,7 @@
     .table-moderna tbody tr:last-child { border-bottom: none; }
     .table-moderna tbody td { padding: 12px 16px; font-size: 13px; }
 
-    /* AVATAR MODERNO */
+    /* AVATAR */
     .avatar-mod {
       width: 32px; height: 32px;
       border-radius: 10px;
@@ -179,12 +285,12 @@
     .membro-mod { display: flex; align-items: center; gap: 10px; }
     .membro-nome { font-weight: 600; font-size: 13px; }
 
-    /* BADGE MODERNO */
+    /* BADGE */
     .badge-mod {
       padding: 3px 10px;
       border-radius: 20px;
       font-size: 11px;
-      font-weight: 600;
+      font-weight: 700;
       display: inline-block;
     }
     .badge-mod.pago { background: var(--verde-light); color: var(--verde); }
@@ -192,7 +298,7 @@
     .badge-mod.atrasado { background: var(--vermelho-light); color: var(--vermelho); }
 
     /* ANIVERSÁRIOS */
-    .aniv-lista { padding: 8px 0; }
+    .aniv-lista { padding: 4px 0; }
     .aniv-item {
       display: flex;
       align-items: center;
@@ -212,7 +318,7 @@
       flex-shrink: 0;
     }
     .aniv-avatar.hoje {
-      background: linear-gradient(135deg, #10b981, #1a56db);
+      background: linear-gradient(135deg, #10b981, var(--cor-primaria));
       animation: pulse 2s infinite;
     }
     @keyframes pulse {
@@ -220,22 +326,64 @@
       50% { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
     }
     .aniv-info { flex: 1; min-width: 0; }
-    .aniv-nome-mod { font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .aniv-data-mod { font-size: 12px; color: var(--texto2); margin-top: 2px; }
-    .badge-hoje { background: linear-gradient(135deg, #10b981, #1a56db); color: white; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .aniv-nome-mod {
+      font-weight: 600;
+      font-size: 13px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .aniv-data-mod {
+      font-size: 12px;
+      color: var(--texto2);
+      margin-top: 2px;
+    }
+    .badge-hoje {
+      background: linear-gradient(135deg, #10b981, var(--cor-primaria));
+      color: white;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+    }
 
-    /* BARRA PROGRESSO */
-    .progresso-wrap { margin-top: 16px; padding: 0 20px 16px; }
-    .progresso-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--texto2); margin-bottom: 6px; }
-    .progresso-bar { height: 6px; background: var(--borda); border-radius: 10px; overflow: hidden; }
-    .progresso-fill { height: 100%; border-radius: 10px; background: linear-gradient(90deg, var(--verde), #34d399); transition: width 0.5s; }
+    /* PROGRESSO */
+    .progresso-wrap { margin-top: 14px; padding: 0 20px 14px; }
+    .progresso-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--texto2);
+      margin-bottom: 6px;
+    }
+    .progresso-bar {
+      height: 6px;
+      background: var(--borda);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .progresso-fill {
+      height: 100%;
+      border-radius: 10px;
+      background: linear-gradient(90deg, var(--verde), #34d399);
+      transition: width 0.5s;
+    }
 
     /* VAZIO */
-    .vazio-mod { padding: 40px 20px; text-align: center; color: var(--texto2); font-size: 13px; }
+    .vazio-mod {
+      padding: 40px 20px;
+      text-align: center;
+      color: var(--texto2);
+      font-size: 13px;
+    }
 
-    @media (max-width: 1100px) {
+    @media (max-width: 1200px) {
+      .quick-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 900px) {
       .stats-grid { grid-template-columns: repeat(2, 1fr); }
       .bottom-grid { grid-template-columns: 1fr; }
+      .quick-grid { grid-template-columns: repeat(2, 1fr); }
     }
   </style>
 </head>
@@ -247,17 +395,17 @@
       <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
       <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
 
-      <!-- TOPBAR MODERNA -->
-      <div class="topbar">
-        <div class="topbar-left">
+      <!-- HERO -->
+      <div class="dash-hero">
+        <div class="dash-hero-left">
           <h1>Olá, <%= usuario.nome.split(' ')[0] %>! 👋</h1>
           <p>Bem-vindo ao painel da <%= config.org_nome || 'Liga Acadêmica de Urologia' %></p>
         </div>
-        <div class="topbar-acoes">
-          <button onclick="abrirPerfil()" class="btn-perfil">
-            👤 <%= usuario.nome.split(' ')[0] %>
+        <div class="dash-hero-actions">
+          <button onclick="abrirPerfil()" class="btn-hero-ghost">
+            👤 Meu Perfil
           </button>
-          <a href="/cobrancas" class="btn-gerar">
+          <a href="/cobrancas" class="btn-hero-primary">
             ⚡ Gerar cobranças
           </a>
         </div>
@@ -291,6 +439,34 @@
         </div>
       </div>
 
+      <!-- ACESSO RÁPIDO -->
+      <div class="quick-grid">
+        <a href="/ligantes" class="quick-card">
+          <div class="quick-icone">🎓</div>
+          <div class="quick-label">Ligantes</div>
+        </a>
+        <a href="/frequencia" class="quick-card alt-1">
+          <div class="quick-icone">✅</div>
+          <div class="quick-label">Frequência</div>
+        </a>
+        <a href="/eventos" class="quick-card alt-2">
+          <div class="quick-icone">🎟️</div>
+          <div class="quick-label">Eventos</div>
+        </a>
+        <a href="/cobrancas" class="quick-card alt-3">
+          <div class="quick-icone">💰</div>
+          <div class="quick-label">Cobranças</div>
+        </a>
+        <a href="/marketing" class="quick-card alt-4">
+          <div class="quick-icone">📣</div>
+          <div class="quick-label">Marketing</div>
+        </a>
+        <a href="/aniversarios" class="quick-card alt-5">
+          <div class="quick-icone">🎂</div>
+          <div class="quick-label">Aniversários</div>
+        </a>
+      </div>
+
       <% 
         const totalMembros = Number(stats.total) || 1;
         const pagos = Number(stats.pagos) || 0;
@@ -307,11 +483,10 @@
             <a href="/cobrancas" class="card-link">Ver todas →</a>
           </div>
 
-          <!-- Barra de progresso -->
           <div class="progresso-wrap">
             <div class="progresso-label">
               <span>Taxa de pagamento este mês</span>
-              <span style="font-weight:600;color:var(--verde)"><%= pctPago %>%</span>
+              <span style="font-weight:700;color:var(--verde)"><%= pctPago %>%</span>
             </div>
             <div class="progresso-bar">
               <div class="progresso-fill" style="width:<%= pctPago %>%"></div>
@@ -407,11 +582,11 @@
     </div>
     <div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--borda)">
       <button onclick="mostrarTab('senha')" id="tab-senha"
-        style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--cor-primaria);border-bottom:2px solid var(--cor-primaria);font-family:Inter,sans-serif">
+        style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--cor-primaria);border-bottom:2px solid var(--cor-primaria);font-family:inherit">
         🔒 Alterar Senha
       </button>
       <button onclick="mostrarTab('email')" id="tab-email"
-        style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--texto2);border-bottom:2px solid transparent;font-family:Inter,sans-serif">
+        style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--texto2);border-bottom:2px solid transparent;font-family:inherit">
         📧 Alterar E-mail
       </button>
     </div>
