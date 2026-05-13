@@ -265,14 +265,15 @@
       <!-- FILTROS -->
       <div class="filtros-row">
         <input type="text" id="busca-input" class="input"
-          placeholder="🔍 Buscar por nome, email ou turma..."
-          style="flex:1;max-width:420px"
+          placeholder="Buscar por nome, email ou turma..."
+          style="flex:1;max-width:380px"
           oninput="buscar(this.value)">
-        <select class="input" id="filtro-status" style="width:170px" onchange="filtrarStatus(this.value)">
-          <option value="todos">Todos</option>
-          <option value="ativo">Somente ativos</option>
-          <option value="inativo">Somente inativos</option>
-        </select>
+        <div style="display:flex;gap:4px">
+          <% const sf = typeof statusFiltro !== 'undefined' ? statusFiltro : 'ativos'; %>
+          <a href="/ligantes?status=ativos" class="btn" style="font-size:12px;padding:6px 12px;<%= sf==='ativos'||!sf ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">Ativos</a>
+          <a href="/ligantes?status=inativos" class="btn" style="font-size:12px;padding:6px 12px;<%= sf==='inativos' ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">Inativos</a>
+          <a href="/ligantes?status=todos" class="btn" style="font-size:12px;padding:6px 12px;<%= sf==='todos' ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">Todos</a>
+        </div>
         <span id="contador" style="font-size:13px;color:var(--texto2);white-space:nowrap"><%= ligantes.length %> exibidos</span>
       </div>
 
@@ -374,28 +375,10 @@ function buscar(termo) {
   let vis = 0;
   document.querySelectorAll('.ligante-card').forEach(c => {
     const match = !t || c.dataset.nome.includes(t) || c.dataset.email.includes(t) || c.dataset.turma.includes(t);
-    const statusOk = checkStatus(c);
-    c.style.display = (match && statusOk) ? '' : 'none';
-    if (match && statusOk) vis++;
+    c.style.display = match ? '' : 'none';
+    if (match) vis++;
   });
   document.getElementById('contador').textContent = vis + ' exibidos';
-}
-
-function filtrarStatus(val) {
-  let vis = 0;
-  const busca = document.getElementById('busca-input').value.toLowerCase().trim();
-  document.querySelectorAll('.ligante-card').forEach(c => {
-    const statusOk = val === 'todos' || c.dataset.status === val;
-    const buscaOk = !busca || c.dataset.nome.includes(busca) || c.dataset.email.includes(busca) || c.dataset.turma.includes(busca);
-    c.style.display = (statusOk && buscaOk) ? '' : 'none';
-    if (statusOk && buscaOk) vis++;
-  });
-  document.getElementById('contador').textContent = vis + ' exibidos';
-}
-
-function checkStatus(card) {
-  const val = document.getElementById('filtro-status').value;
-  return val === 'todos' || card.dataset.status === val;
 }
 
 function trocarTab(tab, btn) {
