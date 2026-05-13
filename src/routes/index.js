@@ -968,6 +968,28 @@ router.post('/diretivos/:id/editar', requireAuth, requireSecretaria, async (req,
   res.redirect('/diretivos');
 });
 
+router.get('/diretivos/:id/foto', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT foto_chave FROM diretivos WHERE id=$1', [req.params.id]);
+    const d = r.rows[0];
+    if (!d || !d.foto_chave) return res.status(404).send('Foto nao encontrada');
+    const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
+    const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+    const R2 = new S3Client({ region:'auto', endpoint:process.env.R2_ENDPOINT, credentials:{ accessKeyId:process.env.R2_ACCESS_KEY_ID, secretAccessKey:process.env.R2_SECRET_ACCESS_KEY } });
+    const url = await getSignedUrl(R2, new GetObjectCommand({ Bucket: process.env.R2_BUCKET||'liga-urologia-files', Key: d.foto_chave }), { expiresIn: 3600 });
+    res.redirect(url);
+  } catch(e) { res.status(500).send('Erro'); }
+});
+
+router.post('/diretivos/:id/toggle', requireAuth, requireAdmin, async (req, res) => {
+  const r = await query('SELECT ativo FROM diretivos WHERE id=$1', [req.params.id]);
+  const atual = r.rows[0]?.ativo;
+  await query('UPDATE diretivos SET ativo=$1 WHERE id=$2', [atual == 0 ? 1 : 0, req.params.id]);
+  req.session.msg = [atual == 0 ? 'Diretivo reativado!' : 'Diretivo desativado.'];
+  res.redirect('/diretivos' + (req.query.status ? '?status=' + req.query.status : ''));
+});
+
+
 undefined
 
 // ─── FREQUÊNCIA DIRETIVOS ─────────────────────────────────────────────────────
