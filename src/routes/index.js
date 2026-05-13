@@ -2343,13 +2343,16 @@ router.post('/eventos/:id/editar', requireAuth, async (req, res) => {
   try {
     const {upload, uploadArquivo} = require('../services/arquivos');
     upload.single('banner')(req, res, async (err) => {
-      const {nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico,carga_horaria} = req.body;
+      const {nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico,carga_horaria,duracao_minutos,youtube_url} = req.body;
       let bannerChave = null;
       if (req.file) { const r=await uploadArquivo(req.file.buffer,req.file.originalname,req.file.mimetype,'eventos'); bannerChave=r.chave; }
       const bannerUpdate = bannerChave ? ',banner_chave=$11' : '';
+      const idxParam = bannerChave ? 12 : 11;
       const params = [nome,descricao||null,data_inicio||null,data_fim||null,local||null,endereco||null,parseInt(vagas_total),status,publico==='true',parseInt(carga_horaria)||null,req.params.id];
       if (bannerChave) params.splice(10,0,bannerChave);
-      await query(`UPDATE eventos SET nome=$1,descricao=$2,data_inicio=$3,data_fim=$4,local=$5,endereco=$6,vagas_total=$7,status=$8,publico=$9,carga_horaria=$10${bannerUpdate} WHERE id=${bannerChave?'$12':'$11'}`, params);
+      params.push(parseInt(duracao_minutos)||null);
+      params.push(youtube_url||null);
+      await query(`UPDATE eventos SET nome=$1,descricao=$2,data_inicio=$3,data_fim=$4,local=$5,endereco=$6,vagas_total=$7,status=$8,publico=$9,carga_horaria=$10${bannerUpdate},duracao_minutos=$${idxParam+1},youtube_url=$${idxParam+2} WHERE id=$${idxParam}`, params);
       req.session.msg=['Evento atualizado!']; res.redirect('/eventos/'+req.params.id);
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
