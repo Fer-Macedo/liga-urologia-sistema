@@ -1,91 +1,114 @@
 /* ============================================================
-   LIGA UROLOGIA — Modernização do Painel Interno
-   admin-modern.css  (v2 — correção de layout)
+   LIGA UROLOGIA — Painel Interno (v3)
+   admin-modern.css — força layout fluido em 100%
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
+/* RESET DE LARGURA — força 100% */
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 100vh !important;
+  overflow-x: hidden;
+}
+
 body {
   font-family: 'Plus Jakarta Sans', 'Outfit', system-ui, -apple-system, sans-serif !important;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+}
+
+/* LAYOUT — força flex fluido */
+.layout,
+body > .layout,
+div.layout {
+  display: flex !important;
+  flex-direction: row !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 100vh !important;
   margin: 0 !important;
   padding: 0 !important;
 }
 
-.page-titulo,
-.section-titulo,
-.modal-titulo {
-  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important;
-  letter-spacing: -.01em;
-}
-
-/* ============================================================
-   LAYOUT GERAL — ocupar 100% da tela
-   ============================================================ */
-
-.layout {
-  display: flex !important;
-  min-height: 100vh !important;
-  width: 100% !important;
-}
-
-.main {
-  flex: 1 !important;
+.main,
+body .main,
+div.main,
+main.main {
+  flex: 1 1 auto !important;
   display: flex !important;
   flex-direction: column !important;
   min-width: 0 !important;
-  width: 100% !important;
+  width: auto !important;
   max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
-.content {
+.content,
+body .content,
+div.content,
+.main .content,
+.main > .content {
+  width: 100% !important;
+  max-width: 100% !important;
   padding: 24px 32px !important;
+  margin: 0 !important;
+  flex: 1 !important;
+  box-sizing: border-box !important;
+}
+
+.content > .freq-card,
+.content > .stat-card,
+.content > div,
+.freq-card {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
-  flex: 1 !important;
 }
 
-/* ============================================================
-   SIDEBAR moderna — largura fixa
-   ============================================================ */
-
-.sidebar {
+/* SIDEBAR */
+.sidebar,
+aside.sidebar {
   background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
-  color: #e2e8f0;
+  color: #e2e8f0 !important;
   padding: 0 !important;
+  margin: 0 !important;
   display: flex !important;
   flex-direction: column !important;
   width: 240px !important;
   min-width: 240px !important;
   max-width: 240px !important;
   flex-shrink: 0 !important;
-  min-height: 100vh;
-  position: sticky;
-  top: 0;
-  height: 100vh;
-  overflow-y: auto;
-  border: none;
+  flex-grow: 0 !important;
+  height: 100vh !important;
+  position: sticky !important;
+  top: 0 !important;
+  overflow-y: auto !important;
+  border: none !important;
+  box-sizing: border-box !important;
 }
 
 .sidebar-brand {
-  display: flex;
+  display: flex !important;
   align-items: center;
   gap: 12px;
   padding: 22px 18px 18px;
   border-bottom: 1px solid rgba(255,255,255,.08);
 }
 .sidebar-brand-logo {
-  width: 40px; height: 40px;
+  width: 40px;
+  height: 40px;
   border-radius: 11px;
   background: linear-gradient(135deg, #2563eb, #06b6d4);
-  display: grid; place-items: center;
+  display: grid;
+  place-items: center;
   font-family: 'Outfit', sans-serif;
   font-weight: 800;
   font-size: 14px;
   color: white;
-  letter-spacing: .02em;
   box-shadow: 0 4px 14px rgba(37,99,235,.35);
   flex-shrink: 0;
 }
@@ -94,13 +117,13 @@ body {
   flex-direction: column;
   line-height: 1.2;
   min-width: 0;
+  overflow: hidden;
 }
 .sidebar-brand-text strong {
   font-family: 'Outfit', sans-serif;
   font-weight: 700;
   color: white;
   font-size: 13px;
-  letter-spacing: -.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -110,7 +133,6 @@ body {
   color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: .08em;
-  margin-top: 1px;
 }
 
 .sidebar-nav {
@@ -118,9 +140,7 @@ body {
   padding: 14px 12px;
   overflow-y: auto;
 }
-.nav-group {
-  margin-bottom: 16px;
-}
+.nav-group { margin-bottom: 16px; }
 .nav-group-title {
   font-size: 10.5px;
   font-weight: 700;
@@ -131,28 +151,29 @@ body {
 }
 
 .sidebar .nav-item {
-  display: flex;
-  align-items: center;
-  gap: 11px;
-  padding: 9px 12px;
-  border-radius: 9px;
-  color: #cbd5e1;
-  font-size: 13.5px;
-  font-weight: 500;
-  margin-bottom: 2px;
-  text-decoration: none;
-  transition: background .15s ease, color .15s ease, transform .15s ease;
-  border: none;
+  display: flex !important;
+  align-items: center !important;
+  gap: 11px !important;
+  padding: 9px 12px !important;
+  border-radius: 9px !important;
+  color: #cbd5e1 !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  margin-bottom: 2px !important;
+  text-decoration: none !important;
+  transition: all .15s ease !important;
+  border: none !important;
+  background: transparent !important;
 }
 .sidebar .nav-item:hover {
-  background: rgba(255,255,255,.06);
-  color: white;
+  background: rgba(255,255,255,.06) !important;
+  color: white !important;
   transform: translateX(2px);
 }
 .sidebar .nav-item.ativo {
-  background: linear-gradient(90deg, rgba(37,99,235,.22), rgba(6,182,212,.08));
-  color: white;
-  box-shadow: inset 3px 0 0 #06b6d4;
+  background: linear-gradient(90deg, rgba(37,99,235,.22), rgba(6,182,212,.08)) !important;
+  color: white !important;
+  box-shadow: inset 3px 0 0 #06b6d4 !important;
 }
 .sidebar .nav-icon {
   width: 22px;
@@ -176,11 +197,13 @@ body {
   margin-bottom: 8px;
 }
 .sidebar-user-avatar {
-  width: 32px; height: 32px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: linear-gradient(135deg, #2563eb, #06b6d4);
   color: white;
-  display: grid; place-items: center;
+  display: grid;
+  place-items: center;
   font-weight: 700;
   font-size: 13px;
   flex-shrink: 0;
@@ -202,7 +225,6 @@ body {
   color: #94a3b8;
   font-size: 10.5px;
   text-transform: uppercase;
-  letter-spacing: .06em;
 }
 .sidebar-logout {
   display: block;
@@ -221,26 +243,30 @@ body {
   color: white;
 }
 
-/* ============================================================
-   TOPBAR
-   ============================================================ */
-
-.topbar {
-  background: var(--card, #ffffff) !important;
-  border-bottom: 1px solid var(--borda, #e6e9f2) !important;
+/* TOPBAR */
+.topbar,
+.main .topbar,
+.main > .topbar {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e6e9f2 !important;
   padding: 16px 32px !important;
-  box-shadow: 0 1px 2px rgba(15,23,42,.04);
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
   display: flex !important;
   align-items: center !important;
   justify-content: space-between !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .page-titulo {
-  font-weight: 700;
-  font-size: 22px;
-  margin: 0;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 22px !important;
+  margin: 0 !important;
+  letter-spacing: -.01em;
 }
 
 .topbar-acoes {
@@ -249,38 +275,27 @@ body {
   align-items: center;
 }
 
-/* ============================================================
-   CARDS
-   ============================================================ */
-
+/* CARDS */
 .freq-card,
 .stat-card {
   border-radius: 14px !important;
-  border: 1px solid var(--borda, #e6e9f2) !important;
+  border: 1px solid #e6e9f2 !important;
   box-shadow: 0 1px 3px rgba(15,23,42,.04) !important;
-  transition: box-shadow .18s ease;
+  background: #ffffff !important;
   width: 100% !important;
   box-sizing: border-box !important;
-}
-.freq-card:hover {
-  box-shadow: 0 6px 18px rgba(15,23,42,.06) !important;
+  margin-bottom: 16px !important;
 }
 
-/* ============================================================
-   BOTÕES
-   ============================================================ */
-
+/* BOTÕES */
 .btn {
   border-radius: 9px !important;
   font-family: 'Plus Jakarta Sans', sans-serif !important;
   font-weight: 600 !important;
-  transition: transform .08s ease, box-shadow .15s ease !important;
-}
-.btn:active {
-  transform: translateY(1px);
+  transition: all .15s ease !important;
 }
 .btn-primario {
-  background: linear-gradient(135deg, var(--cor-primaria, #1a56db), #1e3a8a) !important;
+  background: linear-gradient(135deg, #1a56db, #1e3a8a) !important;
   color: white !important;
   box-shadow: 0 4px 12px rgba(30, 58, 138, .22) !important;
   border: none !important;
@@ -292,28 +307,16 @@ body {
 .filtro-btn {
   border-radius: 9px !important;
   font-weight: 600 !important;
-  transition: all .15s ease !important;
 }
 .filtro-btn.ativo {
-  background: linear-gradient(135deg, var(--cor-primaria, #1a56db), #1e3a8a) !important;
+  background: linear-gradient(135deg, #1a56db, #1e3a8a) !important;
   color: white !important;
-  box-shadow: 0 3px 10px rgba(30, 58, 138, .22) !important;
 }
 
-/* Esconde "Invalid Date" nos botões de turma quando data inválida */
-.filtro-btn span:empty,
-.filtro-btn span:has-text("Invalid Date") {
-  display: none !important;
-}
-
-/* ============================================================
-   ALERTAS
-   ============================================================ */
-
+/* ALERTAS */
 .alerta {
   border-radius: 12px !important;
   border: 1px solid transparent !important;
-  font-weight: 500 !important;
 }
 .alerta-ok {
   background: #d1fae5 !important;
@@ -326,10 +329,7 @@ body {
   border-color: #fecaca !important;
 }
 
-/* ============================================================
-   MODAL
-   ============================================================ */
-
+/* MODAL */
 .modal-overlay {
   background: rgba(15, 23, 42, .55) !important;
   backdrop-filter: blur(3px);
@@ -337,91 +337,51 @@ body {
 .modal {
   border-radius: 16px !important;
   box-shadow: 0 20px 50px rgba(15,23,42,.18) !important;
-  animation: modalPop .18s ease;
-}
-@keyframes modalPop {
-  from { opacity: 0; transform: scale(.96); }
-  to   { opacity: 1; transform: scale(1); }
 }
 
-/* ============================================================
-   INPUTS
-   ============================================================ */
-
+/* INPUTS */
 .input {
   border-radius: 9px !important;
-  border: 1px solid var(--borda-strong, #d4d9e6) !important;
-  transition: border-color .15s ease, box-shadow .15s ease !important;
   font-family: 'Plus Jakarta Sans', sans-serif !important;
 }
 .input:focus {
   outline: none !important;
-  border-color: var(--cor-primaria, #1a56db) !important;
+  border-color: #1a56db !important;
   box-shadow: 0 0 0 4px rgba(30, 58, 138, .10) !important;
 }
 
-/* ============================================================
-   BADGES
-   ============================================================ */
-
+/* BADGES */
 .badge {
   border-radius: 999px !important;
   padding: 3px 10px !important;
   font-size: 11px !important;
   font-weight: 700 !important;
-  letter-spacing: .02em;
 }
 
-/* ============================================================
-   STATS CARDS - GRID RESPONSIVO
-   ============================================================ */
-
+/* STATS */
 .stat-card {
   padding: 18px 22px !important;
-}
-.stat-label {
-  font-size: 12px;
-  color: var(--texto2, #6b7280);
-  text-transform: uppercase;
-  letter-spacing: .08em;
-  font-weight: 600;
-  margin-bottom: 6px;
 }
 .stat-valor {
   font-family: 'Outfit', sans-serif !important;
   font-size: 32px !important;
   font-weight: 700 !important;
-  letter-spacing: -.02em;
-  line-height: 1.1;
-}
-.stat-sub {
-  font-size: 12px;
-  margin-top: 2px;
 }
 
-/* ============================================================
-   RESPONSIVO
-   ============================================================ */
-
-@media (max-width: 1024px) {
-  .content {
-    padding: 18px 20px !important;
-  }
-  .topbar {
-    padding: 14px 20px !important;
-  }
-}
-
+/* RESPONSIVO */
 @media (max-width: 768px) {
-  .sidebar {
+  .sidebar,
+  aside.sidebar {
     width: 64px !important;
     min-width: 64px !important;
     max-width: 64px !important;
   }
   .sidebar-brand-text,
   .sidebar-user-info,
-  .nav-group-title { display: none; }
+  .nav-group-title { display: none !important; }
   .sidebar-brand-logo { margin: 0 auto; }
-  .sidebar .nav-item span:not(.nav-icon) { display: none; }
-  .sidebar .nav-item { justify-content: center; }
+  .sidebar .nav-item span:not(.nav-icon) { display: none !important; }
+  .sidebar .nav-item { justify-content: center !important; }
+  .content { padding: 16px !important; }
+  .topbar { padding: 14px 16px !important; }
 }
