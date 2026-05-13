@@ -2824,6 +2824,21 @@ router.post('/eventos/:id/campos', requireAuth, async (req, res) => {
   req.session.msg=['Campo adicionado!']; res.redirect('/eventos/'+req.params.id);
 });
 
+router.post('/eventos/:id/campos/:cid/mover', requireAuth, async (req, res) => {
+  const { direcao } = req.body;
+  const r = await query('SELECT * FROM evento_campos WHERE id=$1', [req.params.cid]);
+  const campo = r.rows[0];
+  if (!campo) return res.redirect('/eventos/'+req.params.id+'?tab=campos');
+  const ordemAtual = campo.ordem;
+  const ordemNova = direcao === 'cima' ? ordemAtual - 1 : ordemAtual + 1;
+  const outro = await query('SELECT id FROM evento_campos WHERE evento_id=$1 AND ordem=$2', [req.params.id, ordemNova]);
+  if (outro.rows[0]) {
+    await query('UPDATE evento_campos SET ordem=$1 WHERE id=$2', [ordemAtual, outro.rows[0].id]);
+    await query('UPDATE evento_campos SET ordem=$1 WHERE id=$2', [ordemNova, req.params.cid]);
+  }
+  res.redirect('/eventos/'+req.params.id+'?tab=campos');
+});
+
 router.post('/eventos/:id/campos/:cid/deletar', requireAuth, async (req, res) => {
   await query('DELETE FROM evento_campos WHERE id=$1',[req.params.cid]);
   req.session.msg=['Campo removido!']; res.redirect('/eventos/'+req.params.id);
@@ -3041,6 +3056,49 @@ router.post('/eventos/:id/inscricoes/:iid/editar', requireAuth, async (req, res)
 });
 
 // ─── EMAIL EM MASSA PARA INSCRITOS ────────────────────────────────────────────
+router.post('/eventos/:id/mala-direta', requireAuth, async (req, res) => {
+  const { assunto, conteudo_html, destinatarios } = req.body;
+  try {
+    const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
+    const ev = evR.rows[0];
+    const config = await getConfig();
+    const orgNome = config.org_nome || 'Liga Academica de Urologia';
+    const orgLogo = config.org_logo || null;
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({
+      host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT,
+      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
+    });
+    let where = "WHERE evento_id=$1 AND email IS NOT NULL";
+    const params = [req.params.id];
+    if (destinatarios === 'confirmados') where += " AND status='confirmado'";
+    else if (destinatarios === 'pendentes') where += " AND status='pendente'";
+    const r = await query('SELECT * FROM evento_inscricoes '+where, params);
+    const logoHtml = orgLogo
+      ? '<img src="'+orgLogo+'" style="max-height:56px;max-width:180px;object-fit:contain;display:block;margin:0 auto">'
+      : '<span style="font-size:18px;font-weight:800;color:#1a56db">'+orgNome+'</span>';
+    let enviados = 0;
+    for (const insc of r.rows) {
+      const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>'
+        +'<body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif">'
+        +'<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 16px"><tr><td align="center">'
+        +'<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)">'
+        +'<tr><td style="padding:28px 32px;text-align:center;border-bottom:1px solid #f1f5f9">'+logoHtml+'</td></tr>'
+        +'<tr><td style="padding:32px;font-size:15px;color:#374151;line-height:1.7">'
+        +'<p style="margin:0 0 16px">Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p>'
+        +conteudo_html
+        +'</td></tr>'
+        +'<tr><td style="padding:20px 32px;background:#f8fafc;border-top:1px solid #f1f5f9;text-align:center">'
+        +'<p style="margin:0;font-size:12px;color:#94a3b8">'+orgNome+' · Mensagem enviada pela secretaria</p>'
+        +'</td></tr>'
+        +'</table></td></tr></table></body></html>';
+      try { await transporter.sendMail({from:process.env.EMAIL_USER,to:insc.email,subject:assunto,html}); enviados++; await new Promise(r=>setTimeout(r,200)); } catch(e){}
+    }
+    req.flash('msg', 'Email enviado para '+enviados+' inscritos!');
+  } catch(e) { req.flash('erro', 'Erro: '+e.message); }
+  res.redirect('/eventos/'+req.params.id+'?tab=mala-direta');
+});
+
 router.post('/eventos/:id/email-massa', requireAuth, async (req, res) => {
   const { assunto, mensagem, apenas_confirmados } = req.body;
   try {
