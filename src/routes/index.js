@@ -1085,24 +1085,51 @@ router.get('/frequencia-diretivos/relatorio/:turmaId', requireAuth, requireSecre
   const turmaR = await query('SELECT * FROM diretivo_turmas WHERE id=$1', [req.params.turmaId]);
   const turma = turmaR.rows[0];
   if (!turma) return res.redirect('/frequencia-diretivos');
-  const membros = await query(`SELECT d.id, d.nome, d.cargo, (SELECT COUNT(*) FROM diretivo_atividades a WHERE a.turma_id=$1) as total_atividades, (SELECT COUNT(*) FROM diretivo_presencas p JOIN diretivo_atividades a ON a.id=p.atividade_id WHERE a.turma_id=$1 AND p.diretivo_id=d.id AND p.presente=1) as presencas FROM diretivo_turma_membros tm JOIN diretivos d ON d.id=tm.diretivo_id WHERE tm.turma_id=$1 ORDER BY d.nome`, [req.params.turmaId]);
+  const membros = await query(
+    `SELECT d.id, d.nome, d.cargo, (SELECT COUNT(*) FROM diretivo_atividades a WHERE a.turma_id=$1) as total_atividades, (SELECT COUNT(*) FROM diretivo_presencas p JOIN diretivo_atividades a ON a.id=p.atividade_id WHERE a.turma_id=$1 AND p.diretivo_id=d.id AND p.presente=1) as presencas FROM diretivo_turma_membros tm JOIN diretivos d ON d.id=tm.diretivo_id WHERE tm.turma_id=$1 ORDER BY d.nome`,
+    [req.params.turmaId]
+  );
   const atividades = await query('SELECT id, tipo, descricao, data_atividade FROM diretivo_atividades WHERE turma_id=$1 ORDER BY data_atividade', [req.params.turmaId]);
   const pd = {};
-  for (const at of atividades.rows) { const pr = await query('SELECT diretivo_id, presente FROM diretivo_presencas WHERE atividade_id=$1', [at.id]); pd[at.id] = {}; pr.rows.forEach(p => { pd[at.id][p.diretivo_id] = p.presente; }); }
-  const orgNome = config.org_nome || 'Liga Urologia';
+  for (const at of atividades.rows) {
+    const pr = await query('SELECT diretivo_id, presente FROM diretivo_presencas WHERE atividade_id=$1', [at.id]);
+    pd[at.id] = {};
+    pr.rows.forEach(p => { pd[at.id][p.diretivo_id] = p.presente; });
+  }
+  const orgNome = config.org_nome || 'Liga Academica de Urologia';
   const orgCor = config.org_cor || '#1a56db';
   const orgLogo = config.org_logo || null;
-  const logoHtml = orgLogo ? '<div style="text-align:center;margin-bottom:16px"><img src="' + orgLogo + '" style="max-height:90px;object-fit:contain"></div>' : '';
-  let linhasMembros = membros.rows.map(m => { const pct = m.total_atividades > 0 ? Math.round((m.presencas/m.total_atividades)*100) : 0; const faltas = Number(m.total_atividades) - Number(m.presencas); const status = pct>=75?'APTO':pct>=50?'EM RISCO':'NAO APTO'; const cor = pct>=75?'#22c55e':pct>=50?'#f59e0b':'#ef4444'; return '<tr><td style="padding:10px;border:1px solid #e5e7eb">' + m.nome + '</td><td style="padding:10px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280">' + (m.cargo||'') + '</td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:#22c55e;font-weight:600">' + m.presencas + '</td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:#ef4444;font-weight:600">' + faltas + '</td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center">' + m.total_atividades + '</td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center"><strong>' + pct + '%</strong></td><td style="padding:10px;border:1px solid #e5e7eb;text-align:center;color:' + cor + ';font-weight:bold">' + status + '</td></tr>'; }).join('');
-  let headerAt = '<th style="padding:10px;background:'+orgCor+';color:white;text-align:left;min-width:150px">Membro</th><th style="padding:10px;background:'+orgCor+';color:white;text-align:left">Cargo</th>';
-  for (const at of atividades.rows) { const dt = new Date(at.data_atividade).toLocaleDateString('pt-BR',{timeZone:'UTC'}); headerAt += '<th style="padding:8px;background:'+orgCor+';color:white;text-align:center;font-size:11px;min-width:80px">'+dt+'<br>'+at.tipo+'<br>'+at.descricao.substring(0,12)+'</th>'; }
+  const logoHtml = orgLogo ? `<img src="${orgLogo}" style="max-height:56px;object-fit:contain">` : `<span style="font-size:20px;font-weight:800;color:${orgCor}">${orgNome}</span>`;
+  const aptos = membros.rows.filter(m => m.total_atividades > 0 && (m.presencas/m.total_atividades)*100 >= 75).length;
+  const risco = membros.rows.filter(m => m.total_atividades > 0 && (m.presencas/m.total_atividades)*100 >= 50 && (m.presencas/m.total_atividades)*100 < 75).length;
+  const inaptos = membros.rows.length - aptos - risco;
+  const dataInicio = turma.data_inicio ? new Date(turma.data_inicio+'T12:00:00').toLocaleDateString('pt-BR') : '';
+  const dataFim = turma.data_fim ? new Date(turma.data_fim+'T12:00:00').toLocaleDateString('pt-BR') : '';
+  let linhasMembros = membros.rows.map(m => {
+    const pct = m.total_atividades > 0 ? Math.round((m.presencas/m.total_atividades)*100) : 0;
+    const faltas = Number(m.total_atividades) - Number(m.presencas);
+    const status = pct>=75?'Apto':pct>=50?'Em risco':'Nao apto';
+    const corS = pct>=75?'#166534':pct>=50?'#92400e':'#991b1b';
+    const bgS = pct>=75?'#dcfce7':pct>=50?'#fef3c7':'#fee2e2';
+    const barC = pct>=75?'#10b981':pct>=50?'#f59e0b':'#ef4444';
+    return `<tr><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;font-weight:600">${m.nome}</td><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#64748b">${m.cargo||''}</td><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:center;color:#10b981;font-weight:700">${m.presencas}</td><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:center;color:#ef4444;font-weight:700">${faltas}</td><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:center;color:#64748b">${m.total_atividades}</td><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:center"><div style="display:flex;align-items:center;gap:8px;justify-content:center"><div style="width:80px;height:6px;background:#e2e8f0;border-radius:3px"><div style="width:${pct}%;height:100%;background:${barC};border-radius:3px"></div></div><span style="font-weight:700">${pct}%</span></div></td><td style="padding:12px 16px;border-bottom:1px solid #f1f5f9;text-align:center"><span style="background:${bgS};color:${corS};padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700">${status}</span></td></tr>`;
+  }).join('');
+  let headerAt = `<th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b">Diretivo</th><th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b">Cargo</th>`;
+  for (const at of atividades.rows) {
+    const dt = new Date(at.data_atividade).toLocaleDateString('pt-BR',{timeZone:'UTC',day:'2-digit',month:'2-digit'});
+    headerAt += `<th style="padding:10px 8px;text-align:center;font-size:10px;font-weight:700;color:#64748b;min-width:70px">${dt}<br><span style="font-weight:400;opacity:.7">${at.tipo.substring(0,10)}</span></th>`;
+  }
   let linhasAt = '';
-  for (const m of membros.rows) { let cols = '<td style="padding:8px;border:1px solid #e5e7eb;font-weight:600">' + m.nome + '</td><td style="padding:8px;border:1px solid #e5e7eb;font-size:11px;color:#6b7280">' + (m.cargo||'') + '</td>'; for (const at of atividades.rows) { const presente = pd[at.id] && pd[at.id][m.id] ? 1 : 0; cols += '<td style="padding:8px;border:1px solid #e5e7eb;text-align:center;background:'+(presente?'#dcfce7':'#fee2e2')+';color:'+(presente?'#166534':'#991b1b')+';font-weight:600">'+(presente?'SIM':'NAO')+'</td>'; } linhasAt += '<tr>' + cols + '</tr>'; }
-  const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório Diretivos</title><style>body{font-family:Arial,sans-serif;padding:30px}table{width:100%;border-collapse:collapse}h3{color:'+orgCor+'}@media print{.no-print{display:none}}</style></head><body><div class="no-print" style="margin-bottom:20px"><button onclick="window.print()" style="background:'+orgCor+';color:white;border:none;padding:10px 24px;border-radius:6px;cursor:pointer">Imprimir / Salvar PDF</button></div>'+logoHtml+'<div style="text-align:center;padding-bottom:16px;border-bottom:3px solid '+orgCor+';margin-bottom:24px"><h1 style="margin:0 0 6px;color:'+orgCor+'">Relatório de Frequência — Diretivos</h1><p style="margin:0;color:#6b7280">Turma: <strong>'+turma.nome+'</strong> | Total atividades: <strong>'+atividades.rows.length+'</strong> | Mínimo 75% | '+new Date().toLocaleString('pt-BR')+'</p></div><h3>Resumo por diretivo</h3><table><thead><tr><th style="padding:10px;background:'+orgCor+';color:white;text-align:left">Nome</th><th style="padding:10px;background:'+orgCor+';color:white;text-align:left">Cargo</th><th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Presenças</th><th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Faltas</th><th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Total</th><th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Frequência</th><th style="padding:10px;background:'+orgCor+';color:white;text-align:center">Status</th></tr></thead><tbody>'+linhasMembros+'</tbody></table><br><h3>Presenças por atividade</h3><div style="overflow-x:auto"><table><thead><tr>'+headerAt+'</tr></thead><tbody>'+linhasAt+'</tbody></table></div></body></html>';
-  res.send(html);
-});
-
-// ─── LOG DE ATIVIDADES — Painel ──────────────────────────────────────────────
+  for (const m of membros.rows) {
+    let cols = `<td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;font-weight:600">${m.nome}</td><td style="padding:10px 16px;border-bottom:1px solid #f1f5f9;font-size:12px;color:#64748b">${m.cargo||''}</td>`;
+    for (const at of atividades.rows) {
+      const presente = pd[at.id] && pd[at.id][m.id] ? 1 : 0;
+      cols += presente
+        ? `<td style="padding:10px 8px;border-bottom:1px solid #f1f5f9;text-align:center;background:#f0fdf4;color:#10b981;font-weight:700">S</td>`
+        : `<td style="padding:10px 8px;border-bottom:1px solid #f1f5f9;text-align:center;background:#fff1f2;color:#ef4444;font-weight:700">N</td>`;
+    }
+    linhasAt += `<tr>${cols}</tr>`;
+  }
 
 router.get('/auditoria', requireAuth, requireAdmin, async (req, res) => {
   const config = await getConfig();
