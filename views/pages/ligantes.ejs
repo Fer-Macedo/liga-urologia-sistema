@@ -417,7 +417,29 @@ function abrirDetalhe(id) {
   if (!l) return;
   document.getElementById('modal-titulo').textContent = l.nome;
 
-  document.getElementById('tab-dados').innerHTML = `
+  // Foto + botão download (só exibe se tiver foto)
+  const fotoHtml = l.foto_chave ? `
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding:16px;background:var(--fundo);border-radius:12px;border:1px solid var(--borda)">
+      <img src="/ligantes/${id}/foto"
+        style="width:72px;height:72px;border-radius:12px;object-fit:cover;border:2px solid var(--borda);flex-shrink:0"
+        alt="Foto de ${l.nome}">
+      <div>
+        <div style="font-weight:700;font-size:14px;margin-bottom:6px">${l.nome.split(' ')[0]}</div>
+        <a href="/ligantes/${id}/foto" download="${l.nome.replace(/ /g,'_')}_foto"
+          target="_blank"
+          style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white;border-radius:9px;font-size:12.5px;font-weight:600;text-decoration:none">
+          ⬇️ Baixar foto
+        </a>
+        <div style="font-size:11px;color:var(--texto2);margin-top:5px">
+          Clique em "Baixar foto" — abrirá em nova aba para salvar
+        </div>
+      </div>
+    </div>` : `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:14px 16px;background:var(--fundo);border-radius:12px;border:1px solid var(--borda);color:var(--texto2);font-size:13px">
+      👤 <span>Este ligante não anexou foto no cadastro.</span>
+    </div>`;
+
+  document.getElementById('tab-dados').innerHTML = fotoHtml + `
     <div class="form-grid-2">
       ${campo('Nome completo', l.nome)}
       ${campo('E-mail', l.email)}
