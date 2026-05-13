@@ -6,302 +6,267 @@
   <title>Login — <%= config.org_nome || 'Liga Urologia' %></title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
     :root {
       --cor: <%= config.org_cor || '#1a56db' %>;
     }
 
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
-      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-      background: #060d1f;
+      font-family: 'Outfit', system-ui, sans-serif;
+      background: #f0f4ff;
       min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
-      position: relative;
     }
 
-    /* ── FUNDO ANIMADO ── */
-    .bg {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      overflow: hidden;
-    }
-
-    /* Grade sutil */
-    .bg::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
-      background-size: 48px 48px;
-    }
-
-    /* Bolas de luz flutuantes */
-    .orb {
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(80px);
-      opacity: .45;
-      animation: drift linear infinite;
-    }
-    .orb-1 {
-      width: 600px; height: 600px;
-      background: radial-gradient(circle, #1a56db, transparent 70%);
-      top: -200px; left: -150px;
-      animation-duration: 18s;
-    }
-    .orb-2 {
-      width: 500px; height: 500px;
-      background: radial-gradient(circle, #06b6d4, transparent 70%);
-      bottom: -150px; right: -100px;
-      animation-duration: 22s;
-      animation-direction: reverse;
-    }
-    .orb-3 {
-      width: 350px; height: 350px;
-      background: radial-gradient(circle, #6366f1, transparent 70%);
-      top: 50%; left: 55%;
-      animation-duration: 28s;
-      opacity: .25;
-    }
-
-    @keyframes drift {
-      0%   { transform: translate(0, 0) rotate(0deg); }
-      33%  { transform: translate(40px, -30px) rotate(120deg); }
-      66%  { transform: translate(-20px, 40px) rotate(240deg); }
-      100% { transform: translate(0, 0) rotate(360deg); }
-    }
-
-    /* ── CARD ── */
-    .card {
-      position: relative;
-      z-index: 10;
+    /* LAYOUT SPLIT */
+    .login-wrap {
+      display: flex;
       width: 100%;
-      max-width: 420px;
-      margin: 20px;
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: 24px;
-      padding: 44px 40px;
-      backdrop-filter: blur(24px);
-      box-shadow:
-        0 0 0 1px rgba(255,255,255,.05),
-        0 40px 80px rgba(0,0,0,.5),
-        inset 0 1px 0 rgba(255,255,255,.08);
-      animation: slideUp .5s cubic-bezier(.16,1,.3,1) both;
+      min-height: 100vh;
     }
 
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(28px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    /* ── LOGO ── */
-    .logo-wrap {
+    /* PAINEL ESQUERDO — decorativo */
+    .painel-esq {
+      flex: 1;
+      background: linear-gradient(145deg, #1a56db 0%, #1e3a8a 60%, #0f2460 100%);
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin-bottom: 36px;
-    }
-
-    .logo-img-wrap {
-      width: 72px; height: 72px;
-      border-radius: 20px;
-      background: linear-gradient(135deg, #1a56db, #06b6d4);
-      display: grid;
-      place-items: center;
-      margin-bottom: 18px;
-      box-shadow: 0 8px 28px rgba(26,86,219,.45);
+      justify-content: center;
+      padding: 60px 48px;
+      position: relative;
       overflow: hidden;
     }
-    .logo-img-wrap img {
-      width: 64px; height: 64px;
+
+    .painel-esq::before {
+      content: '';
+      position: absolute;
+      width: 500px; height: 500px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.05);
+      top: -150px; right: -150px;
+    }
+    .painel-esq::after {
+      content: '';
+      position: absolute;
+      width: 320px; height: 320px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.04);
+      bottom: -80px; left: -80px;
+    }
+
+    .painel-esq-content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      max-width: 380px;
+    }
+
+    .logo-wrap-esq {
+      width: 88px; height: 88px;
+      border-radius: 24px;
+      background: rgba(255,255,255,.15);
+      border: 1px solid rgba(255,255,255,.2);
+      display: grid;
+      place-items: center;
+      margin: 0 auto 28px;
+      backdrop-filter: blur(8px);
+      overflow: hidden;
+    }
+    .logo-wrap-esq img {
+      width: 72px; height: 72px;
       object-fit: contain;
     }
-    .logo-img-wrap .logo-initials {
-      font-family: 'Sora', sans-serif;
+    .logo-initials {
+      font-size: 30px;
       font-weight: 800;
-      font-size: 26px;
       color: white;
+    }
+
+    .painel-titulo {
+      font-size: 26px;
+      font-weight: 800;
+      color: white;
+      line-height: 1.2;
+      margin-bottom: 12px;
       letter-spacing: -.02em;
     }
+    .painel-sub {
+      font-size: 14px;
+      color: rgba(255,255,255,.6);
+      font-weight: 400;
+      line-height: 1.6;
+    }
 
-    .org-nome {
-      font-family: 'Sora', sans-serif;
+    .painel-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 32px;
+    }
+    .badge {
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255,255,255,.8);
+    }
+
+    /* PAINEL DIREITO — formulário */
+    .painel-dir {
+      width: 480px;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 60px 48px;
+    }
+
+    .form-wrap {
+      width: 100%;
+      max-width: 360px;
+    }
+
+    .form-titulo {
+      font-size: 24px;
       font-weight: 800;
-      font-size: 20px;
-      color: white;
-      letter-spacing: -.03em;
-      text-align: center;
-      line-height: 1.2;
+      color: #0f172a;
       margin-bottom: 6px;
+      letter-spacing: -.02em;
     }
-    .org-sub {
-      font-size: 13px;
-      color: rgba(255,255,255,.45);
-      text-align: center;
-      font-weight: 500;
-    }
-
-    /* ── LINHA DIVISÓRIA ── */
-    .divider {
-      height: 1px;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
-      margin-bottom: 28px;
+    .form-sub {
+      font-size: 14px;
+      color: #64748b;
+      margin-bottom: 32px;
+      font-weight: 400;
     }
 
-    /* ── ALERTAS ── */
+    /* ALERTAS */
     .alerta {
-      border-radius: 12px;
+      border-radius: 10px;
       padding: 11px 14px;
       font-size: 13px;
       font-weight: 500;
-      margin-bottom: 18px;
+      margin-bottom: 20px;
       display: flex;
       align-items: center;
       gap: 8px;
     }
-    .alerta-ok  { background: rgba(16,185,129,.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,.25); }
-    .alerta-erro { background: rgba(239,68,68,.15);  color: #fca5a5; border: 1px solid rgba(239,68,68,.25); }
+    .alerta-ok   { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .alerta-erro { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
 
-    /* ── FORMULÁRIO ── */
-    .campo { margin-bottom: 18px; }
+    /* CAMPOS */
+    .campo { margin-bottom: 20px; }
 
     .label {
       display: block;
-      font-size: 12.5px;
+      font-size: 13px;
       font-weight: 600;
-      color: rgba(255,255,255,.65);
-      margin-bottom: 8px;
-      letter-spacing: .04em;
-      text-transform: uppercase;
+      color: #374151;
+      margin-bottom: 7px;
     }
 
-    .input-wrap {
-      position: relative;
-    }
+    .input-wrap { position: relative; }
+
     .input-icon {
       position: absolute;
       left: 14px;
       top: 50%;
       transform: translateY(-50%);
-      font-size: 16px;
-      opacity: .5;
+      font-size: 15px;
+      color: #94a3b8;
       pointer-events: none;
     }
 
     .input {
       width: 100%;
-      padding: 13px 14px 13px 42px;
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.10);
-      border-radius: 12px;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      padding: 12px 14px 12px 42px;
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-family: 'Outfit', sans-serif;
       font-size: 14px;
-      color: white;
+      color: #0f172a;
       outline: none;
       transition: all .2s ease;
     }
-    .input::placeholder { color: rgba(255,255,255,.25); }
+    .input::placeholder { color: #cbd5e1; }
     .input:focus {
-      background: rgba(255,255,255,.09);
-      border-color: rgba(26,86,219,.7);
-      box-shadow: 0 0 0 4px rgba(26,86,219,.18);
+      background: white;
+      border-color: var(--cor);
+      box-shadow: 0 0 0 3px rgba(26,86,219,.12);
     }
 
-    /* Toggle senha */
     .toggle-senha {
       position: absolute;
-      right: 14px;
+      right: 13px;
       top: 50%;
       transform: translateY(-50%);
       background: none;
       border: none;
       cursor: pointer;
-      font-size: 16px;
-      opacity: .45;
+      font-size: 15px;
+      color: #94a3b8;
       padding: 0;
       line-height: 1;
-      transition: opacity .15s;
+      transition: color .15s;
     }
-    .toggle-senha:hover { opacity: .8; }
+    .toggle-senha:hover { color: #475569; }
 
     .campo-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
+      margin-bottom: 7px;
     }
     .link-esqueceu {
-      font-size: 12px;
-      color: rgba(26,182,255,.8);
+      font-size: 12.5px;
+      color: var(--cor);
       text-decoration: none;
       font-weight: 500;
-      transition: color .15s;
     }
-    .link-esqueceu:hover { color: white; }
+    .link-esqueceu:hover { text-decoration: underline; }
 
-    /* ── BOTÃO ── */
+    /* BOTÃO */
     .btn-login {
       width: 100%;
-      padding: 14px;
-      background: linear-gradient(135deg, #1a56db 0%, #1e3a8a 100%);
+      padding: 13px;
+      background: linear-gradient(135deg, #1a56db, #1e3a8a);
       color: white;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-family: 'Outfit', sans-serif;
       font-size: 15px;
       font-weight: 700;
       border: none;
-      border-radius: 12px;
+      border-radius: 10px;
       cursor: pointer;
       transition: all .2s ease;
-      box-shadow: 0 6px 20px rgba(26,86,219,.4);
-      margin-top: 6px;
+      box-shadow: 0 4px 14px rgba(26,86,219,.35);
+      margin-top: 4px;
       position: relative;
       overflow: hidden;
       letter-spacing: .01em;
     }
-    .btn-login::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,.12), transparent);
-      opacity: 0;
-      transition: opacity .2s;
-    }
     .btn-login:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 28px rgba(26,86,219,.55);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 22px rgba(26,86,219,.45);
     }
-    .btn-login:hover::before { opacity: 1; }
     .btn-login:active { transform: translateY(0); }
-
-    /* ── LOADING STATE ── */
-    .btn-login.loading {
-      pointer-events: none;
-      opacity: .8;
-    }
+    .btn-login.loading { pointer-events: none; opacity: .8; }
     .btn-login .btn-text { transition: opacity .2s; }
-    .btn-login .spinner {
-      display: none;
-      position: absolute;
-      inset: 0;
-      align-items: center;
-      justify-content: center;
-    }
+    .btn-login .spinner { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; }
     .btn-login.loading .btn-text { opacity: 0; }
     .btn-login.loading .spinner { display: flex; }
 
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
+    @keyframes spin { to { transform: rotate(360deg); } }
     .spinner-ring {
       width: 20px; height: 20px;
       border: 2px solid rgba(255,255,255,.3);
@@ -310,98 +275,104 @@
       animation: spin .7s linear infinite;
     }
 
-    /* ── RODAPÉ ── */
-    .card-footer {
-      margin-top: 24px;
+    .rodape {
+      margin-top: 32px;
       text-align: center;
       font-size: 12px;
-      color: rgba(255,255,255,.2);
+      color: #cbd5e1;
+    }
+
+    /* RESPONSIVO */
+    @media (max-width: 768px) {
+      .painel-esq { display: none; }
+      .painel-dir { width: 100%; padding: 40px 24px; }
     }
   </style>
 </head>
 <body>
 
-  <!-- FUNDO -->
-  <div class="bg">
-    <div class="orb orb-1"></div>
-    <div class="orb orb-2"></div>
-    <div class="orb orb-3"></div>
-  </div>
+<div class="login-wrap">
 
-  <!-- CARD -->
-  <div class="card">
-
-    <!-- LOGO -->
-    <div class="logo-wrap">
-      <div class="logo-img-wrap">
+  <!-- ESQUERDA -->
+  <div class="painel-esq">
+    <div class="painel-esq-content">
+      <div class="logo-wrap-esq">
         <% if (config.org_logo) { %>
           <img src="<%= config.org_logo %>" alt="Logo">
         <% } else { %>
           <span class="logo-initials">LU</span>
         <% } %>
       </div>
-      <div class="org-nome"><%= config.org_nome || 'Liga Acadêmica de Urologia' %></div>
-      <div class="org-sub">Sistema de Gestão Interno</div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- ALERTAS -->
-    <% if (msg && msg.length > 0) { %>
-      <div class="alerta alerta-ok">✅ <%= msg[0] %></div>
-    <% } %>
-    <% if (erro && erro.length > 0) { %>
-      <div class="alerta alerta-erro">❌ <%= erro[0] %></div>
-    <% } %>
-
-    <!-- FORM -->
-    <form action="/login" method="POST" id="form-login">
-      <div class="campo">
-        <label class="label">E-mail</label>
-        <div class="input-wrap">
-          <span class="input-icon">✉️</span>
-          <input type="email" name="email" class="input"
-            placeholder="seu@email.com" required autofocus>
-        </div>
+      <div class="painel-titulo"><%= config.org_nome || 'Liga Acadêmica de Urologia' %></div>
+      <div class="painel-sub">Plataforma de gestão interna para ligantes, diretivos, cobranças e eventos.</div>
+      <div class="painel-badges">
+        <span class="badge">🎓 Ligantes</span>
+        <span class="badge">👥 Diretivos</span>
+        <span class="badge">💰 Cobranças</span>
+        <span class="badge">📅 Eventos</span>
+        <span class="badge">📊 Relatórios</span>
       </div>
-
-      <div class="campo">
-        <div class="campo-row">
-          <label class="label" style="margin:0">Senha</label>
-          <a href="/recuperar-senha" class="link-esqueceu">Esqueceu a senha?</a>
-        </div>
-        <div class="input-wrap">
-          <span class="input-icon">🔒</span>
-          <input type="password" name="senha" class="input" id="campo-senha"
-            placeholder="••••••••" required>
-          <button type="button" class="toggle-senha" id="toggle-senha" title="Mostrar/ocultar senha">👁️</button>
-        </div>
-      </div>
-
-      <button type="submit" class="btn-login" id="btn-entrar">
-        <span class="btn-text">Entrar no sistema →</span>
-        <span class="spinner"><div class="spinner-ring"></div></span>
-      </button>
-    </form>
-
-    <div class="card-footer">
-      <%= config.org_nome || 'LAURO' %> · Painel Interno
     </div>
   </div>
 
-  <script>
-    // Toggle mostrar/ocultar senha
-    document.getElementById('toggle-senha').addEventListener('click', function() {
-      const input = document.getElementById('campo-senha');
-      const isText = input.type === 'text';
-      input.type = isText ? 'password' : 'text';
-      this.textContent = isText ? '👁️' : '🙈';
-    });
+  <!-- DIREITA -->
+  <div class="painel-dir">
+    <div class="form-wrap">
+      <div class="form-titulo">Bem-vindo de volta 👋</div>
+      <div class="form-sub">Acesse com suas credenciais para continuar.</div>
 
-    // Loading state ao submeter
-    document.getElementById('form-login').addEventListener('submit', function() {
-      document.getElementById('btn-entrar').classList.add('loading');
-    });
-  </script>
+      <% if (msg && msg.length > 0) { %>
+        <div class="alerta alerta-ok">✅ <%= msg[0] %></div>
+      <% } %>
+      <% if (erro && erro.length > 0) { %>
+        <div class="alerta alerta-erro">❌ <%= erro[0] %></div>
+      <% } %>
+
+      <form action="/login" method="POST" id="form-login">
+        <div class="campo">
+          <label class="label">E-mail</label>
+          <div class="input-wrap">
+            <span class="input-icon">✉️</span>
+            <input type="email" name="email" class="input"
+              placeholder="seu@email.com" required autofocus>
+          </div>
+        </div>
+
+        <div class="campo">
+          <div class="campo-row">
+            <label class="label" style="margin:0">Senha</label>
+            <a href="/recuperar-senha" class="link-esqueceu">Esqueceu a senha?</a>
+          </div>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
+            <input type="password" name="senha" class="input" id="campo-senha"
+              placeholder="••••••••" required>
+            <button type="button" class="toggle-senha" id="toggle-senha">👁️</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-login" id="btn-entrar">
+          <span class="btn-text">Entrar no sistema →</span>
+          <span class="spinner"><div class="spinner-ring"></div></span>
+        </button>
+      </form>
+
+      <div class="rodape"><%= config.org_nome || 'LAURO' %> · Painel Interno</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  document.getElementById('toggle-senha').addEventListener('click', function() {
+    const input = document.getElementById('campo-senha');
+    const isText = input.type === 'text';
+    input.type = isText ? 'password' : 'text';
+    this.textContent = isText ? '👁️' : '🙈';
+  });
+  document.getElementById('form-login').addEventListener('submit', function() {
+    document.getElementById('btn-entrar').classList.add('loading');
+  });
+</script>
 </body>
 </html>
