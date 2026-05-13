@@ -933,10 +933,13 @@ router.get('/diretivos', requireAuth, requireSecretaria, async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg || []; req.session.msg = [];
   const erro = req.session.erro || []; req.session.erro = [];
-  const r = await query('SELECT * FROM diretivos WHERE ativo=1 ORDER BY cargo, nome');
+  const statusFiltro = req.query.status || 'ativos';
+  const whereAtivo = statusFiltro === 'inativos' ? 'ativo=0' : statusFiltro === 'todos' ? '1=1' : 'ativo=1';
+  const r = await query('SELECT * FROM diretivos WHERE ' + whereAtivo + ' ORDER BY cargo, nome');
   res.render('pages/diretivos', {
     config, msg, erro, diretivos: r.rows, usuario: req.session.usuario,
-    appUrl: process.env.APP_URL || 'https://liga-urologia.onrender.com'
+    appUrl: process.env.APP_URL || 'https://liga-urologia.onrender.com',
+    statusFiltro
   });
 });
 
