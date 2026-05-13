@@ -4,59 +4,337 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Check-in — <%= evento.nome %></title>
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
   <style>
     :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
-    .checkin-box { background:var(--card); border:3px solid var(--borda); border-radius:16px; padding:24px; text-align:center; max-width:500px; margin:0 auto 24px; }
-    .checkin-input { font-size:20px; text-align:center; padding:14px; border:2px solid var(--borda); border-radius:10px; width:100%; margin-bottom:12px; }
-    .resultado { padding:20px; border-radius:12px; margin-top:16px; font-size:15px; font-weight:600; display:none; }
-    .resultado.ok { background:#dcfce7; color:#166534; }
-    .resultado.erro { background:#fee2e2; color:#991b1b; }
-    .stat-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
-    .stat-box { background:var(--card); border:1px solid var(--borda); border-radius:10px; padding:16px; text-align:center; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 14px;
+      padding: 20px 22px;
+      position: relative;
+      overflow: hidden;
+      text-align: center;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .stat-card.azul::before  { background: linear-gradient(90deg,#1a56db,#06b6d4); }
+    .stat-card.verde::before { background: linear-gradient(90deg,#10b981,#34d399); }
+    .stat-card.amr::before   { background: linear-gradient(90deg,#f59e0b,#fbbf24); }
+    .stat-num {
+      font-family: 'Outfit', sans-serif;
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .stat-card.azul  .stat-num { color: #1a56db; }
+    .stat-card.verde .stat-num { color: #10b981; }
+    .stat-card.amr   .stat-num { color: #f59e0b; }
+    .stat-lab {
+      font-size: 11.5px;
+      color: var(--texto2);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .progress-bar {
+      height: 6px;
+      background: var(--borda);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #34d399);
+      border-radius: 3px;
+      transition: width .5s ease;
+    }
+
+    .checkin-panel {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .checkin-panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--borda);
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .checkin-panel-body {
+      padding: 24px;
+    }
+
+    .checkin-input-wrap {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .checkin-input {
+      flex: 1;
+      font-size: 16px;
+      padding: 12px 16px;
+      border: 2px solid var(--borda);
+      border-radius: 10px;
+      background: var(--card);
+      color: var(--texto);
+      font-family: 'Outfit', sans-serif;
+      transition: border-color .15s;
+    }
+    .checkin-input:focus {
+      outline: none;
+      border-color: var(--cor-primaria);
+    }
+
+    .resultado {
+      padding: 16px 20px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .resultado.ok   { background: #dcfce7; color: #166534; display: flex; }
+    .resultado.erro { background: #fee2e2; color: #991b1b; display: flex; }
+
+    /* CAMERA QR */
+    .camera-wrap {
+      position: relative;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      max-width: 360px;
+      margin: 0 auto 16px;
+      display: none;
+    }
+    .camera-wrap.ativo { display: block; }
+    #video-qr {
+      width: 100%;
+      display: block;
+      border-radius: 12px;
+    }
+    .camera-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .camera-frame {
+      width: 200px;
+      height: 200px;
+      border: 3px solid #10b981;
+      border-radius: 12px;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.4);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { border-color: #10b981; }
+      50% { border-color: #34d399; }
+    }
+
+    /* TABELA */
+    .table-moderna {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .table-moderna table { width: 100%; border-collapse: collapse; }
+    .table-moderna thead th {
+      background: var(--fundo);
+      padding: 11px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--texto2);
+      text-align: left;
+      border-bottom: 1px solid var(--borda);
+    }
+    .table-moderna tbody tr { border-bottom: 1px solid var(--borda); transition: background .15s; }
+    .table-moderna tbody tr:last-child { border-bottom: none; }
+    .table-moderna tbody tr:hover { background: var(--fundo); }
+    .table-moderna tbody td { padding: 11px 14px; font-size: 13px; color: var(--texto); vertical-align: middle; }
+    .table-moderna tbody tr.feito td { opacity: .6; }
+
+    .badge-checkin {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge-checkin.ok   { background: #dcfce7; color: #166534; }
+    .badge-checkin.wait { background: #fef3c7; color: #92400e; }
+
+    .busca-input {
+      padding: 7px 12px;
+      border: 1px solid var(--borda);
+      border-radius: 8px;
+      background: var(--fundo);
+      font-size: 13px;
+      color: var(--texto);
+      width: 260px;
+    }
+    .busca-input:focus { outline: none; border-color: var(--cor-primaria); }
+
+    /* FEEDBACK SONORO VISUAL */
+    .flash-ok {
+      position: fixed;
+      inset: 0;
+      background: rgba(16,185,129,.18);
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .1s;
+    }
+    .flash-ok.show { opacity: 1; }
   </style>
 </head>
 <body>
+<div class="flash-ok" id="flash"></div>
 <div class="layout">
   <%- include('../partials/sidebar', { paginaAtual: 'eventos' }) %>
   <main class="main">
     <div class="topbar">
-      <h1 class="page-titulo">✅ Check-in — <%= evento.nome %></h1>
+      <h1 class="page-titulo">Check-in — <%= evento.nome %></h1>
       <div class="topbar-acoes">
-        <a href="/eventos/<%= evento.id %>" class="btn">← Voltar</a>
+        <a href="/eventos/<%= evento.id %>" class="btn btn-sm">Voltar</a>
       </div>
     </div>
+
     <div class="content">
-      <div class="stat-grid">
-        <div class="stat-box"><div style="font-size:24px;font-weight:700;color:var(--cor-primaria)"><%= stats.total %></div><div style="font-size:12px;color:var(--texto2)">Inscritos</div></div>
-        <div class="stat-box"><div style="font-size:24px;font-weight:700;color:#059669"><%= stats.checkins %></div><div style="font-size:12px;color:var(--texto2)">Check-ins</div></div>
-        <div class="stat-box"><div style="font-size:24px;font-weight:700;color:#f59e0b"><%= stats.total - stats.checkins %></div><div style="font-size:12px;color:var(--texto2)">Aguardando</div></div>
+
+      <!-- STATS -->
+      <%
+        const pct = stats.total > 0 ? Math.round(stats.checkins / stats.total * 100) : 0;
+      %>
+      <div class="stats-row">
+        <div class="stat-card azul">
+          <div class="stat-num"><%= stats.total %></div>
+          <div class="stat-lab">Inscritos</div>
+        </div>
+        <div class="stat-card verde">
+          <div class="stat-num"><%= stats.checkins %></div>
+          <div class="stat-lab">Check-ins realizados</div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:<%= pct %>%"></div>
+          </div>
+          <div style="font-size:11px;color:var(--texto2);margin-top:4px"><%= pct %>% de presença</div>
+        </div>
+        <div class="stat-card amr">
+          <div class="stat-num"><%= stats.total - stats.checkins %></div>
+          <div class="stat-lab">Aguardando</div>
+        </div>
       </div>
 
-      <div class="checkin-box">
-        <h2 style="margin-bottom:16px">📷 Check-in por Nome ou QR Code</h2>
-        <input type="text" class="checkin-input" id="busca-checkin" placeholder="Digite o nome ou escaneie o QR Code..." autofocus>
-        <button class="btn btn-primario" style="width:100%" onclick="fazerCheckin()">✅ Confirmar Check-in</button>
-        <div class="resultado" id="resultado"></div>
+      <!-- PAINEL CHECK-IN -->
+      <div class="checkin-panel">
+        <div class="checkin-panel-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Realizar Check-in
+        </div>
+        <div class="checkin-panel-body">
+
+          <!-- CAMERA -->
+          <div class="camera-wrap" id="camera-wrap">
+            <video id="video-qr" autoplay playsinline muted></video>
+            <div class="camera-overlay">
+              <div class="camera-frame"></div>
+            </div>
+            <canvas id="canvas-qr" style="display:none"></canvas>
+          </div>
+
+          <div class="checkin-input-wrap">
+            <input type="text" class="checkin-input" id="busca-checkin"
+              placeholder="Digite o nome ou cole o código QR..."
+              autofocus autocomplete="off">
+            <button class="btn btn-primario" onclick="fazerCheckin()" style="white-space:nowrap">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Check-in
+            </button>
+            <button class="btn" id="btn-camera" onclick="toggleCamera()" title="Usar câmera" style="padding:10px 14px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </button>
+          </div>
+
+          <div class="resultado" id="resultado">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="resultado-icon"><polyline points="20 6 9 17 4 12"/></svg>
+            <span id="resultado-texto"></span>
+          </div>
+
+          <div style="font-size:12px;color:var(--texto2);margin-top:12px">
+            Digite o nome do participante ou o código do ingresso (ex: LAURO-1-1234567) e pressione Enter ou clique em Check-in. Use a câmera para ler o QR Code diretamente.
+          </div>
+        </div>
       </div>
 
-      <div class="card">
-        <div class="card-titulo">📋 Lista de Presença</div>
-        <table class="tabela">
-          <thead><tr><th>Nome</th><th>Email</th><th>Lote</th><th>Check-in</th><th>Ação</th></tr></thead>
-          <tbody>
-            <% inscricoes.forEach(i => { %>
+      <!-- LISTA DE PRESENÇA -->
+      <div class="table-moderna">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <span style="font-size:14px;font-weight:700;font-family:'Outfit',sans-serif">Lista de presença</span>
+          <input type="text" class="busca-input" placeholder="Buscar participante..."
+            oninput="buscarLista(this.value)">
+        </div>
+        <table>
+          <thead>
             <tr>
-              <td><strong><%= i.nome %></strong></td>
-              <td><%= i.email %></td>
-              <td><%= i.lote_nome||'—' %></td>
-              <td><%= i.checkin_em ? '✅ ' + new Date(i.checkin_em).toLocaleTimeString('pt-BR') : '—' %></td>
+              <th>Nome</th>
+              <th>Email</th>
+              <th>Lote</th>
+              <th>Check-in</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="tbody-lista">
+            <% inscricoes.forEach(i => { %>
+            <tr class="<%= i.checkin_em ? 'feito' : '' %>" data-busca="<%= (i.nome + ' ' + (i.email||'')).toLowerCase() %>">
+              <td style="font-weight:600"><%= i.nome %></td>
+              <td style="color:var(--texto2)"><%= i.email %></td>
+              <td style="color:var(--texto2)"><%= i.lote_nome || '—' %></td>
+              <td>
+                <% if (i.checkin_em) { %>
+                  <span class="badge-checkin ok">
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    <%= new Date(i.checkin_em).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) %>
+                  </span>
+                <% } else { %>
+                  <span class="badge-checkin wait">Aguardando</span>
+                <% } %>
+              </td>
               <td>
                 <% if (!i.checkin_em) { %>
-                <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/checkin" style="display:inline">
-                  <button type="submit" class="btn" style="font-size:11px;padding:4px 8px;background:#059669;color:white">✅ Check-in</button>
+                <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/checkin" style="display:inline;margin:0">
+                  <button type="submit" class="btn btn-sm" style="font-size:11px;background:#10b981;color:white;border-color:transparent">
+                    Check-in
+                  </button>
                 </form>
                 <% } else { %>
-                <span style="color:#059669;font-size:12px">✅ Feito</span>
+                  <span style="font-size:12px;color:#10b981;font-weight:600">Realizado</span>
                 <% } %>
               </td>
             </tr>
@@ -64,25 +342,123 @@
           </tbody>
         </table>
       </div>
+
     </div>
   </main>
 </div>
+
+<!-- QR Code lib -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script>
-function fazerCheckin() {
-  const busca = document.getElementById('busca-checkin').value.trim();
+const eventoId = '<%= evento.id %>';
+let cameraAtiva = false;
+let stream = null;
+let scanInterval = null;
+
+function fazerCheckin(codigo) {
+  const busca = codigo || document.getElementById('busca-checkin').value.trim();
   if (!busca) return;
-  fetch('/eventos/<%= evento.id %>/checkin/buscar', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({busca})
-  }).then(r=>r.json()).then(data => {
-    const res = document.getElementById('resultado');
-    res.style.display = 'block';
-    res.className = 'resultado ' + (data.ok ? 'ok' : 'erro');
-    res.textContent = data.msg;
-    if (data.ok) { document.getElementById('busca-checkin').value=''; setTimeout(()=>location.reload(),2000); }
+  fetch('/eventos/' + eventoId + '/checkin/buscar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ busca })
+  })
+  .then(r => r.json())
+  .then(data => {
+    mostrarResultado(data.ok, data.msg);
+    if (data.ok) {
+      document.getElementById('busca-checkin').value = '';
+      flashVerde();
+      setTimeout(() => location.reload(), 2000);
+    }
+  })
+  .catch(() => mostrarResultado(false, 'Erro de conexão.'));
+}
+
+function mostrarResultado(ok, msg) {
+  const res = document.getElementById('resultado');
+  const icon = document.getElementById('resultado-icon');
+  const txt = document.getElementById('resultado-texto');
+  res.className = 'resultado ' + (ok ? 'ok' : 'erro');
+  txt.textContent = msg;
+  if (!ok) {
+    icon.innerHTML = '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>';
+  } else {
+    icon.innerHTML = '<polyline points="20 6 9 17 4 12"/>';
+  }
+}
+
+function flashVerde() {
+  const f = document.getElementById('flash');
+  f.classList.add('show');
+  setTimeout(() => f.classList.remove('show'), 400);
+}
+
+function buscarLista(termo) {
+  const t = termo.toLowerCase();
+  document.querySelectorAll('#tbody-lista tr[data-busca]').forEach(r => {
+    r.style.display = !t || r.dataset.busca.includes(t) ? '' : 'none';
   });
 }
-document.getElementById('busca-checkin').addEventListener('keypress', e => { if(e.key==='Enter') fazerCheckin(); });
+
+async function toggleCamera() {
+  const btn = document.getElementById('btn-camera');
+  const wrap = document.getElementById('camera-wrap');
+  if (!cameraAtiva) {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' }
+      });
+      document.getElementById('video-qr').srcObject = stream;
+      wrap.classList.add('ativo');
+      btn.style.background = '#10b981';
+      btn.style.color = 'white';
+      cameraAtiva = true;
+      iniciarScan();
+    } catch(e) {
+      alert('Não foi possível acessar a câmera. Verifique as permissões do navegador.');
+    }
+  } else {
+    pararCamera();
+  }
+}
+
+function iniciarScan() {
+  const video = document.getElementById('video-qr');
+  const canvas = document.getElementById('canvas-qr');
+  const ctx = canvas.getContext('2d');
+  scanInterval = setInterval(() => {
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+      if (code && code.data) {
+        pararCamera();
+        fazerCheckin(code.data);
+      }
+    }
+  }, 300);
+}
+
+function pararCamera() {
+  clearInterval(scanInterval);
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  document.getElementById('camera-wrap').classList.remove('ativo');
+  const btn = document.getElementById('btn-camera');
+  btn.style.background = '';
+  btn.style.color = '';
+  cameraAtiva = false;
+  stream = null;
+}
+
+document.getElementById('busca-checkin').addEventListener('keypress', e => {
+  if (e.key === 'Enter') fazerCheckin();
+});
+
+// Foco automático no input
+document.getElementById('busca-checkin').focus();
 </script>
 </body>
 </html>
