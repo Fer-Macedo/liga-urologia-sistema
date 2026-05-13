@@ -1,6 +1,7 @@
 <%
 // views/partials/sidebar.ejs
 // Sidebar do painel — Liga Acadêmica de Urologia (LAURO)
+// Variável esperada: paginaAtual (string)
 const pa = typeof paginaAtual !== 'undefined' ? paginaAtual : '';
 const usuarioPerfil = (typeof usuario !== 'undefined' && usuario && usuario.perfil) ? usuario.perfil : 'visualizador';
 %>
