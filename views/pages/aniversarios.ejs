@@ -74,11 +74,18 @@
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: .05em;
-      color: var(--texto2);
-      background: var(--fundo);
-      border: 1px solid var(--borda);
       border-radius: 999px;
       padding: 2px 8px;
+    }
+    .aniv-tipo.ligante {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+    .aniv-tipo.diretivo {
+      background: #f5f3ff;
+      color: #6d28d9;
+      border: 1px solid #ddd6fe;
     }
 
     .badge-hoje {
@@ -187,7 +194,7 @@
                 <div class="aniv-nome"><%= m.nome %></div>
                 <div class="aniv-data">
                   <%= new Date(m.data_nascimento+'T12:00:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long'}) %>
-                  <span class="aniv-tipo"><%= m.tipo === 'diretivo' ? 'Diretivo' : 'Membro' %></span>
+                  <span class="aniv-tipo <%= m.tipo === 'diretivo' ? 'diretivo' : 'ligante' %>"><%= m.tipo === 'diretivo' ? 'Diretivo' : 'Ligante' %></span>
                 </div>
               </div>
               <span class="badge-hoje">Hoje</span>
@@ -212,7 +219,7 @@
                   <div class="aniv-nome"><%= m.nome %></div>
                   <div class="aniv-data">
                     <%= new Date(m.data_nascimento+'T12:00:00').toLocaleDateString('pt-BR',{day:'numeric',month:'long'}) %>
-                    <span class="aniv-tipo"><%= m.tipo === 'diretivo' ? 'Diretivo' : 'Membro' %></span>
+                    <span class="aniv-tipo <%= m.tipo === 'diretivo' ? 'diretivo' : 'ligante' %>"><%= m.tipo === 'diretivo' ? 'Diretivo' : 'Ligante' %></span>
                   </div>
                 </div>
               </div>
