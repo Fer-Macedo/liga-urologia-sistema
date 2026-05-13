@@ -23,6 +23,7 @@
     .inapto { background:#ef4444; }
     .pct-label { font-size:12px;font-weight:600;min-width:40px;text-align:right; }
 
+    /* Botão de excluir registro — destaque para evitar engano de cadastro */
     .btn-excluir-registro {
       display:inline-flex;align-items:center;gap:5px;
       padding:6px 12px;border-radius:8px;
@@ -60,6 +61,7 @@
       <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
       <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
 
+      <!-- Seletor de turma — ordenado por nome -->
       <div class="freq-card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
         <div style="font-size:13px;font-weight:600;color:var(--texto2)">TURMA:</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;flex:1">
@@ -84,12 +86,14 @@
 
       <% if (turmaAtual) { %>
 
+      <!-- Tabs -->
       <div class="freq-tabs">
         <button class="freq-tab ativo" onclick="mostrarTab('tab-resumo', this)">📊 Resumo</button>
         <button class="freq-tab" onclick="mostrarTab('tab-atividades', this)">📅 Atividades (<%= atividades.length %>)</button>
         <button class="freq-tab" onclick="mostrarTab('tab-ligantes', this)">🎓 Ligantes</button>
       </div>
 
+      <!-- Tab Resumo -->
       <div id="tab-resumo" class="tab-content ativo">
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px">
           <div class="stat-card verde">
@@ -155,6 +159,7 @@
         </div>
       </div>
 
+      <!-- Tab Atividades -->
       <div id="tab-atividades" class="tab-content">
         <% if (atividades.length === 0) { %>
           <div class="vazio">Nenhuma atividade cadastrada para esta turma</div>
@@ -208,6 +213,7 @@
         <% }) %>
       </div>
 
+      <!-- Tab Ligantes — antiga "Membros" -->
       <div id="tab-ligantes" class="tab-content">
         <div class="freq-card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
@@ -256,6 +262,7 @@
   </main>
 </div>
 
+<!-- Modal Nova Turma -->
 <div class="modal-overlay" id="modal-turma" style="display:none">
   <div class="modal">
     <div class="modal-header">
@@ -285,6 +292,7 @@
   </div>
 </div>
 
+<!-- Modal Nova Atividade -->
 <div class="modal-overlay" id="modal-atividade" style="display:none">
   <div class="modal">
     <div class="modal-header">
@@ -331,6 +339,7 @@
   </div>
 </div>
 
+<!-- Modal Adicionar Ligante à Turma — SEM campo "Data de entrada na turma" -->
 <div class="modal-overlay" id="modal-add-membro" style="display:none">
   <div class="modal">
     <div class="modal-header">
@@ -354,6 +363,8 @@
             Apenas ligantes ainda não vinculados à turma <%= turmaAtual ? turmaAtual.nome : '' %> aparecem aqui.
           </small>
         </div>
+        <!-- Campo "data_entrada" enviado oculto (data de hoje) para manter compatibilidade com o backend.
+             Removido da interface a pedido — não é informação útil ao usuário. -->
         <input type="hidden" name="data_entrada" value="<%= new Date().toISOString().split('T')[0] %>">
       </div>
       <div class="modal-footer">
@@ -364,6 +375,7 @@
   </div>
 </div>
 
+<!-- Modal Enviar Frequência -->
 <div class="modal-overlay" id="modal-envio" style="display:none">
   <div class="modal" style="max-width:500px">
     <div class="modal-header">
