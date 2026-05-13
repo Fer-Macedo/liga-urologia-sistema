@@ -1,11 +1,11 @@
 /* ============================================================
-   LIGA UROLOGIA — Painel Interno (v3)
-   admin-modern.css — força layout fluido em 100%
+   LIGA UROLOGIA — Painel Interno (v4)
+   admin-modern.css — correção scroll duplo da sidebar
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
 
-/* RESET DE LARGURA — força 100% */
+/* RESET DE LARGURA */
 html, body {
   margin: 0 !important;
   padding: 0 !important;
@@ -20,7 +20,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* LAYOUT — força flex fluido */
+/* LAYOUT */
 .layout,
 body > .layout,
 div.layout {
@@ -69,7 +69,10 @@ div.content,
   box-sizing: border-box !important;
 }
 
-/* SIDEBAR */
+/* ============================================================
+   SIDEBAR — CORRIGIDA (sem scroll duplo)
+   ============================================================ */
+
 .sidebar,
 aside.sidebar {
   background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
@@ -84,30 +87,33 @@ aside.sidebar {
   flex-shrink: 0 !important;
   flex-grow: 0 !important;
   height: 100vh !important;
+  max-height: 100vh !important;
   position: sticky !important;
   top: 0 !important;
-  overflow-y: auto !important;
+  overflow: hidden !important;  /* IMPORTANTE: sem scroll na sidebar inteira */
   border: none !important;
   box-sizing: border-box !important;
 }
 
+/* BRAND - fixo no topo */
 .sidebar-brand {
   display: flex !important;
   align-items: center;
   gap: 12px;
-  padding: 22px 18px 18px;
+  padding: 18px 16px;
   border-bottom: 1px solid rgba(255,255,255,.08);
+  flex-shrink: 0 !important;
 }
 .sidebar-brand-logo {
-  width: 40px;
-  height: 40px;
-  border-radius: 11px;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
   background: linear-gradient(135deg, #2563eb, #06b6d4);
   display: grid;
   place-items: center;
   font-family: 'Outfit', sans-serif;
   font-weight: 800;
-  font-size: 14px;
+  font-size: 13px;
   color: white;
   box-shadow: 0 4px 14px rgba(37,99,235,.35);
   flex-shrink: 0;
@@ -123,41 +129,61 @@ aside.sidebar {
   font-family: 'Outfit', sans-serif;
   font-weight: 700;
   color: white;
-  font-size: 13px;
+  font-size: 12.5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .sidebar-brand-text span {
-  font-size: 10px;
+  font-size: 9.5px;
   color: #94a3b8;
   text-transform: uppercase;
   letter-spacing: .08em;
+  margin-top: 1px;
 }
 
+/* NAV - área que rola */
 .sidebar-nav {
-  flex: 1;
-  padding: 14px 12px;
-  overflow-y: auto;
+  flex: 1 1 auto !important;
+  padding: 12px 10px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  min-height: 0 !important;
 }
-.nav-group { margin-bottom: 16px; }
+
+/* Scrollbar customizada (mais fina e discreta) */
+.sidebar-nav::-webkit-scrollbar {
+  width: 5px;
+}
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.18);
+}
+
+.nav-group { margin-bottom: 14px; }
 .nav-group-title {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: .12em;
   text-transform: uppercase;
   color: #64748b;
-  padding: 0 12px 8px;
+  padding: 0 12px 6px;
 }
 
 .sidebar .nav-item {
   display: flex !important;
   align-items: center !important;
   gap: 11px !important;
-  padding: 9px 12px !important;
-  border-radius: 9px !important;
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
   color: #cbd5e1 !important;
-  font-size: 13.5px !important;
+  font-size: 13px !important;
   font-weight: 500 !important;
   margin-bottom: 2px !important;
   text-decoration: none !important;
@@ -168,7 +194,6 @@ aside.sidebar {
 .sidebar .nav-item:hover {
   background: rgba(255,255,255,.06) !important;
   color: white !important;
-  transform: translateX(2px);
 }
 .sidebar .nav-item.ativo {
   background: linear-gradient(90deg, rgba(37,99,235,.22), rgba(6,182,212,.08)) !important;
@@ -176,36 +201,39 @@ aside.sidebar {
   box-shadow: inset 3px 0 0 #06b6d4 !important;
 }
 .sidebar .nav-icon {
-  width: 22px;
-  font-size: 15px;
+  width: 20px;
+  font-size: 14px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 }
 
+/* FOOTER - fixo embaixo */
 .sidebar-footer {
   border-top: 1px solid rgba(255,255,255,.08);
-  padding: 14px 16px;
+  padding: 12px 14px;
+  flex-shrink: 0 !important;
+  background: rgba(0,0,0,0.2);
 }
 .sidebar-user {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px;
+  padding: 4px;
   border-radius: 10px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 .sidebar-user-avatar {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border-radius: 50%;
   background: linear-gradient(135deg, #2563eb, #06b6d4);
   color: white;
   display: grid;
   place-items: center;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 12px;
   flex-shrink: 0;
 }
 .sidebar-user-info {
@@ -216,24 +244,24 @@ aside.sidebar {
 }
 .sidebar-user-info strong {
   color: white;
-  font-size: 13px;
+  font-size: 12.5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .sidebar-user-info span {
   color: #94a3b8;
-  font-size: 10.5px;
+  font-size: 10px;
   text-transform: uppercase;
 }
 .sidebar-logout {
   display: block;
   text-align: center;
-  padding: 9px 12px;
-  border-radius: 9px;
+  padding: 8px 12px;
+  border-radius: 8px;
   background: rgba(220,38,38,.12);
   color: #fca5a5;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   text-decoration: none;
   transition: all .15s ease;
