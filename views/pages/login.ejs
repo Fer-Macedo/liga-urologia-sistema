@@ -4,48 +4,404 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Login — <%= config.org_nome || 'Liga Urologia' %></title>
-  <link rel="stylesheet" href="/css/style.css">
-  <style>:root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }</style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cor: <%= config.org_cor || '#1a56db' %>;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      background: #060d1f;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* ── FUNDO ANIMADO ── */
+    .bg {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+    }
+
+    /* Grade sutil */
+    .bg::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.025) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+
+    /* Bolas de luz flutuantes */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: .45;
+      animation: drift linear infinite;
+    }
+    .orb-1 {
+      width: 600px; height: 600px;
+      background: radial-gradient(circle, #1a56db, transparent 70%);
+      top: -200px; left: -150px;
+      animation-duration: 18s;
+    }
+    .orb-2 {
+      width: 500px; height: 500px;
+      background: radial-gradient(circle, #06b6d4, transparent 70%);
+      bottom: -150px; right: -100px;
+      animation-duration: 22s;
+      animation-direction: reverse;
+    }
+    .orb-3 {
+      width: 350px; height: 350px;
+      background: radial-gradient(circle, #6366f1, transparent 70%);
+      top: 50%; left: 55%;
+      animation-duration: 28s;
+      opacity: .25;
+    }
+
+    @keyframes drift {
+      0%   { transform: translate(0, 0) rotate(0deg); }
+      33%  { transform: translate(40px, -30px) rotate(120deg); }
+      66%  { transform: translate(-20px, 40px) rotate(240deg); }
+      100% { transform: translate(0, 0) rotate(360deg); }
+    }
+
+    /* ── CARD ── */
+    .card {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 420px;
+      margin: 20px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 24px;
+      padding: 44px 40px;
+      backdrop-filter: blur(24px);
+      box-shadow:
+        0 0 0 1px rgba(255,255,255,.05),
+        0 40px 80px rgba(0,0,0,.5),
+        inset 0 1px 0 rgba(255,255,255,.08);
+      animation: slideUp .5s cubic-bezier(.16,1,.3,1) both;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ── LOGO ── */
+    .logo-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin-bottom: 36px;
+    }
+
+    .logo-img-wrap {
+      width: 72px; height: 72px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #1a56db, #06b6d4);
+      display: grid;
+      place-items: center;
+      margin-bottom: 18px;
+      box-shadow: 0 8px 28px rgba(26,86,219,.45);
+      overflow: hidden;
+    }
+    .logo-img-wrap img {
+      width: 64px; height: 64px;
+      object-fit: contain;
+    }
+    .logo-img-wrap .logo-initials {
+      font-family: 'Sora', sans-serif;
+      font-weight: 800;
+      font-size: 26px;
+      color: white;
+      letter-spacing: -.02em;
+    }
+
+    .org-nome {
+      font-family: 'Sora', sans-serif;
+      font-weight: 800;
+      font-size: 20px;
+      color: white;
+      letter-spacing: -.03em;
+      text-align: center;
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+    .org-sub {
+      font-size: 13px;
+      color: rgba(255,255,255,.45);
+      text-align: center;
+      font-weight: 500;
+    }
+
+    /* ── LINHA DIVISÓRIA ── */
+    .divider {
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
+      margin-bottom: 28px;
+    }
+
+    /* ── ALERTAS ── */
+    .alerta {
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 18px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .alerta-ok  { background: rgba(16,185,129,.15); color: #6ee7b7; border: 1px solid rgba(16,185,129,.25); }
+    .alerta-erro { background: rgba(239,68,68,.15);  color: #fca5a5; border: 1px solid rgba(239,68,68,.25); }
+
+    /* ── FORMULÁRIO ── */
+    .campo { margin-bottom: 18px; }
+
+    .label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: rgba(255,255,255,.65);
+      margin-bottom: 8px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .input-wrap {
+      position: relative;
+    }
+    .input-icon {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 16px;
+      opacity: .5;
+      pointer-events: none;
+    }
+
+    .input {
+      width: 100%;
+      padding: 13px 14px 13px 42px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 12px;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 14px;
+      color: white;
+      outline: none;
+      transition: all .2s ease;
+    }
+    .input::placeholder { color: rgba(255,255,255,.25); }
+    .input:focus {
+      background: rgba(255,255,255,.09);
+      border-color: rgba(26,86,219,.7);
+      box-shadow: 0 0 0 4px rgba(26,86,219,.18);
+    }
+
+    /* Toggle senha */
+    .toggle-senha {
+      position: absolute;
+      right: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+      opacity: .45;
+      padding: 0;
+      line-height: 1;
+      transition: opacity .15s;
+    }
+    .toggle-senha:hover { opacity: .8; }
+
+    .campo-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .link-esqueceu {
+      font-size: 12px;
+      color: rgba(26,182,255,.8);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color .15s;
+    }
+    .link-esqueceu:hover { color: white; }
+
+    /* ── BOTÃO ── */
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #1a56db 0%, #1e3a8a 100%);
+      color: white;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all .2s ease;
+      box-shadow: 0 6px 20px rgba(26,86,219,.4);
+      margin-top: 6px;
+      position: relative;
+      overflow: hidden;
+      letter-spacing: .01em;
+    }
+    .btn-login::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,.12), transparent);
+      opacity: 0;
+      transition: opacity .2s;
+    }
+    .btn-login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(26,86,219,.55);
+    }
+    .btn-login:hover::before { opacity: 1; }
+    .btn-login:active { transform: translateY(0); }
+
+    /* ── LOADING STATE ── */
+    .btn-login.loading {
+      pointer-events: none;
+      opacity: .8;
+    }
+    .btn-login .btn-text { transition: opacity .2s; }
+    .btn-login .spinner {
+      display: none;
+      position: absolute;
+      inset: 0;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-login.loading .btn-text { opacity: 0; }
+    .btn-login.loading .spinner { display: flex; }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .spinner-ring {
+      width: 20px; height: 20px;
+      border: 2px solid rgba(255,255,255,.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+
+    /* ── RODAPÉ ── */
+    .card-footer {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 12px;
+      color: rgba(255,255,255,.2);
+    }
+  </style>
 </head>
-<body class="login-body">
-  <div class="login-container">
-    <div class="login-card">
-      <div class="login-logo">
+<body>
+
+  <!-- FUNDO -->
+  <div class="bg">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <!-- CARD -->
+  <div class="card">
+
+    <!-- LOGO -->
+    <div class="logo-wrap">
+      <div class="logo-img-wrap">
         <% if (config.org_logo) { %>
-          <img src="<%= config.org_logo %>" alt="Logo" class="login-logo-img">
+          <img src="<%= config.org_logo %>" alt="Logo">
         <% } else { %>
-          <div class="login-logo-icone">LU</div>
+          <span class="logo-initials">LU</span>
         <% } %>
-        <h1 class="login-titulo"><%= config.org_nome || 'Liga Acadêmica de Urologia' %></h1>
-        <p class="login-sub">Sistema de Gestão de Liga Acadêmica</p>
+      </div>
+      <div class="org-nome"><%= config.org_nome || 'Liga Acadêmica de Urologia' %></div>
+      <div class="org-sub">Sistema de Gestão Interno</div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ALERTAS -->
+    <% if (msg && msg.length > 0) { %>
+      <div class="alerta alerta-ok">✅ <%= msg[0] %></div>
+    <% } %>
+    <% if (erro && erro.length > 0) { %>
+      <div class="alerta alerta-erro">❌ <%= erro[0] %></div>
+    <% } %>
+
+    <!-- FORM -->
+    <form action="/login" method="POST" id="form-login">
+      <div class="campo">
+        <label class="label">E-mail</label>
+        <div class="input-wrap">
+          <span class="input-icon">✉️</span>
+          <input type="email" name="email" class="input"
+            placeholder="seu@email.com" required autofocus>
+        </div>
       </div>
 
-      <% if (msg && msg.length > 0) { %>
-        <div class="alerta alerta-ok">✅ <%= msg[0] %></div>
-      <% } %>
-      <% if (erro && erro.length > 0) { %>
-        <div class="alerta alerta-erro">❌ <%= erro[0] %></div>
-      <% } %>
+      <div class="campo">
+        <div class="campo-row">
+          <label class="label" style="margin:0">Senha</label>
+          <a href="/recuperar-senha" class="link-esqueceu">Esqueceu a senha?</a>
+        </div>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" name="senha" class="input" id="campo-senha"
+            placeholder="••••••••" required>
+          <button type="button" class="toggle-senha" id="toggle-senha" title="Mostrar/ocultar senha">👁️</button>
+        </div>
+      </div>
 
-      <form action="/login" method="POST" class="login-form">
-        <div class="campo">
-          <label class="label">E-mail</label>
-          <input type="email" name="email" class="input" placeholder="seu@email.com.br" required autofocus>
-        </div>
-        <div class="campo">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <label class="label" style="margin:0">Senha</label>
-            <a href="/recuperar-senha" style="font-size:12px;color:var(--cor-primaria);text-decoration:none">
-              Esqueceu a senha?
-            </a>
-          </div>
-          <input type="password" name="senha" class="input" placeholder="••••••••" required>
-        </div>
-        <button type="submit" class="btn btn-primario" style="width:100%;justify-content:center;padding:12px">
-          Entrar no sistema
-        </button>
-      </form>
+      <button type="submit" class="btn-login" id="btn-entrar">
+        <span class="btn-text">Entrar no sistema →</span>
+        <span class="spinner"><div class="spinner-ring"></div></span>
+      </button>
+    </form>
+
+    <div class="card-footer">
+      <%= config.org_nome || 'LAURO' %> · Painel Interno
     </div>
   </div>
+
+  <script>
+    // Toggle mostrar/ocultar senha
+    document.getElementById('toggle-senha').addEventListener('click', function() {
+      const input = document.getElementById('campo-senha');
+      const isText = input.type === 'text';
+      input.type = isText ? 'password' : 'text';
+      this.textContent = isText ? '👁️' : '🙈';
+    });
+
+    // Loading state ao submeter
+    document.getElementById('form-login').addEventListener('submit', function() {
+      document.getElementById('btn-entrar').classList.add('loading');
+    });
+  </script>
 </body>
 </html>
