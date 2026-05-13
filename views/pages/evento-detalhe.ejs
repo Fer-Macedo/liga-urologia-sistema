@@ -61,7 +61,8 @@
         <button class="tab-btn" onclick="showTab('lotes',this)">🎫 Lotes</button>
         <button class="tab-btn" onclick="showTab('campos',this)">📝 Campos</button>
         <button class="tab-btn" onclick="showTab('inscritos',this)">👥 Inscritos</button>
-        <button class="tab-btn" onclick="showTab('pagamentos',this)">💰 Pagamentos</button>
+        <button class="tab-btn" onclick="showTab('pagamentos',this)">Pagamentos</button>
+        <button class="tab-btn" onclick="showTab('financeiro',this)">Financeiro</button>
         <button class="tab-btn" onclick="showTab('programacao',this)">🗓️ Programação</button>
         <button class="tab-btn" onclick="showTab('palestrantes',this)">🎤 Palestrantes</button>
         <button class="tab-btn" onclick="showTab('patrocinadores',this)">🤝 Patrocinadores</button>
@@ -295,6 +296,73 @@
                 <td><% if(pg.status!=='pago'){%><form method="POST" action="/eventos/<%= evento.id %>/pagamentos/<%= pg.id %>/confirmar" style="display:inline"><button class="btn" style="font-size:11px;padding:4px 8px;background:#059669;color:white">✅ Confirmar</button></form><%}%></td>
               </tr>
               <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- FINANCEIRO -->
+      <div class="tab-content" id="tab-financeiro">
+        <%
+          const pagsPagos = pagamentos.filter(p => p.status === 'pago');
+          let bruto = 0, taxas = 0;
+          pagsPagos.forEach(p => {
+            const v = Number(p.valor) || 0;
+            bruto += v;
+            if (p.metodo === 'pix') taxas += v * 0.0099;
+            else if (p.metodo === 'cartao') taxas += v * 0.0299 + 0.40;
+          });
+          const liquido = bruto - taxas;
+          const taxaPct = bruto > 0 ? (taxas / bruto * 100) : 0;
+        %>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
+          <div class="stat-box" style="border-top:3px solid #10b981">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--texto2);margin-bottom:6px">Receita Bruta</div>
+            <div style="font-size:24px;font-weight:700;color:#10b981">R$ <%= bruto.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
+            <div style="font-size:11px;color:var(--texto2);margin-top:4px"><%= pagsPagos.length %> pagamentos confirmados</div>
+          </div>
+          <div class="stat-box" style="border-top:3px solid #ef4444">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--texto2);margin-bottom:6px">Taxas PagBank</div>
+            <div style="font-size:24px;font-weight:700;color:#ef4444">R$ <%= taxas.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
+            <div style="font-size:11px;color:var(--texto2);margin-top:4px"><%= taxaPct.toFixed(1) %>% do bruto</div>
+          </div>
+          <div class="stat-box" style="border-top:3px solid #1a56db">
+            <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--texto2);margin-bottom:6px">Receita Liquida</div>
+            <div style="font-size:24px;font-weight:700;color:#1a56db">R$ <%= liquido.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
+            <div style="font-size:11px;color:var(--texto2);margin-top:4px">Valor efetivamente recebido</div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="padding:14px 16px;border-bottom:1px solid var(--borda);display:flex;justify-content:space-between;align-items:center">
+            <span style="font-weight:700;font-size:14px">Detalhamento por pagamento</span>
+            <button onclick="imprimirRelatorio()" class="btn" style="font-size:12px">Imprimir relatorio</button>
+          </div>
+          <table class="tabela">
+            <thead><tr><th>Participante</th><th>Metodo</th><th>Bruto</th><th>Taxa</th><th>Liquido</th><th>Data</th></tr></thead>
+            <tbody>
+              <% pagsPagos.forEach(p => {
+                const v = Number(p.valor)||0;
+                let tx = 0;
+                if(p.metodo==='pix') tx = v*0.0099;
+                else if(p.metodo==='cartao') tx = v*0.0299+0.40;
+                const liq = v - tx;
+              %>
+              <tr>
+                <td style="font-weight:600"><%= p.inscrito_nome %></td>
+                <td><span style="background:<%= p.metodo==='pix'?'#dcfce7':'#eff6ff' %>;color:<%= p.metodo==='pix'?'#166534':'#1e40af' %>;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700"><%= p.metodo==='pix'?'PIX':'Cartao' %></span></td>
+                <td style="color:#10b981;font-weight:600">R$ <%= v.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></td>
+                <td style="color:#ef4444;font-size:12px">R$ <%= tx.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></td>
+                <td style="font-weight:700;color:#1a56db">R$ <%= liq.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></td>
+                <td style="color:var(--texto2);font-size:12px"><%= p.pago_em?new Date(p.pago_em).toLocaleDateString('pt-BR'):'—' %></td>
+              </tr>
+              <% }) %>
+              <tr style="background:var(--fundo);font-weight:700">
+                <td colspan="2">TOTAL</td>
+                <td style="color:#10b981">R$ <%= bruto.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></td>
+                <td style="color:#ef4444">R$ <%= taxas.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></td>
+                <td style="color:#1a56db">R$ <%= liquido.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></td>
+                <td></td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -671,6 +739,7 @@ function editarInscrito(id, nome, email, wpp, cpf, inst, status) {
 function mostrarOpcoes(tipo) {
   document.getElementById('div-opcoes').style.display=['select','radio','checkbox'].includes(tipo)?'block':'none';
 }
+function imprimirRelatorio(){const w=window.open('','_blank');w.document.write('<html><head><title>Relatorio</title></head><body>'+document.getElementById('tab-financeiro').innerHTML+'</body></html>');w.document.close();w.print();}
 function setCor(cor) {
   document.getElementById('cor-input').value=cor;
   document.getElementById('cor-preview').style.background=cor;
