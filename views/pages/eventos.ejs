@@ -4,32 +4,224 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Eventos — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
   <style>
     :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
-    .ev-tabs { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
-    .ev-tab { padding:8px 18px; border-radius:8px; border:2px solid var(--borda); background:var(--card); cursor:pointer; font-weight:600; font-size:13px; transition:all .2s; }
-    .ev-tab.ativo { background:var(--cor-primaria); color:white; border-color:var(--cor-primaria); }
-    .ev-section { display:none; }
-    .ev-section.ativo { display:block; }
-    .evento-card { background:var(--card); border:1px solid var(--borda); border-radius:12px; overflow:hidden; transition:.2s; }
-    .evento-card:hover { box-shadow:0 4px 20px rgba(0,0,0,.08); }
-    .evento-banner { width:100%; height:160px; object-fit:cover; background:linear-gradient(135deg,var(--cor-primaria),#6366f1); display:flex; align-items:center; justify-content:center; color:white; font-size:40px; }
-    .evento-body { padding:16px; }
-    .evento-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:16px; }
-    .badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
-    .badge-rascunho { background:#f3f4f6;color:#6b7280; }
-    .badge-ativo { background:#dcfce7;color:#166534; }
-    .badge-encerrado { background:#fee2e2;color:#991b1b; }
-    .badge-cancelado { background:#fef3c7;color:#92400e; }
-    .stat-mini { display:flex; gap:16px; flex-wrap:wrap; margin-top:10px; }
-    .stat-mini-item { text-align:center; }
-    .stat-mini-num { font-size:20px; font-weight:700; color:var(--cor-primaria); }
-    .stat-mini-label { font-size:11px; color:var(--texto2); }
-    .inscricao-row { display:grid; grid-template-columns:1fr 1fr auto; gap:12px; align-items:center; padding:10px; border-bottom:1px solid var(--borda); }
-    .qr-container { text-align:center; padding:20px; }
-    .progress-bar { height:6px; background:var(--borda); border-radius:3px; overflow:hidden; margin-top:6px; }
-    .progress-fill { height:100%; background:var(--cor-primaria); border-radius:3px; transition:.3s; }
-    .lote-card { background:var(--fundo); border:1px solid var(--borda); border-radius:8px; padding:12px; margin-bottom:8px; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 14px;
+      padding: 20px 22px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .stat-card.azul::before  { background: linear-gradient(90deg,#1a56db,#06b6d4); }
+    .stat-card.verde::before { background: linear-gradient(90deg,#10b981,#34d399); }
+    .stat-card.roxo::before  { background: linear-gradient(90deg,#8b5cf6,#a78bfa); }
+    .stat-card.amr::before   { background: linear-gradient(90deg,#f59e0b,#fbbf24); }
+    .stat-num {
+      font-family: 'Outfit', sans-serif;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .stat-card.azul  .stat-num { color: #1a56db; }
+    .stat-card.verde .stat-num { color: #10b981; }
+    .stat-card.roxo  .stat-num { color: #8b5cf6; }
+    .stat-card.amr   .stat-num { color: #f59e0b; }
+    .stat-lab {
+      font-size: 11.5px;
+      color: var(--texto2);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .ev-tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 20px;
+      border-bottom: 2px solid var(--borda);
+    }
+    .ev-tab {
+      padding: 10px 20px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--texto2);
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      font-family: 'Outfit', sans-serif;
+      transition: all .15s;
+    }
+    .ev-tab.ativo { color: var(--cor-primaria); border-bottom-color: var(--cor-primaria); font-weight: 600; }
+    .ev-tab:hover { color: var(--texto); }
+    .ev-section { display: none; }
+    .ev-section.ativo { display: block; }
+
+    .evento-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 16px;
+    }
+
+    .evento-card {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 16px;
+      overflow: hidden;
+      transition: all .18s ease;
+    }
+    .evento-card:hover {
+      border-color: var(--cor-primaria);
+      box-shadow: 0 8px 24px rgba(26,86,219,.10);
+      transform: translateY(-2px);
+    }
+
+    .evento-banner {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+    }
+    .evento-banner-placeholder {
+      width: 100%;
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.9);
+    }
+
+    .evento-body { padding: 18px; }
+
+    .evento-status {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 10.5px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .status-ativo      { background: #dcfce7; color: #166534; }
+    .status-rascunho   { background: #f1f5f9; color: #64748b; }
+    .status-encerrado  { background: #fee2e2; color: #991b1b; }
+    .status-cancelado  { background: #fef3c7; color: #92400e; }
+
+    .evento-nome {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+    .evento-meta {
+      font-size: 12px;
+      color: var(--texto2);
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .progress-wrap {
+      margin: 12px 0 6px;
+    }
+    .progress-bar {
+      height: 6px;
+      background: var(--borda);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width .3s ease;
+    }
+
+    .evento-acoes {
+      display: flex;
+      gap: 6px;
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid var(--borda);
+      flex-wrap: wrap;
+    }
+    .ev-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      border: 1px solid var(--borda);
+      background: var(--fundo);
+      color: var(--texto);
+      cursor: pointer;
+      transition: all .15s ease;
+      font-family: inherit;
+    }
+    .ev-btn:hover { border-color: var(--cor-primaria); color: var(--cor-primaria); }
+    .ev-btn.primario { background: var(--cor-primaria); color: white; border-color: transparent; }
+    .ev-btn.primario:hover { opacity: .88; }
+    .ev-btn.verde { background: #059669; color: white; border-color: transparent; }
+    .ev-btn.roxo  { background: #7c3aed; color: white; border-color: transparent; }
+    .ev-btn.danger { color: #dc2626; border-color: #fecaca; background: transparent; }
+    .ev-btn.danger:hover { background: #fee2e2; }
+
+    /* TABELA RELATÓRIO */
+    .table-moderna {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .table-moderna table { width: 100%; border-collapse: collapse; }
+    .table-moderna thead th {
+      background: var(--fundo);
+      padding: 11px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--texto2);
+      text-align: left;
+      border-bottom: 1px solid var(--borda);
+    }
+    .table-moderna tbody tr { border-bottom: 1px solid var(--borda); transition: background .15s; }
+    .table-moderna tbody tr:last-child { border-bottom: none; }
+    .table-moderna tbody tr:hover { background: var(--fundo); }
+    .table-moderna tbody td { padding: 12px 14px; font-size: 13px; color: var(--texto); vertical-align: middle; }
+
+    /* CORES DE SWATCHES */
+    .cor-swatch {
+      width: 26px; height: 26px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all .15s;
+    }
+    .cor-swatch:hover { transform: scale(1.15); border-color: white; box-shadow: 0 0 0 2px var(--cor-primaria); }
   </style>
 </head>
 <body>
@@ -37,53 +229,110 @@
   <%- include('../partials/sidebar', { paginaAtual: 'eventos' }) %>
   <main class="main">
     <div class="topbar">
-      <h1 class="page-titulo">🎪 Eventos</h1>
+      <h1 class="page-titulo">Eventos</h1>
       <div class="topbar-acoes">
-        <button class="btn btn-primario" onclick="abrirModal('modal-novo-evento')">+ Novo Evento</button>
+        <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-novo-evento')">+ Novo evento</button>
       </div>
     </div>
-    <div class="content">
-      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
-      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
 
-      <div class="ev-tabs">
-        <button class="ev-tab ativo" onclick="showTab('lista')">📋 Todos os Eventos</button>
-        <button class="ev-tab" onclick="showTab('ativos')">🟢 Ativos</button>
-        <button class="ev-tab" onclick="showTab('relatorio')">📊 Relatórios</button>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
+
+      <!-- STATS -->
+      <div class="stats-row">
+        <div class="stat-card azul">
+          <div class="stat-num"><%= eventos.length %></div>
+          <div class="stat-lab">Total de eventos</div>
+        </div>
+        <div class="stat-card verde">
+          <div class="stat-num"><%= totalInscritos %></div>
+          <div class="stat-lab">Total inscritos</div>
+        </div>
+        <div class="stat-card roxo">
+          <div class="stat-num">R$ <%= Number(totalReceita).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
+          <div class="stat-lab">Receita total</div>
+        </div>
+        <div class="stat-card amr">
+          <div class="stat-num"><%= totalCheckins %></div>
+          <div class="stat-lab">Check-ins</div>
+        </div>
       </div>
 
-      <!-- LISTA -->
+      <!-- TABS -->
+      <div class="ev-tabs">
+        <button class="ev-tab ativo" onclick="showTab('lista', this)">Todos os eventos</button>
+        <button class="ev-tab" onclick="showTab('ativos', this)">Ativos</button>
+        <button class="ev-tab" onclick="showTab('relatorio', this)">Relatório</button>
+      </div>
+
+      <!-- TAB LISTA -->
       <div class="ev-section ativo" id="tab-lista">
         <% if (eventos.length === 0) { %>
-        <div style="text-align:center;padding:60px;color:var(--texto2)">
-          <div style="font-size:48px;margin-bottom:12px">🎪</div>
-          <p>Nenhum evento criado ainda.</p>
-          <button class="btn btn-primario" style="margin-top:12px" onclick="abrirModal('modal-novo-evento')">+ Criar Primeiro Evento</button>
+        <div style="text-align:center;padding:80px;color:var(--texto2)">
+          <div style="font-size:48px;margin-bottom:16px;opacity:.4">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div style="font-size:15px;font-weight:600;margin-bottom:8px">Nenhum evento criado</div>
+          <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-novo-evento')">+ Criar primeiro evento</button>
         </div>
         <% } %>
         <div class="evento-grid">
-          <% eventos.forEach(ev => { %>
+          <% eventos.forEach(ev => {
+            const pct = ev.vagas_total > 0 ? Math.min(100, Math.round((ev.total_inscritos||0) / ev.vagas_total * 100)) : 0;
+            const corBarra = pct >= 90 ? '#ef4444' : pct >= 60 ? '#f59e0b' : '#10b981';
+            const corTema = ev.cor_tema || '#1a56db';
+          %>
           <div class="evento-card">
             <% if (ev.banner_chave) { %>
-            <img src="/eventos/<%= ev.id %>/banner" class="evento-banner" alt="Banner">
+              <img src="/eventos/<%= ev.id %>/banner" class="evento-banner" alt="<%= ev.nome %>">
             <% } else { %>
-            <div class="evento-banner">🎪</div>
+              <div class="evento-banner-placeholder" style="background:linear-gradient(135deg,<%= corTema %>,<%= corTema %>88)">
+                <%= ev.nome.substring(0,30) %>
+              </div>
             <% } %>
             <div class="evento-body">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-                <h3 style="font-size:15px;font-weight:700;flex:1"><%= ev.nome %></h3>
-                <span class="badge badge-<%= ev.status %>"><%= ev.status==='ativo'?'🟢 Ativo':ev.status==='encerrado'?'🔴 Encerrado':ev.status==='cancelado'?'⚫ Cancelado':'⚪ Rascunho' %></span>
+              <span class="evento-status status-<%= ev.status %>">
+                <%= ev.status === 'ativo' ? 'Ativo' : ev.status === 'encerrado' ? 'Encerrado' : ev.status === 'cancelado' ? 'Cancelado' : 'Rascunho' %>
+              </span>
+              <div class="evento-nome"><%= ev.nome %></div>
+              <div class="evento-meta">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <%= ev.data_inicio ? new Date(ev.data_inicio).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'}) : 'Data a definir' %>
               </div>
-              <div style="font-size:12px;color:var(--texto2);margin-bottom:4px">📅 <%= ev.data_inicio ? new Date(ev.data_inicio).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '—' %></div>
-              <div style="font-size:12px;color:var(--texto2);margin-bottom:10px">📍 <%= ev.local || '—' %></div>
-              <div class="progress-bar"><div class="progress-fill" style="width:<%= ev.vagas_total>0?Math.min(100,Math.round((ev.total_inscritos||0)/ev.vagas_total*100)):0 %>%"></div></div>
-              <div style="font-size:11px;color:var(--texto2);margin-top:3px"><%= ev.total_inscritos||0 %> / <%= ev.vagas_total %> inscritos</div>
-              <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
-                <a href="/eventos/<%= ev.id %>" class="btn" style="font-size:11px;padding:4px 8px">⚙️ Gerenciar</a>
-                <a href="/eventos/<%= ev.id %>/inscricoes" class="btn" style="font-size:11px;padding:4px 8px;background:#6366f1;color:white">👥 Inscritos</a>
-                <a href="/inscricao/<%= ev.id %>" target="_blank" class="btn" style="font-size:11px;padding:4px 8px;background:#059669;color:white">🔗 Página</a>
+              <div class="evento-meta">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                <%= ev.local || 'Local a definir' %>
+              </div>
+              <div class="progress-wrap">
+                <div class="progress-bar">
+                  <div class="progress-fill" style="width:<%= pct %>%;background:<%= corBarra %>"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;margin-top:4px">
+                  <span style="font-size:11px;color:var(--texto2)"><%= ev.total_inscritos||0 %> inscritos</span>
+                  <span style="font-size:11px;color:var(--texto2)"><%= pct %>% — <%= ev.vagas_total %> vagas</span>
+                </div>
+              </div>
+              <div class="evento-acoes">
+                <a href="/eventos/<%= ev.id %>" class="ev-btn primario">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+                  Gerenciar
+                </a>
+                <a href="/eventos/<%= ev.id %>/checkin" class="ev-btn verde">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Check-in
+                </a>
+                <a href="/inscricao/<%= ev.id %>" target="_blank" class="ev-btn roxo">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                  Página
+                </a>
                 <% if (usuario.perfil==='admin'||usuario.perfil==='presidencia') { %>
-                <form method="POST" action="/eventos/<%= ev.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir evento?')"><button type="submit" class="btn" style="font-size:11px;padding:4px 8px;color:var(--vermelho)">🗑</button></form>
+                <form method="POST" action="/eventos/<%= ev.id %>/deletar" style="display:inline;margin:0"
+                  onsubmit="return confirm('Excluir o evento <%= ev.nome.replace(/'/g,"\\'") %>?')">
+                  <button type="submit" class="ev-btn danger">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
+                  </button>
+                </form>
                 <% } %>
               </div>
             </div>
@@ -92,24 +341,53 @@
         </div>
       </div>
 
-      <!-- ATIVOS -->
+      <!-- TAB ATIVOS -->
       <div class="ev-section" id="tab-ativos">
-        <% const ativos = eventos.filter(e=>e.status==='ativo'); %>
-        <% if (ativos.length === 0) { %><p style="color:var(--texto2)">Nenhum evento ativo.</p><% } %>
+        <% const ativos = eventos.filter(e => e.status === 'ativo'); %>
+        <% if (ativos.length === 0) { %>
+          <div style="text-align:center;padding:60px;color:var(--texto2)">Nenhum evento ativo no momento.</div>
+        <% } %>
         <div class="evento-grid">
-          <% ativos.forEach(ev => { %>
+          <% ativos.forEach(ev => {
+            const corTema = ev.cor_tema || '#1a56db';
+          %>
           <div class="evento-card">
-            <div class="evento-body">
-              <h3 style="font-size:15px;font-weight:700;margin-bottom:6px"><%= ev.nome %></h3>
-              <div style="font-size:12px;color:var(--texto2)">📅 <%= ev.data_inicio ? new Date(ev.data_inicio).toLocaleDateString('pt-BR') : '—' %></div>
-              <div class="stat-mini">
-                <div class="stat-mini-item"><div class="stat-mini-num"><%= ev.total_inscritos||0 %></div><div class="stat-mini-label">Inscritos</div></div>
-                <div class="stat-mini-item"><div class="stat-mini-num"><%= ev.total_pagos||0 %></div><div class="stat-mini-label">Pagos</div></div>
-                <div class="stat-mini-item"><div class="stat-mini-num">R$ <%= Number(ev.receita||0).toFixed(2) %></div><div class="stat-mini-label">Receita</div></div>
+            <% if (ev.banner_chave) { %>
+              <img src="/eventos/<%= ev.id %>/banner" class="evento-banner" alt="<%= ev.nome %>">
+            <% } else { %>
+              <div class="evento-banner-placeholder" style="background:linear-gradient(135deg,<%= corTema %>,<%= corTema %>88)">
+                <%= ev.nome.substring(0,30) %>
               </div>
-              <div style="display:flex;gap:6px;margin-top:12px">
-                <a href="/eventos/<%= ev.id %>/checkin" class="btn btn-primario" style="font-size:11px;padding:4px 10px">✅ Check-in</a>
-                <a href="/eventos/<%= ev.id %>/inscricoes" class="btn" style="font-size:11px;padding:4px 10px">👥 Inscritos</a>
+            <% } %>
+            <div class="evento-body">
+              <div class="evento-nome"><%= ev.nome %></div>
+              <div class="evento-meta">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <%= ev.data_inicio ? new Date(ev.data_inicio).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}) : 'Data a definir' %>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0;text-align:center">
+                <div>
+                  <div style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:700;color:var(--cor-primaria)"><%= ev.total_inscritos||0 %></div>
+                  <div style="font-size:11px;color:var(--texto2);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Inscritos</div>
+                </div>
+                <div>
+                  <div style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:700;color:#10b981"><%= ev.total_pagos||0 %></div>
+                  <div style="font-size:11px;color:var(--texto2);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Pagos</div>
+                </div>
+                <div>
+                  <div style="font-family:'Outfit',sans-serif;font-size:22px;font-weight:700;color:#f59e0b"><%= ev.total_checkins||0 %></div>
+                  <div style="font-size:11px;color:var(--texto2);font-weight:600;text-transform:uppercase;letter-spacing:.04em">Check-ins</div>
+                </div>
+              </div>
+              <div style="font-size:13px;font-weight:600;color:#8b5cf6;margin-bottom:14px">
+                R$ <%= Number(ev.receita||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) %> arrecadados
+              </div>
+              <div class="evento-acoes">
+                <a href="/eventos/<%= ev.id %>/checkin" class="ev-btn verde" style="flex:1;justify-content:center">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Check-in
+                </a>
+                <a href="/eventos/<%= ev.id %>" class="ev-btn primario" style="flex:1;justify-content:center">Gerenciar</a>
               </div>
             </div>
           </div>
@@ -117,90 +395,149 @@
         </div>
       </div>
 
-      <!-- RELATÓRIOS -->
+      <!-- TAB RELATÓRIO -->
       <div class="ev-section" id="tab-relatorio">
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:20px">
-          <div class="card" style="text-align:center"><div style="font-size:28px;font-weight:700;color:var(--cor-primaria)"><%= eventos.length %></div><div style="font-size:12px;color:var(--texto2)">Total de Eventos</div></div>
-          <div class="card" style="text-align:center"><div style="font-size:28px;font-weight:700;color:#059669"><%= totalInscritos %></div><div style="font-size:12px;color:var(--texto2)">Total de Inscrições</div></div>
-          <div class="card" style="text-align:center"><div style="font-size:28px;font-weight:700;color:#6366f1">R$ <%= Number(totalReceita).toFixed(2) %></div><div style="font-size:12px;color:var(--texto2)">Receita Total</div></div>
-          <div class="card" style="text-align:center"><div style="font-size:28px;font-weight:700;color:#f59e0b"><%= totalCheckins %></div><div style="font-size:12px;color:var(--texto2)">Check-ins</div></div>
+        <div class="stats-row" style="margin-bottom:20px">
+          <div class="stat-card azul">
+            <div class="stat-num"><%= eventos.length %></div>
+            <div class="stat-lab">Eventos criados</div>
+          </div>
+          <div class="stat-card verde">
+            <div class="stat-num"><%= totalInscritos %></div>
+            <div class="stat-lab">Total inscritos</div>
+          </div>
+          <div class="stat-card roxo">
+            <div class="stat-num">R$ <%= Number(totalReceita).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
+            <div class="stat-lab">Receita total</div>
+          </div>
+          <div class="stat-card amr">
+            <div class="stat-num"><%= totalCheckins %></div>
+            <div class="stat-lab">Check-ins realizados</div>
+          </div>
         </div>
-        <div class="card">
-          <div class="card-titulo">📋 Resumo por Evento</div>
-          <table class="tabela">
-            <thead><tr><th>Evento</th><th>Data</th><th>Inscritos</th><th>Pagos</th><th>Check-ins</th><th>Receita</th><th>Status</th></tr></thead>
+
+        <div class="table-moderna">
+          <div style="padding:16px 18px;border-bottom:1px solid var(--borda);font-size:14px;font-weight:700;font-family:'Outfit',sans-serif">
+            Resumo por evento
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Evento</th>
+                <th>Data</th>
+                <th style="text-align:center">Inscritos</th>
+                <th style="text-align:center">Pagos</th>
+                <th style="text-align:center">Check-ins</th>
+                <th style="text-align:right">Receita</th>
+                <th>Status</th>
+              </tr>
+            </thead>
             <tbody>
               <% eventos.forEach(ev => { %>
               <tr>
-                <td><strong><%= ev.nome %></strong></td>
-                <td><%= ev.data_inicio ? new Date(ev.data_inicio).toLocaleDateString('pt-BR') : '—' %></td>
-                <td><%= ev.total_inscritos||0 %></td>
-                <td><%= ev.total_pagos||0 %></td>
-                <td><%= ev.total_checkins||0 %></td>
-                <td>R$ <%= Number(ev.receita||0).toFixed(2) %></td>
-                <td><span class="badge badge-<%= ev.status %>"><%= ev.status %></span></td>
+                <td style="font-weight:600"><%= ev.nome %></td>
+                <td style="color:var(--texto2)"><%= ev.data_inicio ? new Date(ev.data_inicio).toLocaleDateString('pt-BR') : '—' %></td>
+                <td style="text-align:center;font-weight:600"><%= ev.total_inscritos||0 %></td>
+                <td style="text-align:center;color:#10b981;font-weight:600"><%= ev.total_pagos||0 %></td>
+                <td style="text-align:center;color:#f59e0b;font-weight:600"><%= ev.total_checkins||0 %></td>
+                <td style="text-align:right;font-weight:600;color:#8b5cf6">R$ <%= Number(ev.receita||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></td>
+                <td>
+                  <span class="evento-status status-<%= ev.status %>">
+                    <%= ev.status === 'ativo' ? 'Ativo' : ev.status === 'encerrado' ? 'Encerrado' : ev.status === 'cancelado' ? 'Cancelado' : 'Rascunho' %>
+                  </span>
+                </td>
               </tr>
               <% }) %>
             </tbody>
           </table>
         </div>
       </div>
+
     </div>
   </main>
 </div>
 
-<!-- Modal Novo Evento -->
+<!-- MODAL NOVO EVENTO -->
 <div class="modal-overlay" id="modal-novo-evento" style="display:none">
-  <div class="modal" style="max-width:600px">
+  <div class="modal" style="max-width:620px;max-height:90vh;overflow-y:auto">
     <div class="modal-header">
-      <span class="modal-titulo">🎪 Novo Evento</span>
+      <span class="modal-titulo">Novo evento</span>
       <button class="icon-btn" onclick="fecharModal('modal-novo-evento')">✕</button>
     </div>
     <form action="/eventos" method="POST" enctype="multipart/form-data">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-        <div class="campo" style="grid-column:1/-1"><label class="label">Nome do Evento *</label><input name="nome" class="input" placeholder="Ex: Congresso de Urologia 2026" required></div>
-        <div class="campo" style="grid-column:1/-1"><label class="label">Descrição</label><textarea name="descricao" class="input" rows="3" placeholder="Descrição do evento..."></textarea></div>
-        <div class="campo"><label class="label">Data/Hora Início</label><input type="datetime-local" name="data_inicio" class="input"></div>
-        <div class="campo"><label class="label">Data/Hora Fim</label><input type="datetime-local" name="data_fim" class="input"></div>
-        <div class="campo"><label class="label">Local</label><input name="local" class="input" placeholder="Nome do local"></div>
-        <div class="campo"><label class="label">Total de Vagas</label><input type="number" name="vagas_total" class="input" value="100" min="1"></div>
-        <div class="campo" style="grid-column:1/-1"><label class="label">Endereço</label><input name="endereco" class="input" placeholder="Endereço completo"></div>
-        <div class="campo" style="grid-column:1/-1"><label class="label">Banner (imagem)</label><input type="file" name="banner" class="input" accept="image/*"></div>
-        <div class="campo"><label class="label">Tipo de Evento</label>
+        <div class="campo" style="grid-column:1/-1">
+          <label class="label">Nome do evento *</label>
+          <input name="nome" class="input" placeholder="Ex: Congresso de Urologia 2026" required>
+        </div>
+        <div class="campo" style="grid-column:1/-1">
+          <label class="label">Descrição</label>
+          <textarea name="descricao" class="input" rows="3" placeholder="Descrição do evento..."></textarea>
+        </div>
+        <div class="campo">
+          <label class="label">Data/hora início</label>
+          <input type="datetime-local" name="data_inicio" class="input">
+        </div>
+        <div class="campo">
+          <label class="label">Data/hora fim</label>
+          <input type="datetime-local" name="data_fim" class="input">
+        </div>
+        <div class="campo">
+          <label class="label">Local</label>
+          <input name="local" class="input" placeholder="Nome do local">
+        </div>
+        <div class="campo">
+          <label class="label">Total de vagas</label>
+          <input type="number" name="vagas_total" class="input" value="100" min="1">
+        </div>
+        <div class="campo" style="grid-column:1/-1">
+          <label class="label">Endereço</label>
+          <input name="endereco" class="input" placeholder="Endereço completo">
+        </div>
+        <div class="campo" style="grid-column:1/-1">
+          <label class="label">Banner (imagem)</label>
+          <input type="file" name="banner" class="input" accept="image/*" style="padding:8px">
+        </div>
+        <div class="campo">
+          <label class="label">Tipo de evento</label>
           <select name="tipo_evento" class="input">
-            <option value="presencial">📍 Presencial</option>
-            <option value="online">💻 Online</option>
-            <option value="hibrido">🔀 Híbrido</option>
+            <option value="presencial">Presencial</option>
+            <option value="online">Online</option>
+            <option value="hibrido">Híbrido</option>
           </select>
         </div>
-        <div class="campo"><label class="label">Cor Tema</label>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-            <div onclick="setCor('#1a3d2b'" style="width:26px;height:26px;border-radius:6px;background:#1a3d2b;cursor:pointer"></div>
-            <div onclick="setCor('#1a56db'" style="width:26px;height:26px;border-radius:6px;background:#1a56db;cursor:pointer"></div>
-            <div onclick="setCor('#7c3aed'" style="width:26px;height:26px;border-radius:6px;background:#7c3aed;cursor:pointer"></div>
-            <div onclick="setCor('#dc2626'" style="width:26px;height:26px;border-radius:6px;background:#dc2626;cursor:pointer"></div>
-            <div onclick="setCor('#ea580c'" style="width:26px;height:26px;border-radius:6px;background:#ea580c;cursor:pointer"></div>
-            <div onclick="setCor('#0891b2'" style="width:26px;height:26px;border-radius:6px;background:#0891b2;cursor:pointer"></div>
-            <input type="color" onchange="setCor(this.value)" style="width:26px;height:26px;border:none;border-radius:6px;cursor:pointer;padding:0">
-          </div>
-          <input type="text" name="cor_tema" id="cor-nova" class="input" value="#1a3d2b" style="max-width:120px">
-        </div>
-        <div class="campo"><label class="label">Status</label>
+        <div class="campo">
+          <label class="label">Status</label>
           <select name="status" class="input">
-            <option value="rascunho">⚪ Rascunho</option>
-            <option value="ativo">🟢 Ativo</option>
+            <option value="rascunho">Rascunho</option>
+            <option value="ativo">Ativo</option>
           </select>
         </div>
-        <div class="campo"><label class="label">Inscrições Públicas?</label>
+        <div class="campo">
+          <label class="label">Inscrições públicas</label>
           <select name="publico" class="input">
-            <option value="true">✅ Sim — página pública</option>
-            <option value="false">❌ Não — somente interno</option>
+            <option value="true">Sim — página pública</option>
+            <option value="false">Não — somente interno</option>
           </select>
+        </div>
+        <div class="campo">
+          <label class="label">Cor tema</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+            <div class="cor-swatch" style="background:#1a3d2b" onclick="setCor('#1a3d2b')"></div>
+            <div class="cor-swatch" style="background:#1a56db" onclick="setCor('#1a56db')"></div>
+            <div class="cor-swatch" style="background:#7c3aed" onclick="setCor('#7c3aed')"></div>
+            <div class="cor-swatch" style="background:#dc2626" onclick="setCor('#dc2626')"></div>
+            <div class="cor-swatch" style="background:#ea580c" onclick="setCor('#ea580c')"></div>
+            <div class="cor-swatch" style="background:#0891b2" onclick="setCor('#0891b2')"></div>
+            <input type="color" onchange="setCor(this.value)"
+              style="width:26px;height:26px;border:none;border-radius:6px;cursor:pointer;padding:0">
+          </div>
+          <input type="text" name="cor_tema" id="cor-nova" class="input" value="#1a3d2b" style="max-width:130px">
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-novo-evento')">Cancelar</button>
-        <button type="submit" class="btn btn-primario">🎪 Criar Evento</button>
+        <button type="submit" class="btn btn-primario">Criar evento</button>
       </div>
     </form>
   </div>
@@ -208,11 +545,15 @@
 
 <script src="/js/app.js"></script>
 <script>
-function showTab(id) {
-  document.querySelectorAll('.ev-section').forEach(s=>s.classList.remove('ativo'));
-  document.querySelectorAll('.ev-tab').forEach(t=>t.classList.remove('ativo'));
-  document.getElementById('tab-'+id).classList.add('ativo');
-  event.target.classList.add('ativo');
+function showTab(id, btn) {
+  document.querySelectorAll('.ev-section').forEach(s => s.classList.remove('ativo'));
+  document.querySelectorAll('.ev-tab').forEach(t => t.classList.remove('ativo'));
+  document.getElementById('tab-' + id).classList.add('ativo');
+  btn.classList.add('ativo');
+}
+
+function setCor(val) {
+  document.getElementById('cor-nova').value = val;
 }
 </script>
 </body>
