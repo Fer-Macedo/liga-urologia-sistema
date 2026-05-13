@@ -4,24 +4,224 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Diretivos — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/admin-modern.css">
   <style>
     :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
-    * { font-family: 'Inter', sans-serif; }
-    .dir-card { background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:18px 20px;margin-bottom:12px;transition:box-shadow 0.2s; }
-    .dir-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.08); }
-    .dir-header { display:flex;align-items:center;gap:14px;margin-bottom:12px; }
-    .dir-avatar { width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--cor-primaria),#6366f1);color:white;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
-    .dir-nome { font-size:15px;font-weight:700;margin-bottom:3px; }
-    .dir-cargo { font-size:12px;color:var(--cor-primaria);font-weight:600;background:var(--cor-primaria)15;padding:3px 10px;border-radius:20px;display:inline-block; }
-    .dir-info { display:flex;flex-wrap:wrap;gap:12px;font-size:12px;color:var(--texto2); }
-    .dir-info span { display:flex;align-items:center;gap:4px; }
-    .dir-acoes { display:flex;gap:8px;margin-top:12px; }
-    .filtros { display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;align-items:center; }
-    .filtro-input { padding:8px 14px;border:1.5px solid var(--borda);border-radius:10px;font-size:13px;background:var(--fundo); }
-    .link-cadastro { background:var(--fundo);border:1.5px dashed var(--cor-primaria);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px; }
-    .link-url { font-size:13px;color:var(--cor-primaria);font-weight:600;word-break:break-all; }
-    .badge-cargo { padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:var(--cor-primaria)15;color:var(--cor-primaria); }
+
+    /* STATS */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 22px;
+    }
+    .stat-mini {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 14px;
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-mini::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+    }
+    .stat-mini.azul::before  { background: linear-gradient(90deg, #1a56db, #06b6d4); }
+    .stat-mini.verde::before { background: linear-gradient(90deg, #10b981, #34d399); }
+    .stat-mini.amr::before   { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .stat-mini.roxo::before  { background: linear-gradient(90deg, #8b5cf6, #a78bfa); }
+    .stat-mini .num {
+      font-family: 'Outfit', sans-serif;
+      font-size: 30px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .stat-mini.azul  .num { color: #1a56db; }
+    .stat-mini.verde .num { color: #10b981; }
+    .stat-mini.amr   .num { color: #f59e0b; }
+    .stat-mini.roxo  .num { color: #8b5cf6; }
+    .stat-mini .lab {
+      font-size: 11.5px;
+      color: var(--texto2);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    /* FILTROS */
+    .filtros-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    /* LINK CADASTRO */
+    .link-box {
+      background: var(--fundo);
+      border: 1.5px dashed var(--borda-strong, #d4d9e6);
+      border-radius: 12px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .link-box-label { font-size: 12px; font-weight: 600; color: var(--texto2); margin-bottom: 3px; }
+    .link-box-url { font-size: 13px; color: var(--cor-primaria); font-weight: 600; word-break: break-all; }
+
+    /* GRID DE CARDS */
+    .diretivos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 14px;
+    }
+
+    .dir-card {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 14px;
+      padding: 18px;
+      transition: all .18s ease;
+      position: relative;
+    }
+    .dir-card:hover {
+      border-color: var(--cor-primaria);
+      box-shadow: 0 6px 20px rgba(26,86,219,.10);
+      transform: translateY(-2px);
+    }
+
+    .dir-avatar {
+      width: 48px; height: 48px;
+      border-radius: 13px;
+      background: linear-gradient(135deg, var(--cor-primaria), #6366f1);
+      color: white;
+      font-family: 'Outfit', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .dir-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .dir-nome {
+      font-family: 'Outfit', sans-serif;
+      font-size: 14.5px;
+      font-weight: 700;
+      letter-spacing: -.01em;
+      margin-bottom: 5px;
+    }
+    .dir-cargo-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      background: var(--cor-primaria)18;
+      color: var(--cor-primaria);
+    }
+
+    .dir-info {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      font-size: 12.5px;
+      color: var(--texto2);
+      margin-bottom: 12px;
+    }
+    .dir-info-row {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+    .dir-info-icon {
+      width: 16px;
+      color: var(--texto2);
+      flex-shrink: 0;
+    }
+
+    .card-acoes {
+      display: flex;
+      gap: 6px;
+      padding-top: 12px;
+      border-top: 1px solid var(--borda);
+    }
+    .btn-sm {
+      font-size: 12px !important;
+      padding: 6px 12px !important;
+    }
+    .btn-danger-soft {
+      background: transparent !important;
+      border: 1px solid var(--borda) !important;
+      color: #dc2626 !important;
+      border-radius: 9px !important;
+      padding: 6px 10px !important;
+      font-size: 12px !important;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .btn-danger-soft:hover {
+      background: #fee2e2 !important;
+      border-color: #fecaca !important;
+    }
+
+    /* MODAL VISUALIZAR */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,23,42,.55); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+    .modal-overlay.aberto { display: flex; }
+    .modal-grande {
+      background: var(--card);
+      border-radius: 18px;
+      padding: 28px;
+      max-width: 680px;
+      width: 95%;
+      max-height: 88vh;
+      overflow-y: auto;
+      box-shadow: 0 24px 60px rgba(15,23,42,.18);
+      animation: popIn .18s ease;
+    }
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(.96); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+    .modal-tabs {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 1.5px solid var(--borda);
+    }
+    .modal-tab {
+      padding: 8px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      color: var(--texto2);
+      border-bottom: 2.5px solid transparent;
+      margin-bottom: -1.5px;
+      background: none;
+      border-top: none;
+      border-left: none;
+      border-right: none;
+      font-family: inherit;
+      transition: all .15s;
+    }
+    .modal-tab.ativo { color: var(--cor-primaria); border-bottom-color: var(--cor-primaria); }
+    .tab-content { display: none; }
+    .tab-content.ativo { display: block; }
+
+    .detalhe-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .detalhe-item { display: flex; flex-direction: column; gap: 2px; }
+    .detalhe-label { font-size: 10.5px; font-weight: 700; color: var(--texto2); text-transform: uppercase; letter-spacing: .06em; }
+    .detalhe-valor { font-size: 13.5px; color: var(--texto); font-weight: 500; }
+    .detalhe-full { grid-column: 1 / -1; }
   </style>
 </head>
 <body>
@@ -29,55 +229,52 @@
   <%- include('../partials/sidebar', { paginaAtual: 'diretivos' }) %>
   <main class="main">
     <div class="topbar">
-      <h1 class="page-titulo">🏛️ Diretivos</h1>
+      <h1 class="page-titulo">Diretivos</h1>
       <div class="topbar-acoes">
-        <a href="/cadastro-diretivo" target="_blank" class="btn">🔗 Link de cadastro</a>
-        <button class="btn btn-primario" onclick="abrirModal('modal-diretivo')">+ Cadastrar diretivo</button>
+        <a href="/cadastro-diretivo" target="_blank" class="btn btn-sm">Link de cadastro</a>
+        <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-cadastrar')">+ Cadastrar diretivo</button>
       </div>
     </div>
 
     <div class="content">
-      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
-      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
 
-      <!-- Link de cadastro público -->
-      <div class="link-cadastro">
+      <!-- Link público -->
+      <div class="link-box">
         <div>
-          <div style="font-size:13px;font-weight:600;margin-bottom:4px">📋 Link de cadastro para diretivos</div>
-          <div class="link-url" id="link-publico"><%= appUrl %>/cadastro-diretivo</div>
+          <div class="link-box-label">Link de cadastro público para diretivos</div>
+          <div class="link-box-url" id="link-publico"><%= appUrl %>/cadastro-diretivo</div>
         </div>
-        <button class="btn btn-primario" style="font-size:12px" onclick="copiarLink()">📋 Copiar link</button>
+        <button class="btn btn-sm" onclick="copiarLink()">Copiar link</button>
       </div>
 
-      <!-- Stats -->
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px">
-        <div class="stat-card azul">
-          <div class="stat-label">Total diretivos</div>
-          <div class="stat-valor azul"><%= diretivos.length %></div>
-          <div class="stat-sub azul">ativos</div>
+      <!-- STATS -->
+      <% const cargosCount = {}; diretivos.forEach(d => { cargosCount[d.cargo] = (cargosCount[d.cargo]||0)+1; }); %>
+      <div class="stats-row">
+        <div class="stat-mini azul">
+          <div class="num"><%= diretivos.length %></div>
+          <div class="lab">Total diretivos</div>
         </div>
-        <% const cargosCount = {}; diretivos.forEach(d => { cargosCount[d.cargo] = (cargosCount[d.cargo]||0)+1; }); %>
-        <div class="stat-card verde">
-          <div class="stat-label">Presidência</div>
-          <div class="stat-valor verde"><%= (cargosCount['Presidente(a)']||0) + (cargosCount['Vice-presidente(a)']||0) %></div>
-          <div class="stat-sub verde">membros</div>
+        <div class="stat-mini verde">
+          <div class="num"><%= (cargosCount['Presidente(a)']||0) + (cargosCount['Vice-presidente(a)']||0) %></div>
+          <div class="lab">Presidência</div>
         </div>
-        <div class="stat-card amarelo">
-          <div class="stat-label">Diretores</div>
-          <div class="stat-valor amarelo"><%= diretivos.filter(d => d.cargo && d.cargo.startsWith('Diretor')).length %></div>
-          <div class="stat-sub amarelo">membros</div>
+        <div class="stat-mini amr">
+          <div class="num"><%= diretivos.filter(d => d.cargo && d.cargo.startsWith('Diretor')).length %></div>
+          <div class="lab">Diretores</div>
         </div>
-        <div class="stat-card roxo" style="--roxo:#8b5cf6">
-          <div class="stat-label">Vice-Diretores</div>
-          <div class="stat-valor" style="color:#8b5cf6"><%= diretivos.filter(d => d.cargo && d.cargo.startsWith('Vice Dir')).length %></div>
-          <div class="stat-sub" style="color:#8b5cf6">membros</div>
+        <div class="stat-mini roxo">
+          <div class="num"><%= diretivos.filter(d => d.cargo && d.cargo.startsWith('Vice Dir')).length %></div>
+          <div class="lab">Vice-Diretores</div>
         </div>
       </div>
 
-      <!-- Filtro -->
-      <div class="filtros">
-        <input type="text" class="filtro-input" placeholder="🔍 Buscar por nome ou cargo..." id="busca" oninput="filtrar()" style="flex:1;min-width:200px">
-        <select class="filtro-input" id="filtro-cargo" onchange="filtrar()">
+      <!-- FILTROS -->
+      <div class="filtros-row">
+        <input type="text" class="input" placeholder="Buscar por nome ou cargo..."
+          id="busca" oninput="filtrar()" style="flex:1;max-width:380px">
+        <select class="input" id="filtro-cargo" onchange="filtrar()" style="width:220px">
           <option value="">Todos os cargos</option>
           <option>Presidente(a)</option>
           <option>Vice-presidente(a)</option>
@@ -92,35 +289,77 @@
           <option>Diretor(a) de Marketing</option>
           <option>Vice Diretor(a) de Marketing</option>
         </select>
+        <span id="contador" style="font-size:13px;color:var(--texto2)"><%= diretivos.length %> diretivos</span>
       </div>
 
-      <!-- Lista de diretivos -->
-      <div id="lista-diretivos">
+      <!-- GRID -->
+      <div class="diretivos-grid" id="lista-diretivos">
         <% if (diretivos.length === 0) { %>
-          <div class="vazio">Nenhum diretivo cadastrado. Envie o link de cadastro para os diretivos!</div>
+          <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--texto2)">
+            Nenhum diretivo cadastrado. Envie o link de cadastro!
+          </div>
         <% } %>
         <% diretivos.forEach(d => { %>
-        <div class="dir-card" data-nome="<%= d.nome.toLowerCase() %>" data-cargo="<%= d.cargo || '' %>">
+        <div class="dir-card"
+          data-nome="<%= d.nome.toLowerCase() %>"
+          data-cargo="<%= d.cargo || '' %>">
+
           <div class="dir-header">
             <div class="dir-avatar"><%= d.nome.substring(0,2).toUpperCase() %></div>
-            <div style="flex:1">
+            <div style="flex:1;min-width:0">
               <div class="dir-nome"><%= d.nome %></div>
-              <span class="dir-cargo"><%= d.cargo || 'Sem cargo' %></span>
-            </div>
-            <div style="display:flex;gap:8px">
-              <button class="btn" style="font-size:12px;padding:6px 12px" onclick="abrirEditar(<%= d.id %>)">✏️ Editar</button>
-              <form action="/diretivos/<%= d.id %>/toggle" method="POST" style="display:inline">
-                <button class="btn" style="font-size:12px;padding:6px 12px;color:var(--vermelho)" title="Desativar">🗑</button>
-              </form>
+              <span class="dir-cargo-badge"><%= d.cargo || 'Sem cargo' %></span>
             </div>
           </div>
+
           <div class="dir-info">
-            <% if (d.email) { %><span>📧 <%= d.email %></span><% } %>
-            <% if (d.whatsapp) { %><span>📱 <%= d.whatsapp %></span><% } %>
-            <% if (d.semestre_turma) { %><span>🎓 <%= d.semestre_turma %></span><% } %>
-            <% if (d.onde_reside) { %><span>📍 <%= d.onde_reside %></span><% } %>
-            <% if (d.disponibilidade) { %><span>🕐 <%= d.disponibilidade %></span><% } %>
-            <span style="color:#9ca3af">Cadastrado em <%= new Date(d.cadastrado_em).toLocaleDateString('pt-BR') %></span>
+            <% if (d.email) { %>
+            <div class="dir-info-row">
+              <svg class="dir-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>
+              </svg>
+              <%= d.email %>
+            </div>
+            <% } %>
+            <% if (d.whatsapp) { %>
+            <div class="dir-info-row">
+              <svg class="dir-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 5.49 5.49l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16.92z"/>
+              </svg>
+              <%= d.whatsapp %>
+            </div>
+            <% } %>
+            <% if (d.semestre_turma) { %>
+            <div class="dir-info-row">
+              <svg class="dir-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>
+              </svg>
+              <%= d.semestre_turma %>
+            </div>
+            <% } %>
+            <% if (d.onde_reside) { %>
+            <div class="dir-info-row">
+              <svg class="dir-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+              <%= d.onde_reside %>
+            </div>
+            <% } %>
+          </div>
+
+          <div class="card-acoes">
+            <button class="btn btn-primario btn-sm" onclick="abrirVisualizar(<%= d.id %>)">Ver detalhes</button>
+            <button class="btn btn-sm" onclick="abrirEditar(<%= d.id %>)">Editar</button>
+            <form action="/diretivos/<%= d.id %>/toggle" method="POST" style="display:inline;margin:0;margin-left:auto">
+              <button type="submit" class="btn-danger-soft"
+                onclick="return confirm('Desativar <%= d.nome.replace(/'/g,"\\'") %>?')"
+                title="Desativar">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/>
+                  <path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/>
+                </svg>
+              </button>
+            </form>
           </div>
         </div>
         <% }) %>
@@ -129,12 +368,31 @@
   </main>
 </div>
 
-<!-- Modal cadastro manual -->
-<div class="modal-overlay" id="modal-diretivo" style="display:none">
+<!-- MODAL VISUALIZAR -->
+<div class="modal-overlay" id="modal-visualizar" onclick="fecharModalClick(event,'modal-visualizar')">
+  <div class="modal-grande">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <span style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:700" id="vis-titulo">Detalhes</span>
+      <button onclick="document.getElementById('modal-visualizar').classList.remove('aberto')"
+        style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--texto2);line-height:1">✕</button>
+    </div>
+    <div class="modal-tabs">
+      <button class="modal-tab ativo" onclick="trocarTab('dados', this)">Dados pessoais</button>
+      <button class="modal-tab" onclick="trocarTab('academico', this)">Acadêmico</button>
+      <button class="modal-tab" onclick="trocarTab('perfil', this)">Perfil</button>
+    </div>
+    <div id="tab-dados" class="tab-content ativo"></div>
+    <div id="tab-academico" class="tab-content"></div>
+    <div id="tab-perfil" class="tab-content"></div>
+  </div>
+</div>
+
+<!-- MODAL CADASTRAR -->
+<div class="modal-overlay" id="modal-cadastrar" style="display:none">
   <div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto">
     <div class="modal-header">
       <span class="modal-titulo">Cadastrar Diretivo</span>
-      <button class="icon-btn" onclick="fecharModal('modal-diretivo')">✕</button>
+      <button class="icon-btn" onclick="fecharModal('modal-cadastrar')">✕</button>
     </div>
     <form action="/diretivos" method="POST">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
@@ -147,34 +405,28 @@
           <label class="label">Cargo *</label>
           <select name="cargo" class="input" required>
             <option value="">Selecione...</option>
-            <option>Presidente(a)</option>
-            <option>Vice-presidente(a)</option>
-            <option>Secretário(a)</option>
-            <option>Diretor(a) Financeiro(a)</option>
-            <option>Diretor(a) Científico</option>
-            <option>Vice Diretor(a) Científico</option>
-            <option>Diretor(a) de Extensão</option>
-            <option>Vice Diretor(a) de Extensão</option>
-            <option>Diretor(a) de Ensino</option>
-            <option>Vice Diretor(a) de Ensino</option>
-            <option>Diretor(a) de Marketing</option>
-            <option>Vice Diretor(a) de Marketing</option>
+            <option>Presidente(a)</option><option>Vice-presidente(a)</option>
+            <option>Secretário(a)</option><option>Diretor(a) Financeiro(a)</option>
+            <option>Diretor(a) Científico</option><option>Vice Diretor(a) Científico</option>
+            <option>Diretor(a) de Extensão</option><option>Vice Diretor(a) de Extensão</option>
+            <option>Diretor(a) de Ensino</option><option>Vice Diretor(a) de Ensino</option>
+            <option>Diretor(a) de Marketing</option><option>Vice Diretor(a) de Marketing</option>
           </select>
         </div>
         <div class="campo"><label class="label">Semestre/Turma</label><input name="semestre_turma" class="input" placeholder="Ex: 2025.2"></div>
         <div class="campo"><label class="label">Data de nascimento</label><input name="data_nascimento" type="date" class="input"></div>
         <div class="campo"><label class="label">Onde reside</label><input name="onde_reside" class="input"></div>
-        <div class="campo"><label class="label">Disponibilidade</label><input name="disponibilidade" class="input" placeholder="Ex: Manhã, Tarde"></div>
+        <div class="campo"><label class="label">Disponibilidade</label><input name="disponibilidade" class="input"></div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn" onclick="fecharModal('modal-diretivo')">Cancelar</button>
+        <button type="button" class="btn" onclick="fecharModal('modal-cadastrar')">Cancelar</button>
         <button type="submit" class="btn btn-primario">Cadastrar</button>
       </div>
     </form>
   </div>
 </div>
 
-<!-- Modal editar diretivo -->
+<!-- MODAL EDITAR -->
 <div class="modal-overlay" id="modal-editar" style="display:none">
   <div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto">
     <div class="modal-header">
@@ -193,18 +445,12 @@
         <div class="campo" style="grid-column:1/-1">
           <label class="label">Cargo</label>
           <select name="cargo" id="e-cargo" class="input">
-            <option>Presidente(a)</option>
-            <option>Vice-presidente(a)</option>
-            <option>Secretário(a)</option>
-            <option>Diretor(a) Financeiro(a)</option>
-            <option>Diretor(a) Científico</option>
-            <option>Vice Diretor(a) Científico</option>
-            <option>Diretor(a) de Extensão</option>
-            <option>Vice Diretor(a) de Extensão</option>
-            <option>Diretor(a) de Ensino</option>
-            <option>Vice Diretor(a) de Ensino</option>
-            <option>Diretor(a) de Marketing</option>
-            <option>Vice Diretor(a) de Marketing</option>
+            <option>Presidente(a)</option><option>Vice-presidente(a)</option>
+            <option>Secretário(a)</option><option>Diretor(a) Financeiro(a)</option>
+            <option>Diretor(a) Científico</option><option>Vice Diretor(a) Científico</option>
+            <option>Diretor(a) de Extensão</option><option>Vice Diretor(a) de Extensão</option>
+            <option>Diretor(a) de Ensino</option><option>Vice Diretor(a) de Ensino</option>
+            <option>Diretor(a) de Marketing</option><option>Vice Diretor(a) de Marketing</option>
           </select>
         </div>
         <div class="campo"><label class="label">Semestre/Turma</label><input name="semestre_turma" id="e-semestre" class="input"></div>
@@ -215,7 +461,11 @@
         <div class="campo"><label class="label">ORCID</label><input name="orcid" id="e-orcid" class="input"></div>
         <div class="campo" style="grid-column:1/-1"><label class="label">Graduação/Curso técnico</label><input name="graduacao" id="e-graduacao" class="input"></div>
         <div class="campo" style="grid-column:1/-1"><label class="label">Experiência com Urologia</label><textarea name="experiencia_urologia" id="e-experiencia" class="input" style="min-height:70px"></textarea></div>
-        <div class="campo"><label class="label">Transporte próprio</label><select name="transporte_proprio" id="e-transporte" class="input"><option value="">-</option><option>Sim</option><option>Não</option></select></div>
+        <div class="campo"><label class="label">Transporte próprio</label>
+          <select name="transporte_proprio" id="e-transporte" class="input">
+            <option value="">-</option><option>Sim</option><option>Não</option>
+          </select>
+        </div>
         <div class="campo"><label class="label">Tipo de transporte</label><input name="tipo_transporte" id="e-tipo-transporte" class="input"></div>
       </div>
       <div class="modal-footer">
@@ -233,13 +483,82 @@ const diretivos = <%- JSON.stringify(diretivos) %>;
 function filtrar() {
   const busca = document.getElementById('busca').value.toLowerCase();
   const cargo = document.getElementById('filtro-cargo').value;
+  let vis = 0;
   document.querySelectorAll('.dir-card').forEach(c => {
-    const nome = c.dataset.nome;
-    const cargoDirt = c.dataset.cargo;
-    const ok = (!busca || nome.includes(busca) || cargoDirt.toLowerCase().includes(busca))
-              && (!cargo || cargoDirt === cargo);
+    const ok = (!busca || c.dataset.nome.includes(busca) || c.dataset.cargo.toLowerCase().includes(busca))
+      && (!cargo || c.dataset.cargo === cargo);
     c.style.display = ok ? '' : 'none';
+    if (ok) vis++;
   });
+  document.getElementById('contador').textContent = vis + ' diretivos';
+}
+
+function copiarLink() {
+  navigator.clipboard.writeText(document.getElementById('link-publico').textContent)
+    .then(() => alert('Link copiado!'));
+}
+
+function trocarTab(tab, btn) {
+  document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('ativo'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('ativo'));
+  btn.classList.add('ativo');
+  document.getElementById('tab-' + tab).classList.add('ativo');
+}
+
+function campo(label, valor, full) {
+  return `<div class="detalhe-item ${full ? 'detalhe-full' : ''}">
+    <span class="detalhe-label">${label}</span>
+    <span class="detalhe-valor">${valor || '—'}</span>
+  </div>`;
+}
+
+function abrirVisualizar(id) {
+  const d = diretivos.find(x => x.id == id);
+  if (!d) return;
+  document.getElementById('vis-titulo').textContent = d.nome;
+
+  document.getElementById('tab-dados').innerHTML = `
+    <div class="detalhe-grid">
+      ${campo('Nome completo', d.nome, true)}
+      ${campo('E-mail', d.email)}
+      ${campo('WhatsApp', d.whatsapp)}
+      ${campo('Instagram', d.instagram)}
+      ${campo('RG / C.I.', d.rg)}
+      ${campo('CPF', d.cpf)}
+      ${campo('Catraca', d.catraca)}
+      ${campo('Cargo', d.cargo)}
+      ${campo('Data de nascimento', d.data_nascimento ? new Date(d.data_nascimento + 'T12:00:00').toLocaleDateString('pt-BR') : null)}
+      ${campo('Onde reside', d.onde_reside)}
+      ${campo('Disponibilidade', d.disponibilidade)}
+      ${campo('Cadastrado em', d.cadastrado_em ? new Date(d.cadastrado_em).toLocaleString('pt-BR') : null)}
+    </div>
+    <div style="margin-top:16px;display:flex;gap:8px">
+      <button class="btn btn-primario btn-sm" onclick="document.getElementById('modal-visualizar').classList.remove('aberto');abrirEditar(${id})">
+        Editar dados
+      </button>
+    </div>`;
+
+  document.getElementById('tab-academico').innerHTML = `
+    <div class="detalhe-grid">
+      ${campo('Semestre / Turma', d.semestre_turma)}
+      ${campo('Ano de ingresso', d.ano_ingresso)}
+      ${campo('Graduação / Curso', d.graduacao)}
+      ${campo('ORCID', d.orcid)}
+      ${campo('Transporte próprio', d.transporte_proprio)}
+      ${campo('Tipo de transporte', d.tipo_transporte)}
+      ${campo('Experiência com Urologia', d.experiencia_urologia, true)}
+    </div>`;
+
+  document.getElementById('tab-perfil').innerHTML = `
+    <div class="detalhe-grid">
+      ${campo('Disponibilidade', d.disponibilidade, true)}
+    </div>`;
+
+  // Resetar para aba 1
+  document.querySelectorAll('.modal-tab').forEach((t, i) => t.classList.toggle('ativo', i === 0));
+  document.querySelectorAll('.tab-content').forEach((t, i) => t.classList.toggle('ativo', i === 0));
+
+  document.getElementById('modal-visualizar').classList.add('aberto');
 }
 
 function abrirEditar(id) {
@@ -267,9 +586,9 @@ function abrirEditar(id) {
   abrirModal('modal-editar');
 }
 
-function copiarLink() {
-  const url = document.getElementById('link-publico').textContent;
-  navigator.clipboard.writeText(url).then(() => alert('Link copiado!'));
+function fecharModalClick(e, id) {
+  if (e.target === document.getElementById(id))
+    document.getElementById(id).classList.remove('aberto');
 }
 </script>
 </body>
