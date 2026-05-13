@@ -1170,6 +1170,74 @@ router.get('/frequencia-diretivos/relatorio/:turmaId', requireAuth, requireSecre
   res.send(htmlDir);
 });
 
+router.get('/live/:token', async (req, res) => {
+  try {
+    const r = await query('SELECT epo.*, i.nome, i.email, e.nome as evento_nome, e.youtube_url, e.duracao_minutos FROM evento_presencas_online epo JOIN evento_inscricoes i ON i.id=epo.inscricao_id JOIN eventos e ON e.id=epo.evento_id WHERE epo.token=$1',[req.params.token]);
+    if (!r.rows[0]) return res.status(404).send('Link invalido ou expirado.');
+    const p = r.rows[0];
+    if (!p.primeiro_acesso) { await query("UPDATE evento_presencas_online SET primeiro_acesso=NOW(),ativo=true WHERE token=$1",[req.params.token]); }
+    else { await query("UPDATE evento_presencas_online SET ativo=true,ultimo_ping=NOW() WHERE token=$1",[req.params.token]); }
+    const config = await getConfig();
+    res.render('pages/evento-live', { token: req.params.token, presenca: p, config });
+  } catch(e) { res.status(500).send('Erro: '+e.message); }
+});
+router.post('/live/:token/ping', async (req, res) => {
+  try {
+    await query("UPDATE evento_presencas_online SET ultimo_ping=NOW(),ativo=true,tempo_total_segundos=tempo_total_segundos+120 WHERE token=$1",[req.params.token]);
+    res.json({ok:true});
+  } catch(e) { res.json({ok:false}); }
+});
+router.post('/live/:token/sair', async (req, res) => {
+  try {
+    await query("UPDATE evento_presencas_online SET ativo=false WHERE token=$1",[req.params.token]);
+    res.json({ok:true});
+  } catch(e) { res.json({ok:false}); }
+});
+router.post('/eventos/:id/enviar-link-live', requireAuth, async (req, res) => {
+  try {
+    const crypto = require('crypto');
+    const { enviarWhatsApp, enviarEmail } = require('../services/notificacoes');
+    const config = await getConfig();
+    const appUrl = process.env.APP_URL || 'https://liga-urologia.onrender.com';
+    const evR = await query('SELECT * FROM eventos WHERE id=$1',[req.params.id]);
+    const ev = evR.rows[0];
+    if (!ev) return res.json({ok:false,msg:'Evento nao encontrado'});
+    const inscrR = await query("SELECT * FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado'",[req.params.id]);
+    let enviados = 0;
+    for (const insc of inscrR.rows) {
+      let token = crypto.randomBytes(24).toString('hex');
+      const existe = await query('SELECT token FROM evento_presencas_online WHERE inscricao_id=$1 AND evento_id=$2',[insc.id,ev.id]);
+      if (existe.rows.length > 0) { token = existe.rows[0].token; }
+      else { await query('INSERT INTO evento_presencas_online (inscricao_id,evento_id,token) VALUES ($1,$2,$3)',[insc.id,ev.id,token]); }
+      const link = appUrl+'/live/'+token;
+      const msg = (config.org_nome||'LAURO')+'\n\nOla, '+insc.nome.split(' ')[0]+'!\n\nSeu link de acesso ao evento '+ev.nome+':\n\n'+link+'\n\nAcesse para assistir e registrar sua presenca automaticamente.';
+      if (insc.whatsapp) { try { await enviarWhatsApp(insc.whatsapp,msg); enviados++; await new Promise(r=>setTimeout(r,500)); } catch(e){} }
+      if (insc.email) {
+        const html = '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:20px"><h2>'+ev.nome+'</h2><p>Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p><p>Clique para assistir e ter sua presenca registrada:</p><div style="text-align:center;margin:24px 0"><a href="'+link+'" style="background:#1a56db;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700">Assistir ao evento</a></div><p style="font-size:12px;color:#6b7280">Link exclusivo — nao compartilhe.</p></div>';
+        try { await enviarEmail({para:insc.email,assunto:'Seu link de acesso — '+ev.nome,html,texto:msg}); } catch(e){}
+      }
+    }
+    res.json({ok:true,msg:enviados+' links enviados!'});
+  } catch(e) { res.json({ok:false,msg:e.message}); }
+});
+router.get('/eventos/:id/presencas', requireAuth, async (req, res) => {
+  try {
+    const config = await getConfig();
+    const evR = await query('SELECT * FROM eventos WHERE id=$1',[req.params.id]);
+    const ev = evR.rows[0];
+    if (!ev) return res.redirect('/eventos');
+    const inscrR = await query(
+      `SELECT i.*,
+        COALESCE((SELECT SUM(EXTRACT(EPOCH FROM (COALESCE(saida_em,NOW())-entrada_em))) FROM evento_presencas_tempo WHERE inscricao_id=i.id),0) as segundos_presencial,
+        COALESCE((SELECT tempo_total_segundos FROM evento_presencas_online WHERE inscricao_id=i.id AND evento_id=$1),0) as segundos_online
+       FROM evento_inscricoes i WHERE i.evento_id=$1 AND i.status='confirmado' ORDER BY i.nome`,
+      [ev.id]
+    );
+    const duracaoSeg = (ev.duracao_minutos||0)*60;
+    res.render('pages/evento-presencas',{config,evento:ev,inscricoes:inscrR.rows,duracaoSeg,usuario:req.session.usuario,msg:req.flash('msg')});
+  } catch(e) { res.status(500).send('Erro: '+e.message); }
+});
+
 router.get('/auditoria', requireAuth, requireAdmin, async (req, res) => {
   const config = await getConfig();
   const pagina = parseInt(req.query.pagina) || 1;
@@ -2670,15 +2738,43 @@ router.get('/eventos/:id/checkin', requireAuth, async (req, res) => {
   res.render('pages/evento-checkin', { config, usuario: req.session.usuario, msg, erro:[], evento: evR.rows[0], inscricoes: inscrR.rows, stats });
 });
 
+// ─── CHECK-IN COM TEMPO (ENTRADA/SAIDA) ──────────────────────────────────────
 router.post('/eventos/:id/checkin/buscar', requireAuth, async (req, res) => {
   try {
     const {busca} = req.body;
     const r = await query("SELECT * FROM evento_inscricoes WHERE evento_id=$1 AND (LOWER(nome) LIKE $2 OR qrcode=$3) LIMIT 1",
-      [req.params.id,'%'+busca.toLowerCase()+'%',busca]);
-    if (!r.rows[0]) return res.json({ok:false, msg:'Inscrito não encontrado'});
-    if (r.rows[0].checkin_em) return res.json({ok:false, msg:'Check-in já realizado por '+r.rows[0].nome});
-    await query('UPDATE evento_inscricoes SET checkin_em=NOW() WHERE id=$1',[r.rows[0].id]);
-    res.json({ok:true, msg:'✅ Check-in realizado: '+r.rows[0].nome});
+      [req.params.id,'%'+(busca||'').toLowerCase()+'%',busca]);
+    if (!r.rows[0]) return res.json({ok:false, msg:'Inscrito nao encontrado.'});
+    const insc = r.rows[0];
+
+    // Verifica se tem entrada aberta (sem saida)
+    const aberto = await query(
+      "SELECT id FROM evento_presencas_tempo WHERE inscricao_id=$1 AND saida_em IS NULL ORDER BY entrada_em DESC LIMIT 1",
+      [insc.id]
+    );
+
+    if (aberto.rows.length > 0) {
+      // SAIDA — fecha a sessao aberta
+      await query("UPDATE evento_presencas_tempo SET saida_em=NOW() WHERE id=$1", [aberto.rows[0].id]);
+      // Calcula tempo total
+      const tot = await query(
+        "SELECT COALESCE(SUM(EXTRACT(EPOCH FROM (COALESCE(saida_em,NOW())-entrada_em))),0) as segundos FROM evento_presencas_tempo WHERE inscricao_id=$1",
+        [insc.id]
+      );
+      const mins = Math.round(tot.rows[0].segundos / 60);
+      return res.json({ok:true, tipo:'saida', msg:'Saida registrada: '+insc.nome+' — '+mins+' min acumulados', nome: insc.nome});
+    } else {
+      // ENTRADA — abre nova sessao
+      await query(
+        "INSERT INTO evento_presencas_tempo (inscricao_id, evento_id, entrada_em) VALUES ($1,$2,NOW())",
+        [insc.id, req.params.id]
+      );
+      // Primeiro checkin — marca checkin_em se ainda nao tiver
+      if (!insc.checkin_em) {
+        await query("UPDATE evento_inscricoes SET checkin_em=NOW() WHERE id=$1", [insc.id]);
+      }
+      return res.json({ok:true, tipo:'entrada', msg:'Entrada registrada: '+insc.nome, nome: insc.nome});
+    }
   } catch(e) { res.json({ok:false, msg:'Erro: '+e.message}); }
 });
 
