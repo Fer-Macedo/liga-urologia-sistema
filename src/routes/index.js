@@ -1178,7 +1178,8 @@ router.get('/live/:token', async (req, res) => {
     if (!p.primeiro_acesso) { await query("UPDATE evento_presencas_online SET primeiro_acesso=NOW(),ativo=true WHERE token=$1",[req.params.token]); }
     else { await query("UPDATE evento_presencas_online SET ativo=true,ultimo_ping=NOW() WHERE token=$1",[req.params.token]); }
     const config = await getConfig();
-    res.render('pages/evento-live', { token: req.params.token, presenca: p, config });
+    const patrocR = await query('SELECT * FROM evento_patrocinadores WHERE evento_id=$1 ORDER BY id', [p.evento_id]);
+    res.render('pages/evento-live', { token: req.params.token, presenca: p, config, patrocinadores: patrocR.rows });
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 router.post('/live/:token/ping', async (req, res) => {
