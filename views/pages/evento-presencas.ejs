@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presenças — <%= evento.nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+    .stats-row { display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px; }
+    .stat-card { background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:18px 20px;position:relative;overflow:hidden; }
+    .stat-card::before { content:'';position:absolute;top:0;left:0;right:0;height:3px; }
+    .stat-card.azul::before  { background:linear-gradient(90deg,#1a56db,#06b6d4); }
+    .stat-card.verde::before { background:linear-gradient(90deg,#10b981,#34d399); }
+    .stat-card.amr::before   { background:linear-gradient(90deg,#f59e0b,#fbbf24); }
+    .stat-card.verm::before  { background:linear-gradient(90deg,#ef4444,#f87171); }
+    .stat-num { font-family:'Outfit',sans-serif;font-size:26px;font-weight:700;margin-bottom:4px; }
+    .stat-card.azul  .stat-num { color:#1a56db; }
+    .stat-card.verde .stat-num { color:#10b981; }
+    .stat-card.amr   .stat-num { color:#f59e0b; }
+    .stat-card.verm  .stat-num { color:#ef4444; }
+    .stat-lab { font-size:11px;color:var(--texto2);font-weight:600;text-transform:uppercase;letter-spacing:.06em; }
+
+    .table-moderna { background:var(--card);border:1px solid var(--borda);border-radius:14px;overflow:hidden; }
+    .table-moderna table { width:100%;border-collapse:collapse; }
+    .table-moderna thead th { background:var(--fundo);padding:11px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--texto2);text-align:left;border-bottom:1px solid var(--borda); }
+    .table-moderna tbody tr { border-bottom:1px solid var(--borda);transition:background .15s; }
+    .table-moderna tbody tr:last-child { border-bottom:none; }
+    .table-moderna tbody tr:hover { background:var(--fundo); }
+    .table-moderna tbody td { padding:12px 14px;font-size:13px;color:var(--texto);vertical-align:middle; }
+
+    .badge-apt { display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700; }
+    .badge-apt.apto   { background:#dcfce7;color:#166534; }
+    .badge-apt.risco  { background:#fef3c7;color:#92400e; }
+    .badge-apt.inapto { background:#fee2e2;color:#991b1b; }
+
+    .prog-mini { height:5px;background:var(--borda);border-radius:3px;overflow:hidden;width:80px;display:inline-block;vertical-align:middle;margin-right:6px; }
+    .prog-fill { height:100%;border-radius:3px; }
+
+    .tipo-badge { display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700; }
+    .tipo-presencial { background:#eff6ff;color:#1e40af; }
+    .tipo-online     { background:#fdf4ff;color:#7e22ce; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'eventos' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Presenças — <%= evento.nome %></h1>
+      <div class="topbar-acoes">
+        <a href="/eventos/<%= evento.id %>" class="btn btn-sm">Voltar</a>
+        <button onclick="window.print()" class="btn btn-sm">Imprimir</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <%
+        const duracaoMin = evento.duracao_minutos || 0;
+        const duracaoSeg2 = duracaoMin * 60;
+        let aptos = 0, risco = 0, inaptos = 0;
+        inscricoes.forEach(i => {
+          const seg = Math.max(Number(i.segundos_presencial||0), Number(i.segundos_online||0));
+          const pct = duracaoSeg2 > 0 ? seg / duracaoSeg2 * 100 : 0;
+          if (pct >= 75) aptos++;
+          else if (pct >= 50) risco++;
+          else inaptos++;
+        });
+      %>
+
+      <!-- STATS -->
+      <div class="stats-row">
+        <div class="stat-card azul">
+          <div class="stat-num"><%= inscricoes.length %></div>
+          <div class="stat-lab">Total confirmados</div>
+        </div>
+        <div class="stat-card verde">
+          <div class="stat-num"><%= aptos %></div>
+          <div class="stat-lab">Aptos (≥75%)</div>
+        </div>
+        <div class="stat-card amr">
+          <div class="stat-num"><%= risco %></div>
+          <div class="stat-lab">Em risco (50-74%)</div>
+        </div>
+        <div class="stat-card verm">
+          <div class="stat-num"><%= inaptos %></div>
+          <div class="stat-lab">Não aptos (&lt;50%)</div>
+        </div>
+      </div>
+
+      <!-- INFO EVENTO -->
+      <div style="background:var(--card);border:1px solid var(--borda);border-radius:12px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:11px;color:var(--texto2);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Duração total do evento</div>
+          <div style="font-size:20px;font-weight:700;font-family:'Outfit',sans-serif;color:var(--cor-primaria)">
+            <%= duracaoMin ? Math.floor(duracaoMin/60)+'h '+(duracaoMin%60>0?(duracaoMin%60)+'min':'') : 'Não definida' %>
+          </div>
+        </div>
+        <div style="height:40px;width:1px;background:var(--borda)"></div>
+        <div>
+          <div style="font-size:11px;color:var(--texto2);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">Mínimo para certificado</div>
+          <div style="font-size:20px;font-weight:700;font-family:'Outfit',sans-serif;color:#10b981">
+            75% — <%= duracaoMin ? Math.floor(duracaoMin*0.75/60)+'h '+(Math.round(duracaoMin*0.75)%60>0?Math.round(duracaoMin*0.75)%60+'min':'') : '—' %>
+          </div>
+        </div>
+        <% if (!duracaoMin) { %>
+        <a href="/eventos/<%= evento.id %>" class="btn btn-sm" style="margin-left:auto">Definir duração do evento</a>
+        <% } %>
+      </div>
+
+      <!-- TABELA -->
+      <div class="table-moderna">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <span style="font-size:14px;font-weight:700;font-family:'Outfit',sans-serif">Lista de presenças</span>
+          <input type="text" class="input" placeholder="Buscar participante..."
+            style="width:240px;font-size:13px;padding:7px 12px"
+            oninput="buscar(this.value)">
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Participante</th>
+              <th>Tipo</th>
+              <th style="text-align:center">Tempo assistido</th>
+              <th style="text-align:center">% presença</th>
+              <th>Status</th>
+              <th>Certificado</th>
+            </tr>
+          </thead>
+          <tbody id="tbody">
+            <% inscricoes.forEach(i => {
+              const segP = Number(i.segundos_presencial || 0);
+              const segO = Number(i.segundos_online || 0);
+              const seg = Math.max(segP, segO);
+              const tipo = segP > segO ? 'presencial' : segO > 0 ? 'online' : 'presencial';
+              const minutos = Math.floor(seg / 60);
+              const horas = Math.floor(minutos / 60);
+              const mins = minutos % 60;
+              const tempoStr = horas > 0 ? horas+'h '+mins+'min' : mins+'min';
+              const pct = duracaoSeg2 > 0 ? Math.min(100, Math.round(seg / duracaoSeg2 * 100)) : 0;
+              const corBarra = pct >= 75 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
+            %>
+            <tr data-busca="<%= (i.nome + ' ' + (i.email||'')).toLowerCase() %>">
+              <td>
+                <div style="font-weight:600"><%= i.nome %></div>
+                <div style="font-size:11px;color:var(--texto2)"><%= i.email %></div>
+              </td>
+              <td>
+                <span class="tipo-badge tipo-<%= tipo %>">
+                  <%= tipo === 'presencial' ? 'Presencial' : 'Online' %>
+                </span>
+              </td>
+              <td style="text-align:center;font-weight:600;font-family:'Outfit',sans-serif">
+                <%= seg > 0 ? tempoStr : '—' %>
+              </td>
+              <td style="text-align:center">
+                <div style="display:flex;align-items:center;justify-content:center;gap:6px">
+                  <div class="prog-mini">
+                    <div class="prog-fill" style="width:<%= pct %>%;background:<%= corBarra %>"></div>
+                  </div>
+                  <span style="font-weight:700;font-size:13px;color:<%= corBarra %>"><%= pct %>%</span>
+                </div>
+              </td>
+              <td>
+                <% if (pct >= 75) { %>
+                  <span class="badge-apt apto">Apto</span>
+                <% } else if (pct >= 50) { %>
+                  <span class="badge-apt risco">Em risco</span>
+                <% } else { %>
+                  <span class="badge-apt inapto">Nao apto</span>
+                <% } %>
+              </td>
+              <td>
+                <% if (pct >= 75) { %>
+                  <a href="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/certificado"
+                    target="_blank" class="btn btn-sm"
+                    style="font-size:11px;background:#8b5cf6;color:white;border-color:transparent">
+                    Emitir
+                  </a>
+                <% } else { %>
+                  <span style="font-size:12px;color:var(--texto2)">—</span>
+                <% } %>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<script>
+function buscar(t) {
+  t = t.toLowerCase();
+  document.querySelectorAll('#tbody tr[data-busca]').forEach(r => {
+    r.style.display = !t || r.dataset.busca.includes(t) ? '' : 'none';
+  });
+}
+</script>
+</body>
+</html>
