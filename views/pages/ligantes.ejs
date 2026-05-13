@@ -441,11 +441,10 @@ function abrirDetalhe(id) {
     </div>
     <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
       <a href="/ligantes/${id}/editar" class="btn btn-primario">✏️ Editar dados</a>
-      <form action="/ligantes/${id}/toggle" method="POST" style="display:inline;margin:0">
-        <button class="btn" style="color:${l.ativo==0?'#16a34a':'#dc2626'}">
-          ${l.ativo==0?'✅ Marcar como ativo':'⏸ Marcar como inativo'}
-        </button>
-      </form>
+      ${l.ativo==0?
+        `<form action="/ligantes/${id}/toggle" method="POST" style="display:inline;margin:0"><button class="btn" style="color:#16a34a">Reativar</button></form>`
+        :`<button class="btn" style="color:#dc2626" onclick="document.getElementById('modal-detalhe').classList.remove('aberto');abrirInativL(${id})">Inativar</button>`
+      }
     </div>`;
 
   document.getElementById('tab-perfil').innerHTML = `
@@ -465,6 +464,60 @@ function abrirDetalhe(id) {
 function fecharModalClick(e) {
   if (e.target === document.getElementById('modal-detalhe'))
     document.getElementById('modal-detalhe').classList.remove('aberto');
+}
+</script>
+
+<div class="modal-overlay" id="modal-inativ-l" style="display:none">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <span class="modal-titulo">Inativar ligante</span>
+      <button class="icon-btn" onclick="fecharModal('modal-inativ-l')">&#x2715;</button>
+    </div>
+    <p style="font-size:13px;color:var(--texto2);margin:0 0 16px;line-height:1.6">
+      Ao inativar, o ligante nao receberao mais notificacoes do sistema.
+    </p>
+    <div class="campo" style="margin-bottom:12px">
+      <label class="label">Motivo *</label>
+      <select id="sel-motivo-l" class="input" onchange="atualizarMotivoL()">
+        <option value="">Selecione...</option>
+        <option>Desligamento voluntario</option>
+        <option>Desvinculacao</option>
+        <option>Conclusao de curso</option>
+        <option>Transferencia de instituicao</option>
+        <option>Desempenho insatisfatorio</option>
+        <option>Outro</option>
+      </select>
+    </div>
+    <div id="outro-l" style="display:none;margin-bottom:12px">
+      <label class="label">Especifique *</label>
+      <textarea id="txt-outro-l" class="input" rows="2" oninput="atualizarMotivoL()"></textarea>
+    </div>
+    <form id="form-inativ-l" action="" method="POST">
+      <input type="hidden" name="motivo" id="motivo-l">
+      <div class="modal-footer" style="padding:0;margin-top:8px">
+        <button type="button" class="btn" onclick="fecharModal('modal-inativ-l')">Cancelar</button>
+        <button type="submit" class="btn btn-primario" onclick="return validarL()"
+          style="background:linear-gradient(135deg,#dc2626,#b91c1c)">Confirmar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function abrirInativL(id){
+  document.getElementById('form-inativ-l').action='/ligantes/'+id+'/toggle';
+  document.getElementById('sel-motivo-l').value='';
+  document.getElementById('motivo-l').value='';
+  document.getElementById('outro-l').style.display='none';
+  abrirModal('modal-inativ-l');
+}
+function atualizarMotivoL(){
+  const s=document.getElementById('sel-motivo-l').value;
+  document.getElementById('outro-l').style.display=s==='Outro'?'':'none';
+  document.getElementById('motivo-l').value=s==='Outro'?document.getElementById('txt-outro-l').value:s;
+}
+function validarL(){
+  if(!document.getElementById('motivo-l').value){alert('Informe o motivo.');return false;}
+  return true;
 }
 </script>
 </body>
