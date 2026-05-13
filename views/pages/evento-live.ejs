@@ -227,6 +227,7 @@ const emailInscrito = '<%= presenca.email %>'.toLowerCase().trim();
 const nomeInscrito = '<%= presenca.nome %>';
 const segundosIniciais = <%= presenca.tempo_total_segundos || 0 %>;
 const primeiroAcessoStr = '<%= presenca.primeiro_acesso ? new Date(presenca.primeiro_acesso).toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"}) : "" %>';
+const ultimoPingStr = '<%= presenca.ultimo_ping ? new Date(presenca.ultimo_ping).toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"}) : "" %>';
 const wapiNum = '<%= config.wapi_numero || "" %>';
 
 let online = true;
@@ -257,9 +258,8 @@ function validarAcesso() {
   document.getElementById('main-content').style.display = 'grid';
   document.getElementById('nome-exibido').textContent = nomeInscrito.split(' ')[0];
 
-  // Mostrar horario do ultimo acesso (ultimo_ping) ou primeiro acesso
-  const agora = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
-  document.getElementById('primeiro-acesso').textContent = primeiroAcessoStr || agora;
+  // Mostrar horario do ultimo login (ultimo_ping do banco)
+  document.getElementById('primeiro-acesso').textContent = ultimoPingStr || primeiroAcessoStr || '—';
 
   // Contador local — so conta tempo desta sessao
   setInterval(() => {
