@@ -2,8 +2,9 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Frequência — <%= config.org_nome %></title>
+  <title>Frequência Ligantes — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
   <style>
     :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
     .freq-card { background:var(--card);border:1px solid var(--borda);border-radius:var(--radius-lg);padding:20px;box-shadow:var(--sombra);margin-bottom:16px; }
@@ -21,6 +22,27 @@
     .risco { background:#f59e0b; }
     .inapto { background:#ef4444; }
     .pct-label { font-size:12px;font-weight:600;min-width:40px;text-align:right; }
+
+    .btn-excluir-registro {
+      display:inline-flex;align-items:center;gap:5px;
+      padding:6px 12px;border-radius:8px;
+      background:#fef2f2;color:#dc2626;
+      border:1.5px solid #fecaca;
+      font-size:11.5px;font-weight:600;
+      cursor:pointer;transition:all .15s ease;
+      font-family:inherit;
+    }
+    .btn-excluir-registro:hover {
+      background:#dc2626;color:white;border-color:#dc2626;
+      transform:translateY(-1px);box-shadow:0 4px 10px rgba(220,38,38,.25);
+    }
+    .ligante-info-block {
+      display:flex;align-items:center;gap:10px;flex:1;min-width:0;
+    }
+    .ligante-info-block .meta {
+      font-size:11px;color:var(--texto2);margin-top:4px;
+      display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+    }
   </style>
 </head>
 <body>
@@ -28,7 +50,7 @@
   <%- include('../partials/sidebar', { paginaAtual: 'frequencia' }) %>
   <main class="main">
     <div class="topbar">
-      <h1 class="page-titulo">📊 Frequência</h1>
+      <h1 class="page-titulo">✅ Frequência Ligantes</h1>
       <div class="topbar-acoes">
         <button class="btn" onclick="abrirModal('modal-turma')">+ Nova turma</button>
         <button class="btn btn-primario" onclick="abrirModal('modal-atividade')">+ Nova atividade</button>
@@ -38,7 +60,6 @@
       <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
       <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
 
-      <!-- Seletor de turma — ordenado por nome (ex: 2025.1, 2025.2, 2026.1) -->
       <div class="freq-card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
         <div style="font-size:13px;font-weight:600;color:var(--texto2)">TURMA:</div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;flex:1">
@@ -63,38 +84,39 @@
 
       <% if (turmaAtual) { %>
 
-      <!-- Tabs -->
       <div class="freq-tabs">
-        <button class="freq-tab ativo" onclick="mostrarTab('tab-resumo')">📊 Resumo</button>
-        <button class="freq-tab" onclick="mostrarTab('tab-atividades')">📅 Atividades (<%= atividades.length %>)</button>
-        <button class="freq-tab" onclick="mostrarTab('tab-membros')">👥 Membros</button>
+        <button class="freq-tab ativo" onclick="mostrarTab('tab-resumo', this)">📊 Resumo</button>
+        <button class="freq-tab" onclick="mostrarTab('tab-atividades', this)">📅 Atividades (<%= atividades.length %>)</button>
+        <button class="freq-tab" onclick="mostrarTab('tab-ligantes', this)">🎓 Ligantes</button>
       </div>
 
-      <!-- Tab Resumo -->
       <div id="tab-resumo" class="tab-content ativo">
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px">
           <div class="stat-card verde">
             <div class="stat-label">Aptos (≥75%)</div>
             <div class="stat-valor verde"><%= resumo.aptos %></div>
-            <div class="stat-sub verde">membros</div>
+            <div class="stat-sub verde">ligantes</div>
           </div>
           <div class="stat-card amarelo">
             <div class="stat-label">Em risco (50-74%)</div>
             <div class="stat-valor amarelo"><%= resumo.risco %></div>
-            <div class="stat-sub amarelo">membros</div>
+            <div class="stat-sub amarelo">ligantes</div>
           </div>
           <div class="stat-card vermelho">
             <div class="stat-label">Não aptos (<50%)</div>
             <div class="stat-valor vermelho"><%= resumo.inaptos %></div>
-            <div class="stat-sub vermelho">membros</div>
+            <div class="stat-sub vermelho">ligantes</div>
           </div>
         </div>
 
         <div class="freq-card">
-          <div class="section-titulo" style="margin-bottom:16px">Frequência por membro</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+            <div class="section-titulo" style="margin:0">Frequência por Ligante</div>
+            <small style="color:var(--texto2);font-size:12px">Clique em 🗑 para remover um ligante cadastrado por engano</small>
+          </div>
           <div class="presenca-grid">
             <% if (membrosFrequencia.length === 0) { %>
-              <div class="vazio">Nenhum membro na turma ainda</div>
+              <div class="vazio">Nenhum ligante na turma ainda</div>
             <% } %>
             <% membrosFrequencia.forEach(m => {
               const pct = m.total_atividades > 0 ? Math.round((m.presencas / m.total_atividades) * 100) : 0;
@@ -103,21 +125,29 @@
               const corTexto = pct >= 75 ? 'var(--verde)' : pct >= 50 ? 'var(--amarelo)' : 'var(--vermelho)';
             %>
             <div class="presenca-row">
-              <div style="display:flex;align-items:center;gap:10px;flex:1">
+              <div class="ligante-info-block">
                 <div class="avatar" style="width:32px;height:32px;font-size:11px"><%= m.nome.substring(0,2).toUpperCase() %></div>
                 <div style="flex:1;min-width:0">
                   <div style="font-size:13px;font-weight:600"><%= m.nome %></div>
-                  <div style="display:flex;align-items:center;gap:8px;margin-top:4px">
-                    <div class="barra-wrap"><div class="barra <%= cor %>" style="width:<%= pct %>%"></div></div>
-                    <span style="font-size:11px;color:var(--texto2)">✅ <%= m.presencas %> | ❌ <%= faltas %> | Total: <%= m.total_atividades %></span>
+                  <div class="meta">
+                    <div class="barra-wrap" style="max-width:140px;min-width:80px"><div class="barra <%= cor %>" style="width:<%= pct %>%"></div></div>
+                    <span>✅ <%= m.presencas %> | ❌ <%= faltas %> | Total: <%= m.total_atividades %></span>
                   </div>
                 </div>
               </div>
-              <div style="display:flex;align-items:center;gap:8px">
+              <div style="display:flex;align-items:center;gap:10px">
                 <span class="pct-label" style="color:<%= corTexto %>"><%= pct %>%</span>
                 <span class="badge <%= pct >= 75 ? 'verde' : pct >= 50 ? 'amarelo' : 'vermelho' %>">
                   <%= pct >= 75 ? 'Apto' : pct >= 50 ? 'Em risco' : 'Não apto' %>
                 </span>
+                <form action="/frequencia/turma/<%= turmaAtual.id %>/remover-membro" method="POST"
+                  onsubmit="return confirm('⚠️ Excluir o registro de <%= m.nome.replace(/'/g, "\\'") %> desta turma?\n\nIsso removerá o ligante e todas as suas presenças nesta turma.')"
+                  style="display:inline;margin:0">
+                  <input type="hidden" name="membro_id" value="<%= m.membro_id %>">
+                  <button type="submit" class="btn-excluir-registro" title="Excluir registro desta turma">
+                    🗑 Excluir
+                  </button>
+                </form>
               </div>
             </div>
             <% }) %>
@@ -125,7 +155,6 @@
         </div>
       </div>
 
-      <!-- Tab Atividades -->
       <div id="tab-atividades" class="tab-content">
         <% if (atividades.length === 0) { %>
           <div class="vazio">Nenhuma atividade cadastrada para esta turma</div>
@@ -136,7 +165,7 @@
             <div>
               <div style="font-size:15px;font-weight:600"><%= a.descricao %></div>
               <div style="font-size:12px;color:var(--texto2);margin-top:2px">
-                <% 
+                <%
   const coresTipo = {
     'Aula Presencial': 'background:#1a56db;color:white',
     'Aula On-line': 'background:#7c3aed;color:white',
@@ -179,27 +208,28 @@
         <% }) %>
       </div>
 
-      <!-- Tab Membros — nome completo -->
-      <div id="tab-membros" class="tab-content">
+      <div id="tab-ligantes" class="tab-content">
         <div class="freq-card">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-            <div class="section-titulo">Membros da turma</div>
-            <button class="btn btn-primario" style="font-size:12px" onclick="abrirModal('modal-add-membro')">+ Adicionar membro</button>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+            <div>
+              <div class="section-titulo" style="margin:0">Ligantes da turma</div>
+              <small style="color:var(--texto2);font-size:12px">Adicione ligantes à turma <%= turmaAtual.nome %></small>
+            </div>
+            <button class="btn btn-primario" style="font-size:12px" onclick="abrirModal('modal-add-membro')">+ Adicionar ligante</button>
           </div>
           <% if (membrosFrequencia.length === 0) { %>
-            <div class="vazio">Nenhum membro na turma</div>
+            <div class="vazio">Nenhum ligante na turma</div>
           <% } %>
           <% membrosFrequencia.forEach(m => {
             const pct = m.total_atividades > 0 ? Math.round((m.presencas / m.total_atividades) * 100) : 0;
             const faltas = m.total_atividades - m.presencas;
           %>
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--borda)">
-            <div style="display:flex;align-items:center;gap:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--borda);flex-wrap:wrap;gap:8px">
+            <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
               <div class="avatar" style="width:32px;height:32px;font-size:11px"><%= m.nome.substring(0,2).toUpperCase() %></div>
               <div>
                 <div style="font-size:13px;font-weight:600"><%= m.nome %></div>
                 <div style="font-size:11px;color:var(--texto2)">
-                  Desde <%= new Date(m.data_entrada+'T12:00:00').toLocaleDateString('pt-BR') %> &nbsp;|&nbsp;
                   ✅ <%= m.presencas %> presenças &nbsp;|&nbsp; ❌ <%= faltas %> faltas
                 </div>
               </div>
@@ -207,9 +237,11 @@
             <div style="display:flex;align-items:center;gap:8px">
               <span class="badge <%= pct >= 75 ? 'verde' : pct >= 50 ? 'amarelo' : 'vermelho' %>"><%= pct %>%</span>
               <form action="/frequencia/turma/<%= turmaAtual.id %>/remover-membro" method="POST"
-                onsubmit="return confirm('Remover este membro da turma?')">
+                onsubmit="return confirm('⚠️ Remover <%= m.nome.replace(/'/g, "\\'") %> desta turma?\n\nO ligante será desvinculado e todas as suas presenças nesta turma serão removidas.')">
                 <input type="hidden" name="membro_id" value="<%= m.membro_id %>">
-                <button class="icon-btn" style="color:var(--vermelho)" title="Remover">✕</button>
+                <button type="submit" class="btn-excluir-registro" title="Excluir registro desta turma">
+                  🗑 Excluir
+                </button>
               </form>
             </div>
           </div>
@@ -224,7 +256,6 @@
   </main>
 </div>
 
-<!-- Modal Nova Turma -->
 <div class="modal-overlay" id="modal-turma" style="display:none">
   <div class="modal">
     <div class="modal-header">
@@ -254,7 +285,6 @@
   </div>
 </div>
 
-<!-- Modal Nova Atividade -->
 <div class="modal-overlay" id="modal-atividade" style="display:none">
   <div class="modal">
     <div class="modal-header">
@@ -301,17 +331,16 @@
   </div>
 </div>
 
-<!-- Modal Adicionar Membro à Turma -->
 <div class="modal-overlay" id="modal-add-membro" style="display:none">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-titulo">Adicionar Membro à Turma</span>
+      <span class="modal-titulo">Adicionar Ligante à Turma</span>
       <button class="icon-btn" onclick="fecharModal('modal-add-membro')">✕</button>
     </div>
     <form action="/frequencia/turma/<%= turmaAtual ? turmaAtual.id : 0 %>/adicionar-membro" method="POST">
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="campo">
-          <label class="label">Membro *</label>
+          <label class="label">Ligante *</label>
           <select name="membro_id" class="input" required>
             <option value="">Selecione...</option>
             <% todosMembros.forEach(m => { %>
@@ -321,11 +350,11 @@
               <% } %>
             <% }) %>
           </select>
+          <small style="font-size:11px;color:var(--texto2);margin-top:4px;display:block">
+            Apenas ligantes ainda não vinculados à turma <%= turmaAtual ? turmaAtual.nome : '' %> aparecem aqui.
+          </small>
         </div>
-        <div class="campo">
-          <label class="label">Data de entrada na turma *</label>
-          <input name="data_entrada" type="date" class="input" required value="<%= new Date().toISOString().split('T')[0] %>">
-        </div>
+        <input type="hidden" name="data_entrada" value="<%= new Date().toISOString().split('T')[0] %>">
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-add-membro')">Cancelar</button>
@@ -335,7 +364,6 @@
   </div>
 </div>
 
-<!-- Modal Enviar Frequência -->
 <div class="modal-overlay" id="modal-envio" style="display:none">
   <div class="modal" style="max-width:500px">
     <div class="modal-header">
@@ -374,11 +402,11 @@
 
 <script src="/js/app.js"></script>
 <script>
-function mostrarTab(tabId) {
+function mostrarTab(tabId, btn) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('ativo'));
   document.querySelectorAll('.freq-tab').forEach(t => t.classList.remove('ativo'));
   document.getElementById(tabId).classList.add('ativo');
-  event.target.classList.add('ativo');
+  btn.classList.add('ativo');
 }
 
 let turmaIdEnvio = null;
@@ -394,7 +422,7 @@ function selecionarTodos(val) {
 
 function confirmarEnvio() {
   const selecionados = Array.from(document.querySelectorAll('.check-envio:checked')).map(c => c.value);
-  if (selecionados.length === 0) { alert('Selecione pelo menos um membro!'); return; }
+  if (selecionados.length === 0) { alert('Selecione pelo menos um ligante!'); return; }
   fecharModal('modal-envio');
 
   const formData = new FormData();
