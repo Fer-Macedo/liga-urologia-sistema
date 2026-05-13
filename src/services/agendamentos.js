@@ -320,5 +320,6 @@ module.exports = {
   gerarCobrancasMes,
   verificarPagamentos,
   logNotificacao,
-  enviarFrequenciaMensal
+  enviarFrequenciaMensal,
+  enviarNotificacoes
 };
