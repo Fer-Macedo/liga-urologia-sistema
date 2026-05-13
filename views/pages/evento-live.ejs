@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= presenca.evento_nome %> — Transmissão ao Vivo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0f172a; color: white; min-height: 100vh; }
+
+    .header {
+      background: #1e293b;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid #334155;
+    }
+    .header-nome { font-size: 14px; font-weight: 600; color: #94a3b8; }
+    .header-evento { font-size: 16px; font-weight: 700; color: white; margin-top: 2px; }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .status-badge.online { background: #dcfce7; color: #166534; }
+    .status-badge.offline { background: #fee2e2; color: #991b1b; }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      animation: blink 1.5s infinite;
+    }
+    .status-badge.online .status-dot { background: #16a34a; }
+    .status-badge.offline .status-dot { background: #dc2626; animation: none; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    .video-wrap {
+      position: relative;
+      width: 100%;
+      padding-top: 56.25%;
+      background: #000;
+    }
+    .video-wrap iframe {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      border: none;
+    }
+    .video-placeholder {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #1e293b;
+      color: #94a3b8;
+    }
+
+    .info-panel {
+      background: #1e293b;
+      padding: 20px;
+      border-top: 1px solid #334155;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    .info-card {
+      background: #0f172a;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+    .info-num {
+      font-size: 24px;
+      font-weight: 700;
+      font-family: 'Courier New', monospace;
+      color: #38bdf8;
+      margin-bottom: 4px;
+    }
+    .info-lab {
+      font-size: 11px;
+      color: #64748b;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    .progress-outer {
+      background: #0f172a;
+      border-radius: 8px;
+      height: 10px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+    .progress-inner {
+      height: 100%;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #10b981, #34d399);
+      transition: width .5s ease;
+    }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #64748b;
+      margin-bottom: 16px;
+    }
+
+    .apto-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 700;
+    }
+    .apto-badge.apto { background: #dcfce7; color: #166534; }
+    .apto-badge.risco { background: #fef3c7; color: #92400e; }
+    .apto-badge.inapto { background: #fee2e2; color: #991b1b; }
+
+    .aviso {
+      background: #1e3a5f;
+      border: 1px solid #1d4ed8;
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 13px;
+      color: #93c5fd;
+      line-height: 1.6;
+      margin-top: 16px;
+    }
+
+    @media (max-width: 600px) {
+      .info-grid { grid-template-columns: 1fr 1fr; }
+      .header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="header-nome">Olá, <%= presenca.nome.split(' ')[0] %> — sua presença está sendo registrada</div>
+    <div class="header-evento"><%= presenca.evento_nome %></div>
+  </div>
+  <div class="status-badge online" id="status-badge">
+    <div class="status-dot"></div>
+    <span id="status-txt">Online</span>
+  </div>
+</div>
+
+<!-- VIDEO -->
+<div class="video-wrap">
+  <% if (presenca.youtube_url) {
+    let ytId = '';
+    const m = presenca.youtube_url.match(/(?:v=|youtu\.be\/|live\/)([a-zA-Z0-9_-]{11})/);
+    if (m) ytId = m[1];
+  %>
+    <% if (ytId) { %>
+      <iframe
+        src="https://www.youtube.com/embed/<%= ytId %>?autoplay=1&rel=0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+        allowfullscreen>
+      </iframe>
+    <% } else { %>
+      <div class="video-placeholder">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;color:#475569"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+        <p style="color:#475569">Link do YouTube indisponivel</p>
+      </div>
+    <% } %>
+  <% } else { %>
+    <div class="video-placeholder">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:12px;color:#475569"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+      <p style="color:#475569">Transmissao nao configurada</p>
+    </div>
+  <% } %>
+</div>
+
+<!-- INFO PANEL -->
+<div class="info-panel">
+  <div class="info-grid">
+    <div class="info-card">
+      <div class="info-num" id="tempo-assistido">00:00:00</div>
+      <div class="info-lab">Tempo assistido</div>
+    </div>
+    <div class="info-card">
+      <div class="info-num" id="tempo-evento"><%= presenca.duracao_minutos ? Math.floor(presenca.duracao_minutos/60).toString().padStart(2,'0')+':'+((presenca.duracao_minutos%60).toString().padStart(2,'0'))+':00' : '--:--:--' %></div>
+      <div class="info-lab">Duração total</div>
+    </div>
+    <div class="info-card">
+      <div class="info-num" id="pct-assistido">0%</div>
+      <div class="info-lab">% assistido</div>
+    </div>
+  </div>
+
+  <div class="progress-outer">
+    <div class="progress-inner" id="progress-bar" style="width:0%"></div>
+  </div>
+  <div class="progress-label">
+    <span>0%</span>
+    <span>Meta: 75%</span>
+    <span>100%</span>
+  </div>
+
+  <div id="status-apto" class="apto-badge inapto" style="margin-bottom:16px">
+    Aguardando — continue assistindo
+  </div>
+
+  <div class="aviso">
+    Sua presença é registrada automaticamente a cada 2 minutos enquanto esta página estiver aberta.
+    Nao feche esta aba durante a transmissão. Se precisar sair temporariamente, retorne ao mesmo link.
+    Ao final, seu tempo total será calculado para emissão do certificado (mínimo 75% do evento).
+  </div>
+</div>
+
+<script>
+const token = '<%= token %>';
+const duracaoSeg = <%= presenca.duracao_minutos ? presenca.duracao_minutos * 60 : 0 %>;
+let segundosAcumulados = <%= presenca.tempo_total_segundos || 0 %>;
+let segundosEstasSessao = 0;
+let online = true;
+
+function formatarTempo(seg) {
+  const h = Math.floor(seg / 3600);
+  const m = Math.floor((seg % 3600) / 60);
+  const s = seg % 60;
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+
+function atualizarUI() {
+  const total = segundosAcumulados + segundosEstasSessao;
+  document.getElementById('tempo-assistido').textContent = formatarTempo(total);
+  const pct = duracaoSeg > 0 ? Math.min(100, Math.round(total / duracaoSeg * 100)) : 0;
+  document.getElementById('pct-assistido').textContent = pct + '%';
+  document.getElementById('progress-bar').style.width = pct + '%';
+
+  const badge = document.getElementById('status-apto');
+  if (pct >= 75) {
+    badge.className = 'apto-badge apto';
+    badge.textContent = 'Apto para certificado (' + pct + '%)';
+  } else if (pct >= 40) {
+    badge.className = 'apto-badge risco';
+    badge.textContent = 'Em progresso — ' + pct + '% (meta: 75%)';
+  } else {
+    badge.className = 'apto-badge inapto';
+    badge.textContent = 'Continue assistindo — ' + pct + '% (meta: 75%)';
+  }
+}
+
+// Contador local a cada segundo
+setInterval(() => {
+  if (online) {
+    segundosEstasSessao++;
+    atualizarUI();
+  }
+}, 1000);
+
+// Ping a cada 2 minutos
+setInterval(() => {
+  if (online) {
+    fetch('/live/' + token + '/ping', { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        if (d.ok) {
+          segundosAcumulados += 120;
+          segundosEstasSessao = Math.max(0, segundosEstasSessao - 120);
+        }
+      })
+      .catch(() => {});
+  }
+}, 120000);
+
+// Detectar visibilidade da aba
+document.addEventListener('visibilitychange', () => {
+  const badge = document.getElementById('status-badge');
+  const txt = document.getElementById('status-txt');
+  if (document.hidden) {
+    online = false;
+    badge.className = 'status-badge offline';
+    txt.textContent = 'Aba oculta — pausado';
+    fetch('/live/' + token + '/sair', { method: 'POST' }).catch(() => {});
+  } else {
+    online = true;
+    badge.className = 'status-badge online';
+    txt.textContent = 'Online';
+    fetch('/live/' + token + '/ping', { method: 'POST' }).catch(() => {});
+  }
+});
+
+// Ao fechar a aba
+window.addEventListener('beforeunload', () => {
+  navigator.sendBeacon('/live/' + token + '/sair');
+});
+
+atualizarUI();
+</script>
+</body>
+</html>
