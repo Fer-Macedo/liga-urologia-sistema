@@ -200,9 +200,9 @@
 
       <!-- FILTROS -->
       <div class="filtros-row">
-        <a href="/membros" class="btn btn-sm" style="<%= filtro==='todos' ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">Todos</a>
         <a href="/membros?filtro=ativos" class="btn btn-sm" style="<%= filtro==='ativos' ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">Ativos</a>
         <a href="/membros?filtro=inativos" class="btn btn-sm" style="<%= filtro==='inativos' ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">Inativos</a>
+        <a href="/membros" class="btn btn-sm" style="<%= filtro==='todos' ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">Todos</a>
         <input type="text" class="input" placeholder="Buscar por nome ou e-mail..."
           id="busca" oninput="buscar(this.value)"
           style="margin-left:auto;width:280px;font-size:13px;padding:7px 12px">
