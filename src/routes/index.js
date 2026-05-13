@@ -2579,81 +2579,35 @@ router.get('/pagamento/:inscricaoId/confirmado', async (req, res) => {
 async function enviarEmailConfirmacaoEvento(inscricaoId) {
   try {
     const r = await query(
-      `SELECT i.*, e.nome as evento_nome, e.email_inscricao, e.wpp_grupo, e.notif_email,
-              e.data_inicio, e.local, e.cor_tema
-       FROM evento_inscricoes i JOIN eventos e ON e.id=i.evento_id WHERE i.id=$1`,
+      `SELECT i.*, e.nome as evento_nome, e.email_inscricao, e.wpp_grupo, e.notif_email, e.data_inicio, e.local, e.cor_tema FROM evento_inscricoes i JOIN eventos e ON e.id=i.evento_id WHERE i.id=$1`,
       [inscricaoId]
     );
     const insc = r.rows[0];
     if (!insc || !insc.email) return;
-
     const config = await getConfig();
     const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT,
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
-    });
-
+    const transporter = nodemailer.createTransport({ host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT, auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS } });
     const cor = insc.cor_tema || '#1a3d2b';
+    const corEsc = '#0a2018';
+    const orgNome = config.org_nome || 'Liga Academica de Urologia';
+    const orgLogo = config.org_logo || null;
     const textoExtra = insc.email_inscricao || '';
-    const dataStr = insc.data_inicio
-      ? new Date(insc.data_inicio).toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric', timeZone:'UTC' })
-      : '';
-    const wppBtn = insc.wpp_grupo
-      ? `<div style="text-align:center;margin:24px 0"><a href="${insc.wpp_grupo}" style="background:#25d366;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px">📱 Entrar no grupo do evento</a></div>`
-      : '';
-
-    const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;background:#f4f4f4;padding:24px;margin:0">
-<div style="max-width:580px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(0,0,0,.08)">
-  <div style="background:${cor};padding:28px 32px">
-    <h1 style="color:#fff;margin:0;font-size:22px">${config.org_nome || 'Liga Acadêmica de Urologia'}</h1>
-    <p style="color:rgba(255,255,255,.75);margin:4px 0 0;font-size:13px">Confirmação de inscrição</p>
-  </div>
-  <div style="padding:32px">
-    <h2 style="font-size:20px;margin:0 0 8px;color:#1a1f18">✅ Inscrição confirmada!</h2>
-    <p style="color:#555;margin:0 0 24px;line-height:1.6">
-      Olá, <strong>${insc.nome.split(' ')[0]}</strong>! Seu pagamento foi aprovado e sua inscrição em
-      <strong>${insc.evento_nome}</strong> está confirmada.
-    </p>
-    <div style="background:#f8f9f6;border-radius:10px;padding:20px;margin-bottom:24px">
-      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:14px">
-        <span style="color:#6b7280">Evento</span><strong>${insc.evento_nome}</strong>
-      </div>
-      ${dataStr ? `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:14px"><span style="color:#6b7280">Data</span><strong>${dataStr}</strong></div>` : ''}
-      ${insc.local ? `<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e5e7eb;font-size:14px"><span style="color:#6b7280">Local</span><strong>${insc.local}</strong></div>` : ''}
-      <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:14px">
-        <span style="color:#6b7280">Código de inscrição</span>
-        <code style="background:#f0fdf4;color:#166534;padding:2px 8px;border-radius:4px;font-weight:700">${insc.qrcode}</code>
-      </div>
-    </div>
-    ${textoExtra ? `<div style="margin-bottom:24px;color:#444;font-size:14px;line-height:1.7">${textoExtra.replace(/\n/g,'<br>')}</div>` : ''}
-    ${wppBtn}
-    <p style="font-size:12px;color:#9ca3af;margin-top:24px;padding-top:16px;border-top:1px solid #f3f4f6">
-      ${config.org_nome || 'Liga Acadêmica de Urologia'} · Dúvidas? Responda este e-mail.
-    </p>
-  </div>
-</div></body></html>`;
-
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: insc.email,
-      subject: '✅ Inscrição confirmada — ' + insc.evento_nome,
-      html
-    });
-
+    const dataStr = insc.data_inicio ? new Date(insc.data_inicio).toLocaleDateString('pt-BR', {day:'2-digit',month:'long',year:'numeric',timeZone:'UTC'}) : '';
+    const logoHtml = orgLogo ? '<img src="'+orgLogo+'" alt="'+orgNome+'" style="max-height:56px;max-width:180px;object-fit:contain;display:block;margin:0 auto">' : '<span style="color:white;font-size:20px;font-weight:800">'+orgNome+'</span>';
+    const wppBtn = insc.wpp_grupo ? '<a href="'+insc.wpp_grupo+'" style="display:inline-block;background:#25d366;color:white;padding:12px 32px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.5px;text-transform:uppercase">Entrar no grupo do evento</a>' : '';
+    const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f1f5f9"><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">'
+      +'<tr><td style="background:linear-gradient(160deg,'+cor+' 0%,'+corEsc+' 100%);border-radius:12px 12px 0 0;padding:36px 40px;text-align:center">'+logoHtml+'<div style="margin-top:14px;display:inline-block;background:rgba(255,255,255,0.15);border-radius:4px;padding:4px 16px"><span style="color:rgba(255,255,255,0.9);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase">INSCRICAO CONFIRMADA</span></div></td></tr>'
+      +'<tr><td style="background:white;padding:36px 40px"><div style="border-left:3px solid '+cor+';padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:'+cor+';letter-spacing:1.5px;text-transform:uppercase">CONFIRMACAO DE INSCRICAO</p><h2 style="margin:4px 0 0;font-size:20px;font-weight:700;color:#0f172a">'+insc.evento_nome+'</h2></div>'
+      +'<p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>! Sua inscricao foi confirmada com sucesso.</p>'
+      +(wppBtn?'<div style="text-align:center;padding-bottom:24px">'+wppBtn+'</div>':'')
+      +'</td></tr><tr><td style="background:#0f172a;border-radius:0 0 12px 12px;padding:24px 40px"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">'+orgNome+'</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">Duvidas? Responda este e-mail.</p></td><td align="right"><p style="margin:0;color:rgba(255,255,255,0.3);font-size:9px;letter-spacing:1.5px;text-transform:uppercase">Powered by PagBank</p></td></tr></table></td></tr>'
+      +'</table></td></tr></table></body></html>';
+    await transporter.sendMail({ from: process.env.EMAIL_USER, to: insc.email, subject: 'Inscricao confirmada — ' + insc.evento_nome, html });
     if (insc.notif_email) {
-      await transporter.sendMail({
-        from: process.env.EMAIL_USER,
-        to: insc.notif_email,
-        subject: '🔔 Pagamento confirmado — ' + insc.nome + ' | ' + insc.evento_nome,
-        html: `<p>Pagamento confirmado:<br><strong>${insc.nome}</strong> (${insc.email})<br>Evento: ${insc.evento_nome}</p>`
-      }).catch(() => {});
+      await transporter.sendMail({ from: process.env.EMAIL_USER, to: insc.notif_email, subject: 'Pagamento confirmado — ' + insc.nome + ' | ' + insc.evento_nome, html: '<p>Confirmado: <strong>' + insc.nome + '</strong> — ' + insc.evento_nome + '</p>' }).catch(() => {});
     }
-
-    console.log('Email confirmação enviado:', insc.email);
-  } catch(e) {
-    console.error('enviarEmailConfirmacaoEvento ERRO:', e.message);
-  }
+    console.log('Email confirmacao enviado:', insc.email);
+  } catch(e) { console.error('enviarEmailConfirmacaoEvento ERRO:', e.message); }
 }
 
 function traduzirRecusaCartao(msg) {
