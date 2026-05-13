@@ -1129,7 +1129,31 @@ router.get('/frequencia-diretivos/relatorio/:turmaId', requireAuth, requireSecre
         : `<td style="padding:10px 8px;border-bottom:1px solid #f1f5f9;text-align:center;background:#fff1f2;color:#ef4444;font-weight:700">N</td>`;
     }
     linhasAt += `<tr>${cols}</tr>`;
-  }
+  const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f8fafc;padding:32px}.card{background:white;border-radius:14px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:20px}table{width:100%;border-collapse:collapse}thead tr{background:#f8fafc}.btn{background:#1a56db;color:white;border:none;padding:10px 24px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;margin-bottom:20px}@media print{.btn{display:none}body{background:white;padding:0}}</style></head><body>'
+    + '<button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button>'
+    + '<div class="card"><div style="padding:24px 28px">' + logoHtml
+    + '<div style="margin-top:12px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#64748b">Relatorio de Frequencia — Diretivos</div>'
+    + '<div style="font-size:20px;font-weight:800">' + turma.nome + '</div>'
+    + '<div style="font-size:12px;color:#64748b">' + dataInicio + ' · ' + atividades.rows.length + ' atividades · Minimo 75%</div></div></div></div>'
+    + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">'
+    + '<div class="card" style="padding:18px"><div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px">Aptos</div><div style="font-size:28px;font-weight:800;color:#10b981">' + aptos + '</div></div>'
+    + '<div class="card" style="padding:18px"><div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px">Em risco</div><div style="font-size:28px;font-weight:800;color:#f59e0b">' + risco + '</div></div>'
+    + '<div class="card" style="padding:18px"><div style="font-size:11px;font-weight:700;color:#64748b;margin-bottom:6px">Nao aptos</div><div style="font-size:28px;font-weight:800;color:#ef4444">' + inaptos + '</div></div></div>'
+    + '<div class="card"><div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;font-size:14px;font-weight:700">Resumo por diretivo</div>'
+    + '<table><thead><tr>'
+    + '<th style="padding:10px 16px;text-align:left;font-size:11px;color:#64748b;font-weight:700">Diretivo</th>'
+    + '<th style="padding:10px 16px;text-align:left;font-size:11px;color:#64748b;font-weight:700">Cargo</th>'
+    + '<th style="padding:10px 16px;text-align:center;font-size:11px;color:#64748b;font-weight:700">Presencas</th>'
+    + '<th style="padding:10px 16px;text-align:center;font-size:11px;color:#64748b;font-weight:700">Faltas</th>'
+    + '<th style="padding:10px 16px;text-align:center;font-size:11px;color:#64748b;font-weight:700">Total</th>'
+    + '<th style="padding:10px 16px;text-align:center;font-size:11px;color:#64748b;font-weight:700">Frequencia</th>'
+    + '<th style="padding:10px 16px;text-align:center;font-size:11px;color:#64748b;font-weight:700">Status</th>'
+    + '</tr></thead><tbody>' + linhasMembros + '</tbody></table></div>'
+    + '<div class="card"><div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;font-size:14px;font-weight:700">Presencas por atividade</div>'
+    + '<div style="overflow-x:auto"><table><thead><tr>' + headerAt + '</tr></thead><tbody>' + linhasAt + '</tbody></table></div></div>'
+    + '</body></html>';
+  res.send(html);
+});
 
 router.get('/auditoria', requireAuth, requireAdmin, async (req, res) => {
   const config = await getConfig();
