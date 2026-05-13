@@ -743,7 +743,7 @@ router.get('/frequencia/relatorio/:turmaId', requireAuth, requireSecretaria, asy
   }
 
   const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;background:#f8fafc;padding:32px}.card{background:white;border-radius:14px;border:1px solid #e2e8f0;overflow:hidden;margin-bottom:20px}table{width:100%;border-collapse:collapse}thead tr{background:#f8fafc}.btn{background:#1a56db;color:white;border:none;padding:10px 24px;border-radius:10px;cursor:pointer;font-size:14px;font-weight:600;margin-bottom:20px}@media print{.btn{display:none}body{background:white;padding:0}}</style></head><body>'
-    + '<button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button>'
+  const html = '<button class="btn" onclick="window.print()">Imprimir / Salvar PDF</button>'
     + '<div class="card"><div style="padding:24px 28px">' + logoHtml + '<div style="margin-top:12px">'
     + '<div style="font-size:20px;font-weight:800">' + turma.nome + '</div>'
     + '<div style="font-size:12px;color:#64748b">' + dataInicio + ' · ' + atividades.rows.length + ' atividades · Minimo 75%</div></div></div></div>'
