@@ -1152,7 +1152,7 @@ router.get('/frequencia-diretivos/relatorio/:turmaId', requireAuth, requireSecre
     + '<div class="card"><div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;font-size:14px;font-weight:700">Presencas por atividade</div>'
     + '<div style="overflow-x:auto"><table><thead><tr>' + headerAt + '</tr></thead><tbody>' + linhasAt + '</tbody></table></div></div>'
     + '</body></html>';
-  res.send(html);
+  res.send(htmlDir);
 });
 
 router.get('/auditoria', requireAuth, requireAdmin, async (req, res) => {
