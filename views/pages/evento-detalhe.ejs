@@ -889,27 +889,55 @@
       <!-- CERTIFICADOS -->
       <div class="tab-content" id="tab-certificados">
         <div class="section-card" style="margin-bottom:16px">
+          <div class="section-header">Imagem de fundo</div>
+          <div class="section-body">
+            <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Fundo personalizado para este evento. Se não definir, usa o timbrado global.</p>
+            <form action="/eventos/<%= evento.id %>/cert-bg" method="POST" enctype="multipart/form-data" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+              <% if(evento.cert_bg_chave){ %>
+              <div><img src="/eventos/<%= evento.id %>/cert-bg" style="max-width:180px;border-radius:8px;border:1px solid var(--borda);display:block;margin-bottom:4px"><span style="font-size:11px;color:#10b981;font-weight:600">Fundo ativo</span></div>
+              <% } %>
+              <div class="campo" style="flex:1"><label class="label">Upload (A4: 2480x3508px)</label><input type="file" name="cert_bg" class="input" accept="image/*" style="padding:8px"></div>
+              <button type="submit" class="btn btn-primario">Salvar</button>
+            </form>
+            <% if(evento.cert_bg_chave){ %>
+            <form method="POST" action="/eventos/<%= evento.id %>/cert-bg/remover" style="margin-top:8px">
+              <button type="submit" class="btn-xs verm" onclick="return confirm('Remover?')">Remover fundo personalizado</button>
+            </form>
+            <% } %>
+          </div>
+        </div>
+        <div class="section-card" style="margin-bottom:16px">
           <div class="section-header">Emitir certificados</div>
           <div class="section-body">
-            <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Emite certificados para todos os inscritos com check-in realizado.</p>
-            <form method="POST" action="/eventos/<%= evento.id %>/certificados/emitir-todos" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-              <div class="campo"><label class="label">Carga horária (h)</label><input type="number" name="carga_horaria" class="input" style="width:100px" value="<%= evento.carga_horaria||4 %>" min="1"></div>
-              <div style="margin-top:18px"><button type="submit" class="btn btn-primario" onclick="return confirm('Emitir para todos com check-in?')">Emitir todos</button></div>
+            <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Emite para inscritos com check-in e envia por email e WhatsApp automaticamente.</p>
+            <form method="POST" action="/eventos/<%= evento.id %>/certificados/emitir-todos" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+              <div class="campo"><label class="label">Carga horaria (h)</label><input type="number" name="carga_horaria" class="input" style="width:100px" value="<%= evento.carga_horaria||4 %>" min="1"></div>
+              <button type="submit" class="btn btn-primario" onclick="return confirm('Emitir para todos com check-in?')">Emitir todos</button>
             </form>
           </div>
         </div>
         <div class="section-card">
-          <div class="section-header">Certificados emitidos</div>
+          <div class="section-header">Certificados emitidos (<%= certificados.length %>)</div>
           <table class="tabela">
-            <thead><tr><th>Inscrito</th><th>Emitido em</th><th>Ação</th></tr></thead>
+            <thead><tr><th>Participante</th><th>Emitido em</th><th style="text-align:center">Email</th><th style="text-align:center">WhatsApp</th><th>Acoes</th></tr></thead>
             <tbody>
               <% certificados.forEach(cert => { %>
               <tr>
                 <td style="font-weight:600"><%= cert.inscrito_nome %></td>
                 <td style="color:var(--texto2)"><%= new Date(cert.emitido_em).toLocaleDateString('pt-BR') %></td>
-                <td><a href="/eventos/<%= evento.id %>/inscricoes/<%= cert.inscricao_id %>/certificado" target="_blank" class="btn-xs roxo">Ver</a></td>
+                <td style="text-align:center"><%= cert.enviado_email ? '✅' : '—' %></td>
+                <td style="text-align:center"><%= cert.enviado_wpp ? '✅' : '—' %></td>
+                <td><div style="display:flex;gap:6px">
+                  <a href="/eventos/<%= evento.id %>/inscricoes/<%= cert.inscricao_id %>/certificado" target="_blank" class="btn-xs roxo">Ver</a>
+                  <% if(cert.codigo_validacao){ %>
+                  <button onclick="copiarLink('/certificado/validar/<%= cert.codigo_validacao %>')" class="btn-xs azul">Link</button>
+                  <% } %>
+                </div></td>
               </tr>
               <% }) %>
+              <% if(certificados.length===0){ %>
+              <tr><td colspan="5" style="text-align:center;padding:30px;color:var(--texto2)">Nenhum certificado emitido ainda.</td></tr>
+              <% } %>
             </tbody>
           </table>
         </div>
