@@ -103,7 +103,9 @@
             <div class="pasta-item <%= pastaAtual && pastaAtual.id == pasta.id ? 'ativa' : '' %>"
               style="<%= pasta.cor ? 'border-left:3px solid '+pasta.cor : '' %>"
               onclick="<%= subs.length > 0 ? 'toggleSub('+pasta.id+')' : 'navegarPasta('+pasta.id+')' %>">
-              <span><%= pasta.icone || '📁' %></span>
+              <%if(pasta.icone && pasta.icone!=='📁'){%><span><%=pasta.icone%></span><%}else{%>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="<%= pasta.cor||'#f59e0b' %>" stroke="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <%}%>
               <span><%= pasta.nome %></span>
               <% if (subs.length > 0) { %><span class="pasta-toggle" id="toggle-<%= pasta.id %>">▶</span><% } %>
             </div>
@@ -128,26 +130,26 @@
           <div class="files-header">
             <div class="breadcrumb">
               <% if (pastaAtual && pastaAtual.pasta_pai_id) { %>
-              <span onclick="navegarPasta(null)">🏠</span>
+              <span onclick="navegarPasta(null)">&#8962;</span>
               <% const pai = todasPastas.find(p => p.id == pastaAtual.pasta_pai_id); %>
               <% if (pai) { %> › <span onclick="navegarPasta(<%= pai.id %>)"><%= pai.nome %></span><% } %>
               › <span class="atual"><%= pastaAtual.nome %></span>
               <% } else if (pastaAtual) { %>
-              <span onclick="navegarPasta(null)">🏠 Início</span> › <span class="atual"><%= pastaAtual.nome %></span>
+              <span onclick="navegarPasta(null)">Inicio</span> › <span class="atual"><%=pastaAtual.nome%></span>
               <% } else if (lixeiraMode) { %>
-              <span onclick="navegarPasta(null)">🏠 Início</span> › <span class="atual" style="color:#dc2626">🗑 Lixeira</span>
+              <span onclick="navegarPasta(null)">Inicio</span> › <span class="atual" style="color:#dc2626">Lixeira</span>
               <% } else { %>
-              <span class="atual">🏠 Todos os arquivos</span>
+              <span class="atual">Todos os arquivos</span>
               <% } %>
               <% if (pastaAtual) { %>
               <span style="margin-left:8px;color:var(--texto2)">|</span>
-              <button class="btn-mini" onclick="editarPasta(<%= pastaAtual.id %>, '<%= pastaAtual.nome %>', '<%= pastaAtual.icone||'📁' %>', '<%= pastaAtual.cor||'' %>')">✏️ Editar pasta</button>
-              <button class="btn-mini" onclick="moverPasta(<%= pastaAtual.id %>)">↕️ Mover</button>
-              <button class="btn-mini" style="color:#dc2626" onclick="excluirPasta(<%= pastaAtual.id %>)">🗑 Excluir</button>
+              <button class="btn-mini" onclick="editarPasta(<%= pastaAtual.id %>, '<%= pastaAtual.nome %>', '<%= pastaAtual.icone||'📁' %>', '<%= pastaAtual.cor||'' %>')">Editar pasta</button>
+              <button class="btn-mini" onclick="moverPasta(<%= pastaAtual.id %>)">Mover</button>
+              <button class="btn-mini" style="color:#dc2626" onclick="excluirPasta(<%= pastaAtual.id %>)">Excluir</button>
               <% } %>
             </div>
             <div class="files-toolbar">
-              <input type="text" class="search-input" id="search-input" placeholder="🔍 Buscar..." oninput="buscar(this.value)">
+              <input type="text" class="search-input" id="search-input" placeholder="Buscar..." oninput="buscar(this.value)">
               <button class="view-btn ativo" id="btn-grid" onclick="setView('grid')" title="Grade">⊞</button>
               <button class="view-btn" id="btn-lista" onclick="setView('lista')" title="Lista">☰</button>
             </div>
@@ -156,7 +158,7 @@
           <div class="files-content">
             <% if (!lixeiraMode) { %>
             <div class="upload-drop" id="drop-area">
-              ☁️ Arraste arquivos aqui para fazer upload
+              Arraste arquivos aqui para fazer upload
               <div id="prog-upload" style="display:none;margin-top:8px;font-size:12px">Enviando...</div>
             </div>
             <% } %>
@@ -166,17 +168,21 @@
             <% const subPastas = pastaAtual ? todasPastas.filter(p => p.pasta_pai_id == pastaAtual.id && !p.lixeira) : todasPastas.filter(p => !p.pasta_pai_id && !p.lixeira); %>
             <% const subPastasOrdenadas = subPastas.sort((a,b) => a.nome.localeCompare(b.nome)); %>
             <% if (subPastasOrdenadas.length > 0 && !lixeiraMode) { %>
-            <div class="secao-titulo">📁 Pastas (<%= subPastasOrdenadas.length %>)</div>
+            <div class="secao-titulo">Pastas (<%= subPastasOrdenadas.length %>)</div>
             <div class="files-grid" id="pastas-grid" style="margin-bottom:20px">
               <% subPastasOrdenadas.forEach(pasta => { %>
-              <div class="pasta-card" style="background:<%= pasta.cor ? pasta.cor+'18' : 'var(--fundo)' %>;border-color:<%= pasta.cor || 'var(--borda)' %>">
+              <div class="pasta-card" style="background:<%= pasta.cor ? pasta.cor+'22' : 'var(--fundo)' %>;border-color:<%= pasta.cor || 'var(--borda)' %>;border-width:<%= pasta.cor ? '2px' : '1.5px' %>">
                 <div class="pasta-card-acoes">
-                  <button class="btn-mini" onclick="event.stopPropagation();editarPasta(<%= pasta.id %>,'<%= pasta.nome %>','<%= pasta.icone||'📁' %>','<%= pasta.cor||'' %>')" title="Editar">✏️</button>
-                  <button class="btn-mini" onclick="event.stopPropagation();moverPasta(<%= pasta.id %>)" title="Mover">↕️</button>
-                  <button class="btn-mini" onclick="event.stopPropagation();excluirPasta(<%= pasta.id %>)" style="color:#dc2626" title="Excluir">🗑</button>
+                  <button class="btn-mini" onclick="event.stopPropagation();editarPasta(<%=pasta.id%>,'<%=pasta.nome%>','<%=pasta.icone||''%>','<%=pasta.cor||''%>')" title="Editar">&#9998;</button>
+                  <button class="btn-mini" onclick="event.stopPropagation();moverPasta(<%=pasta.id%>)" title="Mover">&#8645;</button>
+                  <button class="btn-mini" onclick="event.stopPropagation();excluirPasta(<%=pasta.id%>)" style="color:#dc2626" title="Excluir">&#128465;</button>
                 </div>
                 <div onclick="navegarPasta(<%= pasta.id %>)">
-                  <div class="pasta-card-icone"><%= pasta.icone || '📁' %></div>
+                  <div class="pasta-card-icone" style="font-size:0">
+                    <% if(pasta.icone && pasta.icone !== '📁'){%><%=pasta.icone%><%}else{%>
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="<%= pasta.cor||'#f59e0b' %>" stroke="<%= pasta.cor ? pasta.cor : '#d97706' %>" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    <%}%>
+                  </div>
                   <div class="pasta-card-nome"><%= pasta.nome %></div>
                   <div class="pasta-card-meta"><%= todasPastas.filter(p=>p.pasta_pai_id==pasta.id).length %> subpastas • <%= arquivos.filter(a=>a.pasta_id==pasta.id).length %> arquivos</div>
                 </div>
@@ -188,9 +194,9 @@
             <!-- Arquivos Grid -->
             <% if (arquivos.length > 0 || lixeiraMode) { %>
             <div class="secao-titulo">
-              📄 Arquivos (<%= arquivos.length %>)
+              Arquivos (<%= arquivos.length %>)
               <% if (lixeiraMode && arquivos.length > 0) { %>
-              <button class="btn-mini" style="color:#dc2626" onclick="esvaziarLixeira()">🗑 Esvaziar lixeira</button>
+              <button class="btn-mini" style="color:#dc2626" onclick="esvaziarLixeira()">Esvaziar lixeira</button>
               <% } %>
             </div>
             <% } %>
@@ -198,7 +204,9 @@
             <div class="files-grid" id="view-grid">
               <% if (arquivos.length === 0 && subPastasOrdenadas.length === 0) { %>
               <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--texto2)">
-                <div style="font-size:48px"><%= lixeiraMode ? '🗑' : '📂' %></div>
+                <div style="font-size:48px;color:var(--texto2)">
+                  <%if(lixeiraMode){%>&#128465;<%}else{%>&#128194;<%}%>
+                </div>
                 <div style="font-size:15px;font-weight:600;margin-top:10px"><%= lixeiraMode ? 'Lixeira vazia' : 'Pasta vazia' %></div>
               </div>
               <% } %>
@@ -206,19 +214,31 @@
               <div class="arquivo-card" data-nome="<%= (a.nome_original||'').toLowerCase() %>" onclick="abrirArquivo(<%= a.id %>)">
                 <div class="arquivo-acoes">
                   <% if (!lixeiraMode) { %>
-                  <a href="/arquivos/<%= a.id %>/download" onclick="event.stopPropagation()" title="Baixar">⬇️</a>
-                  <button onclick="event.stopPropagation();abrirSubstituir(<%= a.id %>, '<%= a.nome_original %>')" title="Substituir">🔄</button>
-                  <button onclick="event.stopPropagation();renomearArquivo(<%= a.id %>, '<%= a.nome_original %>')" title="Renomear">✏️</button>
-                  <button onclick="event.stopPropagation();moverArquivo(<%= a.id %>)" title="Mover">↕️</button>
+                  <a href="/arquivos/<%= a.id %>/download" onclick="event.stopPropagation()" title="Baixar">&#8681;</a>
+                  <button onclick="event.stopPropagation();abrirSubstituir(<%= a.id %>, '<%= a.nome_original %>')" title="Substituir">&#8635;</button>
+                  <button onclick="event.stopPropagation();renomearArquivo(<%= a.id %>, '<%= a.nome_original %>')" title="Renomear">&#9998;</button>
+                  <button onclick="event.stopPropagation();moverArquivo(<%= a.id %>)" title="Mover">&#8645;</button>
                   <% } %>
                   <% if (lixeiraMode) { %>
-                  <button onclick="event.stopPropagation();restaurarArquivo(<%= a.id %>)" style="color:#16a34a" title="Restaurar">↩️</button>
-                  <button onclick="event.stopPropagation();excluirDefinitivo(<%= a.id %>)" style="color:#dc2626" title="Excluir definitivamente">🗑</button>
+                  <button onclick="event.stopPropagation();restaurarArquivo(<%= a.id %>)" style="color:#16a34a" title="Restaurar">&#8617;</button>
+                  <button onclick="event.stopPropagation();excluirDefinitivo(<%= a.id %>)" style="color:#dc2626" title="Excluir definitivamente">&#128465;</button>
                   <% } else if (usuario.perfil === 'admin' || usuario.perfil === 'presidencia') { %>
-                  <button onclick="event.stopPropagation();moverLixeira(<%= a.id %>)" style="color:#dc2626" title="Mover para lixeira">🗑</button>
+                  <button onclick="event.stopPropagation();moverLixeira(<%= a.id %>)" style="color:#dc2626" title="Lixeira">&#128465;</button>
                   <% } %>
                 </div>
-                <div class="arquivo-icone"><%= a.icone || (a.tipo==='google'?'🔗':'📄') %></div>
+                <div class="arquivo-icone" style="font-size:0;display:flex;justify-content:center;margin-bottom:8px">
+                  <%
+                    const ext2=(a.nome_original||'').split('.').pop().toLowerCase();
+                    let svgClr='#6b7280';
+                    if(['pdf'].includes(ext2)) svgClr='#dc2626';
+                    else if(['xlsx','xls','csv'].includes(ext2)) svgClr='#16a34a';
+                    else if(['docx','doc'].includes(ext2)) svgClr='#1d4ed8';
+                    else if(['pptx','ppt'].includes(ext2)) svgClr='#ea580c';
+                    else if(['jpg','jpeg','png','gif','webp'].includes(ext2)) svgClr='#0891b2';
+                    else if(a.tipo==='google') svgClr='#4285f4';
+                  %>
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="<%=svgClr%>" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                </div>
                 <div class="arquivo-nome" title="<%= a.nome_original %>"><%= (a.nome_original||'').length > 20 ? (a.nome_original||'').substring(0,18)+'...' : (a.nome_original||'') %></div>
                 <div class="arquivo-meta"><%= a.tamanho_fmt || '' %></div>
                 <div class="arquivo-meta"><%= new Date(a.criado_em).toLocaleDateString('pt-BR') %></div>
@@ -231,7 +251,7 @@
             <div id="view-lista" style="display:none">
               <% arquivos.forEach(a => { %>
               <div class="lista-item" data-nome="<%= (a.nome_original||'').toLowerCase() %>" onclick="abrirArquivo(<%= a.id %>)">
-                <div class="icone"><%= a.icone || (a.tipo==='google'?'🔗':'📄') %></div>
+                <div class="icone" style="color:#6b7280">&#128196;</div>
                 <div class="info">
                   <div class="nome"><%= a.nome_original %></div>
                   <div class="meta"><%= a.tamanho_fmt || '' %> • <%= new Date(a.criado_em).toLocaleDateString('pt-BR') %></div>
