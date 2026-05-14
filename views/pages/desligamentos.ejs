@@ -90,28 +90,66 @@
         </div>
         <div class="config-body">
           <form action="/desligamentos/configurar" method="POST" enctype="multipart/form-data">
-            <div class="grid-3">
-              <div class="campo"><label class="label">Papel Timbrado (PDF ou PNG)</label>
-                <input type="file" name="timbrado" class="input" accept=".pdf,.png,.jpg">
-                <%if(config.timbrado_chave){%><span style="font-size:11px;color:#10b981;font-weight:600">Timbrado configurado</span><%}%>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;align-items:start">
+              <!-- TIMBRADO -->
+              <div style="background:var(--fundo);border:1px solid var(--borda);border-radius:12px;padding:16px">
+                <div style="font-size:12px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Papel Timbrado</div>
+                <div class="campo">
+                  <label class="label">Arquivo (PDF ou PNG)</label>
+                  <input type="file" name="timbrado" class="input" accept=".pdf,.png,.jpg">
+                </div>
+                <%if(config.timbrado_chave){%>
+                <div style="margin-top:8px;display:flex;align-items:center;gap:6px;font-size:12px;color:#10b981;font-weight:600">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Timbrado configurado
+                </div>
+                <%}else{%>
+                <div style="margin-top:8px;font-size:11px;color:var(--texto2)">Nenhum timbrado configurado</div>
+                <%}%>
               </div>
-              <div class="campo"><label class="label">Assinatura do Presidente (PNG)</label>
-                <input type="file" name="assinatura_presidente" class="input" accept=".png,.jpg">
-                <%if(config.assinatura_presidente_chave){%><span style="font-size:11px;color:#10b981;font-weight:600">Assinatura configurada</span><%}%>
+              <!-- PRESIDENTE -->
+              <div style="background:var(--fundo);border:1px solid var(--borda);border-radius:12px;padding:16px">
+                <div style="font-size:12px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Presidente</div>
+                <div class="campo" style="margin-bottom:10px">
+                  <label class="label">Nome</label>
+                  <input name="presidente_nome" class="input" value="<%=config.presidente_nome||'Manuel Fernando Macedo Neto'%>">
+                </div>
+                <div class="campo">
+                  <label class="label">Assinatura (PNG)</label>
+                  <input type="file" name="assinatura_presidente" class="input" accept=".png,.jpg">
+                </div>
+                <%if(config.assinatura_presidente_chave){%>
+                <div style="margin-top:8px;display:flex;align-items:center;gap:6px;font-size:12px;color:#10b981;font-weight:600">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Assinatura configurada
+                </div>
+                <%}else{%>
+                <div style="margin-top:8px;font-size:11px;color:var(--texto2)">Nenhuma assinatura configurada</div>
+                <%}%>
               </div>
-              <div class="campo"><label class="label">Assinatura do Secretario (PNG)</label>
-                <input type="file" name="assinatura_secretario" class="input" accept=".png,.jpg">
-                <%if(config.assinatura_secretario_chave){%><span style="font-size:11px;color:#10b981;font-weight:600">Assinatura configurada</span><%}%>
+              <!-- SECRETARIO -->
+              <div style="background:var(--fundo);border:1px solid var(--borda);border-radius:12px;padding:16px">
+                <div style="font-size:12px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Secretario</div>
+                <div class="campo" style="margin-bottom:10px">
+                  <label class="label">Nome</label>
+                  <input name="secretario_nome" class="input" value="<%=config.secretario_nome||'Kaue Teixeira Lacerda'%>">
+                </div>
+                <div class="campo">
+                  <label class="label">Assinatura (PNG)</label>
+                  <input type="file" name="assinatura_secretario" class="input" accept=".png,.jpg">
+                </div>
+                <%if(config.assinatura_secretario_chave){%>
+                <div style="margin-top:8px;display:flex;align-items:center;gap:6px;font-size:12px;color:#10b981;font-weight:600">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Assinatura configurada
+                </div>
+                <%}else{%>
+                <div style="margin-top:8px;font-size:11px;color:var(--texto2)">Nenhuma assinatura configurada</div>
+                <%}%>
               </div>
-              <div class="campo"><label class="label">Nome do Presidente</label>
-                <input name="presidente_nome" class="input" value="<%=config.presidente_nome||'Manuel Fernando Macedo Neto'%>">
-              </div>
-              <div class="campo"><label class="label">Nome do Secretario</label>
-                <input name="secretario_nome" class="input" value="<%=config.secretario_nome||'Kaue Teixeira Lacerda'%>">
-              </div>
-              <div class="campo" style="display:flex;align-items:flex-end">
-                <button type="submit" class="btn btn-primario" style="width:100%">Salvar configuracoes</button>
-              </div>
+            </div>
+            <div style="margin-top:16px;display:flex;justify-content:flex-end">
+              <button type="submit" class="btn btn-primario">Salvar configuracoes</button>
             </div>
           </form>
         </div>
