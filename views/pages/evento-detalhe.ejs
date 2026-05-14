@@ -1148,6 +1148,10 @@ function carregarHistorico() {
     }).join('');
   });
 }
+function copiarLink(path) {
+  const link = window.location.origin + path;
+  navigator.clipboard.writeText(link).then(() => alert('Link copiado!\n\n'+link)).catch(() => prompt('Copie:', link));
+}
 function copiarLinkCupom(codigo) {
   const appUrl = window.location.origin;
   const link = appUrl + '/inscricao/<%= evento.id %>?cupom=' + codigo;

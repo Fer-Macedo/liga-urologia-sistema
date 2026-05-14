@@ -2890,6 +2890,36 @@ router.get('/eventos/:id/inscricoes/:iid/certificado', requireAuth, async (req, 
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
+router.post('/eventos/:id/cert-bg', requireAuth, async (req, res) => {
+  try {
+    const {upload, uploadArquivo} = require('../services/arquivos');
+    upload.single('cert_bg')(req, res, async (err) => {
+      if (req.file) {
+        const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'cert-bg');
+        await query('UPDATE eventos SET cert_bg_chave=$1 WHERE id=$2', [r.chave, req.params.id]);
+      }
+      req.session.msg = ['Fundo salvo!'];
+      res.redirect('/eventos/'+req.params.id+'?tab=certificados');
+    });
+  } catch(e) { res.redirect('/eventos/'+req.params.id+'?tab=certificados'); }
+});
+router.post('/eventos/:id/cert-bg/remover', requireAuth, async (req, res) => {
+  await query('UPDATE eventos SET cert_bg_chave=NULL WHERE id=$1', [req.params.id]);
+  req.session.msg = ['Fundo removido!'];
+  res.redirect('/eventos/'+req.params.id+'?tab=certificados');
+});
+router.get('/eventos/:id/cert-bg', async (req, res) => {
+  try {
+    const r = await query('SELECT cert_bg_chave FROM eventos WHERE id=$1', [req.params.id]);
+    const chave = r.rows[0]?.cert_bg_chave;
+    if (!chave) return res.status(404).send('Sem fundo');
+    const {downloadArquivo} = require('../services/arquivos');
+    const {buffer, contentType} = await downloadArquivo(chave);
+    res.set('Content-Type', contentType);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(buffer);
+  } catch(e) { res.status(500).send('Erro'); }
+});
 router.post('/eventos/:id/certificados/emitir-todos', requireAuth, async (req, res) => {
   const inscritos = await query("SELECT id FROM evento_inscricoes WHERE evento_id=$1 AND checkin_em IS NOT NULL",[req.params.id]);
   for (const i of inscritos.rows) { await query('INSERT INTO evento_certificados (inscricao_id) VALUES ($1) ON CONFLICT DO NOTHING',[i.id]); }
