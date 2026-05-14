@@ -65,7 +65,7 @@
   <main class="main">
     <div class="topbar">
       <h1 class="page-titulo">Arquivos Financeiros</h1>
-      <div class="topbar-acoes"><a href="/cobrancas" class="btn btn-sm">Voltar</a></div>
+      <div class="topbar-acoes"><a href="/cobrancas" class="btn btn-sm">Voltar</a><button class="btn btn-sm" onclick="abrirModal('modal-pasta')">+ Nova pasta</button><button class="btn btn-sm verde" onclick="abrirModal('modal-upload')" style="background:#059669;color:white">&#8679; Upload</button><button class="btn btn-sm" onclick="abrirModal('modal-google')" style="background:#4285f4;color:white">&#128279; Google</button></div>
     </div>
     <div class="content" style="padding-bottom:0">
       <%if(msg&&msg.length>0){%><div class="alerta alerta-ok"><%=msg[0]%></div><%}%>
