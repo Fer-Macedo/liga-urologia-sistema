@@ -958,6 +958,19 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+function abrirEspera(){document.getElementById('modal-espera').style.display='flex';}
+function fecharEspera(){document.getElementById('modal-espera').style.display='none';}
+function entrarEspera(){
+  const nome=document.getElementById('esp-nome').value.trim();
+  const email=document.getElementById('esp-email').value.trim();
+  const wpp=document.getElementById('esp-wpp').value.trim();
+  if(!nome){alert('Informe seu nome.');return;}
+  fetch('/inscricao/<%= evento.id %>/lista-espera',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,email,whatsapp:wpp})})
+  .then(r=>r.json()).then(d=>{
+    if(d.ok){document.getElementById('modal-espera').querySelector('div').innerHTML='<div style="text-align:center;padding:20px"><div style="font-size:40px">✅</div><h3>Voce esta na lista!</h3><p style="color:#6b7280;font-size:14px;margin:8px 0">'+d.msg+'</p><button onclick="fecharEspera()" style="margin-top:12px;padding:10px 24px;background:#1a56db;color:white;border:none;border-radius:8px;cursor:pointer">Fechar</button></div>';}
+    else{alert(d.msg||'Erro.');}
+  });
+}
 // COUNTDOWN
 (function(){
   const dataEvento = new Date('<%= evento.data_inicio %>');
