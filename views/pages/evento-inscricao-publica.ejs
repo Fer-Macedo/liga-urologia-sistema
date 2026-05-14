@@ -550,7 +550,14 @@
             </div>
             <div id="cupom-msg" style="display:none"></div>
           </div>
+          <% const totalInscritos2 = evento.total_inscritos || 0; %>
+          <% const lotado = evento.vagas_total > 0 && totalInscritos2 >= evento.vagas_total; %>
+          <% if (lotado) { %>
+          <button class="btn-prox" style="background:#f59e0b" onclick="abrirEspera()">Entrar na lista de espera</button>
+          <div style="font-size:12px;color:var(--ink3);margin-top:8px;text-align:center">Evento lotado — cadastre-se para ser avisado quando uma vaga abrir</div>
+          <% } else { %>
           <button class="btn-prox" onclick="abrirForm()">Garantir minha vaga →</button>
+          <% } %>
           <div style="display:flex;align-items:center;gap:7px;background:var(--sur3);border-radius:8px;padding:9px 12px;margin-top:8px">
             <svg style="width:13px;height:13px;fill:var(--ink4);flex-shrink:0" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
             <span style="font-size:11px;color:var(--ink3)">Pagamento 100% seguro via PIX ou Cartão · PagBank</span>
@@ -981,5 +988,18 @@ window.addEventListener('DOMContentLoaded', () => {
   setInterval(tick, 1000);
 })();
 </script>
+<div id="modal-espera" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div style="background:white;border-radius:16px;padding:28px;max-width:420px;width:100%">
+    <h3 style="font-size:18px;font-weight:700;margin-bottom:6px">Lista de espera</h3>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:20px">Preencha seus dados e avisaremos assim que uma vaga abrir.</p>
+    <input id="esp-nome" type="text" placeholder="Seu nome completo *" style="width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
+    <input id="esp-email" type="email" placeholder="Seu email" style="width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
+    <input id="esp-wpp" type="tel" placeholder="WhatsApp (com DDD)" style="width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:16px;font-family:inherit">
+    <div style="display:flex;gap:10px;justify-content:flex-end">
+      <button onclick="fecharEspera()" style="padding:10px 20px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;font-size:13px">Cancelar</button>
+      <button onclick="entrarEspera()" style="padding:10px 20px;background:#1a56db;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">Entrar na lista</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>

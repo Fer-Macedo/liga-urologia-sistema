@@ -1275,6 +1275,38 @@ router.get('/certificado/validar/:codigo', async (req, res) => {
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
+// ─── LISTA DE ESPERA ─────────────────────────────────────────────────────────
+router.post('/inscricao/:id/lista-espera', async (req, res) => {
+  try {
+    const { nome, email, whatsapp } = req.body;
+    if (!nome) return res.json({ok:false, msg:'Nome obrigatório.'});
+    const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
+    const ev = evR.rows[0];
+    if (!ev) return res.json({ok:false, msg:'Evento não encontrado.'});
+    // Verifica se ja esta na lista
+    const jaR = await query('SELECT id FROM evento_lista_espera WHERE evento_id=$1 AND (email=$2 OR whatsapp=$3)', [req.params.id, email||'', whatsapp||'']);
+    if (jaR.rows.length > 0) return res.json({ok:false, msg:'Você já está na lista de espera!'});
+    await query('INSERT INTO evento_lista_espera (evento_id,nome,email,whatsapp) VALUES ($1,$2,$3,$4)', [req.params.id, nome, email||null, whatsapp||null]);
+    // Notifica por WhatsApp
+    if (whatsapp) {
+      try {
+        const {enviarWhatsApp} = require('../services/notificacoes');
+        const config = await getConfig();
+        const msg = (config.org_nome||'LAURO')+'\n\nOla, *'+nome.split(' ')[0]+'*!\n\nVoce foi adicionado(a) a lista de espera do evento *'+ev.nome+'*.\n\nAssim que uma vaga abrir, voce sera notificado(a) automaticamente!';
+        await enviarWhatsApp(whatsapp, msg);
+      } catch(e) {}
+    }
+    res.json({ok:true, msg:'Você foi adicionado(a) à lista de espera! Avisaremos quando uma vaga abrir.'});
+  } catch(e) { res.json({ok:false, msg:'Erro: '+e.message}); }
+});
+
+router.get('/eventos/:id/lista-espera', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT * FROM evento_lista_espera WHERE evento_id=$1 ORDER BY criado_em ASC', [req.params.id]);
+    res.json({ok:true, espera: r.rows});
+  } catch(e) { res.json({ok:false}); }
+});
+
 router.get('/auditoria', requireAuth, requireAdmin, async (req, res) => {
   const config = await getConfig();
   const pagina = parseInt(req.query.pagina) || 1;
@@ -2792,6 +2824,21 @@ router.post('/eventos/:id/inscricoes/:iid/confirmar', requireAuth, async (req, r
 
 router.post('/eventos/:id/inscricoes/:iid/deletar', requireAuth, async (req, res) => {
   await query('DELETE FROM evento_inscricoes WHERE id=$1',[req.params.iid]);
+  // Notificar primeiro da lista de espera
+  try {
+    const evR = await query('SELECT * FROM eventos WHERE id=$1',[req.params.id]);
+    const ev = evR.rows[0];
+    const espR = await query('SELECT * FROM evento_lista_espera WHERE evento_id=$1 AND notificado=false ORDER BY criado_em ASC LIMIT 1',[req.params.id]);
+    if (espR.rows[0] && ev) {
+      const esp = espR.rows[0];
+      const {enviarWhatsApp} = require('../services/notificacoes');
+      const config = await getConfig();
+      const appUrl = process.env.APP_URL||'https://liga-urologia.onrender.com';
+      const msg = (config.org_nome||'LAURO')+'\n\n*Vaga disponível!*\n\nOla, *'+esp.nome.split(' ')[0]+'*! Uma vaga abriu no evento *'+ev.nome+'*.\n\nAcesse agora para garantir sua vaga:\n'+appUrl+'/inscricao/'+ev.id;
+      if (esp.whatsapp) await enviarWhatsApp(esp.whatsapp, msg);
+      await query('UPDATE evento_lista_espera SET notificado=true, notificado_em=NOW() WHERE id=$1',[esp.id]);
+    }
+  } catch(e) {}
   req.session.msg=['Inscrição excluída!']; res.redirect('/eventos/'+req.params.id);
 });
 
