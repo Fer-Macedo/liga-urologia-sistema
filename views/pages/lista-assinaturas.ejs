@@ -4,11 +4,141 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lista de Assinaturas — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
   <style>
     :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
-    .badge { padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700; }
-    .badge-pendente { background:#fef3c7;color:#92400e; }
-    .badge-assinado { background:#dcfce7;color:#166534; }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-box {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 12px;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-box::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--cor-primaria);
+      opacity: .5;
+    }
+    .stat-icon {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .stat-icon svg { width: 20px; height: 20px; }
+    .stat-num {
+      font-family: 'Outfit', sans-serif;
+      font-size: 24px; font-weight: 700;
+      color: var(--cor-primaria);
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+    .stat-lab { font-size: 12px; color: var(--texto2); font-weight: 600; }
+
+    .lista-card {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .lista-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--borda);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .lista-titulo {
+      font-size: 14px; font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .badge-assinado { background: #dcfce7; color: #166534; }
+    .badge-pendente { background: #fef3c7; color: #92400e; }
+
+    .btn-xs {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 5px 10px;
+      border-radius: 7px;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid var(--borda);
+      background: var(--fundo);
+      color: var(--texto);
+      cursor: pointer;
+      text-decoration: none;
+      transition: all .15s;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+    .btn-xs:hover { border-color: var(--cor-primaria); color: var(--cor-primaria); }
+    .btn-xs.roxo  { background: #6366f1; color: white; border-color: transparent; }
+    .btn-xs.verde { background: #059669; color: white; border-color: transparent; }
+    .btn-xs.azul  { background: #0891b2; color: white; border-color: transparent; }
+    .btn-xs.verm  { color: #dc2626; border-color: #fecaca; }
+    .btn-xs.verm:hover { background: #fee2e2; }
+
+    table.tabela { width: 100%; border-collapse: collapse; }
+    table.tabela thead th {
+      background: var(--fundo);
+      padding: 10px 14px;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em;
+      color: var(--texto2); text-align: left;
+      border-bottom: 1px solid var(--borda);
+    }
+    table.tabela tbody tr { border-bottom: 1px solid var(--borda); transition: background .15s; }
+    table.tabela tbody tr:last-child { border-bottom: none; }
+    table.tabela tbody tr:hover { background: var(--fundo); }
+    table.tabela tbody td { padding: 12px 14px; font-size: 13px; color: var(--texto); vertical-align: middle; }
+
+    .nome-evento { font-weight: 600; margin-bottom: 2px; }
+    .desc-evento { font-size: 12px; color: var(--texto2); }
+
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--fundo);
+      border: 1px solid var(--borda);
+      border-radius: 8px;
+      padding: 0 12px;
+      height: 36px;
+    }
+    .search-bar svg { width: 14px; height: 14px; fill: var(--texto2); flex-shrink: 0; }
+    .search-bar input {
+      border: none; background: transparent;
+      font-size: 13px; color: var(--texto);
+      outline: none; width: 180px;
+      font-family: inherit;
+    }
   </style>
 </head>
 <body>
@@ -16,23 +146,71 @@
   <%- include('../partials/sidebar', { paginaAtual: 'lista-assinaturas' }) %>
   <main class="main">
     <div class="topbar">
-      <h1 class="page-titulo">✍️ Lista de Assinaturas</h1>
+      <h1 class="page-titulo">Lista de Assinaturas</h1>
       <div class="topbar-acoes">
-        <button class="btn btn-primario" onclick="abrirModal('modal-nova')">+ Nova Lista</button>
+        <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-nova')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Nova Lista
+        </button>
       </div>
     </div>
-    <div class="content">
-      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
-      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
 
-      <div class="card">
-        <table class="tabela">
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
+
+      <%
+        const total = listas.length;
+        const assinadas = listas.filter(l => l.status === 'assinado').length;
+        const pendentes = listas.filter(l => l.status !== 'assinado').length;
+      %>
+
+      <!-- STATS -->
+      <div class="stats-row">
+        <div class="stat-box">
+          <div class="stat-icon" style="background:#eff6ff">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#1a56db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <div>
+            <div class="stat-num"><%= total %></div>
+            <div class="stat-lab">Total de listas</div>
+          </div>
+        </div>
+        <div class="stat-box" style="--cor-primaria:#10b981">
+          <div class="stat-icon" style="background:#f0fdf4">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <div class="stat-num" style="color:#10b981"><%= assinadas %></div>
+            <div class="stat-lab">Assinadas</div>
+          </div>
+        </div>
+        <div class="stat-box" style="--cor-primaria:#f59e0b">
+          <div class="stat-icon" style="background:#fffbeb">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div>
+            <div class="stat-num" style="color:#f59e0b"><%= pendentes %></div>
+            <div class="stat-lab">Pendentes</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TABELA -->
+      <div class="lista-card">
+        <div class="lista-header">
+          <span class="lista-titulo">Todas as listas (<%= total %>)</span>
+          <div class="search-bar">
+            <svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>
+            <input type="text" id="busca" placeholder="Buscar lista..." oninput="filtrar(this.value)">
+          </div>
+        </div>
+
+        <table class="tabela" id="tabela-listas">
           <thead>
             <tr>
-              <th>#</th>
-              <th>Nome do Evento</th>
+              <th>Lista</th>
               <th>Data</th>
-              <th>Descrição</th>
               <th>Status</th>
               <th>Criado em</th>
               <th>Ações</th>
@@ -40,33 +218,62 @@
           </thead>
           <tbody>
             <% if (listas.length === 0) { %>
-            <tr><td colspan="7" style="text-align:center;color:var(--texto2);padding:40px">Nenhuma lista cadastrada</td></tr>
+            <tr><td colspan="5" style="text-align:center;padding:48px;color:var(--texto2)">
+              <div style="font-size:32px;margin-bottom:12px">📋</div>
+              <div style="font-weight:600;margin-bottom:4px">Nenhuma lista criada</div>
+              <div style="font-size:12px">Clique em "Nova Lista" para começar</div>
+            </td></tr>
             <% } %>
             <% listas.forEach(l => { %>
-            <tr>
-              <td><%= l.id %></td>
-              <td><strong><%= l.nome %></strong></td>
-              <td><%= l.data_evento ? new Date(l.data_evento).toLocaleDateString('pt-BR') : '—' %></td>
-              <td><%= l.descricao || '—' %></td>
+            <tr class="lista-row">
+              <td>
+                <div class="nome-evento"><%= l.nome %></div>
+                <% if (l.descricao) { %><div class="desc-evento"><%= l.descricao %></div><% } %>
+              </td>
+              <td style="color:var(--texto2);white-space:nowrap">
+                <%= l.data_evento ? new Date(l.data_evento).toLocaleDateString('pt-BR', {day:'2-digit',month:'short',year:'numeric'}) : '—' %>
+              </td>
               <td>
                 <% if (l.status === 'assinado') { %>
-                  <span class="badge badge-assinado">✅ Assinado</span>
+                <span class="badge-status badge-assinado">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Assinada
+                </span>
                 <% } else { %>
-                  <span class="badge badge-pendente">⏳ Pendente</span>
+                <span class="badge-status badge-pendente">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  Pendente
+                </span>
                 <% } %>
               </td>
-              <td><%= new Date(l.criado_em).toLocaleDateString('pt-BR') %></td>
+              <td style="color:var(--texto2);font-size:12px;white-space:nowrap">
+                <%= new Date(l.criado_em).toLocaleDateString('pt-BR') %>
+              </td>
               <td>
-                <div style="display:flex;gap:4px;flex-wrap:wrap">
-                  <a href="/lista-assinaturas/<%= l.id %>/visualizar" target="_blank" class="btn" style="font-size:11px;padding:4px 8px" title="Visualizar">👁</a>
-                  <a href="/lista-assinaturas/<%= l.id %>/imprimir" target="_blank" class="btn" style="font-size:11px;padding:4px 8px;background:#6366f1;color:white" title="Imprimir">🖨️</a>
-                  <button onclick="abrirUpload(<%= l.id %>)" class="btn" style="font-size:11px;padding:4px 8px;background:#059669;color:white" title="Upload assinada">📎 Upload</button>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  <a href="/lista-assinaturas/<%= l.id %>/visualizar" target="_blank" class="btn-xs" title="Visualizar">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Ver
+                  </a>
+                  <a href="/lista-assinaturas/<%= l.id %>/imprimir" target="_blank" class="btn-xs roxo" title="Imprimir">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                    Imprimir
+                  </a>
+                  <button onclick="abrirUpload(<%= l.id %>)" class="btn-xs verde" title="Upload assinada">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                    Upload
+                  </button>
                   <% if (l.pdf_assinado_chave) { %>
-                  <a href="/lista-assinaturas/<%= l.id %>/assinada" target="_blank" class="btn" style="font-size:11px;padding:4px 8px;background:#0891b2;color:white" title="Ver assinada">📄 Assinada</a>
+                  <a href="/lista-assinaturas/<%= l.id %>/assinada" target="_blank" class="btn-xs azul" title="Ver assinada">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    Assinada
+                  </a>
                   <% } %>
                   <% if (usuario.perfil === 'admin' || usuario.perfil === 'presidencia') { %>
-                  <form method="POST" action="/lista-assinaturas/<%= l.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')">
-                    <button type="submit" class="btn" style="font-size:11px;padding:4px 8px;color:var(--vermelho)">🗑</button>
+                  <form method="POST" action="/lista-assinaturas/<%= l.id %>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir esta lista?')">
+                    <button type="submit" class="btn-xs verm" title="Excluir">
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                    </button>
                   </form>
                   <% } %>
                 </div>
@@ -84,7 +291,7 @@
 <div class="modal-overlay" id="modal-nova" style="display:none">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-titulo">✍️ Nova Lista de Assinaturas</span>
+      <span class="modal-titulo">Nova Lista de Assinaturas</span>
       <button class="icon-btn" onclick="fecharModal('modal-nova')">✕</button>
     </div>
     <form action="/lista-assinaturas" method="POST">
@@ -99,12 +306,12 @@
         </div>
         <div class="campo">
           <label class="label">Descrição (opcional)</label>
-          <textarea name="descricao" class="input" rows="2" placeholder="Descrição do evento..."></textarea>
+          <textarea name="descricao" class="input" rows="2" placeholder="Descrição breve do evento..."></textarea>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-nova')">Cancelar</button>
-        <button type="submit" class="btn btn-primario">✍️ Criar</button>
+        <button type="submit" class="btn btn-primario">Criar lista</button>
       </div>
     </form>
   </div>
@@ -114,19 +321,21 @@
 <div class="modal-overlay" id="modal-upload" style="display:none">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-titulo">📎 Upload da Lista Assinada</span>
+      <span class="modal-titulo">Upload da Lista Assinada</span>
       <button class="icon-btn" onclick="fecharModal('modal-upload')">✕</button>
     </div>
     <form id="form-upload" action="" method="POST" enctype="multipart/form-data">
       <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="campo">
-          <label class="label">Arquivo PDF da lista assinada *</label>
-          <input type="file" name="pdf_assinado" class="input" accept=".pdf,.jpg,.jpeg,.png" required>
+        <div style="background:var(--fundo);border:2px dashed var(--borda);border-radius:10px;padding:24px;text-align:center">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--texto2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 10px;display:block"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">Selecione o arquivo</div>
+          <div style="font-size:11px;color:var(--texto2);margin-bottom:12px">PDF, JPG ou PNG</div>
+          <input type="file" name="pdf_assinado" class="input" accept=".pdf,.jpg,.jpeg,.png" required style="max-width:280px;margin:0 auto">
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-upload')">Cancelar</button>
-        <button type="submit" class="btn btn-primario">📎 Enviar</button>
+        <button type="submit" class="btn btn-primario">Enviar arquivo</button>
       </div>
     </form>
   </div>
@@ -137,6 +346,11 @@
 function abrirUpload(id) {
   document.getElementById('form-upload').action = '/lista-assinaturas/' + id + '/upload-assinada';
   abrirModal('modal-upload');
+}
+function filtrar(q) {
+  document.querySelectorAll('.lista-row').forEach(r => {
+    r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
 }
 </script>
 </body>
