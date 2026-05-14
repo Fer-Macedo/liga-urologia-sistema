@@ -1184,8 +1184,10 @@ router.get('/live/:token', async (req, res) => {
 });
 router.post('/live/:token/ping', async (req, res) => {
   try {
-    await query("UPDATE evento_presencas_online SET ultimo_ping=NOW(),ativo=true,tempo_total_segundos=tempo_total_segundos+120 WHERE token=$1",[req.params.token]);
-    res.json({ok:true});
+    const rp = await query("UPDATE evento_presencas_online SET ultimo_ping=NOW(),ativo=true,tempo_total_segundos=tempo_total_segundos+120 WHERE token=$1 RETURNING tempo_total_segundos,ultimo_ping",[req.params.token]);
+    const total = rp.rows[0]?.tempo_total_segundos || 0;
+    const ult = rp.rows[0]?.ultimo_ping;
+    res.json({ok:true, total, ultimoPing: ult});
   } catch(e) { res.json({ok:false}); }
 });
 router.post('/live/:token/sair', async (req, res) => {
