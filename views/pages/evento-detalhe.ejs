@@ -270,6 +270,7 @@
       <h1 class="page-titulo" style="font-size:15px"><%= evento.nome %></h1>
       <div class="topbar-acoes">
         <a href="/eventos" class="btn btn-sm">Voltar</a>
+        <a href="/eventos/<%= evento.id %>/relatorio-pdf" target="_blank" class="btn btn-sm" style="background:#374151;color:white">Relatorio PDF</a>
         <a href="/inscricao/<%= evento.id %>" target="_blank" class="btn btn-sm" style="background:#059669;color:white">Pág. Pública</a>
         <a href="/eventos/<%= evento.id %>/checkin" class="btn btn-sm btn-primario">Check-in</a>
         <a href="/eventos/<%= evento.id %>/presencas" class="btn btn-sm" style="background:#8b5cf6;color:white">Presenças</a>

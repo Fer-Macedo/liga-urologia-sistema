@@ -2956,6 +2956,57 @@ router.post('/eventos/:id/pagamentos/:pid/confirmar', requireAuth, async (req, r
   req.session.msg=['Pagamento confirmado!']; res.redirect('/eventos/'+req.params.id);
 });
 
+router.get('/eventos/:id/relatorio-pdf', requireAuth, async (req, res) => {
+  try {
+    const [evR, inscrR, pgR, config] = await Promise.all([
+      query('SELECT * FROM eventos WHERE id=$1',[req.params.id]),
+      query("SELECT * FROM evento_inscricoes WHERE evento_id=$1 ORDER BY nome",[req.params.id]),
+      query("SELECT * FROM evento_pagamentos WHERE status='pago' AND inscricao_id IN (SELECT id FROM evento_inscricoes WHERE evento_id=$1)",[req.params.id]),
+      getConfig()
+    ]);
+    const ev = evR.rows[0];
+    if (!ev) return res.status(404).send('Evento nao encontrado');
+    const inscritos = inscrR.rows;
+    const pagamentos = pgR.rows;
+    const orgNome = config.org_nome||'LAURO';
+    const orgCor = ev.cor_tema||config.org_cor||'#1a56db';
+    const orgLogo = config.org_logo||null;
+    const dataEv = ev.data_inicio?new Date(ev.data_inicio).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):'';
+    const confirmados = inscritos.filter(i=>i.status==='confirmado').length;
+    const checkins = inscritos.filter(i=>i.checkin_em).length;
+    let bruto=0, taxas=0;
+    pagamentos.forEach(p=>{
+      const v=Number(p.valor)||0; bruto+=v;
+      if(p.metodo==='pix') taxas+=v*0.0099;
+      else if(p.metodo==='cartao') taxas+=v*0.0299+0.40;
+    });
+    const liquido = bruto-taxas;
+    const logoHtml = orgLogo?`<img src="${orgLogo}" style="max-height:50px;max-width:160px;object-fit:contain" alt="${orgNome}">`:`<span style="font-size:18px;font-weight:800;color:white">${orgNome}</span>`;
+    const linhasInscritos = inscritos.map((i,idx)=>`
+      <tr style="background:${idx%2===0?'#f8fafc':'white'}">
+        <td style="padding:6px 10px;font-size:11px">${idx+1}</td>
+        <td style="padding:6px 10px;font-size:11px;font-weight:600">${i.nome}</td>
+        <td style="padding:6px 10px;font-size:11px">${i.email||'—'}</td>
+        <td style="padding:6px 10px;font-size:11px">${i.lote_nome||'—'}</td>
+        <td style="padding:6px 10px;font-size:11px;text-align:center">
+          <span style="background:${i.status==='confirmado'?'#dcfce7':'#fef3c7'};color:${i.status==='confirmado'?'#166534':'#92400e'};padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">${i.status}</span>
+        </td>
+        <td style="padding:6px 10px;font-size:11px;text-align:center">${i.checkin_em?'✅':'—'}</td>
+      </tr>`).join('');
+    const logoHtml = orgLogo?`<img src="${orgLogo}" style="max-height:50px;max-width:160px;object-fit:contain" alt="${orgNome}">`:`<span style="font-size:18px;font-weight:800;color:white">${orgNome}</span>`;
+    const linhasInscritos = inscritos.map((i,idx)=>`<tr style="background:${idx%2===0?'#f8fafc':'white'}"><td style="padding:6px 10px;font-size:11px">${idx+1}</td><td style="padding:6px 10px;font-size:11px;font-weight:600">${i.nome}</td><td style="padding:6px 10px;font-size:11px">${i.email||'—'}</td><td style="padding:6px 10px;font-size:11px">${i.lote_nome||'—'}</td><td style="padding:6px 10px;font-size:11px;text-align:center"><span style="background:${i.status==='confirmado'?'#dcfce7':'#fef3c7'};color:${i.status==='confirmado'?'#166534':'#92400e'};padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">${i.status}</span></td><td style="padding:6px 10px;font-size:11px;text-align:center">${i.checkin_em?'✅':'—'}</td></tr>`).join('');
+    const estilos=`*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;color:#374151}@media print{.np{display:none}}.header{background:linear-gradient(135deg,${orgCor},${orgCor}cc);padding:28px 32px;color:white;display:flex;align-items:center;justify-content:space-between}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:20px 32px;background:#f8fafc;border-bottom:1px solid #e5e7eb}.stat{background:white;border-radius:8px;padding:14px;text-align:center;border:1px solid #e5e7eb}.stat-num{font-size:24px;font-weight:800;color:${orgCor}}.stat-lab{font-size:10px;color:#6b7280;font-weight:600;text-transform:uppercase;margin-top:3px}.section{padding:24px 32px}.sec-title{font-size:14px;font-weight:700;margin-bottom:14px;padding-bottom:6px;border-bottom:2px solid ${orgCor}}.fin-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #e5e7eb;font-size:13px}table{width:100%;border-collapse:collapse}thead th{background:${orgCor};color:white;padding:8px 10px;font-size:11px;text-align:left}.btn-p{position:fixed;bottom:20px;right:20px;padding:12px 24px;background:${orgCor};color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600}`;
+    const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${estilos}</style></head><body>
+<div class="header"><div>${logoHtml}<div style="margin-top:8px;font-size:13px;opacity:.85">${orgNome}</div></div><div style="text-align:right"><div style="font-size:20px;font-weight:800">${ev.nome}</div><div style="font-size:13px;opacity:.85;margin-top:4px">${dataEv}</div><div style="font-size:12px;opacity:.75">${ev.local||''}</div></div></div>
+<div class="stats"><div class="stat"><div class="stat-num">${inscritos.length}</div><div class="stat-lab">Inscritos</div></div><div class="stat"><div class="stat-num">${confirmados}</div><div class="stat-lab">Confirmados</div></div><div class="stat"><div class="stat-num">${checkins}</div><div class="stat-lab">Check-ins</div></div><div class="stat"><div class="stat-num">R$ ${liquido.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="stat-lab">Receita líquida</div></div></div>
+<div class="section"><div class="sec-title">Resumo financeiro</div><div class="fin-row"><span>Receita bruta</span><span style="color:#10b981;font-weight:600">R$ ${bruto.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></div><div class="fin-row"><span>Taxas</span><span style="color:#ef4444;font-weight:600">- R$ ${taxas.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></div><div class="fin-row" style="border-bottom:2px solid ${orgCor}"><span style="font-weight:700">Receita líquida</span><span style="font-weight:800;color:${orgCor}">R$ ${liquido.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span></div></div>
+<div class="section"><div class="sec-title">Lista de inscritos (${inscritos.length})</div><table><thead><tr><th>#</th><th>Nome</th><th>Email</th><th>Lote</th><th>Status</th><th>Check-in</th></tr></thead><tbody>${linhasInscritos}</tbody></table></div>
+<button class="btn-p np" onclick="window.print()">Imprimir / Salvar PDF</button>
+<script>window.onload=()=>window.print();</script></body></html>`;
+    res.setHeader('Content-Type','text/html; charset=utf-8');
+    res.send(html);
+  } catch(e) { res.status(500).send('Erro: '+e.message); }
+});
 router.get('/eventos/:id/inscricoes/:iid/cracha', requireAuth, async (req, res) => {
   try {
     const [inscR, evR, config] = await Promise.all([
