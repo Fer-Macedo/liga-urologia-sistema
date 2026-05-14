@@ -2839,6 +2839,12 @@ async function enviarEmailConfirmacaoEvento(inscricaoId) {
       +'<tr><td style="background:white;padding:36px 40px"><div style="border-left:3px solid '+cor+';padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:'+cor+';letter-spacing:1.5px;text-transform:uppercase">CONFIRMACAO DE INSCRICAO</p><h2 style="margin:4px 0 0;font-size:20px;font-weight:700;color:#0f172a">'+insc.evento_nome+'</h2></div>'
       +'<p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>! Sua inscricao foi confirmada com sucesso.</p>'
       +(wppBtn?'<div style="text-align:center;padding-bottom:24px">'+wppBtn+'</div>':'')
+      +'<div style="text-align:center;margin:24px 0;padding:24px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">'
+      +'<p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">Seu QR Code de Check-in</p>'
+      +'<img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(insc.qrcode||insc.id)+'" style="width:160px;height:160px;border-radius:8px" alt="QR Code">'
+      +'<p style="margin:12px 0 0;font-size:11px;color:#94a3b8">Apresente este QR Code na entrada do evento</p>'
+      +'<p style="margin:6px 0 0;font-size:12px;font-family:monospace;color:#475569;font-weight:600">'+insc.qrcode+'</p>'
+      +'</div>'
       +'</td></tr><tr><td style="background:#0f172a;border-radius:0 0 12px 12px;padding:24px 40px"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">'+orgNome+'</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">Duvidas? Responda este e-mail.</p></td><td align="right"><p style="margin:0;color:rgba(255,255,255,0.3);font-size:9px;letter-spacing:1.5px;text-transform:uppercase">Powered by PagBank</p></td></tr></table></td></tr>'
       +'</table></td></tr></table></body></html>';
     await transporter.sendMail({ from: process.env.EMAIL_USER, to: insc.email, subject: 'Inscricao confirmada — ' + insc.evento_nome, html });
