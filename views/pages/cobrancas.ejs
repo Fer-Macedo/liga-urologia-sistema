@@ -4,12 +4,181 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cobranças — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
   <style>
     :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
-    .qr-modal { text-align:center; }
-    .qr-modal img { width:200px;height:200px;border:2px solid var(--borda);border-radius:8px;margin:12px auto;display:block; }
-    .pix-copia { background:var(--fundo);border:1px solid var(--borda);border-radius:8px;padding:10px;font-size:11px;word-break:break-all;font-family:monospace;margin:10px 0;cursor:pointer;text-align:left; }
-    .pix-copia:hover { background:var(--cor-primaria-claro); }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-box {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 12px;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-box::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: var(--cor-stat, var(--cor-primaria));
+    }
+    .stat-icon {
+      width: 42px; height: 42px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .stat-icon svg { width: 20px; height: 20px; }
+    .stat-num {
+      font-family: 'Outfit', sans-serif;
+      font-size: 22px; font-weight: 700;
+      line-height: 1; margin-bottom: 2px;
+    }
+    .stat-lab { font-size: 12px; color: var(--texto2); font-weight: 600; }
+
+    .filtros {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .filtro-pill {
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      border: 1.5px solid var(--borda);
+      background: var(--card);
+      color: var(--texto2);
+      text-decoration: none;
+      transition: all .15s;
+      cursor: pointer;
+    }
+    .filtro-pill:hover { border-color: var(--cor-primaria); color: var(--cor-primaria); }
+    .filtro-pill.ativo { background: var(--cor-primaria); color: white; border-color: var(--cor-primaria); }
+    .filtro-pill.vermelho { border-color: #fecaca; color: #dc2626; }
+    .filtro-pill.vermelho.ativo { background: #dc2626; color: white; border-color: #dc2626; }
+
+    .table-card {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .table-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--borda);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .table-titulo { font-size: 14px; font-weight: 700; font-family: 'Outfit', sans-serif; }
+
+    table.tabela { width: 100%; border-collapse: collapse; }
+    table.tabela thead th {
+      background: var(--fundo);
+      padding: 10px 14px;
+      font-size: 11px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .06em;
+      color: var(--texto2); text-align: left;
+      border-bottom: 1px solid var(--borda);
+    }
+    table.tabela tbody tr { border-bottom: 1px solid var(--borda); transition: background .15s; }
+    table.tabela tbody tr:last-child { border-bottom: none; }
+    table.tabela tbody tr:hover { background: var(--fundo); }
+    table.tabela tbody td { padding: 11px 14px; font-size: 13px; color: var(--texto); vertical-align: middle; }
+
+    .membro-info { display: flex; align-items: center; gap: 10px; }
+    .avatar-sm {
+      width: 34px; height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--cor-primaria), var(--cor-primaria)99);
+      color: white; font-size: 12px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .membro-nome { font-weight: 600; font-size: 13px; }
+
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 11px; font-weight: 700;
+    }
+    .badge-pago     { background: #dcfce7; color: #166534; }
+    .badge-pendente { background: #fef3c7; color: #92400e; }
+    .badge-atrasado { background: #fee2e2; color: #991b1b; }
+    .badge-cancelado { background: #f1f5f9; color: #64748b; }
+
+    .acoes { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+    .btn-acao {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px; height: 30px;
+      border-radius: 7px;
+      border: 1px solid var(--borda);
+      background: var(--fundo);
+      color: var(--texto2);
+      cursor: pointer;
+      font-size: 11px;
+      transition: all .15s;
+      text-decoration: none;
+    }
+    .btn-acao:hover { border-color: var(--cor-primaria); color: var(--cor-primaria); background: var(--card); }
+    .btn-acao.confirmar { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; }
+    .btn-acao.confirmar:hover { background: #dcfce7; }
+    .btn-acao.pix { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+    .btn-acao.cartao { background: #fdf4ff; color: #7e22ce; border-color: #e9d5ff; }
+    .btn-acao.notif { background: #fff7ed; color: #c2410c; border-color: #fed7aa; }
+
+    .search-bar {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--fundo);
+      border: 1px solid var(--borda);
+      border-radius: 8px;
+      padding: 0 12px;
+      height: 34px;
+    }
+    .search-bar svg { width: 13px; height: 13px; fill: var(--texto2); flex-shrink: 0; }
+    .search-bar input {
+      border: none; background: transparent;
+      font-size: 13px; color: var(--texto);
+      outline: none; width: 160px;
+      font-family: inherit;
+    }
+
+    .qr-box { text-align: center; }
+    .qr-box img { width: 200px; height: 200px; border-radius: 10px; border: 1px solid var(--borda); display: block; margin: 0 auto 12px; }
+    .pix-copia {
+      background: var(--fundo); border: 1px solid var(--borda);
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 11px; word-break: break-all;
+      font-family: monospace; margin: 10px 0;
+      cursor: pointer; text-align: left;
+      transition: background .15s;
+    }
+    .pix-copia:hover { background: #eff6ff; }
+
+    @media(max-width:768px) {
+      .stats-row { grid-template-columns: repeat(2,1fr); }
+    }
   </style>
 </head>
 <body>
@@ -20,68 +189,166 @@
       <h1 class="page-titulo">Cobranças</h1>
       <div class="topbar-acoes">
         <form action="/cobrancas/gerar" method="POST" style="display:inline">
-          <button class="btn" onclick="return confirm('Gerar cobranças do mês?')">↻ Gerar do mês</button>
+          <button class="btn btn-sm" onclick="return confirm('Gerar cobranças do mês atual?')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Gerar do mês
+          </button>
         </form>
-        <button class="btn btn-primario" onclick="abrirModal('modal-nova')">+ Nova cobrança</button>
-        <a href="/financeiro-arquivos" class="btn" style="background:#4285f4;color:white;text-decoration:none">📁 Arquivos</a>
-        <a href="/carta-cobranca" class="btn" style="background:#dc2626;color:white;text-decoration:none">📄 Carta de Cobrança</a>
+        <button class="btn btn-sm" onclick="abrirModal('modal-nova')">+ Nova cobrança</button>
+        <a href="/carta-cobranca" class="btn btn-sm" style="background:#dc2626;color:white;text-decoration:none">Carta de Cobrança</a>
       </div>
     </div>
-    <div class="content">
-      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
-      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
 
-      <div class="filtro-bar">
-        <a href="/cobrancas" class="filtro-btn <%= filtro==='todas'?'ativo':'' %>">Todas</a>
-        <a href="/cobrancas?filtro=pagas" class="filtro-btn <%= filtro==='pagas'?'ativo':'' %>">Pagas</a>
-        <a href="/cobrancas?filtro=pendentes" class="filtro-btn <%= filtro==='pendentes'?'ativo':'' %>">Pendentes</a>
-        <a href="/cobrancas?filtro=atrasadas" class="filtro-btn <%= filtro==='atrasadas'?'ativo':'' %>" style="border-color:#c81e1e;color:#c81e1e">Atrasadas</a>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
+
+      <%
+        const totalCob = cobrancas.length;
+        const pagas = cobrancas.filter(c=>c.status==='pago');
+        const pendentes = cobrancas.filter(c=>c.status==='pendente');
+        const atrasadas = cobrancas.filter(c=>c.status==='atrasado');
+        const receitaTotal = pagas.reduce((s,c)=>s+Number(c.valor_desconto||0),0);
+      %>
+
+      <!-- STATS -->
+      <div class="stats-row">
+        <div class="stat-box" style="--cor-stat:var(--cor-primaria)">
+          <div class="stat-icon" style="background:#eff6ff">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#1a56db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          </div>
+          <div>
+            <div class="stat-num" style="color:var(--cor-primaria)"><%= totalCob %></div>
+            <div class="stat-lab">Total cobranças</div>
+          </div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#10b981">
+          <div class="stat-icon" style="background:#f0fdf4">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <div class="stat-num" style="color:#10b981"><%= pagas.length %></div>
+            <div class="stat-lab">Pagas · R$ <%= receitaTotal.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
+          </div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#f59e0b">
+          <div class="stat-icon" style="background:#fffbeb">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div>
+            <div class="stat-num" style="color:#f59e0b"><%= pendentes.length %></div>
+            <div class="stat-lab">Pendentes</div>
+          </div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#dc2626">
+          <div class="stat-icon" style="background:#fef2f2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div>
+            <div class="stat-num" style="color:#dc2626"><%= atrasadas.length %></div>
+            <div class="stat-lab">Atrasadas</div>
+          </div>
+        </div>
       </div>
 
-      <div class="table-wrap">
-        <table class="table">
-          <thead><tr>
-            <th>Membro</th><th>Referência</th><th>Vencimento</th><th>Valor cheio</th><th>Com desconto</th><th>Status</th><th>Ações</th>
-          </tr></thead>
+      <!-- FILTROS -->
+      <div class="filtros">
+        <a href="/cobrancas" class="filtro-pill <%= filtro==='todas'?'ativo':'' %>">Todas (<%= totalCob %>)</a>
+        <a href="/cobrancas?filtro=pagas" class="filtro-pill <%= filtro==='pagas'?'ativo':'' %>">Pagas (<%= pagas.length %>)</a>
+        <a href="/cobrancas?filtro=pendentes" class="filtro-pill <%= filtro==='pendentes'?'ativo':'' %>">Pendentes (<%= pendentes.length %>)</a>
+        <a href="/cobrancas?filtro=atrasadas" class="filtro-pill vermelho <%= filtro==='atrasadas'?'ativo':'' %>">Atrasadas (<%= atrasadas.length %>)</a>
+      </div>
+
+      <!-- TABELA -->
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-titulo">
+            <% if(filtro==='pagas') { %>Cobranças pagas
+            <% } else if(filtro==='pendentes') { %>Cobranças pendentes
+            <% } else if(filtro==='atrasadas') { %>Cobranças atrasadas
+            <% } else { %>Todas as cobranças<% } %>
+            (<%= cobrancas.length %>)
+          </span>
+          <div class="search-bar">
+            <svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>
+            <input type="text" placeholder="Buscar membro..." oninput="filtrarTabela(this.value)">
+          </div>
+        </div>
+
+        <table class="tabela" id="tabela-cobrancas">
+          <thead>
+            <tr>
+              <th>Membro</th>
+              <th>Referência</th>
+              <th>Vencimento</th>
+              <th>Valor cheio</th>
+              <th>Com desconto</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
           <tbody>
             <% if (cobrancas.length === 0) { %>
-              <tr><td colspan="7" style="text-align:center;padding:30px;color:#888">Nenhuma cobrança encontrada</td></tr>
+            <tr><td colspan="7" style="text-align:center;padding:48px;color:var(--texto2)">
+              <div style="font-size:32px;margin-bottom:12px">💳</div>
+              <div style="font-weight:600;margin-bottom:4px">Nenhuma cobrança encontrada</div>
+              <div style="font-size:12px">Tente outro filtro ou gere as cobranças do mês</div>
+            </td></tr>
             <% } %>
             <% cobrancas.forEach(c => { %>
-            <tr>
-              <td><div class="membro-cell"><div class="avatar"><%= c.nome.substring(0,2).toUpperCase() %></div><%= c.nome.split(' ').slice(0,2).join(' ') %></div></td>
-              <td><%= c.referencia %></td>
-              <td><%= new Date(c.data_vencimento+'T12:00:00').toLocaleDateString('pt-BR') %></td>
-              <td>R$ <%= Number(c.valor_cheio).toFixed(2).replace('.',',') %></td>
-              <td>R$ <%= Number(c.valor_desconto).toFixed(2).replace('.',',') %></td>
+            <tr class="cob-row">
               <td>
-                <% if (c.status==='pago') { %><span class="badge verde">✅ Pago</span>
-                <% } else if (c.status==='atrasado') { %><span class="badge vermelho">⚠️ Atrasado</span>
-                <% } else { %><span class="badge amarelo">⏳ Pendente</span><% } %>
+                <div class="membro-info">
+                  <div class="avatar-sm"><%= c.nome.substring(0,2).toUpperCase() %></div>
+                  <div class="membro-nome"><%= c.nome.split(' ').slice(0,2).join(' ') %></div>
+                </div>
+              </td>
+              <td style="font-family:monospace;font-size:12px;color:var(--texto2)"><%= c.referencia %></td>
+              <td style="color:var(--texto2);white-space:nowrap"><%= new Date(c.data_vencimento+'T12:00:00').toLocaleDateString('pt-BR') %></td>
+              <td style="font-weight:600">R$ <%= Number(c.valor_cheio).toFixed(2).replace('.',',') %></td>
+              <td style="color:var(--cor-primaria);font-weight:700">R$ <%= Number(c.valor_desconto).toFixed(2).replace('.',',') %></td>
+              <td>
+                <% if (c.status==='pago') { %>
+                <span class="badge-status badge-pago">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Pago
+                </span>
+                <% } else if (c.status==='atrasado') { %>
+                <span class="badge-status badge-atrasado">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  Atrasado
+                </span>
+                <% } else { %>
+                <span class="badge-status badge-pendente">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  Pendente
+                </span>
+                <% } %>
               </td>
               <td>
-                <div class="btn-acoes">
+                <div class="acoes">
                   <% if (c.status !== 'pago') { %>
-                    <form method="POST" action="/cobrancas/<%= c.id %>/confirmar" style="display:inline;margin:0" onsubmit="return confirm('Confirmar pagamento?')"
-                      <button type="submit" class="icon-btn" title="Confirmar pagamento manual" style="background:#dcfce7;color:#166534;border-color:#bbf7d0">
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                      </button>
-                    </form>
-                    <% if (c.pix_qr_code || c.pix_qr_code_base64) { %>
-                      <button class="icon-btn" title="Ver QR Code PIX"
-                        onclick="abrirPix('<%= c.id %>', '<%= c.nome.split(' ')[0] %>', '<%= c.valor_desconto %>', '<%= (c.pix_qr_code_base64||'').substring(0,20) %>', `<%= c.pix_qr_code %>`)">
-                        📱
-                      </button>
-                    <% } %>
-                    <% if (c.pagbank_link) { %>
-                      <a href="<%= c.pagbank_link %>" target="_blank" class="icon-btn" title="Link cartão crédito">💳</a>
-                    <% } %>
-                    <form action="/cobrancas/<%= c.id %>/notificar" method="POST" style="display:inline">
-                      <button class="icon-btn" title="Enviar notificação" type="submit">✉</button>
-                    </form>
-                    <form action="/cobrancas/<%= c.id %>/pago" method="POST" style="display:inline" onsubmit="return confirm('Marcar como pago?')">
-                      <button class="icon-btn verde" title="Marcar como pago">✓</button>
-                    </form>
+                  <form method="POST" action="/cobrancas/<%= c.id %>/confirmar" style="display:inline;margin:0" onsubmit="return confirm('Confirmar pagamento manual?')">
+                    <button type="submit" class="btn-acao confirmar" title="Confirmar pagamento manual">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </button>
+                  </form>
+                  <% if (c.pix_qr_code || c.pix_qr_code_base64) { %>
+                  <button class="btn-acao pix" title="Ver QR Code PIX"
+                    onclick="abrirPix('<%= c.id %>')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/></svg>
+                  </button>
+                  <% } %>
+                  <% if (c.pagbank_link) { %>
+                  <a href="<%= c.pagbank_link %>" target="_blank" class="btn-acao cartao" title="Link cartão crédito">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                  </a>
+                  <% } %>
+                  <form action="/cobrancas/<%= c.id %>/notificar" method="POST" style="display:inline;margin:0">
+                    <button class="btn-acao notif" title="Enviar notificação">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6.09 6.09l1.07-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    </button>
+                  </form>
                   <% } %>
                 </div>
               </td>
@@ -101,18 +368,24 @@
       <span class="modal-titulo" id="pix-titulo">QR Code PIX</span>
       <button class="icon-btn" onclick="fecharModal('modal-pix')">✕</button>
     </div>
-    <div class="qr-modal">
-      <p style="font-size:13px;color:var(--texto2);margin-bottom:8px">Escaneie o QR Code ou copie o código abaixo</p>
+    <div class="qr-box">
+      <p style="font-size:13px;color:var(--texto2);margin-bottom:12px">Escaneie ou copie o código Pix abaixo</p>
       <img id="pix-qr-img" src="" alt="QR Code PIX">
-      <p style="font-size:12px;font-weight:600;margin:8px 0 4px">Valor: <span id="pix-valor" style="color:var(--cor-primaria)"></span></p>
-      <p style="font-size:11px;color:var(--texto2);margin-bottom:6px">📋 Pix Copia e Cola:</p>
+      <div style="background:var(--fundo);border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;color:var(--texto2);font-weight:600;margin-bottom:4px">Valor a pagar</div>
+        <div id="pix-valor" style="font-size:22px;font-weight:800;color:var(--cor-primaria);font-family:'Outfit',sans-serif"></div>
+      </div>
+      <div style="font-size:11px;color:var(--texto2);font-weight:600;margin-bottom:4px;text-align:left">Pix Copia e Cola:</div>
       <div class="pix-copia" id="pix-codigo" onclick="copiarPix()"></div>
-      <button class="btn btn-primario" style="width:100%;margin-top:8px" onclick="copiarPix()">📋 Copiar código PIX</button>
+      <button class="btn btn-primario" style="width:100%;margin-top:4px" onclick="copiarPix()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copiar código PIX
+      </button>
     </div>
   </div>
 </div>
 
-<!-- Modal nova cobrança manual -->
+<!-- Modal nova cobrança -->
 <div class="modal-overlay" id="modal-nova" style="display:none">
   <div class="modal">
     <div class="modal-header">
@@ -120,17 +393,31 @@
       <button class="icon-btn" onclick="fecharModal('modal-nova')">✕</button>
     </div>
     <form action="/cobrancas/nova" method="POST">
-      <div class="form-grid">
-        <div class="campo full">
-          <label class="label">Membro</label>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="campo">
+          <label class="label">Membro *</label>
           <select name="membro_id" class="input" required>
-            <option value="">Selecione...</option>
+            <option value="">Selecione o membro...</option>
           </select>
         </div>
-        <div class="campo"><label class="label">Referência (ex: 2025-05)</label><input name="referencia" class="input" required placeholder="ID-AAAA-MM"></div>
-        <div class="campo"><label class="label">Vencimento</label><input name="data_vencimento" type="date" class="input" required></div>
-        <div class="campo"><label class="label">Valor cheio (R$)</label><input name="valor_cheio" type="number" step="0.01" class="input" required></div>
-        <div class="campo"><label class="label">Valor com desconto (R$)</label><input name="valor_desconto" type="number" step="0.01" class="input" required></div>
+        <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="campo">
+            <label class="label">Referência</label>
+            <input name="referencia" class="input" required placeholder="ID-AAAA-MM">
+          </div>
+          <div class="campo">
+            <label class="label">Vencimento</label>
+            <input name="data_vencimento" type="date" class="input" required>
+          </div>
+          <div class="campo">
+            <label class="label">Valor cheio (R$)</label>
+            <input name="valor_cheio" type="number" step="0.01" class="input" required>
+          </div>
+          <div class="campo">
+            <label class="label">Com desconto (R$)</label>
+            <input name="valor_desconto" type="number" step="0.01" class="input" required>
+          </div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-nova')">Cancelar</button>
@@ -144,9 +431,9 @@
 <script>
 const pixData = {};
 <% cobrancas.forEach(c => { %>
-  <% if (c.pix_qr_code) { %>
+  <% if (c.pix_qr_code || c.pix_qr_code_base64) { %>
   pixData['<%= c.id %>'] = {
-    qr_code: `<%= c.pix_qr_code %>`,
+    qr_code: `<%= c.pix_qr_code || '' %>`,
     qr_code_base64: '<%= c.pix_qr_code_base64 || "" %>',
     valor: 'R$ <%= Number(c.valor_desconto).toFixed(2).replace(".",",") %>',
     nome: '<%= c.nome.split(" ")[0] %>'
@@ -154,17 +441,18 @@ const pixData = {};
   <% } %>
 <% }) %>
 
-function abrirPix(id, nome, valor, qrBase64Prefix, qrCode) {
-  const dados = pixData[id];
-  if (!dados) return;
-  document.getElementById('pix-titulo').textContent = 'PIX — ' + dados.nome;
-  document.getElementById('pix-valor').textContent = dados.valor;
-  document.getElementById('pix-codigo').textContent = dados.qr_code;
-  if (dados.qr_code_base64) {
-    document.getElementById('pix-qr-img').src = 'data:image/png;base64,' + dados.qr_code_base64;
-    document.getElementById('pix-qr-img').style.display = 'block';
+function abrirPix(id) {
+  const d = pixData[id];
+  if (!d) return;
+  document.getElementById('pix-titulo').textContent = 'PIX — ' + d.nome;
+  document.getElementById('pix-valor').textContent = d.valor;
+  document.getElementById('pix-codigo').textContent = d.qr_code;
+  const img = document.getElementById('pix-qr-img');
+  if (d.qr_code_base64) {
+    img.src = 'data:image/png;base64,' + d.qr_code_base64;
+    img.style.display = 'block';
   } else {
-    document.getElementById('pix-qr-img').style.display = 'none';
+    img.style.display = 'none';
   }
   abrirModal('modal-pix');
 }
@@ -173,8 +461,16 @@ function copiarPix() {
   const codigo = document.getElementById('pix-codigo').textContent;
   navigator.clipboard.writeText(codigo).then(() => {
     const btn = document.querySelector('#modal-pix .btn-primario');
-    btn.textContent = '✅ Copiado!';
-    setTimeout(() => { btn.textContent = '📋 Copiar código PIX'; }, 2000);
+    const orig = btn.innerHTML;
+    btn.innerHTML = 'Copiado!';
+    btn.style.background = '#10b981';
+    setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 2000);
+  });
+}
+
+function filtrarTabela(q) {
+  document.querySelectorAll('.cob-row').forEach(r => {
+    r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
   });
 }
 </script>
