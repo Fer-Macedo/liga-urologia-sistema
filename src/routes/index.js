@@ -2956,6 +2956,59 @@ router.post('/eventos/:id/pagamentos/:pid/confirmar', requireAuth, async (req, r
   req.session.msg=['Pagamento confirmado!']; res.redirect('/eventos/'+req.params.id);
 });
 
+router.get('/eventos/:id/inscricoes/:iid/cracha', requireAuth, async (req, res) => {
+  try {
+    const [inscR, evR, config] = await Promise.all([
+      query('SELECT * FROM evento_inscricoes WHERE id=$1',[req.params.iid]),
+      query('SELECT * FROM eventos WHERE id=$1',[req.params.id]),
+      getConfig()
+    ]);
+    const insc=inscR.rows[0]; const ev=evR.rows[0];
+    if (!insc||!ev) return res.status(404).send('Nao encontrado');
+    const orgLogo=config.org_logo||null;
+    const orgNome=config.org_nome||'LAURO';
+    const orgCor=ev.cor_tema||config.org_cor||'#1a56db';
+    const dataEv=ev.data_inicio?new Date(ev.data_inicio).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}):'';
+    const qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=120x120&data='+encodeURIComponent(insc.qrcode||insc.id);
+    const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
+@page{size:85mm 54mm;margin:0}*{margin:0;padding:0;box-sizing:border-box}body{width:85mm;height:54mm;font-family:Arial,sans-serif;overflow:hidden}
+.cracha{width:85mm;height:54mm;position:relative;background:white}
+.topo{background:${orgCor};height:14mm;display:flex;align-items:center;padding:0 4mm;gap:3mm}
+.topo img{height:10mm;max-width:24mm;object-fit:contain;filter:brightness(0) invert(1)}
+.topo-nome{color:white;font-size:9pt;font-weight:700}
+.corpo{display:flex;height:34mm;padding:3mm 4mm;gap:3mm;align-items:center}
+.info{flex:1;min-width:0}
+.nome{font-size:11pt;font-weight:800;color:#111;line-height:1.2;margin-bottom:2mm;word-break:break-word}
+.tipo{font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:white;background:${orgCor};padding:1mm 3mm;border-radius:3mm;display:inline-block;margin-bottom:2mm}
+.ev-nome{font-size:7pt;color:#6b7280;line-height:1.3}
+.qr{flex-shrink:0;text-align:center}
+.qr img{width:22mm;height:22mm}
+.qr-lab{font-size:5pt;color:#9ca3af;margin-top:1mm}
+.rodape{background:#f8fafc;height:6mm;display:flex;align-items:center;justify-content:space-between;padding:0 4mm;border-top:.3mm solid #e5e7eb}
+.rodape span{font-size:6pt;color:#9ca3af}
+</style></head><body>
+<div class="cracha">
+  <div class="topo">
+    ${orgLogo?`<img src="${orgLogo}" alt="${orgNome}">`:`<span class="topo-nome">${orgNome}</span>`}
+    <span class="topo-nome">${ev.nome.substring(0,35)}</span>
+  </div>
+  <div class="corpo">
+    <div class="info">
+      <div class="nome">${insc.nome}</div>
+      <div class="tipo">${insc.tipo_participante||'Participante'}</div>
+      <div class="ev-nome">${ev.nome}</div>
+      ${dataEv?`<div class="ev-nome" style="margin-top:1mm">${dataEv}</div>`:''}
+    </div>
+    <div class="qr"><img src="${qrUrl}" alt="QR"><div class="qr-lab">Check-in</div></div>
+  </div>
+  <div class="rodape"><span>${orgNome}</span><span>${insc.qrcode||''}</span></div>
+</div>
+<script>window.onload=()=>window.print();</script>
+</body></html>`;
+    res.setHeader('Content-Type','text/html; charset=utf-8');
+    res.send(html);
+  } catch(e) { res.status(500).send('Erro: '+e.message); }
+});
 router.get('/eventos/:id/inscricoes/:iid/certificado', requireAuth, async (req, res) => {
   try {
     const [inscR, evR, config] = await Promise.all([query('SELECT * FROM evento_inscricoes WHERE id=$1',[req.params.iid]), query('SELECT * FROM eventos WHERE id=$1',[req.params.id]), getConfig()]);

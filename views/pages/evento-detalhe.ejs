@@ -558,6 +558,7 @@
                     <button onclick="editarInscrito(<%= i.id %>,'<%= i.nome.replace(/'/g,"\\'") %>','<%= i.email %>','<%= i.whatsapp||'' %>','<%= i.cpf||'' %>','<%= i.instituicao||'' %>','<%= i.status %>')" class="btn-xs azul">Editar</button>
                     <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/confirmar" style="display:inline"><button class="btn-xs verde">Confirmar</button></form>
                     <a href="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/certificado" class="btn-xs roxo">Cert.</a>
+                    <a href="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/cracha" target="_blank" class="btn-xs" style="background:#0891b2;color:white;border-color:transparent">Cracha</a>
                     <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')"><button class="btn-xs verm">Excluir</button></form>
                   </div>
                 </td>
