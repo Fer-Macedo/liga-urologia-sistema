@@ -519,7 +519,7 @@
           <div class="cupom-sec">
             <div class="cupom-lbl">Cupom de desconto</div>
             <div class="cupom-row">
-              <input id="cupom-in" class="cupom-in" placeholder="CÓDIGO DO CUPOM" oninput="this.value=this.value.toUpperCase()">
+              <input id="cupom-in" class="cupom-in" placeholder="CÓDIGO DO CUPOM" oninput="this.value=this.value.toUpperCase()" value="<%= typeof cupomUrl !== 'undefined' && cupomUrl ? cupomUrl : '' %>">
               <button type="button" class="cupom-btn" onclick="aplicarCupom()">Aplicar</button>
             </div>
             <div id="cupom-msg" style="display:none"></div>
@@ -916,6 +916,16 @@ function togForm(){
 function abrirModal(id){document.getElementById(id)?.classList.add('open');}
 function fecharModal(id){document.getElementById(id)?.classList.remove('open');}
 const l0=lotesData.find(x=>x.id==loteId);updRes(l0);
+
+<script>
+// Auto-aplicar cupom se vier pela URL
+window.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('cupom-in');
+  if (input && input.value && input.value.trim()) {
+    setTimeout(() => aplicarCupom(), 600);
+  }
+});
+</script>
 </script>
 </body>
 </html>
