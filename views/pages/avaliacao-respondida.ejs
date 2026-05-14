@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Já respondida</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .card { background: white; border-radius: 20px; padding: 48px 40px; max-width: 440px; width: 100%; text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,.08); border-top: 6px solid #6366f1; }
+    .icon { font-size: 56px; margin-bottom: 16px; }
+    h1 { font-size: 22px; font-weight: 700; color: #111827; margin-bottom: 10px; }
+    p { font-size: 14px; color: #6b7280; line-height: 1.7; }
+    img { max-height: 48px; max-width: 160px; object-fit: contain; margin-bottom: 16px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <% if (config.org_logo) { %><img src="<%= config.org_logo %>" alt="<%= config.org_nome %>"><% } %>
+    <div class="icon">✅</div>
+    <h1>Avaliação já registrada</h1>
+    <p>Você já respondeu a pesquisa de satisfação deste evento. Obrigado pela participação!</p>
+  </div>
+</body>
+</html>
