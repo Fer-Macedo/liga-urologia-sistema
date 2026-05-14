@@ -2982,18 +2982,6 @@ router.get('/eventos/:id/relatorio-pdf', requireAuth, async (req, res) => {
     });
     const liquido = bruto-taxas;
     const logoHtml = orgLogo?`<img src="${orgLogo}" style="max-height:50px;max-width:160px;object-fit:contain" alt="${orgNome}">`:`<span style="font-size:18px;font-weight:800;color:white">${orgNome}</span>`;
-    const linhasInscritos = inscritos.map((i,idx)=>`
-      <tr style="background:${idx%2===0?'#f8fafc':'white'}">
-        <td style="padding:6px 10px;font-size:11px">${idx+1}</td>
-        <td style="padding:6px 10px;font-size:11px;font-weight:600">${i.nome}</td>
-        <td style="padding:6px 10px;font-size:11px">${i.email||'—'}</td>
-        <td style="padding:6px 10px;font-size:11px">${i.lote_nome||'—'}</td>
-        <td style="padding:6px 10px;font-size:11px;text-align:center">
-          <span style="background:${i.status==='confirmado'?'#dcfce7':'#fef3c7'};color:${i.status==='confirmado'?'#166534':'#92400e'};padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">${i.status}</span>
-        </td>
-        <td style="padding:6px 10px;font-size:11px;text-align:center">${i.checkin_em?'✅':'—'}</td>
-      </tr>`).join('');
-    const logoHtml = orgLogo?`<img src="${orgLogo}" style="max-height:50px;max-width:160px;object-fit:contain" alt="${orgNome}">`:`<span style="font-size:18px;font-weight:800;color:white">${orgNome}</span>`;
     const linhasInscritos = inscritos.map((i,idx)=>`<tr style="background:${idx%2===0?'#f8fafc':'white'}"><td style="padding:6px 10px;font-size:11px">${idx+1}</td><td style="padding:6px 10px;font-size:11px;font-weight:600">${i.nome}</td><td style="padding:6px 10px;font-size:11px">${i.email||'—'}</td><td style="padding:6px 10px;font-size:11px">${i.lote_nome||'—'}</td><td style="padding:6px 10px;font-size:11px;text-align:center"><span style="background:${i.status==='confirmado'?'#dcfce7':'#fef3c7'};color:${i.status==='confirmado'?'#166534':'#92400e'};padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700">${i.status}</span></td><td style="padding:6px 10px;font-size:11px;text-align:center">${i.checkin_em?'✅':'—'}</td></tr>`).join('');
     const estilos=`*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;color:#374151}@media print{.np{display:none}}.header{background:linear-gradient(135deg,${orgCor},${orgCor}cc);padding:28px 32px;color:white;display:flex;align-items:center;justify-content:space-between}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:20px 32px;background:#f8fafc;border-bottom:1px solid #e5e7eb}.stat{background:white;border-radius:8px;padding:14px;text-align:center;border:1px solid #e5e7eb}.stat-num{font-size:24px;font-weight:800;color:${orgCor}}.stat-lab{font-size:10px;color:#6b7280;font-weight:600;text-transform:uppercase;margin-top:3px}.section{padding:24px 32px}.sec-title{font-size:14px;font-weight:700;margin-bottom:14px;padding-bottom:6px;border-bottom:2px solid ${orgCor}}.fin-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #e5e7eb;font-size:13px}table{width:100%;border-collapse:collapse}thead th{background:${orgCor};color:white;padding:8px 10px;font-size:11px;text-align:left}.btn-p{position:fixed;bottom:20px;right:20px;padding:12px 24px;background:${orgCor};color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600}`;
     const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${estilos}</style></head><body>
