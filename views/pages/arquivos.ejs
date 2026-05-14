@@ -62,6 +62,20 @@
     .secao-titulo { font-size:12px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px;display:flex;align-items:center;gap:8px; }
     .btn-mini { padding:2px 6px;border:1px solid var(--borda);border-radius:5px;background:white;font-size:11px;cursor:pointer;color:var(--texto); }
     .btn-mini:hover { background:var(--fundo); }
+    .btn-topbar { display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;border:1.5px solid var(--borda);background:var(--card);color:var(--texto);cursor:pointer;text-decoration:none;transition:all .2s;font-family:inherit; }
+    .btn-topbar:hover { border-color:var(--cor-primaria);color:var(--cor-primaria);background:#eff6ff;transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.06); }
+    .btn-topbar.primario { background:var(--cor-primaria);color:white;border-color:var(--cor-primaria); }
+    .btn-topbar.primario:hover { background:var(--cor-primaria);filter:brightness(1.1);color:white;box-shadow:0 3px 10px rgba(0,0,0,.15); }
+    .btn-topbar.google { background:#4285f4;color:white;border-color:#4285f4; }
+    .btn-topbar.google:hover { background:#3367d6;border-color:#3367d6;color:white;box-shadow:0 3px 10px rgba(66,133,244,.3); }
+    .btn-topbar.verm { border-color:#fecaca;color:#dc2626; }
+    .btn-topbar.verm:hover { background:#fee2e2;border-color:#dc2626; }
+    .icone-svg-grid { display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:6px; }
+    .icone-svg-opt { cursor:pointer;padding:10px;border:1.5px solid var(--borda);border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s; }
+    .icone-svg-opt:hover { border-color:var(--cor-primaria);background:#eff6ff; }
+    .icone-svg-opt.selecionado { border-color:var(--cor-primaria);background:#eff6ff; }
+    .icone-svg-opt input { display:none; }
+    .icone-svg-opt span { font-size:10px;color:var(--texto2);font-weight:600; }
   </style>
 </head>
 <body>
@@ -71,13 +85,28 @@
     <div class="topbar">
       <h1 class="page-titulo">Arquivos da Liga</h1>
       <div class="topbar-acoes">
-        <a href="/arquivos?lixeira=1" class="btn btn-sm" style="color:#dc2626">Lixeira (<%=lixeiraCount%>)</a>
+        <a href="/arquivos?lixeira=1" class="btn-topbar verm">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+          Lixeira (<%=lixeiraCount%>)
+        </a>
         <%if(usuario.perfil==="admin"){%>
-        <a href="/google/auth" class="btn btn-sm" style="background:#4285f4;color:white">Conectar Google Drive</a>
+        <a href="/google/auth" class="btn-topbar google">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Conectar Google Drive
+        </a>
         <%}%>
-        <button class="btn btn-sm" onclick="abrirModal('modal-google')">Link Google</button>
-        <button class="btn btn-sm" onclick="abrirModal('modal-pasta')">+ Nova pasta</button>
-        <button class="btn btn-sm btn-primario" onclick="document.getElementById('input-upload').click()">&#8679; Upload</button>
+        <button class="btn-topbar google" onclick="abrirModal('modal-google')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+          Link Google
+        </button>
+        <button class="btn-topbar" onclick="abrirModal('modal-pasta')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>
+          Nova pasta
+        </button>
+        <button class="btn-topbar primario" onclick="document.getElementById('input-upload').click()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          Upload
+        </button>
       </div>
     </div>
     <div class="content" style="padding:0">
@@ -289,35 +318,29 @@
 
 <!-- Modal Nova Pasta -->
 <div class="modal-overlay" id="modal-pasta" style="display:none">
-  <div class="modal">
+  <div class="modal" style="max-width:520px">
     <div class="modal-header">
-      <span class="modal-titulo" id="titulo-modal-pasta">📁 Nova Pasta</span>
-      <button class="icon-btn" onclick="fecharModal('modal-pasta')">✕</button>
+      <span class="modal-titulo" id="titulo-modal-pasta">Nova Pasta</span>
+      <button class="icon-btn" onclick="fecharModal('modal-pasta')">&#x2715;</button>
     </div>
     <form id="form-pasta" action="/arquivos/pasta" method="POST">
       <input type="hidden" name="pasta_pai_id" id="pasta-pai-id" value="<%= pastaAtual ? pastaAtual.id : '' %>">
       <input type="hidden" name="pasta_edit_id" id="pasta-edit-id" value="">
-      <div style="display:flex;flex-direction:column;gap:14px">
+      <input type="hidden" name="icone" id="icone-selecionado" value="">
+      <input type="hidden" name="cor" id="cor-selecionada" value="">
+      <div style="display:flex;flex-direction:column;gap:16px">
         <div class="campo"><label class="label">Nome da pasta *</label><input name="nome" id="input-pasta-nome" class="input" required placeholder="Ex: Contratos 2026"></div>
         <div class="campo">
-          <label class="label">Ícone</label>
-          <div style="display:flex;gap:6px;flex-wrap:wrap" id="icones-grid">
-            <% ['📁','📂','📄','📝','📊','📑','🖼️','🎬','📣','🔬','🌐','📋','👥','🏛️','⚖️','💰','📆','🔒','📬','🎓','🏥','💊','🔑','📌','⭐','🏆','💡','🔧','📎','🗂️'].forEach(ic => { %>
-            <label style="cursor:pointer;padding:6px;border:1.5px solid var(--borda);border-radius:8px;font-size:20px;transition:all 0.15s" class="icone-opt">
-              <input type="radio" name="icone" value="<%= ic %>" style="display:none"> <%= ic %>
-            </label>
-            <% }) %>
-          </div>
+          <label class="label">Icone da pasta</label>
+          <div class="icone-svg-grid" id="icones-grid"></div>
         </div>
         <div class="campo">
           <label class="label">Cor da pasta</label>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
-            <% ['#1a56db','#059669','#dc2626','#d97706','#8b5cf6','#0891b2','#db2777','#0f766e','#92400e','#1e3a5f','#374151','#000000'].forEach(cor => { %>
-            <label style="cursor:pointer" class="cor-opt">
-              <input type="radio" name="cor" value="<%= cor %>" style="display:none">
-              <div style="width:28px;height:28px;border-radius:50%;background:<%= cor %>;border:2px solid transparent;transition:border 0.15s" class="cor-circle"></div>
-            </label>
-            <% }) %>
+          <div style="display:flex;gap:8px;flex-wrap:wrap" id="cores-grid">
+            <%['#1a56db','#059669','#dc2626','#d97706','#8b5cf6','#0891b2','#db2777','#0f766e','#374151','#000000'].forEach(cor=>{%>
+            <div class="cor-dot" data-cor="<%=cor%>" onclick="selecionarCor('<%=cor%>')"
+              style="width:28px;height:28px;border-radius:50%;background:<%=cor%>;border:3px solid transparent;cursor:pointer;transition:all .15s;box-sizing:border-box"></div>
+            <%})%>
           </div>
         </div>
       </div>
@@ -390,13 +413,13 @@
 
 <!-- Modal Google Drive -->
 <div class="modal-overlay" id="modal-google" style="display:none">
-  <div class="modal">
+  <div class="modal" style="max-width:480px">
     <div class="modal-header">
-      <span class="modal-titulo">🔗 Adicionar Link Google</span>
-      <button class="icon-btn" onclick="fecharModal('modal-google')">✕</button>
+      <span class="modal-titulo">Link Google Drive</span>
+      <button class="icon-btn" onclick="fecharModal('modal-google')">&#x2715;</button>
     </div>
     <form action="/arquivos/google" method="POST">
-      <input type="hidden" name="pasta_id" value="<%= pastaAtual ? pastaAtual.id : '' %>">
+      <input type="hidden" name="pasta_id" value="<%=pastaAtual?pastaAtual.id:''%>">
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="campo">
           <label class="label">Nome *</label>
@@ -405,12 +428,15 @@
         <div class="campo">
           <label class="label">Link do Google Drive *</label>
           <input name="google_url" class="input" required placeholder="https://docs.google.com/...">
-          <span style="font-size:11px;color:var(--texto2)">Cole o link de compartilhamento do Google Docs, Sheets, Slides ou Drive</span>
+          <span style="font-size:11px;color:var(--texto2);margin-top:4px;display:block">Cole o link de compartilhamento do Google Docs, Sheets, Slides ou Drive</span>
+        </div>
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 14px;font-size:12px;color:#166534">
+          O arquivo aparecera como link incorporado e podera ser visualizado direto no sistema.
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-google')">Cancelar</button>
-        <button type="submit" class="btn btn-primario" style="background:#4285f4">🔗 Adicionar</button>
+        <button type="submit" class="btn btn-primario" style="background:#4285f4;border-color:#4285f4">Adicionar link</button>
       </div>
     </form>
   </div>
@@ -419,6 +445,42 @@
 <script src="/js/app.js"></script>
 <script>
 const pastaAtualId = <%= pastaAtual ? pastaAtual.id : 'null' %>;
+const iconesCat = [
+  {id:'pasta',    label:'Pasta',     svg:'<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'},
+  {id:'doc',      label:'Documento', svg:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>'},
+  {id:'grafico',  label:'Grafico',   svg:'<line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/>'},
+  {id:'imagem',   label:'Imagens',   svg:'<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>'},
+  {id:'contrato', label:'Contrato',  svg:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>'},
+  {id:'financas', label:'Financas',  svg:'<line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>'},
+  {id:'pessoas',  label:'Pessoas',   svg:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>'},
+  {id:'juridico', label:'Juridico',  svg:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'},
+  {id:'email',    label:'Email',     svg:'<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/>'},
+  {id:'config',   label:'Config',    svg:'<circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>'},
+  {id:'arquivo',  label:'Arquivo',   svg:'<polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/>'},
+];
+function renderIconesGrid(sel) {
+  const g = document.getElementById('icones-grid');
+  if (!g) return;
+  g.innerHTML = iconesCat.map(ic => {
+    const s = sel === ic.id;
+    return '<div class="icone-svg-opt' + (s?' selecionado':'') + '" onclick="selecionarIcone(\'' + ic.id + '\')" data-id="' + ic.id + '">'
+      + '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">' + ic.svg + '</svg>'
+      + '<span>' + ic.label + '</span></div>';
+  }).join('');
+}
+
+function selecionarIcone(id) {
+  document.getElementById('icone-selecionado').value = id;
+  document.querySelectorAll('.icone-svg-opt').forEach(el => el.classList.remove('selecionado'));
+  document.querySelector('.icone-svg-opt[data-id="' + id + '"]')?.classList.add('selecionado');
+}
+function selecionarCor(cor) {
+  document.getElementById('cor-selecionada').value = cor;
+  document.querySelectorAll('.cor-dot').forEach(el => {
+    el.style.border = el.dataset.cor === cor ? '3px solid #111' : '3px solid transparent';
+  });
+}
+
 const arquivosData = <%- JSON.stringify(arquivos) %>;
 const todasPastasData = <%- JSON.stringify(todasPastas) %>;
 let _moverTipo = null, _moverId = null, _renomearId = null;
@@ -624,6 +686,10 @@ document.querySelectorAll('.cor-opt input').forEach(i => {
     document.querySelectorAll('.cor-opt .cor-circle').forEach(c => c.style.border = '2px solid transparent');
     i.nextElementSibling.style.border = '3px solid #000';
   });
+});
+
+document.addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('[onclick*="modal-pasta"]').forEach(b=>b.addEventListener('click',()=>setTimeout(()=>renderIconesGrid(''),50)));
 });
 </script>
 </body>
