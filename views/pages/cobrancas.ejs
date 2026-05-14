@@ -195,7 +195,7 @@
           </button>
         </form>
         <button class="btn btn-sm" onclick="abrirModal('modal-nova')">+ Nova cobrança</button>
-        <button class="btn btn-sm" onclick="gerarRelatorioPDF()" style="background:#374151;color:white">
+        <button class="btn btn-sm" onclick="abrirModal('modal-relatorio')" style="background:#374151;color:white">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             Relatório PDF
           </button>
@@ -484,34 +484,61 @@ function copiarPix() {
 }
 
 function gerarRelatorioPDF() {
-  const filtroAtual = new URLSearchParams(window.location.search).get('filtro') || 'todas';
+  fecharModal('modal-relatorio');
   const w = window.open('', '_blank');
-  const rows = [...document.querySelectorAll('.cob-row')].filter(r => r.style.display !== 'none');
+  const statusFiltro = document.getElementById('rel-status').value;
+  const nomeF = (document.getElementById('rel-nome').value||'').toLowerCase().trim();
+  const dataIni = document.getElementById('rel-data-ini').value;
+  const dataFim = document.getElementById('rel-data-fim').value;
+  const colRef    = document.getElementById('rel-col-ref').checked;
+  const colVenc   = document.getElementById('rel-col-venc').checked;
+  const colTaxa   = document.getElementById('rel-col-taxa').checked;
+  const colStatus = document.getElementById('rel-col-status').checked;
+  const fLabel = {todas:'Todas',pago:'Pagas',pendente:'Pendentes',atrasado:'Atrasadas'}[statusFiltro]||'Todas';
+  const todas = <%- JSON.stringify(cobrancas) %>;
+  const rows = todas.filter(c => {
+    if (statusFiltro !== 'todas' && c.status !== statusFiltro) return false;
+    if (nomeF && !c.nome.toLowerCase().includes(nomeF)) return false;
+    if (dataIni && c.data_vencimento < dataIni) return false;
+    if (dataFim && c.data_vencimento > dataFim) return false;
+    return true;
+  });
   const orgNome = '<%= config.org_nome || "LAURO" %>';
   const corP = '<%= config.org_cor || "#1a56db" %>';
   const orgLogo = '<%= config.org_logo || "" %>';
-  const fLabel = {todas:'Todas',pagas:'Pagas',pendentes:'Pendentes',atrasadas:'Atrasadas'}[filtroAtual]||'Todas';
   const logoH = orgLogo ? `<img src="${orgLogo}" style="max-height:48px;max-width:160px;object-fit:contain">` : `<span style="font-size:18px;font-weight:800;color:white">${orgNome}</span>`;
   let tBruto=0, tTaxa=0, tLiq=0;
   const linhas = rows.map(r => {
-    const tds = r.querySelectorAll('td');
-    const nome = tds[0]?.querySelector('.membro-nome')?.textContent?.trim()||'';
-    const ref  = tds[1]?.textContent?.trim()||'';
-    const venc = tds[2]?.textContent?.trim()||'';
-    const desc = tds[4]?.textContent?.trim()||'';
-    const status = tds[7]?.textContent?.trim()||'';
-    const vD = parseFloat(desc.replace('R$ ','').replace(',','.'))||0;
+    const vD = Number(r.valor_desconto)||0;
     const vT = vD*0.0099; const vL = vD-vT;
     tBruto+=vD; tTaxa+=vT; tLiq+=vL;
-    const bg = status.includes('Pago')?'#dcfce7':status.includes('Atras')?'#fee2e2':'#fef3c7';
-    const ct = status.includes('Pago')?'#166534':status.includes('Atras')?'#991b1b':'#92400e';
-    return `<tr><td>${nome}</td><td>${ref}</td><td>${venc}</td><td>R$ ${vD.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td style="color:#ef4444">R$ ${vT.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td style="color:#10b981;font-weight:700">R$ ${vL.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td><span style="background:${bg};color:${ct};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">${status}</span></td></tr>`;
+    const st = r.status;
+    const bg = st==='pago'?'#dcfce7':st==='atrasado'?'#fee2e2':'#fef3c7';
+    const ct = st==='pago'?'#166534':st==='atrasado'?'#991b1b':'#92400e';
+    const stLabel = st==='pago'?'Pago':st==='atrasado'?'Atrasado':'Pendente';
+    const venc = r.data_vencimento ? new Date(r.data_vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    let cols = `<td style="font-weight:600">${r.nome}</td>`;
+    if(colRef) cols += `<td>${r.referencia||'—'}</td>`;
+    if(colVenc) cols += `<td>${venc}</td>`;
+    cols += `<td>R$ ${vD.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>`;
+    if(colTaxa) cols += `<td style="color:#ef4444">R$ ${vT.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td style="color:#10b981;font-weight:700">R$ ${vL.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>`;
+    if(colStatus) cols += `<td><span style="background:${bg};color:${ct};padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700">${stLabel}</span></td>`;
+    return `<tr>${cols}</tr>`;
   }).join('');
   const css=`*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;color:#374151}@media print{.np{display:none}}.hdr{background:linear-gradient(135deg,${corP},${corP}cc);padding:28px 32px;display:flex;justify-content:space-between;align-items:center;color:white}.sts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:20px 32px;background:#f8fafc}.st{background:white;border-radius:8px;padding:14px;text-align:center;border:1px solid #e5e7eb}.stn{font-size:20px;font-weight:800}.stl{font-size:11px;color:#6b7280;font-weight:600;text-transform:uppercase;margin-top:4px}table{width:calc(100% - 64px);margin:16px 32px;border-collapse:collapse}th{background:${corP};color:white;padding:8px 10px;font-size:11px;text-align:left}td{padding:8px 10px;font-size:12px;border-bottom:1px solid #e5e7eb}.tr{background:#f8fafc;font-weight:700}.bp{position:fixed;bottom:20px;right:20px;padding:12px 24px;background:${corP};color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:600}`;
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${css}</style></head><body>`
     +`<div class="hdr">${logoH}<div style="text-align:right"><div style="font-size:18px;font-weight:800">Relatorio de Cobrancas</div><div style="font-size:13px;opacity:.85">Filtro: ${fLabel} &middot; ${new Date().toLocaleDateString('pt-BR')}</div></div></div>`
     +`<div class="sts"><div class="st"><div class="stn" style="color:${corP}">R$ ${tBruto.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="stl">Receita bruta</div></div><div class="st"><div class="stn" style="color:#ef4444">R$ ${tTaxa.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="stl">Taxas (0,99%)</div></div><div class="st"><div class="stn" style="color:#10b981">R$ ${tLiq.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="stl">Receita liquida</div></div></div>`
-    +`<table><thead><tr><th>Membro</th><th>Referencia</th><th>Vencimento</th><th>Bruto</th><th>Taxa</th><th>Liquido</th><th>Status</th></tr></thead><tbody>${linhas}<tr class="tr"><td colspan="3">TOTAL (${rows.length})</td><td>R$ ${tBruto.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td style="color:#ef4444">R$ ${tTaxa.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td style="color:#10b981">R$ ${tLiq.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td></td></tr></tbody></table>`
+    +(() => {
+    let th = '<th>Membro</th>';
+    if(colRef) th+='<th>Referencia</th>';
+    if(colVenc) th+='<th>Vencimento</th>';
+    th+='<th>Bruto</th>';
+    if(colTaxa) th+='<th>Taxa</th><th>Liquido</th>';
+    if(colStatus) th+='<th>Status</th>';
+    let totCols = 1+(colRef?1:0)+(colVenc?1:0)+1+(colTaxa?2:0)+(colStatus?1:0);
+    return `<table><thead><tr>${th}</tr></thead><tbody>${linhas}<tr class="tr"><td colspan="${totCols-3}">TOTAL (${rows.length})</td><td>R$ ${tBruto.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>${colTaxa?`<td style="color:#ef4444">R$ ${tTaxa.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td style="color:#10b981">R$ ${tLiq.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>`:''}</tr></tbody></table>`;
+  })()
     +`<button class="bp np" onclick="window.print()">Imprimir / Salvar PDF</button><script>window.onload=()=>window.print();<\/script></body></html>`;
   w.document.write(html); w.document.close();
 }
