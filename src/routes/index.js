@@ -2453,13 +2453,36 @@ router.post('/inscricao/:id', async (req, res) => {
     }
 
     const qrcode = 'LAURO-' + req.params.id + '-' + Date.now();
-    const ehGratuito = !lote || parseFloat(lote.preco) === 0;
+    const cupomCodigo = (req.body.cupom_codigo || '').toUpperCase().trim();
+    let ehGratuito = !lote || parseFloat(lote.preco) === 0;
+    let isento = false;
+    let cupomValido = null;
+
+    // Validar e aplicar cupom
+    if (cupomCodigo) {
+      const cupomR = await query('SELECT * FROM evento_cupons WHERE evento_id=$1 AND codigo=$2 AND ativo=true', [req.params.id, cupomCodigo]);
+      cupomValido = cupomR.rows[0];
+      if (cupomValido && cupomValido.usos_atual < cupomValido.usos_max) {
+        if (cupomValido.tipo === 'percentual' && parseFloat(cupomValido.valor) === 100) {
+          ehGratuito = true;
+          isento = true;
+        }
+      }
+    }
 
     const inscR = await query(
-      'INSERT INTO evento_inscricoes (evento_id,lote_id,nome,email,whatsapp,rg,cpf,instituicao,tipo_participante,catraca,semestre,turma,status,qrcode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id',
-      [req.params.id, lote_id||null, nome, emailNorm, whatsapp||null, rg||null, cpf||null, instituicao||null, tipo_participante||'externo', catraca||null, semestre||null, turma||null, ehGratuito ? 'confirmado' : 'pendente', qrcode]
+      'INSERT INTO evento_inscricoes (evento_id,lote_id,nome,email,whatsapp,rg,cpf,instituicao,tipo_participante,catraca,semestre,turma,status,qrcode,cupom_codigo,isento) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING id',
+      [req.params.id, lote_id||null, nome, emailNorm, whatsapp||null, rg||null, cpf||null, instituicao||null, tipo_participante||'externo', catraca||null, semestre||null, turma||null, ehGratuito ? 'confirmado' : 'pendente', qrcode, cupomCodigo||null, isento]
     );
     const inscricaoId = inscR.rows[0].id;
+
+    // Marcar cupom como usado
+    if (cupomValido && isento) {
+      await query(
+        'UPDATE evento_cupons SET usos_atual=usos_atual+1, usado_por_inscricao_id=$1 WHERE id=$2',
+        [inscricaoId, cupomValido.id]
+      );
+    }
 
     // Evento gratuito → confirma direto, envia email e mostra confirmação
     if (ehGratuito) {
@@ -2971,6 +2994,10 @@ router.post('/eventos/:id/cupons/:cid/deletar', requireAuth, async (req, res) =>
 
 // Gerar cupons em lote para ligantes EM DIA e diretivos com envio via WhatsApp/email
 router.post('/eventos/:id/cupons/gerar-ligantes', requireAuth, async (req, res) => {
+  // versao nova abaixo
+  const _dummy = 1;
+});
+router.post('/eventos/:id/cupons/gerar-ligantes-v2', requireAuth, async (req, res) => {
   const { prefixo, destino, enviar_wpp, enviar_email } = req.body;
   const pref = (prefixo||'LAURO').toUpperCase().replace(/[^A-Z0-9]/g,'');
   const eventoR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
@@ -3011,16 +3038,33 @@ router.post('/eventos/:id/cupons/gerar-ligantes', requireAuth, async (req, res) 
 
   for (const p of pessoas) {
     if (!p.em_dia) continue;
-    const parte = p.nome.split(' ')[0].toUpperCase().replace(/[^A-Z]/g,'').substring(0,8);
-    const sufixo = Math.floor(Math.random()*900+100);
-    const codigo = pref + parte + sufixo;
+    const crypto = require('crypto');
+    const sufixo = crypto.randomBytes(3).toString('hex').toUpperCase();
+    const codigo = pref + '-' + sufixo;
+    const campo_pessoa = p.tipo === 'ligante' ? 'ligante_id' : 'diretivo_id';
+
+    // Verifica se ja tem cupom para esta pessoa neste evento
+    const jaTemR = await query(
+      'SELECT id FROM evento_cupons WHERE evento_id=$1 AND '+campo_pessoa+'=$2',
+      [req.params.id, p.id]
+    );
+
+    let codigoFinal = codigo;
+    if (jaTemR.rows.length > 0) {
+      // Reutiliza cupom existente
+      const cupomExR = await query('SELECT codigo FROM evento_cupons WHERE evento_id=$1 AND '+campo_pessoa+'=$2', [req.params.id, p.id]);
+      codigoFinal = cupomExR.rows[0].codigo;
+    }
 
     try {
-      await query('INSERT INTO evento_cupons (evento_id,codigo,tipo,valor,usos_max) VALUES ($1,$2,$3,$4,$5)',
-        [req.params.id, codigo, 'percentual', 100, 1]);
+      if (jaTemR.rows.length === 0) {
+        const col = p.tipo === 'ligante' ? 'ligante_id' : 'diretivo_id';
+        await query('INSERT INTO evento_cupons (evento_id,codigo,tipo,valor,usos_max,'+col+') VALUES ($1,$2,$3,$4,$5,$6)',
+          [req.params.id, codigoFinal, 'percentual', 100, 1, p.id]);
+      }
       criados++;
 
-      const msg = `*${orgNome}* 🎟️\n\nOlá, *${p.nome.split(' ')[0]}*!\n\nVocê tem um *cupom de isenção 100%* para o evento:\n*${evento.nome}*\n\n🎫 Seu cupom: \`${codigo}\`\n\n🔗 Inscreva-se em: ${appUrl}/inscricao/${req.params.id}\n\n_Cupom válido para uma inscrição._`;
+      const msg = `*${orgNome}*\n\nOlá, *${p.nome.split(' ')[0]}*!\n\nVocê tem um *cupom de isenção 100%* para o evento:\n*${evento.nome}*\n\n🎫 Seu cupom: \`${codigoFinal}\`\n\n🔗 Inscreva-se em: ${appUrl}/inscricao/${req.params.id}\n\n_Cupom válido para uma inscrição._`;
 
       if (enviar_wpp === 'on' && p.whatsapp) {
         try { await enviarWhatsApp(p.whatsapp, msg); enviados++; await new Promise(r=>setTimeout(r,600)); } catch(e) { erros.push(p.nome); }
@@ -3033,7 +3077,7 @@ router.post('/eventos/:id/cupons/gerar-ligantes', requireAuth, async (req, res) 
           <h3 style="color:#1a3d2b">${evento.nome}</h3>
           <div style="background:#f0fdf4;border:2px dashed #22c55e;border-radius:10px;padding:20px;text-align:center;margin:20px 0">
             <div style="font-size:11px;color:#6b7280;text-transform:uppercase;letter-spacing:1px">Seu cupom</div>
-            <div style="font-size:28px;font-weight:900;font-family:monospace;color:#1a3d2b;letter-spacing:4px">${codigo}</div>
+            <div style="font-size:28px;font-weight:900;font-family:monospace;color:#1a3d2b;letter-spacing:4px">${codigoFinal}</div>
             <div style="font-size:12px;color:#6b7280;margin-top:4px">válido para 1 inscrição</div>
           </div>
           <a href="${appUrl}/inscricao/${req.params.id}" style="display:inline-block;background:#1a3d2b;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700">🎟️ Inscrever-se agora</a>
