@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Avaliação — <%= aval.evento_nome %></title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc; color: #374151; min-height: 100vh; }
+
+    .header {
+      background: linear-gradient(135deg, #1a56db, #1e3a8a);
+      padding: 28px 20px;
+      text-align: center;
+      color: white;
+    }
+    .header img { max-height: 56px; max-width: 180px; object-fit: contain; margin-bottom: 12px; display: block; margin: 0 auto 12px; }
+    .header h1 { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .header p { font-size: 14px; opacity: .85; }
+
+    .container { max-width: 620px; margin: 0 auto; padding: 24px 16px 48px; }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.06);
+      margin-bottom: 16px;
+    }
+    .card-titulo {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-titulo span {
+      background: #1a56db;
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .estrelas { display: flex; gap: 8px; flex-wrap: wrap; }
+    .estrela-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+    .estrela-btn input { display: none; }
+    .estrela-btn svg { width: 36px; height: 36px; fill: #e5e7eb; transition: fill .15s; }
+    .estrela-btn input:checked ~ svg { fill: #f59e0b; }
+    .estrela-btn:hover svg { fill: #fbbf24; }
+    .estrela-label { font-size: 10px; color: #9ca3af; font-weight: 600; }
+
+    .radio-group { display: flex; gap: 10px; flex-wrap: wrap; }
+    .radio-btn { position: relative; }
+    .radio-btn input { display: none; }
+    .radio-btn label {
+      padding: 10px 20px;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      color: #6b7280;
+      transition: all .15s;
+      display: block;
+    }
+    .radio-btn input:checked + label {
+      border-color: #1a56db;
+      background: #eff6ff;
+      color: #1a56db;
+    }
+
+    textarea, .campo-texto {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      resize: vertical;
+      color: #374151;
+      transition: border-color .15s;
+    }
+    textarea:focus, .campo-texto:focus {
+      outline: none;
+      border-color: #1a56db;
+    }
+
+    .btn-enviar {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #1a56db, #1e3a8a);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity .15s;
+      margin-top: 8px;
+    }
+    .btn-enviar:hover { opacity: .9; }
+
+    .intro-box {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+      font-size: 14px;
+      color: #1e40af;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <% if (config.org_logo) { %>
+  <img src="<%= config.org_logo %>" alt="<%= config.org_nome %>">
+  <% } %>
+  <h1>Pesquisa de satisfação</h1>
+  <p><%= aval.evento_nome %></p>
+</div>
+
+<div class="container">
+  <div class="intro-box">
+    Olá, <strong><%= aval.participante ? aval.participante.split(' ')[0] : 'participante' %></strong>!
+    Sua opinião é muito importante para continuarmos melhorando nossos eventos.
+    Responda as perguntas abaixo — leva menos de 2 minutos!
+  </div>
+
+  <form action="/avaliacao/<%= token %>" method="POST">
+
+    <!-- NOTA GERAL -->
+    <div class="card">
+      <div class="card-titulo"><span>1</span> Nota geral do evento</div>
+      <div class="estrelas">
+        <% for (let i = 1; i <= 5; i++) { %>
+        <label class="estrela-btn">
+          <input type="radio" name="nota_geral" value="<%= i %>" required>
+          <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+          <span class="estrela-label"><%= i %></span>
+        </label>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- NOTA CONTEUDO -->
+    <div class="card">
+      <div class="card-titulo"><span>2</span> Qualidade do conteúdo</div>
+      <div class="estrelas">
+        <% for (let i = 1; i <= 5; i++) { %>
+        <label class="estrela-btn">
+          <input type="radio" name="nota_conteudo" value="<%= i %>" required>
+          <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+          <span class="estrela-label"><%= i %></span>
+        </label>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- NOTA ORGANIZACAO -->
+    <div class="card">
+      <div class="card-titulo"><span>3</span> Organização do evento</div>
+      <div class="estrelas">
+        <% for (let i = 1; i <= 5; i++) { %>
+        <label class="estrela-btn">
+          <input type="radio" name="nota_organizacao" value="<%= i %>" required>
+          <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+          <span class="estrela-label"><%= i %></span>
+        </label>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- NOTA PALESTRANTES -->
+    <div class="card">
+      <div class="card-titulo"><span>4</span> Palestrantes / apresentadores</div>
+      <div class="estrelas">
+        <% for (let i = 1; i <= 5; i++) { %>
+        <label class="estrela-btn">
+          <input type="radio" name="nota_palestrantes" value="<%= i %>" required>
+          <svg viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
+          <span class="estrela-label"><%= i %></span>
+        </label>
+        <% } %>
+      </div>
+    </div>
+
+    <!-- INDICARIA -->
+    <div class="card">
+      <div class="card-titulo"><span>5</span> Indicaria este evento para um amigo?</div>
+      <div class="radio-group">
+        <div class="radio-btn">
+          <input type="radio" name="indicaria" id="ind-sim" value="sim" required>
+          <label for="ind-sim">Sim</label>
+        </div>
+        <div class="radio-btn">
+          <input type="radio" name="indicaria" id="ind-nao" value="nao">
+          <label for="ind-nao">Não</label>
+        </div>
+        <div class="radio-btn">
+          <input type="radio" name="indicaria" id="ind-talvez" value="talvez">
+          <label for="ind-talvez">Talvez</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- GOSTOU -->
+    <div class="card">
+      <div class="card-titulo"><span>6</span> O que você mais gostou?</div>
+      <textarea name="gostou" rows="4" placeholder="Conte o que foi mais positivo no evento..."></textarea>
+    </div>
+
+    <!-- MELHORAR -->
+    <div class="card">
+      <div class="card-titulo"><span>7</span> O que pode melhorar?</div>
+      <textarea name="melhorar" rows="4" placeholder="Suas críticas construtivas nos ajudam a melhorar..."></textarea>
+    </div>
+
+    <!-- SUGESTOES -->
+    <div class="card">
+      <div class="card-titulo"><span>8</span> Sugestões para próximos eventos</div>
+      <textarea name="sugestoes" rows="4" placeholder="Temas, formatos, palestrantes que gostaria de ver..."></textarea>
+    </div>
+
+    <button type="submit" class="btn-enviar">Enviar avaliação</button>
+  </form>
+</div>
+
+<script>
+// Efeito visual nas estrelas
+document.querySelectorAll('.estrelas').forEach(grupo => {
+  const btns = grupo.querySelectorAll('.estrela-btn');
+  btns.forEach((btn, idx) => {
+    btn.addEventListener('mouseover', () => {
+      btns.forEach((b, i) => {
+        b.querySelector('svg').style.fill = i <= idx ? '#fbbf24' : '#e5e7eb';
+      });
+    });
+    btn.addEventListener('mouseout', () => {
+      const checked = grupo.querySelector('input:checked');
+      const checkedIdx = checked ? parseInt(checked.value) - 1 : -1;
+      btns.forEach((b, i) => {
+        b.querySelector('svg').style.fill = i <= checkedIdx ? '#f59e0b' : '#e5e7eb';
+      });
+    });
+    btn.querySelector('input').addEventListener('change', () => {
+      btns.forEach((b, i) => {
+        b.querySelector('svg').style.fill = i <= idx ? '#f59e0b' : '#e5e7eb';
+      });
+    });
+  });
+});
+</script>
+</body>
+</html>
