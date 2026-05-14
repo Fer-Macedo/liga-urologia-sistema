@@ -1275,6 +1275,58 @@ router.get('/certificado/validar/:codigo', async (req, res) => {
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
+// ─── AVALIACAO POS-EVENTO ────────────────────────────────────────────────────
+router.post('/eventos/:id/enviar-avaliacao', requireAuth, async (req, res) => {
+  try {
+    const crypto = require('crypto');
+    const {enviarWhatsApp} = require('../services/notificacoes');
+    const config = await getConfig();
+    const appUrl = process.env.APP_URL||'https://liga-urologia.onrender.com';
+    const evR = await query('SELECT * FROM eventos WHERE id=$1',[req.params.id]);
+    const ev = evR.rows[0];
+    if (!ev) return res.json({ok:false,msg:'Evento nao encontrado'});
+    const inscrR = await query("SELECT * FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado'",[req.params.id]);
+    let enviados = 0;
+    for (const insc of inscrR.rows) {
+      const token = crypto.randomBytes(20).toString('hex');
+      await query('INSERT INTO evento_avaliacoes (evento_id,inscricao_id,token) VALUES ($1,$2,$3) ON CONFLICT (token) DO NOTHING',[ev.id,insc.id,token]);
+      const link = appUrl+'/avaliacao/'+token;
+      const msg = (config.org_nome||'LAURO')+'\n\nOla, *'+insc.nome.split(' ')[0]+'*!\n\nObrigado por participar de *'+ev.nome+'*!\n\nResponda nossa pesquisa rapida:\n'+link+'\n\nLeva menos de 2 minutos!';
+      if (insc.whatsapp) { try { await enviarWhatsApp(insc.whatsapp,msg); enviados++; await new Promise(r=>setTimeout(r,400)); } catch(e){} }
+    }
+    res.json({ok:true,msg:enviados+' pesquisas enviadas!'});
+  } catch(e) { res.json({ok:false,msg:e.message}); }
+});
+router.get('/avaliacao/:token', async (req, res) => {
+  try {
+    const r = await query('SELECT a.*, e.nome as evento_nome, e.data_inicio, i.nome as participante FROM evento_avaliacoes a JOIN eventos e ON e.id=a.evento_id LEFT JOIN evento_inscricoes i ON i.id=a.inscricao_id WHERE a.token=$1',[req.params.token]);
+    if (!r.rows[0]) return res.status(404).send('Link invalido ou expirado.');
+    const aval = r.rows[0];
+    const config = await getConfig();
+    if (aval.respondido) return res.render('pages/avaliacao-respondida',{config,aval});
+    res.render('pages/avaliacao-form',{config,aval,token:req.params.token});
+  } catch(e) { res.status(500).send('Erro: '+e.message); }
+});
+router.post('/avaliacao/:token', async (req, res) => {
+  try {
+    const {nota_geral,nota_conteudo,nota_organizacao,nota_palestrantes,indicaria,gostou,melhorar,sugestoes} = req.body;
+    await query(
+      'UPDATE evento_avaliacoes SET nota_geral=$1,nota_conteudo=$2,nota_organizacao=$3,nota_palestrantes=$4,indicaria=$5,gostou=$6,melhorar=$7,sugestoes=$8,respondido=true,respondido_em=NOW() WHERE token=$9',
+      [parseInt(nota_geral)||null,parseInt(nota_conteudo)||null,parseInt(nota_organizacao)||null,parseInt(nota_palestrantes)||null,indicaria||null,gostou||null,melhorar||null,sugestoes||null,req.params.token]
+    );
+    const config = await getConfig();
+    res.render('pages/avaliacao-obrigado',{config});
+  } catch(e) { res.status(500).send('Erro: '+e.message); }
+});
+router.get('/eventos/:id/avaliacoes', requireAuth, async (req, res) => {
+  try {
+    const config = await getConfig();
+    const evR = await query('SELECT * FROM eventos WHERE id=$1',[req.params.id]);
+    const av = await query('SELECT a.*, i.nome as participante FROM evento_avaliacoes a LEFT JOIN evento_inscricoes i ON i.id=a.inscricao_id WHERE a.evento_id=$1 ORDER BY a.respondido_em DESC',[req.params.id]);
+    res.render('pages/evento-avaliacoes',{config,evento:evR.rows[0],avaliacoes:av.rows,usuario:req.session.usuario});
+  } catch(e) { res.status(500).send('Erro: '+e.message); }
+});
+
 // ─── LISTA DE ESPERA ─────────────────────────────────────────────────────────
 router.post('/inscricao/:id/lista-espera', async (req, res) => {
   try {
