@@ -231,9 +231,8 @@ const ultimoPingStr = '<%= presenca.ultimo_ping ? new Date(presenca.ultimo_ping)
 const wapiNum = '<%= config.wapi_numero || "" %>';
 
 let online = true;
-let segundosSessao = 0;        // tempo desta sessao (resetado a cada acesso)
-let segundosAcumulados = segundosIniciais; // historico anterior salvo no banco
-let pingCount = 0;
+let segundosSessao = 0;
+let segundosAcumulados = segundosIniciais; // total salvo no banco ao entrar
 
 function fmt(seg) {
   seg = Math.max(0, Math.round(seg));
@@ -241,9 +240,7 @@ function fmt(seg) {
 }
 
 function atualizarUI() {
-  // Sessao: apenas o tempo desta conexao atual
   document.getElementById('tempo-sessao').textContent = fmt(segundosSessao);
-  // Total: historico do banco + tempo desta sessao
   document.getElementById('tempo-total').textContent = fmt(segundosAcumulados + segundosSessao);
 }
 
@@ -258,28 +255,30 @@ function validarAcesso() {
   document.getElementById('main-content').style.display = 'grid';
   document.getElementById('nome-exibido').textContent = nomeInscrito.split(' ')[0];
 
-  // Mostrar horario do ultimo login (ultimo_ping do banco)
+  // Ultimo acesso = ultimo_ping do banco (sessao anterior)
   document.getElementById('primeiro-acesso').textContent = ultimoPingStr || primeiroAcessoStr || '—';
 
-  // Contador local — so conta tempo desta sessao
+  // Contador local a cada segundo
   setInterval(() => {
-    if (online) {
-      segundosSessao++;
-      atualizarUI();
-    }
+    if (online) { segundosSessao++; atualizarUI(); }
   }, 1000);
 
-  // Ping a cada 2 min — confirma presenca no banco
+  // Ping a cada 2 min — sincroniza total com banco
   setInterval(() => {
     if (online) {
-      pingCount++;
       fetch('/live/'+token+'/ping', {method:'POST'})
         .then(r=>r.json())
         .then(d=>{
-          if (d.ok) {
-            // Banco confirmou 120s — move da sessao para acumulado
-            segundosAcumulados += 120;
-            segundosSessao = Math.max(0, segundosSessao - 120);
+          if (d.ok && d.total !== undefined) {
+            // total do banco ja inclui os 120s do ping atual
+            // recalcula: acumulado = total_banco - segundos_desta_sessao
+            segundosAcumulados = Math.max(0, d.total - segundosSessao);
+            // atualiza ultimo acesso com horario do ping
+            if (d.ultimoPing) {
+              const dt = new Date(d.ultimoPing);
+              document.getElementById('primeiro-acesso').textContent =
+                dt.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+            }
           }
         });
     }
