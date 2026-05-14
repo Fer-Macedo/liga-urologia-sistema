@@ -922,10 +922,9 @@ const l0=lotesData.find(x=>x.id==loteId);updRes(l0);
 window.addEventListener('DOMContentLoaded', () => {
   const input = document.getElementById('cupom-in');
   if (input && input.value && input.value.trim()) {
-    setTimeout(() => aplicarCupom(), 600);
+    setTimeout(() => { document.getElementById('cupom-in').dispatchEvent(new Event('input')); aplicarCupom(); }, 1200);
   }
 });
-</script>
 </script>
 </body>
 </html>
