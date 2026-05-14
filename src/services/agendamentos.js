@@ -313,6 +313,43 @@ function iniciarAgendamentos() {
       try { await enviarFrequenciaMensal(); } catch(e) { console.error('Erro freq mensal:', e.message); }
     }
   }, { timezone: 'America/Sao_Paulo' });
+
+  // Sync MP a cada hora
+  cron.schedule('0 * * * *', async () => {
+    console.log('MP Sync: iniciando verificacao horaria...');
+    try { await sincronizarPagamentosMP(); } catch(e) { console.error('Erro MP sync:', e.message); }
+  }, { timezone: 'America/Sao_Paulo' });
+}
+
+async function sincronizarPagamentosMP() {
+  try {
+    const r = await query(
+      "SELECT id, referencia, mp_payment_id FROM cobrancas WHERE status='pendente' AND mp_payment_id IS NOT NULL AND mp_payment_id != '' AND mp_payment_id != 'undefined'"
+    );
+    if (r.rows.length === 0) return;
+    console.log('MP Sync: verificando', r.rows.length, 'pagamentos pendentes...');
+    let atualizados = 0;
+    for (const cob of r.rows) {
+      try {
+        const token = process.env.MP_ACCESS_TOKEN;
+        if (!token) break;
+        const resp = await fetch('https://api.mercadopago.com/v1/payments/' + cob.mp_payment_id, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await resp.json();
+        if (data.status === 'approved') {
+          await query(
+            "UPDATE cobrancas SET status='pago', data_pagamento=NOW() WHERE id=$1 AND status='pendente'",
+            [cob.id]
+          );
+          atualizados++;
+          console.log('MP Sync: pago confirmado -', cob.referencia);
+        }
+        await new Promise(r => setTimeout(r, 300));
+      } catch(e) { console.error('MP Sync erro:', cob.mp_payment_id, e.message); }
+    }
+    if (atualizados > 0) console.log('MP Sync: total atualizados:', atualizados);
+  } catch(e) { console.error('MP Sync geral erro:', e.message); }
 }
 
 module.exports = {
@@ -321,5 +358,6 @@ module.exports = {
   verificarPagamentos,
   logNotificacao,
   enviarFrequenciaMensal,
-  enviarNotificacoes
+  enviarNotificacoes,
+  sincronizarPagamentosMP
 };
