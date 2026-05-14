@@ -62,6 +62,11 @@
               <td>
                 <div class="btn-acoes">
                   <% if (c.status !== 'pago') { %>
+                    <form method="POST" action="/cobrancas/<%= c.id %>/confirmar" style="display:inline;margin:0" onsubmit="return confirm('Confirmar pagamento manual de <%= c.nome.split(\' \')[0] %>?')">
+                      <button type="submit" class="icon-btn" title="Confirmar pagamento manual" style="background:#dcfce7;color:#166534;border-color:#bbf7d0">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      </button>
+                    </form>
                     <% if (c.pix_qr_code || c.pix_qr_code_base64) { %>
                       <button class="icon-btn" title="Ver QR Code PIX"
                         onclick="abrirPix('<%= c.id %>', '<%= c.nome.split(' ')[0] %>', '<%= c.valor_desconto %>', '<%= (c.pix_qr_code_base64||'').substring(0,20) %>', `<%= c.pix_qr_code %>`)">

@@ -310,6 +310,15 @@ router.get('/cobrancas', requireAuth, requirePermissao('cobrancas'), async (req,
   res.render('pages/cobrancas', { config, usuario: req.session.usuario, cobrancas: r.rows, filtro, dayjs, msg: req.flash('msg'), erro: req.flash('erro') });
 });
 
+router.post('/cobrancas/:id/confirmar', requireAuth, requireFinanceiro, async (req, res) => {
+  try {
+    await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW() WHERE id=$1 AND status!='pago'", [req.params.id]);
+    req.session.msg = ['Pagamento confirmado manualmente!'];
+  } catch(e) { req.session.erro = ['Erro ao confirmar: '+e.message]; }
+  const ref = req.headers.referer || '/cobrancas';
+  res.redirect(ref);
+});
+
 router.post('/cobrancas/:id/pago', requireAuth, requireFinanceiro, async (req, res) => {
   await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW() WHERE id=$1", [req.params.id]);
   req.flash('msg', 'Pagamento registrado!');
