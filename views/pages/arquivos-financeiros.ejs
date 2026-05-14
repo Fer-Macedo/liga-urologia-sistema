@@ -6,28 +6,709 @@
   <link rel="stylesheet" href="/css/style.css">
   <style>
     :root { --cor-primaria: <%= config.org_cor || '#2b6803' %>; --cor-primaria-rgb: 43,104,3; }
+
+    /* ── Layout principal ── */
     .af-layout { display:grid; grid-template-columns:240px 1fr; gap:16px; height:calc(100vh - 148px); min-height:0; }
-    .af-sidebar { background:var(--card); border:1.5px solid var(--borda); border-radius:14px; padding:14px; overflow-y:auto; display:flex; flex-direction:column; gap:2px; }
-    .af-sidebar-titulo { font-size:11px; font-weight:700; color:var(--texto2); text-transform:uppercase; letter-spacing:.6px; padding:4px 8px 10px; border-bottom:1.5px solid var(--borda); margin-bottom:6px; }
-    .pasta-item { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:8px; cursor:pointer; font-size:13px; transition:all 0.15s; color:var(--texto); border:1.5px solid transparent; }
+
+    /* ── Sidebar de pastas ── */
+    .af-sidebar {
+      background:var(--card);
+      border:1.5px solid var(--borda);
+      border-radius:14px;
+      padding:14px;
+      overflow-y:auto;
+      display:flex;
+      flex-direction:column;
+      gap:2px;
+    }
+    .af-sidebar-titulo {
+      font-size:11px;
+      font-weight:700;
+      color:var(--texto2);
+      text-transform:uppercase;
+      letter-spacing:.6px;
+      padding:4px 8px 10px;
+      border-bottom:1.5px solid var(--borda);
+      margin-bottom:6px;
+    }
+    .pasta-item {
+      display:flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 10px;
+      border-radius:8px;
+      cursor:pointer;
+      font-size:13px;
+      transition:all 0.15s;
+      color:var(--texto);
+      border:1.5px solid transparent;
+    }
     .pasta-item:hover { background:var(--fundo); }
-    .pasta-item.ativa { background:rgba(var(--cor-primaria-rgb),.1); color:var(--cor-primaria); font-weight:600; border-color:rgba(var(--cor-primaria-rgb),.2); }
+    .pasta-item.ativa {
+      background:rgba(var(--cor-primaria-rgb),.1);
+      color:var(--cor-primaria);
+      font-weight:600;
+      border-color:rgba(var(--cor-primaria-rgb),.2);
+    }
     .pasta-item.sub { padding-left:26px; font-size:12px; }
-    .pasta-item.drag-over { background:#dcfce7; border-color:#16a34a; }
-    .pasta-del { margin-left:auto; font-size:11px; opacity:0; color:#ef4444; background:none; border:none; cursor:pointer; padding:0 2px; }
+    .pasta-item.drag-over { background:#dcfce7; border-color:#16a34a; border-radius:8px; }
+    .pasta-del { margin-left:auto; font-size:11px; opacity:0; color:#ef4444; background:none; border:none; cursor:pointer; padding:0 2px; line-height:1; }
     .pasta-item:hover .pasta-del { opacity:1; }
+
+    /* ── Área principal ── */
     .af-main { display:flex; flex-direction:column; gap:12px; min-height:0; overflow-y:auto; }
-    .af-topbar { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; background:var(--card); border:1.5px solid var(--borda); border-radius:12px; padding:12px 16px; }
+
+    /* ── Topbar interno ── */
+    .af-topbar {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+      background:var(--card);
+      border:1.5px solid var(--borda);
+      border-radius:12px;
+      padding:12px 16px;
+    }
+
+    /* ── Breadcrumb ── */
     .breadcrumb { display:flex; align-items:center; gap:6px; font-size:13px; flex-wrap:wrap; }
+    .breadcrumb .bc-sep { color:var(--texto2); }
     .breadcrumb a { color:var(--cor-primaria); cursor:pointer; font-weight:600; text-decoration:none; }
+    .breadcrumb a:hover { text-decoration:underline; }
     .bc-atual { color:var(--texto); font-weight:600; }
+
+    /* ── Stats cards ── */
     .af-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
-    .af-stat { background:var(--card); border:1.5px solid var(--borda); border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px; }
-    .af-stat-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+    .af-stat {
+      background:var(--card);
+      border:1.5px solid var(--borda);
+      border-radius:12px;
+      padding:14px 16px;
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+    .af-stat-icon {
+      width:40px; height:40px;
+      border-radius:10px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:18px;
+      flex-shrink:0;
+    }
     .af-stat-icon.verde { background:rgba(var(--cor-primaria-rgb),.12); color:var(--cor-primaria); }
     .af-stat-icon.azul  { background:#dbeafe; color:#1d4ed8; }
     .af-stat-icon.amber { background:#fef3c7; color:#b45309; }
     .af-stat-num { font-size:22px; font-weight:700; line-height:1; }
     .af-stat-label { font-size:12px; color:var(--texto2); margin-top:2px; }
-    .barra-selecao { display:none; background:#fef2f2; border:1.5px solid #fca5a5; border-radius:10px; padding:10px 16px; align-items:center; gap:12px; }
+
+    /* ── Barra de seleção ── */
+    .barra-selecao {
+      display:none;
+      background:#fef2f2;
+      border:1.5px solid #fca5a5;
+      border-radius:10px;
+      padding:10px 16px;
+      align-items:center;
+      gap:12px;
+    }
     .barra-selecao.visivel { display:flex; }
+
+    /* ── Grid de arquivos ── */
+    .arquivos-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(148px,1fr)); gap:12px; }
+    .arquivo-card {
+      background:var(--card);
+      border:1.5px solid var(--borda);
+      border-radius:12px;
+      padding:16px 12px 12px;
+      text-align:center;
+      cursor:pointer;
+      transition:all 0.18s;
+      position:relative;
+    }
+    .arquivo-card:hover {
+      border-color:var(--cor-primaria);
+      box-shadow:0 4px 16px rgba(var(--cor-primaria-rgb),.12);
+      transform:translateY(-2px);
+    }
+    .arquivo-card.selecionado { border-color:#ef4444; background:#fff5f5; }
+    .arquivo-card.dragging   { opacity:.4; transform:scale(.95); }
+    .arquivo-card.drag-over  { border-color:#16a34a; background:#f0fdf4; transform:scale(1.02); }
+    .arquivo-card[draggable] { cursor:grab; }
+    .arquivo-card[draggable]:active { cursor:grabbing; }
+
+    .arquivo-icon-wrap {
+      width:52px; height:52px;
+      border-radius:12px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:26px;
+      margin:0 auto 10px;
+    }
+    .icon-pasta  { background:rgba(var(--cor-primaria-rgb),.1); }
+    .icon-pdf    { background:#fee2e2; }
+    .icon-img    { background:#e0f2fe; }
+    .icon-sheet  { background:#dcfce7; }
+    .icon-word   { background:#dbeafe; }
+    .icon-google { background:#fef9c3; }
+    .icon-gen    { background:#f3f4f6; }
+
+    .arquivo-nome { font-size:12px; font-weight:600; word-break:break-word; line-height:1.3; color:var(--texto); }
+    .arquivo-meta { font-size:11px; color:var(--texto2); margin-top:4px; }
+
+    .tipo-badge {
+      display:inline-block;
+      padding:2px 8px;
+      border-radius:20px;
+      font-size:10px;
+      font-weight:700;
+      margin-top:6px;
+      white-space:nowrap;
+    }
+    .badge-google { background:#fef9c3; color:#92400e; }
+    .badge-upload { background:#dcfce7; color:#166534; }
+    .badge-pdf    { background:#fee2e2; color:#991b1b; }
+    .badge-img    { background:#e0f2fe; color:#075985; }
+    .badge-sheet  { background:#d1fae5; color:#065f46; }
+    .badge-word   { background:#dbeafe; color:#1e40af; }
+
+    .arquivo-acoes {
+      position:absolute;
+      top:6px; right:6px;
+      display:none;
+      gap:4px;
+    }
+    .arquivo-card:hover .arquivo-acoes { display:flex; }
+    .acao-btn {
+      border:none;
+      border-radius:6px;
+      cursor:pointer;
+      padding:3px 7px;
+      font-size:11px;
+      line-height:1.4;
+      text-decoration:none;
+    }
+    .acao-btn.edit { background:#dbeafe; color:#1e40af; }
+    .acao-btn.del  { background:#fee2e2; color:#991b1b; }
+    .acao-btn.dl   { background:#d1fae5; color:#065f46; }
+
+    /* ── Vazio ── */
+    .af-vazio {
+      grid-column:1/-1;
+      text-align:center;
+      padding:60px 20px;
+      color:var(--texto2);
+    }
+    .af-vazio-icon { font-size:52px; margin-bottom:12px; }
+    .af-vazio-titulo { font-size:15px; font-weight:600; color:var(--texto); }
+    .af-vazio-sub { font-size:13px; margin-top:6px; }
+
+    /* ── Viewer fullscreen ── */
+    .viewer-overlay {
+      display:none;
+      position:fixed; inset:0;
+      background:rgba(0,0,0,.88);
+      z-index:2000;
+      flex-direction:column;
+    }
+    .viewer-overlay.aberto { display:flex; }
+    .viewer-header {
+      background:#0f172a;
+      padding:12px 20px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      color:white;
+    }
+    .viewer-body { flex:1; display:flex; }
+    .viewer-iframe { width:100%; height:100%; border:none; }
+
+    /* ── Contagem ── */
+    .af-count { font-size:12px; color:var(--texto2); white-space:nowrap; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'cobrancas' }) %>
+  <main class="main">
+
+    <div class="topbar">
+      <h1 class="page-titulo">📁 Arquivos Financeiros</h1>
+      <div class="topbar-acoes">
+        <a href="/cobrancas" class="btn">← Cobranças</a>
+        <button class="btn" onclick="abrirModal('modal-pasta')">📁 Nova pasta</button>
+        <button class="btn btn-primario" onclick="abrirModal('modal-upload')">⬆️ Upload arquivo</button>
+        <button class="btn btn-primario" onclick="abrirModal('modal-google')" style="background:#4285f4">🔗 Link Google</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
+
+      <%
+        const totalArqs = arquivos.length;
+        const totalPastas = pastas.length;
+        const totalGoogle = arquivos.filter(a => a.tipo === 'google').length;
+      %>
+
+      <!-- Stats -->
+      <div class="af-stats" style="margin-bottom:16px">
+        <div class="af-stat">
+          <div class="af-stat-icon verde">📄</div>
+          <div>
+            <div class="af-stat-num"><%= totalArqs %></div>
+            <div class="af-stat-label">Arquivos</div>
+          </div>
+        </div>
+        <div class="af-stat">
+          <div class="af-stat-icon azul">📁</div>
+          <div>
+            <div class="af-stat-num"><%= totalPastas %></div>
+            <div class="af-stat-label">Pastas</div>
+          </div>
+        </div>
+        <div class="af-stat">
+          <div class="af-stat-icon amber">🔗</div>
+          <div>
+            <div class="af-stat-num"><%= totalGoogle %></div>
+            <div class="af-stat-label">Links Google</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Layout principal -->
+      <div class="af-layout">
+
+        <!-- Sidebar pastas -->
+        <div class="af-sidebar">
+          <div class="af-sidebar-titulo">📁 Pastas</div>
+
+          <div class="pasta-item <%= !pastaAtual ? 'ativa' : '' %>"
+            ondragover="event.preventDefault();this.classList.add('drag-over')"
+            ondragleave="this.classList.remove('drag-over')"
+            ondrop="dropNaPasta(event,null)"
+            onclick="irPasta(null)">
+            🏠 Raiz
+          </div>
+
+          <%
+            function renderPastas(ps, pai, nivel) {
+              ps.filter(p => p.pai_id == pai).forEach(p => {
+          %>
+          <div class="pasta-item <%= String(pastaAtual) === String(p.id) ? 'ativa' : '' %> <%= nivel > 0 ? 'sub' : '' %>"
+            ondragover="event.preventDefault();this.classList.add('drag-over')"
+            ondragleave="this.classList.remove('drag-over')"
+            ondrop="dropNaPasta(event,<%= p.id %>)"
+            onclick="irPasta(<%= p.id %>)">
+            📁 <%= p.nome %>
+            <button class="pasta-del" onclick="event.stopPropagation();deletarPasta(<%= p.id %>,'<%= p.nome %>')">✕</button>
+          </div>
+          <% renderPastas(ps, p.id, nivel+1); }); }
+          renderPastas(pastas, null, 0); %>
+        </div>
+
+        <!-- Área principal -->
+        <div class="af-main">
+
+          <!-- Topbar interno: breadcrumb + botão voltar + contagem -->
+          <div class="af-topbar">
+            <div class="breadcrumb">
+              <% if (pastaAtual) { %>
+              <button onclick="voltarPasta()" class="btn" style="padding:4px 10px;font-size:12px">← Voltar</button>
+              <% } %>
+              <a onclick="irPasta(null)">🏠 Raiz</a>
+              <% if (pastaAtual) {
+                let caminho = [], pid = pastaAtual, seg = 0;
+                while (pid && seg < 10) {
+                  const p = pastas.find(x => String(x.id) === String(pid));
+                  if (!p) break;
+                  caminho.unshift(p); pid = p.pai_id; seg++;
+                }
+                caminho.forEach((p, i) => { %>
+                <span class="bc-sep">›</span>
+                <% if (i < caminho.length - 1) { %>
+                  <a onclick="irPasta(<%= p.id %>)"><%= p.nome %></a>
+                <% } else { %>
+                  <span class="bc-atual"><%= p.nome %></span>
+                <% } %>
+              <% }); } %>
+            </div>
+            <span class="af-count">
+              <%= arquivos.length %> arquivo(s)
+            </span>
+          </div>
+
+          <!-- Barra seleção múltipla -->
+          <div class="barra-selecao" id="barra-selecao">
+            <span id="count-selecionados" style="font-weight:600;color:#dc2626">0 selecionados</span>
+            <button class="btn" style="background:#dc2626;color:white;font-size:12px;padding:4px 12px" onclick="deletarSelecionados()">🗑 Excluir selecionados</button>
+            <button class="btn" style="font-size:12px;padding:4px 12px" onclick="limparSelecao()">✕ Cancelar</button>
+          </div>
+
+          <!-- Grid -->
+          <div class="arquivos-grid">
+
+            <!-- Subpastas desta pasta -->
+            <% pastas.filter(p => String(p.pai_id) === String(pastaAtual) || (!p.pai_id && !pastaAtual)).forEach(p => { %>
+            <div class="arquivo-card"
+              draggable="true"
+              data-tipo="pasta" data-id="<%= p.id %>"
+              ondragstart="dragStart(event,'pasta',<%= p.id %>)"
+              ondragover="dragOver(event)"
+              ondragleave="dragLeave(event)"
+              ondrop="drop(event,'pasta',<%= p.id %>)"
+              onclick="irPasta(<%= p.id %>)">
+              <div class="arquivo-acoes">
+                <button class="acao-btn edit" onclick="event.stopPropagation();renomear('pasta',<%= p.id %>,'<%= p.nome %>')">✏️</button>
+                <button class="acao-btn del"  onclick="event.stopPropagation();deletarPasta(<%= p.id %>,'<%= p.nome %>')">🗑</button>
+              </div>
+              <div class="arquivo-icon-wrap icon-pasta">📁</div>
+              <div class="arquivo-nome"><%= p.nome %></div>
+            </div>
+            <% }) %>
+
+            <!-- Vazio -->
+            <% if (arquivos.length === 0 && pastas.filter(p => String(p.pai_id) === String(pastaAtual) || (!p.pai_id && !pastaAtual)).length === 0) { %>
+            <div class="af-vazio">
+              <div class="af-vazio-icon">📂</div>
+              <div class="af-vazio-titulo">Pasta vazia</div>
+              <div class="af-vazio-sub">Faça upload ou adicione um link do Google Drive</div>
+            </div>
+            <% } %>
+
+            <!-- Arquivos -->
+            <% arquivos.forEach(a => {
+              let icon = '📄', iconClass = 'icon-gen', badgeClass = 'badge-upload', badgeText = 'Upload';
+              if (a.tipo === 'google') { icon = '🔗'; iconClass = 'icon-google'; badgeClass = 'badge-google'; badgeText = 'Google'; }
+              else if (a.mimetype && a.mimetype.includes('pdf'))    { icon = '📑'; iconClass = 'icon-pdf'; badgeClass = 'badge-pdf'; badgeText = 'PDF'; }
+              else if (a.mimetype && a.mimetype.includes('image'))  { icon = '🖼️'; iconClass = 'icon-img'; badgeClass = 'badge-img'; badgeText = 'Imagem'; }
+              else if (a.mimetype && (a.mimetype.includes('sheet') || a.mimetype.includes('excel'))) { icon = '📊'; iconClass = 'icon-sheet'; badgeClass = 'badge-sheet'; badgeText = 'Planilha'; }
+              else if (a.mimetype && (a.mimetype.includes('word')  || a.mimetype.includes('document'))) { icon = '📝'; iconClass = 'icon-word'; badgeClass = 'badge-word'; badgeText = 'Word'; }
+            %>
+            <div class="arquivo-card" id="card-<%= a.id %>"
+              draggable="true"
+              data-tipo="arquivo" data-id="<%= a.id %>"
+              ondragstart="dragStart(event,'arquivo',<%= a.id %>)"
+              ondragend="dragEnd(event)"
+              onclick="abrirArquivo(<%= a.id %>)">
+              <div class="arquivo-acoes">
+                <button class="acao-btn edit" onclick="event.stopPropagation();renomear('arquivo',<%= a.id %>,'<%= a.nome %>')">✏️</button>
+                <button class="acao-btn del"  onclick="event.stopPropagation();deletarArquivo(<%= a.id %>,'<%= a.nome %>')">🗑</button>
+                <% if (a.tipo !== 'google') { %>
+                <a class="acao-btn dl" href="/financeiro-arquivos/<%= a.id %>/download" onclick="event.stopPropagation()">⬇️</a>
+                <% } %>
+              </div>
+              <div class="arquivo-icon-wrap <%= iconClass %>"><%= icon %></div>
+              <div class="arquivo-nome"><%= a.nome %></div>
+              <div class="arquivo-meta"><%= new Date(a.criado_em).toLocaleDateString('pt-BR') %></div>
+              <span class="tipo-badge <%= badgeClass %>"><%= badgeText %></span>
+            </div>
+            <% }) %>
+
+          </div><!-- /arquivos-grid -->
+        </div><!-- /af-main -->
+      </div><!-- /af-layout -->
+    </div><!-- /content -->
+  </main>
+</div>
+
+<!-- ─── Viewer ─────────────────────────────────────────────────────── -->
+<div class="viewer-overlay" id="viewer">
+  <div class="viewer-header">
+    <span id="viewer-titulo" style="font-weight:600"></span>
+    <div style="display:flex;gap:10px;align-items:center">
+      <a id="viewer-baixar" href="#" target="_blank" style="color:#90cdf4;font-size:13px">⬇️ Baixar</a>
+      <a id="viewer-link-externo" href="#" target="_blank" style="color:#90cdf4;font-size:13px">↗ Abrir no Google</a>
+      <button onclick="fecharViewer()" style="background:#ef4444;border:none;color:white;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:14px">✕ Fechar</button>
+    </div>
+  </div>
+  <div class="viewer-body">
+    <iframe id="viewer-iframe" class="viewer-iframe" allowfullscreen></iframe>
+  </div>
+</div>
+
+<!-- ─── Modal Renomear ─────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-renomear" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">✏️ Renomear</span>
+      <button class="icon-btn" onclick="fecharModal('modal-renomear')">✕</button>
+    </div>
+    <div class="campo" style="margin-bottom:16px">
+      <label class="label">Novo nome</label>
+      <input id="input-renomear" class="input" placeholder="Digite o novo nome">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="fecharModal('modal-renomear')">Cancelar</button>
+      <button class="btn btn-primario" onclick="confirmarRenomear()">✏️ Renomear</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── Modal Nova Pasta ───────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-pasta" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">📁 Nova Pasta</span>
+      <button class="icon-btn" onclick="fecharModal('modal-pasta')">✕</button>
+    </div>
+    <form action="/financeiro-arquivos/pasta" method="POST">
+      <input type="hidden" name="pai_id" value="<%= pastaAtual || '' %>">
+      <div class="campo" style="margin-bottom:16px">
+        <label class="label">Nome da pasta</label>
+        <input name="nome" class="input" required placeholder="Ex: Comprovantes Maio 2026">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-pasta')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">📁 Criar pasta</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ─── Modal Upload ───────────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-upload" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">⬆️ Upload de Arquivo</span>
+      <button class="icon-btn" onclick="fecharModal('modal-upload')">✕</button>
+    </div>
+    <form action="/financeiro-arquivos/upload" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="pasta_id" value="<%= pastaAtual || '' %>">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo">
+          <label class="label">Nome do arquivo <span style="color:var(--texto2)">(opcional)</span></label>
+          <input name="nome" class="input" placeholder="Deixe em branco para usar o nome original">
+        </div>
+        <div class="campo">
+          <label class="label">Arquivo *</label>
+          <input type="file" name="arquivos" class="input" required
+            accept="image/*,.pdf,.xlsx,.xls,.csv,.docx,.doc,.pptx,.ppt,.txt" multiple>
+          <span style="font-size:11px;color:var(--texto2)">Imagens, PDF, Excel, Word, PowerPoint — máx. 10MB</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-upload')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">⬆️ Enviar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ─── Modal Link Google ──────────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-google" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo">🔗 Adicionar Link Google</span>
+      <button class="icon-btn" onclick="fecharModal('modal-google')">✕</button>
+    </div>
+    <form action="/financeiro-arquivos/google" method="POST">
+      <input type="hidden" name="pasta_id" value="<%= pastaAtual || '' %>">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo">
+          <label class="label">Nome do arquivo *</label>
+          <input name="nome" class="input" required placeholder="Ex: Planilha Financeira Maio 2026">
+        </div>
+        <div class="campo">
+          <label class="label">Link do Google Drive *</label>
+          <input name="google_url" id="input-google-url" class="input" required
+            placeholder="https://docs.google.com/..." oninput="gerarEmbed(this.value)">
+          <span style="font-size:11px;color:var(--texto2)">Google Docs, Sheets, Slides ou Drive</span>
+        </div>
+        <div class="campo">
+          <label class="label">Tipo</label>
+          <select name="google_tipo" class="input">
+            <option value="docs">📝 Google Docs</option>
+            <option value="sheets">📊 Google Sheets</option>
+            <option value="slides">📑 Google Slides</option>
+            <option value="drive">📁 Google Drive (arquivo)</option>
+          </select>
+        </div>
+        <div id="preview-embed" style="display:none;background:var(--fundo);border-radius:8px;padding:10px;font-size:12px;color:var(--texto2)">
+          ✅ Link válido do Google detectado
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-google')">Cancelar</button>
+        <button type="submit" class="btn btn-primario" style="background:#4285f4">🔗 Adicionar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const arquivosData  = <%- JSON.stringify(arquivos) %>;
+const pastasData    = <%- JSON.stringify(pastas) %>;
+const pastaAtualId  = <%- JSON.stringify(pastaAtual) %>;
+
+function irPasta(id) {
+  const url = new URL(window.location.href);
+  if (id) url.searchParams.set('pasta', id);
+  else url.searchParams.delete('pasta');
+  window.location.href = url.toString();
+}
+
+function voltarPasta() {
+  if (!pastaAtualId) return;
+  const pasta = pastasData.find(p => String(p.id) === String(pastaAtualId));
+  irPasta(pasta && pasta.pai_id ? pasta.pai_id : null);
+}
+
+// ── Seleção múltipla ─────────────────────────────────────────────────
+const selecionados = new Set();
+
+function atualizarBarraSelecao() {
+  const barra = document.getElementById('barra-selecao');
+  const count = document.getElementById('count-selecionados');
+  if (selecionados.size > 0) {
+    barra.classList.add('visivel');
+    count.textContent = selecionados.size + ' selecionado(s)';
+  } else {
+    barra.classList.remove('visivel');
+  }
+}
+
+function limparSelecao() {
+  selecionados.forEach(id => document.getElementById('card-' + id)?.classList.remove('selecionado'));
+  selecionados.clear();
+  atualizarBarraSelecao();
+}
+
+async function deletarSelecionados() {
+  if (!selecionados.size) return;
+  if (!confirm('Excluir ' + selecionados.size + ' arquivo(s) selecionado(s)?')) return;
+  for (const id of Array.from(selecionados))
+    await fetch('/financeiro-arquivos/' + id + '/deletar', { method: 'POST' });
+  window.location.reload();
+}
+
+// ── Viewer ────────────────────────────────────────────────────────────
+function abrirArquivo(id) {
+  const a = arquivosData.find(x => x.id === id);
+  if (!a) return;
+  const titulo   = document.getElementById('viewer-titulo');
+  const baixar   = document.getElementById('viewer-baixar');
+  const externo  = document.getElementById('viewer-link-externo');
+  const iframe   = document.getElementById('viewer-iframe');
+  const overlay  = document.getElementById('viewer');
+  if (titulo) titulo.textContent = a.nome;
+  if (baixar) baixar.href = '/financeiro-arquivos/' + id + '/download';
+  if (a.tipo === 'google' && a.google_embed) {
+    if (externo) { externo.href = a.google_url || '#'; externo.style.display = ''; }
+    if (iframe)  iframe.src = a.google_embed;
+    if (overlay) overlay.classList.add('aberto');
+    return;
+  }
+  const ext  = (a.nome || '').split('.').pop().toLowerCase();
+  const imgs = ['jpg','jpeg','png','gif','webp','bmp'];
+  if (ext === 'pdf' || imgs.includes(ext)) {
+    if (externo) externo.style.display = 'none';
+    if (iframe)  iframe.src = '/financeiro-arquivos/' + id + '/visualizar';
+    if (overlay) overlay.classList.add('aberto');
+  } else {
+    fetch('/financeiro-arquivos/' + id + '/url').then(r => r.json()).then(d => {
+      if (!d.url) return;
+      if (externo) { externo.href = d.url; externo.style.display = ''; }
+      if (iframe)  iframe.src = 'https://view.officeapps.live.com/op/embed.aspx?src=' + encodeURIComponent(d.url);
+      if (overlay) overlay.classList.add('aberto');
+    });
+  }
+}
+
+function fecharViewer() {
+  document.getElementById('viewer').classList.remove('aberto');
+  document.getElementById('viewer-iframe').src = '';
+}
+
+function gerarEmbed(url) {
+  document.getElementById('preview-embed').style.display = url.includes('google.com') ? 'block' : 'none';
+}
+
+// ── Deletar ────────────────────────────────────────────────────────────
+function deletarArquivo(id, nome) {
+  if (!confirm('Excluir "' + nome + '"?')) return;
+  const f = document.createElement('form');
+  f.method = 'POST'; f.action = '/financeiro-arquivos/' + id + '/deletar';
+  document.body.appendChild(f); f.submit();
+}
+
+function deletarPasta(id, nome) {
+  if (!confirm('Excluir pasta "' + nome + '"? Os arquivos dentro serão removidos.')) return;
+  const f = document.createElement('form');
+  f.method = 'POST'; f.action = '/financeiro-pastas/' + id + '/deletar';
+  document.body.appendChild(f); f.submit();
+}
+
+// ── Drag & Drop ─────────────────────────────────────────────────────
+let dragTipo = null, dragId = null;
+
+function dragStart(event, tipo, id) {
+  dragTipo = tipo; dragId = id;
+  event.dataTransfer.effectAllowed = 'move';
+  event.target.classList.add('dragging');
+}
+
+function dragEnd(event) {
+  event.target.classList.remove('dragging');
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+}
+
+function dragOver(event) {
+  event.preventDefault();
+  event.target.closest('.arquivo-card')?.classList.add('drag-over');
+}
+
+function dragLeave(event) {
+  event.target.closest('.arquivo-card')?.classList.remove('drag-over');
+}
+
+function drop(event, tipo, id) {
+  event.preventDefault(); event.stopPropagation();
+  event.target.closest('.arquivo-card')?.classList.remove('drag-over');
+  if (tipo === 'pasta' && dragTipo === 'arquivo') moverArquivo(dragId, id);
+  else if (tipo === 'pasta' && dragTipo === 'pasta' && dragId !== id) moverPasta(dragId, id);
+}
+
+function dropNaPasta(event, pastaDestino) {
+  event.preventDefault(); event.stopPropagation();
+  document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+  if (!dragId) return;
+  if (dragTipo === 'arquivo') moverArquivo(dragId, pastaDestino);
+  else if (dragTipo === 'pasta') moverPasta(dragId, pastaDestino);
+}
+
+async function moverArquivo(arquivoId, pastaDestinoId) {
+  const r = await fetch('/financeiro-arquivos/' + arquivoId + '/mover', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pasta_id: pastaDestinoId })
+  });
+  if (r.ok) window.location.reload(); else alert('Erro ao mover arquivo');
+}
+
+async function moverPasta(pastaId, pastaDestinoId) {
+  if (String(pastaId) === String(pastaDestinoId)) return;
+  const r = await fetch('/financeiro-pastas/' + pastaId + '/mover', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pai_id: pastaDestinoId })
+  });
+  if (r.ok) window.location.reload(); else alert('Erro ao mover pasta');
+}
+
+// ── Renomear ─────────────────────────────────────────────────────────
+let _rT = null, _rI = null;
+function renomear(t, id, n) { _rT = t; _rI = id; document.getElementById('input-renomear').value = n; abrirModal('modal-renomear'); }
+async function confirmarRenomear() {
+  const n = document.getElementById('input-renomear').value.trim();
+  if (!n) return;
+  const u = _rT === 'pasta'
+    ? '/financeiro-pastas/' + _rI + '/renomear'
+    : '/financeiro-arquivos/' + _rI + '/renomear';
+  const r = await fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nome: n }) });
+  if (r.ok) window.location.reload();
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharViewer(); });
+</script>
+</body>
+</html>
