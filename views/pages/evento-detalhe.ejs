@@ -568,6 +568,15 @@
         </div>
       </div>
 
+      <!-- LISTA ESPERA -->
+      <div id="lista-espera-section" style="margin-top:20px" class="section-card">
+        <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
+          <span>Lista de espera</span>
+          <button onclick="carregarEspera()" class="btn-xs azul">Atualizar</button>
+        </div>
+        <div id="espera-conteudo" style="padding:16px;text-align:center;color:var(--texto2);font-size:13px">Clique em Atualizar para ver a lista.</div>
+      </div>
+
       <!-- PAGAMENTOS -->
       <div class="tab-content" id="tab-pagamentos">
         <div class="section-card">
@@ -1191,6 +1200,23 @@ function copiarLinkCupom(codigo) {
   }).catch(() => {
     prompt('Copie o link abaixo:', link);
   });
+}
+function carregarEspera() {
+  fetch('/eventos/<%= evento.id %>/lista-espera')
+    .then(r=>r.json()).then(d=>{
+      const el = document.getElementById('espera-conteudo');
+      if (!d.ok || !d.espera.length) { el.innerHTML='<div style="padding:20px;text-align:center;color:var(--texto2)">Nenhuma pessoa na lista de espera.</div>'; return; }
+      el.innerHTML = '<table class="tabela" style="width:100%"><thead><tr><th>#</th><th>Nome</th><th>WhatsApp</th><th>Email</th><th>Cadastrado em</th><th>Notificado</th></tr></thead><tbody>'
+        + d.espera.map((e,i) => '<tr>'
+          +'<td style="color:var(--texto2)">'+(i+1)+'</td>'
+          +'<td style="font-weight:600">'+e.nome+'</td>'
+          +'<td style="color:var(--texto2)">'+(e.whatsapp||'—')+'</td>'
+          +'<td style="color:var(--texto2)">'+(e.email||'—')+'</td>'
+          +'<td style="color:var(--texto2)">'+new Date(e.criado_em).toLocaleDateString('pt-BR')+'</td>'
+          +'<td>'+(e.notificado?'<span style="color:#10b981;font-weight:600">Notificado</span>':'<span style="color:var(--texto2)">Aguardando</span>')+'</td>'
+          +'</tr>').join('')
+        + '</tbody></table>';
+    });
 }
 function verLogs(id){
   fetch('/eventos/<%= evento.id %>/mala-direta/'+id+'/logs').then(r=>r.json()).then(d=>{
