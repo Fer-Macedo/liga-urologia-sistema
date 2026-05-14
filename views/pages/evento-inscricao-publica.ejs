@@ -400,6 +400,32 @@
         <span><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}) %></span>
       </div>
       <% } %>
+      <% if(evento.data_inicio && new Date(evento.data_inicio) > new Date()) { %>
+      <div id="countdown-wrap" style="margin-top:16px;background:linear-gradient(135deg,rgba(0,0,0,.3),rgba(0,0,0,.15));border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:18px 24px;display:inline-flex;gap:0;align-items:center;flex-wrap:wrap;gap:8px">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.7);width:100%;margin-bottom:8px">Faltam para o evento</div>
+        <div style="display:flex;gap:12px;align-items:center">
+          <div style="text-align:center">
+            <div id="cd-dias" style="font-size:32px;font-weight:800;color:white;font-family:'Outfit',sans-serif;line-height:1">00</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.6);font-weight:600;text-transform:uppercase;letter-spacing:.06em">dias</div>
+          </div>
+          <div style="font-size:24px;color:rgba(255,255,255,.4);font-weight:300">:</div>
+          <div style="text-align:center">
+            <div id="cd-horas" style="font-size:32px;font-weight:800;color:white;font-family:'Outfit',sans-serif;line-height:1">00</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.6);font-weight:600;text-transform:uppercase;letter-spacing:.06em">horas</div>
+          </div>
+          <div style="font-size:24px;color:rgba(255,255,255,.4);font-weight:300">:</div>
+          <div style="text-align:center">
+            <div id="cd-min" style="font-size:32px;font-weight:800;color:white;font-family:'Outfit',sans-serif;line-height:1">00</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.6);font-weight:600;text-transform:uppercase;letter-spacing:.06em">min</div>
+          </div>
+          <div style="font-size:24px;color:rgba(255,255,255,.4);font-weight:300">:</div>
+          <div style="text-align:center">
+            <div id="cd-seg" style="font-size:32px;font-weight:800;color:white;font-family:'Outfit',sans-serif;line-height:1">00</div>
+            <div style="font-size:10px;color:rgba(255,255,255,.6);font-weight:600;text-transform:uppercase;letter-spacing:.06em">seg</div>
+          </div>
+        </div>
+      </div>
+      <% } %>
       <% if(evento.local&&evento.tipo_evento!=='online'){ %>
       <div class="t-chip">
         <div class="t-chip-icon"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>
@@ -924,6 +950,36 @@ window.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => aplicarCupom(), 1200);
   }
 });
+
+// COUNTDOWN
+(function(){
+  const dataEvento = new Date('<%= evento.data_inicio %>');
+  if (!dataEvento || isNaN(dataEvento)) return;
+  function pad(n){return String(n).padStart(2,'0');}
+  function tick(){
+    const agora = new Date();
+    const diff = dataEvento - agora;
+    if (diff <= 0) {
+      const w = document.getElementById('countdown-wrap');
+      if (w) w.innerHTML = '<div style="font-size:14px;font-weight:700;color:white">Evento em andamento!</div>';
+      return;
+    }
+    const dias  = Math.floor(diff / 86400000);
+    const horas = Math.floor((diff % 86400000) / 3600000);
+    const min   = Math.floor((diff % 3600000) / 60000);
+    const seg   = Math.floor((diff % 60000) / 1000);
+    const d = document.getElementById('cd-dias');
+    const h = document.getElementById('cd-horas');
+    const m = document.getElementById('cd-min');
+    const s = document.getElementById('cd-seg');
+    if(d) d.textContent = pad(dias);
+    if(h) h.textContent = pad(horas);
+    if(m) m.textContent = pad(min);
+    if(s) s.textContent = pad(seg);
+  }
+  tick();
+  setInterval(tick, 1000);
+})();
 </script>
 </body>
 </html>
