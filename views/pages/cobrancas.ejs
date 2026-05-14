@@ -548,5 +548,41 @@ function filtrarTabela(q) {
   });
 }
 </script>
+<div class="modal-overlay" id="modal-relatorio" style="display:none">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <span class="modal-titulo">Gerar Relatorio PDF</span>
+      <button class="icon-btn" onclick="fecharModal('modal-relatorio')">&#x2715;</button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px;padding:4px 0">
+      <div class="campo"><label class="label">Status</label>
+        <select id="rel-status" class="input">
+          <option value="todas">Todas</option>
+          <option value="pago">Pagas</option>
+          <option value="pendente">Pendentes</option>
+          <option value="atrasado">Atrasadas</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="campo"><label class="label">Vencimento de</label><input type="date" id="rel-data-ini" class="input"></div>
+        <div class="campo"><label class="label">Vencimento ate</label><input type="date" id="rel-data-fim" class="input"></div>
+      </div>
+      <div class="campo"><label class="label">Buscar por nome</label><input type="text" id="rel-nome" class="input" placeholder="Ex: Joao..."></div>
+      <div style="background:var(--fundo);border-radius:10px;padding:14px 16px;border:1px solid var(--borda)">
+        <div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:10px">Incluir no relatorio</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="rel-col-ref" checked style="width:15px;height:15px;accent-color:var(--cor-primaria)"> Referencia</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="rel-col-venc" checked style="width:15px;height:15px;accent-color:var(--cor-primaria)"> Vencimento</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="rel-col-taxa" checked style="width:15px;height:15px;accent-color:var(--cor-primaria)"> Taxa e liquido</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="rel-col-status" checked style="width:15px;height:15px;accent-color:var(--cor-primaria)"> Status</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" onclick="fecharModal('modal-relatorio')">Cancelar</button>
+      <button type="button" class="btn btn-primario" onclick="gerarRelatorioPDF()">Gerar PDF</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
