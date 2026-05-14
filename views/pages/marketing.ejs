@@ -400,6 +400,17 @@
     </form>
   </div>
 </div>
+<script src="/js/app.js"></script>
+<script>
+const postsData=<%- JSON.stringify(posts) %>;
+let calMes=new Date().getMonth(),calAno=new Date().getFullYear();
+function showTab(id,el){document.querySelectorAll('.mkt-section').forEach(s=>s.classList.remove('ativo'));document.querySelectorAll('.mkt-tab').forEach(t=>t.classList.remove('ativo'));document.getElementById('tab-'+id).classList.add('ativo');el.classList.add('ativo');}
+function filtrarPosts(status,el){document.querySelectorAll('.post-item').forEach(p=>{p.style.display=status==='todos'||p.dataset.status===status?'':' none';});document.querySelectorAll('.pill').forEach(p=>p.classList.remove('ativo'));el.classList.add('ativo');}
+function buscarPost(q){document.querySelectorAll('.post-item').forEach(p=>{p.style.display=p.dataset.titulo.includes(q.toLowerCase())?'':' none';});}
+function previewWpp(txt){document.getElementById('wpp-preview-text').textContent=txt||'Sua mensagem aqui...';}
+function editarPost(id){window.location='/marketing/'+id+'/editar';}
+function usarMidia(id,nome){alert('Midia "'+nome+'" selecionada!');}
+function usarTemplate(btn){const ta=document.querySelector('[name="mensagem"]');if(ta){ta.value=btn.textContent.trim();previewWpp(ta.value);}}
 function renderCal(){
   const meses=['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   document.getElementById('cal-titulo').textContent=meses[calMes]+' '+calAno;
