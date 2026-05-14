@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Obrigado!</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0fdf4; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .card { background: white; border-radius: 20px; padding: 48px 40px; max-width: 480px; width: 100%; text-align: center; box-shadow: 0 4px 24px rgba(0,0,0,.08); border-top: 6px solid #10b981; }
+    .icon { font-size: 64px; margin-bottom: 20px; }
+    h1 { font-size: 26px; font-weight: 800; color: #111827; margin-bottom: 12px; }
+    p { font-size: 15px; color: #6b7280; line-height: 1.7; margin-bottom: 8px; }
+    .org { margin-top: 28px; font-size: 13px; color: #9ca3af; }
+    img { max-height: 48px; max-width: 160px; object-fit: contain; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <% if (config.org_logo) { %><img src="<%= config.org_logo %>" alt="<%= config.org_nome %>"><% } %>
+    <div class="icon">🎉</div>
+    <h1>Obrigado pela avaliação!</h1>
+    <p>Sua opinião foi registrada com sucesso e será muito útil para aprimorarmos nossos próximos eventos.</p>
+    <p>Continuem acompanhando os eventos da <strong><%= config.org_nome || 'LAURO' %></strong>!</p>
+    <div class="org"><%= config.org_nome || 'LAURO' %> — Liga Acadêmica de Urologia</div>
+  </div>
+</body>
+</html>
