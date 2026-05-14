@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arquivos Financeiros — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#2b6803' %>; --cor-primaria-rgb: 43,104,3; }
+    .af-layout { display:grid; grid-template-columns:240px 1fr; gap:16px; height:calc(100vh - 148px); min-height:0; }
+    .af-sidebar { background:var(--card); border:1.5px solid var(--borda); border-radius:14px; padding:14px; overflow-y:auto; display:flex; flex-direction:column; gap:2px; }
+    .af-sidebar-titulo { font-size:11px; font-weight:700; color:var(--texto2); text-transform:uppercase; letter-spacing:.6px; padding:4px 8px 10px; border-bottom:1.5px solid var(--borda); margin-bottom:6px; }
+    .pasta-item { display:flex; align-items:center; gap:8px; padding:7px 10px; border-radius:8px; cursor:pointer; font-size:13px; transition:all 0.15s; color:var(--texto); border:1.5px solid transparent; }
+    .pasta-item:hover { background:var(--fundo); }
+    .pasta-item.ativa { background:rgba(var(--cor-primaria-rgb),.1); color:var(--cor-primaria); font-weight:600; border-color:rgba(var(--cor-primaria-rgb),.2); }
+    .pasta-item.sub { padding-left:26px; font-size:12px; }
+    .pasta-item.drag-over { background:#dcfce7; border-color:#16a34a; }
+    .pasta-del { margin-left:auto; font-size:11px; opacity:0; color:#ef4444; background:none; border:none; cursor:pointer; padding:0 2px; }
+    .pasta-item:hover .pasta-del { opacity:1; }
+    .af-main { display:flex; flex-direction:column; gap:12px; min-height:0; overflow-y:auto; }
+    .af-topbar { display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; background:var(--card); border:1.5px solid var(--borda); border-radius:12px; padding:12px 16px; }
+    .breadcrumb { display:flex; align-items:center; gap:6px; font-size:13px; flex-wrap:wrap; }
+    .breadcrumb a { color:var(--cor-primaria); cursor:pointer; font-weight:600; text-decoration:none; }
+    .bc-atual { color:var(--texto); font-weight:600; }
+    .af-stats { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
+    .af-stat { background:var(--card); border:1.5px solid var(--borda); border-radius:12px; padding:14px 16px; display:flex; align-items:center; gap:12px; }
+    .af-stat-icon { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+    .af-stat-icon.verde { background:rgba(var(--cor-primaria-rgb),.12); color:var(--cor-primaria); }
+    .af-stat-icon.azul  { background:#dbeafe; color:#1d4ed8; }
+    .af-stat-icon.amber { background:#fef3c7; color:#b45309; }
+    .af-stat-num { font-size:22px; font-weight:700; line-height:1; }
+    .af-stat-label { font-size:12px; color:var(--texto2); margin-top:2px; }
+    .barra-selecao { display:none; background:#fef2f2; border:1.5px solid #fca5a5; border-radius:10px; padding:10px 16px; align-items:center; gap:12px; }
+    .barra-selecao.visivel { display:flex; }
