@@ -2,50 +2,77 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Marketing — <%= config.org_nome %></title>
+  <title>Marketing</title>
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
   <style>
-    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
-    .mkt-tabs { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; }
-    .mkt-tab { padding:8px 18px; border-radius:8px; border:2px solid var(--borda); background:var(--card); cursor:pointer; font-weight:600; font-size:13px; transition:all .2s; }
-    .mkt-tab.ativo { background:var(--cor-primaria); color:white; border-color:var(--cor-primaria); }
-    .mkt-section { display:none; }
-    .mkt-section.ativo { display:block; }
-    .post-card { background:var(--card); border:1px solid var(--borda); border-radius:12px; padding:16px; margin-bottom:12px; }
-    .post-card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
-    .rede-badge { padding:3px 8px; border-radius:20px; font-size:11px; font-weight:700; display:inline-flex; align-items:center; gap:4px; }
-    .rede-instagram { background:#e1306c;color:white; }
-    .rede-facebook { background:#1877f2;color:white; }
-    .rede-whatsapp { background:#25d366;color:white; }
-    .status-badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; }
-    .status-rascunho { background:#f3f4f6;color:#6b7280; }
-    .status-agendado { background:#dbeafe;color:#1e40af; }
-    .status-publicado { background:#dcfce7;color:#166534; }
-    .status-erro { background:#fee2e2;color:#991b1b; }
-    .calendario-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
-    .cal-header { text-align:center; font-weight:700; font-size:12px; padding:6px; color:var(--texto2); }
-    .cal-dia { min-height:70px; background:var(--card); border:1px solid var(--borda); border-radius:8px; padding:4px; }
-    .cal-dia.hoje { border-color:var(--cor-primaria); }
-    .cal-dia.outro-mes { opacity:0.4; }
-    .cal-num { font-size:12px; font-weight:600; margin-bottom:3px; }
-    .cal-post { background:var(--cor-primaria); color:white; border-radius:4px; padding:2px 4px; font-size:10px; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
-    .midia-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
-    .midia-card { border:1px solid var(--borda); border-radius:8px; overflow:hidden; position:relative; cursor:pointer; }
-    .midia-card img { width:100%; height:120px; object-fit:cover; display:block; }
-    .midia-card-info { padding:6px 8px; font-size:11px; }
-    .midia-card:hover .midia-overlay { opacity:1; }
-    .midia-overlay { position:absolute; top:0;left:0;right:0;bottom:0; background:rgba(0,0,0,0.5); opacity:0; transition:.2s; display:flex; align-items:center; justify-content:center; gap:8px; }
-    .stat-card { background:var(--card); border:1px solid var(--borda); border-radius:12px; padding:20px; text-align:center; }
-    .stat-num { font-size:28px; font-weight:700; color:var(--cor-primaria); }
-    .stat-label { font-size:12px; color:var(--texto2); margin-top:4px; }
-    .editor-preview { border:2px dashed var(--borda); border-radius:12px; min-height:200px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden; background:#f8fafc; }
-    .whatsapp-preview { background:#e5ddd5; border-radius:12px; padding:16px; max-width:400px; }
-    .wpp-bubble { background:white; border-radius:12px; padding:10px 14px; margin-bottom:8px; box-shadow:0 1px 2px rgba(0,0,0,.1); font-size:14px; }
-    .wpp-bubble.saida { background:#d9fdd3; margin-left:40px; }
-    .engaj-bar { display:flex; align-items:center; gap:10px; margin-bottom:8px; }
-    .engaj-label { width:100px; font-size:12px; color:var(--texto2); }
-    .engaj-fill { flex:1; background:var(--fundo); border-radius:4px; height:8px; overflow:hidden; }
-    .engaj-valor { width:50px; font-size:12px; font-weight:600; text-align:right; }
+    :root{--cor-primaria:<%= config.org_cor||'#1a56db' %>;}
+    .mkt-tabs{display:flex;gap:6px;margin-bottom:20px;flex-wrap:wrap;background:var(--card);border:1px solid var(--borda);border-radius:12px;padding:6px;}
+    .mkt-tab{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;border:none;background:transparent;cursor:pointer;font-weight:600;font-size:13px;transition:all .2s;color:var(--texto2);font-family:inherit;}
+    .mkt-tab:hover{background:var(--fundo);color:var(--texto);}
+    .mkt-tab.ativo{background:var(--cor-primaria);color:white;}
+    .mkt-section{display:none;}
+    .mkt-section.ativo{display:block;}
+    .stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px;}
+    .stat-box{background:var(--card);border:1px solid var(--borda);border-radius:12px;padding:16px;position:relative;overflow:hidden;}
+    .stat-box::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--cor-stat,var(--cor-primaria));}
+    .stat-num{font-size:24px;font-weight:700;line-height:1;margin-bottom:4px;color:var(--cor-stat,var(--cor-primaria));}
+    .stat-lab{font-size:12px;color:var(--texto2);font-weight:600;}
+    .post-card{background:var(--card);border:1px solid var(--borda);border-radius:12px;padding:16px;margin-bottom:10px;transition:box-shadow .15s;}
+    .post-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.06);}
+    .rede-badge{padding:3px 8px;border-radius:999px;font-size:11px;font-weight:700;display:inline-flex;align-items:center;gap:4px;}
+    .rede-instagram{background:#e1306c;color:white;}
+    .rede-facebook{background:#1877f2;color:white;}
+    .rede-whatsapp{background:#25d366;color:white;}
+    .badge-status{display:inline-flex;align-items:center;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+    .status-rascunho{background:#f3f4f6;color:#6b7280;}
+    .status-agendado{background:#dbeafe;color:#1e40af;}
+    .status-publicado{background:#dcfce7;color:#166534;}
+    .status-erro{background:#fee2e2;color:#991b1b;}
+    .calendario-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+    .cal-header{text-align:center;font-weight:700;font-size:11px;padding:6px;color:var(--texto2);text-transform:uppercase;}
+    .cal-dia{min-height:72px;background:var(--card);border:1px solid var(--borda);border-radius:8px;padding:6px;transition:.15s;}
+    .cal-dia.hoje{border-color:var(--cor-primaria);background:#eff6ff;}
+    .cal-dia.outro-mes{opacity:.35;}
+    .cal-num{font-size:12px;font-weight:700;margin-bottom:3px;}
+    .cal-post{background:var(--cor-primaria);color:white;border-radius:4px;padding:2px 5px;font-size:10px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;}
+    .midia-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;}
+    .midia-card{border:1px solid var(--borda);border-radius:10px;overflow:hidden;position:relative;cursor:pointer;transition:.15s;}
+    .midia-card:hover{border-color:var(--cor-primaria);transform:translateY(-2px);}
+    .midia-card img{width:100%;height:120px;object-fit:cover;display:block;}
+    .midia-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5);opacity:0;transition:.2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+    .midia-card:hover .midia-overlay{opacity:1;}
+    .midia-card-info{padding:6px 8px;font-size:11px;font-weight:600;}
+    .integ-card{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:20px;}
+    .integ-logo{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .badge-conectado{background:#dcfce7;color:#166534;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+    .badge-desconectado{background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+    .whatsapp-preview{background:#e5ddd5;border-radius:12px;padding:16px;min-height:200px;}
+    .wpp-bubble{background:white;border-radius:12px;padding:10px 14px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.1);font-size:13px;max-width:85%;}
+    .wpp-bubble.saida{background:#d9fdd3;margin-left:auto;}
+    .engaj-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+    .engaj-label{width:90px;font-size:12px;color:var(--texto2);font-weight:600;}
+    .engaj-fill{flex:1;background:var(--fundo);border-radius:4px;height:8px;overflow:hidden;border:1px solid var(--borda);}
+    .engaj-valor{width:36px;font-size:12px;font-weight:700;text-align:right;}
+    .btn-xs{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:600;border:1px solid var(--borda);background:var(--fundo);color:var(--texto);cursor:pointer;text-decoration:none;transition:all .15s;font-family:inherit;white-space:nowrap;}
+    .btn-xs:hover{border-color:var(--cor-primaria);color:var(--cor-primaria);}
+    .btn-xs.verde{background:#059669;color:white;border-color:transparent;}
+    .btn-xs.roxo{background:#7c3aed;color:white;border-color:transparent;}
+    .btn-xs.verm{color:#dc2626;border-color:#fecaca;}
+    .btn-xs.azul{background:#1d4ed8;color:white;border-color:transparent;}
+    .ia-loading{display:none;align-items:center;gap:8px;font-size:13px;color:var(--texto2);padding:8px;}
+    .ia-loading.ativo{display:flex;}
+    .dots span{animation:dots 1.2s infinite;opacity:0;}
+    .dots span:nth-child(2){animation-delay:.2s;}
+    .dots span:nth-child(3){animation-delay:.4s;}
+    @keyframes dots{0%,80%,100%{opacity:0}40%{opacity:1}}
+    .template-btn{display:block;width:100%;text-align:left;padding:10px 14px;border:1px solid var(--borda);border-radius:8px;background:var(--fundo);cursor:pointer;font-size:12px;margin-bottom:6px;transition:.15s;font-family:inherit;}
+    .template-btn:hover{border-color:var(--cor-primaria);background:#eff6ff;color:var(--cor-primaria);}
+    .search-bar{display:flex;align-items:center;gap:8px;background:var(--fundo);border:1px solid var(--borda);border-radius:8px;padding:0 12px;height:36px;}
+    .search-bar input{border:none;background:transparent;font-size:13px;color:var(--texto);outline:none;width:180px;font-family:inherit;}
+    .filter-pills{display:flex;gap:6px;flex-wrap:wrap;}
+    .pill{padding:5px 14px;border-radius:999px;border:1.5px solid var(--borda);background:var(--card);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;color:var(--texto2);}
+    .pill.ativo{background:var(--cor-primaria);color:white;border-color:var(--cor-primaria);}
   </style>
 </head>
 <body>
@@ -53,312 +80,357 @@
   <%- include('../partials/sidebar', { paginaAtual: 'marketing' }) %>
   <main class="main">
     <div class="topbar">
-      <h1 class="page-titulo">📣 Marketing</h1>
+      <h1 class="page-titulo">Marketing</h1>
       <div class="topbar-acoes">
-        <button class="btn btn-primario" onclick="abrirModal('modal-novo-post')">✏️ Novo Post</button>
-        <button class="btn" onclick="abrirModal('modal-wpp-massa')">📱 WhatsApp em Massa</button>
+        <button class="btn btn-sm" onclick="abrirModal('modal-wpp-massa')">WhatsApp em Massa</button>
+        <button class="btn btn-sm btn-primario" onclick="abrirModal('modal-novo-post')">+ Novo Post</button>
       </div>
     </div>
     <div class="content">
-      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
-      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
-
-      <!-- TABS -->
+      <%if(msg&&msg.length>0){%><div class="alerta alerta-ok"><%=msg[0]%></div><%}%>
+      <%if(erro&&erro.length>0){%><div class="alerta alerta-erro"><%=erro[0]%></div><%}%>
       <div class="mkt-tabs">
-        <button class="mkt-tab ativo" onclick="showTab('dashboard')">📊 Dashboard</button>
-        <button class="mkt-tab" onclick="showTab('posts')">📝 Posts</button>
-        <button class="mkt-tab" onclick="showTab('calendario')">📅 Calendário</button>
-        <button class="mkt-tab" onclick="showTab('midias')">🖼️ Biblioteca de Mídias</button>
-        <button class="mkt-tab" onclick="showTab('whatsapp')">📱 WhatsApp</button>
-        <button class="mkt-tab" onclick="showTab('integracao')">🔗 Integrações</button>
+        <button class="mkt-tab ativo" onclick="showTab('dashboard',this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          Dashboard</button>
+        <button class="mkt-tab" onclick="showTab('posts',this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          Posts</button>
+        <button class="mkt-tab" onclick="showTab('calendario',this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          Calendario</button>
+        <button class="mkt-tab" onclick="showTab('midias',this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+          Midias</button>
+        <button class="mkt-tab" onclick="showTab('whatsapp',this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          WhatsApp</button>
+        <button class="mkt-tab" onclick="showTab('integracao',this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
+          Integracoes</button>
       </div>
-
-      <!-- DASHBOARD -->
       <div class="mkt-section ativo" id="tab-dashboard">
-        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:20px">
-          <div class="stat-card"><div class="stat-num"><%= posts.length %></div><div class="stat-label">Total de Posts</div></div>
-          <div class="stat-card"><div class="stat-num"><%= posts.filter(p=>p.status==='agendado').length %></div><div class="stat-label">Agendados</div></div>
-          <div class="stat-card"><div class="stat-num"><%= posts.filter(p=>p.status==='publicado').length %></div><div class="stat-label">Publicados</div></div>
-          <div class="stat-card"><div class="stat-num"><%= midias.length %></div><div class="stat-label">Mídias</div></div>
-          <div class="stat-card"><div class="stat-num"><%= posts.filter(p=>p.status==='rascunho').length %></div><div class="stat-label">Rascunhos</div></div>
+        <%const total=posts.length;const agend=posts.filter(p=>p.status==='agendado').length;
+        const pub=posts.filter(p=>p.status==='publicado').length;
+        const rasc=posts.filter(p=>p.status==='rascunho').length;%>
+        <div class="stats-row">
+          <div class="stat-box" style="--cor-stat:var(--cor-primaria)">
+            <div class="stat-num"><%=total%></div><div class="stat-lab">Total de Posts</div>
+          </div>
+          <div class="stat-box" style="--cor-stat:#f59e0b">
+            <div class="stat-num"><%=agend%></div><div class="stat-lab">Agendados</div>
+          </div>
+          <div class="stat-box" style="--cor-stat:#10b981">
+            <div class="stat-num"><%=pub%></div><div class="stat-lab">Publicados</div>
+          </div>
+          <div class="stat-box" style="--cor-stat:#6b7280">
+            <div class="stat-num"><%=rasc%></div><div class="stat-lab">Rascunhos</div>
+          </div>
+          <div class="stat-box" style="--cor-stat:#0891b2">
+            <div class="stat-num"><%=midias.length%></div><div class="stat-lab">Midias</div>
+          </div>
         </div>
-
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
           <div class="card">
-            <div class="card-titulo">📅 Próximos Posts Agendados</div>
-            <% const agendados = posts.filter(p=>p.status==='agendado').slice(0,5); %>
-            <% if (agendados.length === 0) { %><p style="color:var(--texto2);font-size:13px">Nenhum post agendado</p><% } %>
-            <% agendados.forEach(p => { %>
-            <div class="post-card" style="padding:10px">
-              <div style="font-weight:600;font-size:13px"><%= p.titulo %></div>
-              <div style="font-size:11px;color:var(--texto2);margin-top:3px">📅 <%= p.agendado_para ? new Date(p.agendado_para).toLocaleString('pt-BR') : '—' %></div>
-              <div style="margin-top:5px"><% (p.redes||[]).forEach(r=>{ %><span class="rede-badge rede-<%= r %>"><%= r==='instagram'?'📸':r==='facebook'?'👍':'📱' %> <%= r %></span> <% }) %></div>
-            </div>
-            <% }) %>
-          </div>
-
-          <div class="card">
-            <div class="card-titulo">📊 Engajamento por Rede</div>
-            <div class="engaj-bar"><div class="engaj-label">Instagram</div><div class="engaj-fill"><div style="height:100%;background:#e1306c;width:<%= igPct %>%"></div></div><div class="engaj-valor" style="color:#e1306c"><%= posts.filter(p=>(p.redes||[]).includes('instagram')).length %></div></div>
-            <div class="engaj-bar"><div class="engaj-label">Facebook</div><div class="engaj-fill"><div style="height:100%;background:#1877f2;width:<%= fbPct %>%"></div></div><div class="engaj-valor" style="color:#1877f2"><%= posts.filter(p=>(p.redes||[]).includes('facebook')).length %></div></div>
-            <div class="engaj-bar"><div class="engaj-label">WhatsApp</div><div class="engaj-fill"><div style="height:100%;background:#25d366;width:<%= waPct %>%"></div></div><div class="engaj-valor" style="color:#25d366"><%= posts.filter(p=>(p.redes||[]).includes('whatsapp')).length %></div></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- POSTS -->
-      <div class="mkt-section" id="tab-posts">
-        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-          <button class="btn" onclick="filtrarPosts('todos')" id="f-todos" style="background:var(--cor-primaria);color:white">Todos</button>
-          <button class="btn" onclick="filtrarPosts('rascunho')" id="f-rascunho">Rascunhos</button>
-          <button class="btn" onclick="filtrarPosts('agendado')" id="f-agendado">Agendados</button>
-          <button class="btn" onclick="filtrarPosts('publicado')" id="f-publicado">Publicados</button>
-        </div>
-        <% if (posts.length === 0) { %><p style="color:var(--texto2)">Nenhum post criado ainda.</p><% } %>
-        <% posts.forEach(p => { %>
-        <div class="post-card post-item" data-status="<%= p.status %>">
-          <div class="post-card-header">
-            <div style="display:flex;align-items:center;gap:10px">
-              <% if (p.imagem_chave) { %><img src="/marketing/midia/<%= p.id %>/img" style="width:50px;height:50px;border-radius:8px;object-fit:cover"><% } else { %><div style="width:50px;height:50px;border-radius:8px;background:var(--fundo);display:flex;align-items:center;justify-content:center;font-size:20px">📝</div><% } %>
-              <div>
-                <div style="font-weight:700"><%= p.titulo || '(Sem título)' %></div>
-                <div style="font-size:11px;color:var(--texto2)">Criado <%= new Date(p.criado_em).toLocaleDateString('pt-BR') %></div>
+            <div class="card-titulo" style="margin-bottom:14px">Proximos Posts Agendados</div>
+            <%const prox=posts.filter(p=>p.status==='agendado').slice(0,5);%>
+            <%if(prox.length===0){%>
+            <p style="color:var(--texto2);font-size:13px">Nenhum post agendado</p>
+            <%}%>
+            <%prox.forEach(p=>{%>
+            <div class="post-card" style="padding:10px;margin-bottom:8px">
+              <div style="font-weight:600;font-size:13px"><%=p.titulo%></div>
+              <div style="font-size:11px;color:var(--texto2);margin-top:3px">
+                <%=p.agendado_para?new Date(p.agendado_para).toLocaleString('pt-BR'):'&#8212;'%>
+              </div>
+              <div style="margin-top:6px;display:flex;gap:4px">
+                <%(p.redes||[]).forEach(r=>{%>
+                <span class="rede-badge rede-<%=r%>"><%=r%></span>
+                <%});%>
               </div>
             </div>
-            <span class="status-badge status-<%= p.status %>"><%= p.status==='rascunho'?'⚪ Rascunho':p.status==='agendado'?'🔵 Agendado':p.status==='publicado'?'🟢 Publicado':'🔴 Erro' %></span>
+            <%});%>
           </div>
-          <p style="font-size:13px;color:var(--texto2);margin-bottom:8px"><%= (p.conteudo||'').substring(0,120) %><%= (p.conteudo||'').length>120?'...':'' %></p>
-          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
-            <div><% (p.redes||[]).forEach(r=>{ %><span class="rede-badge rede-<%= r %>"><%= r==='instagram'?'📸':r==='facebook'?'👍':'📱' %> <%= r %></span> <% }) %></div>
-            <div style="display:flex;gap:6px">
-              <% if (p.agendado_para) { %><span style="font-size:11px;color:var(--texto2)">📅 <%= new Date(p.agendado_para).toLocaleString('pt-BR') %></span><% } %>
-              <button onclick="editarPost(<%= p.id %>)" class="btn" style="font-size:11px;padding:4px 8px">✏️</button>
-              <% if (p.status==='rascunho'||p.status==='agendado') { %>
-              <form method="POST" action="/marketing/<%= p.id %>/publicar" style="display:inline"><button type="submit" class="btn" style="font-size:11px;padding:4px 8px;background:#059669;color:white">📤 Publicar</button></form>
-              <% } %>
-              <form method="POST" action="/marketing/<%= p.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')"><button type="submit" class="btn" style="font-size:11px;padding:4px 8px;color:var(--vermelho)">🗑</button></form>
+          <div class="card">
+            <div class="card-titulo" style="margin-bottom:14px">Distribuicao por Rede</div>
+            <div class="engaj-bar">
+              <div class="engaj-label">Instagram</div>
+              <div class="engaj-fill"><div style="height:100%;background:#e1306c;width:<%=igPct%>%"></div></div>
+              <div class="engaj-valor" style="color:#e1306c"><%=posts.filter(p=>(p.redes||[]).includes('instagram')).length%></div>
+            </div>
+            <div class="engaj-bar">
+              <div class="engaj-label">Facebook</div>
+              <div class="engaj-fill"><div style="height:100%;background:#1877f2;width:<%=fbPct%>%"></div></div>
+              <div class="engaj-valor" style="color:#1877f2"><%=posts.filter(p=>(p.redes||[]).includes('facebook')).length%></div>
+            </div>
+            <div class="engaj-bar">
+              <div class="engaj-label">WhatsApp</div>
+              <div class="engaj-fill"><div style="height:100%;background:#25d366;width:<%=waPct%>%"></div></div>
+              <div class="engaj-valor" style="color:#25d366"><%=posts.filter(p=>(p.redes||[]).includes('whatsapp')).length%></div>
             </div>
           </div>
         </div>
-        <% }) %>
       </div>
-
-      <!-- CALENDÁRIO -->
+      <div class="mkt-section" id="tab-posts">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+          <div class="filter-pills">
+            <span class="pill ativo" onclick="filtrarPosts('todos',this)">Todos (<%=total%>)</span>
+            <span class="pill" onclick="filtrarPosts('rascunho',this)">Rascunhos</span>
+            <span class="pill" onclick="filtrarPosts('agendado',this)">Agendados</span>
+            <span class="pill" onclick="filtrarPosts('publicado',this)">Publicados</span>
+          </div>
+          <div class="search-bar">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--texto2)"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>
+            <input type="text" placeholder="Buscar post..." oninput="buscarPost(this.value)">
+          </div>
+        </div>
+        <%if(posts.length===0){%>
+        <div style="text-align:center;padding:48px;color:var(--texto2)">
+          <div style="font-size:32px;margin-bottom:12px">&#128221;</div>
+          <div style="font-weight:600">Nenhum post criado ainda</div>
+        </div><%}%>
+        <%posts.forEach(p=>{%>
+        <div class="post-card post-item" data-status="<%=p.status%>" data-titulo="<%=(p.titulo||'').toLowerCase()%>">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+            <div style="display:flex;align-items:center;gap:12px;flex:1">
+              <%if(p.imagem_chave){%>
+              <img src="/marketing/midia/<%=p.id%>/img" style="width:52px;height:52px;border-radius:8px;object-fit:cover;flex-shrink:0">
+              <%}else{%>
+              <div style="width:52px;height:52px;border-radius:8px;background:var(--fundo);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--borda)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--texto2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div><%}%>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:700;font-size:14px;margin-bottom:3px"><%=p.titulo||'(Sem titulo)'%></div>
+                <div style="font-size:12px;color:var(--texto2)"><%=(p.conteudo||'').substring(0,100)%><%=(p.conteudo||'').length>100?'...':''%></div>
+              </div>
+            </div>
+            <span class="badge-status status-<%=p.status%>"><%=p.status%></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;gap:8px">
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <%(p.redes||[]).forEach(r=>{%>
+              <span class="rede-badge rede-<%=r%>"><%=r%></span>
+              <%});%>
+              <%if(p.agendado_para){%>
+              <span style="font-size:11px;color:var(--texto2);margin-left:6px">
+                <%=new Date(p.agendado_para).toLocaleString('pt-BR')%>
+              </span><%}%>
+            </div>
+            <div style="display:flex;gap:5px">
+              <button onclick="editarPost(<%=p.id%>)" class="btn-xs">Editar</button>
+              <%if(p.status==='rascunho'||p.status==='agendado'){%>
+              <form method="POST" action="/marketing/<%=p.id%>/publicar" style="display:inline;margin:0">
+                <button type="submit" class="btn-xs verde">Publicar</button></form>
+              <%}%>
+              <form method="POST" action="/marketing/<%=p.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')">
+                <button type="submit" class="btn-xs verm">Excluir</button></form>
+            </div>
+          </div>
+        </div>
+        <%});%>
+      </div>
       <div class="mkt-section" id="tab-calendario">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <button class="btn" onclick="mudarMes(-1)">← Anterior</button>
-          <h3 id="cal-titulo" style="font-size:16px;font-weight:700"></h3>
-          <button class="btn" onclick="mudarMes(1)">Próximo →</button>
+          <button class="btn btn-sm" onclick="mudarMes(-1)">&#8592; Anterior</button>
+          <h3 id="cal-titulo" style="font-size:16px;font-weight:700;font-family:'Outfit',sans-serif"></h3>
+          <button class="btn btn-sm" onclick="mudarMes(1)">Proximo &#8594;</button>
         </div>
         <div class="calendario-grid">
           <div class="cal-header">Dom</div><div class="cal-header">Seg</div><div class="cal-header">Ter</div>
-          <div class="cal-header">Qua</div><div class="cal-header">Qui</div><div class="cal-header">Sex</div><div class="cal-header">Sáb</div>
+          <div class="cal-header">Qua</div><div class="cal-header">Qui</div><div class="cal-header">Sex</div><div class="cal-header">Sab</div>
         </div>
         <div class="calendario-grid" id="cal-grid" style="margin-top:4px"></div>
-        <script>
-          const postsData = <%- JSON.stringify(posts) %>;
-          let calMes = new Date().getMonth(), calAno = new Date().getFullYear();
-          function renderCal() {
-            const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-            document.getElementById('cal-titulo').textContent = meses[calMes] + ' ' + calAno;
-            const grid = document.getElementById('cal-grid');
-            grid.innerHTML = '';
-            const primeiro = new Date(calAno, calMes, 1).getDay();
-            const dias = new Date(calAno, calMes+1, 0).getDate();
-            const hoje = new Date();
-            for (let i=0;i<primeiro;i++) { const d=document.createElement('div');d.className='cal-dia outro-mes';grid.appendChild(d); }
-            for (let d=1;d<=dias;d++) {
-              const div=document.createElement('div');
-              div.className='cal-dia' + (d===hoje.getDate()&&calMes===hoje.getMonth()&&calAno===hoje.getFullYear()?' hoje':'');
-              div.innerHTML='<div class="cal-num">'+d+'</div>';
-              const dataStr = calAno+'-'+(String(calMes+1).padStart(2,'0'))+'-'+(String(d).padStart(2,'0'));
-              postsData.filter(p=>p.agendado_para&&p.agendado_para.startsWith(dataStr)).forEach(p=>{
-                const s=document.createElement('div');s.className='cal-post';s.textContent=p.titulo||'Post';div.appendChild(s);
-              });
-              grid.appendChild(div);
-            }
-          }
-          function mudarMes(d) { calMes+=d; if(calMes<0){calMes=11;calAno--;}if(calMes>11){calMes=0;calAno++;} renderCal(); }
-          renderCal();
-        </script>
       </div>
-
-      <!-- MÍDIAS -->
       <div class="mkt-section" id="tab-midias">
         <div style="margin-bottom:16px">
           <form action="/marketing/midias/upload" method="POST" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <input type="file" name="midia" class="input" accept="image/*,video/*" style="flex:1;min-width:200px">
-            <input type="text" name="nome" class="input" placeholder="Nome da mídia" style="flex:1;min-width:150px">
-            <button type="submit" class="btn btn-primario">📤 Upload</button>
+            <input type="text" name="nome" class="input" placeholder="Nome da midia" style="flex:1;min-width:150px">
+            <button type="submit" class="btn btn-primario btn-sm">Upload</button>
           </form>
         </div>
-        <% if (midias.length === 0) { %><p style="color:var(--texto2)">Nenhuma mídia enviada ainda.</p><% } %>
+        <%if(midias.length===0){%><div style="text-align:center;padding:48px;color:var(--texto2)"><div style="font-size:32px;margin-bottom:8px">&#128444;</div><div style="font-weight:600">Nenhuma midia enviada</div></div><%}%>
         <div class="midia-grid">
-          <% midias.forEach(m => { %>
+          <%midias.forEach(m=>{%>
           <div class="midia-card">
-            <img src="/marketing/midias/<%= m.id %>/img" alt="<%= m.nome %>" onerror="this.src='/img/placeholder.png'">
+            <img src="/marketing/midias/<%=m.id%>/img" alt="<%=m.nome%>" onerror="this.src='/img/placeholder.png'">
             <div class="midia-overlay">
-              <button onclick="usarMidia('<%= m.id %>','<%= m.nome %>')" class="btn" style="font-size:11px;padding:4px 8px;background:white;color:#000">✔ Usar</button>
-              <form method="POST" action="/marketing/midias/<%= m.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')"><button type="submit" class="btn" style="font-size:11px;padding:4px 8px;background:#dc2626;color:white">🗑</button></form>
+              <button onclick="usarMidia('<%=m.id%>','<%=m.nome%>')" class="btn-xs" style="background:white;color:#111">Usar</button>
+              <form method="POST" action="/marketing/midias/<%=m.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')">
+                <button type="submit" class="btn-xs verm" style="background:#dc2626;color:white;border-color:transparent">Excluir</button></form>
             </div>
-            <div class="midia-card-info"><%= m.nome %></div>
+            <div class="midia-card-info"><%=m.nome%></div>
           </div>
-          <% }) %>
+          <%});%>
         </div>
       </div>
-
-      <!-- WHATSAPP -->
       <div class="mkt-section" id="tab-whatsapp">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
           <div class="card">
-            <div class="card-titulo">📱 Envio em Massa</div>
+            <div class="card-titulo" style="margin-bottom:14px">Envio em Massa</div>
             <form action="/marketing/whatsapp-massa" method="POST">
               <div style="display:flex;flex-direction:column;gap:12px">
-                <div class="campo">
-                  <label class="label">Destinatários</label>
+                <div class="campo"><label class="label">Destinatarios</label>
                   <select name="destinatarios" class="input">
                     <option value="todos">Todos (Ligantes + Diretivos)</option>
                     <option value="ligantes">Somente Ligantes</option>
                     <option value="diretivos">Somente Diretivos</option>
                   </select>
                 </div>
-                <div class="campo">
-                  <label class="label">Mensagem</label>
+                <div class="campo"><label class="label">Mensagem</label>
                   <textarea name="mensagem" class="input" rows="5" placeholder="Digite a mensagem..." oninput="previewWpp(this.value)"></textarea>
                 </div>
-                <button type="submit" class="btn btn-primario" onclick="return confirm('Enviar para todos?')">📤 Enviar Agora</button>
+                <button type="submit" class="btn btn-primario" onclick="return confirm('Enviar para todos?')">Enviar Agora</button>
               </div>
             </form>
           </div>
           <div class="card">
-            <div class="card-titulo">👁 Preview</div>
+            <div class="card-titulo" style="margin-bottom:14px">Preview</div>
             <div class="whatsapp-preview">
-              <div class="wpp-bubble">Olá! 👋</div>
-              <div class="wpp-bubble saida" id="wpp-preview-text">Sua mensagem aparecerá aqui...</div>
+              <div class="wpp-bubble">Ola! Como vai?</div>
+              <div class="wpp-bubble saida" id="wpp-preview-text">Sua mensagem aparecera aqui...</div>
             </div>
+          </div>
+          <div class="card">
+            <div class="card-titulo" style="margin-bottom:14px">Templates Rapidos</div>
+            <button class="template-btn" onclick="usarTemplate(this)">Convite para evento da Liga — prezado ligante, convidamos voce para participar do nosso proximo evento...</button>
+            <button class="template-btn" onclick="usarTemplate(this)">Lembrete de mensalidade — informamos que sua mensalidade esta em aberto. Realize o pagamento para continuar ativo...</button>
+            <button class="template-btn" onclick="usarTemplate(this)">Aviso de reuniao — comunicamos que havera reuniao da diretoria na proxima semana. Sua presenca e importante...</button>
+            <button class="template-btn" onclick="usarTemplate(this)">Boas-vindas ao novo ligante — seja bem-vindo a Liga! Estamos felizes em ter voce conosco...</button>
           </div>
         </div>
       </div>
-
-      <!-- INTEGRAÇÕES -->
       <div class="mkt-section" id="tab-integracao">
         <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
-          <div class="card">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-              <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);display:flex;align-items:center;justify-content:center;font-size:20px">📸</div>
+          <div class="integ-card">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+              <div class="integ-logo" style="background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4" fill="none" stroke="white" stroke-width="1.5"/><circle cx="17.5" cy="6.5" r="1" fill="white"/></svg>
+              </div>
               <div><div style="font-weight:700">Instagram</div><div style="font-size:12px;color:var(--texto2)">Meta Graph API</div></div>
-              <% if (mktConfig.instagram_token) { %><span style="margin-left:auto;background:#dcfce7;color:#166534;padding:2px 8px;border-radius:20px;font-size:11px">✅ Conectado</span><% } else { %><span style="margin-left:auto;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:11px">❌ Desconectado</span><% } %>
+              <%if(mktConfig.instagram_token){%><span class="badge-conectado" style="margin-left:auto">Conectado</span><%}else{%><span class="badge-desconectado" style="margin-left:auto">Desconectado</span><%}%>
             </div>
             <form action="/marketing/config/instagram" method="POST">
-              <div class="campo"><label class="label">Access Token</label><input name="instagram_token" class="input" type="password" placeholder="Token da API Meta" value="<%= mktConfig.instagram_token||'' %>"></div>
-              <div class="campo"><label class="label">Instagram Business ID</label><input name="instagram_id" class="input" placeholder="ID da conta business" value="<%= mktConfig.instagram_id||'' %>"></div>
-              <button type="submit" class="btn btn-primario" style="width:100%;margin-top:8px">💾 Salvar</button>
+              <div class="campo"><label class="label">Access Token</label><input name="instagram_token" class="input" type="password" placeholder="Token da API Meta" value="<%=mktConfig.instagram_token||''%>"></div>
+              <div class="campo"><label class="label">Instagram Business ID</label><input name="instagram_id" class="input" placeholder="ID da conta business" value="<%=mktConfig.instagram_id||''%>"></div>
+              <button type="submit" class="btn btn-primario" style="width:100%;margin-top:8px">Salvar</button>
             </form>
           </div>
-
-          <div class="card">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-              <div style="width:40px;height:40px;border-radius:10px;background:#1877f2;display:flex;align-items:center;justify-content:center;font-size:20px">👍</div>
+          <div class="integ-card">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+              <div class="integ-logo" style="background:#1877f2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+              </div>
               <div><div style="font-weight:700">Facebook</div><div style="font-size:12px;color:var(--texto2)">Meta Graph API</div></div>
-              <% if (mktConfig.facebook_token) { %><span style="margin-left:auto;background:#dcfce7;color:#166534;padding:2px 8px;border-radius:20px;font-size:11px">✅ Conectado</span><% } else { %><span style="margin-left:auto;background:#fee2e2;color:#991b1b;padding:2px 8px;border-radius:20px;font-size:11px">❌ Desconectado</span><% } %>
+              <%if(mktConfig.facebook_token){%><span class="badge-conectado" style="margin-left:auto">Conectado</span><%}else{%><span class="badge-desconectado" style="margin-left:auto">Desconectado</span><%}%>
             </div>
             <form action="/marketing/config/facebook" method="POST">
-              <div class="campo"><label class="label">Page Access Token</label><input name="facebook_token" class="input" type="password" placeholder="Token da página" value="<%= mktConfig.facebook_token||'' %>"></div>
-              <div class="campo"><label class="label">Facebook Page ID</label><input name="facebook_id" class="input" placeholder="ID da página" value="<%= mktConfig.facebook_id||'' %>"></div>
-              <button type="submit" class="btn btn-primario" style="width:100%;margin-top:8px">💾 Salvar</button>
+              <div class="campo"><label class="label">Page Access Token</label><input name="facebook_token" class="input" type="password" placeholder="Token da pagina" value="<%=mktConfig.facebook_token||''%>"></div>
+              <div class="campo"><label class="label">Facebook Page ID</label><input name="facebook_id" class="input" placeholder="ID da pagina" value="<%=mktConfig.facebook_id||''%>"></div>
+              <button type="submit" class="btn btn-primario" style="width:100%;margin-top:8px">Salvar</button>
             </form>
           </div>
-
-          <div class="card">
-            <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-              <div style="width:40px;height:40px;border-radius:10px;background:#25d366;display:flex;align-items:center;justify-content:center;font-size:20px">📱</div>
+          <div class="integ-card">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+              <div class="integ-logo" style="background:#25d366">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+              </div>
               <div><div style="font-weight:700">WhatsApp</div><div style="font-size:12px;color:var(--texto2)">W-API</div></div>
-              <span style="margin-left:auto;background:#dcfce7;color:#166534;padding:2px 8px;border-radius:20px;font-size:11px">✅ Conectado</span>
+              <span class="badge-conectado" style="margin-left:auto">Conectado</span>
             </div>
-            <p style="font-size:13px;color:var(--texto2)">Integração W-API já configurada no sistema. Pronta para envio em massa.</p>
+            <p style="font-size:13px;color:var(--texto2)">Integracao W-API ja configurada. Pronta para envio em massa.</p>
           </div>
         </div>
       </div>
     </div>
   </main>
 </div>
-
-<!-- Modal Novo Post -->
 <div class="modal-overlay" id="modal-novo-post" style="display:none">
   <div class="modal" style="max-width:600px">
-    <div class="modal-header">
-      <span class="modal-titulo">✏️ Novo Post</span>
-      <button class="icon-btn" onclick="fecharModal('modal-novo-post')">✕</button>
-    </div>
+    <div class="modal-header"><span class="modal-titulo">Novo Post</span><button class="icon-btn" onclick="fecharModal('modal-novo-post')">&#x2715;</button></div>
     <form action="/marketing/posts" method="POST" enctype="multipart/form-data">
       <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="campo"><label class="label">Título</label><input name="titulo" class="input" placeholder="Título do post" required></div>
-        <div class="campo"><label class="label">Conteúdo / Legenda</label><textarea name="conteudo" class="input" rows="4" placeholder="Escreva a legenda do post..."></textarea></div>
-        <div class="campo"><label class="label">Imagem</label><input type="file" name="imagem" class="input" accept="image/*"></div>
+        <div class="campo"><label class="label">Titulo</label><input name="titulo" class="input" placeholder="Titulo do post" required></div>
         <div class="campo">
-          <label class="label">Redes Sociais</label>
-          <div style="display:flex;gap:12px;flex-wrap:wrap">
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" name="redes" value="instagram"> 📸 Instagram</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" name="redes" value="facebook"> 👍 Facebook</label>
-            <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" name="redes" value="whatsapp"> 📱 WhatsApp</label>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <label class="label" style="margin:0">Conteudo / Legenda</label>
+            <button type="button" class="btn-xs roxo" onclick="gerarComIA()">Gerar com IA</button>
+          </div>
+          <div class="ia-loading" id="ia-loading"><div class="dots"><span>.</span><span>.</span><span>.</span></div> IA gerando legenda...</div>
+          <textarea name="conteudo" id="post-conteudo" class="input" rows="4" placeholder="Escreva a legenda do post..."></textarea>
+        </div>
+        <div class="campo"><label class="label">Imagem</label><input type="file" name="imagem" class="input" accept="image/*"></div>
+        <div class="campo"><label class="label">Redes Sociais</label>
+          <div style="display:flex;gap:16px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" name="redes" value="instagram"> Instagram</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" name="redes" value="facebook"> Facebook</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" name="redes" value="whatsapp"> WhatsApp</label>
           </div>
         </div>
         <div class="campo"><label class="label">Agendar para (opcional)</label><input type="datetime-local" name="agendado_para" class="input"></div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-novo-post')">Cancelar</button>
-        <button type="submit" name="acao" value="rascunho" class="btn">💾 Rascunho</button>
-        <button type="submit" name="acao" value="agendar" class="btn btn-primario">📅 Agendar</button>
+        <button type="submit" name="acao" value="rascunho" class="btn">Rascunho</button>
+        <button type="submit" name="acao" value="agendar" class="btn btn-primario">Agendar</button>
       </div>
     </form>
   </div>
 </div>
-
-<!-- Modal WhatsApp em Massa -->
 <div class="modal-overlay" id="modal-wpp-massa" style="display:none">
   <div class="modal">
-    <div class="modal-header">
-      <span class="modal-titulo">📱 WhatsApp em Massa</span>
-      <button class="icon-btn" onclick="fecharModal('modal-wpp-massa')">✕</button>
-    </div>
+    <div class="modal-header"><span class="modal-titulo">WhatsApp em Massa</span><button class="icon-btn" onclick="fecharModal('modal-wpp-massa')">&#x2715;</button></div>
     <form action="/marketing/whatsapp-massa" method="POST">
       <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="campo"><label class="label">Destinatários</label>
+        <div class="campo"><label class="label">Destinatarios</label>
           <select name="destinatarios" class="input">
             <option value="todos">Todos (Ligantes + Diretivos)</option>
             <option value="ligantes">Somente Ligantes</option>
             <option value="diretivos">Somente Diretivos</option>
           </select>
         </div>
-        <div class="campo"><label class="label">Mensagem</label><textarea name="mensagem" class="input" rows="5" placeholder="Digite a mensagem..."></textarea></div>
+        <div class="campo"><label class="label">Mensagem</label>
+          <textarea name="mensagem" class="input" rows="5" placeholder="Digite a mensagem..."></textarea>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-wpp-massa')">Cancelar</button>
-        <button type="submit" class="btn btn-primario" onclick="return confirm('Enviar para todos?')">📤 Enviar</button>
+        <button type="submit" class="btn btn-primario" onclick="return confirm('Enviar para todos?')">Enviar</button>
       </div>
     </form>
   </div>
 </div>
-
-<script src="/js/app.js"></script>
-<script>
-function showTab(id) {
-  document.querySelectorAll('.mkt-section').forEach(s=>s.classList.remove('ativo'));
-  document.querySelectorAll('.mkt-tab').forEach(t=>t.classList.remove('ativo'));
-  document.getElementById('tab-'+id).classList.add('ativo');
-  event.target.classList.add('ativo');
+function renderCal(){
+  const meses=['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  document.getElementById('cal-titulo').textContent=meses[calMes]+' '+calAno;
+  const grid=document.getElementById('cal-grid');grid.innerHTML='';
+  const primeiro=new Date(calAno,calMes,1).getDay();
+  const dias=new Date(calAno,calMes+1,0).getDate();
+  const hoje=new Date();
+  for(let i=0;i<primeiro;i++){const d=document.createElement('div');d.className='cal-dia outro-mes';grid.appendChild(d);}
+  for(let d=1;d<=dias;d++){
+    const div=document.createElement('div');
+    div.className='cal-dia'+(d===hoje.getDate()&&calMes===hoje.getMonth()&&calAno===hoje.getFullYear()?" hoje":"");
+    div.innerHTML='<div class="cal-num">'+d+'</div>';
+    const ds=calAno+'-'+(String(calMes+1).padStart(2,'0'))+'-'+(String(d).padStart(2,'0'));
+    postsData.filter(p=>p.agendado_para&&p.agendado_para.startsWith(ds)).forEach(p=>{
+      const s=document.createElement('div');s.className='cal-post';s.textContent=p.titulo||'Post';div.appendChild(s);
+    });grid.appendChild(div);
+  }
 }
-function filtrarPosts(status) {
-  document.querySelectorAll('.post-item').forEach(p=>{
-    p.style.display = status==='todos'||p.dataset.status===status ? '' : 'none';
-  });
-  document.querySelectorAll('[id^="f-"]').forEach(b=>b.style.background='');
-  document.getElementById('f-'+status).style.background='var(--cor-primaria)';
-  document.getElementById('f-'+status).style.color='white';
+function mudarMes(d){calMes+=d;if(calMes<0){calMes=11;calAno--;}if(calMes>11){calMes=0;calAno++;}renderCal();}
+renderCal();
+async function gerarComIA(){
+  const titulo=document.querySelector('[name="titulo"]').value;
+  const loading=document.getElementById('ia-loading');
+  loading.classList.add('ativo');
+  try{
+    const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:500,messages:[{role:"user",content:"Crie uma legenda profissional para post de marketing de uma liga academica de urologia sobre: "+titulo+". Maximo 150 palavras, tom profissional e engajador."}]})});
+    const data=await r.json();
+    document.getElementById('post-conteudo').value=data.content[0].text;
+  }catch(e){alert('Erro ao gerar com IA. Tente novamente.');}
+  loading.classList.remove('ativo');
 }
-function previewWpp(txt) { document.getElementById('wpp-preview-text').textContent = txt||'Sua mensagem aqui...'; }
-function editarPost(id) { window.location='/marketing/'+id+'/editar'; }
-function usarMidia(id, nome) { alert('Mídia "'+nome+'" selecionada!'); }
 </script>
 </body>
 </html>
