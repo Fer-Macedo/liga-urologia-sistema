@@ -874,9 +874,12 @@
                   <div style="font-size:11px;color:var(--texto2)">Usos: <%= c.usos_atual||0 %>/<%= c.usos_max %> <span style="margin-left:6px;background:<%= c.ativo?'#dcfce7':'#fee2e2' %>;color:<%= c.ativo?'#166534':'#991b1b' %>;padding:2px 6px;border-radius:4px;font-weight:700"><%= c.ativo?'ATIVO':'INATIVO' %></span></div>
                 </div>
               </div>
-              <form method="POST" action="/eventos/<%= evento.id %>/cupons/<%= c.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir cupom?')">
-                <button type="submit" class="btn-xs verm">Excluir</button>
-              </form>
+              <div style="display:flex;gap:6px;align-items:center">
+                <button onclick="copiarLinkCupom('<%= c.codigo %>')" class="btn-xs azul" title="Copiar link com cupom aplicado">Link</button>
+                <form method="POST" action="/eventos/<%= evento.id %>/cupons/<%= c.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir cupom?')">
+                  <button type="submit" class="btn-xs verm">Excluir</button>
+                </form>
+              </div>
             </div>
             <% }) %>
           </div>
@@ -1143,6 +1146,15 @@ function carregarHistorico() {
         +'<span style="background:#eff6ff;color:#1e40af;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700">'+tx+'% entrega</span>'
         +'<button onclick="verLogs('+e.id+')" class="btn-xs">Detalhes</button></div></div>';
     }).join('');
+  });
+}
+function copiarLinkCupom(codigo) {
+  const appUrl = window.location.origin;
+  const link = appUrl + '/inscricao/<%= evento.id %>?cupom=' + codigo;
+  navigator.clipboard.writeText(link).then(() => {
+    alert('Link copiado!\n\n' + link);
+  }).catch(() => {
+    prompt('Copie o link abaixo:', link);
   });
 }
 function verLogs(id){

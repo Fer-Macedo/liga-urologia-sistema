@@ -2403,7 +2403,8 @@ router.get('/inscricao/:id', async (req, res) => {
       query('SELECT * FROM evento_patrocinadores WHERE evento_id=$1 ORDER BY ordem',[req.params.id])
     ]);
     const cfgPub = await getConfig();
-    res.render('pages/evento-inscricao-publica', { evento: evR.rows[0], lotes: lotesR.rows, sucesso: false, qrcode: null, campos: camposR.rows, codigoInscricao: null, config: cfgPub, programacao: progPubR.rows, palestrantes: palesPubR.rows, patrocinadores: patrocPubR.rows, pixData: null });
+    const cupomUrl = req.query.cupom ? req.query.cupom.toUpperCase() : null;
+    res.render('pages/evento-inscricao-publica', { evento: evR.rows[0], lotes: lotesR.rows, sucesso: false, qrcode: null, campos: camposR.rows, codigoInscricao: null, config: cfgPub, programacao: progPubR.rows, palestrantes: palesPubR.rows, patrocinadores: patrocPubR.rows, pixData: null, cupomUrl });
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
@@ -2984,7 +2985,7 @@ router.post('/eventos/:id/cupons', requireAuth, async (req, res) => {
       [req.params.id,codigo.toUpperCase(),tipo||'percentual',parseFloat(valor)||100,parseInt(usos_max)||1]);
     req.session.msg=['Cupom criado!'];
   } catch(e) { req.session.erro=['Código já existe!']; }
-  res.redirect('/eventos/'+req.params.id);
+  res.redirect('/eventos/'+req.params.id+'?tab=cupons');
 });
 
 router.post('/eventos/:id/cupons/:cid/deletar', requireAuth, async (req, res) => {
