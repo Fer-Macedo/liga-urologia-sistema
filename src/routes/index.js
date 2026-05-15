@@ -3616,8 +3616,10 @@ router.get('/contratos', requireAuth, async (req, res) => {
 
 router.post('/contratos', requireAuth, async (req, res) => {
   try {
-    const { ligante_id, texto_contrato } = req.body;
-    await query('INSERT INTO contratos_ligantes (ligante_id, texto_contrato, criado_por) VALUES ($1,$2,$3)', [ligante_id, texto_contrato, req.session.usuario.id]);
+    const { ligante_id, data_inicio } = req.body;
+    const tgR = await query("SELECT valor FROM configuracoes WHERE chave='contrato_texto_global'");
+    const texto_contrato = tgR.rows[0]?.valor || '';
+    await query('INSERT INTO contratos_ligantes (ligante_id, texto_contrato, data_inicio, criado_por) VALUES ($1,$2,$3,$4)', [ligante_id, texto_contrato, data_inicio||null, req.session.usuario.id]);
     req.session.msg = ['Contrato gerado!'];
   } catch(e) { req.session.erro = [e.message]; }
   res.redirect('/contratos');
@@ -3644,7 +3646,7 @@ router.get('/contratos/:id/visualizar', requireAuth, async (req, res) => {
     const config = await getConfig();
     const { imagemBase64 } = require('../services/desligamento');
     const [timbB64,assPresB64,assViceB64,assSecB64,assOriB64] = await Promise.all([
-      imagemBase64(config.timbrado_chave),
+      imagemBase64(config.timbrado_contrato_chave || config.timbrado_chave),
       imagemBase64(config.assinatura_presidente_chave),
       imagemBase64(config.assinatura_vicepresidente_chave),
       imagemBase64(config.assinatura_secretario_chave),

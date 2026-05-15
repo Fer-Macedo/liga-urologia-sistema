@@ -99,60 +99,10 @@
             <%ligantes.forEach(l=>{%><option value="<%=l.id%>"><%=l.nome%> — Turma <%=l.turma||'?'%></option><%});%>
           </select>
         </div>
-        <div class="campo"><label class="label">Texto do Contrato (editavel)</label>
-          <div id="editor-novo" style="min-height:280px;border:1px solid var(--borda);border-radius:8px"></div>
-          <textarea name="texto_contrato" id="txt-novo" class="editor-contrato" style="display:none">CAPITULO IV - REGIMEN DISCIPLINARIO
-Sanciones: advertencia verbal, advertencia escrita, expulsion definitiva.
-Expulsion inmediata por: conducta antietica, falsificacion, falta grave de respeto.
-
-CAPITULO V - CONFIDENCIALIDAD
-El miembro no divulgara informacion interna de LAURO, incluso despues de su desvinculacion.
-
-CAPITULO VI - RESPONSABILIDAD
-El miembro actua bajo su propia responsabilidad. LAURO no responde por conductas individuales.
-
-CAPITULO VII - OBLIGACIONES FINANCIERAS
-Pago mensual: R$ 25,00 (descuento R$ 5,00 hasta el dia 15). Incumplimiento puede generar suspension o expulsion.
-
-CAPITULO VIII - PERMANENCIA Y DESVINCULACION
-Permanencia maxima: 1 ano. Para certificacion: minimo 1 ano, 75% asistencia, sin sanciones, pagos al dia.
-
-CAPITULO IX - USO DE IMAGEN
-El miembro autoriza uso de imagen, voz y nombre para fines academicos e institucionales.
-
-CAPITULO X - PROTECCION DE DATOS
-Se autoriza tratamiento de datos personales conforme a normativa vigente.
-
-CAPITULO XI - DISPOSICIONES FINALES
-Contrato de caracter obligatorio. Su firma implica aceptacion total.
-
-Ciudad Del Este, {data}.
-
-
-_________________________________________
-{nome}
-Miembro Activo
-
-
-_________________________________________
-MANUEL FERNANDO MACEDO NETO
-Presidente
-
-
-_________________________________________
-LEYRIANE DE JESUS DA SILVA MENDES
-Vice-Presidente
-
-
-_________________________________________
-KAUE TEIXEIRA LACERDA
-Secretario
-
-
-_________________________________________
-DIOGENES DURANONES
-Docente Orientador</textarea>
-          <div style="font-size:11px;color:var(--texto2);margin-top:4px">Use {nome} {rg} {catraca} {turma} {semestre} {data} para dados automaticos</div>
+        <div class="campo"><label class="label">Data de Inicio do Contrato *</label>
+          <input type="date" name="data_inicio" class="input" required>
+          <span style="font-size:11px;color:var(--texto2)">Data em que o contrato entra em vigor</span>
+        </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -242,12 +192,7 @@ document.addEventListener("DOMContentLoaded",()=>{
   document.querySelector("form[action='/contratos/texto-global']").addEventListener("submit",()=>{
     document.getElementById("txt-global").value=quillGlobal.root.innerHTML;
   });
-  quillNovo=new Quill("#editor-novo",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],['bold','italic','underline'],[{list:'ordered'},{list:'bullet'}],[{align:[]}],['clean']]}});
-  const txtInicial=document.getElementById("txt-novo").value;
-  if(txtInicial)quillNovo.setText(txtInicial);
-  document.querySelector("form[action='/contratos']").addEventListener("submit",()=>{
-    document.getElementById("txt-novo").value=quillNovo.root.innerHTML;
-  });
+
   quillEditar=new Quill("#editor-editar",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],['bold','italic','underline'],[{list:'ordered'},{list:'bullet'}],[{align:[]}],['clean']]}});
   document.getElementById("form-editar").addEventListener("submit",()=>{
     document.getElementById("txt-editar").value=quillEditar.root.innerHTML;
