@@ -29,6 +29,58 @@
     .editor-contrato{width:100%;min-height:300px;font-family:'Times New Roman',serif;font-size:13px;line-height:1.6;padding:16px;border:1px solid var(--borda);border-radius:8px;background:var(--fundo);resize:vertical;}
   </style>
 </head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'contratos' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Contratos Ligantes</h1>
+      <div class="topbar-acoes">
+        <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-novo')">+ Novo Contrato</button>
+      </div>
+    </div>
+    <div class="content">
+      <%if(msg&&msg.length>0){%><div class="alerta alerta-ok"><%=msg[0]%></div><%}%>
+      <%if(erro&&erro.length>0){%><div class="alerta alerta-erro"><%=erro[0]%></div><%}%>
+      <div class="table-card">
+        <div class="table-header"><span style="font-size:14px;font-weight:700"><%=contratos.length%> contrato(s)</span></div>
+        <table class="tabela"><thead><tr>
+          <th>Ligante</th><th>Status</th><th>Criado em</th><th>Enviado em</th><th>Assinado em</th><th>Acoes</th>
+        </tr></thead><tbody>
+        <%if(contratos.length===0){%>
+        <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--texto2)">
+          <div style="font-size:28px;margin-bottom:8px">&#128196;</div>
+          <div style="font-weight:600">Nenhum contrato gerado ainda</div>
+        </td></tr><%}%>
+        <%contratos.forEach(ct=>{%>
+        <tr>
+          <td><div style="font-weight:600"><%=ct.ligante_nome%></div>
+            <div style="font-size:11px;color:var(--texto2)"><%=ct.ligante_email||''%></div></td>
+          <td><span class="badge-status status-<%=ct.status%>"><%=ct.status%></span></td>
+          <td style="font-size:12px;color:var(--texto2)"><%=new Date(ct.criado_em).toLocaleDateString('pt-BR')%></td>
+          <td style="font-size:12px;color:var(--texto2)"><%=ct.enviado_em?new Date(ct.enviado_em).toLocaleDateString('pt-BR'):'-'%></td>
+          <td style="font-size:12px;color:var(--texto2)"><%=ct.assinado_em?new Date(ct.assinado_em).toLocaleDateString('pt-BR'):'-'%></td>
+          <td><div style="display:flex;gap:5px;flex-wrap:wrap">
+            <a href="/contratos/<%=ct.id%>/visualizar" target="_blank" class="btn-xs">Ver</a>
+            <a href="/contratos/<%=ct.id%>/imprimir" target="_blank" class="btn-xs roxo">Imprimir</a>
+            <button class="btn-xs azul" onclick="editarContrato(<%=ct.id%>,'<%=encodeURIComponent((ct.texto_contrato||'').replace(/'/g,'\\x27'))%>')">Editar</button>
+            <form method="POST" action="/contratos/<%=ct.id%>/enviar" style="display:inline;margin:0"><button type="submit" class="btn-xs verde">Enviar</button></form>
+            <%if(ct.status==='enviado'||ct.status==='assinado'){%>
+            <button class="btn-xs verde" onclick="abrirUpload(<%=ct.id%>,'<%=ct.ligante_nome%>')">Anexar Assinado</button>
+            <%}%>
+            <%if(ct.pdf_assinado_chave){%>
+            <a href="/contratos/<%=ct.id%>/assinado" target="_blank" class="btn-xs azul">Ver Assinado</a>
+            <%}%>
+            <form method="POST" action="/contratos/<%=ct.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')">
+              <button type="submit" class="btn-xs verm">Excluir</button></form>
+          </div></td>
+        </tr>
+        <%});%>
+        </tbody></table>
+      </div>
+    </div>
+  </main>
+</div>
 <div class="modal-overlay" id="modal-novo" style="display:none">
   <div class="modal" style="max-width:700px">
     <div class="modal-header"><span class="modal-titulo">Novo Contrato</span><button class="icon-btn" onclick="fecharModal('modal-novo')">&#x2715;</button></div>
@@ -41,20 +93,7 @@
           </select>
         </div>
         <div class="campo"><label class="label">Texto do Contrato (editavel)</label>
-          <textarea name="texto_contrato" class="editor-contrato">CONTRATO DE ADESAO A LIGA ACADEMICA DE UROLOGIA - LAURO
-
-Pelo presente instrumento, Eu, {nome}, estudante de Medicina, portador do RG: {rg}, CATRACA: {catraca}, comprometo-me a cumprir todas as normas e regulamentos da Liga Academica de Urologia LAURO.
-
-COMPROMISSOS DO LIGANTE:
-1. Participar das reunioes e atividades academicas;
-2. Cumprir as obrigacoes financeiras nos prazos estabelecidos;
-3. Respeitar os demais membros e a diretoria;
-4. Contribuir para o desenvolvimento cientifico e academico;
-5. Comunicar antecipadamente qualquer impossibilidade de participacao.
-
-Este contrato e valido pelo periodo de um ano, renovavel mediante acordo.
-
-Cidade do Leste - PY, {data}.</textarea>
+          <textarea name="texto_contrato" class="editor-contrato">__TEXTO2__</textarea>
           <div style="font-size:11px;color:var(--texto2);margin-top:4px">Use {nome} {rg} {catraca} {turma} {semestre} {data} para dados automaticos</div>
         </div>
       </div>
