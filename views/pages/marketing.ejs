@@ -750,7 +750,7 @@
 <script>
 const postsData=<%- JSON.stringify(posts) %>;
 let calMes=new Date().getMonth(),calAno=new Date().getFullYear();
-function showTab(id,el){document.querySelectorAll('.mkt-section').forEach(s=>s.classList.remove('ativo'));document.querySelectorAll('.mkt-tab').forEach(t=>t.classList.remove('ativo'));document.getElementById('tab-'+id).classList.add('ativo');el.classList.add('ativo');}
+function showTab(id,el){document.querySelectorAll('.mkt-section').forEach(s=>s.classList.remove('ativo'));document.querySelectorAll('.mkt-tab').forEach(t=>t.classList.remove('ativo'));const sec=document.getElementById('tab-'+id);if(sec)sec.classList.add('ativo');const btn=el.closest('.mkt-tab')||el;btn.classList.add('ativo');}
 function filtrarPosts(status,el){document.querySelectorAll('.post-item').forEach(p=>{p.style.display=status==='todos'||p.dataset.status===status?'':' none';});document.querySelectorAll('.pill').forEach(p=>p.classList.remove('ativo'));el.classList.add('ativo');}
 function buscarPost(q){document.querySelectorAll('.post-item').forEach(p=>{p.style.display=p.dataset.titulo.includes(q.toLowerCase())?'':' none';});}
 function previewWpp(txt){document.getElementById('wpp-preview-text').textContent=txt||'Sua mensagem aqui...';}
