@@ -150,6 +150,8 @@
               <div class="campo"><label class="label">Assinatura do Secretario (PNG)</label><input type="file" name="assinatura_secretario" class="input" accept="image/*"><%if(config.assinatura_secretario_chave){%><span class="assin-ok">Assinatura cadastrada</span><%}%></div>
               <div class="campo"><label class="label">Nome do Dir. Financeiro(a)</label><input name="financeiro_nome" class="input" value="<%=config.financeiro_nome||''%>"></div>
               <div class="campo"><label class="label">Assinatura Dir. Financeiro(a) (PNG)</label><input type="file" name="assinatura_financeiro" class="input" accept="image/*"><%if(config.assinatura_financeiro_chave){%><span class="assin-ok">Assinatura cadastrada</span><%}%></div>
+              <div class="campo"><label class="label">Nome do Orientador</label><input name="orientador_nome" class="input" value="<%=config.orientador_nome||''%>"></div>
+              <div class="campo"><label class="label">Assinatura do Orientador (PNG)</label><input type="file" name="assinatura_orientador" class="input" accept="image/*"><%if(config.assinatura_orientador_chave){%><span class="assin-ok">Assinatura cadastrada</span><%}%></div>
               <div class="campo" style="grid-column:1/-1"><label class="label">Papel Timbrado A4</label><input type="file" name="timbrado" class="input" accept="image/*"><%if(config.timbrado_chave){%><span class="assin-ok">Timbrado cadastrado</span><%}%></div>
             </div>
           </div>
