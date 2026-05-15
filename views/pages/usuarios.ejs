@@ -2,14 +2,41 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Usuários — <%= config.org_nome %></title>
+  <title>Usuarios</title>
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
   <style>
-    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
-    .perm-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:12px; }
-    .perm-item { display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--fundo);border-radius:8px;border:1px solid var(--borda);cursor:pointer;font-size:13px; }
-    .perm-item input { accent-color:var(--cor-primaria);width:16px;height:16px; }
-    .perm-item.ativo { background:var(--cor-primaria-claro);border-color:var(--cor-primaria); }
+    :root{--cor-primaria:<%= config.org_cor||'#1a56db' %>;}
+    .table-card{background:var(--card);border:1px solid var(--borda);border-radius:14px;overflow:hidden;margin-bottom:16px;}
+    .table-header{padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;align-items:center;justify-content:space-between;}
+    .table-titulo{font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;}
+    table.tabela{width:100%;border-collapse:collapse;}
+    table.tabela thead th{background:var(--fundo);padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--texto2);text-align:left;border-bottom:1px solid var(--borda);}
+    table.tabela tbody tr{border-bottom:1px solid var(--borda);transition:background .15s;}
+    table.tabela tbody tr:last-child{border-bottom:none;}
+    table.tabela tbody tr:hover{background:var(--fundo);}
+    table.tabela tbody td{padding:12px 14px;font-size:13px;vertical-align:middle;}
+    .avatar{width:34px;height:34px;border-radius:50%;background:var(--cor-primaria);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+    .badge-perfil{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+    .badge-admin{background:#dbeafe;color:#1e40af;}
+    .badge-presidencia{background:#dcfce7;color:#166534;}
+    .badge-financeiro{background:#fef3c7;color:#92400e;}
+    .badge-secretaria{background:#ede9fe;color:#4c1d95;}
+    .badge-visualizador{background:#f3f4f6;color:#6b7280;}
+    .badge-ativo{background:#dcfce7;color:#166634;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+    .badge-inativo{background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+    .btn-xs{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:600;border:1px solid var(--borda);background:var(--fundo);color:var(--texto);cursor:pointer;transition:all .15s;font-family:inherit;}
+    .btn-xs:hover{border-color:var(--cor-primaria);color:var(--cor-primaria);}
+    .btn-xs.roxo{background:#7c3aed;color:white;border-color:transparent;}
+    .btn-xs.amarelo{background:#f59e0b;color:white;border-color:transparent;}
+    .perm-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-top:12px;}
+    .perm-item{display:flex;align-items:center;gap:8px;padding:8px 12px;background:var(--fundo);border-radius:8px;border:1px solid var(--borda);cursor:pointer;font-size:12px;font-weight:500;transition:.15s;}
+    .perm-item input{accent-color:var(--cor-primaria);width:15px;height:15px;flex-shrink:0;}
+    .perm-item.ativo{background:#eff6ff;border-color:var(--cor-primaria);color:var(--cor-primaria);font-weight:600;}
+    .perfil-info{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;}
+    .perfil-card{background:var(--fundo);border:1px solid var(--borda);border-radius:10px;padding:12px 16px;}
+    .perfil-card-nome{font-weight:700;font-size:13px;margin-bottom:4px;}
+    .perfil-card-desc{font-size:12px;color:var(--texto2);line-height:1.4;}
   </style>
 </head>
 <body>
@@ -17,220 +44,153 @@
   <%- include('../partials/sidebar', { paginaAtual: 'usuarios' }) %>
   <main class="main">
     <div class="topbar">
-      <h1 class="page-titulo">Usuários do sistema</h1>
-      <button class="btn btn-primario" onclick="abrirModal('modal-usuario')">+ Novo usuário</button>
+      <h1 class="page-titulo">Usuarios do Sistema</h1>
+      <div class="topbar-acoes">
+        <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-usuario')">+ Novo usuario</button>
+      </div>
     </div>
     <div class="content">
-      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
-      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
-
-      <div class="table-wrap">
-        <table class="table">
-          <thead><tr>
-            <th>Nome</th><th>E-mail</th><th>Perfil</th><th>Status</th><th>Criado em</th><th>Ações</th>
-          </tr></thead>
-          <tbody>
-            <% usuarios.forEach(u => { %>
-            <tr>
-              <td><div class="membro-cell"><div class="avatar"><%= u.nome.substring(0,2).toUpperCase() %></div><%= u.nome %></div></td>
-              <td><%= u.email %></td>
-              <td>
-                <% if (u.perfil === 'admin') { %><span class="badge azul">Administrador</span>
-                <% } else if (u.perfil === 'financeiro') { %><span class="badge amarelo">Financeiro</span>
-                <% } else if (u.perfil === 'secretaria') { %><span class="badge cinza">Secretaria</span>
-                <% } else if (u.perfil === 'presidencia') { %><span class="badge" style="background:#f0fdf4;color:#15803d">Presidência</span><% } else { %><span class="badge cinza">Visualizador</span><% } %>
-              </td>
-              <td><span class="badge <%= u.ativo ? 'verde' : 'vermelho' %>"><%= u.ativo ? 'Ativo' : 'Inativo' %></span></td>
-              <td><%= new Date(u.criado_em).toLocaleDateString('pt-BR') %></td>
-              <td>
-                <div class="btn-acoes">
-                  <% if (u.perfil !== 'admin') { %>
-                    <button class="icon-btn verde" onclick="abrirPermissoes(<%= u.id %>, '<%= u.nome %>', '<%= u.perfil %>')" title="Gerenciar permissões">🔐</button>
-                    <form action="/usuarios/<%= u.id %>/toggle" method="POST" style="display:inline" onsubmit="return confirm('<%= u.ativo ? 'Desativar' : 'Ativar' %> este usuário?')">
-                      <button class="icon-btn" title="<%= u.ativo ? 'Desativar' : 'Ativar' %>"><%= u.ativo ? '⏸' : '▶' %></button>
-                    </form>
-                    <button class="icon-btn" onclick="abrirSenha(<%= u.id %>, '<%= u.nome %>')" title="Redefinir senha">🔑</button>
-                  <% } else { %>
-                    <span style="color:#bbb;font-size:12px">Admin principal</span>
-                  <% } %>
-                </div>
-              </td>
-            </tr>
-            <% }) %>
-          </tbody>
-        </table>
+      <%if(msg&&msg.length>0){%><div class="alerta alerta-ok"><%=msg[0]%></div><%}%>
+      <%if(erro&&erro.length>0){%><div class="alerta alerta-erro"><%=erro[0]%></div><%}%>
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-titulo"><%=usuarios.length%> usuario(s)</span>
+        </div>
+        <table class="tabela"><thead><tr>
+          <th>Usuario</th><th>Email</th><th>Perfil</th><th>Status</th><th>Criado em</th><th>Acoes</th>
+        </tr></thead><tbody>
+        <%usuarios.forEach(u=>{%>
+        <tr>
+          <td><div style="display:flex;align-items:center;gap:10px">
+            <div class="avatar"><%=u.nome.substring(0,2).toUpperCase()%></div>
+            <div style="font-weight:600"><%=u.nome%></div>
+          </div></td>
+          <td style="color:var(--texto2)"><%=u.email%></td>
+          <td>
+            <%if(u.perfil==='admin'){%><span class="badge-perfil badge-admin">Administrador</span>
+            <%}else if(u.perfil==='presidencia'){%><span class="badge-perfil badge-presidencia">Presidencia</span>
+            <%}else if(u.perfil==='financeiro'){%><span class="badge-perfil badge-financeiro">Financeiro</span>
+            <%}else if(u.perfil==='secretaria'){%><span class="badge-perfil badge-secretaria">Secretaria</span>
+            <%}else{%><span class="badge-perfil badge-visualizador">Visualizador</span><%}%>
+          </td>
+          <td><%if(u.ativo){%><span class="badge-ativo">Ativo</span><%}else{%><span class="badge-inativo">Inativo</span><%}%></td>
+          <td style="color:var(--texto2);font-size:12px"><%=new Date(u.criado_em).toLocaleDateString('pt-BR')%></td>
+          <td><%if(u.perfil!=='admin'){%>
+            <div style="display:flex;gap:5px">
+              <button class="btn-xs roxo" onclick="abrirPermissoes(<%=u.id%>,'<%=u.nome%>','<%=u.perfil%>')">Permissoes</button>
+              <form action="/usuarios/<%=u.id%>/toggle" method="POST" style="display:inline;margin:0" onsubmit="return confirm('<%=u.ativo?'Desativar':'Ativar'%>?')">
+                <button type="submit" class="btn-xs"><%=u.ativo?'Desativar':'Ativar'%></button>
+              </form>
+              <button class="btn-xs amarelo" onclick="abrirSenha(<%=u.id%>,'<%=u.nome%>')">Senha</button>
+            </div>
+          <%}else{%><span style="color:var(--texto2);font-size:12px">Admin principal</span><%}%></td>
+        </tr>
+        <%});%>
+        </tbody></table>
       </div>
-
-      <div class="info-box" style="margin-top:14px">
-        <strong>Perfis disponíveis:</strong><br>
-        <span style="color:#1a56db;font-weight:600">Administrador</span> — acesso total ao sistema<br>
-        <span style="color:#15803d;font-weight:600">Presidência</span> — permissões personalizadas<br>
-        <span style="color:#9f580a;font-weight:600">Financeiro</span> — gerencia membros, cobranças e notificações<br>
-        <span style="color:#7c3aed;font-weight:600">Secretaria</span> — lança frequências e atividades das turmas<br>
-        <span style="color:#6b7280;font-weight:600">Visualizador</span> — somente visualização<br>
-        <br>💡 Clique em 🔐 para personalizar as permissões de cada usuário.
+      <div class="table-card" style="padding:20px">
+        <div style="font-size:13px;font-weight:700;margin-bottom:14px">Perfis de Acesso</div>
+        <div class="perfil-info">
+          <div class="perfil-card"><div class="perfil-card-nome" style="color:#1e40af">Administrador</div><div class="perfil-card-desc">Acesso total sem restricoes</div></div>
+          <div class="perfil-card"><div class="perfil-card-nome" style="color:#166534">Presidencia</div><div class="perfil-card-desc">Permissoes personalizadas para a diretoria</div></div>
+          <div class="perfil-card"><div class="perfil-card-nome" style="color:#92400e">Financeiro</div><div class="perfil-card-desc">Gerencia membros, cobrancas e notificacoes</div></div>
+          <div class="perfil-card"><div class="perfil-card-nome" style="color:#4c1d95">Secretaria</div><div class="perfil-card-desc">Lanca frequencias e atividades das turmas</div></div>
+          <div class="perfil-card"><div class="perfil-card-nome" style="color:#6b7280">Visualizador</div><div class="perfil-card-desc">Somente visualizacao sem alteracoes</div></div>
+        </div>
       </div>
     </div>
   </main>
 </div>
-
-<!-- Modal novo usuário -->
 <div class="modal-overlay" id="modal-usuario" style="display:none">
   <div class="modal">
-    <div class="modal-header">
-      <span class="modal-titulo">Novo usuário</span>
-      <button class="icon-btn" onclick="fecharModal('modal-usuario')">✕</button>
-    </div>
+    <div class="modal-header"><span class="modal-titulo">Novo Usuario</span><button class="icon-btn" onclick="fecharModal('modal-usuario')">&#x2715;</button></div>
     <form action="/usuarios" method="POST">
-      <div class="form-grid">
-        <div class="campo full"><label class="label">Nome completo</label><input name="nome" class="input" required></div>
-        <div class="campo full"><label class="label">E-mail (usado para login)</label><input name="email" type="email" class="input" required></div>
-        <div class="campo full"><label class="label">Senha inicial</label><input name="senha" type="password" class="input" required minlength="6" placeholder="Mínimo 6 caracteres"></div>
-        <div class="campo full">
-          <label class="label">Perfil de acesso</label>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo"><label class="label">Nome completo</label><input name="nome" class="input" required></div>
+        <div class="campo"><label class="label">Email</label><input name="email" type="email" class="input" required></div>
+        <div class="campo"><label class="label">Senha inicial</label><input name="senha" type="password" class="input" required minlength="6" placeholder="Minimo 6 caracteres"></div>
+        <div class="campo"><label class="label">Perfil</label>
           <select name="perfil" class="input" id="selectPerfil" onchange="atualizarPermissoesDefault()">
-            <option value="presidencia">Presidência</option>
+            <option value="presidencia">Presidencia</option>
             <option value="secretaria">Secretaria</option>
             <option value="financeiro">Financeiro</option>
             <option value="visualizador">Visualizador</option>
           </select>
         </div>
-        <div class="campo full">
-          <label class="label">Permissões iniciais</label>
-          <div class="perm-grid" id="permissoesNovoUsuario">
-            <!-- Preenchido pelo JS -->
-          </div>
+        <div class="campo"><label class="label">Permissoes iniciais</label>
+          <div class="perm-grid" id="permissoesNovoUsuario"></div>
         </div>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn" onclick="fecharModal('modal-usuario')">Cancelar</button>
-        <button type="submit" class="btn btn-primario">Criar usuário</button>
-      </div>
+      <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-usuario')">Cancelar</button><button type="submit" class="btn btn-primario">Criar</button></div>
     </form>
   </div>
 </div>
-
-<!-- Modal permissões -->
 <div class="modal-overlay" id="modal-permissoes" style="display:none">
   <div class="modal" style="max-width:520px">
-    <div class="modal-header">
-      <span class="modal-titulo" id="titulo-permissoes">Permissões</span>
-      <button class="icon-btn" onclick="fecharModal('modal-permissoes')">✕</button>
-    </div>
-    <p style="font-size:13px;color:var(--texto2);margin-bottom:16px">
-      Marque os módulos que este usuário pode acessar. O administrador sempre tem acesso total.
-    </p>
+    <div class="modal-header"><span class="modal-titulo" id="titulo-permissoes">Permissoes</span><button class="icon-btn" onclick="fecharModal('modal-permissoes')">&#x2715;</button></div>
+    <p style="font-size:13px;color:var(--texto2);margin-bottom:16px">Marque os modulos que este usuario pode acessar.</p>
     <form id="form-permissoes" action="" method="POST">
       <div class="perm-grid" id="grid-permissoes"></div>
-      <div class="modal-footer">
-        <button type="button" class="btn" onclick="fecharModal('modal-permissoes')">Cancelar</button>
-        <button type="submit" class="btn btn-primario">💾 Salvar permissões</button>
-      </div>
+      <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-permissoes')">Cancelar</button><button type="submit" class="btn btn-primario">Salvar</button></div>
     </form>
   </div>
 </div>
-
-<!-- Modal redefinir senha -->
 <div class="modal-overlay" id="modal-senha" style="display:none">
-  <div class="modal">
-    <div class="modal-header">
-      <span class="modal-titulo" id="titulo-senha">Redefinir senha</span>
-      <button class="icon-btn" onclick="fecharModal('modal-senha')">✕</button>
-    </div>
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><span class="modal-titulo" id="titulo-senha">Redefinir senha</span><button class="icon-btn" onclick="fecharModal('modal-senha')">&#x2715;</button></div>
     <form id="form-senha" action="" method="POST">
-      <div class="campo" style="margin-bottom:16px">
-        <label class="label">Nova senha</label>
-        <input name="nova_senha" type="password" class="input" required minlength="6" placeholder="Mínimo 6 caracteres">
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn" onclick="fecharModal('modal-senha')">Cancelar</button>
-        <button type="submit" class="btn btn-primario">Salvar nova senha</button>
-      </div>
+      <div class="campo" style="margin-bottom:16px"><label class="label">Nova senha</label><input name="nova_senha" type="password" class="input" required minlength="6" placeholder="Minimo 6 caracteres"></div>
+      <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-senha')">Cancelar</button><button type="submit" class="btn btn-primario">Salvar</button></div>
     </form>
   </div>
 </div>
-
 <script src="/js/app.js"></script>
 <script>
-const TODOS_MODULOS = [
-  { id: 'dashboard',            label: '▦ Dashboard' },
-  { id: 'membros',              label: '◎ Membros' },
-  { id: 'diretivos',            label: '🏛️ Diretivos' },
-  { id: 'ligantes',             label: '🎓 Ligantes' },
-  { id: 'arquivos',             label: '📁 Arquivos' },
-  { id: 'frequencia',           label: '📊 Frequência Membros' },
-  { id: 'frequencia-diretivos', label: '📊 Frequência Diretivos' },
-  { id: 'cobrancas',            label: '◈ Cobranças' },
-  { id: 'aniversarios',         label: '◆ Aniversários' },
-  { id: 'auditoria',            label: '🔍 Auditoria' },
-  { id: 'notificacoes',         label: '◉ Notificações' },
-  { id: 'configuracoes',        label: '✦ Configurações' },
-  { id: 'usuarios',             label: '◎ Usuários' },
-  { id: 'desligamentos',        label: '📋 Desligamentos' },
-  { id: 'desvinculacoes',       label: '✂️ Desvinculações' },
-  { id: 'carta-cobranca',       label: '📄 Carta de Cobrança' },
-  { id: 'lista-assinaturas',    label: '✍️ Lista de Assinaturas' },
-  { id: 'marketing',            label: '📣 Marketing' },
-  { id: 'eventos',              label: '🎪 Eventos' }
+const TODOS_MODULOS=[
+  {id:"dashboard",label:"Dashboard"},{id:"membros",label:"Membros"},
+  {id:"diretivos",label:"Diretivos"},{id:"ligantes",label:"Ligantes"},
+  {id:"arquivos",label:"Arquivos"},{id:"frequencia",label:"Frequencia Membros"},
+  {id:"frequencia-diretivos",label:"Frequencia Diretivos"},{id:"cobrancas",label:"Cobrancas"},
+  {id:"aniversarios",label:"Aniversarios"},{id:"auditoria",label:"Auditoria"},
+  {id:"notificacoes",label:"Notificacoes"},{id:"configuracoes",label:"Configuracoes"},
+  {id:"usuarios",label:"Usuarios"},{id:"desligamentos",label:"Desligamentos"},
+  {id:"desvinculacoes",label:"Desvinculacoes"},{id:"carta-cobranca",label:"Carta Cobranca"},
+  {id:"lista-assinaturas",label:"Lista Assinaturas"},{id:"marketing",label:"Marketing"},
+  {id:"eventos",label:"Eventos"}
 ];
-
-const PERMISSOES_PADRAO = {
-  presidencia: ['dashboard','membros','diretivos','ligantes','arquivos','frequencia','frequencia-diretivos','cobrancas','aniversarios','auditoria','notificacoes','desligamentos','desvinculacoes','carta-cobranca','lista-assinaturas','marketing','eventos'],
-  secretaria:  ['dashboard','membros','diretivos','ligantes','arquivos','frequencia','frequencia-diretivos','aniversarios','desligamentos','desvinculacoes','lista-assinaturas','eventos'],
-  financeiro:  ['dashboard','membros','cobrancas','aniversarios','notificacoes','carta-cobranca','eventos'],
-  visualizador:['dashboard']
+const PERMISSOES_PADRAO={
+  presidencia:["dashboard","membros","diretivos","ligantes","arquivos","frequencia","frequencia-diretivos","cobrancas","aniversarios","auditoria","notificacoes","desligamentos","desvinculacoes","carta-cobranca","lista-assinaturas","marketing","eventos"],
+  secretaria:["dashboard","membros","diretivos","ligantes","arquivos","frequencia","frequencia-diretivos","aniversarios","desligamentos","desvinculacoes","lista-assinaturas","eventos"],
+  financeiro:["dashboard","membros","cobrancas","aniversarios","notificacoes","carta-cobranca","eventos"],
+  visualizador:["dashboard"]
 };
-
-// Permissoes atuais dos usuarios (carregadas do servidor)
-const permissoesUsuarios = <%- JSON.stringify(permissoesUsuarios) %>;
-
-function abrirPermissoes(id, nome, perfil) {
-  document.getElementById('titulo-permissoes').textContent = '🔐 Permissões — ' + nome;
-  document.getElementById('form-permissoes').action = '/usuarios/' + id + '/permissoes';
-
-  const permsAtuais = permissoesUsuarios[id] || PERMISSOES_PADRAO[perfil] || ['dashboard'];
-  const grid = document.getElementById('grid-permissoes');
-  grid.innerHTML = '';
-
-  TODOS_MODULOS.forEach(function(m) {
-    const checked = permsAtuais.includes(m.id);
-    const label = document.createElement('label');
-    label.className = 'perm-item' + (checked ? ' ativo' : '');
-    label.innerHTML = '<input type="checkbox" name="modulos" value="' + m.id + '"' + (checked ? ' checked' : '') + '> ' + m.label;
-    label.querySelector('input').addEventListener('change', function() {
-      label.classList.toggle('ativo', this.checked);
-    });
-    grid.appendChild(label);
-  });
-
-  abrirModal('modal-permissoes');
-}
-
-function atualizarPermissoesDefault() {
-  const perfil = document.getElementById('selectPerfil').value;
-  const padrao = PERMISSOES_PADRAO[perfil] || ['dashboard'];
-  const grid = document.getElementById('permissoesNovoUsuario');
-  grid.innerHTML = '';
-
-  TODOS_MODULOS.forEach(function(m) {
-    const checked = padrao.includes(m.id);
-    const label = document.createElement('label');
-    label.className = 'perm-item' + (checked ? ' ativo' : '');
-    label.innerHTML = '<input type="checkbox" name="modulos_inicial" value="' + m.id + '"' + (checked ? ' checked' : '') + '> ' + m.label;
-    label.querySelector('input').addEventListener('change', function() {
-      label.classList.toggle('ativo', this.checked);
-    });
-    grid.appendChild(label);
+const permissoesUsuarios=<%- JSON.stringify(permissoesUsuarios) %>;
+function renderPerm(gridId,modulos,nomeInput){
+  const g=document.getElementById(gridId);g.innerHTML="";
+  TODOS_MODULOS.forEach(m=>{
+    const ok=modulos.includes(m.id);
+    const l=document.createElement("label");
+    l.className="perm-item"+(ok?" ativo":"");
+    l.innerHTML='<input type="checkbox" name="'+nomeInput+'" value="'+m.id+'"'+(ok?" checked":"")+'> '+m.label;
+    l.querySelector("input").addEventListener("change",function(){l.classList.toggle("ativo",this.checked);});
+    g.appendChild(l);
   });
 }
-
-// Inicializa permissoes do novo usuario
+function abrirPermissoes(id,nome,perfil){
+  document.getElementById("titulo-permissoes").textContent="Permissoes — "+nome;
+  document.getElementById("form-permissoes").action="/usuarios/"+id+"/permissoes";
+  renderPerm("grid-permissoes",permissoesUsuarios[id]||PERMISSOES_PADRAO[perfil]||["dashboard"],"modulos");
+  abrirModal("modal-permissoes");
+}
+function atualizarPermissoesDefault(){
+  renderPerm("permissoesNovoUsuario",PERMISSOES_PADRAO[document.getElementById("selectPerfil").value]||["dashboard"],"modulos_inicial");
+}
+function abrirSenha(id,nome){
+  document.getElementById("titulo-senha").textContent="Redefinir senha — "+nome;
+  document.getElementById("form-senha").action="/usuarios/"+id+"/senha";
+  abrirModal("modal-senha");
+}
 atualizarPermissoesDefault();
-
-function abrirSenha(id, nome) {
-  document.getElementById('titulo-senha').textContent = 'Redefinir senha — ' + nome;
-  document.getElementById('form-senha').action = '/usuarios/' + id + '/senha';
-  abrirModal('modal-senha');
-}
 </script>
-</body></html>
+</body>
+</html>
