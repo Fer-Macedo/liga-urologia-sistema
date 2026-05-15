@@ -2065,6 +2065,28 @@ async function enviarEmailDesvinc(id, req, res, reenvio) {
 router.post('/desvinculacoes/:id/enviar', requireAuth, (req, res) => enviarEmailDesvinc(req.params.id, req, res, false));
 router.post('/desvinculacoes/:id/reenviar', requireAuth, (req, res) => enviarEmailDesvinc(req.params.id, req, res, true));
 
+router.post('/desvinculacoes/:id/assinado', requireAuth, async (req, res) => {
+  try {
+    upload.single('pdf_assinado')(req, res, async (err) => {
+      if (err || !req.file) { req.session.erro=['Erro no upload.']; return res.redirect('/desvinculacoes'); }
+      const r = await uploadArquivo(req.file.buffer, 'desvinculacao-assinada-'+req.params.id+'.pdf', req.file.mimetype, 'desvinculacoes');
+      await query('UPDATE desvinculacoes SET pdf_assinado_chave=$1, status=$2 WHERE id=$3', [r.chave, 'assinado', req.params.id]);
+      req.session.msg = ['Documento assinado anexado com sucesso!'];
+      res.redirect('/desvinculacoes');
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/desvinculacoes'); }
+});
+
+router.get('/desvinculacoes/:id/assinado', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT pdf_assinado_chave FROM desvinculacoes WHERE id=$1', [req.params.id]);
+    const d = r.rows[0];
+    if (!d || !d.pdf_assinado_chave) return res.status(404).send('Nao encontrado');
+    const url = await getUrlAssinada(d.pdf_assinado_chave);
+    res.redirect(url);
+  } catch(e) { res.status(500).send(e.message); }
+});
+
 router.post('/desvinculacoes/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
   await query('DELETE FROM desvinculacoes WHERE id=$1', [req.params.id]);
   req.session.msg = ['Desvinculação excluída!']; res.redirect('/desvinculacoes');
