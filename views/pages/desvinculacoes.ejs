@@ -126,13 +126,7 @@
               <%if(d.pdf_assinado_chave){%>
               <a href="/desvinculacoes/<%=d.id%>/assinado" target="_blank" class="btn-xs azul">Ver Assinado</a>
               <%}%>
-              <%if(d.status==='enviado'||d.status==='assinado'){%>
-              <button class="btn-xs verde" onclick="abrirUploadAssinado(<%=d.id%>,'<%=d.ligante_nome%>')">Anexar Assinado</button>
-              <%}%>
-              <%if(d.pdf_assinado_chave){%>
-              <a href="/desvinculacoes/<%=d.id%>/assinado" target="_blank" class="btn-xs azul">Ver Assinado</a>
-              <%}%>
-              <%if(usuario.perfil==='admin'||usuario.perfil==='presidencia'){%>
+     <%if(usuario.perfil==='admin'||usuario.perfil==='presidencia'){%>
               <form method="POST" action="/desvinculacoes/<%=d.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')">
                 <button type="submit" class="btn-xs verm">Excluir</button></form>
               <%}%>
