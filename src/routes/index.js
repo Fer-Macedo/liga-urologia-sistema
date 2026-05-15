@@ -2,6 +2,20 @@ const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const xss = require('xss');
+async function enviarEmail({from, to, subject, html}) {
+  const { Resend } = require('resend');
+  const resend = new Resend(process.env.RESEND_API_KEY);
+  const fromAddr = from || 'LAURO <onboarding@resend.dev>';
+  return resend.emails.send({ from: fromAddr, to, subject, html });
+}
+
+async function enviarEmail(opts){
+  const {Resend}=require('resend');
+  const r=new Resend(process.env.RESEND_API_KEY);
+  const from=opts.from||'LAURO <onboarding@resend.dev>';
+  return r.emails.send({from,to:opts.to,subject:opts.subject,html:opts.html});
+}
+
 const router = express.Router();
 
 // ─── SEGURANÇA ────────────────────────────────────────────────────────────────
@@ -1551,9 +1565,8 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
     const htmlPdf = require('html-pdf-node');
     const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({ host:process.env.EMAIL_HOST, port:process.env.EMAIL_PORT, auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS} });
-    await transporter.sendMail({ from:process.env.EMAIL_USER, to:d.email, subject:'Carta de Rescisión — Liga Académica de Urología LAURO', html:`<p>Estimado/a <strong>${d.nome}</strong>,</p><p>Adjunto encontrará su Carta de Rescisión de la Liga Académica de Urología - LAURO.</p><ol><li>Imprima el documento adjunto</li><li>Firme en el espacio indicado</li><li>Escanee o fotografíe el documento firmado</li><li><strong>Responda este mismo email</strong> con el documento firmado adjunto</li></ol><p>Atentamente,<br>Secretaría — LAURO<br>Liga Académica de Urología</p>`, attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}] });
+    // resend
+    await enviarEmail({ from: 'LAURO <onboarding@resend.dev>', to:d.email, subject:'Carta de Rescisión — Liga Académica de Urología LAURO', html:`<p>Estimado/a <strong>${d.nome}</strong>,</p><p>Adjunto encontrará su Carta de Rescisión de la Liga Académica de Urología - LAURO.</p><ol><li>Imprima el documento adjunto</li><li>Firme en el espacio indicado</li><li>Escanee o fotografíe el documento firmado</li><li><strong>Responda este mismo email</strong> con el documento firmado adjunto</li></ol><p>Atentamente,<br>Secretaría — LAURO<br>Liga Académica de Urología</p>`, attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}] });
     await query('UPDATE desligamentos SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', req.params.id]);
     await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_ENVIADO', 'Email enviado para: ' + d.email, req);
     req.session.msg = ['Email enviado com sucesso para ' + d.email + '!'];
@@ -1952,9 +1965,8 @@ router.post('/desligamentos/:id/reenviar', requireAuth, async (req, res) => {
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
     const htmlPdf = require('html-pdf-node');
     const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({host:process.env.EMAIL_HOST,port:process.env.EMAIL_PORT,auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS}});
-    await transporter.sendMail({ from:process.env.EMAIL_USER, to:d.email, subject:'Carta de Rescisión — LAURO (Reenvío)', html:`<p>Estimado/a <strong>${d.nome}</strong>,</p><p>Reenviamos su Carta de Rescisión de la LAURO.</p><ol><li>Imprima el documento</li><li>Firme en el espacio indicado</li><li>Escanee el documento firmado</li><li><strong>Responda este mismo email</strong> con el documento firmado adjunto</li></ol><p>Atentamente,<br>Secretaría — LAURO</p>`, attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}] });
+    // resend
+    await enviarEmail({ from: 'LAURO <onboarding@resend.dev>', to:d.email, subject:'Carta de Rescisión — LAURO (Reenvío)', html:`<p>Estimado/a <strong>${d.nome}</strong>,</p><p>Reenviamos su Carta de Rescisión de la LAURO.</p><ol><li>Imprima el documento</li><li>Firme en el espacio indicado</li><li>Escanee el documento firmado</li><li><strong>Responda este mismo email</strong> con el documento firmado adjunto</li></ol><p>Atentamente,<br>Secretaría — LAURO</p>`, attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}] });
     await query('UPDATE desligamentos SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', req.params.id]);
     req.session.msg=['Email reenviado para '+d.email+'!']; res.redirect('/desligamentos');
   } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/desligamentos'); }
@@ -2058,9 +2070,8 @@ async function enviarEmailDesvinc(id, req, res, reenvio) {
     const html = await gerarHTMLDesvinculacao(ligante, config, rd.rows[0].data_solicitacao);
     const htmlPdf = require('html-pdf-node');
     const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({ host:process.env.EMAIL_HOST, port:process.env.EMAIL_PORT, auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS} });
-    await transporter.sendMail({ from:process.env.EMAIL_USER, to:ligante.email, subject:'Carta de Desvinculación — Liga Académica de Urología LAURO'+(reenvio?' (Reenvío)':''), html:`<p>Estimado(a) <strong>${ligante.nome}</strong>,</p><p>Adjunto encontrará su Carta de Desvinculación de la Liga Académica de Urología - LAURO.</p><p>En caso de dudas, responda este mismo email.</p><p>Atentamente,<br>Secretaría — LAURO</p>`, attachments:[{filename:'carta-desvinculacion-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}] });
+    // resend
+    await enviarEmail({ from: 'LAURO <onboarding@resend.dev>', to:ligante.email, subject:'Carta de Desvinculación — Liga Académica de Urología LAURO'+(reenvio?' (Reenvío)':''), html:`<p>Estimado(a) <strong>${ligante.nome}</strong>,</p><p>Adjunto encontrará su Carta de Desvinculación de la Liga Académica de Urología - LAURO.</p><p>En caso de dudas, responda este mismo email.</p><p>Atentamente,<br>Secretaría — LAURO</p>`, attachments:[{filename:'carta-desvinculacion-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}] });
     await query('UPDATE desvinculacoes SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', id]);
     req.session.msg = ['Email enviado para ' + ligante.email + '!']; res.redirect('/desvinculacoes');
   } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/desvinculacoes'); }
@@ -2191,9 +2202,8 @@ async function enviarCartaCobranca(id, req, res, reenvio) {
     const html = gerarHTMLCartaCobranca(pessoa, config, r.rows[0]);
     const htmlPdf = require('html-pdf-node');
     const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({ host:process.env.EMAIL_HOST, port:process.env.EMAIL_PORT, auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS} });
-    await transporter.sendMail({ from:process.env.EMAIL_USER, to:pessoa.email, subject:'Carta de Cobro — LAURO'+(reenvio?' (Reenvío)':''), html:`<p>Estimado(a) <strong>${pessoa.nome}</strong>,</p><p>Adjunto encontrará su Carta de Cobro de la Liga Académica de Urología - LAURO.</p><p>Si ya realizó el pago, por favor envíenos el comprobante respondiendo este email.</p><p>Atentamente,<br>Dirección Financiera — LAURO</p>`, attachments:[{filename:'carta-cobro-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}] });
+    // resend
+    await enviarEmail({ from: 'LAURO <onboarding@resend.dev>', to:pessoa.email, subject:'Carta de Cobro — LAURO'+(reenvio?' (Reenvío)':''), html:`<p>Estimado(a) <strong>${pessoa.nome}</strong>,</p><p>Adjunto encontrará su Carta de Cobro de la Liga Académica de Urología - LAURO.</p><p>Si ya realizó el pago, por favor envíenos el comprobante respondiendo este email.</p><p>Atentamente,<br>Dirección Financiera — LAURO</p>`, attachments:[{filename:'carta-cobro-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}] });
     await query('UPDATE cartas_cobranca SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', id]);
     req.session.msg = ['Email enviado para '+pessoa.email+'!']; res.redirect('/carta-cobranca');
   } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/carta-cobranca'); }
@@ -2850,8 +2860,7 @@ async function enviarEmailConfirmacaoEvento(inscricaoId) {
     const insc = r.rows[0];
     if (!insc || !insc.email) return;
     const config = await getConfig();
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({ host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT, auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS } });
+    // resend
     const cor = insc.cor_tema || '#1a3d2b';
     const corEsc = '#0a2018';
     const orgNome = config.org_nome || 'Liga Academica de Urologia';
@@ -2873,9 +2882,9 @@ async function enviarEmailConfirmacaoEvento(inscricaoId) {
       +'</div>'
       +'</td></tr><tr><td style="background:#0f172a;border-radius:0 0 12px 12px;padding:24px 40px"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">'+orgNome+'</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">Duvidas? Responda este e-mail.</p></td><td align="right"><p style="margin:0;color:rgba(255,255,255,0.3);font-size:9px;letter-spacing:1.5px;text-transform:uppercase">Powered by PagBank</p></td></tr></table></td></tr>'
       +'</table></td></tr></table></body></html>';
-    await transporter.sendMail({ from: process.env.EMAIL_USER, to: insc.email, subject: 'Inscricao confirmada — ' + insc.evento_nome, html });
+    await enviarEmail({ from: 'LAURO <onboarding@resend.dev>', to: insc.email, subject: 'Inscricao confirmada — ' + insc.evento_nome, html });
     if (insc.notif_email) {
-      await transporter.sendMail({ from: process.env.EMAIL_USER, to: insc.notif_email, subject: 'Pagamento confirmado — ' + insc.nome + ' | ' + insc.evento_nome, html: '<p>Confirmado: <strong>' + insc.nome + '</strong> — ' + insc.evento_nome + '</p>' }).catch(() => {});
+      await enviarEmail({ from: 'LAURO <onboarding@resend.dev>', to: insc.notif_email, subject: 'Pagamento confirmado — ' + insc.nome + ' | ' + insc.evento_nome, html: '<p>Confirmado: <strong>' + insc.nome + '</strong> — ' + insc.evento_nome + '</p>' }).catch(() => {});
     }
     console.log('Email confirmacao enviado:', insc.email);
   } catch(e) { console.error('enviarEmailConfirmacaoEvento ERRO:', e.message); }
@@ -3202,9 +3211,8 @@ router.post('/eventos/:id/lotes/:lid/editar', requireAuth, async (req, res) => {
 router.post('/contato-evento/:id', async (req, res) => {
   try {
     const {nome,email,mensagem} = req.body;
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({ host:process.env.EMAIL_HOST, port:process.env.EMAIL_PORT, auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS} });
-    await transporter.sendMail({ from:process.env.EMAIL_USER, to:'lauroucpcde@lauroucpcde.com', subject:'Contato via evento — '+nome, html:'<p><strong>Nome:</strong> '+nome+'</p><p><strong>Email:</strong> '+email+'</p><p><strong>Mensagem:</strong><br>'+mensagem+'</p>' });
+    // resend
+    await enviarEmail({ from: 'LAURO <onboarding@resend.dev>', to:'lauroucpcde@lauroucpcde.com', subject:'Contato via evento — '+nome, html:'<p><strong>Nome:</strong> '+nome+'</p><p><strong>Email:</strong> '+email+'</p><p><strong>Mensagem:</strong><br>'+mensagem+'</p>' });
     res.send('<script>alert("Mensagem enviada! Entraremos em contato em breve.");history.back();</script>');
   } catch(e) { res.send('<script>alert("Erro ao enviar. Tente novamente.");history.back();</script>'); }
 });
@@ -3466,11 +3474,7 @@ router.post('/eventos/:id/mala-direta', requireAuth, async (req, res) => {
     const orgNome = config.org_nome || 'Liga Academica de Urologia';
     const orgCor = config.org_cor || '#1a56db';
     const orgLogo = config.org_logo || null;
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT,
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
-    });
+    // resend
     let where = "WHERE evento_id=$1 AND email IS NOT NULL";
     const params = [req.params.id];
     if (destinatarios === 'confirmados') where += " AND status='confirmado'";
@@ -3502,7 +3506,7 @@ router.post('/eventos/:id/mala-direta', requireAuth, async (req, res) => {
         +'</td></tr></table></td></tr></table></body></html>';
       let status = 'enviado';
       try {
-        await transporter.sendMail({ from: orgNome+' <'+process.env.EMAIL_USER+'>', to: insc.email, subject: assunto, html });
+        await enviarEmail({ from: 'LAURO <onboarding@resend.dev>', to: insc.email, subject: assunto, html });
         enviados++;
         await new Promise(r => setTimeout(r, 200));
       } catch(e) { status = 'erro'; erros++; }
@@ -3523,11 +3527,7 @@ router.post('/eventos/:id/mala-direta', requireAuth, async (req, res) => {
     const config = await getConfig();
     const orgNome = config.org_nome || 'Liga Academica de Urologia';
     const orgLogo = config.org_logo || null;
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({
-      host: process.env.EMAIL_HOST, port: process.env.EMAIL_PORT,
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS }
-    });
+    // resend
     let where = "WHERE evento_id=$1 AND email IS NOT NULL";
     const params = [req.params.id];
     if (destinatarios === 'confirmados') where += " AND status='confirmado'";
@@ -3551,7 +3551,7 @@ router.post('/eventos/:id/mala-direta', requireAuth, async (req, res) => {
         +'<p style="margin:0;font-size:12px;color:#94a3b8">'+orgNome+' · Mensagem enviada pela secretaria</p>'
         +'</td></tr>'
         +'</table></td></tr></table></body></html>';
-      try { await transporter.sendMail({from:process.env.EMAIL_USER,to:insc.email,subject:assunto,html}); enviados++; await new Promise(r=>setTimeout(r,200)); } catch(e){}
+      try { await enviarEmail({from: 'LAURO <onboarding@resend.dev>',to:insc.email,subject:assunto,html}); enviados++; await new Promise(r=>setTimeout(r,200)); } catch(e){}
     }
     req.flash('msg', 'Email enviado para '+enviados+' inscritos!');
   } catch(e) { req.flash('erro', 'Erro: '+e.message); }
@@ -3567,8 +3567,7 @@ router.post('/eventos/:id/email-massa', requireAuth, async (req, res) => {
     const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
     const evento = evR.rows[0];
     const config = await query('SELECT chave,valor FROM configuracoes').then(r => { const c={}; r.rows.forEach(x=>c[x.chave]=x.valor); return c; });
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({ host:process.env.EMAIL_HOST, port:process.env.EMAIL_PORT, auth:{user:process.env.EMAIL_USER,pass:process.env.EMAIL_PASS} });
+    // resend
     const cor = evento.cor_tema || '#1a3d2b';
     let enviados = 0;
     for (const insc of r.rows) {
@@ -3585,7 +3584,7 @@ router.post('/eventos/:id/email-massa', requireAuth, async (req, res) => {
           </div>
         </div></body></html>`;
       try {
-        await transporter.sendMail({ from:process.env.EMAIL_USER, to:insc.email, subject:assunto, html });
+        await enviarEmail({ from: 'LAURO <onboarding@resend.dev>', to:insc.email, subject:assunto, html });
         enviados++;
         await new Promise(r=>setTimeout(r,300));
       } catch(e) { console.error('Email massa erro:', insc.email, e.message); }
@@ -3719,9 +3718,8 @@ router.post('/contratos/:id/enviar', requireAuth, async (req, res) => {
     if (!d||!d.email) { req.session.erro=['Email nao cadastrado.']; return res.redirect('/contratos'); }
     const dataFmt = new Date().toLocaleDateString('pt-BR');
     let texto = (d.texto_contrato||'').replace(/\{nome\}/g,d.nome||'').replace(/\{rg\}/g,d.rg||'').replace(/\{catraca\}/g,d.catraca||'').replace(/\{turma\}/g,d.turma||'').replace(/\{semestre\}/g,d.semestre||'').replace(/\{data\}/g,dataFmt);
-    const nodemailer = require('nodemailer');
-    const transporter = nodemailer.createTransport({ host: process.env.EMAIL_HOST, port: 587, auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS } });
-    await transporter.sendMail({ from: process.env.EMAIL_USER, to: d.email, subject: 'Contrato de Adesao — LAURO', html: `<p>Prezado(a) <strong>${d.nome}</strong>,</p><p>Segue seu contrato de adesao a Liga Academica de Urologia LAURO.</p><pre style='font-family:serif;line-height:1.6'>${texto}</pre><p>Atenciosamente,<br>Secretaria LAURO</p>` });
+    // resend
+    await enviarEmail({ from: 'LAURO <onboarding@resend.dev>', to: d.email, subject: 'Contrato de Adesao — LAURO', html: `<p>Prezado(a) <strong>${d.nome}</strong>,</p><p>Segue seu contrato de adesao a Liga Academica de Urologia LAURO.</p><pre style='font-family:serif;line-height:1.6'>${texto}</pre><p>Atenciosamente,<br>Secretaria LAURO</p>` });
     await query('UPDATE contratos_ligantes SET status=$1,enviado_em=NOW() WHERE id=$2',['enviado',req.params.id]);
     req.session.msg=['Contrato enviado para '+d.email+'!'];
   } catch(e) { req.session.erro=[e.message]; }
