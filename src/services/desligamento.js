@@ -132,7 +132,7 @@ async function uploadBuffer(buffer, chave, contentType) {
 }
 
 
-function gerarHTMLContrato(d, config, texto) {
+function gerarHTMLContrato(d, config, texto, semTimbrado) {
   const timb = config.timbrado_b64 || null;
   const assP = config.assinatura_presidente_b64 || null;
   const assV = config.assinatura_vicepresidente_b64 || null;
@@ -150,7 +150,7 @@ function gerarHTMLContrato(d, config, texto) {
   const dados = '<div class="dados"><strong>MIEMBRO:</strong> '+d.nome+'<br><strong>R.G./C.I:</strong> '+(d.rg||'')+'<br><strong>Catraca:</strong> '+(d.catraca||'')+'<br><strong>Fecha de ingreso:</strong> '+dataIng+'</div>';
   const asss = '<div class="ass">'+assBl(null,(d.nome||'').toUpperCase(),'Miembro Activo')+assBl(assP,nomeP,'Presidente')+assBl(assV,nomeV,'Vice-Presidente')+assBl(assS,nomeS,'Secretario')+assBl(assO,nomeO,'Docente Orientador')+'</div>';
   const tit = '<div class="tit">CONTRATO DE LIGA ACADEMICA Y MIEMBRO ACTIVO<br>LIGA ACADEMICA DE UROLOGIA - LAURO</div>';
-  const bg = timb ? '<div class="bg"><img src="'+timb+'"></div>' : '';
+  const bg = (timb && !semTimbrado) ? '<div class="bg"><img src="'+timb+'"></div>' : '';
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>'+css+'</style></head><body><div class="pagina">'+bg+'<div class="tx">'+tit+dados+'<div class="co">'+texto+'</div>'+asss+'</div></div><script>window.onload=function(){window.print()}<\/script></body></html>';
 }
 

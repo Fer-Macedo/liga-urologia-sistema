@@ -3650,9 +3650,8 @@ router.get('/contratos/:id/pdf', requireAuth, async (req, res) => {
     config.assinatura_vicepresidente_b64 = await imagemBase64(config.assinatura_vicepresidente_chave);
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     config.assinatura_orientador_b64 = await imagemBase64(config.assinatura_orientador_chave);
-    let html = gerarHTMLContrato(d, config, d.texto_contrato || '');
+    let html = gerarHTMLContrato(d, config, d.texto_contrato || '', true);
     html = html.replace('window.onload=function(){window.print()}','');
-    html = html.replace(/<div class="bg">.*?<\/div>/,'');
     const timbB64 = config.timbrado_b64 || '';
     const headerTemplate = timbB64 ? '<div style="width:210mm;height:57mm;margin:0;padding:0"><img src="'+timbB64+'" style="width:210mm;height:57mm;object-fit:cover;object-position:top"></div>' : '<div></div>';
     const footerTemplate = timbB64 ? '<div style="width:210mm;height:38mm;margin:0;padding:0"><img src="'+timbB64+'" style="width:210mm;height:38mm;object-fit:cover;object-position:bottom"></div>' : '<div></div>';
