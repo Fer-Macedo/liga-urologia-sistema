@@ -30,6 +30,7 @@
     "nodemailer": "^6.9.9",
     "pg": "^8.11.3",
     "puppeteer-core": "^21.11.0",
+    "resend": "^6.12.3",
     "xss": "^1.0.14"
   },
   "devDependencies": {
