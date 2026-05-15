@@ -3652,6 +3652,10 @@ router.get('/contratos/:id/pdf', requireAuth, async (req, res) => {
     config.assinatura_orientador_b64 = await imagemBase64(config.assinatura_orientador_chave);
     let html = gerarHTMLContrato(d, config, d.texto_contrato || '');
     html = html.replace('window.onload=function(){window.print()}','');
+    html = html.replace(/\.bg\{[^}]*\}/,'.bg{display:none}');
+    const timbB64 = config.timbrado_b64 || '';
+    const headerTemplate = timbB64 ? '<div style="width:210mm;height:57mm;margin:0;padding:0"><img src="'+timbB64+'" style="width:210mm;height:57mm;object-fit:cover;object-position:top"></div>' : '<div></div>';
+    const footerTemplate = timbB64 ? '<div style="width:210mm;height:38mm;margin:0;padding:0"><img src="'+timbB64+'" style="width:210mm;height:38mm;object-fit:cover;object-position:bottom"></div>' : '<div></div>';
     const puppeteer = require('puppeteer-core');
     const chromium = require('@sparticuz/chromium');
     const browser = await puppeteer.launch({
@@ -3661,7 +3665,7 @@ router.get('/contratos/:id/pdf', requireAuth, async (req, res) => {
     });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
-    const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
+    const pdf = await page.pdf({ format: 'A4', printBackground: true, displayHeaderFooter: true, headerTemplate, footerTemplate, margin: { top: '57mm', right: '20mm', bottom: '38mm', left: '20mm' } });
     await browser.close();
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline; filename="contrato.pdf"');
