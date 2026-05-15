@@ -3603,13 +3603,15 @@ router.post('/eventos/:id/email-massa', requireAuth, async (req, res) => {
 // ===== CONTRATOS LIGANTES =====
 router.get('/contratos', requireAuth, async (req, res) => {
   const config = await getConfig();
+  const tgR = await query("SELECT valor FROM configuracoes WHERE chave='contrato_texto_global'");
+  const textoGlobal = tgR.rows[0]?.valor || '';
   const msg = req.session.msg||[]; req.session.msg=[];
   const erro = req.session.erro||[]; req.session.erro=[];
   const [cR, lR] = await Promise.all([
     query(`SELECT c.*, l.nome as ligante_nome, l.email as ligante_email FROM contratos_ligantes c LEFT JOIN ligantes l ON l.id=c.ligante_id ORDER BY c.criado_em DESC`),
     query(`SELECT id, nome, email, turma, semestre, rg, catraca FROM ligantes ORDER BY nome`)
   ]);
-  res.render('pages/contratos', { config, usuario: req.session.usuario, msg, erro, contratos: cR.rows, ligantes: lR.rows });
+  res.render('pages/contratos', { config, usuario: req.session.usuario, msg, erro, contratos: cR.rows, ligantes: lR.rows, textoGlobal });
 });
 
 router.post('/contratos', requireAuth, async (req, res) => {
@@ -3659,12 +3661,35 @@ router.get('/contratos/:id/visualizar', requireAuth, async (req, res) => {
       .replace(/\{semestre\}/g,d.semestre||'').replace(/\{data\}/g,dataFmt)
       .replace(/\{presidente\}/g,nomeP).replace(/\{vice\}/g,nomeV)
       .replace(/\{secretario\}/g,nomeS).replace(/\{orientador\}/g,nomeO);
-    const timb=timbB64?`<img src='${timbB64}' style='position:fixed;top:0;left:0;width:210mm;height:297mm;z-index:0'>`:'  ';
+    const timb=timbB64?`<img src='${timbB64}' style='position:fixed;top:0;left:0;width:210mm;height:auto;z-index:0'>`:'  ';
     const aImg=(b64,nm,cg)=>`<div class='ab'>${b64?`<img src='${b64}' class='ai'>`:'<div class="ae"></div>'}<div class='al'></div><div class='an'>${nm}</div><div class='ac'>${cg}</div></div>`;
     const css='*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Times New Roman,serif;font-size:11pt;}.pg{width:210mm;min-height:297mm;position:relative;}.tx{position:relative;z-index:1;padding:52mm 22mm 35mm 22mm;}.tit{text-align:center;font-weight:bold;font-size:12pt;margin-bottom:14px;text-transform:uppercase;}.co{text-align:justify;line-height:1.6;font-size:10.5pt;}.ass{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px;page-break-inside:avoid;}.ab{text-align:center;}.ai{max-height:44px;max-width:120px;object-fit:contain;margin-bottom:3px;}.ae{height:44px;}.al{border-top:1.5px solid #000;width:85%;margin:0 auto 3px;}.an{font-size:9.5pt;font-weight:bold;}.ac{font-size:9pt;}';
-    const body=`<div class='pg'>${timb}<div class='tx'><div class='tit'>CONTRATO DE LIGA ACADEMICA Y MIEMBRO ACTIVO<br>LIGA ACADEMICA DE UROLOGIA - LAURO</div><div class='co'>${texto}</div><div class='ass'>${aImg(assPresB64,nomeP,'Presidente')}${aImg(assViceB64,nomeV,'Vice-Presidente')}${aImg(assSecB64,nomeS,'Secretario')}${aImg(assOriB64,nomeO,'Docente Orientador')}</div></div></div>`;
+    const dataIngresso = d.data_ingresso ? new Date(d.data_ingresso).toLocaleDateString('pt-BR') : (d.criado_em ? new Date(d.criado_em).toLocaleDateString('pt-BR') : dataFmt);
+    const dadosLigante=`<div style='margin-bottom:18px;font-size:10.5pt;line-height:2'><strong>MIEMBRO:</strong> ${d.nome||''}<br><strong>R.G./C.I:</strong> ${d.rg||''}<br><strong>Catraca:</strong> ${d.catraca||''}<br><strong>Fecha de ingreso:</strong> ${dataIngresso}</div>`;
+    const body=`<div class='pg'>${timb}<div class='tx'><div class='tit'>CONTRATO DE LIGA ACADEMICA Y MIEMBRO ACTIVO<br>LIGA ACADEMICA DE UROLOGIA - LAURO</div>${dadosLigante}<div class='co'>${texto}</div><div class='ass'><div class='ab'><div class='ae'></div><div class='al'></div><div class='an'>${d.nome||''}</div><div class='ac'>Miembro Activo</div></div>${aImg(assPresB64,nomeP,'Presidente')}${aImg(assViceB64,nomeV,'Vice-Presidente')}${aImg(assSecB64,nomeS,'Secretario')}${aImg(assOriB64,nomeO,'Docente Orientador')}</div></div></div>`;
     res.send(`<!DOCTYPE html><html><head><meta charset='UTF-8'><style>${css}</style></head><body>${body}</body></html>`);
   } catch(e) { res.status(500).send(e.message); }
+});
+
+router.post('/contratos/timbrado', requireAuth, async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.single('timbrado_contrato')(req, res, async (err) => {
+      if (!req.file) { req.session.erro=['Sem arquivo']; return res.redirect('/contratos'); }
+      const chave = await uploadArquivo(req.file);
+      await query("INSERT INTO configuracoes(chave,valor) VALUES('timbrado_contrato_chave',$1) ON CONFLICT(chave) DO UPDATE SET valor=$1", [chave]);
+      req.session.msg=['Timbrado do contrato atualizado!']; res.redirect('/contratos');
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/contratos'); }
+});
+
+router.post('/contratos/texto-global', requireAuth, async (req, res) => {
+  try {
+    const { texto_contrato } = req.body;
+    await query('UPDATE contratos_ligantes SET texto_contrato=$1', [texto_contrato]);
+    await query("INSERT INTO configuracoes(chave,valor) VALUES('contrato_texto_global',$1) ON CONFLICT(chave) DO UPDATE SET valor=$1", [texto_contrato]);
+    req.session.msg=['Texto atualizado em todos os contratos!']; res.redirect('/contratos');
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/contratos'); }
 });
 
 router.get('/contratos/:id/imprimir', requireAuth, async (req, res) => { res.redirect('/contratos/'+req.params.id+'/visualizar'); });
