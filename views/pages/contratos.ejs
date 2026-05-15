@@ -211,10 +211,12 @@ function editarContrato(id,textoEnc){
 }
 function prepararSalvar(){
   const editor = quillGlobal.root;
-  editor.querySelectorAll('.ql-align-center').forEach(el=>el.setAttribute('style','text-align:center'));
-  editor.querySelectorAll('.ql-align-right').forEach(el=>el.setAttribute('style','text-align:right'));
-  editor.querySelectorAll('.ql-align-justify').forEach(el=>el.setAttribute('style','text-align:justify'));
-  document.getElementById('txt-global-hidden').value = editor.innerHTML;
+  const clone = editor.cloneNode(true);
+  clone.querySelectorAll('.ql-align-center').forEach(el=>el.setAttribute('style','text-align:center'));
+  clone.querySelectorAll('.ql-align-right').forEach(el=>el.setAttribute('style','text-align:right'));
+  clone.querySelectorAll('.ql-align-justify').forEach(el=>el.setAttribute('style','text-align:justify'));
+  document.getElementById('txt-global-hidden').value = clone.innerHTML;
+  console.log("SALVANDO:", clone.innerHTML.substring(0,200));
 }
 function abrirUpload(id,nome){
   document.getElementById("titulo-upload").textContent="Anexar Assinado — "+nome;
