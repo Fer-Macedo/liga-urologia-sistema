@@ -207,16 +207,20 @@ function editarContrato(id,textoEnc){
 async function salvarTextoGlobal(){
   const html = quillGlobal.root.innerHTML;
   document.getElementById("txt-global").value = html;
-  const fd = new FormData();
-  fd.append("texto_contrato", html);
-  const r = await fetch("/contratos/texto-global", {method:"POST", body: fd});
-  if(r.ok || r.redirected){
-    alert("Texto salvo com sucesso!");
-    fecharModal("modal-texto-global");
-    window.location.reload();
-  } else {
-    alert("Erro ao salvar: " + r.status);
-  }
+  try {
+    const r = await fetch("/contratos/texto-global", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({texto_contrato: html})
+    });
+    const d = await r.json();
+    if(d.ok){
+      alert("Texto salvo!");
+      window.location.reload();
+    } else {
+      alert("Erro: " + (d.erro||"desconhecido"));
+    }
+  } catch(e){ alert("Erro: "+e.message); }
 }
 function abrirUpload(id,nome){
   document.getElementById("titulo-upload").textContent="Anexar Assinado — "+nome;
