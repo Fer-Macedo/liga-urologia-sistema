@@ -187,7 +187,9 @@
 <script>
 let quillNovo, quillEditar, quillGlobal;
 document.addEventListener("DOMContentLoaded",()=>{
-  quillGlobal=new Quill("#editor-global",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],['bold','italic','underline'],[{list:'ordered'},{list:'bullet'}],[{align:[]}],['clean']]}});
+  const AlignClass = Quill.import('attributors/class/align');
+  Quill.register(AlignClass, true);
+  quillGlobal=new Quill("#editor-global",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],['bold','italic','underline'],[{list:'ordered'},{list:'bullet'}],[{align:['','center','right','justify']}],['clean']]}});
   if(window._textoGlobal)quillGlobal.root.innerHTML=window._textoGlobal;
   document.querySelector("form[action='/contratos/texto-global']").addEventListener("submit",()=>{
     document.getElementById("txt-global").value=quillGlobal.root.innerHTML;
