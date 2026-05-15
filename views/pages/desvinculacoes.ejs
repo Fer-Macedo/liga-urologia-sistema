@@ -120,6 +120,12 @@
               <a href="/desvinculacoes/<%=d.id%>/imprimir" target="_blank" class="btn-xs roxo">Imprimir</a>
               <form method="POST" action="/desvinculacoes/<%=d.id%>/enviar" style="display:inline;margin:0"><button type="submit" class="btn-xs verde">Enviar</button></form>
               <form method="POST" action="/desvinculacoes/<%=d.id%>/reenviar" style="display:inline;margin:0"><button type="submit" class="btn-xs amarelo">Reenviar</button></form>
+              <%if(d.status==='enviado'||d.status==='assinado'){%>
+              <button class="btn-xs verde" onclick="abrirUploadAssinado(<%=d.id%>,'<%=d.ligante_nome%>')">Anexar Assinado</button>
+              <%}%>
+              <%if(d.pdf_assinado_chave){%>
+              <a href="/desvinculacoes/<%=d.id%>/assinado" target="_blank" class="btn-xs azul">Ver Assinado</a>
+              <%}%>
               <%if(usuario.perfil==='admin'||usuario.perfil==='presidencia'){%>
               <form method="POST" action="/desvinculacoes/<%=d.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')">
                 <button type="submit" class="btn-xs verm">Excluir</button></form>
@@ -151,12 +157,36 @@
     </form>
   </div>
 </div>
+<div class="modal-overlay" id="modal-assinado-desvinc" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <span class="modal-titulo" id="titulo-assinado-desvinc">Anexar documento assinado</span>
+      <button class="icon-btn" onclick="fecharModal('modal-assinado-desvinc')">&#x2715;</button>
+    </div>
+    <form id="form-assinado-desvinc" action="" method="POST" enctype="multipart/form-data">
+      <div style="background:var(--fundo);border:2px dashed var(--borda);border-radius:10px;padding:20px;text-align:center;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">Documento assinado (PDF)</div>
+        <div style="font-size:11px;color:var(--texto2);margin-bottom:10px">Selecione o PDF do termo de desvinculacao assinado</div>
+        <input type="file" name="pdf_assinado" class="input" accept=".pdf" required style="max-width:260px;margin:0 auto">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-assinado-desvinc')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Anexar</button>
+      </div>
+    </form>
+  </div>
+</div>
 <script src="/js/app.js"></script>
 <script>
 function editarDesvinc(id,numAdv){
   document.getElementById('form-editar').action='/desvinculacoes/'+id+'/editar';
   document.getElementById('edit-num-adv').value=numAdv;
   abrirModal('modal-editar');
+}
+function abrirUploadAssinado(id,nome){
+  document.getElementById('titulo-assinado-desvinc').textContent='Anexar assinado — '+nome;
+  document.getElementById('form-assinado-desvinc').action='/desvinculacoes/'+id+'/assinado';
+  abrirModal('modal-assinado-desvinc');
 }
 function filtrar(q){document.querySelectorAll('.desvinc-row').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(q.toLowerCase())?'':' none';});}
 </script>
