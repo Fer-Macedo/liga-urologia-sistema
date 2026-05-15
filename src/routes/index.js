@@ -1572,14 +1572,8 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
     config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
-    const puppeteer = require('puppeteer-core');
-    const chromium = require('@sparticuz/chromium');
-    const browser = await puppeteer.launch({ args: chromium.args, executablePath: await chromium.executablePath(), headless: chromium.headless });
-    const page = await browser.newPage();
-    const htmlSemPrint = html.replace(/<script>window\.onload[^<]*<\/script>/g,'');
-    await page.setContent(htmlSemPrint, { waitUntil: 'networkidle0' });
-    const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-    await browser.close();
+    const htmlPdf = require('html-pdf-node');
+    const pdfBuffer = await htmlPdf.generatePdf({ content: html, type: 'html' }, { format: 'A4', printBackground: true });
     // resend
     const resR = await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:d.email, subject:'Carta de Rescisión — Liga Académica de Urología LAURO', html:emailBonito('Carta de Rescisión — LAURO','<p>Estimado/a <strong>'+d.nome+'</strong>,</p><p>Adjunto encontrará su <strong>Carta de Rescisión</strong> de la Liga Académica de Urología - LAURO.</p><p>Por favor:</p><ol style="margin:10px 0 10px 20px"><li style="margin-bottom:6px">Imprima el documento adjunto</li><li style="margin-bottom:6px">Firme en el espacio indicado</li><li style="margin-bottom:6px">Escanee o fotografíe el documento firmado</li><li><strong>Responda este email</strong> con el documento firmado adjunto</li></ol><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     await query('UPDATE desligamentos SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', req.params.id]);
@@ -1978,13 +1972,8 @@ router.post('/desligamentos/:id/reenviar', requireAuth, async (req, res) => {
     config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
-    const puppeteer2 = require('puppeteer-core');
-    const chromium2 = require('@sparticuz/chromium');
-    const browser2 = await puppeteer2.launch({ args: chromium2.args, executablePath: await chromium2.executablePath(), headless: chromium2.headless });
-    const page2 = await browser2.newPage();
-    await page2.setContent(html, { waitUntil: 'networkidle0' });
-    const pdfBuffer = await page2.pdf({ format: 'A4', printBackground: true });
-    await browser2.close();
+    const htmlPdf2 = require('html-pdf-node');
+    const pdfBuffer = await htmlPdf2.generatePdf({ content: html, type: 'html' }, { format: 'A4', printBackground: true });
     // resend
     await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:d.email, subject:'Carta de Rescisión — LAURO (Reenvío)', html:emailBonito('Carta de Rescisión — LAURO (Reenvío)','<p>Estimado/a <strong>'+d.nome+'</strong>,</p><p>Reenviamos su <strong>Carta de Rescisión</strong> de la LAURO.</p><ol style="margin:10px 0 10px 20px"><li style="margin-bottom:6px">Imprima el documento adjunto</li><li style="margin-bottom:6px">Firme en el espacio indicado</li><li style="margin-bottom:6px">Escanee el documento firmado</li><li><strong>Responda este email</strong> con el documento firmado adjunto</li></ol><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     await query('UPDATE desligamentos SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', req.params.id]);
