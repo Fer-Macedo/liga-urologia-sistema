@@ -131,4 +131,28 @@ async function uploadBuffer(buffer, chave, contentType) {
   await R2.send(new PutObjectCommand({ Bucket: BUCKET, Key: chave, Body: buffer, ContentType: contentType }));
 }
 
-module.exports = { gerarHTMLDesligamento, getUrlAssinada, uploadBuffer, imagemBase64 };
+
+function gerarHTMLContrato(d, config, texto) {
+  const timb = config.timbrado_b64 || null;
+  const assP = config.assinatura_presidente_b64 || null;
+  const assV = config.assinatura_vicepresidente_b64 || null;
+  const assS = config.assinatura_secretario_b64 || null;
+  const assO = config.assinatura_orientador_b64 || null;
+  const nomeP = (config.presidente_nome||'MANUEL FERNANDO MACEDO NETO').toUpperCase();
+  const nomeV = (config.vicepresidente_nome||'LEYRIANE').toUpperCase();
+  const nomeS = (config.secretario_nome||'KAUE TEIXEIRA LACERDA').toUpperCase();
+  const nomeO = (config.orientador_nome||'DIOGENES DURANONES').toUpperCase();
+  function assBl(b64,nm,cg){
+    return '<div class="ab">'+(b64?'<img class="ai" src="'+b64+'">':'<div class="ae"></div>')+'<div class="al"></div><div class="an">'+nm+'</div><div class="ac">'+cg+'</div></div>';
+  }
+  const css='*{margin:0;padding:0;box-sizing:border-box}body{font-family:Times New Roman,serif;font-size:11pt;color:#000}.pagina{width:210mm;min-height:297mm;position:relative;overflow:hidden}.bg{position:absolute;top:0;left:0;width:210mm;height:297mm;z-index:0}.bg img{width:210mm;height:297mm;display:block}.tx{position:absolute;top:50mm;left:22mm;width:166mm;bottom:80mm;z-index:1;overflow:hidden}.tit{text-align:center;font-weight:bold;font-size:12pt;margin-bottom:10px;text-transform:uppercase}.dados{font-size:10.5pt;line-height:2;margin-bottom:10px}.co{font-size:10pt;line-height:1.6}.co p{margin-bottom:6px}.co p.ql-align-center{text-align:center!important}.co p.ql-align-right{text-align:right!important}.co p.ql-align-justify{text-align:justify!important}.co p.ql-align-left{text-align:left!important}.ass{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}.ab{text-align:center}.ai{max-height:40px;max-width:110px;object-fit:contain;display:block;margin:0 auto 3px}.ae{height:40px}.al{border-top:1.5px solid #000;width:85%;margin:0 auto 3px}.an{font-size:9pt;font-weight:bold;text-transform:uppercase}.ac{font-size:8.5pt}@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}';
+  const dataIng = d.data_inicio ? new Date(d.data_inicio).toLocaleDateString('pt-BR') : '';
+  const dados = '<div class="dados"><strong>MIEMBRO:</strong> '+d.nome+'<br><strong>R.G./C.I:</strong> '+(d.rg||'')+'<br><strong>Catraca:</strong> '+(d.catraca||'')+'<br><strong>Fecha de ingreso:</strong> '+dataIng+'</div>';
+  const asss = '<div class="ass">'+assBl(null,(d.nome||'').toUpperCase(),'Miembro Activo')+assBl(assP,nomeP,'Presidente')+assBl(assV,nomeV,'Vice-Presidente')+assBl(assS,nomeS,'Secretario')+assBl(assO,nomeO,'Docente Orientador')+'</div>';
+  const tit = '<div class="tit">CONTRATO DE LIGA ACADEMICA Y MIEMBRO ACTIVO<br>LIGA ACADEMICA DE UROLOGIA - LAURO</div>';
+  const bg = timb ? '<div class="bg"><img src="'+timb+'"></div>' : '';
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"><style>'+css+'</style></head><body><div class="pagina">'+bg+'<div class="tx">'+tit+dados+'<div class="co">'+texto+'</div>'+asss+'</div></div><script>window.onload=function(){window.print()}<\/script></body></html>';
+}
+
+
+module.exports = { gerarHTMLDesligamento, gerarHTMLContrato, getUrlAssinada, uploadBuffer, imagemBase64 };

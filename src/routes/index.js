@@ -3640,42 +3640,20 @@ router.post('/contratos/:id/deletar', requireAuth, requireAdmin, async (req, res
 
 router.get('/contratos/:id/visualizar', requireAuth, async (req, res) => {
   try {
-    const r = await query('SELECT c.*, l.nome, l.rg, l.catraca, l.turma, l.semestre, l.email FROM contratos_ligantes c LEFT JOIN ligantes l ON l.id=c.ligante_id WHERE c.id=$1', [req.params.id]);
+    const r = await query('SELECT c.*, l.nome, l.rg, l.catraca, l.turma, l.semestre, l.email, l.data_ingresso FROM contratos_ligantes c LEFT JOIN ligantes l ON l.id=c.ligante_id WHERE c.id=$1', [req.params.id]);
     const d = r.rows[0];
     if (!d) return res.status(404).send('Nao encontrado');
     const config = await getConfig();
-    const { imagemBase64 } = require('../services/desligamento');
-    const [timbB64,assPresB64,assViceB64,assSecB64,assOriB64] = await Promise.all([
-      imagemBase64(config.timbrado_contrato_chave || config.timbrado_chave),
-      imagemBase64(config.assinatura_presidente_chave),
-      imagemBase64(config.assinatura_vicepresidente_chave),
-      imagemBase64(config.assinatura_secretario_chave),
-      imagemBase64(config.assinatura_orientador_chave)
-    ]);
-    const dataFmt=new Date().toLocaleDateString('pt-BR');
-    const nomeP=(config.presidente_nome||'MANUEL FERNANDO MACEDO NETO').toUpperCase();
-    const nomeV=(config.vicepresidente_nome||'LEYRIANE DE JESUS DA SILVA MENDES').toUpperCase();
-    const nomeS=(config.secretario_nome||'KAUE TEIXEIRA LACERDA').toUpperCase();
-    const nomeO=(config.orientador_nome||'DIOGENES DURANONES').toUpperCase();
-    let texto=(d.texto_contrato||'')
-      .replace(/\{nome\}/g,d.nome||'').replace(/\{rg\}/g,d.rg||'')
-      .replace(/\{catraca\}/g,d.catraca||'').replace(/\{turma\}/g,d.turma||'')
-      .replace(/\{semestre\}/g,d.semestre||'').replace(/\{data\}/g,dataFmt)
-      .replace(/\{presidente\}/g,nomeP).replace(/\{vice\}/g,nomeV)
-      .replace(/\{secretario\}/g,nomeS).replace(/\{orientador\}/g,nomeO);
-    const timb=timbB64?`<img src='${timbB64}' class='timb'>`:'  ';
-    const aImg=(b64,nm,cg)=>`<div class='ab'>${b64?`<img src='${b64}' class='ai'>`:'<div class="ae"></div>'}<div class='al'></div><div class='an'>${nm}</div><div class='ac'>${cg}</div></div>`;
-    const timbUrl=timbB64||'';
-    const timbTag=timbUrl?'<div class="bg"><img src="'+timbUrl+'"></div>':'';
-    const css='*{margin:0;padding:0;box-sizing:border-box}body{font-family:Times New Roman,serif;font-size:11pt;color:#000;width:210mm;margin:0 auto}@page{size:A4;margin:0}.pagina{width:210mm;min-height:297mm;position:relative}.bg{position:fixed;top:0;left:0;width:210mm;height:297mm;z-index:0}.bg img{width:210mm;height:297mm;display:block;-webkit-print-color-adjust:exact;print-color-adjust:exact}.tx{position:relative;z-index:1;padding:50mm 22mm 80mm 22mm;width:210mm;box-sizing:border-box}.tit{text-align:center;font-weight:bold;font-size:12pt;margin-bottom:14px;text-transform:uppercase}.co{font-size:10.5pt;line-height:1.7}.co p{margin-bottom:8px}.co p.ql-align-center{text-align:center!important}.co p.ql-align-right{text-align:right!important}.co p.ql-align-justify{text-align:justify!important}.co p.ql-align-left{text-align:left!important}.co ol,.co ul{padding-left:20px;margin-bottom:8px}.ass{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:30px;page-break-inside:avoid}.ab{text-align:center}.ai{max-height:44px;max-width:120px;object-fit:contain;margin-bottom:3px}.ae{height:44px}.al{border-top:1.5px solid #000;width:85%;margin:0 auto 3px}.an{font-size:9.5pt;font-weight:bold;text-transform:uppercase}.ac{font-size:9pt}'
-
-    const dataIngresso = d.data_ingresso ? new Date(d.data_ingresso).toLocaleDateString('pt-BR') : (d.criado_em ? new Date(d.criado_em).toLocaleDateString('pt-BR') : dataFmt);
-    const dadosLigante=`<div style='margin-bottom:18px;font-size:10.5pt;line-height:2'><strong>MIEMBRO:</strong> ${d.nome||''}<br><strong>R.G./C.I:</strong> ${d.rg||''}<br><strong>Catraca:</strong> ${d.catraca||''}<br><strong>Fecha de ingreso:</strong> ${dataIngresso}</div>`;
-    const body='<div class="pagina">'+timbTag+'<div class="tx"><div class="tit">CONTRATO DE LIGA ACADEMICA Y MIEMBRO ACTIVO<br>LIGA ACADEMICA DE UROLOGIA - LAURO</div>'+dadosLigante+'<div class="co">'+texto+'</div><div class="ass"><div class="ab"><div class="ae"></div><div class="al"></div><div class="an">'+(d.nome||'').toUpperCase()+'</div><div class="ac">Miembro Activo</div></div>'+aImg(assPresB64,nomeP,'Presidente')+aImg(assViceB64,nomeV,'Vice-Presidente')+aImg(assSecB64,nomeS,'Secretario')+aImg(assOriB64,nomeO,'Docente Orientador')+'</div></div></div>'
-    res.send(`<!DOCTYPE html><html><head><meta charset='UTF-8'><style>${css}</style></head><body>${body}<script>window.onload=function(){window.print();}<\/script></body></html>`);
-  } catch(e) { res.status(500).send(e.message); }
+    const { gerarHTMLContrato, imagemBase64 } = require('../services/desligamento');
+    config.timbrado_b64 = await imagemBase64(config.timbrado_contrato_chave || config.timbrado_chave);
+    config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
+    config.assinatura_vicepresidente_b64 = await imagemBase64(config.assinatura_vicepresidente_chave);
+    config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
+    config.assinatura_orientador_b64 = await imagemBase64(config.assinatura_orientador_chave);
+    const html = gerarHTMLContrato(d, config, d.texto_contrato || '');
+    res.send(html);
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
-
 router.post('/contratos/timbrado', requireAuth, async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
