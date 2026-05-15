@@ -73,6 +73,34 @@
     .filter-pills{display:flex;gap:6px;flex-wrap:wrap;}
     .pill{padding:5px 14px;border-radius:999px;border:1.5px solid var(--borda);background:var(--card);font-size:12px;font-weight:600;cursor:pointer;transition:.15s;color:var(--texto2);}
     .pill.ativo{background:var(--cor-primaria);color:white;border-color:var(--cor-primaria);}
+    .score-wrap{background:var(--fundo);border:1px solid var(--borda);border-radius:10px;padding:12px 14px;margin-top:8px;}
+    .score-bar-wrap{height:8px;border-radius:4px;background:#e5e7eb;overflow:hidden;margin:6px 0;}
+    .score-bar-fill{height:100%;border-radius:4px;transition:width .4s;}
+    .score-label{font-size:11px;font-weight:700;display:flex;justify-content:space-between;}
+    .hashtag-grid{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+    .hashtag-chip{padding:3px 10px;border-radius:999px;background:#eff6ff;color:var(--cor-primaria);font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid #bfdbfe;transition:.15s;}
+    .hashtag-chip:hover{background:var(--cor-primaria);color:white;border-color:var(--cor-primaria);}
+    .hashtag-chip.selecionado{background:var(--cor-primaria);color:white;border-color:var(--cor-primaria);}
+    .horario-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px;}
+    .horario-dia{text-align:center;font-size:10px;}
+    .horario-dia-nome{font-weight:700;color:var(--texto2);margin-bottom:4px;}
+    .horario-slot{padding:3px 2px;border-radius:4px;font-size:9px;font-weight:600;text-align:center;margin-bottom:2px;}
+    .slot-bom{background:#dcfce7;color:#166534;}
+    .slot-otimo{background:#059669;color:white;}
+    .slot-fraco{background:#f3f4f6;color:#9ca3af;}
+    .aprovacao-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+    .aprovacao-pendente{background:#fef3c7;color:#92400e;}
+    .aprovacao-aprovado{background:#dcfce7;color:#166534;}
+    .aprovacao-rejeitado{background:#fee2e2;color:#991b1b;}
+    .historico-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--borda);}
+    .historico-item:last-child{border-bottom:none;}
+    .preview-social{border:1px solid var(--borda);border-radius:12px;overflow:hidden;background:white;}
+    .preview-social-header{padding:10px 12px;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f0f0f0;}
+    .preview-social-img{width:36px;height:36px;border-radius:50%;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888);}
+    .preview-social-body{padding:10px 12px;font-size:13px;line-height:1.5;}
+    .preview-social-footer{padding:6px 12px;font-size:11px;color:#9ca3af;border-top:1px solid #f0f0f0;display:flex;gap:12px;}
+    .campanha-step{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--borda);border-radius:8px;margin-bottom:8px;}
+    .campanha-step-num{width:28px;height:28px;border-radius:50%;background:var(--cor-primaria);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
   </style>
 </head>
 <body>
@@ -108,6 +136,15 @@
         <button class="mkt-tab" onclick="showTab('integracao',this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
           Integracoes</button>
+        <button class="mkt-tab" onclick="showTab('aprovacoes',this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Aprovacoes</button>
+        <button class="mkt-tab" onclick="showTab('campanha',this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Campanhas</button>
+        <button class="mkt-tab" onclick="showTab('historico',this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Historico</button>
       </div>
       <div class="mkt-section ativo" id="tab-dashboard">
         <%const total=posts.length;const agend=posts.filter(p=>p.status==='agendado').length;
@@ -170,8 +207,19 @@
             </div>
           </div>
         </div>
-      </div>
-      <div class="mkt-section" id="tab-posts">
+        <div class="card" style="margin-top:16px">
+          <div class="card-titulo" style="margin-bottom:14px">Melhores Horarios para Postar</div>
+          <div style="font-size:12px;color:var(--texto2);margin-bottom:10px">Baseado em dados do setor de saude e educacao no Brasil</div>
+          <div class="horario-grid">
+            <div class="horario-dia"><div class="horario-dia-nome">Dom</div><div class="horario-slot slot-fraco">8h</div><div class="horario-slot slot-fraco">12h</div><div class="horario-slot slot-bom">18h</div><div class="horario-slot slot-fraco">21h</div></div>
+            <div class="horario-dia"><div class="horario-dia-nome">Seg</div><div class="horario-slot slot-bom">8h</div><div class="horario-slot slot-otimo">12h</div><div class="horario-slot slot-bom">18h</div><div class="horario-slot slot-bom">20h</div></div>
+            <div class="horario-dia"><div class="horario-dia-nome">Ter</div><div class="horario-slot slot-bom">8h</div><div class="horario-slot slot-otimo">12h</div><div class="horario-slot slot-otimo">18h</div><div class="horario-slot slot-bom">20h</div></div>
+            <div class="horario-dia"><div class="horario-dia-nome">Qua</div><div class="horario-slot slot-otimo">8h</div><div class="horario-slot slot-otimo">12h</div><div class="horario-slot slot-otimo">18h</div><div class="horario-slot slot-bom">20h</div></div>
+            <div class="horario-dia"><div class="horario-dia-nome">Qui</div><div class="horario-slot slot-bom">8h</div><div class="horario-slot slot-otimo">12h</div><div class="horario-slot slot-bom">18h</div><div class="horario-slot slot-bom">20h</div></div>
+            <div class="horario-dia"><div class="horario-dia-nome">Sex</div><div class="horario-slot slot-bom">8h</div><div class="horario-slot slot-bom">12h</div><div class="horario-slot slot-fraco">18h</div><div class="horario-slot slot-fraco">20h</div></div>
+            <div class="horario-dia"><div class="horario-dia-nome">Sab</div><div class="horario-slot slot-fraco">10h</div><div class="horario-slot slot-bom">12h</div><div class="horario-slot slot-bom">16h</div><div class="horario-slot slot-fraco">20h</div></div>
+          </div>
+
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
           <div class="filter-pills">
             <span class="pill ativo" onclick="filtrarPosts('todos',this)">Todos (<%=total%>)</span>
@@ -367,7 +415,19 @@
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" name="redes" value="whatsapp"> WhatsApp</label>
           </div>
         </div>
-        <div class="campo"><label class="label">Agendar para (opcional)</label><input type="datetime-local" name="agendado_para" class="input"></div>
+        <div class="campo"><label class="label">Agendar para (opcional)</label><input type="datetime-local" name="agendado_para" class="input" onchange="calcularMelhorHorario(this.value)"></div>
+        <div class="campo">
+          <label class="label">Hashtags (clique para adicionar)</label>
+          <div class="ia-loading" id="hashtag-loading"><div class="dots"><span>.</span><span>.</span><span>.</span></div> Buscando hashtags...</div>
+          <div class="hashtag-grid" id="hashtag-grid"></div>
+          <input type="hidden" name="hashtags" id="hashtags-selecionadas">
+          <button type="button" class="btn-xs roxo" style="margin-top:8px" onclick="gerarHashtags()">Sugerir hashtags com IA</button>
+        </div>
+        <div class="score-wrap" id="score-wrap">
+          <div class="score-label"><span style="font-weight:700">Score do Post</span><span id="score-valor" style="color:var(--cor-primaria)">0/100</span></div>
+          <div class="score-bar-wrap"><div class="score-bar-fill" id="score-bar" style="width:0%;background:#ef4444"></div></div>
+          <div id="score-dicas" style="font-size:11px;color:var(--texto2);margin-top:6px"></div>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-novo-post')">Cancelar</button>
@@ -431,6 +491,65 @@ function renderCal(){
 }
 function mudarMes(d){calMes+=d;if(calMes<0){calMes=11;calAno--;}if(calMes>11){calMes=0;calAno++;}renderCal();}
 renderCal();
+const hashtagsSel=new Set();
+function calcScore(){
+  const titulo=document.querySelector('[name="titulo"]')?.value||'';
+  const conteudo=document.getElementById('post-conteudo')?.value||'';
+  const imagem=document.querySelector('[name="imagem"]')?.files?.length>0;
+  const redes=document.querySelectorAll('[name="redes"]:checked').length;
+  const agendado=document.querySelector('[name="agendado_para"]')?.value;
+  let score=0;const itens=[];
+  if(titulo.length>5){score+=20;itens.push({ok:true,txt:'Titulo preenchido'});}else{itens.push({ok:false,txt:'Adicione um titulo'});}
+  if(conteudo.length>30){score+=20;itens.push({ok:true,txt:'Legenda boa'});}else{itens.push({ok:false,txt:'Escreva uma legenda'});}
+  if(conteudo.length>=100&&conteudo.length<=2200){score+=15;itens.push({ok:true,txt:'Tamanho ideal'});}else if(conteudo.length>0){itens.push({ok:false,txt:'Tamanho nao ideal'});}
+  if(imagem){score+=20;itens.push({ok:true,txt:'Tem imagem'});}else{itens.push({ok:false,txt:'Adicione uma imagem'});}
+  if(redes>0){score+=15;itens.push({ok:true,txt:redes+' rede(s)'});}else{itens.push({ok:false,txt:'Selecione redes'});}
+  if(hashtagsSel.size>0){score+=10;itens.push({ok:true,txt:hashtagsSel.size+' hashtag(s)'});}else{itens.push({ok:false,txt:'Adicione hashtags'});}
+  const cor=score>=70?'#10b981':score>=40?'#f59e0b':'#ef4444';
+  document.getElementById('score-num').textContent=score;
+  document.getElementById('score-num').style.color=cor;
+  document.getElementById('score-fill').style.width=score+'%';
+  document.getElementById('score-fill').style.background=cor;
+  document.getElementById('score-itens').innerHTML=itens.map(i=>'<span class="score-item '+(i.ok?'ok':'no')+'">'+( i.ok?'✓ ':'✗ ')+i.txt+'</span>').join('');
+}
+document.addEventListener('input',e=>{if(e.target.closest('#modal-novo-post'))calcScore();});
+document.addEventListener('change',e=>{if(e.target.closest('#modal-novo-post'))calcScore();});
+async function gerarHashtags(){
+  const titulo=document.querySelector('[name="titulo"]')?.value||'';
+  const grid=document.getElementById('hashtag-grid');
+  grid.innerHTML='<span style="font-size:12px;color:var(--texto2)">Gerando...</span>';
+  try{
+    const r=await fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:300,
+        messages:[{role:"user",content:"Liste 15 hashtags para post sobre: "+titulo+" de liga academica de urologia. Retorne APENAS hashtags separadas por espaco."}]})
+    });
+    const data=await r.json();
+    const tags=data.content[0].text.trim().split(/\s+/).filter(t=>t.startsWith('#')).slice(0,15);
+    grid.innerHTML=tags.map(t=>'<span class="hashtag-chip" onclick="toggleHashtag(this,\''+t+'\')">'+t+'</span>').join('');
+  }catch(e){grid.innerHTML='<span style="color:#dc2626;font-size:12px">Erro ao gerar</span>';}
+}
+function toggleHashtag(el,tag){
+  el.classList.toggle('selecionado');
+  if(el.classList.contains('selecionado'))hashtagsSel.add(tag);else hashtagsSel.delete(tag);
+  document.getElementById('hashtags-selecionadas').value=[...hashtagsSel].join(' ');
+  calcScore();
+}
+function gerarRelatorio(){
+  const linhas=[['Titulo','Status','Redes','Data']];
+  postsData.forEach(p=>linhas.push([
+    p.titulo||'(Sem titulo)',
+    p.status,
+    (p.redes||[]).join('/'),
+    new Date(p.criado_em).toLocaleDateString('pt-BR')
+  ]));
+  const csv=linhas.map(l=>l.map(v=>'"'+(v||'').replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='relatorio-marketing.csv';
+  a.click();
+}
 async function gerarComIA(){
   const titulo=document.querySelector('[name="titulo"]').value;
   const loading=document.getElementById('ia-loading');
