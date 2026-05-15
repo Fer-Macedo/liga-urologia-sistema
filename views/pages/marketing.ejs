@@ -149,6 +149,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           Historico</button>
       </div>
+      <div id="mkt-content">
       <div class="mkt-section ativo" id="tab-dashboard">
         <%const total=posts.length;const agend=posts.filter(p=>p.status==='agendado').length;
         const pub=posts.filter(p=>p.status==='publicado').length;
@@ -272,6 +273,58 @@
               <%if(p.status==='rascunho'||p.status==='agendado'){%>
               <form method="POST" action="/marketing/<%=p.id%>/publicar" style="display:inline;margin:0">
                 <button type="submit" class="btn-xs verde">Publicar</button></form>
+              <%}%>
+              <form method="POST" action="/marketing/<%=p.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')">
+                <button type="submit" class="btn-xs verm">Excluir</button></form>
+            </div>
+          </div>
+        </div>
+        <%});%>
+      </div>
+      <div class="mkt-section" id="tab-posts">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
+          <div class="filter-pills">
+            <span class="pill ativo" onclick="filtrarPosts('todos',this)">Todos (<%=posts.length%>)</span>
+            <span class="pill" onclick="filtrarPosts('rascunho',this)">Rascunhos</span>
+            <span class="pill" onclick="filtrarPosts('agendado',this)">Agendados</span>
+            <span class="pill" onclick="filtrarPosts('publicado',this)">Publicados</span>
+          </div>
+          <div class="search-bar">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--texto2)"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>
+            <input type="text" placeholder="Buscar post..." oninput="buscarPost(this.value)">
+          </div>
+        </div>
+        <%if(posts.length===0){%>
+        <div style="text-align:center;padding:48px;color:var(--texto2)">
+          <div style="font-size:32px;margin-bottom:12px">&#128221;</div>
+          <div style="font-weight:600">Nenhum post criado ainda</div>
+        </div><%}%>
+        <%posts.forEach(p=>{%>
+        <div class="post-card post-item" data-status="<%=p.status%>" data-titulo="<%=(p.titulo||'').toLowerCase()%>">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+            <div style="display:flex;align-items:center;gap:12px;flex:1">
+              <%if(p.imagem_chave){%>
+              <img src="/marketing/midia/<%=p.id%>/img" style="width:52px;height:52px;border-radius:8px;object-fit:cover;flex-shrink:0">
+              <%}else{%>
+              <div style="width:52px;height:52px;border-radius:8px;background:var(--fundo);display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid var(--borda)">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--texto2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div><%}%>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:700;font-size:14px;margin-bottom:3px"><%=p.titulo||'(Sem titulo)'%></div>
+                <div style="font-size:12px;color:var(--texto2)"><%=(p.conteudo||'').substring(0,100)%><%=(p.conteudo||'').length>100?'...':''%></div>
+              </div>
+            </div>
+            <span class="badge-status status-<%=p.status%>"><%=p.status%></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;gap:8px">
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              <%(p.redes||[]).forEach(r=>{%><span class="rede-badge rede-<%=r%>"><%=r%></span><%});%>
+              <%if(p.agendado_para){%><span style="font-size:11px;color:var(--texto2);margin-left:6px"><%=new Date(p.agendado_para).toLocaleString('pt-BR')%></span><%}%>
+            </div>
+            <div style="display:flex;gap:5px">
+              <button onclick="editarPost(<%=p.id%>)" class="btn-xs">Editar</button>
+              <%if(p.status==='rascunho'||p.status==='agendado'){%>
+              <form method="POST" action="/marketing/<%=p.id%>/publicar" style="display:inline;margin:0"><button type="submit" class="btn-xs verde">Publicar</button></form>
               <%}%>
               <form method="POST" action="/marketing/<%=p.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')">
                 <button type="submit" class="btn-xs verm">Excluir</button></form>
@@ -492,7 +545,7 @@
       </div>
     </div>
       <div class="mkt-section" id="tab-campanha">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:100%">
           <div class="card">
             <div class="card-titulo" style="margin-bottom:4px">Campanha Multicanal</div>
             <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">Dispare para todas as redes com um unico clique</p>
@@ -548,7 +601,7 @@
         </div>
       </div>
       <div class="mkt-section" id="tab-templates">
-        <div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+        <div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
           <div style="font-size:14px;font-weight:700">Templates Prontos</div>
           <span style="font-size:12px;color:var(--texto2)">Clique para usar como base no novo post</span>
         </div>
@@ -594,6 +647,7 @@
             <div style="margin-top:8px"><span class="rede-badge rede-instagram">instagram</span> <span class="rede-badge rede-facebook">facebook</span></div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   </main>
