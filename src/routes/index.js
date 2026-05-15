@@ -3641,11 +3641,25 @@ router.get('/contratos/:id/visualizar', requireAuth, async (req, res) => {
     if (!d) return res.status(404).send('Nao encontrado');
     const config = await getConfig();
     const { imagemBase64 } = require('../services/desligamento');
-    const timbB64 = await imagemBase64(config.timbrado_chave);
-    const dataFmt = new Date().toLocaleDateString('pt-BR');
-    let texto = (d.texto_contrato||'').replace(/\{nome\}/g,d.nome||'').replace(/\{rg\}/g,d.rg||'').replace(/\{catraca\}/g,d.catraca||'').replace(/\{turma\}/g,d.turma||'').replace(/\{semestre\}/g,d.semestre||'').replace(/\{data\}/g,dataFmt);
-    const timb = timbB64 ? `<img src='${timbB64}' style='width:210mm;height:297mm;position:absolute;top:0;left:0;z-index:0'>` : '';
-    res.send(`<!DOCTYPE html><html><head><meta charset='UTF-8'><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Times New Roman',serif;font-size:11pt;}.pagina{width:210mm;min-height:297mm;position:relative;}.texto{position:relative;z-index:1;padding:55mm 22mm 20mm 22mm;}.titulo{text-align:center;font-weight:bold;font-size:12pt;margin-bottom:20px;text-transform:uppercase;}.corpo{text-align:justify;line-height:1.6;white-space:pre-wrap;}</style></head><body><div class='pagina'>${timb}<div class='texto'><div class='titulo'>CONTRATO DE ADESAO - LAURO</div><div class='corpo'>${texto}</div></div></div></body></html>`);
+    const [timbB64,assPresB64,assViceB64,assSecB64,assOriB64] = await Promise.all([
+      imagemBase64(config.timbrado_chave),
+      imagemBase64(config.assinatura_presidente_chave),
+      imagemBase64(config.assinatura_vicepresidente_chave),
+      imagemBase64(config.assinatura_secretario_chave),
+      imagemBase64(config.assinatura_orientador_chave)
+    ]);
+    const dataFmt=new Date().toLocaleDateString('pt-BR');
+    const nomeP=(config.presidente_nome||'MANUEL FERNANDO MACEDO NETO').toUpperCase();
+    const nomeV=(config.vicepresidente_nome||'LEYRIANE DE JESUS DA SILVA MENDES').toUpperCase();
+    const nomeS=(config.secretario_nome||'KAUE TEIXEIRA LACERDA').toUpperCase();
+    const nomeO=(config.orientador_nome||'DIOGENES DURANONES').toUpperCase();
+    let texto=(d.texto_contrato||'')
+      .replace(/\{nome\}/g,d.nome||'').replace(/\{rg\}/g,d.rg||'')
+      .replace(/\{catraca\}/g,d.catraca||'').replace(/\{turma\}/g,d.turma||'')
+      .replace(/\{semestre\}/g,d.semestre||'').replace(/\{data\}/g,dataFmt)
+      .replace(/\{presidente\}/g,nomeP).replace(/\{vice\}/g,nomeV)
+      .replace(/\{secretario\}/g,nomeS).replace(/\{orientador\}/g,nomeO);
+    __HTML__
   } catch(e) { res.status(500).send(e.message); }
 });
 
