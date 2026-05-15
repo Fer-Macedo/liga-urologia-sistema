@@ -118,37 +118,37 @@
       <%if(msg&&msg.length>0){%><div class="alerta alerta-ok"><%=msg[0]%></div><%}%>
       <%if(erro&&erro.length>0){%><div class="alerta alerta-erro"><%=erro[0]%></div><%}%>
       <div class="mkt-tabs">
-        <button class="mkt-tab ativo" onclick="showTab('dashboard',this)">
+        <button class="mkt-tab ativo" onclick=\"showTab('dashboard')\">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
           Dashboard</button>
-        <button class="mkt-tab" onclick="showTab('posts',this)">
+        <button class="mkt-tab" onclick=\"showTab('posts')\">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           Posts</button>
-        <button class="mkt-tab" onclick="showTab('calendario',this)">
+        <button class="mkt-tab" onclick=\"showTab('calendario')\">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           Calendario</button>
-        <button class="mkt-tab" onclick="showTab('midias',this)">
+        <button class="mkt-tab" onclick=\"showTab('midias')\">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           Midias</button>
-        <button class="mkt-tab" onclick="showTab('whatsapp',this)">
+        <button class="mkt-tab" onclick=\"showTab('whatsapp')\">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           WhatsApp</button>
-        <button class="mkt-tab" onclick="showTab('integracao',this)">
+        <button class="mkt-tab" onclick=\"showTab('integracao')\">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
           Integracoes</button>
-        <button class="mkt-tab" onclick="showTab('aprovacao',this)">
+        <button class="mkt-tab" onclick=\"showTab('aprovacao')\">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           Aprovacoes</button>
-        <button class="mkt-tab" onclick="showTab('campanha',this)">
+        <button class="mkt-tab" onclick=\"showTab('campanha')\">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           Campanhas</button>
-        <button class="mkt-tab" onclick="showTab('templates',this)">
+        <button class="mkt-tab" onclick=\"showTab('templates')\">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="9"/></svg>
           Templates</button>
-        <button class="mkt-tab" onclick="showTab('historico',this)">
+        <button class="mkt-tab" onclick=\"showTab('historico')\">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           Historico</button>
-        <button class="mkt-tab" onclick="showTab('analytics',this)">
+        <button class="mkt-tab" onclick=\"showTab('analytics')\">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Analytics</button>
       </div>
@@ -750,7 +750,7 @@
 <script>
 const postsData=<%- JSON.stringify(posts) %>;
 let calMes=new Date().getMonth(),calAno=new Date().getFullYear();
-function showTab(id,el){document.querySelectorAll('.mkt-section').forEach(s=>s.classList.remove('ativo'));document.querySelectorAll('.mkt-tab').forEach(t=>t.classList.remove('ativo'));const sec=document.getElementById('tab-'+id);if(sec)sec.classList.add('ativo');const btn=el.closest('.mkt-tab')||el;btn.classList.add('ativo');}
+function showTab(id){document.querySelectorAll('.mkt-section').forEach(s=>s.classList.remove('ativo'));document.querySelectorAll('.mkt-tab').forEach(t=>t.classList.remove('ativo'));const sec=document.getElementById('tab-'+id);if(sec)sec.classList.add('ativo');}
 function filtrarPosts(status,el){document.querySelectorAll('.post-item').forEach(p=>{p.style.display=status==='todos'||p.dataset.status===status?'':' none';});document.querySelectorAll('.pill').forEach(p=>p.classList.remove('ativo'));el.classList.add('ativo');}
 function buscarPost(q){document.querySelectorAll('.post-item').forEach(p=>{p.style.display=p.dataset.titulo.includes(q.toLowerCase())?'':' none';});}
 function previewWpp(txt){document.getElementById('wpp-preview-text').textContent=txt||'Sua mensagem aqui...';}
