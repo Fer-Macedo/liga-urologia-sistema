@@ -208,6 +208,7 @@ function editarContrato(id,textoEnc){
 }
 async function salvarTextoGlobal(){
   const html = quillGlobal.root.innerHTML;
+  console.log("HTML QUILL:", html.substring(0,500));
   document.getElementById("txt-global").value = html;
   try {
     const r = await fetch("/contratos/texto-global", {
