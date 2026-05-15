@@ -1573,7 +1573,7 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
     const htmlPdf = require('html-pdf-node');
-    const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
+    const pdfBuffer = await htmlPdf.generatePdf({ content: html, type: 'html' }, { format: 'A4', printBackground: true });
     // resend
     const resR = await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:d.email, subject:'Carta de Rescisión — Liga Académica de Urología LAURO', html:emailBonito('Carta de Rescisión — LAURO','<p>Estimado/a <strong>'+d.nome+'</strong>,</p><p>Adjunto encontrará su <strong>Carta de Rescisión</strong> de la Liga Académica de Urología - LAURO.</p><p>Por favor:</p><ol style="margin:10px 0 10px 20px"><li style="margin-bottom:6px">Imprima el documento adjunto</li><li style="margin-bottom:6px">Firme en el espacio indicado</li><li style="margin-bottom:6px">Escanee o fotografíe el documento firmado</li><li><strong>Responda este email</strong> con el documento firmado adjunto</li></ol><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     await query('UPDATE desligamentos SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', req.params.id]);
@@ -1973,7 +1973,7 @@ router.post('/desligamentos/:id/reenviar', requireAuth, async (req, res) => {
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
     const htmlPdf = require('html-pdf-node');
-    const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
+    const pdfBuffer = await htmlPdf.generatePdf({ content: html, type: 'html' }, { format: 'A4', printBackground: true });
     // resend
     await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:d.email, subject:'Carta de Rescisión — LAURO (Reenvío)', html:emailBonito('Carta de Rescisión — LAURO (Reenvío)','<p>Estimado/a <strong>'+d.nome+'</strong>,</p><p>Reenviamos su <strong>Carta de Rescisión</strong> de la LAURO.</p><ol style="margin:10px 0 10px 20px"><li style="margin-bottom:6px">Imprima el documento adjunto</li><li style="margin-bottom:6px">Firme en el espacio indicado</li><li style="margin-bottom:6px">Escanee el documento firmado</li><li><strong>Responda este email</strong> con el documento firmado adjunto</li></ol><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     await query('UPDATE desligamentos SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', req.params.id]);
@@ -2075,7 +2075,7 @@ async function enviarEmailDesvinc(id, req, res, reenvio) {
     const config = await prepararConfigDesvinc(await getConfig());
     const html = await gerarHTMLDesvinculacao(ligante, config, rd.rows[0].data_solicitacao);
     const htmlPdf = require('html-pdf-node');
-    const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
+    const pdfBuffer = await htmlPdf.generatePdf({ content: html, type: 'html' }, { format: 'A4', printBackground: true });
     // resend
     await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:ligante.email, subject:'Carta de Desvinculación — Liga Académica de Urología LAURO'+(reenvio?' (Reenvío)':''), html:emailBonito('Carta de Desvinculación — LAURO','<p>Estimado(a) <strong>'+ligante.nome+'</strong>,</p><p>Adjunto encontrará su <strong>Carta de Desvinculación</strong> de la Liga Académica de Urología - LAURO.</p><p>En caso de dudas, responda este mismo email.</p><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-desvinculacion-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     await query('UPDATE desvinculacoes SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', id]);
@@ -2207,7 +2207,7 @@ async function enviarCartaCobranca(id, req, res, reenvio) {
     const config = await prepararConfigCobranca(await getConfig());
     const html = gerarHTMLCartaCobranca(pessoa, config, r.rows[0]);
     const htmlPdf = require('html-pdf-node');
-    const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
+    const pdfBuffer = await htmlPdf.generatePdf({ content: html, type: 'html' }, { format: 'A4', printBackground: true });
     // resend
     await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:pessoa.email, subject:'Carta de Cobro — LAURO'+(reenvio?' (Reenvío)':''), html:`<p>Estimado(a) <strong>${pessoa.nome}</strong>,</p><p>Adjunto encontrará su Carta de Cobro de la Liga Académica de Urología - LAURO.</p><p>Si ya realizó el pago, por favor envíenos el comprobante respondiendo este email.</p><p>Atentamente,<br>Dirección Financiera — LAURO</p>`, attachments:[{filename:'carta-cobro-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     await query('UPDATE cartas_cobranca SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', id]);
