@@ -1586,7 +1586,7 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
     await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_ENVIADO', 'Email enviado para: ' + d.email, req);
     req.session.msg = ['Email enviado com sucesso para ' + d.email + '!'];
     res.redirect('/desligamentos');
-  } catch(e) { req.session.erro=['Erro ao enviar email: ' + e.message]; res.redirect('/desligamentos'); }
+  } catch(e) { console.log('ERRO DESLIGAMENTO ENVIAR:', e.message); req.session.erro=['Erro ao enviar email: ' + e.message]; res.redirect('/desligamentos'); }
 });
 
 router.post('/desligamentos/:id/assinado', requireAuth, async (req, res) => {
