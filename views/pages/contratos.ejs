@@ -166,7 +166,7 @@
 <div class="modal-overlay" id="modal-texto-global" style="display:none">
   <div class="modal" style="max-width:750px">
     <div class="modal-header"><span class="modal-titulo">&#128196; Texto do Contrato</span><button class="icon-btn" onclick="fecharModal('modal-texto-global')">&#x2715;</button></div>
-    <div id="form-texto-global">
+    <form id="form-texto-global" action="/contratos/texto-global" method="POST">
       <div style="font-size:12px;color:var(--texto2);margin-bottom:10px;padding:8px;background:var(--fundo);border-radius:8px">
         Este texto sera aplicado a <strong>todos os contratos</strong> existentes e futuros. Use as variaveis: <code>{nome}</code> <code>{rg}</code> <code>{catraca}</code> <code>{data_ingresso}</code> <code>{data}</code>
       </div>
@@ -177,9 +177,10 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-texto-global')">Cancelar</button>
-        <button type="button" class="btn btn-primario" onclick="salvarTextoGlobal()">Salvar para Todos</button>
+        <input type="hidden" name="texto_contrato" id="txt-global-hidden">
+        <button type="submit" class="btn btn-primario" onclick="prepararSalvar()">Salvar para Todos</button>
       </div>
-    </div>
+    </form>
   </div>
 </div>
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
@@ -208,27 +209,12 @@ function editarContrato(id,textoEnc){
   if(quillEditar)quillEditar.root.innerHTML=txt;
   abrirModal("modal-editar");
 }
-async function salvarTextoGlobal(){
+function prepararSalvar(){
   const editor = quillGlobal.root;
-  editor.querySelectorAll('.ql-align-center').forEach(el=>el.style.textAlign='center');
-  editor.querySelectorAll('.ql-align-right').forEach(el=>el.style.textAlign='right');
-  editor.querySelectorAll('.ql-align-justify').forEach(el=>el.style.textAlign='justify');
-  const html = editor.innerHTML;
-  document.getElementById("txt-global").value = html;
-  try {
-    const r = await fetch("/contratos/texto-global", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({texto_contrato: html})
-    });
-    const d = await r.json();
-    if(d.ok){
-      alert("Texto salvo!");
-      window.location.reload();
-    } else {
-      alert("Erro: " + (d.erro||"desconhecido"));
-    }
-  } catch(e){ alert("Erro: "+e.message); }
+  editor.querySelectorAll('.ql-align-center').forEach(el=>el.setAttribute('style','text-align:center'));
+  editor.querySelectorAll('.ql-align-right').forEach(el=>el.setAttribute('style','text-align:right'));
+  editor.querySelectorAll('.ql-align-justify').forEach(el=>el.setAttribute('style','text-align:justify'));
+  document.getElementById('txt-global-hidden').value = editor.innerHTML;
 }
 function abrirUpload(id,nome){
   document.getElementById("titulo-upload").textContent="Anexar Assinado — "+nome;
