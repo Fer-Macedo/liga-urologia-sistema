@@ -209,8 +209,11 @@ function editarContrato(id,textoEnc){
   abrirModal("modal-editar");
 }
 async function salvarTextoGlobal(){
-  const html = quillGlobal.root.innerHTML;
-  console.log("HTML QUILL:", html.substring(0,500));
+  const editor = quillGlobal.root;
+  editor.querySelectorAll('.ql-align-center').forEach(el=>el.style.textAlign='center');
+  editor.querySelectorAll('.ql-align-right').forEach(el=>el.style.textAlign='right');
+  editor.querySelectorAll('.ql-align-justify').forEach(el=>el.style.textAlign='justify');
+  const html = editor.innerHTML;
   document.getElementById("txt-global").value = html;
   try {
     const r = await fetch("/contratos/texto-global", {
