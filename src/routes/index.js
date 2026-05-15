@@ -3653,8 +3653,8 @@ router.get('/contratos/:id/pdf', requireAuth, async (req, res) => {
     let html = gerarHTMLContrato(d, config, d.texto_contrato || '', true);
     html = html.replace('window.onload=function(){window.print()}','');
     const timbB64 = config.timbrado_b64 || '';
-    const headerTemplate = timbB64 ? '<div style="width:210mm;height:57mm;margin:0;padding:0"><img src="'+timbB64+'" style="width:210mm;height:57mm;object-fit:cover;object-position:top"></div>' : '<div></div>';
-    const footerTemplate = timbB64 ? '<div style="width:210mm;height:38mm;margin:0;padding:0"><img src="'+timbB64+'" style="width:210mm;height:38mm;object-fit:cover;object-position:bottom"></div>' : '<div></div>';
+    const headerTemplate = timbB64 ? '<div style="font-size:10px;width:210mm;height:57mm;margin:0;padding:0"><img src="'+timbB64+'" style="width:210mm;height:57mm;object-fit:cover;object-position:top"></div>' : '<div></div>';
+    const footerTemplate = timbB64 ? '<div style="font-size:10px;width:210mm;height:38mm;margin:0;padding:0"><img src="'+timbB64+'" style="width:210mm;height:38mm;object-fit:cover;object-position:bottom"></div>' : '<div></div>';
     const puppeteer = require('puppeteer-core');
     const chromium = require('@sparticuz/chromium');
     const browser = await puppeteer.launch({
