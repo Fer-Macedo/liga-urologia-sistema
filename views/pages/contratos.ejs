@@ -172,7 +172,8 @@
       </div>
       <div class="campo" style="margin-bottom:16px">
         <div id="editor-global" style="min-height:320px;border:1px solid var(--borda);border-radius:8px"></div>
-        <textarea name="texto_contrato" id="txt-global" style="display:none"><%=textoGlobal||''%></textarea>
+        <textarea name="texto_contrato" id="txt-global" style="display:none"></textarea>
+        <script>window._textoGlobal=<%- JSON.stringify(textoGlobal||'') %>;</script>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-texto-global')">Cancelar</button>
@@ -187,8 +188,7 @@
 let quillNovo, quillEditar;
 document.addEventListener("DOMContentLoaded",()=>{
   const quillGlobal=new Quill("#editor-global",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],['bold','italic','underline'],[{list:'ordered'},{list:'bullet'}],[{align:[]}],['clean']]}});
-  const txtG=document.getElementById("txt-global").value;
-  if(txtG)quillGlobal.root.innerHTML=txtG;
+  if(window._textoGlobal)quillGlobal.root.innerHTML=window._textoGlobal;
   document.querySelector("form[action='/contratos/texto-global']").addEventListener("submit",()=>{
     document.getElementById("txt-global").value=quillGlobal.root.innerHTML;
   });
