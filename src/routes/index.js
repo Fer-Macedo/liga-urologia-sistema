@@ -1576,7 +1576,8 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
     const chromium = require('@sparticuz/chromium');
     const browser = await puppeteer.launch({ args: chromium.args, executablePath: await chromium.executablePath(), headless: chromium.headless });
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const htmlSemPrint = html.replace(/<script>window\.onload[^<]*<\/script>/g,'');
+    await page.setContent(htmlSemPrint, { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
     await browser.close();
     // resend
