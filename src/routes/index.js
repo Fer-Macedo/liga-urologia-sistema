@@ -1476,12 +1476,13 @@ router.get('/desligamentos', requireAuth, async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg || []; req.session.msg = [];
   const erro = req.session.erro || []; req.session.erro = [];
-  const [deslig, membros, ligR] = await Promise.all([
-    query(`SELECT d.*, COALESCE(m.nome,l.nome) as membro_nome, COALESCE(m.email,l.email) as membro_email FROM desligamentos d LEFT JOIN membros m ON m.id=d.membro_id LEFT JOIN ligantes l ON l.id=d.ligante_id ORDER BY d.criado_em DESC`),
+  const [deslig, membros, ligR, dirR] = await Promise.all([
+    query(`SELECT d.*, COALESCE(m.nome,l.nome,dir.nome) as membro_nome, COALESCE(m.email,l.email) as membro_email FROM desligamentos d LEFT JOIN membros m ON m.id=d.membro_id LEFT JOIN ligantes l ON l.id=d.ligante_id LEFT JOIN diretivos dir ON dir.id=d.diretivo_id ORDER BY d.criado_em DESC`),
     query(`SELECT id, nome, cargo FROM membros WHERE ativo=1 ORDER BY nome`),
-    query(`SELECT id, nome, email, turma, semestre, rg, catraca FROM ligantes ORDER BY nome`)
+    query(`SELECT id, nome, email, turma, semestre, rg, catraca FROM ligantes ORDER BY nome`),
+    query(`SELECT id, nome, cargo FROM diretivos WHERE ativo=true ORDER BY nome`)
   ]);
-  res.render('pages/desligamentos', { config, usuario: req.session.usuario, msg, erro, desligamentos: deslig.rows, membros: membros.rows, ligantes: ligR.rows });
+  res.render('pages/desligamentos', { config, usuario: req.session.usuario, msg, erro, desligamentos: deslig.rows, membros: membros.rows, ligantes: ligR.rows, diretivos: dirR.rows });
 });
 
 router.post('/desligamentos/configurar', requireAuth, requireAdmin, async (req, res) => {
@@ -1500,10 +1501,11 @@ router.post('/desligamentos/configurar', requireAuth, requireAdmin, async (req, 
 
 router.post('/desligamentos', requireAuth, async (req, res) => {
   try {
-    const { membro_id, ligante_id, data_solicitacao, motivo, tipo_membro } = req.body;
+    const { membro_id, ligante_id, diretivo_id, data_solicitacao, motivo, tipo_membro } = req.body;
     const mid = membro_id && membro_id !== '' && membro_id !== 'null' ? parseInt(membro_id) : null;
     const lid = ligante_id && ligante_id !== '' && ligante_id !== 'null' ? parseInt(ligante_id) : null;
-    await query('INSERT INTO desligamentos (membro_id, ligante_id, data_solicitacao, motivo, tipo_membro, criado_por) VALUES ($1,$2,$3,$4,$5,$6)', [mid, lid, data_solicitacao || new Date(), motivo || null, tipo_membro || 'LIGANTE', req.session.usuario.id]);
+    const did = diretivo_id && diretivo_id !== '' && diretivo_id !== 'null' ? parseInt(diretivo_id) : null;
+    await query('INSERT INTO desligamentos (membro_id, ligante_id, diretivo_id, data_solicitacao, motivo, tipo_membro, criado_por) VALUES ($1,$2,$3,$4,$5,$6,$7)', [mid, lid, did, data_solicitacao || new Date(), motivo || null, tipo_membro || 'LIGANTE', req.session.usuario.id]);
     await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_CRIADO', 'Desligamento criado', req);
     req.session.msg = ['Documento de desligamento criado! Clique em 📧 para enviar por email.'];
     res.redirect('/desligamentos');
