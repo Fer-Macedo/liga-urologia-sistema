@@ -220,6 +220,7 @@
           <select class="input" id="select-tipo-solicitante" onchange="atualizarListaMembros()">
             <option value="membro">Membro (paga mensalidade)</option>
             <option value="ligante">Ligante</option>
+            <option value="diretivo">Diretivo</option>
           </select>
         </div>
         <div class="campo" id="campo-membro"><label class="label">Selecione o membro *</label>
@@ -234,7 +235,7 @@
             <%ligantes.forEach(l=>{%><option value="<%=l.id%>"><%=l.nome%> — Turma <%=l.turma||'?'%></option><%});%>
           </select>
         </div>
-        <div class="campo"><label class="label">Diretivo (se aplicavel)</label>
+        <div class="campo" id="campo-diretivo" style="display:none"><label class="label">Selecione o diretivo *</label>
           <select name="diretivo_id" class="input" id="sel-diretivo">
             <option value="">Selecione...</option>
             <%diretivos.forEach(d=>{%><option value="<%=d.id%>"><%=d.nome%> — <%=d.cargo||''%></option><%});%>
@@ -298,8 +299,9 @@
 <script>
 function atualizarListaMembros(){
   const tipo=document.getElementById('select-tipo-solicitante').value;
-  document.getElementById('campo-membro').style.display=tipo==='membro'?'':' none';
-  document.getElementById('campo-ligante').style.display=tipo==='ligante'?'':' none';
+  document.getElementById('campo-membro').style.display=tipo==='membro'?'':'none';
+  document.getElementById('campo-ligante').style.display=tipo==='ligante'?'':'none';
+  document.getElementById('campo-diretivo').style.display=tipo==='diretivo'?'':'none';
 }
 function abrirUploadAssinado(id,nome){
   document.getElementById('titulo-assinado').textContent='Anexar assinado — '+nome;
