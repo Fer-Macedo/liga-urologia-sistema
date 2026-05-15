@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contratos</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%= config.org_cor||'#1a56db' %>;}
+    .table-card{background:var(--card);border:1px solid var(--borda);border-radius:14px;overflow:hidden;margin-bottom:16px;}
+    .table-header{padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;align-items:center;justify-content:space-between;}
+    table.tabela{width:100%;border-collapse:collapse;}
+    table.tabela thead th{background:var(--fundo);padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--texto2);text-align:left;border-bottom:1px solid var(--borda);}
+    table.tabela tbody tr{border-bottom:1px solid var(--borda);transition:background .15s;}
+    table.tabela tbody tr:last-child{border-bottom:none;}
+    table.tabela tbody tr:hover{background:var(--fundo);}
+    table.tabela tbody td{padding:11px 14px;font-size:13px;vertical-align:middle;}
+    .badge-status{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+    .status-rascunho{background:#f1f5f9;color:#475569;}
+    .status-enviado{background:#dbeafe;color:#1e40af;}
+    .status-assinado{background:#dcfce7;color:#166534;}
+    .btn-xs{display:inline-flex;align-items:center;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:600;border:1px solid var(--borda);background:var(--fundo);color:var(--texto);cursor:pointer;transition:all .15s;font-family:inherit;text-decoration:none;}
+    .btn-xs:hover{border-color:var(--cor-primaria);color:var(--cor-primaria);}
+    .btn-xs.verde{background:#10b981;color:white;border-color:transparent;}
+    .btn-xs.azul{background:#3b82f6;color:white;border-color:transparent;}
+    .btn-xs.roxo{background:#7c3aed;color:white;border-color:transparent;}
+    .btn-xs.verm{background:#ef4444;color:white;border-color:transparent;}
+    .btn-xs.amarelo{background:#f59e0b;color:white;border-color:transparent;}
+    .editor-contrato{width:100%;min-height:300px;font-family:'Times New Roman',serif;font-size:13px;line-height:1.6;padding:16px;border:1px solid var(--borda);border-radius:8px;background:var(--fundo);resize:vertical;}
+  </style>
+</head>
+<div class="modal-overlay" id="modal-novo" style="display:none">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header"><span class="modal-titulo">Novo Contrato</span><button class="icon-btn" onclick="fecharModal('modal-novo')">&#x2715;</button></div>
+    <form action="/contratos" method="POST">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo"><label class="label">Ligante *</label>
+          <select name="ligante_id" class="input" required>
+            <option value="">Selecione...</option>
+            <%ligantes.forEach(l=>{%><option value="<%=l.id%>"><%=l.nome%> — Turma <%=l.turma||'?'%></option><%});%>
+          </select>
+        </div>
+        <div class="campo"><label class="label">Texto do Contrato (editavel)</label>
+          <textarea name="texto_contrato" class="editor-contrato">CONTRATO DE ADESAO A LIGA ACADEMICA DE UROLOGIA - LAURO
+
+Pelo presente instrumento, Eu, {nome}, estudante de Medicina, portador do RG: {rg}, CATRACA: {catraca}, comprometo-me a cumprir todas as normas e regulamentos da Liga Academica de Urologia LAURO.
+
+COMPROMISSOS DO LIGANTE:
+1. Participar das reunioes e atividades academicas;
+2. Cumprir as obrigacoes financeiras nos prazos estabelecidos;
+3. Respeitar os demais membros e a diretoria;
+4. Contribuir para o desenvolvimento cientifico e academico;
+5. Comunicar antecipadamente qualquer impossibilidade de participacao.
+
+Este contrato e valido pelo periodo de um ano, renovavel mediante acordo.
+
+Cidade do Leste - PY, {data}.</textarea>
+          <div style="font-size:11px;color:var(--texto2);margin-top:4px">Use {nome} {rg} {catraca} {turma} {semestre} {data} para dados automaticos</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-novo')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Gerar Contrato</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-editar" style="display:none">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header"><span class="modal-titulo">Editar Contrato</span><button class="icon-btn" onclick="fecharModal('modal-editar')">&#x2715;</button></div>
+    <form id="form-editar" action="" method="POST">
+      <div class="campo" style="margin-bottom:16px"><label class="label">Texto do Contrato</label>
+        <textarea name="texto_contrato" id="txt-editar" class="editor-contrato"></textarea>
+        <div style="font-size:11px;color:var(--texto2);margin-top:4px">Use {nome} {rg} {catraca} {turma} {semestre} {data}</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-editar')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-upload" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header"><span class="modal-titulo" id="titulo-upload">Anexar Assinado</span><button class="icon-btn" onclick="fecharModal('modal-upload')">&#x2715;</button></div>
+    <form id="form-upload" action="" method="POST" enctype="multipart/form-data">
+      <div style="background:var(--fundo);border:2px dashed var(--borda);border-radius:10px;padding:20px;text-align:center;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">Contrato assinado (PDF)</div>
+        <div style="font-size:11px;color:var(--texto2);margin-bottom:10px">Selecione o PDF do contrato assinado</div>
+        <input type="file" name="pdf_assinado" class="input" accept=".pdf" required>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-upload')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Anexar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script src="/js/app.js"></script>
+<script>
+function editarContrato(id,textoEnc){
+  document.getElementById('form-editar').action='/contratos/'+id+'/editar';
+  document.getElementById('txt-editar').value=decodeURIComponent(textoEnc);
+  abrirModal('modal-editar');
+}
+function abrirUpload(id,nome){
+  document.getElementById('titulo-upload').textContent='Anexar Assinado — '+nome;
+  document.getElementById('form-upload').action='/contratos/'+id+'/assinado';
+  abrirModal('modal-upload');
+}
+</script>
+</body>
+</html>

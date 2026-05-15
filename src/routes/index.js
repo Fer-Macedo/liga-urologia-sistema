@@ -3600,4 +3600,95 @@ router.post('/eventos/:id/email-massa', requireAuth, async (req, res) => {
 // ─── SALVAR LGPD NO EVENTO (via avançado) ────────────────────────────────────
 // Já coberto pela rota /eventos/:id/avancado existente — lgpd_texto salvo junto
 
+// ===== CONTRATOS LIGANTES =====
+router.get('/contratos', requireAuth, async (req, res) => {
+  const config = await getConfig();
+  const msg = req.session.msg||[]; req.session.msg=[];
+  const erro = req.session.erro||[]; req.session.erro=[];
+  const [cR, lR] = await Promise.all([
+    query(`SELECT c.*, l.nome as ligante_nome, l.email as ligante_email FROM contratos_ligantes c LEFT JOIN ligantes l ON l.id=c.ligante_id ORDER BY c.criado_em DESC`),
+    query(`SELECT id, nome, email, turma, semestre, rg, catraca FROM ligantes ORDER BY nome`)
+  ]);
+  res.render('pages/contratos', { config, usuario: req.session.usuario, msg, erro, contratos: cR.rows, ligantes: lR.rows });
+});
+
+router.post('/contratos', requireAuth, async (req, res) => {
+  try {
+    const { ligante_id, texto_contrato } = req.body;
+    await query('INSERT INTO contratos_ligantes (ligante_id, texto_contrato, criado_por) VALUES ($1,$2,$3)', [ligante_id, texto_contrato, req.session.usuario.id]);
+    req.session.msg = ['Contrato gerado!'];
+  } catch(e) { req.session.erro = [e.message]; }
+  res.redirect('/contratos');
+});
+
+router.post('/contratos/:id/editar', requireAuth, async (req, res) => {
+  try {
+    await query('UPDATE contratos_ligantes SET texto_contrato=$1 WHERE id=$2', [req.body.texto_contrato, req.params.id]);
+    req.session.msg = ['Contrato atualizado!'];
+  } catch(e) { req.session.erro = [e.message]; }
+  res.redirect('/contratos');
+});
+
+router.post('/contratos/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
+  await query('DELETE FROM contratos_ligantes WHERE id=$1', [req.params.id]);
+  req.session.msg = ['Excluido!']; res.redirect('/contratos');
+});
+
+router.get('/contratos/:id/visualizar', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT c.*, l.nome, l.rg, l.catraca, l.turma, l.semestre, l.email FROM contratos_ligantes c LEFT JOIN ligantes l ON l.id=c.ligante_id WHERE c.id=$1', [req.params.id]);
+    const d = r.rows[0];
+    if (!d) return res.status(404).send('Nao encontrado');
+    const config = await getConfig();
+    const { imagemBase64 } = require('../services/desligamento');
+    const timbB64 = await imagemBase64(config.timbrado_chave);
+    const dataFmt = new Date().toLocaleDateString('pt-BR');
+    let texto = (d.texto_contrato||'').replace(/\{nome\}/g,d.nome||'').replace(/\{rg\}/g,d.rg||'').replace(/\{catraca\}/g,d.catraca||'').replace(/\{turma\}/g,d.turma||'').replace(/\{semestre\}/g,d.semestre||'').replace(/\{data\}/g,dataFmt);
+    const timb = timbB64 ? `<img src='${timbB64}' style='width:210mm;height:297mm;position:absolute;top:0;left:0;z-index:0'>` : '';
+    res.send(`<!DOCTYPE html><html><head><meta charset='UTF-8'><style>*{margin:0;padding:0;box-sizing:border-box;}body{font-family:'Times New Roman',serif;font-size:11pt;}.pagina{width:210mm;min-height:297mm;position:relative;}.texto{position:relative;z-index:1;padding:55mm 22mm 20mm 22mm;}.titulo{text-align:center;font-weight:bold;font-size:12pt;margin-bottom:20px;text-transform:uppercase;}.corpo{text-align:justify;line-height:1.6;white-space:pre-wrap;}</style></head><body><div class='pagina'>${timb}<div class='texto'><div class='titulo'>CONTRATO DE ADESAO - LAURO</div><div class='corpo'>${texto}</div></div></div></body></html>`);
+  } catch(e) { res.status(500).send(e.message); }
+});
+
+router.get('/contratos/:id/imprimir', requireAuth, async (req, res) => { res.redirect('/contratos/'+req.params.id+'/visualizar'); });
+
+router.post('/contratos/:id/enviar', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT c.*, l.nome, l.rg, l.catraca, l.turma, l.semestre, l.email FROM contratos_ligantes c LEFT JOIN ligantes l ON l.id=c.ligante_id WHERE c.id=$1', [req.params.id]);
+    const d = r.rows[0];
+    if (!d||!d.email) { req.session.erro=['Email nao cadastrado.']; return res.redirect('/contratos'); }
+    const dataFmt = new Date().toLocaleDateString('pt-BR');
+    let texto = (d.texto_contrato||'').replace(/\{nome\}/g,d.nome||'').replace(/\{rg\}/g,d.rg||'').replace(/\{catraca\}/g,d.catraca||'').replace(/\{turma\}/g,d.turma||'').replace(/\{semestre\}/g,d.semestre||'').replace(/\{data\}/g,dataFmt);
+    const nodemailer = require('nodemailer');
+    const transporter = nodemailer.createTransport({ host: process.env.EMAIL_HOST, port: 587, auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS } });
+    await transporter.sendMail({ from: process.env.EMAIL_USER, to: d.email, subject: 'Contrato de Adesao — LAURO', html: `<p>Prezado(a) <strong>${d.nome}</strong>,</p><p>Segue seu contrato de adesao a Liga Academica de Urologia LAURO.</p><pre style='font-family:serif;line-height:1.6'>${texto}</pre><p>Atenciosamente,<br>Secretaria LAURO</p>` });
+    await query('UPDATE contratos_ligantes SET status=$1,enviado_em=NOW() WHERE id=$2',['enviado',req.params.id]);
+    req.session.msg=['Contrato enviado para '+d.email+'!'];
+  } catch(e) { req.session.erro=[e.message]; }
+  res.redirect('/contratos');
+});
+
+router.post('/contratos/:id/assinado', requireAuth, async (req, res) => {
+  try {
+    upload.single('pdf_assinado')(req, res, async (err) => {
+      if (err||!req.file) { req.session.erro=['Erro no upload.']; return res.redirect('/contratos'); }
+      const { uploadArquivo } = require('../services/arquivos');
+      const r = await uploadArquivo(req.file.buffer,'contrato-assinado-'+req.params.id+'.pdf',req.file.mimetype,'contratos');
+      await query('UPDATE contratos_ligantes SET pdf_assinado_chave=$1,status=$2,assinado_em=NOW() WHERE id=$3',[r.chave,'assinado',req.params.id]);
+      req.session.msg=['Contrato assinado anexado!'];
+      res.redirect('/contratos');
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/contratos'); }
+});
+
+router.get('/contratos/:id/assinado', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT pdf_assinado_chave FROM contratos_ligantes WHERE id=$1',[req.params.id]);
+    const d = r.rows[0];
+    if (!d||!d.pdf_assinado_chave) return res.status(404).send('Nao encontrado');
+    const { getUrlAssinada } = require('../services/arquivos');
+    const url = await getUrlAssinada(d.pdf_assinado_chave);
+    res.redirect(url);
+  } catch(e) { res.status(500).send(e.message); }
+});
+
 module.exports = router;
