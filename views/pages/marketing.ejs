@@ -488,6 +488,111 @@
         </div>
       </div>
     </div>
+      <div class="mkt-section" id="tab-campanha">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="card-titulo" style="margin-bottom:4px">Campanha Multicanal</div>
+            <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">Dispare para todas as redes com um unico clique</p>
+            <form action="/marketing/posts" method="POST" enctype="multipart/form-data">
+              <div style="display:flex;flex-direction:column;gap:12px">
+                <div class="campo"><label class="label">Titulo *</label>
+                  <input name="titulo" class="input" required placeholder="Ex: Semana Urologica 2026">
+                </div>
+                <div class="campo"><label class="label">Legenda *</label>
+                  <textarea name="conteudo" class="input" rows="4" placeholder="Mensagem para todas as redes..."></textarea>
+                </div>
+                <div class="campo"><label class="label">Imagem</label>
+                  <input type="file" name="imagem" class="input" accept="image/*">
+                </div>
+                <div class="campo"><label class="label">Canais</label>
+                  <div style="display:flex;gap:14px;flex-wrap:wrap">
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+                      <input type="checkbox" name="redes" value="instagram" checked> Instagram
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+                      <input type="checkbox" name="redes" value="facebook" checked> Facebook
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px">
+                      <input type="checkbox" name="redes" value="whatsapp" checked> WhatsApp
+                    </label>
+                  </div>
+                </div>
+                <button type="submit" name="acao" value="agendar" class="btn btn-primario"
+                  onclick="return confirm('Disparar campanha para todas as redes?')">Disparar Campanha</button>
+              </div>
+            </form>
+          </div>
+          <div class="card">
+            <div class="card-titulo" style="margin-bottom:14px">Como funciona</div>
+            <div style="display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div style="width:28px;height:28px;border-radius:50%;background:var(--cor-primaria);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">1</div>
+                <div><div style="font-weight:600;font-size:13px">Crie o conteudo</div>
+                <div style="font-size:12px;color:var(--texto2)">Escreva a legenda e adicione imagem</div></div>
+              </div>
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div style="width:28px;height:28px;border-radius:50%;background:var(--cor-primaria);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">2</div>
+                <div><div style="font-weight:600;font-size:13px">Selecione os canais</div>
+                <div style="font-size:12px;color:var(--texto2)">Instagram, Facebook e/ou WhatsApp</div></div>
+              </div>
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div style="width:28px;height:28px;border-radius:50%;background:#10b981;color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0">3</div>
+                <div><div style="font-weight:600;font-size:13px">Disparo automatico</div>
+                <div style="font-size:12px;color:var(--texto2)">Sistema publica em todos os canais</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mkt-section" id="tab-templates">
+        <div style="margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:14px;font-weight:700">Templates Prontos</div>
+          <span style="font-size:12px;color:var(--texto2)">Clique para usar como base no novo post</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+          <div class="post-card" style="cursor:pointer" onclick="usarTemplate2('Semana Urologica','Prezados ligantes, convidamos voce para a nossa Semana Urologica 2026! Um evento repleto de palestras, workshops e discussoes de casos clinicos. Sua presenca e fundamental! Data: a confirmar. #urologia #medicinaacademica #ligaurologia')">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <div style="width:36px;height:36px;border-radius:8px;background:#eff6ff;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+              <div><div style="font-weight:700;font-size:13px">Semana Urologica</div><div style="font-size:11px;color:var(--texto2)">Evento cientifico</div></div>
+            </div>
+            <p style="font-size:12px;color:var(--texto2);line-height:1.5">Convite para evento academico da liga com palestras e workshops.</p>
+            <div style="margin-top:8px"><span class="rede-badge rede-instagram">instagram</span> <span class="rede-badge rede-facebook">facebook</span></div>
+          </div>
+          <div class="post-card" style="cursor:pointer" onclick="usarTemplate2('Boas-vindas Ligante','Sejam bem-vindos aos novos integrantes da Liga Academica de Urologia! Estamos muito felizes em ter voces conosco. Juntos vamos crescer, aprender e fazer historia na urologia academica. #ligaurologia #bemvindo #medicinaacademica')">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <div style="width:36px;height:36px;border-radius:8px;background:#f0fdf4;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+              <div><div style="font-weight:700;font-size:13px">Boas-vindas</div><div style="font-size:11px;color:var(--texto2)">Novos membros</div></div>
+            </div>
+            <p style="font-size:12px;color:var(--texto2);line-height:1.5">Mensagem de boas-vindas para novos integrantes da liga.</p>
+            <div style="margin-top:8px"><span class="rede-badge rede-whatsapp">whatsapp</span> <span class="rede-badge rede-instagram">instagram</span></div>
+          </div>
+          <div class="post-card" style="cursor:pointer" onclick="usarTemplate2('Congresso de Urologia','A Liga Academica de Urologia estara presente no Congresso Brasileiro de Urologia! Venha nos encontrar e trocar experiencias. Um orgulho representar nossa liga neste grande evento. #CBU #urologia #congresso')">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <div style="width:36px;height:36px;border-radius:8px;background:#fdf4ff;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+              <div><div style="font-weight:700;font-size:13px">Congresso</div><div style="font-size:11px;color:var(--texto2)">Representacao em evento</div></div>
+            </div>
+            <p style="font-size:12px;color:var(--texto2);line-height:1.5">Post sobre participacao em congresso nacional de urologia.</p>
+            <div style="margin-top:8px"><span class="rede-badge rede-instagram">instagram</span> <span class="rede-badge rede-facebook">facebook</span></div>
+          </div>
+          <div class="post-card" style="cursor:pointer" onclick="usarTemplate2('Lembrete Mensalidade','Prezado ligante, lembramos que sua mensalidade esta em aberto. Para continuar ativo e aproveitando todos os beneficios da liga, realize o pagamento ate o fim do mes. Qualquer duvida, entre em contato conosco.')">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <div style="width:36px;height:36px;border-radius:8px;background:#fffbeb;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+              <div><div style="font-weight:700;font-size:13px">Lembrete</div><div style="font-size:11px;color:var(--texto2)">Cobranca mensalidade</div></div>
+            </div>
+            <p style="font-size:12px;color:var(--texto2);line-height:1.5">Mensagem de lembrete de mensalidade via WhatsApp.</p>
+            <div style="margin-top:8px"><span class="rede-badge rede-whatsapp">whatsapp</span></div>
+          </div>
+          <div class="post-card" style="cursor:pointer" onclick="usarTemplate2('Divulgacao Pesquisa','Nossa liga esta desenvolvendo uma pesquisa cientifica na area de urologia! Seu apoio e fundamental para o avanco da medicina academica. Acompanhe nossas redes para novidades. #pesquisa #urologia #ciencia')">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <div style="width:36px;height:36px;border-radius:8px;background:#fff1f2;display:flex;align-items:center;justify-content:center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>
+              <div><div style="font-weight:700;font-size:13px">Pesquisa</div><div style="font-size:11px;color:var(--texto2)">Divulgacao cientifica</div></div>
+            </div>
+            <p style="font-size:12px;color:var(--texto2);line-height:1.5">Post de divulgacao de pesquisa cientifica da liga.</p>
+            <div style="margin-top:8px"><span class="rede-badge rede-instagram">instagram</span> <span class="rede-badge rede-facebook">facebook</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </main>
 </div>
 <div class="modal-overlay" id="modal-novo-post" style="display:none">
@@ -524,6 +629,30 @@
           <div class="score-label"><span style="font-weight:700">Score do Post</span><span id="score-valor" style="color:var(--cor-primaria)">0/100</span></div>
           <div class="score-bar-wrap"><div class="score-bar-fill" id="score-bar" style="width:0%;background:#ef4444"></div></div>
           <div id="score-dicas" style="font-size:11px;color:var(--texto2);margin-top:6px"></div>
+        </div>
+      </div>
+      <div class="campo">
+        <label class="label">Preview</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:#e1306c;margin-bottom:6px">Instagram</div>
+            <div id="prev-ig" style="background:#fafafa;border:1px solid #dbdbdb;border-radius:10px;overflow:hidden;max-width:220px">
+              <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid #efefef">
+                <div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366)"></div>
+                <span style="font-size:12px;font-weight:700">liga_urologia</span>
+              </div>
+              <div id="prev-ig-img" style="width:100%;height:120px;background:#f0f0f0;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:12px">Sem imagem</div>
+              <div style="padding:8px 10px">
+                <div style="font-size:11px;line-height:1.4" id="prev-ig-txt">Legenda aparece aqui...</div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;font-weight:700;color:#25d366;margin-bottom:6px">WhatsApp</div>
+            <div style="background:#e5ddd5;border-radius:10px;padding:10px;min-height:120px">
+              <div class="wpp-bubble saida" id="prev-wpp-txt" style="font-size:11px">Mensagem aparece aqui...</div>
+            </div>
+          </div>
         </div>
       </div>
       <div class="modal-footer">
@@ -632,6 +761,25 @@ function toggleHashtag(el,tag){
   document.getElementById('hashtags-selecionadas').value=[...hashtagsSel].join(' ');
   calcScore();
 }
+function usarTemplate2(titulo,conteudo){
+  abrirModal('modal-novo-post');
+  setTimeout(()=>{
+    const t=document.querySelector('#modal-novo-post [name="titulo"]');
+    const c=document.getElementById('post-conteudo');
+    if(t)t.value=titulo;
+    if(c){c.value=conteudo;atualizarPreview();calcScore();}
+  },100);
+}
+function atualizarPreview(){
+  const txt=document.getElementById('post-conteudo')?.value||'';
+  const ig=document.getElementById('prev-ig-txt');
+  const wpp=document.getElementById('prev-wpp-txt');
+  if(ig)ig.textContent=txt.substring(0,150)+(txt.length>150?'...':'');
+  if(wpp)wpp.textContent=txt.substring(0,200)+(txt.length>200?'...':'');
+}
+document.addEventListener('input',e=>{
+  if(e.target.id==='post-conteudo')atualizarPreview();
+});
 function gerarRelatorio(){
   const linhas=[['Titulo','Status','Redes','Data']];
   postsData.forEach(p=>linhas.push([
