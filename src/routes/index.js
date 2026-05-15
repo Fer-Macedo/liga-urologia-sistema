@@ -3638,6 +3638,37 @@ router.post('/contratos/:id/deletar', requireAuth, requireAdmin, async (req, res
   req.session.msg = ['Excluido!']; res.redirect('/contratos');
 });
 
+router.get('/contratos/:id/pdf', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT c.*, l.nome, l.rg, l.catraca, l.turma, l.semestre, l.email FROM contratos_ligantes c LEFT JOIN ligantes l ON l.id=c.ligante_id WHERE c.id=$1', [req.params.id]);
+    const d = r.rows[0];
+    if (!d) return res.status(404).send('Nao encontrado');
+    const config = await getConfig();
+    const { gerarHTMLContrato, imagemBase64 } = require('../services/desligamento');
+    config.timbrado_b64 = await imagemBase64(config.timbrado_contrato_chave || config.timbrado_chave);
+    config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
+    config.assinatura_vicepresidente_b64 = await imagemBase64(config.assinatura_vicepresidente_chave);
+    config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
+    config.assinatura_orientador_b64 = await imagemBase64(config.assinatura_orientador_chave);
+    let html = gerarHTMLContrato(d, config, d.texto_contrato || '');
+    html = html.replace('window.onload=function(){window.print()}','');
+    const puppeteer = require('puppeteer-core');
+    const chromium = require('@sparticuz/chromium');
+    const browser = await puppeteer.launch({
+      args: chromium.args,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless
+    });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: 0, right: 0, bottom: 0, left: 0 } });
+    await browser.close();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="contrato.pdf"');
+    res.send(pdf);
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
 router.get('/contratos/:id/visualizar', requireAuth, async (req, res) => {
   try {
     const r = await query('SELECT c.*, l.nome, l.rg, l.catraca, l.turma, l.semestre, l.email FROM contratos_ligantes c LEFT JOIN ligantes l ON l.id=c.ligante_id WHERE c.id=$1', [req.params.id]);

@@ -68,7 +68,7 @@
           <td style="font-size:12px;color:var(--texto2)"><%=ct.enviado_em?new Date(ct.enviado_em).toLocaleDateString('pt-BR'):'-'%></td>
           <td style="font-size:12px;color:var(--texto2)"><%=ct.assinado_em?new Date(ct.assinado_em).toLocaleDateString('pt-BR'):'-'%></td>
           <td><div style="display:flex;gap:5px;flex-wrap:wrap">
-            <a href="/contratos/<%=ct.id%>/visualizar" target="_blank" class="btn-xs">Ver</a>
+            <a href="/contratos/<%=ct.id%>/pdf" target="_blank" class="btn-xs">Ver</a>
             <a href="/contratos/<%=ct.id%>/imprimir" target="_blank" class="btn-xs roxo">Imprimir</a>
             <button
             <form method="POST" action="/contratos/<%=ct.id%>/enviar" style="display:inline;margin:0"><button type="submit" class="btn-xs verde">Enviar</button></form>
