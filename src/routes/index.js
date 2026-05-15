@@ -1,29 +1,4 @@
-const timbUrl = timbB64 || '';
-    const css=`
-      *{margin:0;padding:0;box-sizing:border-box}
-      html,body{width:210mm;font-family:'Times New Roman',serif;font-size:11pt}
-      @page{size:A4 portrait;margin:0}
-      .timb-fixed{position:fixed;top:0;left:0;width:210mm;height:297mm;z-index:0;display:block}
-      .tx{position:relative;z-index:1;padding:48mm 22mm 82mm 22mm;width:210mm;box-sizing:border-box}
-      .tit{text-align:center;font-weight:bold;font-size:12pt;margin-bottom:14px;text-transform:uppercase}
-      .co{font-size:10.5pt;line-height:1.7}
-      .co p{margin-bottom:8px;line-height:1.7}
-      .co p.ql-align-center{text-align:center!important}
-      .co p.ql-align-right{text-align:right!important}
-      .co p.ql-align-justify{text-align:justify!important}
-      .co p.ql-align-left{text-align:left!important}
-      .co ol,.co ul{padding-left:20px;margin-bottom:8px}
-      .ass{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:30px;page-break-inside:avoid}
-      .ab{text-align:center}
-      .ai{max-height:44px;max-width:120px;object-fit:contain;margin-bottom:3px}
-      .ae{height:44px}
-      .al{border-top:1.5px solid #000;width:85%;margin:0 auto 3px}
-      .an{font-size:9.5pt;font-weight:bold;text-transform:uppercase}
-      .ac{font-size:9pt}
-      @media print{
-        .timb-fixed{position:fixed;top:0;left:0;width:210mm;height:297mm;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      }
-    `const express = require('express');
+const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const xss = require('xss');
@@ -3690,37 +3665,13 @@ router.get('/contratos/:id/visualizar', requireAuth, async (req, res) => {
       .replace(/\{secretario\}/g,nomeS).replace(/\{orientador\}/g,nomeO);
     const timb=timbB64?`<img src='${timbB64}' class='timb'>`:'  ';
     const aImg=(b64,nm,cg)=>`<div class='ab'>${b64?`<img src='${b64}' class='ai'>`:'<div class="ae"></div>'}<div class='al'></div><div class='an'>${nm}</div><div class='ac'>${cg}</div></div>`;
-    const timbUrl = timbB64 || '';
-    const css=`
-      *{margin:0;padding:0;box-sizing:border-box}
-      body{font-family:'Times New Roman',serif;font-size:11pt;width:210mm;margin:0 auto}
-      @page{size:A4 portrait;margin:50mm 22mm 80mm 22mm}
-      @media print{
-        body{width:210mm}
-        .pg{background-image:${timbUrl?'url('+timbUrl+')':'none'};background-size:cover;background-repeat:no-repeat;background-position:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-      }
-      .pg{width:210mm;min-height:297mm;background-image:${timbUrl?'url('+timbUrl+')':'none'};background-size:210mm 297mm;background-repeat:no-repeat;background-position:top left}
-      .tx{padding:0}
-      .tit{text-align:center;font-weight:bold;font-size:12pt;margin-bottom:14px;text-transform:uppercase}
-      .co{font-size:10.5pt;line-height:1.6}
-      .co p{margin-bottom:6px;line-height:1.6}
-      .co p.ql-align-center{text-align:center!important}
-      .co p.ql-align-right{text-align:right!important}
-      .co p.ql-align-justify{text-align:justify!important}
-      .co p.ql-align-left{text-align:left!important}
-      .co ol,.co ul{padding-left:20px;margin-bottom:6px}
-      .ass{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:30px;page-break-inside:avoid}
-      .ab{text-align:center}
-      .ai{max-height:44px;max-width:120px;object-fit:contain;margin-bottom:3px}
-      .ae{height:44px}
-      .al{border-top:1.5px solid #000;width:85%;margin:0 auto 3px}
-      .an{font-size:9.5pt;font-weight:bold;text-transform:uppercase}
-      .ac{font-size:9pt}
-    `
+    const timbUrl=timbB64||'';
+    const timbSrc=timbUrl.replace(/'/g,'%27');
+    const timbHtml=timbUrl?'<img src="'+timbSrc+'" style="position:fixed;top:0;left:0;width:210mm;height:297mm;z-index:0">':'';
+    const css='*{margin:0;padding:0;box-sizing:border-box}html,body{width:210mm;font-family:Times New Roman,serif;font-size:11pt}@page{size:A4;margin:0}.tx{position:relative;z-index:1;padding:50mm 22mm 80mm 22mm;width:210mm;box-sizing:border-box}.tit{text-align:center;font-weight:bold;font-size:12pt;margin-bottom:14px;text-transform:uppercase}.co{font-size:10.5pt;line-height:1.7}.co p{margin-bottom:8px}.co p.ql-align-center{text-align:center!important}.co p.ql-align-right{text-align:right!important}.co p.ql-align-justify{text-align:justify!important}.co p.ql-align-left{text-align:left!important}.co ol,.co ul{padding-left:20px}.ass{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:30px;page-break-inside:avoid}.ab{text-align:center}.ai{max-height:44px;max-width:120px;object-fit:contain}.ae{height:44px}.al{border-top:1.5px solid #000;width:85%;margin:0 auto 3px}.an{font-size:9.5pt;font-weight:bold;text-transform:uppercase}.ac{font-size:9pt}@media print{img{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
     const dataIngresso = d.data_ingresso ? new Date(d.data_ingresso).toLocaleDateString('pt-BR') : (d.criado_em ? new Date(d.criado_em).toLocaleDateString('pt-BR') : dataFmt);
     const dadosLigante=`<div style='margin-bottom:18px;font-size:10.5pt;line-height:2'><strong>MIEMBRO:</strong> ${d.nome||''}<br><strong>R.G./C.I:</strong> ${d.rg||''}<br><strong>Catraca:</strong> ${d.catraca||''}<br><strong>Fecha de ingreso:</strong> ${dataIngresso}</div>`;
-    const timbHtml = timbUrl ? `<img class='timb-fixed' src='${timbUrl}'>` : '';
-    const body=`${timbHtml}<div class='tx'><div class='tit'>CONTRATO DE LIGA ACADEMICA Y MIEMBRO ACTIVO<br>LIGA ACADEMICA DE UROLOGIA - LAURO</div>${dadosLigante}<div class='co'>${texto}</div><div class='ass'><div class='ab'><div class='ae'></div><div class='al'></div><div class='an'>${(d.nome||'').toUpperCase()}</div><div class='ac'>Miembro Activo</div></div>${aImg(assPresB64,nomeP,'Presidente')}${aImg(assViceB64,nomeV,'Vice-Presidente')}${aImg(assSecB64,nomeS,'Secretario')}${aImg(assOriB64,nomeO,'Docente Orientador')}</div></div></div>`;
+    const body=timbHtml+`<div class='tx'><div class='tit'>CONTRATO DE LIGA ACADEMICA Y MIEMBRO ACTIVO<br>LIGA ACADEMICA DE UROLOGIA - LAURO</div>${dadosLigante}<div class='co'>${texto}</div><div class='ass'><div class='ab'><div class='ae'></div><div class='al'></div><div class='an'>${(d.nome||'').toUpperCase()}</div><div class='ac'>Miembro Activo</div></div>${aImg(assPresB64,nomeP,'Presidente')}${aImg(assViceB64,nomeV,'Vice-Presidente')}${aImg(assSecB64,nomeS,'Secretario')}${aImg(assOriB64,nomeO,'Docente Orientador')}</div></div>`;
     res.send(`<!DOCTYPE html><html><head><meta charset='UTF-8'><style>${css}</style></head><body>${body}<script>window.onload=function(){window.print();}<\/script></body></html>`);
   } catch(e) { res.status(500).send(e.message); }
 });
