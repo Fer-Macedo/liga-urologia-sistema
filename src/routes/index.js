@@ -3672,8 +3672,8 @@ router.post('/contratos/texto-global', requireAuth, async (req, res) => {
     const texto_contrato = req.body?.texto_contrato || '';
     await query('UPDATE contratos_ligantes SET texto_contrato=$1', [texto_contrato]);
     await query("INSERT INTO configuracoes(chave,valor) VALUES('contrato_texto_global',$1) ON CONFLICT(chave) DO UPDATE SET valor=$1", [texto_contrato]);
-    return res.json({ok:true});
-  } catch(e) { return res.json({ok:false,erro:e.message}); }
+    req.session.msg=['Texto atualizado em todos os contratos!']; res.redirect('/contratos');
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/contratos'); }
 });
 
 router.get('/contratos/:id/imprimir', requireAuth, async (req, res) => { res.redirect('/contratos/'+req.params.id+'/visualizar'); });
