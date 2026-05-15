@@ -3640,7 +3640,7 @@ router.post('/contratos/:id/deletar', requireAuth, requireAdmin, async (req, res
 
 router.get('/contratos/:id/visualizar', requireAuth, async (req, res) => {
   try {
-    const r = await query('SELECT c.*, l.nome, l.rg, l.catraca, l.turma, l.semestre, l.email, l.data_ingresso FROM contratos_ligantes c LEFT JOIN ligantes l ON l.id=c.ligante_id WHERE c.id=$1', [req.params.id]);
+    const r = await query('SELECT c.*, l.nome, l.rg, l.catraca, l.turma, l.semestre, l.email FROM contratos_ligantes c LEFT JOIN ligantes l ON l.id=c.ligante_id WHERE c.id=$1', [req.params.id]);
     const d = r.rows[0];
     if (!d) return res.status(404).send('Nao encontrado');
     const config = await getConfig();
