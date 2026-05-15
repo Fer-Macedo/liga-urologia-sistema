@@ -391,6 +391,103 @@
         </div>
       </div>
     </div>
+      <div class="mkt-section" id="tab-aprovacao">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="card">
+            <div class="card-titulo" style="margin-bottom:14px">Posts Aguardando Aprovacao</div>
+            <%const pendAprov=posts.filter(p=>p.status==='rascunho');%>
+            <%if(pendAprov.length===0){%>
+            <div style="text-align:center;padding:32px;color:var(--texto2)">Nenhum pendente</div>
+            <%}%>
+            <%pendAprov.forEach(p=>{%>
+            <div class="post-card" style="padding:12px;margin-bottom:8px">
+              <div style="font-weight:600;font-size:13px;margin-bottom:4px"><%=p.titulo||'(Sem titulo)'%></div>
+              <div style="font-size:11px;color:var(--texto2);margin-bottom:8px"><%=(p.conteudo||'').substring(0,80)%>...</div>
+              <div style="display:flex;gap:6px">
+                <form method="POST" action="/marketing/<%=p.id%>/publicar" style="display:inline;margin:0">
+                  <button type="submit" class="btn-xs verde">Aprovar</button></form>
+                <form method="POST" action="/marketing/<%=p.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Reprovar?')">
+                  <button type="submit" class="btn-xs verm">Reprovar</button></form>
+              </div>
+            </div>
+            <%});%>
+          </div>
+          <div class="card">
+            <div class="card-titulo" style="margin-bottom:14px">Melhores Horarios</div>
+            <p style="font-size:12px;color:var(--texto2);margin-bottom:10px">Setor saude/educacao no Brasil</p>
+            <div class="horario-grid">
+              <%[['Dom',0],['Seg',1],['Ter',1],['Qua',1],['Qui',1],['Sex',1],['Sab',0]].forEach(([d,util])=>{%>
+              <div class="horario-dia"><div class="horario-dia-nome"><%=d%></div>
+                <div class="horario-slot <%=util?'alto':'baixo'%>">8h</div>
+                <div class="horario-slot <%=util?'alto':'medio'%>">12h</div>
+                <div class="horario-slot <%=util?'alto':'medio'%>">18h</div>
+                <div class="horario-slot medio">21h</div>
+              </div><%});%>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:10px;font-size:11px">
+              <span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:4px;font-weight:600">Alto</span>
+              <span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:4px;font-weight:600">Medio</span>
+              <span style="background:#f3f4f6;color:#9ca3af;padding:2px 8px;border-radius:4px;font-weight:600">Baixo</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mkt-section" id="tab-historico">
+        <div class="card">
+          <div class="card-titulo" style="margin-bottom:14px">Historico de Publicacoes</div>
+          <%const pubList=posts.filter(p=>p.status==='publicado');%>
+          <%if(pubList.length===0){%>
+          <div style="text-align:center;padding:40px;color:var(--texto2)">Nenhuma publicacao ainda</div>
+          <%}%>
+          <%pubList.forEach(p=>{%>
+          <div class="log-item">
+            <div class="log-dot" style="background:#10b981"></div>
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:13px"><%=p.titulo%></div>
+              <div style="font-size:11px;color:var(--texto2)"><%=new Date(p.criado_em).toLocaleString('pt-BR')%></div>
+            </div>
+            <div style="display:flex;gap:4px"><%=(p.redes||[]).map(r=>'<span class="rede-badge rede-'+r+'">'+r+'</span>').join(' ')%></div>
+          </div><%});%>
+        </div>
+      </div>
+      <div class="mkt-section" id="tab-analytics">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
+          <div class="card"><div class="card-titulo" style="margin-bottom:14px">Por Rede</div>
+            <div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;justify-content:space-between;padding:10px;background:#fce7f3;border-radius:8px">
+                <span style="font-weight:600;color:#9d174d">Instagram</span>
+                <span style="font-weight:700;font-size:18px;color:#9d174d"><%=posts.filter(p=>(p.redes||[]).includes('instagram')).length%></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:10px;background:#dbeafe;border-radius:8px">
+                <span style="font-weight:600;color:#1e40af">Facebook</span>
+                <span style="font-weight:700;font-size:18px;color:#1e40af"><%=posts.filter(p=>(p.redes||[]).includes('facebook')).length%></span>
+              </div>
+              <div style="display:flex;justify-content:space-between;padding:10px;background:#dcfce7;border-radius:8px">
+                <span style="font-weight:600;color:#166534">WhatsApp</span>
+                <span style="font-weight:700;font-size:18px;color:#166534"><%=posts.filter(p=>(p.redes||[]).includes('whatsapp')).length%></span>
+              </div>
+            </div>
+          </div>
+          <div class="card"><div class="card-titulo" style="margin-bottom:14px">Resumo do Mes</div>
+            <%const mesAtual=new Date().getMonth();const anoAtual=new Date().getFullYear();
+            const postsMes=posts.filter(p=>{const d=new Date(p.criado_em);return d.getMonth()===mesAtual&&d.getFullYear()===anoAtual;});%>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="background:var(--fundo);border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700;color:var(--cor-primaria)"><%=postsMes.length%></div><div style="font-size:11px;color:var(--texto2)">Posts este mes</div></div>
+              <div style="background:var(--fundo);border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700;color:#10b981"><%=postsMes.filter(p=>p.status==='publicado').length%></div><div style="font-size:11px;color:var(--texto2)">Publicados</div></div>
+              <div style="background:var(--fundo);border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700;color:#f59e0b"><%=postsMes.filter(p=>p.status==='agendado').length%></div><div style="font-size:11px;color:var(--texto2)">Agendados</div></div>
+              <div style="background:var(--fundo);border-radius:8px;padding:12px;text-align:center"><div style="font-size:22px;font-weight:700;color:#0891b2"><%=midias.length%></div><div style="font-size:11px;color:var(--texto2)">Midias</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+            <div class="card-titulo">Relatorio Mensal</div>
+            <button class="btn btn-sm btn-primario" onclick="gerarRelatorio()">Baixar CSV</button>
+          </div>
+          <p style="font-size:13px;color:var(--texto2)">Exporta todos os posts com status, redes e datas.</p>
+        </div>
+      </div>
+    </div>
   </main>
 </div>
 <div class="modal-overlay" id="modal-novo-post" style="display:none">
