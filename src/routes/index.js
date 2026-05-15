@@ -3659,7 +3659,11 @@ router.get('/contratos/:id/visualizar', requireAuth, async (req, res) => {
       .replace(/\{semestre\}/g,d.semestre||'').replace(/\{data\}/g,dataFmt)
       .replace(/\{presidente\}/g,nomeP).replace(/\{vice\}/g,nomeV)
       .replace(/\{secretario\}/g,nomeS).replace(/\{orientador\}/g,nomeO);
-    __HTML__
+    const timb=timbB64?`<img src='${timbB64}' style='position:fixed;top:0;left:0;width:210mm;height:297mm;z-index:0'>`:'  ';
+    const aImg=(b64,nm,cg)=>`<div class='ab'>${b64?`<img src='${b64}' class='ai'>`:'<div class="ae"></div>'}<div class='al'></div><div class='an'>${nm}</div><div class='ac'>${cg}</div></div>`;
+    const css='*{margin:0;padding:0;box-sizing:border-box;}body{font-family:Times New Roman,serif;font-size:11pt;}.pg{width:210mm;min-height:297mm;position:relative;}.tx{position:relative;z-index:1;padding:52mm 22mm 35mm 22mm;}.tit{text-align:center;font-weight:bold;font-size:12pt;margin-bottom:14px;text-transform:uppercase;}.co{text-align:justify;line-height:1.6;font-size:10.5pt;}.ass{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px;page-break-inside:avoid;}.ab{text-align:center;}.ai{max-height:44px;max-width:120px;object-fit:contain;margin-bottom:3px;}.ae{height:44px;}.al{border-top:1.5px solid #000;width:85%;margin:0 auto 3px;}.an{font-size:9.5pt;font-weight:bold;}.ac{font-size:9pt;}';
+    const body=`<div class='pg'>${timb}<div class='tx'><div class='tit'>CONTRATO DE LIGA ACADEMICA Y MIEMBRO ACTIVO<br>LIGA ACADEMICA DE UROLOGIA - LAURO</div><div class='co'>${texto}</div><div class='ass'>${aImg(assPresB64,nomeP,'Presidente')}${aImg(assViceB64,nomeV,'Vice-Presidente')}${aImg(assSecB64,nomeS,'Secretario')}${aImg(assOriB64,nomeO,'Docente Orientador')}</div></div></div>`;
+    res.send(`<!DOCTYPE html><html><head><meta charset='UTF-8'><style>${css}</style></head><body>${body}</body></html>`);
   } catch(e) { res.status(500).send(e.message); }
 });
 
