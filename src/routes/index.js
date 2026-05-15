@@ -1520,6 +1520,7 @@ router.get('/desligamentos/:id/visualizar', requireAuth, async (req, res) => {
     let pessoa = {};
     if (desl.membro_id) { const rm = await query('SELECT * FROM membros WHERE id=$1', [desl.membro_id]); pessoa = rm.rows[0] || {}; }
     else if (desl.ligante_id) { const rl = await query('SELECT * FROM ligantes WHERE id=$1', [desl.ligante_id]); pessoa = rl.rows[0] || {}; }
+    else if (desl.diretivo_id) { const rd2 = await query('SELECT * FROM diretivos WHERE id=$1', [desl.diretivo_id]); pessoa = rd2.rows[0] || {}; }
     const d = { ...desl, ...pessoa };
     const config = await getConfig();
     const { gerarHTMLDesligamento, imagemBase64 } = require('../services/desligamento');
@@ -1539,6 +1540,7 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
     let pessoa = {};
     if (desl.membro_id) { const rm = await query('SELECT * FROM membros WHERE id=$1',[desl.membro_id]); pessoa=rm.rows[0]||{}; }
     else if (desl.ligante_id) { const rl = await query('SELECT * FROM ligantes WHERE id=$1',[desl.ligante_id]); pessoa=rl.rows[0]||{}; }
+    else if (desl.diretivo_id) { const rd2 = await query('SELECT * FROM diretivos WHERE id=$1',[desl.diretivo_id]); pessoa=rd2.rows[0]||{}; }
     const d = {...desl,...pessoa};
     if (!d.email) { req.session.erro=['Email nao cadastrado.']; return res.redirect('/desligamentos'); }
     const config = await getConfig();

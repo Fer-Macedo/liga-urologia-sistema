@@ -31,6 +31,7 @@ function gerarHTMLDesligamento(membro, config, data, tipo_membro) {
   const presidente = config.assinatura_presidente_b64 || null;
   const secretario = config.assinatura_secretario_b64 || null;
   const tipoMembro = tipo_membro || membro.cargo || 'LIGANTE';
+  const nome = membro.nome || '___________________';
   const catraca = membro.catraca || '___________________';
   const rg = membro.rg || '___________________';
   const cargo = membro.cargo || tipoMembro;
@@ -86,7 +87,7 @@ body { font-family:'Times New Roman',serif; font-size:11pt; color:#000; }
   <div class="texto">
     <div class="titulo">Carta de Rescisión de la Liga Académica de Urología</div>
     <div class="corpo">
-      <p>Yo, <strong>${membro.nome}</strong>, estudiante de Medicina, con CATRACA: <strong>${catraca}</strong>, portador del documento de identidad (RG): <strong>${rg}</strong>, por medio de la presente, comunico mi decisión de renunciar al cargo de <strong>${cargo}</strong> de la Liga Académica de Urología - LAURO, con sede en la Universidad Central del Paraguay, en Ciudad del Este - PY, debido a razones personales/profesionales.</p>
+      <p>Yo, <strong>${nome}</strong>, estudiante de Medicina, con CATRACA: <strong>${catraca}</strong>, portador del documento de identidad (RG): <strong>${rg}</strong>, por medio de la presente, comunico mi decisión de renunciar al cargo de <strong>${cargo}</strong> de la Liga Académica de Urología - LAURO, con sede en la Universidad Central del Paraguay, en Ciudad del Este - PY, debido a razones personales/profesionales.</p>
       <p>Agradezco la oportunidad brindada y la colaboración de todos los miembros de la Liga durante mi tiempo de participación.</p>
       <p>Asimismo, reconozco y acepto que, con mi salida de la Liga, no tendré derecho a recibir un certificado de participación como <strong>${tipoMembro}</strong> de ésta, conforme a las normativas establecidas por la Coordinación de Ligas.</p>
       <p>Sin otro particular, quedo a disposición para formalizar cualquier detalle relacionado con mi salida del cargo.</p>
