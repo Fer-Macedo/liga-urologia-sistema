@@ -16,6 +16,11 @@ async function enviarEmail(opts){
   return r.emails.send({from,to:opts.to,subject:opts.subject,html:opts.html});
 }
 
+function emailBonito(titulo, corpo, logo) {
+  const logoHtml = logo ? '<img src="'+logo+'" style="height:60px;object-fit:contain">' : '<strong style="color:#2b6803;font-size:20px">LAURO</strong>';
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:30px 0"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)"><tr><td style="background:#2b6803;padding:24px 32px;text-align:center">'+logoHtml+'</td></tr><tr><td style="padding:32px"><h2 style="color:#2b6803;font-size:18px;margin:0 0 20px 0;border-bottom:2px solid #2b6803;padding-bottom:10px">'+titulo+'</h2><div style="color:#333;font-size:14px;line-height:1.7">'+corpo+'</div><div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;text-align:center;color:#888;font-size:12px"><p style="margin:0">LAURO — Liga Académica de Urología</p><p style="margin:4px 0">Universidad Central del Paraguay — Ciudad del Este</p><p style="margin:4px 0">sistema@lauroucpcde.com</p></div></td></tr></table></td></tr></table></body></html>';
+}
+
 const router = express.Router();
 
 // ─── SEGURANÇA ────────────────────────────────────────────────────────────────
@@ -1566,7 +1571,7 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
     const htmlPdf = require('html-pdf-node');
     const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
     // resend
-    await enviarEmail({ from: 'LAURO - Liga Urologia <sistema@lauroucpcde.com>', to:d.email, subject:'Carta de Rescisión — Liga Académica de Urología LAURO', html:`<p>Estimado/a <strong>${d.nome}</strong>,</p><p>Adjunto encontrará su Carta de Rescisión de la Liga Académica de Urología - LAURO.</p><ol><li>Imprima el documento adjunto</li><li>Firme en el espacio indicado</li><li>Escanee o fotografíe el documento firmado</li><li><strong>Responda este mismo email</strong> con el documento firmado adjunto</li></ol><p>Atentamente,<br>Secretaría — LAURO<br>Liga Académica de Urología</p>`, attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}] });
+    await enviarEmail({ from: 'LAURO - Liga Urologia <sistema@lauroucpcde.com>', to:d.email, subject:'Carta de Rescisión — Liga Académica de Urología LAURO', html:emailBonito('Carta de Rescisión — LAURO','<p>Estimado/a <strong>'+d.nome+'</strong>,</p><p>Adjunto encontrará su <strong>Carta de Rescisión</strong> de la Liga Académica de Urología - LAURO.</p><p>Por favor:</p><ol style="margin:10px 0 10px 20px"><li style="margin-bottom:6px">Imprima el documento adjunto</li><li style="margin-bottom:6px">Firme en el espacio indicado</li><li style="margin-bottom:6px">Escanee o fotografíe el documento firmado</li><li><strong>Responda este email</strong> con el documento firmado adjunto</li></ol><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}] });
     await query('UPDATE desligamentos SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', req.params.id]);
     await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_ENVIADO', 'Email enviado para: ' + d.email, req);
     req.session.msg = ['Email enviado com sucesso para ' + d.email + '!'];
@@ -2068,7 +2073,7 @@ async function enviarEmailDesvinc(id, req, res, reenvio) {
     const htmlPdf = require('html-pdf-node');
     const pdfBuffer = await htmlPdf.generatePdf({ content: html }, { format: 'A4', printBackground: true });
     // resend
-    await enviarEmail({ from: 'LAURO - Liga Urologia <sistema@lauroucpcde.com>', to:ligante.email, subject:'Carta de Desvinculación — Liga Académica de Urología LAURO'+(reenvio?' (Reenvío)':''), html:`<p>Estimado(a) <strong>${ligante.nome}</strong>,</p><p>Adjunto encontrará su Carta de Desvinculación de la Liga Académica de Urología - LAURO.</p><p>En caso de dudas, responda este mismo email.</p><p>Atentamente,<br>Secretaría — LAURO</p>`, attachments:[{filename:'carta-desvinculacion-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}] });
+    await enviarEmail({ from: 'LAURO - Liga Urologia <sistema@lauroucpcde.com>', to:ligante.email, subject:'Carta de Desvinculación — Liga Académica de Urología LAURO'+(reenvio?' (Reenvío)':''), html:emailBonito('Carta de Desvinculación — LAURO','<p>Estimado(a) <strong>'+ligante.nome+'</strong>,</p><p>Adjunto encontrará su <strong>Carta de Desvinculación</strong> de la Liga Académica de Urología - LAURO.</p><p>En caso de dudas, responda este mismo email.</p><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-desvinculacion-LAURO.pdf',content:pdfBuffer,contentType:'application/pdf'}] });
     await query('UPDATE desvinculacoes SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', id]);
     req.session.msg = ['Email enviado para ' + ligante.email + '!']; res.redirect('/desvinculacoes');
   } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/desvinculacoes'); }
