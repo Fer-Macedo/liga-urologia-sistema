@@ -195,10 +195,12 @@ document.addEventListener("DOMContentLoaded",()=>{
     document.getElementById("txt-global").value=quillGlobal.root.innerHTML;
   });
 
-  quillEditar=new Quill("#editor-editar",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],['bold','italic','underline'],[{list:'ordered'},{list:'bullet'}],[{align:[]}],['clean']]}});
-  document.getElementById("form-editar").addEventListener("submit",()=>{
-    document.getElementById("txt-editar").value=quillEditar.root.innerHTML;
-  });
+  if(document.getElementById("editor-editar")){
+    quillEditar=new Quill("#editor-editar",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],['bold','italic','underline'],[{list:'ordered'},{list:'bullet'}],[{align:['',"center","right","justify"]}],['clean']]}});
+    document.getElementById("form-editar").addEventListener("submit",()=>{
+      document.getElementById("txt-editar").value=quillEditar.root.innerHTML;
+    });
+  }
 });
 function editarContrato(id,textoEnc){
   document.getElementById("form-editar").action="/contratos/"+id+"/editar";
