@@ -2,123 +2,171 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Notificações — <%= config.org_nome %></title>
+  <title>Notificacoes</title>
   <link rel="stylesheet" href="/css/style.css">
-  <style>:root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }</style>
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%= config.org_cor||'#1a56db' %>;}
+    .notif-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px;}
+    .notif-card{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:20px;transition:box-shadow .15s;}
+    .notif-card:hover{box-shadow:0 2px 12px rgba(0,0,0,.06);}
+    .notif-card-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;}
+    .notif-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .notif-titulo{font-size:14px;font-weight:700;margin-bottom:4px;}
+    .notif-desc{font-size:12px;color:var(--texto2);line-height:1.5;}
+    .toggle-label{display:flex;align-items:center;cursor:pointer;}
+    .toggle-label input{display:none;}
+    .toggle{width:44px;height:24px;background:#e5e7eb;border-radius:12px;position:relative;transition:.2s;flex-shrink:0;}
+    .toggle::after{content:"";width:18px;height:18px;background:white;border-radius:50%;position:absolute;top:3px;left:3px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+    .toggle-label input:checked+.toggle{background:var(--cor-primaria);}
+    .toggle-label input:checked+.toggle::after{left:23px;}
+    .msgs-card{background:var(--card);border:1px solid var(--borda);border-radius:14px;overflow:hidden;}
+    .msgs-header{padding:16px 20px;border-bottom:1px solid var(--borda);display:flex;align-items:center;gap:8px;}
+    .msgs-header-titulo{font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;}
+    .msgs-body{padding:20px;display:flex;flex-direction:column;gap:16px;}
+    .var-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:5px;background:#eff6ff;color:#1d4ed8;font-size:11px;font-weight:600;font-family:monospace;margin:2px;cursor:pointer;border:1px solid #bfdbfe;transition:.15s;}
+    .var-chip:hover{background:#dbeafe;}
+    .stats-notif{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+    .stat-box{background:var(--card);border:1px solid var(--borda);border-radius:12px;padding:16px;position:relative;overflow:hidden;}
+    .stat-box::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--cor-stat,var(--cor-primaria));}
+    .stat-num{font-size:22px;font-weight:700;color:var(--cor-stat,var(--cor-primaria));margin-bottom:2px;}
+    .stat-lab{font-size:12px;color:var(--texto2);font-weight:600;}
+  </style>
 </head>
 <body>
 <div class="layout">
   <%- include('../partials/sidebar', { paginaAtual: 'notificacoes' }) %>
   <main class="main">
     <div class="topbar">
-      <h1 class="page-titulo">Notificações automáticas</h1>
+      <h1 class="page-titulo">Notificacoes Automaticas</h1>
+      <div class="topbar-acoes">
+        <button type="submit" form="form-notif" class="btn btn-primario btn-sm">Salvar configuracoes</button>
+      </div>
     </div>
     <div class="content">
-      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
-
-      <form action="/notificacoes" method="POST">
-        <div class="config-secao">
-          <div class="config-secao-titulo">Ativação das notificações</div>
-          <div class="notif-lista">
-
-            <div class="notif-card">
-              <div class="notif-header">
-                <div>
-                  <div class="notif-titulo">Lembrete 3 dias antes do vencimento</div>
-                  <div class="notif-desc">Envia link de pagamento com desconto por WhatsApp e e-mail</div>
-                </div>
-                <label class="toggle-label">
-                  <input type="checkbox" name="notif_pre_ativo" <%= config.notif_pre_ativo === '1' ? 'checked' : '' %>>
-                  <span class="toggle"></span>
-                </label>
-              </div>
-            </div>
-
-            <div class="notif-card">
-              <div class="notif-header">
-                <div>
-                  <div class="notif-titulo">Lembrete no dia do vencimento</div>
-                  <div class="notif-desc">Envia link de pagamento com desconto (último dia)</div>
-                </div>
-                <label class="toggle-label">
-                  <input type="checkbox" name="notif_dia_ativo" <%= config.notif_dia_ativo === '1' ? 'checked' : '' %>>
-                  <span class="toggle"></span>
-                </label>
-              </div>
-            </div>
-
-            <div class="notif-card">
-              <div class="notif-header">
-                <div>
-                  <div class="notif-titulo">Cobrança 1 dia após vencimento</div>
-                  <div class="notif-desc">Avisa que o desconto expirou e envia novo link de pagamento</div>
-                </div>
-                <label class="toggle-label">
-                  <input type="checkbox" name="notif_pos1_ativo" <%= config.notif_pos1_ativo === '1' ? 'checked' : '' %>>
-                  <span class="toggle"></span>
-                </label>
-              </div>
-            </div>
-
-            <div class="notif-card">
-              <div class="notif-header">
-                <div>
-                  <div class="notif-titulo">Reforço de cobrança 7 dias após vencimento</div>
-                  <div class="notif-desc">Segunda cobrança para inadimplentes com mais de uma semana</div>
-                </div>
-                <label class="toggle-label">
-                  <input type="checkbox" name="notif_pos7_ativo" <%= config.notif_pos7_ativo === '1' ? 'checked' : '' %>>
-                  <span class="toggle"></span>
-                </label>
-              </div>
-            </div>
-
-            <div class="notif-card">
-              <div class="notif-header">
-                <div>
-                  <div class="notif-titulo">Mensagem de aniversário</div>
-                  <div class="notif-desc">Envia parabéns automaticamente no dia do aniversário do membro</div>
-                </div>
-                <label class="toggle-label">
-                  <input type="checkbox" name="notif_aniversario_ativo" <%= config.notif_aniversario_ativo === '1' ? 'checked' : '' %>>
-                  <span class="toggle"></span>
-                </label>
-              </div>
-            </div>
-
-          </div>
+      <%if(msg&&msg.length>0){%><div class="alerta alerta-ok"><%=msg[0]%></div><%}%>
+      <%
+        const ativas=['notif_pre_ativo','notif_dia_ativo','notif_pos1_ativo','notif_pos7_ativo','notif_aniversario_ativo'].filter(k=>config[k]==='1').length;
+      %>
+      <div class="stats-notif">
+        <div class="stat-box" style="--cor-stat:var(--cor-primaria)">
+          <div class="stat-num">5</div><div class="stat-lab">Tipos de notificacao</div>
         </div>
-
-        <div class="config-secao">
-          <div class="config-secao-titulo">Textos das mensagens</div>
-          <p class="config-dica">Use as variáveis: <code>{nome}</code> <code>{dias}</code> <code>{data}</code> <code>{valor_desc}</code> <code>{valor_cheio}</code> <code>{link}</code></p>
-
-          <div class="form-grid">
-            <div class="campo full">
-              <label class="label">Mensagem — 3 dias antes do vencimento</label>
-              <textarea name="msg_cobranca_pre" class="input" rows="3"><%= config.msg_cobranca_pre || '' %></textarea>
+        <div class="stat-box" style="--cor-stat:#10b981">
+          <div class="stat-num"><%=ativas%></div><div class="stat-lab">Ativas</div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#f59e0b">
+          <div class="stat-num"><%=5-ativas%></div><div class="stat-lab">Inativas</div>
+        </div>
+      </div>
+      <form id="form-notif" action="/notificacoes" method="POST">
+        <div style="font-size:13px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Ativacao das notificacoes</div>
+        <div class="notif-grid">
+          <div class="notif-card">
+            <div class="notif-card-header">
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div class="notif-icon" style="background:#fef3c7"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+                <div><div class="notif-titulo">3 dias antes do vencimento</div><div class="notif-desc">Envia link de pagamento com desconto por WhatsApp</div></div>
+              </div>
+              <label class="toggle-label"><input type="checkbox" name="notif_pre_ativo" <%=config.notif_pre_ativo==='1'?'checked':''%>><span class="toggle"></span></label>
             </div>
-            <div class="campo full">
-              <label class="label">Mensagem — no dia do vencimento</label>
-              <textarea name="msg_cobranca_dia" class="input" rows="3"><%= config.msg_cobranca_dia || '' %></textarea>
+          </div>
+          <div class="notif-card">
+            <div class="notif-card-header">
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div class="notif-icon" style="background:#fffbeb"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+                <div><div class="notif-titulo">No dia do vencimento</div><div class="notif-desc">Ultimo lembrete com link de pagamento e desconto</div></div>
+              </div>
+              <label class="toggle-label"><input type="checkbox" name="notif_dia_ativo" <%=config.notif_dia_ativo==='1'?'checked':''%>><span class="toggle"></span></label>
             </div>
-            <div class="campo full">
-              <label class="label">Mensagem — após o vencimento (cobrança de atraso)</label>
-              <textarea name="msg_cobranca_pos" class="input" rows="3"><%= config.msg_cobranca_pos || '' %></textarea>
+          </div>
+          <div class="notif-card">
+            <div class="notif-card-header">
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div class="notif-icon" style="background:#fee2e2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                </div>
+                <div><div class="notif-titulo">1 dia apos vencimento</div>
+                <div class="notif-desc">Avisa que o desconto expirou e envia novo link</div></div>
+              </div>
+              <label class="toggle-label"><input type="checkbox" name="notif_pos1_ativo" <%=config.notif_pos1_ativo==='1'?'checked':''%>><span class="toggle"></span></label>
             </div>
-            <div class="campo full">
-              <label class="label">Mensagem de aniversário</label>
-              <textarea name="msg_aniversario" class="input" rows="3"><%= config.msg_aniversario || '' %></textarea>
+          </div>
+          <div class="notif-card">
+            <div class="notif-card-header">
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div class="notif-icon" style="background:#fef2f2">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+                <div><div class="notif-titulo">7 dias apos vencimento</div>
+                <div class="notif-desc">Segunda cobranca para inadimplentes ha mais de uma semana</div></div>
+              </div>
+              <label class="toggle-label"><input type="checkbox" name="notif_pos7_ativo" <%=config.notif_pos7_ativo==='1'?'checked':''%>><span class="toggle"></span></label>
+            </div>
+          </div>
+          <div class="notif-card" style="grid-column:1/-1">
+            <div class="notif-card-header">
+              <div style="display:flex;gap:12px;align-items:flex-start">
+                <div class="notif-icon" style="background:#fdf4ff">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9333ea" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <div><div class="notif-titulo">Mensagem de aniversario</div>
+                <div class="notif-desc">Envia parabens automaticamente no dia do aniversario do membro por WhatsApp</div></div>
+              </div>
+              <label class="toggle-label"><input type="checkbox" name="notif_aniversario_ativo" <%=config.notif_aniversario_ativo==='1'?'checked':''%>><span class="toggle"></span></label>
             </div>
           </div>
         </div>
-
-        <div style="display:flex;justify-content:flex-end;margin-top:8px">
-          <button type="submit" class="btn btn-primario">Salvar configurações</button>
+        <div class="msgs-card">
+          <div class="msgs-header">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span class="msgs-header-titulo">Textos das Mensagens</span>
+          </div>
+          <div class="msgs-body">
+            <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 16px">
+              <div style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:8px">Variaveis disponiveis — clique para copiar:</div>
+              <div>
+                <span class="var-chip" onclick="copiarVar('{nome}')">{nome}</span>
+                <span class="var-chip" onclick="copiarVar('{dias}')">{dias}</span>
+                <span class="var-chip" onclick="copiarVar('{data}')">{data}</span>
+                <span class="var-chip" onclick="copiarVar('{valor_desc}')">{valor_desc}</span>
+                <span class="var-chip" onclick="copiarVar('{valor_cheio}')">{valor_cheio}</span>
+                <span class="var-chip" onclick="copiarVar('{link}')">{link}</span>
+              </div>
+            </div>
+            <div class="campo"><label class="label">3 dias antes do vencimento</label>
+              <textarea name="msg_cobranca_pre" class="input" rows="3"><%=config.msg_cobranca_pre||''%></textarea>
+            </div>
+            <div class="campo"><label class="label">No dia do vencimento</label>
+              <textarea name="msg_cobranca_dia" class="input" rows="3"><%=config.msg_cobranca_dia||''%></textarea>
+            </div>
+            <div class="campo"><label class="label">Apos o vencimento (cobranca de atraso)</label>
+              <textarea name="msg_cobranca_pos" class="input" rows="3"><%=config.msg_cobranca_pos||''%></textarea>
+            </div>
+            <div class="campo"><label class="label">Mensagem de aniversario</label>
+              <textarea name="msg_aniversario" class="input" rows="3"><%=config.msg_aniversario||''%></textarea>
+            </div>
+            <div style="display:flex;justify-content:flex-end">
+              <button type="submit" class="btn btn-primario">Salvar configuracoes</button>
+            </div>
+          </div>
         </div>
       </form>
     </div>
   </main>
 </div>
 <script src="/js/app.js"></script>
-</body></html>
+<script>
+function copiarVar(v){
+  navigator.clipboard.writeText(v).then(()=>{
+    const el=event.target;
+    const orig=el.textContent;
+    el.textContent='Copiado!';
+    el.style.background='#dcfce7';
+    el.style.color='#166534';
+    setTimeout(()=>{el.textContent=orig;el.style.background='';el.style.color='';},1200);
+  });
+}
+</script>
+</body>
+</html>
