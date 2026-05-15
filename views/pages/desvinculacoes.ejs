@@ -195,6 +195,36 @@
     </form>
   </div>
 </div>
+
+<div id="modal-nova" class="modal-overlay" style="display:none">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <h3>Nova Desvinculação</h3>
+      <button onclick="fecharModal('modal-nova')" class="btn-fechar">&times;</button>
+    </div>
+    <form action="/desvinculacoes" method="POST">
+      <div class="modal-body">
+        <div class="campo">
+          <label>Ligante</label>
+          <select name="ligante_id" required class="input">
+            <option value="">Selecione...</option>
+            <%ligantes.forEach(l=>{%>
+            <option value="<%=l.id%>"><%=l.nome%> — <%=l.email||'sem email'%></option>
+            <%})%>
+          </select>
+        </div>
+        <div class="campo">
+          <label>Nº de Advertências</label>
+          <input type="number" name="num_advertencias" value="3" min="0" class="input">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" onclick="fecharModal('modal-nova')" class="btn btn-secundario">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Criar Desvinculação</button>
+      </div>
+    </form>
+  </div>
+</div>
 <script src="/js/app.js"></script>
 <script>
 function editarDesvinc(id,numAdv){
