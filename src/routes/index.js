@@ -17,7 +17,9 @@ async function enviarEmail(opts){
 }
 
 function emailBonito(titulo, corpo, logo) {
-  const logoHtml = logo ? '<img src="'+logo+'" style="height:60px;object-fit:contain">' : '<strong style="color:#2b6803;font-size:20px">LAURO</strong>';
+  const logoDefault = 'https://i.imgur.com/LPrFxrF.png';
+  const logoUrl = logo || logoDefault;
+  const logoHtml = '<img src="'+logoUrl+'" style="height:60px;object-fit:contain">';
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:30px 0"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)"><tr><td style="background:#2b6803;padding:24px 32px;text-align:center">'+logoHtml+'</td></tr><tr><td style="padding:32px"><h2 style="color:#2b6803;font-size:18px;margin:0 0 20px 0;border-bottom:2px solid #2b6803;padding-bottom:10px">'+titulo+'</h2><div style="color:#333;font-size:14px;line-height:1.7">'+corpo+'</div><div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;text-align:center;color:#888;font-size:12px"><p style="margin:0">LAURO — Liga Académica de Urología</p><p style="margin:4px 0">Universidad Central del Paraguay — Ciudad del Este</p><p style="margin:4px 0">sistema@lauroucpcde.com</p></div></td></tr></table></td></tr></table></body></html>';
 }
 
