@@ -1480,7 +1480,7 @@ router.get('/desligamentos', requireAuth, async (req, res) => {
     query(`SELECT d.*, COALESCE(m.nome,l.nome,dir.nome) as membro_nome, COALESCE(m.email,l.email) as membro_email FROM desligamentos d LEFT JOIN membros m ON m.id=d.membro_id LEFT JOIN ligantes l ON l.id=d.ligante_id LEFT JOIN diretivos dir ON dir.id=d.diretivo_id ORDER BY d.criado_em DESC`),
     query(`SELECT id, nome, cargo FROM membros WHERE ativo=1 ORDER BY nome`),
     query(`SELECT id, nome, email, turma, semestre, rg, catraca FROM ligantes ORDER BY nome`),
-    query(`SELECT id, nome, cargo FROM diretivos WHERE ativo=true ORDER BY nome`)
+    query(`SELECT id, nome, cargo FROM diretivos WHERE ativo=1 ORDER BY nome`)
   ]);
   res.render('pages/desligamentos', { config, usuario: req.session.usuario, msg, erro, desligamentos: deslig.rows, membros: membros.rows, ligantes: ligR.rows, diretivos: dirR.rows });
 });
