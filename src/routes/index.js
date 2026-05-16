@@ -2,13 +2,16 @@ const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const xss = require('xss');
-async function enviarEmail({from, to, subject, html, attachments}) {
+async async function enviarEmail({from, to, subject, html, attachments}) {
   const { Resend } = require('resend');
   const resend = new Resend(process.env.RESEND_API_KEY);
   const fromAddr = from || 'LAURO <lauroucpcde@lauroucpcde.com>';
   const opts = { from: fromAddr, to, subject, html };
   if(attachments && attachments.length) opts.attachments = attachments;
-  return resend.emails.send(opts);
+  console.log('ENVIANDO EMAIL opts.attachments:', opts.attachments ? opts.attachments.length : 0);
+  const result = await resend.emails.send(opts);
+  console.log('RESEND RAW:', JSON.stringify(result));
+  return result;
 }
 
 async function enviarEmail(opts){
