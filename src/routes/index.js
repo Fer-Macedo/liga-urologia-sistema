@@ -22,17 +22,27 @@ function emailBonito(titulo, corpo, logo) {
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:30px 0"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)"><tr><td style="background:#2b6803;padding:24px 32px;text-align:center">'+logoHtml+'</td></tr><tr><td style="padding:32px"><h2 style="color:#2b6803;font-size:18px;margin:0 0 20px 0;border-bottom:2px solid #2b6803;padding-bottom:10px">'+titulo+'</h2><div style="color:#333;font-size:14px;line-height:1.7">'+corpo+'</div><div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;text-align:center;color:#888;font-size:12px"><p style="margin:0">LAURO — Liga Académica de Urología</p><p style="margin:4px 0">Universidad Central del Paraguay — Ciudad del Este</p><p style="margin:4px 0">lauroucpcde@lauroucpcde.com</p></div></td></tr></table></td></tr></table></body></html>';
 }
 
-async function gerarPDFBuffer(html) {
+async function gerarPDFBuffer(html, timbradoB64) {
   const PDFDocument = require('pdfkit');
   return new Promise((resolve, reject) => {
     try {
-      const doc = new PDFDocument({ size: 'A4', margin: 60 });
+      const doc = new PDFDocument({ size: 'A4', margin: 0 });
       const chunks = [];
       doc.on('data', c => chunks.push(c));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
-      // Extrair texto do HTML de forma simples
+      const W = 595.28, H = 841.89;
+
+      // Timbrado como fundo
+      if (timbradoB64) {
+        try {
+          const imgBuf = Buffer.from(timbradoB64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+          doc.image(imgBuf, 0, 0, { width: W, height: H });
+        } catch(e) { /* sem timbrado */ }
+      }
+
+      // Extrair texto do HTML
       const texto = html
         .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
@@ -50,7 +60,10 @@ async function gerarPDFBuffer(html) {
         .replace(/\n\s*\n\s*\n/g, '\n\n')
         .trim();
 
-      doc.fontSize(10).font('Helvetica').text(texto, { align: 'justify', lineGap: 4 });
+      // Texto sobre o timbrado
+      doc.fontSize(10).font('Helvetica').fillColor('#000000')
+        .text(texto, 60, 150, { width: W - 120, align: 'justify', lineGap: 4 });
+
       doc.end();
     } catch(e) { reject(e); }
   });
@@ -1605,7 +1618,7 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
     console.log('GERANDO PDF...');
-    const pdfBuffer = await gerarPDFBuffer(html);
+    const pdfBuffer = await gerarPDFBuffer(html, config.timbrado_b64);
     console.log('PDF GERADO:', pdfBuffer ? pdfBuffer.length : 'NULL');
     const emailRes = await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:d.email, subject:'Carta de Rescisión — Liga Académica de Urología LAURO', html:emailBonito('Carta de Rescisión — LAURO','<p>Estimado/a <strong>'+d.nome+'</strong>,</p><p>Adjunto encontrará su <strong>Carta de Rescisión</strong> de la Liga Académica de Urología - LAURO.</p><p>Por favor:</p><ol style="margin:10px 0 10px 20px"><li style="margin-bottom:6px">Imprima el documento adjunto</li><li style="margin-bottom:6px">Firme en el espacio indicado</li><li style="margin-bottom:6px">Escanee o fotografíe el documento firmado</li><li><strong>Responda este email</strong> con el documento firmado adjunto</li></ol><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     console.log('RESEND RESPONSE:', JSON.stringify(emailRes));
@@ -2007,7 +2020,7 @@ router.post('/desligamentos/:id/reenviar', requireAuth, async (req, res) => {
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
     console.log('GERANDO PDF...');
-    const pdfBuffer = await gerarPDFBuffer(html);
+    const pdfBuffer = await gerarPDFBuffer(html, config.timbrado_b64);
     console.log('PDF GERADO:', pdfBuffer ? pdfBuffer.length : 'NULL');
     const emailRes = await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:d.email, subject:'Carta de Rescisión — LAURO (Reenvío)', html:emailBonito('Carta de Rescisión — LAURO (Reenvío)','<p>Estimado/a <strong>'+d.nome+'</strong>,</p><p>Reenviamos su <strong>Carta de Rescisión</strong> de la LAURO.</p><ol style="margin:10px 0 10px 20px"><li style="margin-bottom:6px">Imprima el documento adjunto</li><li style="margin-bottom:6px">Firme en el espacio indicado</li><li style="margin-bottom:6px">Escanee el documento firmado</li><li><strong>Responda este email</strong> con el documento firmado adjunto</li></ol><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     await query('UPDATE desligamentos SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', req.params.id]);
@@ -2248,7 +2261,7 @@ async function enviarCartaCobranca(id, req, res, reenvio) {
     const config = await prepararConfigCobranca(await getConfig());
     const htmlCarta = gerarHTMLCartaCobranca(pessoa, config, r.rows[0]);
     console.log('GERANDO PDF carta cobranca...');
-    const pdfBuffer = await gerarPDFBuffer(htmlCarta);
+    const pdfBuffer = await gerarPDFBuffer(htmlCarta, config.timbrado_b64);
     console.log('PDF GERADO:', pdfBuffer ? pdfBuffer.length : 'NULL');
     await enviarEmail({
       from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>',
