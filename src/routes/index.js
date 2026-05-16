@@ -1576,6 +1576,7 @@ router.get('/desligamentos/:id/visualizar', requireAuth, async (req, res) => {
 });
 
 router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
+  req.setTimeout(120000); res.setTimeout(120000);
   try {
     const rd = await query('SELECT * FROM desligamentos WHERE id=$1', [req.params.id]);
     if (!rd.rows[0]) { req.session.erro=['Nao encontrado.']; return res.redirect('/desligamentos'); }
@@ -1980,6 +1981,7 @@ router.get('/desligamentos/:id/imprimir', requireAuth, async (req, res) => {
 });
 
 router.post('/desligamentos/:id/reenviar', requireAuth, async (req, res) => {
+  req.setTimeout(120000); res.setTimeout(120000);
   try {
     const rd = await query('SELECT * FROM desligamentos WHERE id=$1',[req.params.id]);
     if (!rd.rows[0]) { req.session.erro=['Nao encontrado.']; return res.redirect('/desligamentos'); }
