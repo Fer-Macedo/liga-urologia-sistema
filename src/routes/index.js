@@ -14,12 +14,6 @@ async function enviarEmail({from, to, subject, html, attachments}) {
   return result;
 }
 
-async function enviarEmail(opts){
-  const {Resend}=require('resend');
-  const r=new Resend(process.env.RESEND_API_KEY);
-  const from=opts.from||'LAURO <onboarding@resend.dev>';
-  return r.emails.send({from,to:opts.to,subject:opts.subject,html:opts.html});
-}
 
 function emailBonito(titulo, corpo, logo) {
   const logoDefault = 'https://i.imgur.com/LPrFxrF.png';
