@@ -44,36 +44,37 @@ async function gerarPDFDesligamento(html, timbradoB64, assinaturaPresidenteB64, 
         } catch(e) {}
       }
 
-      // Helper limpar HTML
-      function limpar(str) {
-        return (str || '')
-          .replace(/<br\s*\/?>/gi, '\n')
-          .replace(/<[^>]+>/g, '')
+      function stripHtml(str) {
+        return (str || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '')
           .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-          .replace(/&[a-z]+;/gi, ' ').trim();
+          .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&[a-z]+;/gi, ' ').trim();
       }
 
       // Extrair título
       const tituloMatch = html.match(/class="titulo"[^>]*>([^<]*)</i);
-      const titulo = tituloMatch ? tituloMatch[1].trim().toUpperCase() : 'CARTA DE RESCISIÓN DE LA LIGA ACADÉMICA DE UROLOGÍA';
+      const titulo = (tituloMatch ? tituloMatch[1].trim() : 'CARTA DE RESCISIÓN DE LA LIGA ACADÉMICA DE UROLOGÍA').toUpperCase();
 
       // Extrair data
       const dataMatch = html.match(/class="data"[^>]*>([^<]*)</i);
       const dataTexto = dataMatch ? dataMatch[1].trim() : '';
 
-      // Extrair parágrafos do corpo — SIMPLES, sem inline bold
-      // Pegar cada <p> e extrair texto limpo marcando onde havia <strong>
+      // Extrair parágrafos do corpo
       const corpoMatch = html.match(/class="corpo"[^>]*>([\s\S]*?)<div class="data"/i);
       const corpoHtml = corpoMatch ? corpoMatch[1] : '';
       const pTags = corpoHtml.match(/<p[^>]*>[\s\S]*?<\/p>/gi) || [];
 
-      // Dados das assinaturas diretamente dos parâmetros (não do HTML)
-      // Nome ligante vem do HTML
+      // Extrair nome do membro (primeiro <strong> do HTML)
       const nomeMembroMatch = html.match(/<strong>([^<]+)<\/strong>/i);
-      const nomeMembro = nomeMembroMatch ? nomeMembroMatch[1].trim() : '';
-      const tipoMembroMatch = html.match(/class="assinatura-cargo"[^>]*>([\s\S]*?)<\/div>/i);
-      const tipoMembro = tipoMembroMatch ? limpar(tipoMembroMatch[0]) : 'LIGANTE';
+      const nomeMembro = nomeMembroMatch ? nomeMembroMatch[1].trim().toUpperCase() : '';
+
+      // Extrair tipo do membro — do div assinatura-cargo (primeiro bloco)
+      // Pegar o primeiro bloco de assinatura completo
+      const primeiroBloco = html.match(/class="assinatura-bloco"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i);
+      let cargoMembro = 'LIGANTE\nEstudiante de Medicina – UCP';
+      if (primeiroBloco) {
+        const cargoEl = primeiroBloco[1].match(/class="assinatura-cargo"[^>]*>([\s\S]*?)<\/div>/i);
+        if (cargoEl) cargoMembro = stripHtml(cargoEl[1]);
+      }
 
       let y = MT;
 
@@ -82,18 +83,57 @@ async function gerarPDFDesligamento(html, timbradoB64, assinaturaPresidenteB64, 
         .text(titulo, ML, y, { width: textW, align: 'center' });
       y = doc.y + 12;
 
-      // PARÁGRAFOS — renderizar cada parágrafo como texto único justificado
+      // PARÁGRAFOS com bold inline nos <strong>
       for (const p of pTags) {
         if (y > H - 260) break;
-        // Texto limpo sem tags
-        const textoLimpo = limpar(p.replace(/<p[^>]*>/i,'').replace(/<\/p>/i,''));
-        if (!textoLimpo) continue;
+        const inner = p.replace(/<p[^>]*>/i, '').replace(/<\/p>/i, '');
+        if (!inner.trim()) continue;
 
-        // Verificar se tem strong — renderizar em bold
-        const temStrong = /<strong>/i.test(p);
+        // Dividir em segmentos normal/bold
+        const segs = [];
+        const re = /<strong>([\s\S]*?)<\/strong>/gi;
+        let last = 0, m;
+        re.lastIndex = 0;
+        while ((m = re.exec(inner)) !== null) {
+          if (m.index > last) {
+            const t = stripHtml(inner.slice(last, m.index));
+            if (t) segs.push({ t, bold: false });
+          }
+          const t = stripHtml(m[1]);
+          if (t) segs.push({ t, bold: true });
+          last = m.index + m[0].length;
+        }
+        if (last < inner.length) {
+          const t = stripHtml(inner.slice(last));
+          if (t) segs.push({ t, bold: false });
+        }
 
-        doc.fontSize(11).font(temStrong ? 'Helvetica-Bold' : 'Helvetica').fillColor('#000')
-          .text(textoLimpo, ML, y, { width: textW, align: 'justify', lineGap: 1 });
+        if (segs.length === 0) continue;
+
+        // Renderizar: se não há bold, simples
+        if (!segs.some(s => s.bold)) {
+          doc.fontSize(11).font('Helvetica').fillColor('#000')
+            .text(segs.map(s => s.t).join(''), ML, y, { width: textW, align: 'justify', lineGap: 1 });
+          y = doc.y + 7;
+          continue;
+        }
+
+        // Com bold: montar texto completo e renderizar segmentos inline
+        // Usar posição de cursor manual
+        let xPos = ML;
+        const lineY = y;
+        for (let si = 0; si < segs.length; si++) {
+          const seg = segs[si];
+          const isLast = si === segs.length - 1;
+          doc.fontSize(11).font(seg.bold ? 'Helvetica-Bold' : 'Helvetica').fillColor('#000');
+          if (isLast) {
+            doc.text(seg.t, xPos, lineY, { width: (ML + textW) - xPos, align: 'justify', lineGap: 1 });
+          } else {
+            const sw = doc.widthOfString(seg.t);
+            doc.text(seg.t, xPos, lineY, { width: sw + 0.5, lineBreak: false });
+            xPos = doc.x;
+          }
+        }
         y = doc.y + 7;
       }
 
@@ -109,45 +149,26 @@ async function gerarPDFDesligamento(html, timbradoB64, assinaturaPresidenteB64, 
       const assinW = textW * 0.70;
       const assinX = ML + (textW - assinW) / 2;
 
-      // Bloco 1: Ligante (sem imagem)
-      const npLig = nomeMembro.toUpperCase() || '_______________';
-
-      // Extrair nomes e cargos das assinaturas
-      const nomeNPs = (nomePresidente || 'PRESIDENTE').toUpperCase();
-      const nomeNSs = (nomeSecretario || 'SECRETÁRIO').toUpperCase();
-
-      // Extrair tipo e cargo do membro do HTML
-      const cargoMembroMatch = html.match(/class="assinatura-cargo"[^>]*>([\s\S]*?)<\/div>/i);
-      const cargoMembro = cargoMembroMatch ? limpar(cargoMembroMatch[0]) : 'LIGANTE\nEstudiante de Medicina – UCP';
-
       const blocos = [
-        { nome: npLig, cargo: cargoMembro, img: null },
-        { nome: nomeNPs, cargo: 'PRESIDENTE', img: assinaturaPresidenteB64 },
-        { nome: nomeNSs, cargo: 'SECRETÁRIO', img: assinaturaSecretarioB64 }
+        { nome: nomeMembro, cargo: cargoMembro, img: null },
+        { nome: (nomePresidente || 'PRESIDENTE').toUpperCase(), cargo: 'PRESIDENTE', img: assinaturaPresidenteB64 },
+        { nome: (nomeSecretario || 'SECRETÁRIO').toUpperCase(), cargo: 'SECRETÁRIO', img: assinaturaSecretarioB64 }
       ];
 
       for (const bloco of blocos) {
         if (y > H - 80) break;
-
-        // Imagem
         if (bloco.img) {
           try {
             const aBuf = Buffer.from(bloco.img.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
-            doc.image(aBuf, assinX + assinW/2 - 65, y, { width: 130, height: 50, fit: [130, 50] });
+            doc.image(aBuf, assinX + assinW / 2 - 65, y, { width: 130, height: 50, fit: [130, 50] });
           } catch(e) {}
         }
         y += 54;
-
-        // Linha
         doc.moveTo(assinX, y).lineTo(assinX + assinW, y).lineWidth(1).stroke('#000');
         y += 4;
-
-        // Nome bold
         doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#000')
           .text(bloco.nome, assinX, y, { width: assinW, align: 'center' });
         y = doc.y + 2;
-
-        // Cargo
         doc.fontSize(8).font('Helvetica').fillColor('#000')
           .text(bloco.cargo, assinX, y, { width: assinW, align: 'center' });
         y = doc.y + 12;
