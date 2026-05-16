@@ -92,17 +92,16 @@
   <div class="modal" style="max-width:700px">
     <div class="modal-header"><span class="modal-titulo">Novo Contrato</span><button class="icon-btn" onclick="fecharModal('modal-novo')">&#x2715;</button></div>
     <form action="/contratos" method="POST">
-      <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;padding:20px 24px">
         <div class="campo"><label class="label">Ligante *</label>
           <select name="ligante_id" class="input" required>
             <option value="">Selecione...</option>
             <%ligantes.forEach(l=>{%><option value="<%=l.id%>"><%=l.nome%> — Turma <%=l.turma||'?'%></option><%});%>
           </select>
         </div>
-        <div class="campo"><label class="label">Data de Inicio do Contrato *</label>
+        <div class="campo"><label class="label">Data de Início do Contrato *</label>
           <input type="date" name="data_inicio" class="input" required>
           <span style="font-size:11px;color:var(--texto2)">Data em que o contrato entra em vigor</span>
-        </div>
         </div>
       </div>
       <div class="modal-footer">
