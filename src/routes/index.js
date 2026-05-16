@@ -41,9 +41,11 @@ async function gerarPDFBuffer(html) {
     });
   } catch(e) {
     const puppeteer = require('puppeteer');
+    const execPath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
     browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage'],
+      executablePath: execPath,
+      args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu'],
       timeout: 30000
     });
   }
