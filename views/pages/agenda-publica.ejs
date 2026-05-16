@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agenda — <%= config.org_nome %></title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f0f4f0;min-height:100vh;}
+    
+    .pub-header{background:#2b6803;color:#fff;padding:20px 24px;display:flex;align-items:center;gap:14px;}
+    .pub-logo{width:48px;height:48px;border-radius:12px;object-fit:cover;}
+    .pub-header-info h1{font-size:18px;font-weight:800;margin-bottom:2px;}
+    .pub-header-info p{font-size:13px;opacity:.8;}
+    
+    .pub-ical{background:#235502;margin:0 16px;border-radius:0 0 12px 12px;padding:12px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+    .pub-ical p{font-size:12px;color:#b8dea0;flex:1;}
+    .pub-ical-btn{background:#fff;color:#2b6803;border:none;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer;}
+    
+    .pub-content{max-width:680px;margin:20px auto;padding:0 16px 40px;}
+    
+    .pub-mes-header{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#4a7c2a;margin:24px 0 10px;padding:0 4px;}
+    
+    .pub-evento{background:#fff;border-radius:12px;margin-bottom:10px;overflow:hidden;display:flex;box-shadow:0 1px 3px rgba(0,0,0,.08);}
+    .pub-evento-barra{width:5px;flex-shrink:0;}
+    .pub-evento-body{padding:14px 16px;flex:1;}
+    .pub-evento-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px;}
+    .pub-evento-titulo{font-size:15px;font-weight:700;color:#1a2e0e;}
+    .pub-evento-cat{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;}
+    .pub-evento-meta{display:flex;flex-wrap:wrap;gap:10px;}
+    .pub-evento-meta span{font-size:12px;color:#6b7280;display:flex;align-items:center;gap:4px;}
+    .pub-evento-desc{font-size:13px;color:#6b7280;margin-top:6px;line-height:1.5;}
+    .pub-evento-link{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:#2b6803;font-weight:600;text-decoration:none;margin-top:6px;}
+    
+    .pub-vazio{text-align:center;padding:48px;color:#9ca3af;}
+    .pub-vazio svg{display:block;margin:0 auto 12px;opacity:.2;}
+
+    .pub-filtros{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+    .pub-filtro-btn{background:#fff;border:1.5px solid #e2e8f0;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;color:#374151;transition:.2s;}
+    .pub-filtro-btn.ativo{background:#2b6803;color:#fff;border-color:#2b6803;}
+
+    .pub-nav{display:flex;align-items:center;gap:12px;margin-bottom:4px;}
+    .pub-nav-btn{background:#fff;border:1px solid #e2e8f0;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#374151;}
+    .pub-nav-btn:hover{border-color:#2b6803;color:#2b6803;}
+    .pub-nav-label{font-size:16px;font-weight:700;color:#1a2e0e;}
+  </style>
+</head>
+<body>
+  <div class="pub-header">
+    <% if(config.org_logo){ %>
+      <img class="pub-logo" src="<%= config.org_logo %>" alt="Logo">
+    <% } %>
+    <div class="pub-header-info">
+      <h1><%= config.org_nome %></h1>
+      <p>Agenda de Atividades</p>
+    </div>
+  </div>
+
+  <div class="pub-ical">
+    <p>📅 Adicione este calendário no seu iPhone ou Android para receber os eventos automaticamente</p>
+    <button class="pub-ical-btn" onclick="copiarIcal()">Copiar Link iCal</button>
+  </div>
+
+  <div class="pub-content">
+    <div class="pub-nav">
+      <button class="pub-nav-btn" onclick="navMes(-1)">‹</button>
+      <div class="pub-nav-label" id="labelMes"></div>
+      <button class="pub-nav-btn" onclick="navMes(1)">›</button>
+    </div>
+
+    <div class="pub-filtros" id="filtros"></div>
+    <div id="listaEventos"></div>
+  </div>
+
+<script>
+const eventos = <%- JSON.stringify(atividades) %>;
+const catNomes = {
+  'Aula Pratica':'Aula Prática','Aula Teorica':'Aula Teórica',
+  'Evento Externo':'Evento Externo','Reuniao':'Reunião',
+  'Prazo':'Prazo','So Diretivos':'Só Diretivos','Outro':'Outro'
+};
+const mesesNomes=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const diasSemana=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+
+let hoje = new Date();
+let mesAtual = hoje.getMonth();
+let anoAtual = hoje.getFullYear();
+let filtrosCat = new Set();
+
+function navMes(d){
+  mesAtual += d;
+  if(mesAtual>11){mesAtual=0;anoAtual++;}
+  if(mesAtual<0){mesAtual=11;anoAtual--;}
+  render();
+}
+
+function render(){
+  document.getElementById('labelMes').textContent = mesesNomes[mesAtual]+' '+anoAtual;
+  renderFiltros();
+  renderLista();
+}
+
+function renderFiltros(){
+  const cats = [...new Set(eventos.map(e=>e.categoria))];
+  const wrap = document.getElementById('filtros');
+  wrap.innerHTML = '';
+  cats.forEach(cat => {
+    const btn = document.createElement('button');
+    btn.className = 'pub-filtro-btn' + (filtrosCat.has(cat)?'':' ativo');
+    btn.textContent = catNomes[cat]||cat;
+    btn.onclick = () => {
+      if(filtrosCat.has(cat)) filtrosCat.delete(cat);
+      else filtrosCat.add(cat);
+      render();
+    };
+    wrap.appendChild(btn);
+  });
+}
+
+function renderLista(){
+  const lista = document.getElementById('listaEventos');
+  const inicio = new Date(anoAtual,mesAtual,1);
+  const fim = new Date(anoAtual,mesAtual+1,0,23,59);
+  
+  let evs = eventos.filter(e => {
+    const d = new Date(e.data_inicio);
+    return d>=inicio && d<=fim && (filtrosCat.size===0||!filtrosCat.has(e.categoria));
+  }).sort((a,b)=>new Date(a.data_inicio)-new Date(b.data_inicio));
+
+  if(evs.length===0){
+    lista.innerHTML=`<div class="pub-vazio"><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><p>Nenhuma atividade este mês.</p></div>`;
+    return;
+  }
+
+  lista.innerHTML='';
+  evs.forEach(ev => {
+    const d = new Date(ev.data_inicio);
+    const cor = ev.cor||'#2b6803';
+    const hora = ev.dia_inteiro ? 'Dia inteiro' : d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const item = document.createElement('div');
+    item.className='pub-evento';
+    item.innerHTML=`
+      <div class="pub-evento-barra" style="background:${cor}"></div>
+      <div class="pub-evento-body">
+        <div class="pub-evento-header">
+          <div class="pub-evento-titulo">${ev.titulo}</div>
+          <span class="pub-evento-cat" style="background:${cor}22;color:${cor}">${catNomes[ev.categoria]||ev.categoria}</span>
+        </div>
+        <div class="pub-evento-meta">
+          <span>📅 ${diasSemana[d.getDay()]}, ${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}</span>
+          <span>🕐 ${hora}</span>
+          ${ev.local?`<span>📍 ${ev.local}</span>`:''}
+        </div>
+        ${ev.descricao?`<div class="pub-evento-desc">${ev.descricao}</div>`:''}
+        ${ev.link_externo?`<a class="pub-evento-link" href="${ev.link_externo}" target="_blank">🔗 Ver mais</a>`:''}
+      </div>
+    `;
+    lista.appendChild(item);
+  });
+}
+
+function copiarIcal(){
+  const url = window.location.origin+'/calendario.ics';
+  navigator.clipboard.writeText(url).then(()=>{
+    alert('Link copiado!\n\n📱 iPhone:\nCalendário → Contas → Adicionar Conta → Outro → Assinatura de Calendário → cole o link\n\n🤖 Android/Google:\nGoogle Calendar → + → Outros calendários → Da web → cole o link');
+  }).catch(()=>{ prompt('Copie este link:', url); });
+}
+
+render();
+</script>
+</body>
+</html>
