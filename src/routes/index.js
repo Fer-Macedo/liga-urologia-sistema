@@ -598,8 +598,8 @@ router.get('/dashboard', requireAuth, async (req, res) => {
   const [total, pagos, pendentes, atrasados, recTot, pendTot, atrTot, recentes, aniversariantes] = await Promise.all([
     query("SELECT COUNT(*) n FROM membros WHERE ativo=1"),
     query("SELECT COUNT(*) n FROM cobrancas WHERE status='pago' AND referencia LIKE $1", [mesStr]),
-    query("SELECT COUNT(*) n FROM cobrancas WHERE status='pendente' AND referencia LIKE $1", [mesStr]),
-    query("SELECT COUNT(*) n FROM cobrancas WHERE status='atrasado'"),
+    query("SELECT COUNT(*) n FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='pendente' AND c.referencia LIKE $1 AND m.ativo=1", [mesStr]),
+    query("SELECT COUNT(*) n FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='atrasado' AND m.ativo=1"),
     query("SELECT COALESCE(SUM(valor_desconto),0) v FROM cobrancas WHERE status='pago' AND referencia LIKE $1", [mesStr]),
     query("SELECT COALESCE(SUM(valor_cheio),0) v FROM cobrancas WHERE status='pendente' AND referencia LIKE $1", [mesStr]),
     query("SELECT COALESCE(SUM(valor_cheio),0) v FROM cobrancas WHERE status='atrasado'"),
@@ -662,7 +662,7 @@ router.post('/membros/:id/editar', requireAuth, requireFinanceiro, async (req, r
     [nome, cpf||null, email||null, whatsapp||null, data_nascimento||null, parseInt(dia_vencimento)||15, parseFloat(mensalidade)||100, parseFloat(desconto_pontualidade)||10, novoAtivo, observacoes||null, req.params.id]
   );
   if (eraAtivo == 1 && novoAtivo === 0) {
-    await query("UPDATE cobrancas SET status='cancelado' WHERE membro_id=$1 AND status='pendente'", [req.params.id]);
+    await query("UPDATE cobrancas SET status='cancelado' WHERE membro_id=$1 AND status IN ('pendente','atrasado')", [req.params.id]);
     if (motivo_inativacao) {
       await query('INSERT INTO inativacoes_log (tipo, referencia_id, motivo, usuario_id) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING', ['membro', req.params.id, motivo_inativacao, req.session.usuario.id]).catch(()=>{});
     }
@@ -677,9 +677,10 @@ router.get('/cobrancas', requireAuth, requirePermissao('cobrancas'), async (req,
   const config = await getConfig();
   const filtro = req.query.filtro || 'todas';
   let where = '';
-  if (filtro === 'pagas') where = "WHERE c.status='pago'";
-  else if (filtro === 'pendentes') where = "WHERE c.status='pendente'";
-  else if (filtro === 'atrasadas') where = "WHERE c.status='atrasado'";
+  if (filtro === 'pagas') where = "WHERE c.status='pago' AND m.ativo=1";
+  else if (filtro === 'pendentes') where = "WHERE c.status='pendente' AND m.ativo=1";
+  else if (filtro === 'atrasadas') where = "WHERE c.status='atrasado' AND m.ativo=1";
+  else where = "WHERE m.ativo=1"; // todas — só membros ativos
   const r = await query(
     'SELECT c.*, m.nome, m.whatsapp, m.email FROM cobrancas c JOIN membros m ON m.id=c.membro_id ' + where + ' ORDER BY c.data_vencimento DESC LIMIT 100'
   );
@@ -1825,11 +1826,21 @@ router.post('/ligantes/:id/toggle', requireAuth, async (req, res) => {
   const novoStatus = atual == 0 ? 1 : 0;
   const motivo = req.body.motivo || null;
   await query('UPDATE ligantes SET ativo=$1 WHERE id=$2', [novoStatus, req.params.id]);
-  if (novoStatus === 0 && motivo) {
-    await query('INSERT INTO inativacoes_log (tipo, referencia_id, motivo, usuario_id) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING', ['ligante', req.params.id, motivo, req.session.usuario.id]).catch(()=>{});
+  if (novoStatus === 0) {
+    // Cancelar cobranças pendentes do membro vinculado ao email do ligante
+    const ligR = await query('SELECT email FROM ligantes WHERE id=$1', [req.params.id]);
+    if (ligR.rows[0]?.email) {
+      await query(
+        "UPDATE cobrancas SET status='cancelado' WHERE membro_id IN (SELECT id FROM membros WHERE email=$1) AND status IN ('pendente','atrasado')",
+        [ligR.rows[0].email]
+      );
+    }
+    if (motivo) {
+      await query('INSERT INTO inativacoes_log (tipo, referencia_id, motivo, usuario_id) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING', ['ligante', req.params.id, motivo, req.session.usuario.id]).catch(()=>{});
+    }
   }
   await logAtividade(req.session.usuario.id, 'LIGANTE_STATUS', 'Status alterado ID: ' + req.params.id + (motivo ? ' — ' + motivo : ''), req);
-  req.session.msg = [novoStatus == 1 ? 'Ligante reativado!' : 'Ligante inativado.'];
+  req.session.msg = [novoStatus == 1 ? 'Ligante reativado!' : 'Ligante inativado e cobranças canceladas!'];
   res.redirect('/ligantes');
 });
 
