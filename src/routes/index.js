@@ -2231,11 +2231,8 @@ async function enviarCartaCobranca(id, req, res, reenvio) {
     const pessoa = await buscarPessoaCarta(r.rows[0]);
     if (!pessoa.email) { req.session.erro=['Email nao cadastrado.']; return res.redirect('/carta-cobranca'); }
     const config = await prepararConfigCobranca(await getConfig());
-    const html = gerarHTMLCartaCobranca(pessoa, config, r.rows[0]);
-    console.log('GERANDO PDF...');
-    const pdfBuffer = await gerarPDFBuffer(html);
-    console.log('PDF GERADO:', pdfBuffer ? pdfBuffer.length : 'NULL');
-    const emailRes = await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:pessoa.email, subject:'Carta de Cobro — LAURO'+(reenvio?' (Reenvío)':''), html:`<p>Estimado(a) <strong>${pessoa.nome}</strong>,</p><p>Adjunto encontrará su Carta de Cobro de la Liga Académica de Urología - LAURO.</p><p>Si ya realizó el pago, por favor envíenos el comprobante respondiendo este email.</p><p>Atentamente,<br>Dirección Financiera — LAURO</p>`, attachments:[{filename:'carta-cobro-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
+    const htmlCarta = gerarHTMLCartaCobranca(pessoa, config, r.rows[0]);
+    await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:pessoa.email, subject:'Carta de Cobro — LAURO'+(reenvio?' (Reenvío)':''), html:htmlCarta });
     await query('UPDATE cartas_cobranca SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', id]);
     req.session.msg = ['Email enviado para '+pessoa.email+'!']; res.redirect('/carta-cobranca');
   } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/carta-cobranca'); }
