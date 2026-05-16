@@ -4675,6 +4675,7 @@ router.get('/calendario', requireAuth, async (req, res) => {
     res.render('pages/calendario', {
       config: await getConfig(),
       usuario: req.session.usuario,
+      paginaAtual: 'calendario',
       atividades: JSON.stringify(atividades),
       icalUrl,
       msg: req.flash('msg'),
