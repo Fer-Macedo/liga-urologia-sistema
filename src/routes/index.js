@@ -48,11 +48,8 @@ async function gerarPDFDesvinculacao(html, timbradoB64, assinaturaPresidenteB64,
           .replace(/\s+/g, ' ').trim();
       }
 
-      // Extrair título — entre class="titulo"> e </div>
-      const idxTitulo = html.indexOf('class="titulo">');
-      const idxTituloFim = html.indexOf('</div>', idxTitulo);
-      const tituloRaw = idxTitulo > 0 ? html.slice(idxTitulo + 15, idxTituloFim) : '';
-      const titulo = strip(tituloRaw).toUpperCase();
+      // Título fixo da carta de desvinculação
+      const titulo = 'CARTA DE DESVINCULACIÓN\nLIGA ACADÉMICA DE UROLOGÍA - LAURO\nUniversidad Central del Paraguay';
 
       // Extrair corpo — entre class="corpo"> e </div><div class="assinaturas"
       const idxCorpo = html.indexOf('class="corpo">');
@@ -99,10 +96,17 @@ async function gerarPDFDesvinculacao(html, timbradoB64, assinaturaPresidenteB64,
 
       let y = MT;
 
-      // TÍTULO bold à esquerda
+      // TÍTULO — 3 linhas: CARTA DE DESVINCULACIÓN (maior), LIGA (bold), Universidad (normal)
+      const linhasTitulo = titulo.split('\n');
+      doc.fontSize(13).font('Helvetica-Bold').fillColor('#000')
+        .text(linhasTitulo[0] || '', ML, y, { width: textW, align: 'center' });
+      y = doc.y + 4;
       doc.fontSize(11).font('Helvetica-Bold').fillColor('#000')
-        .text(titulo, ML, y, { width: textW, align: 'left' });
-      y = doc.y + 12;
+        .text(linhasTitulo[1] || '', ML, y, { width: textW, align: 'center' });
+      y = doc.y + 2;
+      doc.fontSize(10).font('Helvetica').fillColor('#000')
+        .text(linhasTitulo[2] || '', ML, y, { width: textW, align: 'center' });
+      y = doc.y + 14;
 
       // ELEMENTOS (parágrafos e itens de lista)
       for (const texto of elementos) {
