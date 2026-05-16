@@ -4654,9 +4654,32 @@ router.get('/fluxo-caixa/:id/nf-url', requireAuth, async (req, res) => {
 
 
 
-// ════════════════════════════════════════════════════════════════
-//  CALENDÁRIO DE ATIVIDADES
-// ════════════════════════════════════════════════════════════════
+
+// ── CATEGORIAS DO CALENDÁRIO ──
+router.get('/calendario/categorias', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT * FROM calendario_categorias ORDER BY criado_em');
+    res.json(r.rows);
+  } catch(e) { res.json([]); }
+});
+
+router.post('/calendario/categorias', requireAuth, async (req, res) => {
+  try {
+    const { nome, cor } = req.body;
+    if(!nome) return res.json({ok:false, erro:'Nome obrigatório'});
+    await query('INSERT INTO calendario_categorias (nome,cor,criado_por) VALUES ($1,$2,$3)', [nome, cor||'#2b6803', req.session.usuario.id]);
+    res.json({ok:true});
+  } catch(e) { res.json({ok:false, erro:e.message}); }
+});
+
+router.delete('/calendario/categorias/:id', requireAuth, async (req, res) => {
+  try {
+    await query('DELETE FROM calendario_categorias WHERE id=$1', [req.params.id]);
+    res.json({ok:true});
+  } catch(e) { res.json({ok:false, erro:e.message}); }
+});
+
+
 
 // Helper para buscar atividades
 async function getAtividades(apenasPublicas = false) {
