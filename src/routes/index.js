@@ -2225,6 +2225,8 @@ router.get('/carta-cobranca/:id/imprimir', requireAuth, async (req, res) => {
 });
 
 async function enviarCartaCobranca(id, req, res, reenvio) {
+  req.setTimeout && req.setTimeout(120000);
+  res.setTimeout && res.setTimeout(120000);
   try {
     const r = await query('SELECT * FROM cartas_cobranca WHERE id=$1', [id]);
     if (!r.rows[0]) { req.session.erro=['Nao encontrado.']; return res.redirect('/carta-cobranca'); }
@@ -2232,10 +2234,19 @@ async function enviarCartaCobranca(id, req, res, reenvio) {
     if (!pessoa.email) { req.session.erro=['Email nao cadastrado.']; return res.redirect('/carta-cobranca'); }
     const config = await prepararConfigCobranca(await getConfig());
     const htmlCarta = gerarHTMLCartaCobranca(pessoa, config, r.rows[0]);
-    await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:pessoa.email, subject:'Carta de Cobro — LAURO'+(reenvio?' (Reenvío)':''), html:htmlCarta });
+    console.log('GERANDO PDF carta cobranca...');
+    const pdfBuffer = await gerarPDFBuffer(htmlCarta);
+    console.log('PDF GERADO:', pdfBuffer ? pdfBuffer.length : 'NULL');
+    await enviarEmail({
+      from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>',
+      to: pessoa.email,
+      subject: 'Carta de Cobro — LAURO' + (reenvio ? ' (Reenvío)' : ''),
+      html: '<p>Estimado(a) <strong>' + pessoa.nome + '</strong>,</p><p>Adjunto encontrará su Carta de Cobro de la Liga Académica de Urología - LAURO.</p><p>Si ya realizó el pago, por favor envíenos el comprobante respondiendo este email.</p><p>Atentamente,<br>Dirección Financiera — LAURO</p>',
+      attachments: [{filename: 'carta-cobro-LAURO.pdf', content: pdfBuffer.toString('base64')}]
+    });
     await query('UPDATE cartas_cobranca SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', id]);
-    req.session.msg = ['Email enviado para '+pessoa.email+'!']; res.redirect('/carta-cobranca');
-  } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/carta-cobranca'); }
+    req.session.msg = ['Email enviado para ' + pessoa.email + '!']; res.redirect('/carta-cobranca');
+  } catch(e) { console.log('ERRO carta cobranca:', e.message); req.session.erro=['Erro: '+e.message]; res.redirect('/carta-cobranca'); }
 }
 
 router.post('/carta-cobranca/:id/enviar', requireAuth, (req, res) => enviarCartaCobranca(req.params.id, req, res, false));
