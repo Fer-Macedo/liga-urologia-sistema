@@ -4126,7 +4126,7 @@ router.post('/contratos/:id/enviar', requireAuth, async (req, res) => {
         function novaPagina() {
           doc.addPage({ size: 'A4', margin: 0 });
           desenharTimbrado();
-          return 60; // topo da nova página
+          return 142; // 5cm do topo para não sobrepor cabeçalho
         }
 
         desenharTimbrado();
@@ -4181,6 +4181,8 @@ router.post('/contratos/:id/enviar', requireAuth, async (req, res) => {
           const align = isCenter ? 'center' : isRight ? 'right' : 'justify';
           // Estimar altura antes de renderizar
           doc.fontSize(10).font('Helvetica');
+          // Forçar nova página antes do CAPÍTULO V
+          if (txt === 'CAPÍTULO V') { y = novaPagina(); }
           const alt = doc.heightOfString(txt, { width: textW, lineGap: 1 });
           if (y + alt > maxY) { y = novaPagina(); }
           doc.fillColor('#000').text(txt, ML, y, { width: textW, align, lineGap: 1 });
