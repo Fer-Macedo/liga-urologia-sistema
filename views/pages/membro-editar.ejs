@@ -89,8 +89,8 @@
             <div class="campo">
               <label class="label">Status</label>
               <select name="ativo" class="input">
-                <option value="1" <%= membro.ativo ? 'selected' : '' %>>Ativo</option>
-                <option value="" <%= !membro.ativo ? 'selected' : '' %>>Inativo</option>
+                <option value="1" <%= membro.ativo == 1 ? 'selected' : '' %>>Ativo</option>
+                <option value="0" <%= membro.ativo == 0 ? 'selected' : '' %>>Inativo</option>
               </select>
             </div>
             <div class="campo full">
