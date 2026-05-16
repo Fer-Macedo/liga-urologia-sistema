@@ -1,7 +1,7 @@
 {
   "name": "liga-urologia-cobranca",
   "version": "1.0.0",
-  "description": "Sistema de cobrança de mensalidades - Liga Acadêmica de Urologia",
+  "description": "Sistema de cobran\u00e7a de mensalidades - Liga Acad\u00eamica de Urologia",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -32,7 +32,8 @@
     "puppeteer": "^25.0.2",
     "puppeteer-core": "^21.11.0",
     "resend": "^6.12.3",
-    "xss": "^1.0.14"
+    "xss": "^1.0.14",
+    "pdfkit": "^0.15.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.3"
