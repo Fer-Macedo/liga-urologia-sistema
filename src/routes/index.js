@@ -656,7 +656,7 @@ router.post('/membros/:id/editar', requireAuth, requireFinanceiro, async (req, r
   const { nome, cpf, email, whatsapp, data_nascimento, dia_vencimento, mensalidade, desconto_pontualidade, ativo, observacoes, motivo_inativacao } = req.body;
   const membroAtual = await query('SELECT ativo FROM membros WHERE id=$1', [req.params.id]);
   const eraAtivo = membroAtual.rows[0]?.ativo;
-  const novoAtivo = ativo ? 1 : 0;
+  const novoAtivo = (ativo === '1' || ativo === 1) ? 1 : 0;
   await query(
     'UPDATE membros SET nome=$1,cpf=$2,email=$3,whatsapp=$4,data_nascimento=$5,dia_vencimento=$6,mensalidade=$7,desconto_pontualidade=$8,ativo=$9,observacoes=$10 WHERE id=$11',
     [nome, cpf||null, email||null, whatsapp||null, data_nascimento||null, parseInt(dia_vencimento)||15, parseFloat(mensalidade)||100, parseFloat(desconto_pontualidade)||10, novoAtivo, observacoes||null, req.params.id]
