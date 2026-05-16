@@ -68,7 +68,7 @@ async function gerarPDFBuffer(html, timbradoB64, assinaturaB64, nomeAssinatura, 
       doc.fontSize(13).font('Helvetica-Bold').fillColor('#000').text(titulo.toUpperCase(), ML, y, { width: textW, align: 'center' });
       y += 18;
       doc.fontSize(11).font('Helvetica-Bold').text(subtitulo.toUpperCase(), ML, y, { width: textW, align: 'center' });
-      y += 24;
+      y += 36;
 
       // Corpo com negrito inline
       const partes = corpo.split('\n');
@@ -2318,7 +2318,15 @@ async function enviarCartaCobranca(id, req, res, reenvio) {
       from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>',
       to: pessoa.email,
       subject: 'Carta de Cobro — LAURO' + (reenvio ? ' (Reenvío)' : ''),
-      html: '<p>Estimado(a) <strong>' + pessoa.nome + '</strong>,</p><p>Adjunto encontrará su Carta de Cobro de la Liga Académica de Urología - LAURO.</p><p>Si ya realizó el pago, por favor envíenos el comprobante respondiendo este email.</p><p>Atentamente,<br>Dirección Financiera — LAURO</p>',
+      html: emailBonito(
+        'Carta de Cobro' + (reenvio ? ' (Reenvío)' : ''),
+        '<p>Estimado(a) <strong>' + pessoa.nome + '</strong>,</p>' +
+        '<p>Adjunto a este mensaje encontrará su <strong>Carta de Cobro</strong> de la Liga Académica de Urología – LAURO.</p>' +
+        '<p>Le solicitamos amablemente que regularice su situación a la brevedad posible.</p>' +
+        '<p>Si ya realizó el pago, por favor envíenos el comprobante respondiendo este mismo email.</p>' +
+        '<p>Estamos a su disposición para cualquier consulta.</p>' +
+        '<p style="margin-top:16px">Atentamente,<br><strong>Dirección Financiera — LAURO</strong></p>'
+      ),
       attachments: [{filename: 'carta-cobro-LAURO.pdf', content: pdfBuffer.toString('base64')}]
     });
     await query('UPDATE cartas_cobranca SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', id]);
