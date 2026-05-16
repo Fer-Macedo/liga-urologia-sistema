@@ -24,25 +24,14 @@ function emailBonito(titulo, corpo, logo) {
 
 async function gerarPDFBuffer(html) {
   let browser;
-  try {
-    const puppeteer = require('puppeteer-core');
-    const chromium = require('@sparticuz/chromium');
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless,
-      timeout: 30000
-    });
-  } catch(e) {
-    const puppeteer = require('puppeteer');
-    const execPath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
-    browser = await puppeteer.launch({
-      headless: true,
-      executablePath: execPath,
-      args: ['--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu'],
-      timeout: 30000
-    });
-  }
+  const puppeteer = require('puppeteer-core');
+  const chromium = require('@sparticuz/chromium');
+  browser = await puppeteer.launch({
+    args: chromium.args,
+    executablePath: await chromium.executablePath(),
+    headless: chromium.headless,
+    timeout: 30000
+  });
   try {
     const page = await browser.newPage();
     const htmlLimpo = html.replace(/<script>[^<]*window\.print[^<]*<\/script>/g, '');
