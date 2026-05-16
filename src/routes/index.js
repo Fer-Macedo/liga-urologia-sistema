@@ -628,10 +628,26 @@ router.get('/membros', requireAuth, requirePermissao('membros'), async (req, res
   let where = '';
   if (filtro === 'ativos') where = 'WHERE m.ativo=1';
   else if (filtro === 'inativos') where = 'WHERE m.ativo=0';
-  const membros = await query(
-    'SELECT m.*, (SELECT status FROM cobrancas WHERE membro_id=m.id ORDER BY criado_em DESC LIMIT 1) as ultimo_status FROM membros m ' + where + ' ORDER BY m.nome'
-  );
-  res.render('pages/membros', { config, usuario: req.session.usuario, membros: membros.rows, filtro, msg: req.flash('msg'), erro: req.flash('erro') });
+  const [membros, statsR] = await Promise.all([
+    query('SELECT m.*, (SELECT status FROM cobrancas WHERE membro_id=m.id ORDER BY criado_em DESC LIMIT 1) as ultimo_status FROM membros m ' + where + ' ORDER BY m.nome'),
+    query(`SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN m.ativo=1 THEN 1 ELSE 0 END) as ativos,
+      SUM(CASE WHEN m.ativo=0 THEN 1 ELSE 0 END) as inativos,
+      SUM(CASE WHEN m.ativo=1 AND (SELECT status FROM cobrancas WHERE membro_id=m.id ORDER BY criado_em DESC LIMIT 1) IN ('pago','em_dia') THEN 1 ELSE 0 END) as em_dia,
+      SUM(CASE WHEN m.ativo=1 AND (SELECT status FROM cobrancas WHERE membro_id=m.id ORDER BY criado_em DESC LIMIT 1) = 'atrasado' THEN 1 ELSE 0 END) as atrasados
+      FROM membros m`)
+  ]);
+  const st = statsR.rows[0];
+  res.render('pages/membros', {
+    config, usuario: req.session.usuario, membros: membros.rows, filtro,
+    msg: req.flash('msg'), erro: req.flash('erro'),
+    total: parseInt(st.total)||0,
+    ativos: parseInt(st.ativos)||0,
+    inativos: parseInt(st.inativos)||0,
+    emDia: parseInt(st.em_dia)||0,
+    atrasados: parseInt(st.atrasados)||0
+  });
 });
 
 router.post('/membros', requireAuth, requireFinanceiro, async (req, res) => {
