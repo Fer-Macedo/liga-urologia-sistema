@@ -4682,16 +4682,64 @@ router.delete('/calendario/categorias/:id', requireAuth, async (req, res) => {
 
 
 // Helper para buscar atividades
-async function getAtividades(apenasPublicas = false) {
+async function getAniversarios(anoRef) {
+  // Busca membros e diretivos ativos com data de nascimento
+  const r = await query(`
+    SELECT nome, data_nascimento, 'membro' as tipo FROM membros
+      WHERE ativo=1 AND data_nascimento IS NOT NULL
+    UNION ALL
+    SELECT nome, data_nascimento, 'diretivo' as tipo FROM diretivos
+      WHERE ativo=1 AND data_nascimento IS NOT NULL
+  `);
+
+  const aniversarios = [];
+  const anos = [anoRef - 1, anoRef, anoRef + 1];
+
+  r.rows.forEach(m => {
+    const nasc = new Date(m.data_nascimento);
+    const dia = nasc.getUTCDate();
+    const mes = nasc.getUTCMonth(); // 0-11
+
+    anos.forEach(ano => {
+      const dataAniv = new Date(Date.UTC(ano, mes, dia));
+      aniversarios.push({
+        id: `aniv-${m.tipo}-${m.nome}-${ano}`,
+        titulo: `🎂 Aniversário — ${m.nome}`,
+        descricao: `${m.tipo === 'membro' ? 'Ligante' : 'Diretivo'} ${m.nome} faz aniversário hoje!`,
+        categoria: 'Aniversario',
+        cor: '#f97316',
+        data_inicio: dataAniv.toISOString(),
+        data_fim: null,
+        dia_inteiro: true,
+        local: null,
+        link_externo: null,
+        publico: false, // não aparece na agenda pública
+        criado_em: new Date().toISOString()
+      });
+    });
+  });
+
+  return aniversarios;
+}
+
+async function getAtividades(apenasPublicas = false, incluirAniversarios = false) {
   const where = apenasPublicas ? 'WHERE publico = TRUE' : '';
   const r = await query(`SELECT * FROM calendario_atividades ${where} ORDER BY data_inicio`);
-  return r.rows;
+  let atividades = r.rows;
+
+  if (incluirAniversarios) {
+    const anivs = await getAniversarios(new Date().getFullYear());
+    atividades = [...atividades, ...anivs];
+  }
+
+  return atividades;
 }
+
 
 // PAINEL INTERNO
 router.get('/calendario', requireAuth, async (req, res) => {
   try {
-    const atividades = await getAtividades(false);
+    const atividades = await getAtividades(false, true);
     const icalUrl = (process.env.RAILWAY_PUBLIC_DOMAIN
       ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN
       : 'https://liga-urologia-production.up.railway.app') + '/calendario.ics';
