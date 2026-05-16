@@ -2287,13 +2287,9 @@ async function enviarEmailDesvinc(id, req, res, reenvio) {
     if (!ligante.email) { req.session.erro=['Email não cadastrado.']; return res.redirect('/desvinculacoes'); }
     const config = await prepararConfigDesvinc(await getConfig());
     const html = await gerarHTMLDesvinculacao(ligante, config, rd.rows[0].data_solicitacao);
-    const puppeteer3 = require('puppeteer-core');
-    const chromium3 = require('@sparticuz/chromium');
-    const browser3 = await puppeteer3.launch({ args: chromium3.args, executablePath: await chromium3.executablePath(), headless: chromium3.headless });
-    const page3 = await browser3.newPage();
-    await page3.setContent(html, { waitUntil: 'networkidle0' });
-    const pdfBuffer = await page3.pdf({ format: 'A4', printBackground: true });
-    await browser3.close();
+    console.log('GERANDO PDF desvinculacao...');
+    const pdfBuffer = await gerarPDFDesligamento(html, config.timbrado_b64, config.assinatura_presidente_b64, config.assinatura_secretario_b64, config.presidente_nome, config.secretario_nome);
+    console.log('PDF GERADO:', pdfBuffer ? pdfBuffer.length : 'NULL');
     // resend
     await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:ligante.email, subject:'Carta de Desvinculación — Liga Académica de Urología LAURO'+(reenvio?' (Reenvío)':''), html:emailBonito('Carta de Desvinculación — LAURO','<p>Estimado(a) <strong>'+ligante.nome+'</strong>,</p><p>Adjunto encontrará su <strong>Carta de Desvinculación</strong> de la Liga Académica de Urología - LAURO.</p><p>En caso de dudas, responda este mismo email.</p><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-desvinculacion-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     await query('UPDATE desvinculacoes SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', id]);
