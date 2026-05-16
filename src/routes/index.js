@@ -15,6 +15,132 @@ async function enviarEmail({from, to, subject, html, attachments}) {
 }
 
 
+async function gerarPDFDesvinculacao(html, timbradoB64, assinaturaPresidenteB64, assinaturaSecretarioB64, nomePresidente, nomeSecretario) {
+  const PDFDocument = require('pdfkit');
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ size: 'A4', margin: 0 });
+      const chunks = [];
+      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      const W = 595.28, H = 841.89;
+      const ML = 62.4, MT = 147.4, textW = 470.5;
+
+      // Timbrado como fundo
+      if (timbradoB64) {
+        try {
+          const imgBuf = Buffer.from(timbradoB64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+          doc.image(imgBuf, 0, 0, { width: W, height: H });
+        } catch(e) {}
+      }
+
+      function strip(str) {
+        return (str || '')
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/<li>/gi, '• ')
+          .replace(/<\/li>/gi, '\n')
+          .replace(/<[^>]+>/g, '')
+          .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+          .replace(/&[a-z]+;/gi, ' ').trim();
+      }
+
+      // Extrair título — pode ter <br> dentro
+      const tituloMatch = html.match(/class="titulo"[^>]*>([\s\S]*?)<\/div>/i);
+      const titulo = tituloMatch
+        ? strip(tituloMatch[1]).replace(/\n/g, ' — ').toUpperCase()
+        : 'LIGA ACADÉMICA DE UROLOGÍA - LAURO';
+
+      // Extrair corpo — até assinaturas
+      const corpoMatch = html.match(/class="corpo"[^>]*>([\s\S]*?)<\/div>\s*<div class="assinaturas"/i);
+      const corpoHtml = corpoMatch ? corpoMatch[1] : '';
+
+      // Extrair parágrafos e listas
+      const elementos = [];
+      // Pegar todos os <p> e <ul>
+      const elRe = /(<p[^>]*>[\s\S]*?<\/p>|<ul[^>]*>[\s\S]*?<\/ul>)/gi;
+      let m;
+      while ((m = elRe.exec(corpoHtml)) !== null) {
+        const el = m[1];
+        const texto = strip(el);
+        if (texto) elementos.push(texto);
+      }
+
+      // Extrair nomes das assinaturas
+      const nomeMatches = [...html.matchAll(/class="assinatura-nome"[^>]*>([\s\S]*?)<\/div>/gi)];
+      const cargoMatches = [...html.matchAll(/class="assinatura-cargo"[^>]*>([\s\S]*?)<\/div>/gi)];
+      const nomes = nomeMatches.map(m => strip(m[1]));
+      const cargos = cargoMatches.map(m => strip(m[1]));
+
+      let y = MT;
+
+      // TÍTULO bold à esquerda (como no HTML original - não centralizado)
+      doc.fontSize(11).font('Helvetica-Bold').fillColor('#000')
+        .text(titulo, ML, y, { width: textW, align: 'left' });
+      y = doc.y + 12;
+
+      // PARÁGRAFOS
+      for (const texto of elementos) {
+        if (y > H - 220) break;
+        doc.fontSize(11).font('Helvetica').fillColor('#000')
+          .text(texto, ML, y, { width: textW, align: 'justify', lineGap: 1 });
+        y = doc.y + 7;
+      }
+
+      // ASSINATURAS — 2 blocos lado a lado (presidente e secretário)
+      y += 20;
+      const assinW = textW * 0.70;
+      const assinX = ML + (textW - assinW) / 2;
+
+      // A desvinculação tem 2 assinaturas (presidente e secretário) lado a lado
+      const imgs = [assinaturaPresidenteB64, assinaturaSecretarioB64];
+      const ns = [
+        (nomePresidente || nomes[0] || 'PRESIDENTE').toUpperCase(),
+        (nomeSecretario || nomes[1] || 'SECRETÁRIO').toUpperCase()
+      ];
+      const cs = [
+        cargos[0] || 'PRESIDENTE — LAURO',
+        cargos[1] || 'SECRETÁRIO — LAURO'
+      ];
+
+      const col1X = ML + assinW * 0.05;
+      const col2X = ML + assinW * 0.55;
+      const colW = assinW * 0.40;
+
+      // Imagens
+      if (imgs[0]) {
+        try {
+          const buf = Buffer.from(imgs[0].replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+          doc.image(buf, col1X, y, { width: colW, height: 45, fit: [colW, 45] });
+        } catch(e) {}
+      }
+      if (imgs[1]) {
+        try {
+          const buf = Buffer.from(imgs[1].replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+          doc.image(buf, col2X, y, { width: colW, height: 45, fit: [colW, 45] });
+        } catch(e) {}
+      }
+      y += 48;
+
+      // Linhas
+      doc.moveTo(col1X, y).lineTo(col1X + colW, y).lineWidth(1).stroke('#000');
+      doc.moveTo(col2X, y).lineTo(col2X + colW, y).lineWidth(1).stroke('#000');
+      y += 4;
+
+      // Nomes
+      doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#000').text(ns[0], col1X, y, { width: colW, align: 'center' });
+      doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#000').text(ns[1], col2X, y, { width: colW, align: 'center' });
+      y = doc.y + 2;
+      doc.fontSize(8).font('Helvetica').text(cs[0], col1X, y, { width: colW, align: 'center' });
+      doc.fontSize(8).font('Helvetica').text(cs[1], col2X, y, { width: colW, align: 'center' });
+
+      doc.end();
+    } catch(e) { reject(e); }
+  });
+}
+
 function emailBonito(titulo, corpo, logo) {
   const logoDefault = 'https://i.imgur.com/LPrFxrF.png';
   const logoUrl = logo || logoDefault;
@@ -1784,7 +1910,7 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
     console.log('GERANDO PDF...');
-    const pdfBuffer = await gerarPDFDesligamento(html, config.timbrado_b64, config.assinatura_presidente_b64, config.assinatura_secretario_b64, config.presidente_nome, config.secretario_nome);
+    const pdfBuffer = await gerarPDFDesvinculacao(html, config.timbrado_b64, config.assinatura_presidente_b64, config.assinatura_secretario_b64, config.presidente_nome, config.secretario_nome);
     console.log('PDF GERADO:', pdfBuffer ? pdfBuffer.length : 'NULL');
     const emailRes = await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:d.email, subject:'Carta de Rescisión — Liga Académica de Urología LAURO', html:emailBonito('Carta de Rescisión — LAURO','<p>Estimado/a <strong>'+d.nome+'</strong>,</p><p>Adjunto encontrará su <strong>Carta de Rescisión</strong> de la Liga Académica de Urología - LAURO.</p><p>Por favor:</p><ol style="margin:10px 0 10px 20px"><li style="margin-bottom:6px">Imprima el documento adjunto</li><li style="margin-bottom:6px">Firme en el espacio indicado</li><li style="margin-bottom:6px">Escanee o fotografíe el documento firmado</li><li><strong>Responda este email</strong> con el documento firmado adjunto</li></ol><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     console.log('RESEND RESPONSE:', JSON.stringify(emailRes));
