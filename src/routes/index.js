@@ -15,6 +15,108 @@ async function enviarEmail({from, to, subject, html, attachments}) {
 }
 
 
+async function gerarPDFDesligamento(html, timbradoB64, assinaturaPresidenteB64, assinaturaSecretarioB64, nomePresidente, nomeSecretario) {
+  const PDFDocument = require('pdfkit');
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ size: 'A4', margin: 0 });
+      const chunks = [];
+      doc.on('data', chunk => chunks.push(chunk));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      const W = 595.28, H = 841.89;
+      const ML = 62, MR = 62, MT = 148, textW = W - ML - MR;
+
+      if (timbradoB64) {
+        try {
+          const imgBuf = Buffer.from(timbradoB64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+          doc.image(imgBuf, 0, 0, { width: W, height: H });
+        } catch(e) {}
+      }
+
+      const tituloMatch = html.match(/class="titulo"[^>]*>([\s\S]*?)<\/div>/i);
+      const titulo = tituloMatch ? tituloMatch[1].replace(/<br\s*\/?>/gi,' — ').replace(/<[^>]+>/g,'').trim() : 'Liga Académica de Urología - LAURO';
+
+      const corpoMatch = html.match(/class="corpo"[^>]*>([\s\S]*?)<\/div>\s*<div class="assinaturas/i);
+      const corpoHtml = corpoMatch ? corpoMatch[1] : html;
+
+      const corpo = corpoHtml
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'')
+        .replace(/<strong>([^<]+)<\/strong>/gi,'§BOLD§$1§END§')
+        .replace(/<br\s*\/?>/gi,'\n')
+        .replace(/<\/p>/gi,'\n')
+        .replace(/<\/li>/gi,'\n')
+        .replace(/<li>/gi,'• ')
+        .replace(/<\/ul>/gi,'\n')
+        .replace(/<\/div>/gi,'\n')
+        .replace(/<[^>]+>/g,'')
+        .replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
+        .replace(/&[a-z]+;/gi,' ')
+        .replace(/\n\s*\n\s*\n/g,'\n\n').trim();
+
+      let y = MT;
+
+      doc.fontSize(11).font('Helvetica-Bold').fillColor('#000').text(titulo.toUpperCase(), ML, y, { width: textW, align: 'left' });
+      y = doc.y + 20;
+
+      const partes = corpo.split('\n');
+      for (const linha of partes) {
+        if (!linha.trim()) { y += 6; continue; }
+        if (y > H - 180) break;
+        const segmentos = linha.split(/§BOLD§|§END§/);
+        const alts = [];
+        for (let i = 0; i < segmentos.length; i++) {
+          if (!segmentos[i]) continue;
+          alts.push({ text: segmentos[i], bold: i % 2 === 1 });
+        }
+        if (alts.length === 1) {
+          doc.fontSize(10).font('Helvetica').fillColor('#000').text(alts[0].text, ML, y, { width: textW, align: 'justify', lineGap: 2 });
+        } else {
+          const textoCompleto = alts.map(a => a.text).join('');
+          const temBold = alts.some(a => a.bold);
+          doc.fontSize(10).font(temBold ? 'Helvetica-Bold' : 'Helvetica').fillColor('#000').text(textoCompleto, ML, y, { width: textW, align: 'justify', lineGap: 2 });
+        }
+        y = doc.y + 4;
+      }
+
+      y += 20;
+      const colW = 160;
+      const col1X = ML + 20;
+      const col2X = W - MR - colW - 20;
+
+      if (assinaturaPresidenteB64) {
+        try {
+          const aBuf = Buffer.from(assinaturaPresidenteB64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+          doc.image(aBuf, col1X, y, { width: colW, height: 45, fit: [colW, 45] });
+        } catch(e) {}
+      }
+      if (assinaturaSecretarioB64) {
+        try {
+          const aBuf = Buffer.from(assinaturaSecretarioB64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+          doc.image(aBuf, col2X, y, { width: colW, height: 45, fit: [colW, 45] });
+        } catch(e) {}
+      }
+
+      y += 48;
+      doc.moveTo(col1X, y).lineTo(col1X + colW, y).lineWidth(1).stroke('#000');
+      doc.moveTo(col2X, y).lineTo(col2X + colW, y).lineWidth(1).stroke('#000');
+      y += 4;
+
+      const np = (nomePresidente || 'PRESIDENTE').toUpperCase();
+      const ns = (nomeSecretario || 'SECRETÁRIO').toUpperCase();
+      doc.fontSize(8).font('Helvetica-Bold').fillColor('#000').text(np, col1X, y, { width: colW, align: 'center' });
+      doc.fontSize(8).font('Helvetica-Bold').fillColor('#000').text(ns, col2X, y, { width: colW, align: 'center' });
+      y = doc.y + 2;
+      doc.fontSize(7.5).font('Helvetica').text('PRESIDENTE — LAURO', col1X, y, { width: colW, align: 'center' });
+      doc.fontSize(7.5).font('Helvetica').text('SECRETÁRIO — LAURO', col2X, y, { width: colW, align: 'center' });
+
+      doc.end();
+    } catch(e) { reject(e); }
+  });
+}
+
 function emailBonito(titulo, corpo, logo) {
   const logoDefault = 'https://i.imgur.com/LPrFxrF.png';
   const logoUrl = logo || logoDefault;
@@ -56,7 +158,7 @@ async function gerarPDFBuffer(html, timbradoB64, assinaturaB64, nomeAssinatura, 
 
       const corpo = corpoHtml.replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'')
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'')
-        .replace(/<strong>([^<]+)<\/strong>/gi,'§BOLD§$1§END§')
+        .replace(/<strong>([^<]+)<\/strong>/gi,'\u00a7BOLD\u00a7$1\u00a7END\u00a7')
         .replace(/<br\s*\/?>/gi,'\n').replace(/<\/p>/gi,'\n').replace(/<\/div>/gi,'\n')
         .replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&')
         .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&[a-z]+;/gi,' ')
@@ -1669,7 +1771,7 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
     console.log('GERANDO PDF...');
-    const pdfBuffer = await gerarPDFBuffer(html, config.timbrado_b64);
+    const pdfBuffer = await gerarPDFDesligamento(html, config.timbrado_b64, config.assinatura_presidente_b64, config.assinatura_secretario_b64, config.presidente_nome, config.secretario_nome);
     console.log('PDF GERADO:', pdfBuffer ? pdfBuffer.length : 'NULL');
     const emailRes = await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:d.email, subject:'Carta de Rescisión — Liga Académica de Urología LAURO', html:emailBonito('Carta de Rescisión — LAURO','<p>Estimado/a <strong>'+d.nome+'</strong>,</p><p>Adjunto encontrará su <strong>Carta de Rescisión</strong> de la Liga Académica de Urología - LAURO.</p><p>Por favor:</p><ol style="margin:10px 0 10px 20px"><li style="margin-bottom:6px">Imprima el documento adjunto</li><li style="margin-bottom:6px">Firme en el espacio indicado</li><li style="margin-bottom:6px">Escanee o fotografíe el documento firmado</li><li><strong>Responda este email</strong> con el documento firmado adjunto</li></ol><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     console.log('RESEND RESPONSE:', JSON.stringify(emailRes));
@@ -2071,7 +2173,7 @@ router.post('/desligamentos/:id/reenviar', requireAuth, async (req, res) => {
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
     console.log('GERANDO PDF...');
-    const pdfBuffer = await gerarPDFBuffer(html, config.timbrado_b64);
+    const pdfBuffer = await gerarPDFDesligamento(html, config.timbrado_b64, config.assinatura_presidente_b64, config.assinatura_secretario_b64, config.presidente_nome, config.secretario_nome);
     console.log('PDF GERADO:', pdfBuffer ? pdfBuffer.length : 'NULL');
     const emailRes = await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:d.email, subject:'Carta de Rescisión — LAURO (Reenvío)', html:emailBonito('Carta de Rescisión — LAURO (Reenvío)','<p>Estimado/a <strong>'+d.nome+'</strong>,</p><p>Reenviamos su <strong>Carta de Rescisión</strong> de la LAURO.</p><ol style="margin:10px 0 10px 20px"><li style="margin-bottom:6px">Imprima el documento adjunto</li><li style="margin-bottom:6px">Firme en el espacio indicado</li><li style="margin-bottom:6px">Escanee el documento firmado</li><li><strong>Responda este email</strong> con el documento firmado adjunto</li></ol><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     await query('UPDATE desligamentos SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', req.params.id]);
@@ -2318,15 +2420,7 @@ async function enviarCartaCobranca(id, req, res, reenvio) {
       from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>',
       to: pessoa.email,
       subject: 'Carta de Cobro — LAURO' + (reenvio ? ' (Reenvío)' : ''),
-      html: emailBonito(
-        'Carta de Cobro' + (reenvio ? ' (Reenvío)' : ''),
-        '<p>Estimado(a) <strong>' + pessoa.nome + '</strong>,</p>' +
-        '<p>Adjunto a este mensaje encontrará su <strong>Carta de Cobro</strong> de la Liga Académica de Urología – LAURO.</p>' +
-        '<p>Le solicitamos amablemente que regularice su situación a la brevedad posible.</p>' +
-        '<p>Si ya realizó el pago, por favor envíenos el comprobante respondiendo este mismo email.</p>' +
-        '<p>Estamos a su disposición para cualquier consulta.</p>' +
-        '<p style="margin-top:16px">Atentamente,<br><strong>Dirección Financiera — LAURO</strong></p>'
-      ),
+      html: emailBonito('Carta de Cobro' + (reenvio ? ' (Reenvío)' : ''), '<p>Estimado(a) <strong>' + pessoa.nome + '</strong>,</p><p>Adjunto a este mensaje encontrará su <strong>Carta de Cobro</strong> de la Liga Académica de Urología – LAURO.</p><p>Le solicitamos amablemente que regularice su situación a la brevedad posible.</p><p>Si ya realizó el pago, por favor envínos el comprobante respondiendo este mismo email.</p><p>Estamos a su disposición para cualquier consulta.</p><p style="margin-top:16px">Atentamente,<br><strong>Dirección Financiera — LAURO</strong></p>'),
       attachments: [{filename: 'carta-cobro-LAURO.pdf', content: pdfBuffer.toString('base64')}]
     });
     await query('UPDATE cartas_cobranca SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', id]);
