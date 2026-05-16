@@ -22,47 +22,94 @@ function emailBonito(titulo, corpo, logo) {
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:30px 0"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)"><tr><td style="background:#2b6803;padding:24px 32px;text-align:center">'+logoHtml+'</td></tr><tr><td style="padding:32px"><h2 style="color:#2b6803;font-size:18px;margin:0 0 20px 0;border-bottom:2px solid #2b6803;padding-bottom:10px">'+titulo+'</h2><div style="color:#333;font-size:14px;line-height:1.7">'+corpo+'</div><div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;text-align:center;color:#888;font-size:12px"><p style="margin:0">LAURO — Liga Académica de Urología</p><p style="margin:4px 0">Universidad Central del Paraguay — Ciudad del Este</p><p style="margin:4px 0">lauroucpcde@lauroucpcde.com</p></div></td></tr></table></td></tr></table></body></html>';
 }
 
-async function gerarPDFBuffer(html, timbradoB64) {
+async function gerarPDFBuffer(html, timbradoB64, assinaturaB64, nomeAssinatura, cargoAssinatura) {
   const PDFDocument = require('pdfkit');
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: 'A4', margin: 0 });
       const chunks = [];
-      doc.on('data', c => chunks.push(c));
+      doc.on('data', chunk => chunks.push(chunk));
       doc.on('end', () => resolve(Buffer.concat(chunks)));
       doc.on('error', reject);
 
       const W = 595.28, H = 841.89;
+      const ML = 62, MR = 62, MT = 148, textW = W - ML - MR;
 
       // Timbrado como fundo
       if (timbradoB64) {
         try {
           const imgBuf = Buffer.from(timbradoB64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
           doc.image(imgBuf, 0, 0, { width: W, height: H });
-        } catch(e) { /* sem timbrado */ }
+        } catch(e) {}
       }
 
-      // Extrair texto do HTML
-      const texto = html
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<\/p>/gi, '\n')
-        .replace(/<\/div>/gi, '\n')
-        .replace(/<\/tr>/gi, '\n')
-        .replace(/<\/td>/gi, ' | ')
-        .replace(/<[^>]+>/g, '')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&[a-z]+;/gi, ' ')
-        .replace(/\n\s*\n\s*\n/g, '\n\n')
-        .trim();
+      // Extrair partes do HTML com regex
+      const getTag = (tag, html) => {
+        const m = html.match(new RegExp('<' + tag + '[^>]*>([\s\S]*?)<\/' + tag + '>', 'i'));
+        return m ? m[1].replace(/<[^>]+>/g, '').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim() : '';
+      };
+      const titulo = getTag('titulo', html) || 'Carta de Cobro — LAURO';
+      const subtitulo = getTag('subtitulo', html) || 'Pago Mensual Vencido';
+      const corpo = html.replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'')
+        .replace(/<strong>([^<]+)<\/strong>/gi,'§BOLD§$1§END§')
+        .replace(/<br\s*\/?>/gi,'\n').replace(/<\/p>/gi,'\n').replace(/<\/div>/gi,'\n')
+        .replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&')
+        .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&[a-z]+;/gi,' ')
+        .replace(/\n\s*\n\s*\n/g,'\n\n').trim();
 
-      // Texto sobre o timbrado
-      doc.fontSize(10).font('Helvetica').fillColor('#000000')
-        .text(texto, 60, 150, { width: W - 120, align: 'justify', lineGap: 4 });
+      let y = MT;
+
+      // Titulo
+      doc.fontSize(13).font('Helvetica-Bold').fillColor('#000').text(titulo.toUpperCase(), ML, y, { width: textW, align: 'center' });
+      y += 18;
+      doc.fontSize(11).font('Helvetica-Bold').text(subtitulo.toUpperCase(), ML, y, { width: textW, align: 'center' });
+      y += 24;
+
+      // Corpo com negrito inline
+      const partes = corpo.split('\n');
+      for (const linha of partes) {
+        if (!linha.trim()) { y += 6; continue; }
+        const segmentos = linha.split(/§BOLD§|§END§/);
+        let x = ML;
+        let primeiroSeg = true;
+        const alts = [];
+        for (let i = 0; i < segmentos.length; i++) {
+          if (!segmentos[i]) continue;
+          alts.push({ text: segmentos[i], bold: i % 2 === 1 });
+        }
+        // Linha simples com negrito
+        if (alts.length === 1) {
+          doc.fontSize(10).font('Helvetica').fillColor('#000').text(alts[0].text, ML, y, { width: textW, align: 'justify', lineGap: 2 });
+          y = doc.y + 4;
+        } else {
+          // Linha com mistura bold/normal — renderiza toda em bold onde necessário
+          const textoCompleto = alts.map(a => a.text).join('');
+          const temBold = alts.some(a => a.bold);
+          doc.fontSize(10).font(temBold ? 'Helvetica-Bold' : 'Helvetica').fillColor('#000').text(textoCompleto, ML, y, { width: textW, align: 'justify', lineGap: 2 });
+          y = doc.y + 4;
+        }
+      }
+
+      // Assinatura
+      y += 16;
+      const assinX = W / 2 - 80;
+      if (assinaturaB64) {
+        try {
+          const aBuf = Buffer.from(assinaturaB64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+          doc.image(aBuf, assinX, y, { width: 160, height: 50, fit: [160, 50] });
+          y += 54;
+        } catch(e) { y += 10; }
+      }
+      doc.moveTo(assinX, y).lineTo(assinX + 160, y).lineWidth(1).stroke('#000');
+      y += 4;
+      if (nomeAssinatura) {
+        doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#000').text(nomeAssinatura.toUpperCase(), assinX - 20, y, { width: 200, align: 'center' });
+        y = doc.y + 2;
+      }
+      if (cargoAssinatura) {
+        doc.fontSize(8).font('Helvetica').text(cargoAssinatura, assinX - 20, y, { width: 200, align: 'center' });
+      }
 
       doc.end();
     } catch(e) { reject(e); }
@@ -2261,7 +2308,7 @@ async function enviarCartaCobranca(id, req, res, reenvio) {
     const config = await prepararConfigCobranca(await getConfig());
     const htmlCarta = gerarHTMLCartaCobranca(pessoa, config, r.rows[0]);
     console.log('GERANDO PDF carta cobranca...');
-    const pdfBuffer = await gerarPDFBuffer(htmlCarta, config.timbrado_b64);
+    const pdfBuffer = await gerarPDFBuffer(htmlCarta, config.timbrado_b64, config.assinatura_financeiro_b64, config.financeiro_nome || 'DIRECTOR(A) FINANCIERO(A)', 'Director(a) Financiero(a)\nLAURO – Liga Académica de Urología');
     console.log('PDF GERADO:', pdfBuffer ? pdfBuffer.length : 'NULL');
     await enviarEmail({
       from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>',
