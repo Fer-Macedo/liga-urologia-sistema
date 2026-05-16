@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Contratos Diretivos</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%= config.org_cor||'#1a56db' %>;}
+    .table-card{background:var(--card);border:1px solid var(--borda);border-radius:14px;overflow:hidden;margin-bottom:16px;}
+    .table-header{padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;align-items:center;justify-content:space-between;}
+    table.tabela{width:100%;border-collapse:collapse;}
+    table.tabela thead th{background:var(--fundo);padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--texto2);text-align:left;border-bottom:1px solid var(--borda);}
+    table.tabela tbody tr{border-bottom:1px solid var(--borda);transition:background .15s;}
+    table.tabela tbody tr:last-child{border-bottom:none;}
+    table.tabela tbody tr:hover{background:var(--fundo);}
+    table.tabela tbody td{padding:11px 14px;font-size:13px;vertical-align:middle;}
+    .badge-status{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+    .status-rascunho{background:#f1f5f9;color:#475569;}
+    .status-enviado{background:#dbeafe;color:#1e40af;}
+    .status-assinado{background:#dcfce7;color:#166534;}
+    .btn-xs{display:inline-flex;align-items:center;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:600;border:1px solid var(--borda);background:var(--fundo);color:var(--texto);cursor:pointer;transition:all .15s;font-family:inherit;text-decoration:none;}
+    .btn-xs:hover{border-color:var(--cor-primaria);color:var(--cor-primaria);}
+    .btn-xs.verde{background:#10b981;color:white;border-color:transparent;}
+    .btn-xs.azul{background:#3b82f6;color:white;border-color:transparent;}
+    .btn-xs.roxo{background:#7c3aed;color:white;border-color:transparent;}
+    .btn-xs.verm{background:#ef4444;color:white;border-color:transparent;}
+    .btn-xs.amarelo{background:#f59e0b;color:white;border-color:transparent;}
+    .editor-contrato{width:100%;min-height:300px;font-family:'Times New Roman',serif;font-size:13px;line-height:1.6;padding:16px;border:1px solid var(--borda);border-radius:8px;background:var(--fundo);resize:vertical;}
+  </style>
+  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
+  <style>
+    .ql-container{font-family:'Times New Roman',serif;font-size:13px;min-height:280px;border-radius:0 0 8px 8px;}
+    .ql-toolbar{border-radius:8px 8px 0 0;background:var(--fundo);}
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'contratos-diretivos' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Contratos Diretivos</h1>
+      <div class="topbar-acoes">
+        <button class="btn btn-sm" onclick="abrirModal('modal-timbrado')">&#128247; Timbrado Contrato</button>
+        <button class="btn btn-sm" onclick="abrirModal('modal-texto-global')">&#128196; Texto do Contrato</button>
+        <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-novo')">+ Novo Contrato</button>
+      </div>
+    </div>
+    <div class="content">
+      <%if(msg&&msg.length>0){%><div class="alerta alerta-ok"><%=msg[0]%></div><%}%>
+      <%if(erro&&erro.length>0){%><div class="alerta alerta-erro"><%=erro[0]%></div><%}%>
+      <div class="table-card">
+        <div class="table-header"><span style="font-size:14px;font-weight:700"><%=contratos.length%> contrato(s)</span></div>
+        <table class="tabela"><thead><tr>
+          <th>Diretivo</th><th>Status</th><th>Criado em</th><th>Enviado em</th><th>Assinado em</th><th>Acoes</th>
+        </tr></thead><tbody>
+        <%if(contratos.length===0){%>
+        <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--texto2)">
+          <div style="font-size:28px;margin-bottom:8px">&#128196;</div>
+          <div style="font-weight:600">Nenhum contrato gerado ainda</div>
+        </td></tr><%}%>
+        <%contratos.forEach(ct=>{%>
+        <tr>
+          <td><div style="font-weight:600"><%=ct.diretivo_nome%></div>
+            <div style="font-size:11px;color:var(--texto2)"><%=ct.diretivo_email||''%></div></td>
+          <td><span class="badge-status status-<%=ct.status%>"><%=ct.status%></span></td>
+          <td style="font-size:12px;color:var(--texto2)"><%=new Date(ct.criado_em).toLocaleDateString('pt-BR')%></td>
+          <td style="font-size:12px;color:var(--texto2)"><%=ct.enviado_em?new Date(ct.enviado_em).toLocaleDateString('pt-BR'):'-'%></td>
+          <td style="font-size:12px;color:var(--texto2)"><%=ct.assinado_em?new Date(ct.assinado_em).toLocaleDateString('pt-BR'):'-'%></td>
+          <td><div style="display:flex;gap:5px;flex-wrap:wrap">
+            <a href="/contratos-diretivos/<%=ct.id%>/pdf" target="_blank" class="btn-xs">Ver</a>
+            <a href="/contratos-diretivos/<%=ct.id%>/imprimir" target="_blank" class="btn-xs roxo">Imprimir</a>
+            <form method="POST" action="/contratos-diretivos/<%=ct.id%>/enviar" style="display:inline;margin:0"><button type="submit" class="btn-xs verde">Enviar</button></form>
+            <%if(ct.status==='enviado'||ct.status==='assinado'){%>
+            <button class="btn-xs verde" onclick="abrirUpload(<%=ct.id%>,'<%=ct.diretivo_nome%>')">Anexar Assinado</button>
+            <%}%>
+            <%if(ct.pdf_assinado_chave){%>
+            <a href="/contratos-diretivos/<%=ct.id%>/assinado" target="_blank" class="btn-xs azul">Ver Assinado</a>
+            <%}%>
+            <form method="POST" action="/contratos-diretivos/<%=ct.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')">
+              <button type="submit" class="btn-xs verm">Excluir</button></form>
+          </div></td>
+        </tr>
+        <%});%>
+        </tbody></table>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="modal-overlay" id="modal-novo" style="display:none">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header"><span class="modal-titulo">Novo Contrato Diretivo</span><button class="icon-btn" onclick="fecharModal('modal-novo')">&#x2715;</button></div>
+    <form action="/contratos-diretivos" method="POST">
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;padding:20px 24px">
+        <div class="campo"><label class="label">Diretivo *</label>
+          <select name="diretivo_id" class="input" required>
+            <option value="">Selecione...</option>
+            <%diretivos.forEach(d=>{%><option value="<%=d.id%>"><%=d.nome%> — <%=d.cargo||'Diretivo'%></option><%});%>
+          </select>
+        </div>
+        <div class="campo"><label class="label">Data de Início do Contrato *</label>
+          <input type="date" name="data_inicio" class="input" required>
+          <span style="font-size:11px;color:var(--texto2)">Data em que o contrato entra em vigor</span>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-novo')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Gerar Contrato</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-editar" style="display:none">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header"><span class="modal-titulo">Editar Contrato</span><button class="icon-btn" onclick="fecharModal('modal-editar')">&#x2715;</button></div>
+    <form id="form-editar" action="" method="POST">
+      <div class="campo" style="margin-bottom:16px"><label class="label">Texto do Contrato</label>
+        <div id="editor-editar" style="min-height:280px;border:1px solid var(--borda);border-radius:8px"></div>
+        <textarea name="texto_contrato" id="txt-editar" style="display:none"></textarea>
+        <div style="font-size:11px;color:var(--texto2);margin-top:4px">Use {nome} {rg} {catraca} {turma} {semestre} {data} {presidente} {vice} {secretario} {orientador}</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-editar')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-upload" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header"><span class="modal-titulo" id="titulo-upload">Anexar Assinado</span><button class="icon-btn" onclick="fecharModal('modal-upload')">&#x2715;</button></div>
+    <form id="form-upload" action="" method="POST" enctype="multipart/form-data">
+      <div style="background:var(--fundo);border:2px dashed var(--borda);border-radius:10px;padding:20px;text-align:center;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">Contrato assinado (PDF)</div>
+        <div style="font-size:11px;color:var(--texto2);margin-bottom:10px">Selecione o PDF do contrato assinado</div>
+        <input type="file" name="pdf_assinado" class="input" accept=".pdf" required>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-upload')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Anexar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- Modal Timbrado Contrato -->
+<div class="modal-overlay" id="modal-timbrado" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header"><span class="modal-titulo">&#128247; Timbrado do Contrato</span><button class="icon-btn" onclick="fecharModal('modal-timbrado')">&#x2715;</button></div>
+    <form action="/contratos-diretivos/timbrado" method="POST" enctype="multipart/form-data">
+      <div style="background:var(--fundo);border:2px dashed var(--borda);border-radius:10px;padding:20px;text-align:center;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">Papel Timbrado (PNG ou JPG)</div>
+        <div style="font-size:11px;color:var(--texto2);margin-bottom:10px">Imagem A4 usada como fundo do contrato</div>
+        <input type="file" name="timbrado_contrato" class="input" accept="image/*" required>
+        <%if(config.timbrado_contrato_chave){%><div style="margin-top:8px;font-size:11px;color:#10b981;font-weight:600">&#10003; Timbrado configurado</div><%}%>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-timbrado')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar Timbrado</button>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- Modal Texto Global -->
+<div class="modal-overlay" id="modal-texto-global" style="display:none">
+  <div class="modal" style="max-width:750px">
+    <div class="modal-header"><span class="modal-titulo">&#128196; Texto do Contrato</span><button class="icon-btn" onclick="fecharModal('modal-texto-global')">&#x2715;</button></div>
+    <form id="form-texto-global" action="/contratos-diretivos/texto-global" method="POST">
+      <div style="font-size:12px;color:var(--texto2);margin-bottom:10px;padding:8px;background:var(--fundo);border-radius:8px">
+        Este texto sera aplicado a <strong>todos os contratos</strong> existentes e futuros. Use as variaveis: <code>{nome}</code> <code>{rg}</code> <code>{catraca}</code> <code>{data_ingresso}</code> <code>{data}</code>
+      </div>
+      <div class="campo" style="margin-bottom:16px">
+        <div id="editor-global" style="min-height:320px;border:1px solid var(--borda);border-radius:8px"></div>
+        <textarea name="texto_contrato" id="txt-global" style="display:none"></textarea>
+        <script>window._textoGlobal=<%- JSON.stringify(textoGlobalDir||'') %>;</script>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-texto-global')">Cancelar</button>
+        <input type="hidden" name="texto_contrato" id="txt-global-hidden">
+        <button type="submit" class="btn btn-primario" onclick="prepararSalvar()">Salvar para Todos</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+<script src="/js/app.js"></script>
+<script>
+let quillNovo, quillEditar, quillGlobal;
+document.addEventListener("DOMContentLoaded",()=>{
+  const AlignClass = Quill.import('attributors/class/align');
+  Quill.register(AlignClass, true);
+  quillGlobal=new Quill("#editor-global",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],['bold','italic','underline'],[{list:'ordered'},{list:'bullet'}],[{align:['','center','right','justify']}],['clean']]}});
+  if(window._textoGlobal)quillGlobal.root.innerHTML=window._textoGlobal;
+  document.querySelector("form[action='/contratos-diretivos/texto-global']").addEventListener("submit",()=>{
+    document.getElementById("txt-global").value=quillGlobal.root.innerHTML;
+  });
+
+  if(document.getElementById("editor-editar")){
+    quillEditar=new Quill("#editor-editar",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],['bold','italic','underline'],[{list:'ordered'},{list:'bullet'}],[{align:['',"center","right","justify"]}],['clean']]}});
+    document.getElementById("form-editar").addEventListener("submit",()=>{
+      document.getElementById("txt-editar").value=quillEditar.root.innerHTML;
+    });
+  }
+});
+function editarContrato(id,textoEnc){
+  document.getElementById("form-editar").action="/contratos-diretivos/"+id+"/editar";
+  const txt=decodeURIComponent(textoEnc);
+  if(quillEditar)quillEditar.root.innerHTML=txt;
+  abrirModal("modal-editar");
+}
+function prepararSalvar(){
+  const editor = quillGlobal.root;
+  const clone = editor.cloneNode(true);
+  clone.querySelectorAll('.ql-align-center').forEach(el=>el.setAttribute('style','text-align:center'));
+  clone.querySelectorAll('.ql-align-right').forEach(el=>el.setAttribute('style','text-align:right'));
+  clone.querySelectorAll('.ql-align-justify').forEach(el=>el.setAttribute('style','text-align:justify'));
+  document.getElementById('txt-global-hidden').value = clone.innerHTML;
+  console.log("SALVANDO:", clone.innerHTML.substring(0,200));
+}
+function abrirUpload(id,nome){
+  document.getElementById("titulo-upload").textContent="Anexar Assinado — "+nome;
+  document.getElementById("form-upload").action="/contratos-diretivos/"+id+"/assinado";
+  abrirModal("modal-upload");
+}
+</script>
+</body>
+</html>
