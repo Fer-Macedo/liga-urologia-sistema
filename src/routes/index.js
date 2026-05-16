@@ -23,24 +23,37 @@ function emailBonito(titulo, corpo, logo) {
 }
 
 async function gerarPDFBuffer(html) {
-  let browser;
-  const puppeteer = require('puppeteer-core');
-  const chromium = require('@sparticuz/chromium');
-  browser = await puppeteer.launch({
-    args: chromium.args,
-    executablePath: await chromium.executablePath(),
-    headless: chromium.headless,
-    timeout: 30000
+  const PDFDocument = require('pdfkit');
+  return new Promise((resolve, reject) => {
+    try {
+      const doc = new PDFDocument({ size: 'A4', margin: 60 });
+      const chunks = [];
+      doc.on('data', c => chunks.push(c));
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+      doc.on('error', reject);
+
+      // Extrair texto do HTML de forma simples
+      const texto = html
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<\/div>/gi, '\n')
+        .replace(/<\/tr>/gi, '\n')
+        .replace(/<\/td>/gi, ' | ')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&[a-z]+;/gi, ' ')
+        .replace(/\n\s*\n\s*\n/g, '\n\n')
+        .trim();
+
+      doc.fontSize(10).font('Helvetica').text(texto, { align: 'justify', lineGap: 4 });
+      doc.end();
+    } catch(e) { reject(e); }
   });
-  try {
-    const page = await browser.newPage();
-    const htmlLimpo = html.replace(/<script>[^<]*window\.print[^<]*<\/script>/g, '');
-    await page.setContent(htmlLimpo, { waitUntil: 'domcontentloaded', timeout: 15000 });
-    const buf = await page.pdf({ format: 'A4', printBackground: true });
-    return buf;
-  } finally {
-    await browser.close();
-  }
 }
 
 const router = express.Router();
