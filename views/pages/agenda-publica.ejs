@@ -56,18 +56,27 @@
     .cal-head-dia { text-align:center; padding:10px 4px; font-size:10px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--text-light); }
     .cal-grade { display:grid; grid-template-columns:repeat(7,1fr); padding:4px 12px 12px; gap:3px; }
 
-    .cal-dia { min-height:90px; border-radius:10px; padding:8px 7px 6px; position:relative; cursor:pointer; transition:all .18s cubic-bezier(.34,1.4,.64,1); border:1.5px solid transparent; }
-    .cal-dia:hover { background:rgba(43,104,3,.06); border-color:rgba(43,104,3,.18); transform:translateY(-2px) scale(1.01); box-shadow:0 4px 16px rgba(43,104,3,.12); }
-    .cal-dia.outro { opacity:.38; pointer-events:none; }
-    .cal-dia.tem-ev { background:rgba(43,104,3,.03); }
-    .cal-dia.tem-ev:hover { background:rgba(43,104,3,.09); }
-    .cal-dia.hoje .dia-num { background:var(--verde); color:#fff; box-shadow:0 2px 10px rgba(43,104,3,.4); }
+    .cal-dia { min-height:100px; border-radius:10px; padding:0; position:relative; cursor:pointer; transition:all .18s cubic-bezier(.34,1.4,.64,1); border:1.5px solid #f0f0ee; overflow:hidden; display:flex; flex-direction:column; }
+    .cal-dia:hover { transform:translateY(-2px) scale(1.02); box-shadow:0 6px 20px rgba(43,104,3,.15); border-color:rgba(43,104,3,.3); z-index:2; }
+    .cal-dia.outro { opacity:.35; pointer-events:none; }
+    .cal-dia.hoje { border-color:var(--verde) !important; box-shadow:0 0 0 2px rgba(43,104,3,.2); }
+    .cal-dia.hoje .dia-num { background:var(--verde); color:#fff; box-shadow:0 2px 8px rgba(43,104,3,.4); }
 
-    .dia-num { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; color:var(--text); margin-bottom:5px; transition:.2s; }
+    /* Número do dia — fica no topo */
+    .dia-top { padding:7px 8px 4px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+    .dia-num { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:var(--text); transition:.2s; }
 
-    .ev-pill { padding:2px 7px; border-radius:5px; font-size:10px; font-weight:700; margin-bottom:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; transition:.15s; line-height:1.6; }
-    .ev-pill:hover { filter:brightness(.88); transform:translateX(2px); }
-    .ev-mais { font-size:10px; color:var(--text-light); font-weight:700; padding:1px 4px; cursor:pointer; }
+    /* Dia com 1 evento — fill total */
+    .cal-dia.ev-1 { cursor:pointer; }
+    .ev-fill { flex:1; display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-end; padding:0 7px 8px; cursor:pointer; transition:.15s; }
+    .ev-fill-nome { font-size:10px; font-weight:800; line-height:1.3; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.2); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .ev-fill-hora { font-size:9px; color:rgba(255,255,255,.8); font-weight:600; margin-top:2px; }
+
+    /* Dia com múltiplos eventos */
+    .ev-multi-wrap { flex:1; display:flex; flex-direction:column; gap:2px; padding:2px 5px 5px; overflow:hidden; }
+    .ev-multi-item { border-radius:5px; padding:3px 6px; font-size:10px; font-weight:800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; transition:.15s; text-shadow:0 1px 2px rgba(0,0,0,.15); line-height:1.4; }
+    .ev-multi-item:hover { filter:brightness(.88); transform:translateX(1px); }
+    .ev-mais { font-size:9px; color:var(--text-light); font-weight:700; padding:2px 6px; cursor:pointer; text-align:center; }
     .ev-mais:hover { color:var(--verde); }
 
     /* BACKDROP */
@@ -126,9 +135,9 @@
     .step-txt { font-size:13px; color:var(--text); line-height:1.6; }
 
     @media(max-width:640px){
-      .cal-dia { min-height:56px; padding:5px 3px; }
-      .ev-pill { display:none; }
-      .cal-dia.tem-ev::after { content:''; display:block; width:5px; height:5px; border-radius:50%; background:var(--verde); margin:2px auto 0; }
+      .cal-dia { min-height:60px; }
+      .ev-fill-nome { font-size:9px; }
+      .ev-multi-item { font-size:9px; }
       .hero { padding:22px 16px 44px; }
       .cal-wrap { padding:0 12px 40px; }
       .m-head-title { font-size:18px; }
@@ -289,30 +298,66 @@ function renderGrade(){
     });
 
     const el=document.createElement('div');
-    el.className='cal-dia'+(outro?' outro':'')+(isHoje?' hoje':'')+(evsDia.length?' tem-ev':'');
+    el.className='cal-dia'+(outro?' outro':'')+(isHoje?' hoje':'');
 
+    const cor1 = evsDia.length ? getCor(evsDia[0]) : null;
+
+    // Fundo do dia — se tem evento, preencher com gradiente da cor
+    if(evsDia.length===1){
+      el.style.background=`linear-gradient(160deg, ${cor1}22 0%, ${cor1}55 100%)`;
+      el.style.borderColor=`${cor1}55`;
+    } else if(evsDia.length>1){
+      el.style.background=`#fafffe`;
+      el.style.borderColor=`rgba(43,104,3,.12)`;
+    }
+
+    // Topo com número do dia
+    const top=document.createElement('div');
+    top.className='dia-top';
     const num=document.createElement('div');
-    num.className='dia-num'; num.textContent=d; el.appendChild(num);
+    num.className='dia-num';
+    num.textContent=d;
+    if(evsDia.length===1) { num.style.color=cor1; num.style.fontWeight='900'; }
+    top.appendChild(num);
+    el.appendChild(top);
 
-    evsDia.slice(0,2).forEach(ev=>{
-      const cor=getCor(ev);
-      const pill=document.createElement('div');
-      pill.className='ev-pill';
-      pill.style.cssText=`background:${cor}18;color:${cor};border-left:3px solid ${cor}`;
-      pill.textContent=ev.titulo;
-      pill.onclick=e=>{e.stopPropagation();abrirEvento(ev);};
-      el.appendChild(pill);
-    });
-    if(evsDia.length>2){
-      const mais=document.createElement('div');
-      mais.className='ev-mais'; mais.textContent=`+${evsDia.length-2} mais`;
-      mais.onclick=e=>{e.stopPropagation();abrirMulti(d,m2,a2,evsDia);};
-      el.appendChild(mais);
+    if(evsDia.length===1){
+      // Fill único evento
+      const dt=new Date(evsDia[0].data_inicio); dt.setMinutes(dt.getMinutes()+dt.getTimezoneOffset());
+      const hora=evsDia[0].dia_inteiro?'Dia inteiro':dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      const fill=document.createElement('div');
+      fill.className='ev-fill';
+      fill.style.background=`linear-gradient(180deg, transparent 0%, ${cor1}cc 100%)`;
+      fill.innerHTML=`<div class="ev-fill-nome">${evsDia[0].titulo}</div><div class="ev-fill-hora">${hora}</div>`;
+      fill.onclick=e=>{e.stopPropagation();abrirEvento(evsDia[0]);};
+      el.appendChild(fill);
+      el.onclick=()=>abrirEvento(evsDia[0]);
+
+    } else if(evsDia.length>1){
+      // Múltiplos eventos em pills dentro do quadrado
+      const wrap=document.createElement('div');
+      wrap.className='ev-multi-wrap';
+      const max=3;
+      evsDia.slice(0,max).forEach(ev=>{
+        const cor=getCor(ev);
+        const item=document.createElement('div');
+        item.className='ev-multi-item';
+        item.style.background=cor;
+        item.textContent=ev.titulo;
+        item.onclick=e=>{e.stopPropagation();abrirEvento(ev);};
+        wrap.appendChild(item);
+      });
+      if(evsDia.length>max){
+        const mais=document.createElement('div');
+        mais.className='ev-mais';
+        mais.textContent=`+${evsDia.length-max} mais`;
+        mais.onclick=e=>{e.stopPropagation();abrirMulti(d,m2,a2,evsDia);};
+        wrap.appendChild(mais);
+      }
+      el.appendChild(wrap);
+      el.onclick=()=>abrirMulti(d,m2,a2,evsDia);
     }
-    if(!outro){
-      if(evsDia.length===1) el.onclick=()=>abrirEvento(evsDia[0]);
-      else if(evsDia.length>1) el.onclick=()=>abrirMulti(d,m2,a2,evsDia);
-    }
+
     g.appendChild(el);
   }
 }
