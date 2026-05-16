@@ -34,7 +34,8 @@ async function gerarPDFDesligamento(html, timbradoB64, assinaturaPresidenteB64, 
       doc.on('error', reject);
 
       const W = 595.28, H = 841.89;
-      const ML = 62, MR = 62, MT = 148, textW = W - ML - MR;
+      // Margens equivalentes ao HTML: top:52mm, left:22mm, width:166mm
+      const ML = 62.4, MT = 147.4, textW = 470.5;
 
       // Timbrado como fundo
       if (timbradoB64) {
@@ -44,134 +45,129 @@ async function gerarPDFDesligamento(html, timbradoB64, assinaturaPresidenteB64, 
         } catch(e) {}
       }
 
-      // Extrair título
-      const tituloMatch = html.match(/class="titulo"[^>]*>([\s\S]*?)<\/div>/i);
-      const titulo = tituloMatch
-        ? tituloMatch[1].replace(/<br\s*\/?>/gi, ' — ').replace(/<[^>]+>/g, '').trim()
-        : 'Liga Académica de Urología - LAURO';
+      // Extrair dados do HTML
+      const get = (regex) => { const m = html.match(regex); return m ? m[1].replace(/<[^>]+>/g,'').trim() : ''; };
 
-      // Extrair corpo
-      const corpoMatch = html.match(/class="corpo"[^>]*>([\s\S]*?)<\/div>\s*<div class="assinaturas/i);
-      const corpoHtml = corpoMatch ? corpoMatch[1] : html;
+      // Extrair parágrafos com bold preservado
+      const corpoMatch = html.match(/class="corpo"[^>]*>([\s\S]*?)<\/div>\s*<div class="data"/i);
+      const corpoHtml = corpoMatch ? corpoMatch[1] : '';
+      const dataMatch = html.match(/class="data"[^>]*>([\s\S]*?)<\/div>/i);
+      const dataTexto = dataMatch ? dataMatch[1].replace(/<[^>]+>/g,'').trim() : '';
 
-      const corpo = corpoHtml
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-        .replace(/<strong>([^<]+)<\/strong>/gi, '§BOLD§$1§END§')
-        .replace(/<br\s*\/?>/gi, '\n')
-        .replace(/<\/p>/gi, '\n')
-        .replace(/<\/li>/gi, '\n')
-        .replace(/<li>/gi, '• ')
-        .replace(/<\/ul>/gi, '\n')
-        .replace(/<\/div>/gi, '\n')
-        .replace(/<[^>]+>/g, '')
-        .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-        .replace(/&[a-z]+;/gi, ' ')
-        .replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+      // Extrair assinaturas
+      const blocos = [];
+      const bMatch = html.match(/class="assinatura-bloco"[^>]*>([\s\S]*?)<\/div>\s*(?:<div class="assinatura-bloco"|<\/div>\s*<\/div>)/gi) || [];
+      const allBlocos = html.match(/class="assinatura-bloco"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/gi) || [];
+
+      // Extrair nome e cargo de cada bloco de assinatura
+      const assinaturas = [];
+      const nomeMatches = html.match(/class="assinatura-nome"[^>]*>([\s\S]*?)<\/div>/gi) || [];
+      const cargoMatches = html.match(/class="assinatura-cargo"[^>]*>([\s\S]*?)<\/div>/gi) || [];
+      for (let i = 0; i < nomeMatches.length; i++) {
+        const nome = nomeMatches[i].replace(/<[^>]+>/g,'').trim();
+        const cargo = cargoMatches[i] ? cargoMatches[i].replace(/<br\s*\/?>/gi,'\n').replace(/<[^>]+>/g,'').trim() : '';
+        assinaturas.push({ nome, cargo });
+      }
 
       let y = MT;
 
-      // Título CENTRALIZADO
-      doc.fontSize(11).font('Helvetica-Bold').fillColor('#000')
-        .text(titulo.toUpperCase(), ML, y, { width: textW, align: 'center' });
-      y = doc.y + 24; // espaço generoso antes do corpo
+      // TÍTULO centralizado
+      const tituloMatch = html.match(/class="titulo"[^>]*>([\s\S]*?)<\/div>/i);
+      const titulo = tituloMatch ? tituloMatch[1].replace(/<[^>]+>/g,'').trim().toUpperCase() : 'CARTA DE RESCISIÓN DE LA LIGA ACADÉMICA DE UROLOGÍA';
+      doc.fontSize(12).font('Helvetica-Bold').fillColor('#000')
+        .text(titulo, ML, y, { width: textW, align: 'center' });
+      y = doc.y + 12;
 
-      // Corpo com negrito inline (linha a linha)
-      const partes = corpo.split('\n');
-      for (const linha of partes) {
-        if (!linha.trim()) { y += 6; continue; }
-        if (y > H - 200) break;
+      // PARÁGRAFOS com bold inline
+      const pTags = corpoHtml.match(/<p[^>]*>([\s\S]*?)<\/p>/gi) || [];
+      for (const p of pTags) {
+        const inner = p.replace(/<p[^>]*>/i,'').replace(/<\/p>/i,'');
+        if (!inner.trim()) continue;
+        if (y > H - 250) break;
 
-        const segmentos = linha.split(/§BOLD§|§END§/);
-        const alts = [];
-        for (let i = 0; i < segmentos.length; i++) {
-          if (!segmentos[i]) continue;
-          alts.push({ text: segmentos[i], bold: i % 2 === 1 });
-        }
-
-        // Renderiza cada segmento inline (bold/normal misturado na mesma linha)
-        if (alts.length === 1) {
-          doc.fontSize(10).font('Helvetica').fillColor('#000')
-            .text(alts[0].text, ML, y, { width: textW, align: 'justify', lineGap: 2 });
-          y = doc.y + 4;
-        } else {
-          // Monta a linha com segmentos bold e normal
-          // pdfkit não suporta inline bold nativamente, então usamos
-          // uma abordagem de múltiplos .text() na mesma linha
-          let xCursor = ML;
-          const lineY = y;
-          let maxY = y;
-
-          // Calcular largura total da linha para alinhar
-          // Renderizar segmentos sequencialmente
-          for (let si = 0; si < alts.length; si++) {
-            const seg = alts[si];
-            const font = seg.bold ? 'Helvetica-Bold' : 'Helvetica';
-            const isLast = si === alts.length - 1;
-            doc.fontSize(10).font(font).fillColor('#000');
-
-            if (isLast) {
-              // Último segmento ocupa o restante da linha
-              doc.text(seg.text, xCursor, lineY, {
-                width: ML + textW - xCursor,
-                align: 'justify',
-                lineGap: 2
-              });
-            } else {
-              // Calcular largura do texto
-              const segW = doc.widthOfString(seg.text);
-              doc.text(seg.text, xCursor, lineY, {
-                width: segW + 2,
-                lineBreak: false
-              });
-              xCursor += segW;
-            }
-            if (doc.y > maxY) maxY = doc.y;
+        // Segmentar em partes bold/normal
+        const partes = [];
+        let restante = inner.replace(/<br\s*\/?>/gi,' ');
+        const segRe = /<strong>([\s\S]*?)<\/strong>/gi;
+        let lastIdx = 0, m2;
+        segRe.lastIndex = 0;
+        while ((m2 = segRe.exec(restante)) !== null) {
+          if (m2.index > lastIdx) {
+            const txt = restante.slice(lastIdx, m2.index).replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&');
+            if (txt) partes.push({ txt, bold: false });
           }
-          y = maxY + 4;
+          partes.push({ txt: m2[1].replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&'), bold: true });
+          lastIdx = m2.index + m2[0].length;
         }
+        if (lastIdx < restante.length) {
+          const txt = restante.slice(lastIdx).replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&');
+          if (txt) partes.push({ txt, bold: false });
+        }
+
+        // Renderizar parágrafo: se só tem um segmento, renderiza direto
+        if (partes.length === 1) {
+          doc.fontSize(11).font(partes[0].bold ? 'Helvetica-Bold' : 'Helvetica').fillColor('#000')
+            .text(partes[0].txt, ML, y, { width: textW, align: 'justify', lineGap: 1 });
+        } else {
+          // Múltiplos segmentos: renderizar cada um inline
+          let xPos = ML;
+          const lineY = y;
+          for (let si = 0; si < partes.length; si++) {
+            const seg = partes[si];
+            const isLast = si === partes.length - 1;
+            doc.fontSize(11).font(seg.bold ? 'Helvetica-Bold' : 'Helvetica').fillColor('#000');
+            if (isLast) {
+              doc.text(seg.txt.trim(), xPos, lineY, { width: ML + textW - xPos, align: 'justify', lineGap: 1 });
+            } else {
+              const segW = doc.widthOfString(seg.txt);
+              doc.text(seg.txt, xPos, lineY, { width: segW + 1, lineBreak: false });
+              xPos = doc.x;
+            }
+          }
+        }
+        y = doc.y + 7;
       }
 
-      // Assinaturas lado a lado CENTRALIZADAS
-      y += 24;
-      const colW = 160;
-      // Calcular posições centralizadas simétricas
-      const col1X = W / 4 - colW / 2;       // quarto esquerdo centralizado
-      const col2X = (3 * W) / 4 - colW / 2; // quarto direito centralizado
+      // DATA alinhada à direita
+      y += 4;
+      doc.fontSize(10).font('Helvetica').fillColor('#000')
+        .text(dataTexto, ML, y, { width: textW, align: 'right' });
+      y = doc.y + 16;
 
-      if (assinaturaPresidenteB64) {
-        try {
-          const aBuf = Buffer.from(assinaturaPresidenteB64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
-          doc.image(aBuf, col1X, y, { width: colW, height: 45, fit: [colW, 45] });
-        } catch(e) {}
+      // ASSINATURAS em coluna central (igual ao HTML original)
+      const assinW = textW * 0.70; // 70% da largura
+      const assinX = ML + (textW - assinW) / 2; // centralizado
+
+      const imgs = [null, assinaturaPresidenteB64, assinaturaSecretarioB64];
+
+      for (let i = 0; i < assinaturas.length; i++) {
+        if (y > H - 80) break;
+        const ass = assinaturas[i];
+
+        // Imagem da assinatura (altura 50px)
+        if (imgs[i]) {
+          try {
+            const aBuf = Buffer.from(imgs[i].replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+            // Centralizar imagem dentro da coluna
+            doc.image(aBuf, assinX + assinW/2 - 65, y, { width: 130, height: 50, fit: [130, 50] });
+          } catch(e) {}
+        }
+        y += 54;
+
+        // Linha
+        doc.moveTo(assinX, y).lineTo(assinX + assinW, y).lineWidth(1).stroke('#000');
+        y += 4;
+
+        // Nome em bold centralizado
+        doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#000')
+          .text(ass.nome, assinX, y, { width: assinW, align: 'center' });
+        y = doc.y + 2;
+
+        // Cargo
+        doc.fontSize(8).font('Helvetica').fillColor('#000')
+          .text(ass.cargo, assinX, y, { width: assinW, align: 'center' });
+        y = doc.y + 12;
       }
-      if (assinaturaSecretarioB64) {
-        try {
-          const aBuf = Buffer.from(assinaturaSecretarioB64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
-          doc.image(aBuf, col2X, y, { width: colW, height: 45, fit: [colW, 45] });
-        } catch(e) {}
-      }
-
-      y += 48;
-
-      // Linhas de assinatura
-      doc.moveTo(col1X, y).lineTo(col1X + colW, y).lineWidth(1).stroke('#000');
-      doc.moveTo(col2X, y).lineTo(col2X + colW, y).lineWidth(1).stroke('#000');
-      y += 5;
-
-      // Nomes e cargos centralizados em cada coluna
-      const np = (nomePresidente || 'PRESIDENTE').toUpperCase();
-      const ns = (nomeSecretario || 'SECRETÁRIO').toUpperCase();
-
-      doc.fontSize(8).font('Helvetica-Bold').fillColor('#000')
-        .text(np, col1X, y, { width: colW, align: 'center' });
-      doc.fontSize(8).font('Helvetica-Bold').fillColor('#000')
-        .text(ns, col2X, y, { width: colW, align: 'center' });
-      y = doc.y + 2;
-      doc.fontSize(7.5).font('Helvetica')
-        .text('PRESIDENTE — LAURO', col1X, y, { width: colW, align: 'center' });
-      doc.fontSize(7.5).font('Helvetica')
-        .text('SECRETÁRIO — LAURO', col2X, y, { width: colW, align: 'center' });
 
       doc.end();
     } catch(e) { reject(e); }
