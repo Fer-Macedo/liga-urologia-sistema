@@ -4083,17 +4083,167 @@ router.post('/contratos/texto-global', requireAuth, async (req, res) => {
 router.get('/contratos/:id/imprimir', requireAuth, async (req, res) => { res.redirect('/contratos/'+req.params.id+'/visualizar'); });
 
 router.post('/contratos/:id/enviar', requireAuth, async (req, res) => {
+  req.setTimeout && req.setTimeout(120000);
+  res.setTimeout && res.setTimeout(120000);
   try {
     const r = await query('SELECT c.*, l.nome, l.rg, l.catraca, l.turma, l.semestre, l.email FROM contratos_ligantes c LEFT JOIN ligantes l ON l.id=c.ligante_id WHERE c.id=$1', [req.params.id]);
     const d = r.rows[0];
     if (!d||!d.email) { req.session.erro=['Email nao cadastrado.']; return res.redirect('/contratos'); }
-    const dataFmt = new Date().toLocaleDateString('pt-BR');
-    let texto = (d.texto_contrato||'').replace(/\{nome\}/g,d.nome||'').replace(/\{rg\}/g,d.rg||'').replace(/\{catraca\}/g,d.catraca||'').replace(/\{turma\}/g,d.turma||'').replace(/\{semestre\}/g,d.semestre||'').replace(/\{data\}/g,dataFmt);
-    // resend
-    await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: d.email, subject: 'Contrato de Adesao — LAURO', html: `<p>Prezado(a) <strong>${d.nome}</strong>,</p><p>Segue seu contrato de adesao a Liga Academica de Urologia LAURO.</p><pre style='font-family:serif;line-height:1.6'>${texto}</pre><p>Atenciosamente,<br>Secretaria LAURO</p>` });
+
+    const config = await getConfig();
+    const { imagemBase64 } = require('../services/desligamento');
+    config.timbrado_b64 = await imagemBase64(config.timbrado_contrato_chave || config.timbrado_chave);
+    config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
+    config.assinatura_vicepresidente_b64 = await imagemBase64(config.assinatura_vicepresidente_chave);
+    config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
+    config.assinatura_orientador_b64 = await imagemBase64(config.assinatura_orientador_chave);
+
+    // Gerar PDF com pdfkit
+    const PDFDocument = require('pdfkit');
+    const pdfBuffer = await new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ size: 'A4', margin: 0 });
+        const chunks = [];
+        doc.on('data', chunk => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', reject);
+
+        const W = 595.28, H = 841.89;
+
+        // Timbrado como fundo
+        if (config.timbrado_b64) {
+          try {
+            const imgBuf = Buffer.from(config.timbrado_b64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+            doc.image(imgBuf, 0, 0, { width: W, height: H });
+          } catch(e) {}
+        }
+
+        const ML = 56, MT = 162, textW = 482;
+        let y = MT;
+
+        // Título
+        doc.fontSize(11).font('Helvetica-Bold').fillColor('#000')
+          .text('CONTRATO DE LIGA ACADEMICA Y MIEMBRO ACTIVO', ML, y, { width: textW, align: 'center' });
+        y = doc.y + 2;
+        doc.fontSize(11).font('Helvetica-Bold')
+          .text('LIGA ACADEMICA DE UROLOGIA - LAURO', ML, y, { width: textW, align: 'center' });
+        y = doc.y + 14;
+
+        // Dados do ligante
+        const dataIng = d.data_inicio ? new Date(d.data_inicio).toLocaleDateString('pt-BR') : '';
+        doc.fontSize(10).font('Helvetica-Bold').text('MIEMBRO: ', ML, y, { continued: true });
+        doc.font('Helvetica').text(d.nome || '');
+        y = doc.y + 2;
+        doc.font('Helvetica-Bold').text('R.G./C.I: ', ML, y, { continued: true });
+        doc.font('Helvetica').text(d.rg || '');
+        y = doc.y + 2;
+        doc.font('Helvetica-Bold').text('Catraca: ', ML, y, { continued: true });
+        doc.font('Helvetica').text(d.catraca || '');
+        y = doc.y + 2;
+        doc.font('Helvetica-Bold').text('Fecha de ingreso: ', ML, y, { continued: true });
+        doc.font('Helvetica').text(dataIng);
+        y = doc.y + 12;
+
+        // Texto do contrato — limpar HTML do Quill
+        const dataFmt = new Date().toLocaleDateString('pt-BR');
+        let texto = (d.texto_contrato || '')
+          .replace(/\{nome\}/g, d.nome||'').replace(/\{rg\}/g, d.rg||'')
+          .replace(/\{catraca\}/g, d.catraca||'').replace(/\{turma\}/g, d.turma||'')
+          .replace(/\{semestre\}/g, d.semestre||'').replace(/\{data\}/g, dataFmt)
+          .replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n')
+          .replace(/<p[^>]*class="ql-align-center"[^>]*>/gi, '§CENTER§')
+          .replace(/<p[^>]*class="ql-align-right"[^>]*>/gi, '§RIGHT§')
+          .replace(/<p[^>]*>/gi, '')
+          .replace(/<strong>([^<]+)<\/strong>/gi, '$1')
+          .replace(/<em>([^<]+)<\/em>/gi, '$1')
+          .replace(/<[^>]+>/g, '')
+          .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+          .replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+
+        const linhas = texto.split('\n');
+        for (const linha of linhas) {
+          if (y > H - 110) break;
+          const isCenter = linha.startsWith('§CENTER§');
+          const isRight = linha.startsWith('§RIGHT§');
+          const txt = linha.replace(/§CENTER§|§RIGHT§/g, '').trim();
+          if (!txt) { y += 5; continue; }
+          const align = isCenter ? 'center' : isRight ? 'right' : 'justify';
+          doc.fontSize(10).font('Helvetica').fillColor('#000')
+            .text(txt, ML, y, { width: textW, align, lineGap: 1 });
+          y = doc.y + 4;
+        }
+
+        // Assinaturas — 2x2 grid
+        y += 10;
+        const assinaturas = [
+          { nome: (d.nome||'').toUpperCase(), cargo: 'Miembro Activo', img: null },
+          { nome: (config.presidente_nome||'PRESIDENTE').toUpperCase(), cargo: 'Presidente', img: config.assinatura_presidente_b64 },
+          { nome: (config.vicepresidente_nome||'VICE-PRESIDENTE').toUpperCase(), cargo: 'Vice-Presidente', img: config.assinatura_vicepresidente_b64 },
+          { nome: (config.secretario_nome||'SECRETÁRIO').toUpperCase(), cargo: 'Secretario', img: config.assinatura_secretario_b64 }
+        ];
+
+        const colW = textW / 2 - 10;
+        const col1X = ML;
+        const col2X = ML + colW + 20;
+
+        for (let i = 0; i < assinaturas.length; i += 2) {
+          if (y > H - 80) break;
+          const a1 = assinaturas[i];
+          const a2 = assinaturas[i+1];
+
+          // Imagens
+          if (a1 && a1.img) {
+            try {
+              const buf = Buffer.from(a1.img.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+              doc.image(buf, col1X + colW/2 - 55, y, { width: 110, height: 40, fit: [110, 40] });
+            } catch(e) {}
+          }
+          if (a2 && a2.img) {
+            try {
+              const buf = Buffer.from(a2.img.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+              doc.image(buf, col2X + colW/2 - 55, y, { width: 110, height: 40, fit: [110, 40] });
+            } catch(e) {}
+          }
+          y += 43;
+
+          // Linhas
+          doc.moveTo(col1X, y).lineTo(col1X + colW, y).lineWidth(1).stroke('#000');
+          if (a2) doc.moveTo(col2X, y).lineTo(col2X + colW, y).lineWidth(1).stroke('#000');
+          y += 3;
+
+          // Nomes
+          if (a1) {
+            doc.fontSize(8).font('Helvetica-Bold').fillColor('#000').text(a1.nome, col1X, y, { width: colW, align: 'center' });
+            doc.fontSize(7.5).font('Helvetica').text(a1.cargo, col1X, doc.y, { width: colW, align: 'center' });
+          }
+          if (a2) {
+            doc.fontSize(8).font('Helvetica-Bold').fillColor('#000').text(a2.nome, col2X, y, { width: colW, align: 'center' });
+            doc.fontSize(7.5).font('Helvetica').text(a2.cargo, col2X, doc.y, { width: colW, align: 'center' });
+          }
+          y = doc.y + 10;
+        }
+
+        doc.end();
+      } catch(e) { reject(e); }
+    });
+
+    console.log('PDF contrato gerado:', pdfBuffer.length);
+    await enviarEmail({
+      from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>',
+      to: d.email,
+      subject: 'Contrato de Adesão — LAURO',
+      html: emailBonito('Contrato de Adesão — LAURO',
+        '<p>Prezado(a) <strong>' + d.nome + '</strong>,</p>' +
+        '<p>Segue em anexo seu <strong>Contrato de Adesão</strong> à Liga Acadêmica de Urologia LAURO.</p>' +
+        '<p>Por favor, assine o documento e devolva-o assinado à secretaria.</p>' +
+        '<p style="margin-top:16px">Atenciosamente,<br><strong>Secretaria — LAURO</strong></p>'
+      ),
+      attachments: [{ filename: 'contrato-LAURO.pdf', content: pdfBuffer.toString('base64') }]
+    });
     await query('UPDATE contratos_ligantes SET status=$1,enviado_em=NOW() WHERE id=$2',['enviado',req.params.id]);
     req.session.msg=['Contrato enviado para '+d.email+'!'];
-  } catch(e) { req.session.erro=[e.message]; }
+  } catch(e) { console.log('ERRO enviar contrato:', e.message); req.session.erro=[e.message]; }
   res.redirect('/contratos');
 });
 
