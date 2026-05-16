@@ -28,6 +28,7 @@ async function gerarPDFDesligamento(html, timbradoB64, assinaturaPresidenteB64, 
       const W = 595.28, H = 841.89;
       const ML = 62, MR = 62, MT = 148, textW = W - ML - MR;
 
+      // Timbrado como fundo
       if (timbradoB64) {
         try {
           const imgBuf = Buffer.from(timbradoB64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
@@ -35,56 +36,100 @@ async function gerarPDFDesligamento(html, timbradoB64, assinaturaPresidenteB64, 
         } catch(e) {}
       }
 
+      // Extrair título
       const tituloMatch = html.match(/class="titulo"[^>]*>([\s\S]*?)<\/div>/i);
-      const titulo = tituloMatch ? tituloMatch[1].replace(/<br\s*\/?>/gi,' — ').replace(/<[^>]+>/g,'').trim() : 'Liga Académica de Urología - LAURO';
+      const titulo = tituloMatch
+        ? tituloMatch[1].replace(/<br\s*\/?>/gi, ' — ').replace(/<[^>]+>/g, '').trim()
+        : 'Liga Académica de Urología - LAURO';
 
+      // Extrair corpo
       const corpoMatch = html.match(/class="corpo"[^>]*>([\s\S]*?)<\/div>\s*<div class="assinaturas/i);
       const corpoHtml = corpoMatch ? corpoMatch[1] : html;
 
       const corpo = corpoHtml
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'')
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'')
-        .replace(/<strong>([^<]+)<\/strong>/gi,'§BOLD§$1§END§')
-        .replace(/<br\s*\/?>/gi,'\n')
-        .replace(/<\/p>/gi,'\n')
-        .replace(/<\/li>/gi,'\n')
-        .replace(/<li>/gi,'• ')
-        .replace(/<\/ul>/gi,'\n')
-        .replace(/<\/div>/gi,'\n')
-        .replace(/<[^>]+>/g,'')
-        .replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>')
-        .replace(/&[a-z]+;/gi,' ')
-        .replace(/\n\s*\n\s*\n/g,'\n\n').trim();
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<strong>([^<]+)<\/strong>/gi, '§BOLD§$1§END§')
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/p>/gi, '\n')
+        .replace(/<\/li>/gi, '\n')
+        .replace(/<li>/gi, '• ')
+        .replace(/<\/ul>/gi, '\n')
+        .replace(/<\/div>/gi, '\n')
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+        .replace(/&[a-z]+;/gi, ' ')
+        .replace(/\n\s*\n\s*\n/g, '\n\n').trim();
 
       let y = MT;
 
-      doc.fontSize(11).font('Helvetica-Bold').fillColor('#000').text(titulo.toUpperCase(), ML, y, { width: textW, align: 'left' });
-      y = doc.y + 20;
+      // Título CENTRALIZADO
+      doc.fontSize(11).font('Helvetica-Bold').fillColor('#000')
+        .text(titulo.toUpperCase(), ML, y, { width: textW, align: 'center' });
+      y = doc.y + 24; // espaço generoso antes do corpo
 
+      // Corpo com negrito inline (linha a linha)
       const partes = corpo.split('\n');
       for (const linha of partes) {
         if (!linha.trim()) { y += 6; continue; }
-        if (y > H - 180) break;
+        if (y > H - 200) break;
+
         const segmentos = linha.split(/§BOLD§|§END§/);
         const alts = [];
         for (let i = 0; i < segmentos.length; i++) {
           if (!segmentos[i]) continue;
           alts.push({ text: segmentos[i], bold: i % 2 === 1 });
         }
+
+        // Renderiza cada segmento inline (bold/normal misturado na mesma linha)
         if (alts.length === 1) {
-          doc.fontSize(10).font('Helvetica').fillColor('#000').text(alts[0].text, ML, y, { width: textW, align: 'justify', lineGap: 2 });
+          doc.fontSize(10).font('Helvetica').fillColor('#000')
+            .text(alts[0].text, ML, y, { width: textW, align: 'justify', lineGap: 2 });
+          y = doc.y + 4;
         } else {
-          const textoCompleto = alts.map(a => a.text).join('');
-          const temBold = alts.some(a => a.bold);
-          doc.fontSize(10).font(temBold ? 'Helvetica-Bold' : 'Helvetica').fillColor('#000').text(textoCompleto, ML, y, { width: textW, align: 'justify', lineGap: 2 });
+          // Monta a linha com segmentos bold e normal
+          // pdfkit não suporta inline bold nativamente, então usamos
+          // uma abordagem de múltiplos .text() na mesma linha
+          let xCursor = ML;
+          const lineY = y;
+          let maxY = y;
+
+          // Calcular largura total da linha para alinhar
+          // Renderizar segmentos sequencialmente
+          for (let si = 0; si < alts.length; si++) {
+            const seg = alts[si];
+            const font = seg.bold ? 'Helvetica-Bold' : 'Helvetica';
+            const isLast = si === alts.length - 1;
+            doc.fontSize(10).font(font).fillColor('#000');
+
+            if (isLast) {
+              // Último segmento ocupa o restante da linha
+              doc.text(seg.text, xCursor, lineY, {
+                width: ML + textW - xCursor,
+                align: 'justify',
+                lineGap: 2
+              });
+            } else {
+              // Calcular largura do texto
+              const segW = doc.widthOfString(seg.text);
+              doc.text(seg.text, xCursor, lineY, {
+                width: segW + 2,
+                lineBreak: false
+              });
+              xCursor += segW;
+            }
+            if (doc.y > maxY) maxY = doc.y;
+          }
+          y = maxY + 4;
         }
-        y = doc.y + 4;
       }
 
-      y += 20;
+      // Assinaturas lado a lado CENTRALIZADAS
+      y += 24;
       const colW = 160;
-      const col1X = ML + 20;
-      const col2X = W - MR - colW - 20;
+      // Calcular posições centralizadas simétricas
+      const col1X = W / 4 - colW / 2;       // quarto esquerdo centralizado
+      const col2X = (3 * W) / 4 - colW / 2; // quarto direito centralizado
 
       if (assinaturaPresidenteB64) {
         try {
@@ -100,29 +145,31 @@ async function gerarPDFDesligamento(html, timbradoB64, assinaturaPresidenteB64, 
       }
 
       y += 48;
+
+      // Linhas de assinatura
       doc.moveTo(col1X, y).lineTo(col1X + colW, y).lineWidth(1).stroke('#000');
       doc.moveTo(col2X, y).lineTo(col2X + colW, y).lineWidth(1).stroke('#000');
-      y += 4;
+      y += 5;
 
+      // Nomes e cargos centralizados em cada coluna
       const np = (nomePresidente || 'PRESIDENTE').toUpperCase();
       const ns = (nomeSecretario || 'SECRETÁRIO').toUpperCase();
-      doc.fontSize(8).font('Helvetica-Bold').fillColor('#000').text(np, col1X, y, { width: colW, align: 'center' });
-      doc.fontSize(8).font('Helvetica-Bold').fillColor('#000').text(ns, col2X, y, { width: colW, align: 'center' });
+
+      doc.fontSize(8).font('Helvetica-Bold').fillColor('#000')
+        .text(np, col1X, y, { width: colW, align: 'center' });
+      doc.fontSize(8).font('Helvetica-Bold').fillColor('#000')
+        .text(ns, col2X, y, { width: colW, align: 'center' });
       y = doc.y + 2;
-      doc.fontSize(7.5).font('Helvetica').text('PRESIDENTE — LAURO', col1X, y, { width: colW, align: 'center' });
-      doc.fontSize(7.5).font('Helvetica').text('SECRETÁRIO — LAURO', col2X, y, { width: colW, align: 'center' });
+      doc.fontSize(7.5).font('Helvetica')
+        .text('PRESIDENTE — LAURO', col1X, y, { width: colW, align: 'center' });
+      doc.fontSize(7.5).font('Helvetica')
+        .text('SECRETÁRIO — LAURO', col2X, y, { width: colW, align: 'center' });
 
       doc.end();
     } catch(e) { reject(e); }
   });
 }
 
-function emailBonito(titulo, corpo, logo) {
-  const logoDefault = 'https://i.imgur.com/LPrFxrF.png';
-  const logoUrl = logo || logoDefault;
-  const logoHtml = '<img src="'+logoUrl+'" style="height:60px;object-fit:contain">';
-  return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:30px 0"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)"><tr><td style="background:#2b6803;padding:24px 32px;text-align:center">'+logoHtml+'</td></tr><tr><td style="padding:32px"><h2 style="color:#2b6803;font-size:18px;margin:0 0 20px 0;border-bottom:2px solid #2b6803;padding-bottom:10px">'+titulo+'</h2><div style="color:#333;font-size:14px;line-height:1.7">'+corpo+'</div><div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;text-align:center;color:#888;font-size:12px"><p style="margin:0">LAURO — Liga Académica de Urología</p><p style="margin:4px 0">Universidad Central del Paraguay — Ciudad del Este</p><p style="margin:4px 0">lauroucpcde@lauroucpcde.com</p></div></td></tr></table></td></tr></table></body></html>';
-}
 
 async function gerarPDFBuffer(html, timbradoB64, assinaturaB64, nomeAssinatura, cargoAssinatura) {
   const PDFDocument = require('pdfkit');
