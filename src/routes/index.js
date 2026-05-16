@@ -38,88 +38,101 @@ async function gerarPDFDesvinculacao(html, timbradoB64, assinaturaPresidenteB64,
 
       function strip(str) {
         return (str || '')
-          .replace(/<br\s*\/?>/gi, '\n')
-          .replace(/<li>/gi, '• ')
+          .replace(/<br\s*\/?>/gi, ' ')
+          .replace(/<li[^>]*>/gi, '• ')
           .replace(/<\/li>/gi, '\n')
           .replace(/<[^>]+>/g, '')
           .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
           .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
-          .replace(/&[a-z]+;/gi, ' ').trim();
+          .replace(/&[a-z]+;/gi, ' ')
+          .replace(/\s+/g, ' ').trim();
       }
 
-      // Extrair título — pode ter <br> dentro
-      const tituloMatch = html.match(/class="titulo"[^>]*>([\s\S]*?)<\/div>/i);
-      const titulo = tituloMatch
-        ? strip(tituloMatch[1]).replace(/\n/g, ' — ').toUpperCase()
-        : 'LIGA ACADÉMICA DE UROLOGÍA - LAURO';
+      // Extrair título — entre class="titulo"> e </div>
+      const idxTitulo = html.indexOf('class="titulo">');
+      const idxTituloFim = html.indexOf('</div>', idxTitulo);
+      const tituloRaw = idxTitulo > 0 ? html.slice(idxTitulo + 15, idxTituloFim) : '';
+      const titulo = strip(tituloRaw).toUpperCase();
 
-      // Extrair corpo — até assinaturas
-      const corpoMatch = html.match(/class="corpo"[^>]*>([\s\S]*?)<\/div>\s*<div class="assinaturas"/i);
-      const corpoHtml = corpoMatch ? corpoMatch[1] : '';
+      // Extrair corpo — entre class="corpo"> e </div><div class="assinaturas"
+      const idxCorpo = html.indexOf('class="corpo">');
+      const idxCorpoFim = html.indexOf('<div class="assinaturas"', idxCorpo);
+      const corpoHtml = idxCorpo > 0 && idxCorpoFim > 0
+        ? html.slice(idxCorpo + 14, idxCorpoFim)
+        : '';
 
-      // Extrair parágrafos e listas
+      // Extrair todos os parágrafos e listas do corpo
       const elementos = [];
-      // Pegar todos os <p> e <ul>
-      const elRe = /(<p[^>]*>[\s\S]*?<\/p>|<ul[^>]*>[\s\S]*?<\/ul>)/gi;
-      let m;
-      while ((m = elRe.exec(corpoHtml)) !== null) {
-        const el = m[1];
-        const texto = strip(el);
-        if (texto) elementos.push(texto);
+      let pos = 0;
+      while (pos < corpoHtml.length) {
+        // Procurar próximo <p> ou <ul>
+        const pIdx = corpoHtml.indexOf('<p', pos);
+        const uIdx = corpoHtml.indexOf('<ul', pos);
+
+        if (pIdx === -1 && uIdx === -1) break;
+
+        if (uIdx !== -1 && (pIdx === -1 || uIdx < pIdx)) {
+          // É uma lista
+          const endUl = corpoHtml.indexOf('</ul>', uIdx) + 5;
+          const ulHtml = corpoHtml.slice(uIdx, endUl);
+          // Extrair cada <li>
+          const liRe = /<li[^>]*>([\s\S]*?)<\/li>/gi;
+          let liM;
+          while ((liM = liRe.exec(ulHtml)) !== null) {
+            const t = strip(liM[1]);
+            if (t) elementos.push('• ' + t);
+          }
+          pos = endUl;
+        } else {
+          // É um parágrafo
+          const endP = corpoHtml.indexOf('</p>', pIdx) + 4;
+          const pHtml = corpoHtml.slice(pIdx, endP);
+          const t = strip(pHtml.replace(/<p[^>]*>/i,'').replace(/<\/p>/i,''));
+          if (t) elementos.push(t);
+          pos = endP;
+        }
       }
 
-      // Extrair nomes das assinaturas
-      const nomeMatches = [...html.matchAll(/class="assinatura-nome"[^>]*>([\s\S]*?)<\/div>/gi)];
-      const cargoMatches = [...html.matchAll(/class="assinatura-cargo"[^>]*>([\s\S]*?)<\/div>/gi)];
-      const nomes = nomeMatches.map(m => strip(m[1]));
-      const cargos = cargoMatches.map(m => strip(m[1]));
+      // Nomes e cargos das assinaturas diretamente dos parâmetros
+      const np = (nomePresidente || 'PRESIDENTE').toUpperCase();
+      const ns = (nomeSecretario || 'SECRETÁRIO').toUpperCase();
 
       let y = MT;
 
-      // TÍTULO bold à esquerda (como no HTML original - não centralizado)
+      // TÍTULO bold à esquerda
       doc.fontSize(11).font('Helvetica-Bold').fillColor('#000')
         .text(titulo, ML, y, { width: textW, align: 'left' });
       y = doc.y + 12;
 
-      // PARÁGRAFOS
+      // ELEMENTOS (parágrafos e itens de lista)
       for (const texto of elementos) {
         if (y > H - 220) break;
+        const isLista = texto.startsWith('• ');
+        const indent = isLista ? 10 : 0;
         doc.fontSize(11).font('Helvetica').fillColor('#000')
-          .text(texto, ML, y, { width: textW, align: 'justify', lineGap: 1 });
-        y = doc.y + 7;
+          .text(texto, ML + indent, y, { width: textW - indent, align: isLista ? 'left' : 'justify', lineGap: 1 });
+        y = doc.y + (isLista ? 3 : 7);
       }
 
-      // ASSINATURAS — 2 blocos lado a lado (presidente e secretário)
+      // ASSINATURAS — 2 blocos lado a lado
       y += 20;
       const assinW = textW * 0.70;
       const assinX = ML + (textW - assinW) / 2;
-
-      // A desvinculação tem 2 assinaturas (presidente e secretário) lado a lado
-      const imgs = [assinaturaPresidenteB64, assinaturaSecretarioB64];
-      const ns = [
-        (nomePresidente || nomes[0] || 'PRESIDENTE').toUpperCase(),
-        (nomeSecretario || nomes[1] || 'SECRETÁRIO').toUpperCase()
-      ];
-      const cs = [
-        cargos[0] || 'PRESIDENTE — LAURO',
-        cargos[1] || 'SECRETÁRIO — LAURO'
-      ];
-
-      const col1X = ML + assinW * 0.05;
-      const col2X = ML + assinW * 0.55;
-      const colW = assinW * 0.40;
+      const colW = assinW * 0.42;
+      const col1X = assinX;
+      const col2X = assinX + assinW - colW;
 
       // Imagens
-      if (imgs[0]) {
+      if (assinaturaPresidenteB64) {
         try {
-          const buf = Buffer.from(imgs[0].replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
-          doc.image(buf, col1X, y, { width: colW, height: 45, fit: [colW, 45] });
+          const buf = Buffer.from(assinaturaPresidenteB64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+          doc.image(buf, col1X + colW/2 - 65, y, { width: 130, height: 45, fit: [130, 45] });
         } catch(e) {}
       }
-      if (imgs[1]) {
+      if (assinaturaSecretarioB64) {
         try {
-          const buf = Buffer.from(imgs[1].replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
-          doc.image(buf, col2X, y, { width: colW, height: 45, fit: [colW, 45] });
+          const buf = Buffer.from(assinaturaSecretarioB64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+          doc.image(buf, col2X + colW/2 - 65, y, { width: 130, height: 45, fit: [130, 45] });
         } catch(e) {}
       }
       y += 48;
@@ -129,12 +142,12 @@ async function gerarPDFDesvinculacao(html, timbradoB64, assinaturaPresidenteB64,
       doc.moveTo(col2X, y).lineTo(col2X + colW, y).lineWidth(1).stroke('#000');
       y += 4;
 
-      // Nomes
-      doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#000').text(ns[0], col1X, y, { width: colW, align: 'center' });
-      doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#000').text(ns[1], col2X, y, { width: colW, align: 'center' });
+      // Nomes e cargos
+      doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#000').text(np, col1X, y, { width: colW, align: 'center' });
+      doc.fontSize(8.5).font('Helvetica-Bold').fillColor('#000').text(ns, col2X, y, { width: colW, align: 'center' });
       y = doc.y + 2;
-      doc.fontSize(8).font('Helvetica').text(cs[0], col1X, y, { width: colW, align: 'center' });
-      doc.fontSize(8).font('Helvetica').text(cs[1], col2X, y, { width: colW, align: 'center' });
+      doc.fontSize(8).font('Helvetica').text('PRESIDENTE — LAURO', col1X, y, { width: colW, align: 'center' });
+      doc.fontSize(8).font('Helvetica').text('SECRETÁRIO — LAURO', col2X, y, { width: colW, align: 'center' });
 
       doc.end();
     } catch(e) { reject(e); }
