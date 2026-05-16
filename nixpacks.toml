@@ -1,6 +1,8 @@
 [phases.setup]
-nixPkgs = ["chromium", "nss", "freetype", "harfbuzz", "ca-certificates", "ttf-dejavu"]
+nixPkgs = ['nodejs_18', 'chromium', 'nss', 'nspr', 'atk', 'cups', 'libdrm', 'gtk3', 'pango', 'cairo', 'xorg.libX11', 'xorg.libXcomposite', 'xorg.libXdamage', 'xorg.libXext', 'xorg.libXfixes', 'xorg.libXrandr', 'mesa', 'libxkbcommon', 'alsa-lib']
 
-[variables]
-PUPPETEER_EXECUTABLE_PATH = "/run/current-system/sw/bin/chromium"
-PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
+[phases.install]
+cmds = ['npm install']
+
+[start]
+cmd = 'node src/server.js'
