@@ -4654,4 +4654,152 @@ router.get('/fluxo-caixa/:id/nf-url', requireAuth, async (req, res) => {
 
 
 
+// ════════════════════════════════════════════════════════════════
+//  CALENDÁRIO DE ATIVIDADES
+// ════════════════════════════════════════════════════════════════
+
+// Helper para buscar atividades
+async function getAtividades(apenasPublicas = false) {
+  const where = apenasPublicas ? 'WHERE publico = TRUE' : '';
+  const r = await query(`SELECT * FROM calendario_atividades ${where} ORDER BY data_inicio`);
+  return r.rows;
+}
+
+// PAINEL INTERNO
+router.get('/calendario', requireAuth, async (req, res) => {
+  try {
+    const atividades = await getAtividades(false);
+    const icalUrl = (process.env.RAILWAY_PUBLIC_DOMAIN
+      ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN
+      : 'https://liga-urologia-production.up.railway.app') + '/calendario.ics';
+    res.render('pages/calendario', {
+      config: await getConfig(),
+      usuario: req.session.usuario,
+      atividades: JSON.stringify(atividades),
+      icalUrl,
+      msg: req.flash('msg'),
+      erro: req.flash('erro')
+    });
+  } catch(e) { req.flash('erro', [e.message]); res.redirect('/dashboard'); }
+});
+
+// PÁGINA PÚBLICA (sem login)
+router.get('/agenda', async (req, res) => {
+  try {
+    const atividades = await getAtividades(true);
+    res.render('pages/agenda-publica', {
+      config: await getConfig(),
+      atividades: JSON.stringify(atividades)
+    });
+  } catch(e) { res.status(500).send('Erro ao carregar agenda.'); }
+});
+
+// FEED iCAL — compatível com iPhone/Android/Google Calendar
+router.get('/calendario.ics', async (req, res) => {
+  try {
+    const atividades = await getAtividades(true);
+    const config = await getConfig();
+
+    const formatDate = (d, diaInteiro) => {
+      const dt = new Date(d);
+      if (diaInteiro) {
+        return dt.toISOString().replace(/-/g,'').slice(0,8);
+      }
+      return dt.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+    };
+
+    const escIcal = s => (s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
+
+    let ical = [
+      'BEGIN:VCALENDAR',
+      'VERSION:2.0',
+      `PRODID:-//Liga Urologia//Calendario//PT`,
+      `X-WR-CALNAME:${escIcal(config.org_nome)} - Agenda`,
+      'X-WR-TIMEZONE:America/Sao_Paulo',
+      'CALSCALE:GREGORIAN',
+      'METHOD:PUBLISH',
+    ];
+
+    atividades.forEach(ev => {
+      const uid = `${ev.id}-liga-urologia@railway.app`;
+      const dtstart = ev.dia_inteiro
+        ? `DTSTART;VALUE=DATE:${formatDate(ev.data_inicio, true)}`
+        : `DTSTART:${formatDate(ev.data_inicio, false)}`;
+      const dtend = ev.data_fim
+        ? (ev.dia_inteiro
+          ? `DTEND;VALUE=DATE:${formatDate(ev.data_fim, true)}`
+          : `DTEND:${formatDate(ev.data_fim, false)}`)
+        : (ev.dia_inteiro
+          ? `DTEND;VALUE=DATE:${formatDate(ev.data_inicio, true)}`
+          : `DTEND:${formatDate(new Date(new Date(ev.data_inicio).getTime() + 60*60*1000), false)}`);
+
+      const criado = new Date(ev.criado_em).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+
+      ical.push('BEGIN:VEVENT');
+      ical.push(`UID:${uid}`);
+      ical.push(`DTSTAMP:${criado}`);
+      ical.push(dtstart);
+      ical.push(dtend);
+      ical.push(`SUMMARY:${escIcal(ev.titulo)}`);
+      if (ev.descricao) ical.push(`DESCRIPTION:${escIcal(ev.descricao)}`);
+      if (ev.local)     ical.push(`LOCATION:${escIcal(ev.local)}`);
+      if (ev.link_externo) ical.push(`URL:${ev.link_externo}`);
+      ical.push(`CATEGORIES:${escIcal(ev.categoria)}`);
+      ical.push('END:VEVENT');
+    });
+
+    ical.push('END:VCALENDAR');
+
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'inline; filename="liga-urologia.ics"');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.send(ical.join('\r\n'));
+  } catch(e) { res.status(500).send('Erro ao gerar calendário.'); }
+});
+
+// CRIAR ATIVIDADE
+router.post('/calendario/novo', requireAuth, async (req, res) => {
+  try {
+    const { titulo, descricao, categoria, cor, data_inicio, data_fim, local, link_externo } = req.body;
+    const dia_inteiro = req.body.dia_inteiro === 'true';
+    const publico = req.body.publico === 'true';
+    await query(
+      `INSERT INTO calendario_atividades (titulo,descricao,categoria,cor,data_inicio,data_fim,dia_inteiro,local,link_externo,publico,criado_por,criado_em)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,NOW())`,
+      [titulo, descricao||null, categoria, cor||'#2b6803',
+       data_inicio, data_fim||null, dia_inteiro, local||null,
+       link_externo||null, publico, req.session.usuario.id]
+    );
+    req.flash('msg', ['Atividade criada com sucesso!']);
+    res.redirect('/calendario');
+  } catch(e) { req.flash('erro', [e.message]); res.redirect('/calendario'); }
+});
+
+// EDITAR ATIVIDADE
+router.post('/calendario/:id/editar', requireAuth, async (req, res) => {
+  try {
+    const { titulo, descricao, categoria, cor, data_inicio, data_fim, local, link_externo } = req.body;
+    const dia_inteiro = req.body.dia_inteiro === 'true';
+    const publico = req.body.publico === 'true';
+    await query(
+      `UPDATE calendario_atividades SET titulo=$1,descricao=$2,categoria=$3,cor=$4,data_inicio=$5,data_fim=$6,dia_inteiro=$7,local=$8,link_externo=$9,publico=$10 WHERE id=$11`,
+      [titulo, descricao||null, categoria, cor||'#2b6803',
+       data_inicio, data_fim||null, dia_inteiro, local||null,
+       link_externo||null, publico, req.params.id]
+    );
+    req.flash('msg', ['Atividade atualizada!']);
+    res.redirect('/calendario');
+  } catch(e) { req.flash('erro', [e.message]); res.redirect('/calendario'); }
+});
+
+// EXCLUIR ATIVIDADE
+router.post('/calendario/:id/excluir', requireAuth, async (req, res) => {
+  try {
+    await query('DELETE FROM calendario_atividades WHERE id=$1', [req.params.id]);
+    req.flash('msg', ['Atividade excluída.']);
+    res.redirect('/calendario');
+  } catch(e) { req.flash('erro', [e.message]); res.redirect('/calendario'); }
+});
+
+
 module.exports = router;
