@@ -4548,4 +4548,108 @@ router.get('/contratos-diretivos/:id/assinado', requireAuth, async (req, res) =>
 });
 
 
+// ════════════════════════════════════════════════════════════════
+//  FLUXO DE CAIXA
+// ════════════════════════════════════════════════════════════════
+
+router.get('/fluxo-caixa', requireAuth, async (req, res) => {
+  try {
+    const mesesNomes = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+    const hoje = new Date();
+    const mesAtual = req.query.mes || `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}`;
+    const [ano, mes] = mesAtual.split('-').map(Number);
+    const mesNome = mesesNomes[mes-1] + ' ' + ano;
+
+    const lancamentos = await query(
+      `SELECT * FROM fluxo_caixa WHERE EXTRACT(YEAR FROM data_lancamento)=$1 AND EXTRACT(MONTH FROM data_lancamento)=$2 ORDER BY data_lancamento, id`,
+      [ano, mes]
+    );
+
+    const entradas = lancamentos.rows.filter(l => l.tipo === 'E');
+    const saidas   = lancamentos.rows.filter(l => l.tipo === 'S');
+    const totalEntradas = entradas.reduce((s,l) => s + parseFloat(l.valor), 0);
+    const totalSaidas   = saidas.reduce((s,l) => s + parseFloat(l.valor), 0);
+    const saldo = totalEntradas - totalSaidas;
+
+    res.render('pages/fluxo-caixa', {
+      config: await getConfig(), usuario: req.session.usuario,
+      lancamentos: lancamentos.rows, mesAtual, mesNome,
+      totalEntradas, totalSaidas, saldo,
+      qtdEntradas: entradas.length, qtdSaidas: saidas.length,
+      msg: req.flash('msg'), erro: req.flash('erro')
+    });
+  } catch(e) { req.flash('erro', [e.message]); res.redirect('/dashboard'); }
+});
+
+router.post('/fluxo-caixa/novo', requireAuth, async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.single('nf')(req, res, async (err) => {
+      if (err) { req.flash('erro', [err.message]); return res.redirect('/fluxo-caixa'); }
+      const { tipo, descricao, categoria, valor, data_lancamento, observacoes } = req.body;
+      let nf_chave = null, nf_nome_original = null;
+      if (req.file) {
+        const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'fluxo-caixa');
+        nf_chave = r.chave;
+        nf_nome_original = req.file.originalname;
+      }
+      await query(
+        `INSERT INTO fluxo_caixa (tipo,descricao,categoria,valor,data_lancamento,nf_chave,nf_nome_original,observacoes,criado_por,criado_em)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())`,
+        [tipo, descricao, categoria, parseFloat(valor), data_lancamento, nf_chave, nf_nome_original, observacoes||null, req.session.usuario.id]
+      );
+      const mes = data_lancamento.substring(0,7);
+      req.flash('msg', [tipo==='E'?'Entrada registrada!':'Saída registrada!']);
+      res.redirect('/fluxo-caixa?mes='+mes);
+    });
+  } catch(e) { req.flash('erro', [e.message]); res.redirect('/fluxo-caixa'); }
+});
+
+router.post('/fluxo-caixa/:id/editar', requireAuth, async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.single('nf')(req, res, async (err) => {
+      if (err) { req.flash('erro', [err.message]); return res.redirect('/fluxo-caixa'); }
+      const { tipo, descricao, categoria, valor, data_lancamento, observacoes } = req.body;
+      const atual = await query('SELECT nf_chave,nf_nome_original FROM fluxo_caixa WHERE id=$1',[req.params.id]);
+      let nf_chave = atual.rows[0]?.nf_chave;
+      let nf_nome_original = atual.rows[0]?.nf_nome_original;
+      if (req.file) {
+        const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'fluxo-caixa');
+        nf_chave = r.chave;
+        nf_nome_original = req.file.originalname;
+      }
+      await query(
+        `UPDATE fluxo_caixa SET tipo=$1,descricao=$2,categoria=$3,valor=$4,data_lancamento=$5,nf_chave=$6,nf_nome_original=$7,observacoes=$8 WHERE id=$9`,
+        [tipo, descricao, categoria, parseFloat(valor), data_lancamento, nf_chave, nf_nome_original, observacoes||null, req.params.id]
+      );
+      const mes = data_lancamento.substring(0,7);
+      req.flash('msg', ['Lançamento atualizado!']);
+      res.redirect('/fluxo-caixa?mes='+mes);
+    });
+  } catch(e) { req.flash('erro', [e.message]); res.redirect('/fluxo-caixa'); }
+});
+
+router.post('/fluxo-caixa/:id/excluir', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT data_lancamento FROM fluxo_caixa WHERE id=$1',[req.params.id]);
+    const mes = r.rows[0]?.data_lancamento?.toISOString?.()?.substring(0,7) || '';
+    await query('DELETE FROM fluxo_caixa WHERE id=$1',[req.params.id]);
+    req.flash('msg', ['Lançamento excluído.']);
+    res.redirect('/fluxo-caixa'+(mes?'?mes='+mes:''));
+  } catch(e) { req.flash('erro', [e.message]); res.redirect('/fluxo-caixa'); }
+});
+
+router.get('/fluxo-caixa/:id/nf-url', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT nf_chave,nf_nome_original FROM fluxo_caixa WHERE id=$1',[req.params.id]);
+    const d = r.rows[0];
+    if (!d?.nf_chave) return res.json({url:null});
+    const { getUrlAssinada } = require('../services/arquivos');
+    const url = await getUrlAssinada(d.nf_chave);
+    res.json({url, nome: d.nf_nome_original});
+  } catch(e) { res.json({url:null,erro:e.message}); }
+});
+
+
 module.exports = router;
