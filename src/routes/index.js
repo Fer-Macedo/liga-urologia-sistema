@@ -4098,27 +4098,38 @@ router.post('/contratos/:id/enviar', requireAuth, async (req, res) => {
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     config.assinatura_orientador_b64 = await imagemBase64(config.assinatura_orientador_chave);
 
-    // Gerar PDF com pdfkit
+    // Gerar PDF com pdfkit — multi-página
     const PDFDocument = require('pdfkit');
     const pdfBuffer = await new Promise((resolve, reject) => {
       try {
-        const doc = new PDFDocument({ size: 'A4', margin: 0 });
+        const doc = new PDFDocument({ size: 'A4', margin: 0, autoFirstPage: true });
         const chunks = [];
         doc.on('data', chunk => chunks.push(chunk));
         doc.on('end', () => resolve(Buffer.concat(chunks)));
         doc.on('error', reject);
 
         const W = 595.28, H = 841.89;
+        const ML = 56, MR = 56, MT = 162, textW = W - ML - MR;
+        // Rodapé de 3.5cm = 99.2px — limite do texto
+        const RODAPE = 99;
+        const maxY = H - RODAPE;
 
-        // Timbrado como fundo
-        if (config.timbrado_b64) {
-          try {
-            const imgBuf = Buffer.from(config.timbrado_b64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
-            doc.image(imgBuf, 0, 0, { width: W, height: H });
-          } catch(e) {}
+        function desenharTimbrado() {
+          if (config.timbrado_b64) {
+            try {
+              const imgBuf = Buffer.from(config.timbrado_b64.replace(/^data:image\/[^;]+;base64,/, ''), 'base64');
+              doc.image(imgBuf, 0, 0, { width: W, height: H });
+            } catch(e) {}
+          }
         }
 
-        const ML = 56, MT = 162, textW = 482;
+        function novaPagina() {
+          doc.addPage({ size: 'A4', margin: 0 });
+          desenharTimbrado();
+          return 60; // topo da nova página
+        }
+
+        desenharTimbrado();
         let y = MT;
 
         // Título
@@ -4163,18 +4174,22 @@ router.post('/contratos/:id/enviar', requireAuth, async (req, res) => {
 
         const linhas = texto.split('\n');
         for (const linha of linhas) {
-          if (y > H - 110) break;
           const isCenter = linha.startsWith('§CENTER§');
           const isRight = linha.startsWith('§RIGHT§');
           const txt = linha.replace(/§CENTER§|§RIGHT§/g, '').trim();
           if (!txt) { y += 5; continue; }
           const align = isCenter ? 'center' : isRight ? 'right' : 'justify';
-          doc.fontSize(10).font('Helvetica').fillColor('#000')
-            .text(txt, ML, y, { width: textW, align, lineGap: 1 });
+          // Estimar altura antes de renderizar
+          doc.fontSize(10).font('Helvetica');
+          const alt = doc.heightOfString(txt, { width: textW, lineGap: 1 });
+          if (y + alt > maxY) { y = novaPagina(); }
+          doc.fillColor('#000').text(txt, ML, y, { width: textW, align, lineGap: 1 });
           y = doc.y + 4;
         }
 
-        // Assinaturas — 2x2 grid
+        // Assinaturas — verificar espaço, senão nova página
+        const altAssins = 130;
+        if (y + altAssins > maxY) { y = novaPagina(); }
         y += 10;
         const assinaturas = [
           { nome: (d.nome||'').toUpperCase(), cargo: 'Miembro Activo', img: null },
