@@ -1923,7 +1923,7 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
     console.log('GERANDO PDF...');
-    const pdfBuffer = await gerarPDFDesvinculacao(html, config.timbrado_b64, config.assinatura_presidente_b64, config.assinatura_secretario_b64, config.presidente_nome, config.secretario_nome);
+    const pdfBuffer = await gerarPDFDesligamento(html, config.timbrado_b64, config.assinatura_presidente_b64, config.assinatura_secretario_b64, config.presidente_nome, config.secretario_nome);
     console.log('PDF GERADO:', pdfBuffer ? pdfBuffer.length : 'NULL');
     const emailRes = await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:d.email, subject:'Carta de Rescisión — Liga Académica de Urología LAURO', html:emailBonito('Carta de Rescisión — LAURO','<p>Estimado/a <strong>'+d.nome+'</strong>,</p><p>Adjunto encontrará su <strong>Carta de Rescisión</strong> de la Liga Académica de Urología - LAURO.</p><p>Por favor:</p><ol style="margin:10px 0 10px 20px"><li style="margin-bottom:6px">Imprima el documento adjunto</li><li style="margin-bottom:6px">Firme en el espacio indicado</li><li style="margin-bottom:6px">Escanee o fotografíe el documento firmado</li><li><strong>Responda este email</strong> con el documento firmado adjunto</li></ol><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     console.log('RESEND RESPONSE:', JSON.stringify(emailRes));
@@ -2427,7 +2427,7 @@ async function enviarEmailDesvinc(id, req, res, reenvio) {
     const config = await prepararConfigDesvinc(await getConfig());
     const html = await gerarHTMLDesvinculacao(ligante, config, rd.rows[0].data_solicitacao);
     console.log('GERANDO PDF desvinculacao...');
-    const pdfBuffer = await gerarPDFDesligamento(html, config.timbrado_b64, config.assinatura_presidente_b64, config.assinatura_secretario_b64, config.presidente_nome, config.secretario_nome);
+    const pdfBuffer = await gerarPDFDesvinculacao(html, config.timbrado_b64, config.assinatura_presidente_b64, config.assinatura_secretario_b64, config.presidente_nome, config.secretario_nome);
     console.log('PDF GERADO:', pdfBuffer ? pdfBuffer.length : 'NULL');
     // resend
     await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:ligante.email, subject:'Carta de Desvinculación — Liga Académica de Urología LAURO'+(reenvio?' (Reenvío)':''), html:emailBonito('Carta de Desvinculación — LAURO','<p>Estimado(a) <strong>'+ligante.nome+'</strong>,</p><p>Adjunto encontrará su <strong>Carta de Desvinculación</strong> de la Liga Académica de Urología - LAURO.</p><p>En caso de dudas, responda este mismo email.</p><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-desvinculacion-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
