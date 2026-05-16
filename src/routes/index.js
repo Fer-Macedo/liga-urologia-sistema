@@ -4683,12 +4683,11 @@ router.delete('/calendario/categorias/:id', requireAuth, async (req, res) => {
 
 // Helper para buscar atividades
 async function getAniversarios(anoRef) {
-  // Busca membros e diretivos ativos com data de nascimento
   const r = await query(`
-    SELECT nome, data_nascimento, 'membro' as tipo FROM membros
+    SELECT nome, data_nascimento::date as data_nascimento, 'membro' as tipo FROM membros
       WHERE ativo=1 AND data_nascimento IS NOT NULL
     UNION ALL
-    SELECT nome, data_nascimento, 'diretivo' as tipo FROM diretivos
+    SELECT nome, data_nascimento::date as data_nascimento, 'diretivo' as tipo FROM diretivos
       WHERE ativo=1 AND data_nascimento IS NOT NULL
   `);
 
