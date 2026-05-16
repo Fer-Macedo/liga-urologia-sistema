@@ -25,6 +25,26 @@ function emailBonito(titulo, corpo, logo) {
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f4f4f4;font-family:Arial,sans-serif"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f4f4;padding:30px 0"><tr><td align="center"><table width="600" cellpadding="0" cellspacing="0" style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08)"><tr><td style="background:#2b6803;padding:24px 32px;text-align:center">'+logoHtml+'</td></tr><tr><td style="padding:32px"><h2 style="color:#2b6803;font-size:18px;margin:0 0 20px 0;border-bottom:2px solid #2b6803;padding-bottom:10px">'+titulo+'</h2><div style="color:#333;font-size:14px;line-height:1.7">'+corpo+'</div><div style="margin-top:32px;padding-top:20px;border-top:1px solid #eee;text-align:center;color:#888;font-size:12px"><p style="margin:0">LAURO — Liga Académica de Urología</p><p style="margin:4px 0">Universidad Central del Paraguay — Ciudad del Este</p><p style="margin:4px 0">lauroucpcde@lauroucpcde.com</p></div></td></tr></table></td></tr></table></body></html>';
 }
 
+async function gerarPDFBuffer(html) {
+  const puppeteer = require('puppeteer-core');
+  const chromium = require('@sparticuz/chromium');
+  const browser = await puppeteer.launch({
+    args: chromium.args,
+    executablePath: await chromium.executablePath(),
+    headless: chromium.headless,
+    timeout: 30000
+  });
+  try {
+    const page = await browser.newPage();
+    const htmlLimpo = html.replace(/<script>[^<]*window\.print[^<]*<\/script>/g, '');
+    await page.setContent(htmlLimpo, { waitUntil: 'domcontentloaded', timeout: 15000 });
+    const buf = await page.pdf({ format: 'A4', printBackground: true });
+    return buf;
+  } finally {
+    await browser.close();
+  }
+}
+
 const router = express.Router();
 
 // ─── SEGURANÇA ────────────────────────────────────────────────────────────────
@@ -1572,10 +1592,9 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
     config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
-    console.log('INICIANDO PDF ENVIAR');
-    const htmlPdf = require('html-pdf-node');
-    const pdfBuffer = await htmlPdf.generatePdf({ content: html, type: 'html' }, { format: 'A4', printBackground: true });
-    console.log('PDF BUFFER SIZE:', pdfBuffer ? pdfBuffer.length : 'NULL');
+    console.log('GERANDO PDF...');
+    const pdfBuffer = await gerarPDFBuffer(html);
+    console.log('PDF GERADO:', pdfBuffer ? pdfBuffer.length : 'NULL');
     // resend
     const resR = await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:d.email, subject:'Carta de Rescisión — Liga Académica de Urología LAURO', html:emailBonito('Carta de Rescisión — LAURO','<p>Estimado/a <strong>'+d.nome+'</strong>,</p><p>Adjunto encontrará su <strong>Carta de Rescisión</strong> de la Liga Académica de Urología - LAURO.</p><p>Por favor:</p><ol style="margin:10px 0 10px 20px"><li style="margin-bottom:6px">Imprima el documento adjunto</li><li style="margin-bottom:6px">Firme en el espacio indicado</li><li style="margin-bottom:6px">Escanee o fotografíe el documento firmado</li><li><strong>Responda este email</strong> con el documento firmado adjunto</li></ol><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     await query('UPDATE desligamentos SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', req.params.id]);
@@ -1974,10 +1993,9 @@ router.post('/desligamentos/:id/reenviar', requireAuth, async (req, res) => {
     config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
-    console.log('INICIANDO PDF REENVIAR');
-    const htmlPdf2 = require('html-pdf-node');
-    const pdfBuffer = await htmlPdf2.generatePdf({ content: html, type: 'html' }, { format: 'A4', printBackground: true });
-    console.log('PDF REENVIAR SIZE:', pdfBuffer ? pdfBuffer.length : 'NULL');
+    console.log('GERANDO PDF...');
+    const pdfBuffer = await gerarPDFBuffer(html);
+    console.log('PDF GERADO:', pdfBuffer ? pdfBuffer.length : 'NULL');
     // resend
     await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:d.email, subject:'Carta de Rescisión — LAURO (Reenvío)', html:emailBonito('Carta de Rescisión — LAURO (Reenvío)','<p>Estimado/a <strong>'+d.nome+'</strong>,</p><p>Reenviamos su <strong>Carta de Rescisión</strong> de la LAURO.</p><ol style="margin:10px 0 10px 20px"><li style="margin-bottom:6px">Imprima el documento adjunto</li><li style="margin-bottom:6px">Firme en el espacio indicado</li><li style="margin-bottom:6px">Escanee el documento firmado</li><li><strong>Responda este email</strong> con el documento firmado adjunto</li></ol><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     await query('UPDATE desligamentos SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', req.params.id]);
@@ -2215,8 +2233,9 @@ async function enviarCartaCobranca(id, req, res, reenvio) {
     if (!pessoa.email) { req.session.erro=['Email nao cadastrado.']; return res.redirect('/carta-cobranca'); }
     const config = await prepararConfigCobranca(await getConfig());
     const html = gerarHTMLCartaCobranca(pessoa, config, r.rows[0]);
-    const htmlPdf = require('html-pdf-node');
-    const pdfBuffer = await htmlPdf.generatePdf({ content: html, type: 'html' }, { format: 'A4', printBackground: true });
+    console.log('GERANDO PDF...');
+    const pdfBuffer = await gerarPDFBuffer(html);
+    console.log('PDF GERADO:', pdfBuffer ? pdfBuffer.length : 'NULL');
     // resend
     await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:pessoa.email, subject:'Carta de Cobro — LAURO'+(reenvio?' (Reenvío)':''), html:`<p>Estimado(a) <strong>${pessoa.nome}</strong>,</p><p>Adjunto encontrará su Carta de Cobro de la Liga Académica de Urología - LAURO.</p><p>Si ya realizó el pago, por favor envíenos el comprobante respondiendo este email.</p><p>Atentamente,<br>Dirección Financiera — LAURO</p>`, attachments:[{filename:'carta-cobro-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     await query('UPDATE cartas_cobranca SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', id]);
