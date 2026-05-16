@@ -194,7 +194,7 @@
 <div class="backdrop" id="bdEvento"><div class="modal" id="mEvento">
   <div class="m-head" id="mHead"><div><div class="m-head-data" id="mData"></div><div class="m-head-title" id="mTitulo"></div></div><button class="m-x" onclick="fechar('bdEvento')">×</button></div>
   <div class="m-body" id="mBody"></div>
-  <div class="m-foot"><div class="m-foot-hint">📅 Adicione à sua agenda para lembretes</div><button class="m-btn" onclick="fechar('bdEvento')">Fechar</button></div>
+  <div class="m-foot"><button class="m-btn ghost" onclick="baixarEvento()">📅 Adicionar à minha agenda</button><button class="m-btn" onclick="fechar('bdEvento')">Fechar</button></div>
 </div></div>
 
 <!-- MODAL MULTI -->
@@ -362,7 +362,10 @@ function renderGrade(){
   }
 }
 
+let eventoAtual = null;
+
 function abrirEvento(ev){
+  eventoAtual = ev;
   const cor=getCor(ev);
   document.getElementById('mHead').style.background=`linear-gradient(135deg,${cor}dd,${cor})`;
   const dt=new Date(ev.data_inicio); dt.setMinutes(dt.getMinutes()+dt.getTimezoneOffset());
@@ -406,6 +409,39 @@ function irHoje(){ mes=hoje.getMonth(); ano=hoje.getFullYear(); render(); }
 function copiarLink(){ navigator.clipboard.writeText(ICAL).then(()=>{ fechar('bdIcal'); abrirGuia(); }).catch(()=>prompt('Copie:',ICAL)); }
 
 ['bdEvento','bdMulti','bdIcal'].forEach(id=>{ document.getElementById(id).addEventListener('click',e=>{if(e.target===e.currentTarget)fechar(id);}); });
+
+function baixarEvento(){
+  if(!eventoAtual) return;
+  const ev = eventoAtual;
+  const fmt = (d, inteiro) => {
+    const dt = new Date(d);
+    if(inteiro) return dt.toISOString().replace(/-/g,'').slice(0,8);
+    return dt.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+  };
+  const esc = s => (s||'').replace(/\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;');
+  const uid = `ev-${ev.id}-${Date.now()}@liga-urologia`;
+  const dtstart = ev.dia_inteiro ? `DTSTART;VALUE=DATE:${fmt(ev.data_inicio,true)}` : `DTSTART:${fmt(ev.data_inicio,false)}`;
+  const dtend = ev.data_fim
+    ? (ev.dia_inteiro ? `DTEND;VALUE=DATE:${fmt(ev.data_fim,true)}` : `DTEND:${fmt(ev.data_fim,false)}`)
+    : (ev.dia_inteiro ? `DTEND;VALUE=DATE:${fmt(ev.data_inicio,true)}` : `DTEND:${fmt(new Date(new Date(ev.data_inicio).getTime()+60*60*1000),false)}`);
+  const ical = [
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Liga Urologia//PT','CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,`DTSTAMP:${fmt(new Date(),false)}`,
+    dtstart,dtend,
+    `SUMMARY:${esc(ev.titulo)}`,
+    ev.descricao?`DESCRIPTION:${esc(ev.descricao)}`:'',
+    ev.local?`LOCATION:${esc(ev.local)}`:'',
+    ev.link_externo?`URL:${ev.link_externo}`:'',
+    'BEGIN:VALARM','TRIGGER:-PT30M','ACTION:DISPLAY',`DESCRIPTION:Lembrete: ${esc(ev.titulo)}`,'END:VALARM',
+    'END:VEVENT','END:VCALENDAR'
+  ].filter(Boolean).join('\r\n');
+  const blob=new Blob([ical],{type:'text/calendar;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=ev.titulo.replace(/[^a-zA-Z0-9]/g,'-')+'.ics';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
+}
 
 render();
 </script>
