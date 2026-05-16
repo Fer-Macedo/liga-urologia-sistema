@@ -70,7 +70,6 @@
           <td><div style="display:flex;gap:5px;flex-wrap:wrap">
             <a href="/contratos/<%=ct.id%>/pdf" target="_blank" class="btn-xs">Ver</a>
             <a href="/contratos/<%=ct.id%>/imprimir" target="_blank" class="btn-xs roxo">Imprimir</a>
-            <button
             <form method="POST" action="/contratos/<%=ct.id%>/enviar" style="display:inline;margin:0"><button type="submit" class="btn-xs verde">Enviar</button></form>
             <%if(ct.status==='enviado'||ct.status==='assinado'){%>
             <button class="btn-xs verde" onclick="abrirUpload(<%=ct.id%>,'<%=ct.ligante_nome%>')">Anexar Assinado</button>
