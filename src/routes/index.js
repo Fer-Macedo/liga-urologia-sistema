@@ -4747,12 +4747,15 @@ router.get('/calendario', requireAuth, async (req, res) => {
       config: await getConfig(),
       usuario: req.session.usuario,
       paginaAtual: 'calendario',
-      atividades: atividades,
+      atividades: JSON.stringify(atividades),
       icalUrl,
       msg: req.flash('msg'),
       erro: req.flash('erro')
     });
-  } catch(e) { req.flash('erro', [e.message]); res.redirect('/dashboard'); }
+  } catch(e) {
+    console.error('ERRO CALENDARIO:', e.message);
+    res.send('ERRO: ' + e.message);
+  }
 });
 
 // PÁGINA PÚBLICA (sem login)
