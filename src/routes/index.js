@@ -1572,6 +1572,7 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
     config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
+    console.log('INICIANDO PDF ENVIAR');
     const htmlPdf = require('html-pdf-node');
     const pdfBuffer = await htmlPdf.generatePdf({ content: html, type: 'html' }, { format: 'A4', printBackground: true });
     console.log('PDF BUFFER SIZE:', pdfBuffer ? pdfBuffer.length : 'NULL');
@@ -1973,8 +1974,10 @@ router.post('/desligamentos/:id/reenviar', requireAuth, async (req, res) => {
     config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
     config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
     const html = gerarHTMLDesligamento(d, config, d.data_solicitacao, d.tipo_membro);
+    console.log('INICIANDO PDF REENVIAR');
     const htmlPdf2 = require('html-pdf-node');
     const pdfBuffer = await htmlPdf2.generatePdf({ content: html, type: 'html' }, { format: 'A4', printBackground: true });
+    console.log('PDF REENVIAR SIZE:', pdfBuffer ? pdfBuffer.length : 'NULL');
     // resend
     await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:d.email, subject:'Carta de Rescisión — LAURO (Reenvío)', html:emailBonito('Carta de Rescisión — LAURO (Reenvío)','<p>Estimado/a <strong>'+d.nome+'</strong>,</p><p>Reenviamos su <strong>Carta de Rescisión</strong> de la LAURO.</p><ol style="margin:10px 0 10px 20px"><li style="margin-bottom:6px">Imprima el documento adjunto</li><li style="margin-bottom:6px">Firme en el espacio indicado</li><li style="margin-bottom:6px">Escanee el documento firmado</li><li><strong>Responda este email</strong> con el documento firmado adjunto</li></ol><p style="margin-top:16px">Atentamente,<br><strong>Secretaría — LAURO</strong></p>',null), attachments:[{filename:'carta-rescision-LAURO.pdf',content:pdfBuffer.toString('base64')}]});
     await query('UPDATE desligamentos SET status=$1, enviado_em=NOW() WHERE id=$2', ['enviado', req.params.id]);
