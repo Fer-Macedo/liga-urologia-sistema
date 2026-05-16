@@ -4676,7 +4676,7 @@ router.get('/calendario', requireAuth, async (req, res) => {
       config: await getConfig(),
       usuario: req.session.usuario,
       paginaAtual: 'calendario',
-      atividades: JSON.stringify(atividades),
+      atividades: atividades,
       icalUrl,
       msg: req.flash('msg'),
       erro: req.flash('erro')
@@ -4690,7 +4690,7 @@ router.get('/agenda', async (req, res) => {
     const atividades = await getAtividades(true);
     res.render('pages/agenda-publica', {
       config: await getConfig(),
-      atividades: JSON.stringify(atividades)
+      atividades: atividades
     });
   } catch(e) { res.status(500).send('Erro ao carregar agenda.'); }
 });
