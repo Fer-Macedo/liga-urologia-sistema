@@ -44,12 +44,11 @@ async function gerarPDFBuffer(html, timbradoB64, assinaturaB64, nomeAssinatura, 
       }
 
       // Extrair partes do HTML com regex
-      const getTag = (tag, html) => {
-        const m = html.match(new RegExp('<' + tag + '[^>]*>([\s\S]*?)<\/' + tag + '>', 'i'));
-        return m ? m[1].replace(/<[^>]+>/g, '').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').trim() : '';
-      };
-      const titulo = getTag('titulo', html) || 'Carta de Cobro — LAURO';
-      const subtitulo = getTag('subtitulo', html) || 'Pago Mensual Vencido';
+      // Extrair título e subtítulo das divs específicas
+      const tituloMatch = html.match(/<div class="titulo">([^<]*)<\/div>/i);
+      const subtituloMatch = html.match(/<div class="subtitulo">([^<]*)<\/div>/i);
+      const titulo = tituloMatch ? tituloMatch[1].trim() : 'Carta de Cobro — LAURO';
+      const subtitulo = subtituloMatch ? subtituloMatch[1].trim() : 'Pago Mensual Vencido';
 
       // Extrair só o bloco .corpo do HTML
       const corpoMatch = html.match(/<div class="corpo">([\s\S]*?)<\/div>\s*<div class="assinaturas"/i);
@@ -58,20 +57,10 @@ async function gerarPDFBuffer(html, timbradoB64, assinaturaB64, nomeAssinatura, 
       const corpo = corpoHtml.replace(/<style[^>]*>[\s\S]*?<\/style>/gi,'')
         .replace(/<script[^>]*>[\s\S]*?<\/script>/gi,'')
         .replace(/<strong>([^<]+)<\/strong>/gi,'§BOLD§$1§END§')
-        .replace(/<br\s*\/?>/gi,'
-').replace(/<\/p>/gi,'
-').replace(/<\/div>/gi,'
-')
+        .replace(/<br\s*\/?>/gi,'\n').replace(/<\/p>/gi,'\n').replace(/<\/div>/gi,'\n')
         .replace(/<[^>]+>/g,'').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&')
         .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&[a-z]+;/gi,' ')
-        // Remover bloco de assinatura em texto que fica no corpo
-        .replace(/Atentamente,[\s\S]*$/i, 'Atentamente,')
-        .replace(/
-\s*
-\s*
-/g,'
-
-').trim();
+        .replace(/\n\s*\n\s*\n/g,'\n\n').trim();
 
       let y = MT;
 
