@@ -1,6 +1,10 @@
-<%- include('../partials/header') %>
-<%- include('../partials/sidebar', { pa: 'fluxo-caixa' }) %>
-
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fluxo de Caixa — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
 <style>
 .fc-page { padding: 28px 32px; max-width: 1400px; }
 .fc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
@@ -97,6 +101,12 @@ table.fc-table td { padding:12px 16px; font-size:13px; color:#374151; vertical-a
 .flash-msg.err { background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; }
 @media(max-width:640px){ .fc-page{padding:16px;} .form-row{grid-template-columns:1fr;} .fc-cards{grid-template-columns:1fr 1fr;} }
 </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'fluxo-caixa' }) %>
+  <main class="main">
+
 
 <div class="fc-page">
   <% if(msg&&msg.length){ %><div class="flash-msg ok"><%= msg[0] %></div><% } %>
@@ -397,5 +407,7 @@ function exportarCSV(){
 document.getElementById('modalLancamento').addEventListener('click',e=>{if(e.target===e.currentTarget)fecharModal();});
 document.getElementById('modalNF').addEventListener('click',e=>{if(e.target===e.currentTarget)fecharNF();});
 </script>
-
-<%- include('../partials/footer') %>
+  </main>
+</div>
+</body>
+</html>
