@@ -44,10 +44,13 @@ async function gerarPDFDesligamento(html, timbradoB64, assinaturaPresidenteB64, 
         } catch(e) {}
       }
 
-      function stripHtml(str) {
-        return (str || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '')
+      function strip(str) {
+        return (str || '')
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/<[^>]+>/g, '')
           .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&[a-z]+;/gi, ' ').trim();
+          .replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+          .replace(/&[a-z]+;/gi, ' ').trim();
       }
 
       // Extrair título
@@ -58,82 +61,36 @@ async function gerarPDFDesligamento(html, timbradoB64, assinaturaPresidenteB64, 
       const dataMatch = html.match(/class="data"[^>]*>([^<]*)</i);
       const dataTexto = dataMatch ? dataMatch[1].trim() : '';
 
-      // Extrair parágrafos do corpo
+      // Extrair parágrafos — texto limpo SEM tags, strong vira texto normal
       const corpoMatch = html.match(/class="corpo"[^>]*>([\s\S]*?)<div class="data"/i);
       const corpoHtml = corpoMatch ? corpoMatch[1] : '';
       const pTags = corpoHtml.match(/<p[^>]*>[\s\S]*?<\/p>/gi) || [];
 
-      // Extrair nome do membro (primeiro <strong> do HTML)
+      // Extrair nome membro do primeiro strong
       const nomeMembroMatch = html.match(/<strong>([^<]+)<\/strong>/i);
       const nomeMembro = nomeMembroMatch ? nomeMembroMatch[1].trim().toUpperCase() : '';
 
-      // Extrair tipo do membro — do div assinatura-cargo (primeiro bloco)
-      // Pegar o primeiro bloco de assinatura completo
-      const primeiroBloco = html.match(/class="assinatura-bloco"[^>]*>([\s\S]*?)<\/div>\s*<\/div>/i);
+      // Extrair cargo do membro — pegar o texto dentro do primeiro assinatura-cargo
       let cargoMembro = 'LIGANTE\nEstudiante de Medicina – UCP';
-      if (primeiroBloco) {
-        const cargoEl = primeiroBloco[1].match(/class="assinatura-cargo"[^>]*>([\s\S]*?)<\/div>/i);
-        if (cargoEl) cargoMembro = stripHtml(cargoEl[1]);
+      const allCargos = [...html.matchAll(/class="assinatura-cargo"[^>]*>([\s\S]*?)<\/div>/gi)];
+      if (allCargos.length > 0) {
+        cargoMembro = strip(allCargos[0][1]);
       }
 
       let y = MT;
 
-      // TÍTULO centralizado
+      // TÍTULO centralizado bold
       doc.fontSize(12).font('Helvetica-Bold').fillColor('#000')
         .text(titulo, ML, y, { width: textW, align: 'center' });
       y = doc.y + 12;
 
-      // PARÁGRAFOS com bold inline nos <strong>
+      // PARÁGRAFOS — texto limpo, fonte normal, SEM tentar inline bold
       for (const p of pTags) {
         if (y > H - 260) break;
-        const inner = p.replace(/<p[^>]*>/i, '').replace(/<\/p>/i, '');
-        if (!inner.trim()) continue;
-
-        // Dividir em segmentos normal/bold
-        const segs = [];
-        const re = /<strong>([\s\S]*?)<\/strong>/gi;
-        let last = 0, m;
-        re.lastIndex = 0;
-        while ((m = re.exec(inner)) !== null) {
-          if (m.index > last) {
-            const t = stripHtml(inner.slice(last, m.index));
-            if (t) segs.push({ t, bold: false });
-          }
-          const t = stripHtml(m[1]);
-          if (t) segs.push({ t, bold: true });
-          last = m.index + m[0].length;
-        }
-        if (last < inner.length) {
-          const t = stripHtml(inner.slice(last));
-          if (t) segs.push({ t, bold: false });
-        }
-
-        if (segs.length === 0) continue;
-
-        // Renderizar: se não há bold, simples
-        if (!segs.some(s => s.bold)) {
-          doc.fontSize(11).font('Helvetica').fillColor('#000')
-            .text(segs.map(s => s.t).join(''), ML, y, { width: textW, align: 'justify', lineGap: 1 });
-          y = doc.y + 7;
-          continue;
-        }
-
-        // Com bold: montar texto completo e renderizar segmentos inline
-        // Usar posição de cursor manual
-        let xPos = ML;
-        const lineY = y;
-        for (let si = 0; si < segs.length; si++) {
-          const seg = segs[si];
-          const isLast = si === segs.length - 1;
-          doc.fontSize(11).font(seg.bold ? 'Helvetica-Bold' : 'Helvetica').fillColor('#000');
-          if (isLast) {
-            doc.text(seg.t, xPos, lineY, { width: (ML + textW) - xPos, align: 'justify', lineGap: 1 });
-          } else {
-            const sw = doc.widthOfString(seg.t);
-            doc.text(seg.t, xPos, lineY, { width: sw + 0.5, lineBreak: false });
-            xPos = doc.x;
-          }
-        }
+        const textoLimpo = strip(p.replace(/<p[^>]*>/i,'').replace(/<\/p>/i,''));
+        if (!textoLimpo) continue;
+        doc.fontSize(11).font('Helvetica').fillColor('#000')
+          .text(textoLimpo, ML, y, { width: textW, align: 'justify', lineGap: 1 });
         y = doc.y + 7;
       }
 
