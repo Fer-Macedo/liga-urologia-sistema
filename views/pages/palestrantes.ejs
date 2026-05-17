@@ -83,14 +83,27 @@
   <main class="main">
     <div class="topbar">
       <h1 class="page-titulo">Dados de Palestrantes</h1>
-      <div class="topbar-acoes">
-        <button class="btn btn-primario btn-sm" onclick="novoPalestrante()">+ Novo Palestrante</button>
+      <div class="topbar-acoes" style="display:flex;gap:10px;">
+        <button class="btn btn-secundario btn-sm" onclick="gerarLink()">🔗 Enviar Link ao Palestrante</button>
+        <button class="btn btn-primario btn-sm" onclick="novoPalestrante()">+ Cadastrar Manualmente</button>
       </div>
     </div>
     <div class="content">
       <div class="pg">
 
-        <% if(msg&&msg.length){ %><div class="flash-ok"><%= msg[0] %></div><% } %>
+        <% if(msg&&msg.length){ %>
+          <% if(msg[0].startsWith('link:')){ %>
+            <% const token = msg[0].replace('link:',''); %>
+            <div class="flash-ok">✅ Link gerado com sucesso! Copie abaixo e envie ao palestrante.</div>
+            <div style="background:#f0f7eb;border:1.5px solid #b8dea0;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+              <div style="font-size:12px;font-weight:700;color:#2b6803;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">🔗 Link para o palestrante</div>
+              <div style="font-size:13px;font-family:monospace;word-break:break-all;color:#1a4002;background:#fff;padding:10px 14px;border-radius:8px;border:1px solid #b8dea0;margin-bottom:10px;" id="linkGerado"><%= (config.app_url || 'https://sistema.lauroucpcde.com') %>/palestrante/form/<%= token %></div>
+              <button onclick="copiarLinkGerado()" style="background:#2b6803;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;">📋 Copiar Link</button>
+            </div>
+          <% } else { %>
+            <div class="flash-ok"><%= msg[0] %></div>
+          <% } %>
+        <% } %>
         <% if(erro&&erro.length){ %><div class="flash-err"><%= erro[0] %></div><% } %>
 
         <!-- STATS -->
@@ -181,6 +194,46 @@
       </div>
     </div>
   </main>
+</div>
+
+<!-- MODAL GERAR LINK -->
+<div class="modal-overlay" id="modalGerarLink">
+  <div class="modal-box" style="max-width:500px;">
+    <div class="modal-head">
+      <h3>🔗 Enviar Link ao Palestrante</h3>
+      <button class="modal-close" onclick="fecharModal('modalGerarLink')">×</button>
+    </div>
+    <form method="POST" action="/palestrantes/gerar-link" id="formGerarLink">
+      <div class="modal-body">
+        <p style="font-size:14px;color:#374151;margin-bottom:20px;line-height:1.6;">
+          Informe os dados básicos do palestrante. O sistema vai gerar um link personalizado para ele preencher o formulário completo.
+        </p>
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Nome (opcional)</label>
+            <input type="text" name="nome_completo" placeholder="Dr. João Silva">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>E-mail (opcional)</label>
+            <input type="email" name="email" placeholder="doutor@email.com">
+          </div>
+          <div class="form-group">
+            <label>WhatsApp (opcional)</label>
+            <input type="text" name="whatsapp" placeholder="+55 11 99999-9999">
+          </div>
+        </div>
+        <div style="background:#f0f7eb;border-radius:10px;padding:12px 14px;font-size:13px;color:#2b6803;">
+          💡 Após criar, você receberá um link para copiar e enviar por WhatsApp ou e-mail. O palestrante preenche o formulário e os dados aparecem automaticamente aqui.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancelar" onclick="fecharModal('modalGerarLink')">Cancelar</button>
+        <button type="submit" class="btn-salvar">🔗 Gerar Link</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- MODAL EDITAR/VER -->
@@ -316,6 +369,19 @@ function buscar(){
   });
 }
 
+function copiarLinkGerado(){
+  const url = document.getElementById('linkGerado')?.textContent;
+  if(!url) return;
+  navigator.clipboard.writeText(url).then(()=>{
+    alert('✅ Link copiado!\n\nEnvie por WhatsApp ou e-mail para o palestrante preencher.');
+  }).catch(()=>{ prompt('Copie este link:', url); });
+}
+
+function gerarLink(){
+  document.getElementById('formGerarLink').reset();
+  document.getElementById('modalGerarLink').classList.add('open');
+}
+
 function novoPalestrante(){
   document.getElementById('formEditar').action = '/palestrantes/novo';
   document.getElementById('modalTitulo').textContent = 'Novo Palestrante';
@@ -370,6 +436,7 @@ function excluir(id, nome){
 
 document.getElementById('modalEditar').addEventListener('click', e=>{ if(e.target===e.currentTarget) fecharModal('modalEditar'); });
 document.getElementById('modalLink').addEventListener('click', e=>{ if(e.target===e.currentTarget) fecharModal('modalLink'); });
+document.getElementById('modalGerarLink').addEventListener('click', e=>{ if(e.target===e.currentTarget) fecharModal('modalGerarLink'); });
 </script>
 </body>
 </html>
