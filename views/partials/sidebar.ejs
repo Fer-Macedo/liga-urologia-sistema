@@ -123,6 +123,10 @@ const orgNome = (typeof config !== 'undefined' && config && config.org_nome) ? c
 
     <div class="nav-group">
       <div class="nav-group-title">Comunicação</div>
+      <a href="/sorteios" class="nav-item <%= pa === 'sorteios' ? 'ativo' : '' %>">
+        <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></span>
+        <span>Sorteios</span>
+      </a>
       <a href="/marketing" class="nav-item <%= pa === 'marketing' ? 'ativo' : '' %>">
         <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>
         <span>Marketing</span>
