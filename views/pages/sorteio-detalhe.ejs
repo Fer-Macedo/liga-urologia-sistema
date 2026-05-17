@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= sorteio.nome %> — Sorteio</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#2b6803' %>; }
+    .page-content { padding: 0 32px 40px; max-width: 1100px; }
+    .sorteio-layout { display: grid; grid-template-columns: 1fr 380px; gap: 24px; }
+
+    /* PAINEL SORTEIO */
+    .sorteio-arena { background: #fff; border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.07); overflow: hidden; }
+    .arena-head { padding: 20px 24px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; justify-content: space-between; }
+    .arena-titulo { font-size: 18px; font-weight: 700; color: #1a2e0e; }
+    .arena-status { font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
+
+    /* DISPLAY DO SORTEIO */
+    .sorteio-display { padding: 32px 24px; text-align: center; min-height: 280px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .sorteio-drum { width: 100%; max-width: 500px; background: linear-gradient(135deg, #0d2001, #1a4002); border-radius: 16px; padding: 32px; margin: 0 auto 24px; position: relative; overflow: hidden; }
+    .sorteio-drum::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(92,184,6,.15), transparent 70%); }
+    .drum-label { font-size: 11px; font-weight: 700; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+    .drum-nome { font-size: clamp(22px, 4vw, 36px); font-weight: 800; color: #fff; min-height: 52px; display: flex; align-items: center; justify-content: center; transition: all .1s; word-break: break-word; line-height: 1.2; }
+    .drum-nome.rolando { animation: drumRoll .08s ease infinite; color: #a8e063; }
+    @keyframes drumRoll { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
+    .drum-nome.ganhador { animation: ganhadorPulse 1s ease infinite; color: #fbbf24; font-size: clamp(24px,4vw,40px); }
+    @keyframes ganhadorPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+
+    .btn-sortear { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; border: none; border-radius: 12px; padding: 16px 40px; font-size: 18px; font-weight: 800; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 20px rgba(245,158,11,.4); }
+    .btn-sortear:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(245,158,11,.5); }
+    .btn-sortear:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+    .btn-novo-sorteio { background: #f0f7eb; color: var(--cor-primaria); border: 1.5px solid var(--cor-primaria); border-radius: 10px; padding: 10px 22px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-novo-sorteio:hover { background: var(--cor-primaria); color: #fff; }
+
+    /* CONFETES */
+    .confete { position: fixed; pointer-events: none; z-index: 9999; }
+    .confete-piece { position: absolute; width: 10px; height: 10px; animation: confeteFall linear forwards; }
+    @keyframes confeteFall { 0%{transform:translateY(-20px) rotate(0);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
+
+    /* GANHADORES */
+    .ganhadores-lista { display: flex; flex-direction: column; gap: 10px; padding: 0 24px 24px; }
+    .ganhador-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: #f0f7eb; border-radius: 10px; border-left: 4px solid var(--cor-primaria); }
+    .ganhador-num { width: 28px; height: 28px; border-radius: 50%; background: var(--cor-primaria); color: #fff; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .ganhador-nome { font-size: 15px; font-weight: 700; color: #1a2e0e; }
+
+    /* PAINEL LATERAL */
+    .sorteio-info { display: flex; flex-direction: column; gap: 16px; }
+    .info-card { background: #fff; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.07); overflow: hidden; }
+    .info-card-head { padding: 14px 18px; border-bottom: 1px solid #f1f5f9; font-size: 13px; font-weight: 700; color: #374151; display: flex; align-items: center; gap: 8px; }
+    .info-card-body { padding: 16px 18px; }
+
+    /* PARTICIPANTES */
+    .participantes-lista { display: flex; flex-direction: column; gap: 6px; max-height: 320px; overflow-y: auto; }
+    .participante-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; font-size: 13px; color: #374151; transition: .15s; }
+    .participante-item:hover { background: #f8fafc; }
+    .participante-avatar { width: 30px; height: 30px; border-radius: 50%; background: #f0f7eb; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--cor-primaria); flex-shrink: 0; }
+    .participante-nome { flex: 1; }
+    .participante-ganhador { color: #d97706; font-weight: 700; }
+
+    /* VALIDAÇÃO */
+    .validacao-form { display: flex; flex-direction: column; gap: 12px; }
+    .check-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px; background: #f8fafc; border-radius: 8px; }
+    .check-item input[type=checkbox] { width: 18px; height: 18px; margin-top: 1px; flex-shrink: 0; accent-color: var(--cor-primaria); cursor: pointer; }
+    .check-label { font-size: 13px; color: #374151; line-height: 1.4; }
+    .brinde-input { border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 9px 12px; font-size: 14px; width: 100%; font-family: inherit; }
+    .brinde-input:focus { outline: none; border-color: var(--cor-primaria); }
+    .btn-validar { background: var(--cor-primaria); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 700; cursor: pointer; width: 100%; }
+    .btn-validar:hover { filter: brightness(.9); }
+    .btn-invalidar { background: #fee2e2; color: #dc2626; border: 1.5px solid #fecaca; border-radius: 8px; padding: 8px 20px; font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 6px; }
+
+    /* RESULTADO REGISTRADO */
+    .resultado-registrado { background: linear-gradient(135deg, #f0f7eb, #dbefd3); border-radius: 12px; padding: 20px; text-align: center; border: 1px solid #b8dea0; }
+    .resultado-registrado .trophy { font-size: 36px; margin-bottom: 8px; }
+    .resultado-registrado h3 { font-size: 18px; font-weight: 800; color: #1a4002; margin-bottom: 4px; }
+    .resultado-registrado .brinde-tag { display: inline-block; background: var(--cor-primaria); color: #fff; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-top: 8px; }
+
+    .flash-ok { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 14px; font-weight: 600; }
+    .flash-err { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 14px; font-weight: 600; }
+
+    @media(max-width:900px){ .sorteio-layout{grid-template-columns:1fr;} .page-content{padding:0 16px 40px;} }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'sorteios' }) %>
+  <main class="main">
+    <div class="topbar">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <a href="/sorteios" style="color:#6b7280;font-size:13px;text-decoration:none;display:flex;align-items:center;gap:4px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Sorteios
+        </a>
+        <h1 class="page-titulo" style="margin:0"><%= sorteio.nome %></h1>
+      </div>
+    </div>
+    <div class="content">
+      <div class="page-content">
+
+        <% if(msg&&msg.length){ %><div class="flash-ok"><%= msg[0] %></div><% } %>
+        <% if(erro&&erro.length){ %><div class="flash-err"><%= erro[0] %></div><% } %>
+
+        <div class="sorteio-layout">
+
+          <!-- ARENA PRINCIPAL -->
+          <div>
+            <div class="sorteio-arena">
+              <div class="arena-head">
+                <div class="arena-titulo">🎰 <%= sorteio.nome %></div>
+                <span class="arena-status badge-status status-<%= sorteio.status %>"><%= sorteio.status %></span>
+              </div>
+
+              <% if(sorteio.status === 'sorteado' && sorteio.validado){ %>
+                <!-- RESULTADO FINAL -->
+                <div style="padding:32px 24px;text-align:center;">
+                  <div class="resultado-registrado">
+                    <div class="trophy">🏆</div>
+                    <h3><%= sorteio.ganhador_nome %></h3>
+                    <% if(sorteio.ganhador_contato){ %><p style="font-size:13px;color:#4a7c2a"><%= sorteio.ganhador_contato %></p><% } %>
+                    <% if(sorteio.brinde){ %><span class="brinde-tag">🎁 <%= sorteio.brinde %></span><% } %>
+                  </div>
+                </div>
+              <% } else { %>
+                <!-- DISPLAY ANIMADO -->
+                <div class="sorteio-display">
+                  <div class="sorteio-drum">
+                    <div class="drum-label">Participante</div>
+                    <div class="drum-nome" id="drumNome">
+                      <% if(sorteio.ganhador_nome){ %>
+                        🏆 <%= sorteio.ganhador_nome %>
+                      <% } else { %>
+                        Pronto para sortear...
+                      <% } %>
+                    </div>
+                  </div>
+
+                  <% if(sorteio.status !== 'sorteado'){ %>
+                    <button class="btn-sortear" id="btnSortear" onclick="iniciarSorteio()" <%= participantes.length === 0 ? 'disabled' : '' %>>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                      <%= participantes.length === 0 ? 'Sem participantes' : 'Sortear Agora!' %>
+                    </button>
+                  <% } else { %>
+                    <div style="text-align:center;margin-bottom:16px">
+                      <div style="font-size:14px;color:#6b7280;margin-bottom:12px">Ganhador sorteado! Valide abaixo →</div>
+                      <button class="btn-novo-sorteio" onclick="if(confirm('Refazer o sorteio?')) window.location='/sorteios/<%= sorteio.id %>/resetar'">🔄 Refazer Sorteio</button>
+                    </div>
+                  <% } %>
+                </div>
+
+                <!-- GANHADORES (se múltiplos) -->
+                <% if(ganhadores && ganhadores.length > 1){ %>
+                <div class="ganhadores-lista">
+                  <% ganhadores.forEach((g,i) => { %>
+                  <div class="ganhador-item">
+                    <div class="ganhador-num"><%= i+1 %></div>
+                    <div class="ganhador-nome"><%= g %></div>
+                  </div>
+                  <% }) %>
+                </div>
+                <% } %>
+
+              <% } %>
+            </div>
+          </div>
+
+          <!-- PAINEL LATERAL -->
+          <div class="sorteio-info">
+
+            <!-- PARTICIPANTES -->
+            <div class="info-card">
+              <div class="info-card-head">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Participantes (<%= participantes.length %>)
+              </div>
+              <div class="info-card-body">
+                <% if(participantes.length === 0){ %>
+                  <p style="font-size:13px;color:#9ca3af;text-align:center;padding:12px 0">Nenhum participante</p>
+                <% } else { %>
+                <div class="participantes-lista">
+                  <% participantes.forEach((p, i) => { %>
+                  <div class="participante-item <%= sorteio.ganhador_nome===p?'participante-ganhador':'' %>">
+                    <div class="participante-avatar"><%= p.charAt(0).toUpperCase() %></div>
+                    <span class="participante-nome"><%= p %></span>
+                    <% if(sorteio.ganhador_nome===p){ %><span>🏆</span><% } %>
+                  </div>
+                  <% }) %>
+                </div>
+                <% } %>
+              </div>
+            </div>
+
+            <!-- VALIDAÇÃO DO GANHADOR -->
+            <% if(sorteio.status === 'sorteado' && !sorteio.validado){ %>
+            <div class="info-card">
+              <div class="info-card-head">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                Validar Ganhador — <%= sorteio.ganhador_nome %>
+              </div>
+              <div class="info-card-body">
+                <form method="POST" action="/sorteios/<%= sorteio.id %>/validar">
+                  <div class="validacao-form">
+                    <% const tarefas = sorteio.tarefas ? JSON.parse(sorteio.tarefas) : []; %>
+                    <% if(tarefas.length > 0){ %>
+                      <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px">Tarefas cumpridas</div>
+                      <% tarefas.forEach((t, i) => { %>
+                      <div class="check-item">
+                        <input type="checkbox" name="tarefas_cumpridas" value="<%= t %>" id="tc<%= i %>">
+                        <label class="check-label" for="tc<%= i %>"><%= t %></label>
+                      </div>
+                      <% }) %>
+                    <% } else { %>
+                      <div class="check-item">
+                        <input type="checkbox" name="tarefas_cumpridas" value="Regras confirmadas" id="tc0" checked>
+                        <label class="check-label" for="tc0">Ganhador confirma as regras do sorteio</label>
+                      </div>
+                    <% } %>
+                    <div>
+                      <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Brinde ganho *</div>
+                      <input type="text" name="brinde" class="brinde-input" placeholder="Ex: Tablet Samsung, Voucher R$100..." required>
+                    </div>
+                    <div>
+                      <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Contato do ganhador</div>
+                      <input type="text" name="ganhador_contato" class="brinde-input" placeholder="WhatsApp ou e-mail">
+                    </div>
+                    <div>
+                      <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Observações</div>
+                      <textarea name="observacoes_validacao" class="brinde-input" style="min-height:60px;resize:vertical;" placeholder="Anotações sobre a entrega..."></textarea>
+                    </div>
+                    <button type="submit" name="validado" value="true" class="btn-validar">✅ Confirmar Ganhador</button>
+                    <button type="submit" name="validado" value="false" class="btn-invalidar">❌ Ganhador não atendeu as regras</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+            <% } %>
+
+            <!-- INFO DO SORTEIO -->
+            <div class="info-card">
+              <div class="info-card-head">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Informações
+              </div>
+              <div class="info-card-body" style="font-size:13px;color:#374151;display:flex;flex-direction:column;gap:8px;">
+                <div><strong>Tipo:</strong> <%= sorteio.tipo === 'interno' ? 'Interno' : 'Externo' %></div>
+                <div><strong>Público:</strong> <%= sorteio.publico_alvo || '—' %></div>
+                <div><strong>Ganhadores:</strong> <%= sorteio.qtd_ganhadores %></div>
+                <div><strong>Criado:</strong> <%= new Date(sorteio.criado_em).toLocaleDateString('pt-BR') %></div>
+                <% if(sorteio.sorteado_em){ %>
+                <div><strong>Sorteado:</strong> <%= new Date(sorteio.sorteado_em).toLocaleDateString('pt-BR') %></div>
+                <% } %>
+                <% if(sorteio.descricao){ %>
+                <div><strong>Descrição:</strong> <%= sorteio.descricao %></div>
+                <% } %>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+const participantes = <%- JSON.stringify(participantes) %>;
+const sorteioStatus = '<%= sorteio.status %>';
+const qtdGanhadores = <%= sorteio.qtd_ganhadores %>;
+let rodando = false;
+let ganhadores = [];
+
+function iniciarSorteio(){
+  if(rodando || participantes.length === 0) return;
+  rodando = true;
+  document.getElementById('btnSortear').disabled = true;
+
+  const drum = document.getElementById('drumNome');
+  drum.classList.add('rolando');
+
+  // Animação de rolagem
+  let count = 0;
+  const total = 40 + Math.floor(Math.random()*20);
+  const interval = setInterval(() => {
+    const p = participantes[Math.floor(Math.random()*participantes.length)];
+    drum.textContent = p;
+    count++;
+    if(count >= total){
+      clearInterval(interval);
+      finalizarSorteio();
+    }
+  }, 80);
+}
+
+function finalizarSorteio(){
+  // Embaralhar e pegar ganhadores
+  const embaralhados = [...participantes].sort(()=>Math.random()-.5);
+  ganhadores = embaralhados.slice(0, qtdGanhadores);
+
+  const drum = document.getElementById('drumNome');
+  drum.classList.remove('rolando');
+  drum.classList.add('ganhador');
+  drum.textContent = '🏆 ' + ganhadores[0];
+
+  // Confetes!
+  lancarConfetes();
+
+  // Salvar no servidor
+  setTimeout(() => {
+    const f = document.createElement('form');
+    f.method = 'POST';
+    f.action = '/sorteios/<%= sorteio.id %>/salvar-resultado';
+    const inp = document.createElement('input');
+    inp.name = 'ganhadores';
+    inp.value = JSON.stringify(ganhadores);
+    f.appendChild(inp);
+    document.body.appendChild(f);
+    f.submit();
+  }, 3000);
+}
+
+function lancarConfetes(){
+  const cores = ['#2b6803','#5cb806','#f59e0b','#3b82f6','#ec4899','#a8e063'];
+  for(let i=0; i<80; i++){
+    const div = document.createElement('div');
+    div.className = 'confete-piece';
+    div.style.cssText = `
+      left:${Math.random()*100}vw;
+      top:-10px;
+      background:${cores[Math.floor(Math.random()*cores.length)]};
+      width:${Math.random()*10+6}px;
+      height:${Math.random()*10+6}px;
+      border-radius:${Math.random()>.5?'50%':'2px'};
+      animation-duration:${Math.random()*2+1.5}s;
+      animation-delay:${Math.random()*.5}s;
+    `;
+    document.body.appendChild(div);
+    setTimeout(()=>div.remove(), 4000);
+  }
+}
+</script>
+</body>
+</html>
