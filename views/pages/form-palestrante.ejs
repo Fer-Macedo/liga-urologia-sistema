@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dados do Palestrante — <%= config.org_nome %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --verde: <%= config.org_cor || '#2b6803' %>; }
+    body { font-family: 'DM Sans', system-ui, sans-serif; background: #f7f9f5; min-height: 100vh; }
+
+    /* HEADER */
+    .header { background: var(--verde); padding: 20px 24px; display: flex; align-items: center; gap: 14px; }
+    .header img { width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(255,255,255,.3); object-fit: cover; }
+    .header-info h1 { font-size: 16px; font-weight: 700; color: #fff; }
+    .header-info p { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 1px; }
+
+    /* FORM CONTAINER */
+    .form-wrap { max-width: 680px; margin: 32px auto; padding: 0 20px 60px; }
+
+    .form-intro { background: #fff; border-radius: 14px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 4px rgba(0,0,0,.07); border-left: 4px solid var(--verde); }
+    .form-intro h2 { font-size: 18px; font-weight: 700; color: #1a2e0e; margin-bottom: 8px; }
+    .form-intro p { font-size: 14px; color: #6b7280; line-height: 1.6; }
+
+    .form-card { background: #fff; border-radius: 14px; padding: 28px; margin-bottom: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+    .form-card-titulo { font-size: 13px; font-weight: 700; color: var(--verde); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #f0f7eb; display: flex; align-items: center; gap: 8px; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+    .form-row.full { grid-template-columns: 1fr; }
+    .form-row.tri { grid-template-columns: 1fr 1fr 1fr; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 12px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: .4px; }
+    .form-group .req { color: #dc2626; }
+    .form-group input, .form-group select { border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 11px 14px; font-size: 15px; color: #1f2937; transition: .2s; background: #fafafa; font-family: 'DM Sans', sans-serif; width: 100%; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--verde); background: #fff; box-shadow: 0 0 0 3px rgba(43,104,3,.1); }
+    .form-group input.readonly { background: #f8fafc; color: #6b7280; cursor: not-allowed; }
+
+    .hint { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+    /* BOTÃO */
+    .btn-enviar { background: var(--verde); color: #fff; border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 700; cursor: pointer; width: 100%; font-family: 'DM Sans', sans-serif; transition: .2s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-enviar:hover { filter: brightness(.9); transform: translateY(-1px); }
+    .btn-enviar:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+    /* SUCESSO */
+    .sucesso { text-align: center; padding: 48px 24px; }
+    .sucesso-icon { font-size: 64px; margin-bottom: 16px; }
+    .sucesso h2 { font-size: 22px; font-weight: 800; color: #1a2e0e; margin-bottom: 8px; }
+    .sucesso p { font-size: 15px; color: #6b7280; line-height: 1.6; max-width: 400px; margin: 0 auto; }
+
+    /* ERRO */
+    .erro-box { background: #fee2e2; border: 1px solid #fecaca; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; font-size: 14px; color: #b91c1c; font-weight: 600; }
+
+    /* PREENCHIDO */
+    .preenchido-banner { background: #dcfce7; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; font-size: 14px; color: #15803d; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+
+    @media(max-width:600px){ .form-row,.form-row.tri{grid-template-columns:1fr;} .form-wrap{padding:0 14px 40px;} }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <% if(config.org_logo){ %><img src="<%= config.org_logo %>" alt="Logo"><% } %>
+  <div class="header-info">
+    <h1><%= config.org_nome %></h1>
+    <p>Formulário de Dados do Palestrante</p>
+  </div>
+</div>
+
+<div class="form-wrap">
+
+  <% if(enviado){ %>
+    <!-- SUCESSO -->
+    <div class="form-card sucesso">
+      <div class="sucesso-icon">✅</div>
+      <h2>Dados enviados com sucesso!</h2>
+      <p>Obrigado, <strong><%= palestrante.nome_completo %></strong>! Seus dados foram recebidos pela equipe da <%= config.org_nome %>. Entraremos em contato caso seja necessário.</p>
+    </div>
+  <% } else { %>
+
+    <div class="form-intro">
+      <h2>Olá, Dr(a)! 👋</h2>
+      <p>Por favor, preencha os dados abaixo para que possamos processar os documentos necessários para a sua participação como palestrante. Todos os campos marcados com <strong style="color:#dc2626">*</strong> são obrigatórios.</p>
+    </div>
+
+    <% if(palestrante.preenchido_em){ %>
+    <div class="preenchido-banner">
+      ✅ Você já preencheu este formulário em <%= new Date(palestrante.preenchido_em).toLocaleDateString('pt-BR') %>. Pode atualizar os dados abaixo se necessário.
+    </div>
+    <% } %>
+
+    <form method="POST" action="/palestrante/form/<%= palestrante.token_form %>" id="formPalestrante">
+
+      <!-- IDENTIFICAÇÃO -->
+      <div class="form-card">
+        <div class="form-card-titulo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Dados Pessoais
+        </div>
+
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Nome Completo <span class="req">*</span></label>
+            <input type="text" name="nome_completo" value="<%= palestrante.nome_completo||'' %>" required placeholder="Dr. João da Silva">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>E-mail <span class="req">*</span></label>
+            <input type="email" name="email" value="<%= palestrante.email||'' %>" required placeholder="seu@email.com">
+          </div>
+          <div class="form-group">
+            <label>WhatsApp</label>
+            <input type="text" name="whatsapp" value="<%= palestrante.whatsapp||'' %>" placeholder="+55 11 99999-9999">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>RG / C.I. <span class="req">*</span></label>
+            <input type="text" name="rg_ci" value="<%= palestrante.rg_ci||'' %>" required placeholder="Número do documento">
+            <span class="hint">RG (brasileiros) ou Cédula de Identidad (paraguaios)</span>
+          </div>
+          <div class="form-group">
+            <label>Especialidade</label>
+            <input type="text" name="especialidade" value="<%= palestrante.especialidade||'' %>" placeholder="Ex: Urologia, Andrologia...">
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Instituição / Hospital de Vínculo</label>
+            <input type="text" name="instituicao" value="<%= palestrante.instituicao||'' %>" placeholder="Ex: Hospital das Clínicas - USP">
+          </div>
+        </div>
+      </div>
+
+      <!-- ENDEREÇO -->
+      <div class="form-card">
+        <div class="form-card-titulo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Endereço Completo
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>País <span class="req">*</span></label>
+            <select name="endereco_pais" id="selectPais" onchange="toggleCampos()" required>
+              <option value="Brasil" <%= (palestrante.endereco_pais||'Brasil')==='Brasil'?'selected':'' %>>Brasil</option>
+              <option value="Paraguay" <%= palestrante.endereco_pais==='Paraguay'?'selected':'' %>>Paraguay</option>
+              <option value="Outro" <%= (palestrante.endereco_pais && palestrante.endereco_pais!=='Brasil' && palestrante.endereco_pais!=='Paraguay')?'selected':'' %>>Outro</option>
+            </select>
+          </div>
+          <div class="form-group" id="grupoCep">
+            <label>CEP</label>
+            <input type="text" name="endereco_cep" id="cep" value="<%= palestrante.endereco_cep||'' %>" placeholder="00000-000" oninput="buscarCep(this.value)">
+            <span class="hint">Digite o CEP para preencher automaticamente</span>
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Rua / Avenida <span class="req">*</span></label>
+            <input type="text" name="endereco_rua" id="rua" value="<%= palestrante.endereco_rua||'' %>" required>
+          </div>
+        </div>
+        <div class="form-row tri">
+          <div class="form-group">
+            <label>Número</label>
+            <input type="text" name="endereco_numero" value="<%= palestrante.endereco_numero||'' %>" placeholder="123">
+          </div>
+          <div class="form-group">
+            <label>Complemento</label>
+            <input type="text" name="endereco_complemento" value="<%= palestrante.endereco_complemento||'' %>" placeholder="Apto, Bloco...">
+          </div>
+          <div class="form-group">
+            <label>Bairro</label>
+            <input type="text" name="endereco_bairro" id="bairro" value="<%= palestrante.endereco_bairro||'' %>">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Cidade <span class="req">*</span></label>
+            <input type="text" name="endereco_cidade" id="cidade" value="<%= palestrante.endereco_cidade||'' %>" required>
+          </div>
+          <div class="form-group">
+            <label>Estado / Departamento</label>
+            <input type="text" name="endereco_estado" id="estado" value="<%= palestrante.endereco_estado||'' %>">
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn-enviar" id="btnEnviar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Enviar Dados
+      </button>
+
+    </form>
+
+  <% } %>
+
+</div>
+
+<script>
+// Buscar CEP automaticamente
+async function buscarCep(cep){
+  const c = cep.replace(/\D/g,'');
+  if(c.length !== 8) return;
+  try {
+    const r = await fetch('https://viacep.com.br/ws/'+c+'/json/');
+    const d = await r.json();
+    if(!d.erro){
+      document.getElementById('rua').value = d.logradouro || '';
+      document.getElementById('bairro').value = d.bairro || '';
+      document.getElementById('cidade').value = d.localidade || '';
+      document.getElementById('estado').value = d.uf || '';
+    }
+  } catch(e){}
+}
+
+function toggleCampos(){
+  const pais = document.getElementById('selectPais').value;
+  const grupoCep = document.getElementById('grupoCep');
+  grupoCep.style.display = pais === 'Brasil' ? '' : 'none';
+}
+
+// Submit com loading
+document.getElementById('formPalestrante')?.addEventListener('submit', ()=>{
+  const btn = document.getElementById('btnEnviar');
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+});
+
+toggleCampos();
+</script>
+
+</body>
+</html>
