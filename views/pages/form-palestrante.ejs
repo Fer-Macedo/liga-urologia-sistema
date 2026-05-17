@@ -36,6 +36,17 @@
     .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--verde); background: #fff; box-shadow: 0 0 0 3px rgba(43,104,3,.1); }
     .form-group input.readonly { background: #f8fafc; color: #6b7280; cursor: not-allowed; }
 
+    /* BOTÕES DE PAÍS */
+    .pais-btn { border: 2px solid #e2e8f0; border-radius: 12px; padding: 16px 12px; text-align: center; cursor: pointer; transition: all .2s; background: #fafafa; }
+    .pais-btn:hover { border-color: var(--verde); background: #f0f7eb; transform: translateY(-1px); }
+    .pais-btn.ativo { border-color: var(--verde); background: #f0f7eb; box-shadow: 0 0 0 3px rgba(43,104,3,.1); }
+    .pais-flag { font-size: 28px; margin-bottom: 6px; }
+    .pais-nome { font-size: 13px; font-weight: 700; color: #374151; }
+    .pais-btn.ativo .pais-nome { color: var(--verde); }
+
+    /* ANIMAÇÃO ENDEREÇO */
+    #secaoEndereco { transition: all .3s ease; overflow: hidden; }
+
     .hint { font-size: 11px; color: #9ca3af; margin-top: 2px; }
 
     /* BOTÃO */
@@ -138,52 +149,68 @@
       <div class="form-card">
         <div class="form-card-titulo">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          Endereço Completo
+          País de Vínculo
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>País <span class="req">*</span></label>
-            <select name="endereco_pais" id="selectPais" onchange="toggleCampos()" required>
-              <option value="Brasil" <%= (palestrante.endereco_pais||'Brasil')==='Brasil'?'selected':'' %>>Brasil</option>
-              <option value="Paraguay" <%= palestrante.endereco_pais==='Paraguay'?'selected':'' %>>Paraguay</option>
-              <option value="Outro" <%= (palestrante.endereco_pais && palestrante.endereco_pais!=='Brasil' && palestrante.endereco_pais!=='Paraguay')?'selected':'' %>>Outro</option>
-            </select>
-          </div>
-          <div class="form-group" id="grupoCep">
-            <label>CEP</label>
-            <input type="text" name="endereco_cep" id="cep" value="<%= palestrante.endereco_cep||'' %>" placeholder="00000-000" oninput="buscarCep(this.value)">
-            <span class="hint">Digite o CEP para preencher automaticamente</span>
-          </div>
-        </div>
         <div class="form-row full">
           <div class="form-group">
-            <label>Rua / Avenida <span class="req">*</span></label>
-            <input type="text" name="endereco_rua" id="rua" value="<%= palestrante.endereco_rua||'' %>" required>
+            <label>Você é médico de qual país? <span class="req">*</span></label>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:4px;" id="paisBtns">
+              <div class="pais-btn <%= (palestrante.endereco_pais||'Brasil')==='Brasil'?'ativo':'' %>" onclick="setPais('Brasil')" data-pais="Brasil">
+                <div class="pais-flag">🇧🇷</div>
+                <div class="pais-nome">Brasil</div>
+              </div>
+              <div class="pais-btn <%= palestrante.endereco_pais==='Paraguay'?'ativo':'' %>" onclick="setPais('Paraguay')" data-pais="Paraguay">
+                <div class="pais-flag">🇵🇾</div>
+                <div class="pais-nome">Paraguay</div>
+              </div>
+              <div class="pais-btn <%= (palestrante.endereco_pais && palestrante.endereco_pais!=='Brasil' && palestrante.endereco_pais!=='Paraguay')?'ativo':'' %>" onclick="setPais('Outro')" data-pais="Outro">
+                <div class="pais-flag">🌎</div>
+                <div class="pais-nome">Otro país</div>
+              </div>
+            </div>
+            <input type="hidden" name="endereco_pais" id="selectPais" value="<%= palestrante.endereco_pais||'Brasil' %>">
           </div>
         </div>
-        <div class="form-row tri">
-          <div class="form-group">
-            <label>Número</label>
-            <input type="text" name="endereco_numero" value="<%= palestrante.endereco_numero||'' %>" placeholder="123">
+
+        <!-- ENDEREÇO — só para brasileiros -->
+        <div id="secaoEndereco">
+          <div class="form-row">
+            <div class="form-group" id="grupoCep">
+              <label>CEP</label>
+              <input type="text" name="endereco_cep" id="cep" value="<%= palestrante.endereco_cep||'' %>" placeholder="00000-000" oninput="buscarCep(this.value)">
+              <span class="hint">Digite o CEP para preencher automaticamente</span>
+            </div>
+            <div class="form-group">
+              <label>Estado</label>
+              <input type="text" name="endereco_estado" id="estado" value="<%= palestrante.endereco_estado||'' %>">
+            </div>
           </div>
-          <div class="form-group">
-            <label>Complemento</label>
-            <input type="text" name="endereco_complemento" value="<%= palestrante.endereco_complemento||'' %>" placeholder="Apto, Bloco...">
+          <div class="form-row full">
+            <div class="form-group">
+              <label>Rua / Avenida <span class="req">*</span></label>
+              <input type="text" name="endereco_rua" id="rua" value="<%= palestrante.endereco_rua||'' %>">
+            </div>
           </div>
-          <div class="form-group">
-            <label>Bairro</label>
-            <input type="text" name="endereco_bairro" id="bairro" value="<%= palestrante.endereco_bairro||'' %>">
+          <div class="form-row tri">
+            <div class="form-group">
+              <label>Número</label>
+              <input type="text" name="endereco_numero" value="<%= palestrante.endereco_numero||'' %>" placeholder="123">
+            </div>
+            <div class="form-group">
+              <label>Complemento</label>
+              <input type="text" name="endereco_complemento" value="<%= palestrante.endereco_complemento||'' %>" placeholder="Apto, Bloco...">
+            </div>
+            <div class="form-group">
+              <label>Bairro</label>
+              <input type="text" name="endereco_bairro" id="bairro" value="<%= palestrante.endereco_bairro||'' %>">
+            </div>
           </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Cidade <span class="req">*</span></label>
-            <input type="text" name="endereco_cidade" id="cidade" value="<%= palestrante.endereco_cidade||'' %>" required>
-          </div>
-          <div class="form-group">
-            <label>Estado / Departamento</label>
-            <input type="text" name="endereco_estado" id="estado" value="<%= palestrante.endereco_estado||'' %>">
+          <div class="form-row full">
+            <div class="form-group">
+              <label>Cidade <span class="req">*</span></label>
+              <input type="text" name="endereco_cidade" id="cidade" value="<%= palestrante.endereco_cidade||'' %>">
+            </div>
           </div>
         </div>
       </div>
@@ -216,10 +243,26 @@ async function buscarCep(cep){
   } catch(e){}
 }
 
+function setPais(pais){
+  document.getElementById('selectPais').value = pais;
+  document.querySelectorAll('.pais-btn').forEach(b => {
+    b.classList.toggle('ativo', b.dataset.pais === pais);
+  });
+  toggleCampos();
+}
+
 function toggleCampos(){
   const pais = document.getElementById('selectPais').value;
-  const grupoCep = document.getElementById('grupoCep');
-  grupoCep.style.display = pais === 'Brasil' ? '' : 'none';
+  const secao = document.getElementById('secaoEndereco');
+  const ruaInput = document.getElementById('rua');
+
+  if(pais === 'Brasil'){
+    secao.style.display = 'block';
+    if(ruaInput) ruaInput.required = true;
+  } else {
+    secao.style.display = 'none';
+    if(ruaInput) ruaInput.required = false;
+  }
 }
 
 // Submit com loading
@@ -229,7 +272,7 @@ document.getElementById('formPalestrante')?.addEventListener('submit', ()=>{
   btn.textContent = 'Enviando...';
 });
 
-toggleCampos();
+setPais(document.getElementById('selectPais').value || 'Brasil');
 </script>
 
 </body>
