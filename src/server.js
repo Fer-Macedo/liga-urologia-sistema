@@ -8,6 +8,7 @@ const path = require('path');
 const { initSchema } = require('./models/database');
 const routes = require('./routes/index');
 const { iniciarAgendamentos } = require('./services/agendamentos');
+const { agendarBackup } = require('./services/backup');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -46,6 +47,7 @@ async function start() {
   try {
     await initSchema();
     iniciarAgendamentos();
+    agendarBackup();
     app.listen(PORT, () => {
       console.log('\n🏥 Liga Urologia — Sistema de Cobranças');
       console.log('🌐 Porta: ' + PORT);
