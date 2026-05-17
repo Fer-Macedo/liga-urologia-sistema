@@ -5034,6 +5034,20 @@ router.get('/palestrantes', requireAuth, async (req, res) => {
   } catch(e) { res.send('ERRO: ' + e.message); }
 });
 
+
+router.post('/palestrantes/gerar-link', requireAuth, async (req, res) => {
+  try {
+    const { nome_completo, email, whatsapp } = req.body;
+    const token = require('crypto').randomBytes(32).toString('hex');
+    await query(
+      `INSERT INTO palestrantes (token_form,nome_completo,email,whatsapp,criado_por) VALUES ($1,$2,$3,$4,$5)`,
+      [token, nome_completo||null, email||null, whatsapp||null, req.session.usuario.id]
+    );
+    req.flash('msg', ['link:' + token]);
+    res.redirect('/palestrantes');
+  } catch(e) { req.flash('erro', [e.message]); res.redirect('/palestrantes'); }
+});
+
 router.post('/palestrantes/novo', requireAuth, async (req, res) => {
   try {
     const { nome_completo, email, whatsapp, rg_ci, especialidade, instituicao,
