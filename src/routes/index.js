@@ -5139,5 +5139,38 @@ router.post('/palestrante/form/:token', async (req, res) => {
 });
 
 
-rotaBackupManual(router, requireAdmin);
+
+// BACKUP MANUAL
+router.get('/admin/backup/download', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const tabelas = ['usuarios','configuracoes','membros','diretivos','cobrancas','fluxo_caixa','eventos','evento_lotes','evento_inscricoes','evento_pagamentos','evento_certificados','evento_campos','evento_cupons','evento_programacao','evento_palestrantes','evento_patrocinadores','listas_assinaturas','desvinculacoes','cartas_cobranca','calendario_atividades','calendario_categorias','sorteios','sorteio_participantes','palestrantes','marketing_posts','marketing_midias','marketing_config','contratos_diretivos'];
+    const linhas = ['-- BACKUP LAURO ' + new Date().toISOString(), 'BEGIN;'];
+    for (const t of tabelas) {
+      try {
+        const ex = await query('SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)', [t]);
+        if (!ex.rows[0].exists) continue;
+        const r = await query('SELECT * FROM ' + t + ' ORDER BY 1');
+        linhas.push('-- ' + t + ' (' + r.rows.length + ' registros)');
+        for (const row of r.rows) {
+          const cols = Object.keys(row).map(c => '"' + c + '"').join(', ');
+          const vals = Object.values(row).map(v => {
+            if (v === null) return 'NULL';
+            if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
+            if (typeof v === 'number') return String(v);
+            if (v instanceof Date) return "'" + v.toISOString() + "'";
+            return "'" + String(v).replace(/'/g, "''") + "'";
+          }).join(', ');
+          linhas.push('INSERT INTO ' + t + ' (' + cols + ') VALUES (' + vals + ') ON CONFLICT DO NOTHING;');
+        }
+      } catch(e) { linhas.push('-- ERRO ' + t + ': ' + e.message); }
+    }
+    linhas.push('COMMIT;');
+    const dataStr = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="backup-lauro-' + dataStr + '.sql"');
+    res.send(linhas.join('\n'));
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
+
 module.exports = router;
