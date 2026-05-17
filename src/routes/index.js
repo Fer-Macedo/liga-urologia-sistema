@@ -5139,4 +5139,5 @@ router.post('/palestrante/form/:token', async (req, res) => {
 });
 
 
+rotaBackupManual(router, requireAdmin);
 module.exports = router;
