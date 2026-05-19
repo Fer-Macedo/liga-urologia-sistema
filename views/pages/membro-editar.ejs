@@ -4,11 +4,70 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Editar Membro — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
   <style>
-    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
-    .phone-wrap { display:flex; gap:8px; align-items:flex-start; }
-    .phone-pais { width:180px; flex-shrink:0; }
-    .phone-numero { flex:1; }
+    :root { --cor-primaria: <%= config.org_cor || '#2b6803' %>; }
+
+    .edit-wrap { max-width: 860px; margin: 0 auto; padding: 0 32px 48px; }
+
+    /* CARD DO FORMULÁRIO */
+    .edit-card { background: #fff; border-radius: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.07); overflow: hidden; margin-bottom: 20px; }
+    .edit-card-head { padding: 18px 24px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; }
+    .edit-card-head-icon { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, var(--cor-primaria), #1a4002); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .edit-card-head-titulo { font-size: 14px; font-weight: 700; color: #1a2e0e; }
+    .edit-card-body { padding: 24px; }
+
+    /* GRID DE CAMPOS */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .form-grid .full { grid-column: 1 / -1; }
+    .form-grid .tri { grid-column: span 1; }
+
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group label { font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: .4px; }
+    .form-group .req { color: #dc2626; }
+    .form-group input, .form-group select, .form-group textarea {
+      border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 10px 14px;
+      font-size: 14px; color: #1f2937; transition: .2s; background: #fafafa;
+      font-family: inherit; width: 100%;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none; border-color: var(--cor-primaria); background: #fff;
+      box-shadow: 0 0 0 3px rgba(43,104,3,.08);
+    }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .form-hint { font-size: 11px; color: #9ca3af; margin-top: 2px; }
+
+    /* WHATSAPP */
+    .phone-wrap { display: flex; gap: 8px; }
+    .phone-pais { width: 190px; flex-shrink: 0; }
+    .phone-numero { flex: 1; }
+    .phone-preview { font-size: 11px; color: var(--cor-primaria); font-weight: 600; margin-top: 4px; }
+
+    /* STATUS BADGE */
+    .status-wrap { display: flex; gap: 10px; }
+    .status-opt { flex: 1; }
+    .status-opt input[type=radio] { display: none; }
+    .status-opt label {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px; border: 2px solid #e2e8f0; border-radius: 10px;
+      font-size: 13px; font-weight: 600; color: #6b7280; cursor: pointer; transition: .2s;
+    }
+    .status-opt input[type=radio]:checked + label.ativo { border-color: #16a34a; background: #dcfce7; color: #16a34a; }
+    .status-opt input[type=radio]:checked + label.inativo { border-color: #dc2626; background: #fee2e2; color: #dc2626; }
+
+    /* AVATAR DO MEMBRO */
+    .membro-avatar { width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(135deg, var(--cor-primaria), #1a4002); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: #fff; flex-shrink: 0; }
+
+    /* RODAPÉ DE AÇÕES */
+    .edit-footer { display: flex; justify-content: flex-end; gap: 10px; padding-top: 8px; }
+    .btn-cancelar { background: #f1f5f9; color: #374151; border: none; border-radius: 10px; padding: 11px 22px; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+    .btn-salvar { background: linear-gradient(135deg, var(--cor-primaria), #1a4002); color: #fff; border: none; border-radius: 10px; padding: 11px 28px; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(43,104,3,.25); transition: .2s; }
+    .btn-salvar:hover { filter: brightness(.92); transform: translateY(-1px); }
+
+    .flash-ok  { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; font-size: 14px; font-weight: 600; }
+    .flash-err { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; font-size: 14px; font-weight: 600; }
+
+    @media(max-width:768px){ .edit-wrap{padding:0 16px 40px;} .form-grid{grid-template-columns:1fr;} .form-grid .full{grid-column:1;} .phone-pais{width:150px;} }
   </style>
 </head>
 <body>
@@ -16,121 +75,178 @@
   <%- include('../partials/sidebar', { paginaAtual: 'membros' }) %>
   <main class="main">
     <div class="topbar">
-      <h1 class="page-titulo">Editar membro</h1>
-      <a href="/membros" class="btn">← Voltar</a>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <a href="/membros" style="color:#6b7280;font-size:13px;text-decoration:none;display:flex;align-items:center;gap:4px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Ligantes
+        </a>
+        <h1 class="page-titulo" style="margin:0">Editar Ligante</h1>
+      </div>
     </div>
+
     <div class="content">
-      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
-      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
-      <div class="config-secao">
+      <div class="edit-wrap">
+
+        <% if(msg && msg.length){ %><div class="flash-ok"><%= msg[0] %></div><% } %>
+        <% if(erro && erro.length){ %><div class="flash-err"><%= erro[0] %></div><% } %>
+
         <form action="/membros/<%= membro.id %>/editar" method="POST" id="formMembro">
-          <div class="form-grid">
-            <div class="campo full">
-              <label class="label">Nome completo *</label>
-              <input name="nome" class="input" value="<%= membro.nome %>" required>
-            </div>
-            <div class="campo">
-              <label class="label">CPF</label>
-              <input name="cpf" class="input" value="<%= membro.cpf || '' %>" placeholder="000.000.000-00">
-            </div>
-            <div class="campo">
-              <label class="label">Data de nascimento</label>
-              <input name="data_nascimento" type="date" class="input" value="<%= membro.data_nascimento || '' %>">
-            </div>
-            <div class="campo">
-              <label class="label">E-mail</label>
-              <input name="email" type="email" class="input" value="<%= membro.email || '' %>">
-            </div>
 
-            <!-- CAMPO WHATSAPP INTERNACIONAL -->
-            <div class="campo full">
-              <label class="label">WhatsApp</label>
-              <div class="phone-wrap">
-                <select id="paisCodigo" class="input phone-pais" onchange="atualizarWhatsapp()">
-                  <option value="55" data-flag="🇧🇷">🇧🇷 Brasil (+55)</option>
-                  <option value="595" data-flag="🇵🇾">🇵🇾 Paraguai (+595)</option>
-                  <option value="54" data-flag="🇦🇷">🇦🇷 Argentina (+54)</option>
-                  <option value="598" data-flag="🇺🇾">🇺🇾 Uruguai (+598)</option>
-                  <option value="591" data-flag="🇧🇴">🇧🇴 Bolívia (+591)</option>
-                  <option value="56" data-flag="🇨🇱">🇨🇱 Chile (+56)</option>
-                  <option value="57" data-flag="🇨🇴">🇨🇴 Colômbia (+57)</option>
-                  <option value="51" data-flag="🇵🇪">🇵🇪 Peru (+51)</option>
-                  <option value="58" data-flag="🇻🇪">🇻🇪 Venezuela (+58)</option>
-                  <option value="1" data-flag="🇺🇸">🇺🇸 EUA/Canadá (+1)</option>
-                  <option value="351" data-flag="🇵🇹">🇵🇹 Portugal (+351)</option>
-                  <option value="34" data-flag="🇪🇸">🇪🇸 Espanha (+34)</option>
-                  <option value="39" data-flag="🇮🇹">🇮🇹 Itália (+39)</option>
-                  <option value="49" data-flag="🇩🇪">🇩🇪 Alemanha (+49)</option>
-                  <option value="33" data-flag="🇫🇷">🇫🇷 França (+33)</option>
-                  <option value="44" data-flag="🇬🇧">🇬🇧 Reino Unido (+44)</option>
-                  <option value="81" data-flag="🇯🇵">🇯🇵 Japão (+81)</option>
-                  <option value="outro" data-flag="🌍">🌍 Outro país</option>
-                </select>
-                <input id="numeroWhatsapp" class="input phone-numero"
-                  placeholder="DDD + número"
-                  oninput="atualizarWhatsapp()">
+          <!-- IDENTIFICAÇÃO -->
+          <div class="edit-card">
+            <div class="edit-card-head">
+              <div class="edit-card-head-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               </div>
-              <input type="hidden" name="whatsapp" id="whatsappFinal">
-              <div id="previewWhatsapp" style="font-size:11px;color:var(--texto2);margin-top:4px"></div>
+              <div>
+                <div class="edit-card-head-titulo">Dados Pessoais</div>
+              </div>
+              <div style="margin-left:auto;display:flex;align-items:center;gap:10px;">
+                <div class="membro-avatar"><%= membro.nome.charAt(0).toUpperCase() %></div>
+                <div>
+                  <div style="font-size:14px;font-weight:700;color:#1a2e0e"><%= membro.nome.split(' ').slice(0,2).join(' ') %></div>
+                  <div style="font-size:11px;color:#9ca3af">ID #<%= membro.id %></div>
+                </div>
+              </div>
             </div>
+            <div class="edit-card-body">
+              <div class="form-grid">
+                <div class="form-group full">
+                  <label>Nome completo <span class="req">*</span></label>
+                  <input name="nome" value="<%= membro.nome %>" required placeholder="Nome completo do ligante">
+                </div>
+                <div class="form-group">
+                  <label>CPF</label>
+                  <input name="cpf" value="<%= membro.cpf || '' %>" placeholder="000.000.000-00">
+                </div>
+                <div class="form-group">
+                  <label>Data de nascimento</label>
+                  <input name="data_nascimento" type="date" value="<%= membro.data_nascimento ? new Date(membro.data_nascimento).toISOString().slice(0,10) : '' %>">
+                </div>
+                <div class="form-group">
+                  <label>E-mail</label>
+                  <input name="email" type="email" value="<%= membro.email || '' %>" placeholder="email@exemplo.com">
+                </div>
+                <div class="form-group">
+                  <label>WhatsApp</label>
+                  <div class="phone-wrap">
+                    <select id="paisCodigo" class="phone-pais" onchange="atualizarWhatsapp()">
+                      <option value="55">🇧🇷 Brasil (+55)</option>
+                      <option value="595">🇵🇾 Paraguay (+595)</option>
+                      <option value="54">🇦🇷 Argentina (+54)</option>
+                      <option value="598">🇺🇾 Uruguai (+598)</option>
+                      <option value="591">🇧🇴 Bolívia (+591)</option>
+                      <option value="56">🇨🇱 Chile (+56)</option>
+                      <option value="57">🇨🇴 Colômbia (+57)</option>
+                      <option value="51">🇵🇪 Peru (+51)</option>
+                      <option value="58">🇻🇪 Venezuela (+58)</option>
+                      <option value="1">🇺🇸 EUA/Canadá (+1)</option>
+                      <option value="351">🇵🇹 Portugal (+351)</option>
+                      <option value="34">🇪🇸 Espanha (+34)</option>
+                      <option value="outro">🌍 Outro</option>
+                    </select>
+                    <input id="numeroWhatsapp" class="phone-numero" placeholder="DDD + número" oninput="atualizarWhatsapp()">
+                  </div>
+                  <input type="hidden" name="whatsapp" id="whatsappFinal">
+                  <div class="phone-preview" id="previewWhatsapp"></div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-            <div class="campo">
-              <label class="label">Mensalidade (R$)</label>
-              <input name="mensalidade" type="number" step="0.01" class="input" value="<%= membro.mensalidade %>">
+          <!-- FINANCEIRO -->
+          <div class="edit-card">
+            <div class="edit-card-head">
+              <div class="edit-card-head-icon" style="background:linear-gradient(135deg,#0369a1,#0c4a6e)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+              </div>
+              <div class="edit-card-head-titulo">Dados Financeiros</div>
             </div>
-            <div class="campo">
-              <label class="label">Desconto pontualidade (%)</label>
-              <input name="desconto_pontualidade" type="number" class="input" value="<%= membro.desconto_pontualidade %>">
-            </div>
-            <div class="campo">
-              <label class="label">Dia de vencimento</label>
-              <input name="dia_vencimento" type="number" min="1" max="28" class="input" value="<%= membro.dia_vencimento %>">
-            </div>
-            <div class="campo">
-              <label class="label">Status</label>
-              <select name="ativo" class="input">
-                <option value="1" <%= membro.ativo == 1 ? 'selected' : '' %>>Ativo</option>
-                <option value="0" <%= membro.ativo == 0 ? 'selected' : '' %>>Inativo</option>
-              </select>
-            </div>
-            <div class="campo full">
-              <label class="label">Observações</label>
-              <textarea name="observacoes" class="input" rows="3"><%= membro.observacoes || '' %></textarea>
+            <div class="edit-card-body">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label>Mensalidade (R$)</label>
+                  <input name="mensalidade" type="number" step="0.01" value="<%= membro.mensalidade %>" placeholder="0,00">
+                </div>
+                <div class="form-group">
+                  <label>Desconto pontualidade (%)</label>
+                  <input name="desconto_pontualidade" type="number" value="<%= membro.desconto_pontualidade %>" placeholder="0">
+                </div>
+                <div class="form-group">
+                  <label>Dia de vencimento</label>
+                  <input name="dia_vencimento" type="number" min="1" max="28" value="<%= membro.dia_vencimento %>" placeholder="15">
+                  <span class="form-hint">Entre 1 e 28</span>
+                </div>
+                <div class="form-group">
+                  <label>Status</label>
+                  <div class="status-wrap">
+                    <div class="status-opt">
+                      <input type="radio" name="ativo" value="1" id="sAtivo" <%= membro.ativo == 1 ? 'checked' : '' %>>
+                      <label for="sAtivo" class="ativo">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        Ativo
+                      </label>
+                    </div>
+                    <div class="status-opt">
+                      <input type="radio" name="ativo" value="0" id="sInativo" <%= membro.ativo == 0 ? 'checked' : '' %>>
+                      <label for="sInativo" class="inativo">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        Inativo
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px">
-            <a href="/membros" class="btn">Cancelar</a>
-            <button type="submit" class="btn btn-primario">Salvar alterações</button>
+
+          <!-- OBSERVAÇÕES -->
+          <div class="edit-card">
+            <div class="edit-card-head">
+              <div class="edit-card-head-icon" style="background:linear-gradient(135deg,#7c3aed,#4c1d95)">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              </div>
+              <div class="edit-card-head-titulo">Observações</div>
+            </div>
+            <div class="edit-card-body">
+              <div class="form-group">
+                <label>Observações internas</label>
+                <textarea name="observacoes" rows="3" placeholder="Anotações sobre o ligante..."><%= membro.observacoes || '' %></textarea>
+              </div>
+            </div>
           </div>
+
+          <!-- RODAPÉ -->
+          <div class="edit-footer">
+            <a href="/membros" class="btn-cancelar">Cancelar</a>
+            <button type="submit" class="btn-salvar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+              Salvar alterações
+            </button>
+          </div>
+
         </form>
       </div>
     </div>
   </main>
 </div>
-<script src="/js/app.js"></script>
+
 <script>
-// Carrega o numero atual do membro
 const whatsappAtual = '<%= membro.whatsapp || "" %>'.replace(/\D/g,'');
 
 function detectarPaisENumero(numero) {
   const codigos = ['595','351','598','591','55','56','57','51','58','54','44','49','33','39','34','81','1'];
   for (const cod of codigos) {
-    if (numero.startsWith(cod)) {
-      return { codigo: cod, numero: numero.slice(cod.length) };
-    }
+    if (numero.startsWith(cod)) return { codigo: cod, numero: numero.slice(cod.length) };
   }
   return { codigo: '55', numero: numero };
 }
 
-// Inicializa o campo com o valor atual
 if (whatsappAtual) {
   const { codigo, numero } = detectarPaisENumero(whatsappAtual);
-  const select = document.getElementById('paisCodigo');
-  for (let i = 0; i < select.options.length; i++) {
-    if (select.options[i].value === codigo) {
-      select.selectedIndex = i;
-      break;
-    }
+  const sel = document.getElementById('paisCodigo');
+  for (let i = 0; i < sel.options.length; i++) {
+    if (sel.options[i].value === codigo) { sel.selectedIndex = i; break; }
   }
   document.getElementById('numeroWhatsapp').value = numero;
   atualizarWhatsapp();
@@ -141,23 +257,18 @@ function atualizarWhatsapp() {
   const numero = document.getElementById('numeroWhatsapp').value.replace(/\D/g,'');
   const preview = document.getElementById('previewWhatsapp');
   const hidden = document.getElementById('whatsappFinal');
-
   if (pais === 'outro') {
-    // Campo livre para digitar o numero completo com codigo do pais
-    document.getElementById('numeroWhatsapp').placeholder = 'Código do país + número completo';
+    document.getElementById('numeroWhatsapp').placeholder = 'Código do país + número';
     hidden.value = numero;
-    preview.textContent = numero ? 'Número completo: +' + numero : '';
+    preview.textContent = numero ? 'Número: +' + numero : '';
   } else {
     document.getElementById('numeroWhatsapp').placeholder = 'DDD + número';
-    const completo = pais + numero;
-    hidden.value = completo;
-    preview.textContent = numero ? 'Número completo: +' + completo : '';
+    hidden.value = pais + numero;
+    preview.textContent = numero ? 'Número completo: +' + pais + numero : '';
   }
 }
 
-// Garante que o whatsapp seja enviado antes do submit
-document.getElementById('formMembro').addEventListener('submit', function() {
-  atualizarWhatsapp();
-});
+document.getElementById('formMembro').addEventListener('submit', atualizarWhatsapp);
 </script>
-</body></html>
+</body>
+</html>
