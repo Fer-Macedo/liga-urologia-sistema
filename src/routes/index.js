@@ -4150,10 +4150,13 @@ router.get('/contratos/:id/pdf', requireAuth, async (req, res) => {
     const footerTemplate = timbB64 ? '<div style="font-size:10px;width:210mm;height:38mm;margin:0;padding:0"><img src="'+timbB64+'" style="width:210mm;height:38mm;object-fit:cover;object-position:bottom"></div>' : '<div></div>';
     const puppeteer = require('puppeteer-core');
     const chromium = require('@sparticuz/chromium');
+    chromium.setHeadlessMode = true;
+    chromium.setGraphicsMode = false;
+    const execPath = await chromium.executablePath();
     const browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath: await chromium.executablePath(),
-      headless: chromium.headless
+      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      executablePath: execPath,
+      headless: 'new'
     });
     const page = await browser.newPage();
     await page.setContent(html, { waitUntil: 'networkidle0' });
