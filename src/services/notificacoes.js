@@ -3,14 +3,65 @@ const nodemailer = require('nodemailer');
 const { query } = require('../models/database');
 require('dotenv').config();
 
-function formatarNumero(numero) {
-  const d = numero.replace(/\D/g, '');
-  if (d.length > 11) return d;
-  if (d.length >= 10) return '55' + d;
-  return d;
+// ─── FILA DE ENVIO WHATSAPP ───────────────────────────────────────────────────
+// Evita banimento enviando em lotes com intervalos seguros
+// Configurações: WAPP_LOTE_TAM (padrão 5), WAPP_INTERVALO_MSG (padrão 30s), WAPP_INTERVALO_LOTE (padrão 120s)
+
+const filaEnvio = [];
+let filaProcessando = false;
+
+const LOTE_TAM         = parseInt(process.env.WAPP_LOTE_TAM)        || 5;   // msgs por lote
+const INTERVALO_MSG    = parseInt(process.env.WAPP_INTERVALO_MSG)    || 30;  // segundos entre mensagens
+const INTERVALO_LOTE   = parseInt(process.env.WAPP_INTERVALO_LOTE)  || 120; // segundos entre lotes
+
+function sleep(segundos) {
+  return new Promise(r => setTimeout(r, segundos * 1000));
 }
 
-async function enviarWhatsApp(numero, mensagem) {
+async function processarFila() {
+  if (filaProcessando || filaEnvio.length === 0) return;
+  filaProcessando = true;
+  console.log(`[FILA WAPP] Iniciando envio de ${filaEnvio.length} mensagem(ns) em lotes de ${LOTE_TAM}`);
+
+  let enviados = 0;
+  let erros = 0;
+
+  while (filaEnvio.length > 0) {
+    const lote = filaEnvio.splice(0, LOTE_TAM);
+
+    for (let i = 0; i < lote.length; i++) {
+      const { numero, mensagem, resolve } = lote[i];
+      try {
+        const result = await _enviarWhatsAppDireto(numero, mensagem);
+        resolve(result);
+        if (result.ok) enviados++;
+        else erros++;
+      } catch(e) {
+        resolve({ ok: false });
+        erros++;
+      }
+
+      // Intervalo entre mensagens dentro do lote (exceto na última)
+      if (i < lote.length - 1) {
+        const intervalo = INTERVALO_MSG + Math.floor(Math.random() * 10); // +0-10s aleatório
+        console.log(`[FILA WAPP] Aguardando ${intervalo}s antes da próxima...`);
+        await sleep(intervalo);
+      }
+    }
+
+    // Intervalo entre lotes (se ainda houver mensagens)
+    if (filaEnvio.length > 0) {
+      console.log(`[FILA WAPP] Lote concluído. Aguardando ${INTERVALO_LOTE}s antes do próximo lote... (${filaEnvio.length} restantes)`);
+      await sleep(INTERVALO_LOTE);
+    }
+  }
+
+  console.log(`[FILA WAPP] Envio concluído — ${enviados} ok, ${erros} erros`);
+  filaProcessando = false;
+}
+
+// Envia direto para a W-API (sem fila)
+async function _enviarWhatsAppDireto(numero, mensagem) {
   const token = process.env.ZAPAPI_TOKEN;
   const instanceId = process.env.ZAPAPI_INSTANCE;
   if (!token || !instanceId) { console.warn('W-API nao configurada'); return { ok: false }; }
@@ -21,13 +72,44 @@ async function enviarWhatsApp(numero, mensagem) {
       { phone: fone, message: mensagem, instanceId: instanceId, delayMessage: 1 },
       { headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, timeout: 20000 }
     );
-    console.log('WhatsApp OK ' + status);
+    console.log('WhatsApp OK ' + fone + ' — ' + status);
     return { ok: true, data };
   } catch (err) {
-    console.error('W-API ERRO: ' + (err.response ? err.response.status : err.message));
+    console.error('W-API ERRO ' + fone + ': ' + (err.response ? err.response.status : err.message));
     return { ok: false };
   }
 }
+
+// Adiciona à fila (para disparos em massa — cobranças, eventos, etc)
+async function enviarWhatsAppFila(numero, mensagem) {
+  return new Promise(resolve => {
+    filaEnvio.push({ numero, mensagem, resolve });
+    // Inicia processamento se ainda não está rodando
+    setTimeout(processarFila, 100);
+  });
+}
+
+// Envio imediato SEM fila (para mensagens urgentes/individuais)
+async function enviarWhatsApp(numero, mensagem, opts = {}) {
+  if (opts.urgente) {
+    // Urgente = direto, sem esperar fila (ex: confirmação de inscrição individual)
+    return await _enviarWhatsAppDireto(numero, mensagem);
+  }
+  // Padrão: passa pela fila para segurança
+  return await enviarWhatsAppFila(numero, mensagem);
+}
+
+// Info da fila (para exibir no painel admin)
+function statusFila() {
+  return {
+    na_fila: filaEnvio.length,
+    processando: filaProcessando,
+    config: { lote_tam: LOTE_TAM, intervalo_msg: INTERVALO_MSG, intervalo_lote: INTERVALO_LOTE }
+  };
+}
+
+
+// [função enviarWhatsApp substituída pela versão com fila acima]
 
 async function enviarEmail(opts) {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return { ok: false };
@@ -278,4 +360,4 @@ async function notificarAniversario(opts) {
   }
 }
 
-module.exports = { enviarWhatsApp, enviarEmail, notificarCobranca, notificarAniversario };
+module.exports = { enviarWhatsApp, enviarWhatsAppFila, enviarEmail, notificarCobranca, notificarAniversario, statusFila };
