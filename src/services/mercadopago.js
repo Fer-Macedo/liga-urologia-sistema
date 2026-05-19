@@ -72,7 +72,11 @@ async function criarPreferencia({ membro, valor, vencimento, referencia }) {
       },
       external_reference: referencia,
       expires: true,
-      expiration_date_to: vencimento + 'T23:59:59.000-03:00',
+      expiration_date_to: (() => {
+      const d = new Date(vencimento + 'T23:59:59.000-03:00');
+      d.setDate(d.getDate() + 60);
+      return d.toISOString().replace('Z', '-03:00');
+    })(),
       back_urls: {
         success: appUrl + '/cobrancas?pago=sim',
         failure: appUrl + '/cobrancas?pago=nao',
