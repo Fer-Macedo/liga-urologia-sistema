@@ -1712,7 +1712,7 @@ router.post('/eventos/:id/enviar-link-live', requireAuth, async (req, res) => {
       else { await query('INSERT INTO evento_presencas_online (inscricao_id,evento_id,token) VALUES ($1,$2,$3)',[insc.id,ev.id,token]); }
       const link = appUrl+'/live/'+token;
       const msg = (config.org_nome||'LAURO')+'\n\nOla, '+insc.nome.split(' ')[0]+'!\n\nSeu link de acesso ao evento '+ev.nome+':\n\n'+link+'\n\nAcesse para assistir e registrar sua presenca automaticamente.';
-      if (insc.whatsapp) { try { await enviarWhatsApp(insc.whatsapp,msg); enviados++; await new Promise(r=>setTimeout(r,500)); } catch(e){} }
+      if (insc.whatsapp) { try { await enviarWhatsApp(insc.whatsapp,msg); enviados++; } catch(e){} }
       if (insc.email) {
         const html = '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:20px"><h2>'+ev.nome+'</h2><p>Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p><p>Clique para assistir e ter sua presenca registrada:</p><div style="text-align:center;margin:24px 0"><a href="'+link+'" style="background:#1a56db;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700">Assistir ao evento</a></div><p style="font-size:12px;color:#6b7280">Link exclusivo — nao compartilhe.</p></div>';
         try { await enviarEmail({para:insc.email,assunto:'Seu link de acesso — '+ev.nome,html,texto:msg}); } catch(e){}
@@ -1781,7 +1781,7 @@ router.post('/eventos/:id/enviar-avaliacao', requireAuth, async (req, res) => {
       await query('INSERT INTO evento_avaliacoes (evento_id,inscricao_id,token) VALUES ($1,$2,$3) ON CONFLICT (token) DO NOTHING',[ev.id,insc.id,token]);
       const link = appUrl+'/avaliacao/'+token;
       const msg = (config.org_nome||'LAURO')+'\n\nOla, *'+insc.nome.split(' ')[0]+'*!\n\nObrigado por participar de *'+ev.nome+'*!\n\nResponda nossa pesquisa rapida:\n'+link+'\n\nLeva menos de 2 minutos!';
-      if (insc.whatsapp) { try { await enviarWhatsApp(insc.whatsapp,msg); enviados++; await new Promise(r=>setTimeout(r,400)); } catch(e){} }
+      if (insc.whatsapp) { try { await enviarWhatsApp(insc.whatsapp,msg); enviados++; } catch(e){} }
     }
     res.json({ok:true,msg:enviados+' pesquisas enviadas!'});
   } catch(e) { res.json({ok:false,msg:e.message}); }
@@ -3891,7 +3891,7 @@ router.post('/eventos/:id/cupons/gerar-ligantes-v2', requireAuth, async (req, re
       const msg = `*${orgNome}*\n\nOlá, *${p.nome.split(' ')[0]}*!\n\nVocê tem um *cupom de isenção 100%* para o evento:\n*${evento.nome}*\n\n🎫 Seu cupom: \`${codigoFinal}\`\n\n🔗 Inscreva-se em: ${appUrl}/inscricao/${req.params.id}\n\n_Cupom válido para uma inscrição._`;
 
       if (enviar_wpp === 'on' && p.whatsapp) {
-        try { await enviarWhatsApp(p.whatsapp, msg); enviados++; await new Promise(r=>setTimeout(r,600)); } catch(e) { erros.push(p.nome); }
+        try { await enviarWhatsApp(p.whatsapp, msg); enviados++; } catch(e) { erros.push(p.nome); }
       }
       if (enviar_email === 'on' && p.email) {
         const html = `<div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:20px">
