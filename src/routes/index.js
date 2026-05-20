@@ -788,15 +788,34 @@ router.post('/membros/:id/editar', requireAuth, requireFinanceiro, async (req, r
 router.get('/cobrancas', requireAuth, requirePermissao('cobrancas'), async (req, res) => {
   const config = await getConfig();
   const filtro = req.query.filtro || 'todas';
+
+  // Totais globais — sempre fixos nos cards
+  const [tPagas, tPendentes, tAtrasadas, tTodas] = await Promise.all([
+    query("SELECT COUNT(*) n, COALESCE(SUM(c.valor_desconto),0) soma FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='pago' AND m.ativo=1"),
+    query("SELECT COUNT(*) n FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='pendente' AND m.ativo=1"),
+    query("SELECT COUNT(*) n FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='atrasado' AND m.ativo=1"),
+    query("SELECT COUNT(*) n FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE m.ativo=1"),
+  ]);
+
+  // Lista filtrada
   let where = '';
   if (filtro === 'pagas') where = "WHERE c.status='pago' AND m.ativo=1";
   else if (filtro === 'pendentes') where = "WHERE c.status='pendente' AND m.ativo=1";
   else if (filtro === 'atrasadas') where = "WHERE c.status='atrasado' AND m.ativo=1";
-  else where = "WHERE m.ativo=1"; // todas — só membros ativos
+  else where = "WHERE m.ativo=1";
+
   const r = await query(
     'SELECT c.*, m.nome, m.whatsapp, m.email FROM cobrancas c JOIN membros m ON m.id=c.membro_id ' + where + ' ORDER BY c.data_vencimento DESC LIMIT 100'
   );
-  res.render('pages/cobrancas', { config, usuario: req.session.usuario, cobrancas: r.rows, filtro, dayjs, msg: req.flash('msg'), erro: req.flash('erro') });
+
+  res.render('pages/cobrancas', {
+    config, usuario: req.session.usuario, cobrancas: r.rows, filtro, dayjs,
+    msg: req.flash('msg'), erro: req.flash('erro'),
+    totalPagas: parseInt(tPagas.rows[0].n), somaPagas: parseFloat(tPagas.rows[0].soma),
+    totalPendentes: parseInt(tPendentes.rows[0].n),
+    totalAtrasadas: parseInt(tAtrasadas.rows[0].n),
+    totalTodas: parseInt(tTodas.rows[0].n),
+  });
 });
 
 router.post('/cobrancas/:id/confirmar', requireAuth, requireFinanceiro, async (req, res) => {

@@ -28,6 +28,17 @@ app.use(session({
 app.use(flash());
 
 app.use((req, res, next) => {
+  // Timeout de inatividade: 30 minutos
+  if (req.session.usuario) {
+    const agora = Date.now();
+    const ultima = req.session.lastActivity || agora;
+    const inativo = agora - ultima;
+    if (inativo > 30 * 60 * 1000) {
+      req.session.destroy();
+      return res.redirect('/login?motivo=inatividade');
+    }
+    req.session.lastActivity = agora;
+  }
   res.locals.usuarioLogado = req.session.usuario || null;
   next();
 });
