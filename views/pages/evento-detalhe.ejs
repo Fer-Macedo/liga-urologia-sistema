@@ -629,13 +629,59 @@
 
       <!-- PAGAMENTOS -->
       <div class="tab-content" id="tab-pagamentos">
+        <!-- FILTROS PAGAMENTOS -->
+        <div style="background:var(--card);border:1px solid var(--borda);border-radius:8px;padding:16px;margin-bottom:14px">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+            <div style="flex:1;min-width:160px">
+              <label class="label">Buscar</label>
+              <input type="text" id="pg-busca" class="input" style="width:100%;font-size:13px" placeholder="Nome do inscrito..." oninput="filtrarPagamentos()">
+            </div>
+            <div style="min-width:120px">
+              <label class="label">Status</label>
+              <select id="pg-status" class="input" style="width:100%;font-size:13px" onchange="filtrarPagamentos()">
+                <option value="">Todos</option><option value="pago">Pago</option><option value="pendente">Pendente</option><option value="cancelado">Cancelado</option>
+              </select>
+            </div>
+            <div style="min-width:120px">
+              <label class="label">Método</label>
+              <select id="pg-metodo" class="input" style="width:100%;font-size:13px" onchange="filtrarPagamentos()">
+                <option value="">Todos</option><option value="pix">PIX</option><option value="cartao">Cartão</option>
+              </select>
+            </div>
+            <div style="min-width:130px">
+              <label class="label">Pago de</label>
+              <input type="date" id="pg-data-de" class="input" style="width:100%;font-size:13px" onchange="filtrarPagamentos()">
+            </div>
+            <div style="min-width:130px">
+              <label class="label">Pago até</label>
+              <input type="date" id="pg-data-ate" class="input" style="width:100%;font-size:13px" onchange="filtrarPagamentos()">
+            </div>
+            <div style="display:flex;gap:8px;align-items:flex-end">
+              <button class="btn btn-sm" onclick="limparFiltrosPagamentos()" style="white-space:nowrap">Limpar</button>
+            </div>
+          </div>
+          <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+            <div style="font-size:12px;color:var(--texto2)">Exibindo <span id="pg-count-filt" style="font-weight:700;color:var(--cor-primaria)">0</span> de <span id="pg-count-tot" style="font-weight:700"><%= pagamentos.length %></span> pagamentos</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:12px;color:var(--texto2)">Por página:</span>
+              <select id="pg-por-pagina" class="input" style="font-size:12px;padding:4px 8px;width:74px" onchange="filtrarPagamentos()">
+                <option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="9999">Todos</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <div class="section-card">
           <div class="section-header">Pagamentos</div>
-          <table class="tabela">
+          <table class="tabela" id="tabela-pagamentos">
             <thead><tr><th>Inscrito</th><th>Valor</th><th>Método</th><th>Status</th><th>Pago em</th><th>Ação</th></tr></thead>
             <tbody>
               <% pagamentos.forEach(pg => { %>
-              <tr>
+              <tr class="pagamento-row"
+                data-nome="<%= (pg.inscrito_nome||'').toLowerCase() %>"
+                data-status="<%= pg.status %>"
+                data-metodo="<%= pg.metodo||'' %>"
+                data-data="<%= pg.pago_em ? new Date(new Date(pg.pago_em).getTime() - new Date(pg.pago_em).getTimezoneOffset()*60000).toISOString().slice(0,10) : '' %>">
                 <td style="font-weight:600"><%= pg.inscrito_nome %></td>
                 <td>R$ <%= Number(pg.valor).toFixed(2) %></td>
                 <td><span style="background:<%= pg.metodo==='pix'?'#dcfce7':'#eff6ff' %>;color:<%= pg.metodo==='pix'?'#166534':'#1e40af' %>;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700"><%= pg.metodo==='pix'?'PIX':pg.metodo==='cartao'?'Cartão':'—' %></span></td>
@@ -646,9 +692,9 @@
               <% }) %>
             </tbody>
           </table>
+          <div id="pg-paginacao" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:16px 0;flex-wrap:wrap"></div>
         </div>
       </div>
-
       <!-- FINANCEIRO -->
       <div class="tab-content" id="tab-financeiro">
         <%
