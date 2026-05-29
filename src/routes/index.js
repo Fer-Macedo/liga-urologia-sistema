@@ -3630,6 +3630,63 @@ router.get('/eventos/:id/relatorio-pdf', requireAuth, async (req, res) => {
     res.send(html);
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
+router.get('/eventos/:id/inscritos-pdf', requireAuth, async (req, res) => {
+  try {
+    const [evR, inscrR, config] = await Promise.all([
+      query('SELECT * FROM eventos WHERE id=$1',[req.params.id]),
+      query("SELECT * FROM evento_inscricoes WHERE evento_id=$1 ORDER BY nome",[req.params.id]),
+      getConfig()
+    ]);
+    const ev = evR.rows[0];
+    if (!ev) return res.status(404).send('Evento nao encontrado');
+    const orgNome = config.org_nome||'LAURO';
+    const orgLogo = config.org_logo||null;
+    const dataEv = ev.data_inicio?new Date(ev.data_inicio).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):'';
+    const fBusca = (req.query.busca||'').toString().toLowerCase().trim();
+    const fStatus = (req.query.status||'').toString();
+    const fTipo = (req.query.tipo||'').toString();
+    const fLote = (req.query.lote||'').toString();
+    let inscritos = inscrR.rows.filter(i=>{
+      const nome=(i.nome||'').toLowerCase(), email=(i.email||'').toLowerCase();
+      const isento = i.isento ? 'isento' : 'pagante';
+      if (fBusca && !nome.includes(fBusca) && !email.includes(fBusca)) return false;
+      if (fStatus && i.status !== fStatus) return false;
+      if (fTipo && isento !== fTipo) return false;
+      if (fLote && String(i.lote_id||'') !== fLote) return false;
+      return true;
+    });
+    const filtros = [];
+    if (fStatus) filtros.push('Status: '+fStatus);
+    if (fTipo) filtros.push('Tipo: '+fTipo);
+    if (fLote) filtros.push('Lote selecionado');
+    if (fBusca) filtros.push('Busca: "'+fBusca+'"');
+    const filtroTxt = filtros.length ? filtros.join(' · ') : 'Todos os inscritos';
+    const linhas = inscritos.map((i,idx)=>{
+      const st=i.status||'';
+      const conf = st==='confirmado'; const canc = st==='cancelado';
+      const pillBg = conf?'#EDF6F1':canc?'#FBE9E7':'#FBF3E0';
+      const pillCo = conf?'#23704F':canc?'#C0392B':'#C98A1E';
+      const isentoTag = i.isento ? ` <span style="background:#FBF3E0;color:#C98A1E;padding:1px 6px;font-size:8px;font-weight:700;letter-spacing:.5px">ISENTO</span>` : '';
+      const chk = i.checkin_em ? new Date(i.checkin_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '—';
+      return `<tr style="background:${idx%2===0?'#F6F8F5':'#ffffff'}"><td style="padding:7px 10px;font-size:10.5px;color:#74837C">${idx+1}</td><td style="padding:7px 10px;font-size:11px;font-weight:600;color:#10201A">${i.nome||''}</td><td style="padding:7px 10px;font-size:10.5px;color:#3A4A43">${i.email||'—'}</td><td style="padding:7px 10px;font-size:10.5px;color:#3A4A43">${i.lote_nome||'—'}</td><td style="padding:7px 10px;text-align:center"><span style="background:${pillBg};color:${pillCo};padding:2px 8px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${st}</span>${isentoTag}</td><td style="padding:7px 10px;font-size:10.5px;text-align:center;color:${i.checkin_em?'#23704F':'#9ca3af'};font-weight:${i.checkin_em?'700':'400'}">${chk}</td></tr>`;
+    }).join('');
+    const estilos=`*{margin:0;padding:0;box-sizing:border-box}@page{size:A4;margin:0}body{font-family:'IBM Plex Sans',Arial,sans-serif;color:#10201A;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{.np{display:none}}.wrap{max-width:820px;margin:0 auto}.header{background:linear-gradient(135deg,#103024,#0C231B);padding:26px 34px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{display:flex;align-items:center;gap:14px}.logo-chip{width:54px;height:54px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}.logo-chip img{width:54px;height:54px;object-fit:cover;border-radius:50%}.org{font-family:'Archivo';font-weight:800;font-size:15px;letter-spacing:.3px;line-height:1.15}.org small{display:block;font-family:'IBM Plex Mono';font-size:8.5px;letter-spacing:2px;color:#37C98B;text-transform:uppercase;margin-top:4px;font-weight:500}.ev{text-align:right}.ev .nm{font-family:'Archivo';font-size:18px;font-weight:800;line-height:1.15}.ev .dt{font-size:11.5px;color:#A9C2B6;margin-top:5px;text-transform:capitalize}.ev .lc{font-size:10.5px;color:#7E988B;margin-top:1px}.meta{padding:14px 34px;background:#F2F4F0;border-bottom:1px solid #E2E6E1;display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}.meta .l{font-family:'IBM Plex Mono';font-size:9px;color:#74837C;text-transform:uppercase;letter-spacing:1px}.meta .v{font-family:'Archivo';font-size:14px;font-weight:800;color:#15402F;margin-top:3px}.section{padding:20px 34px}.sec-title{font-family:'Archivo';font-size:13px;font-weight:800;letter-spacing:.2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:7px;border-bottom:2px solid #2FA873;color:#10201A}table{width:100%;border-collapse:collapse;border:1px solid #E2E6E1}thead{display:table-header-group}thead th{background:#15402F;color:#fff;padding:9px 10px;font-family:'IBM Plex Mono';font-size:9px;text-align:left;text-transform:uppercase;letter-spacing:1px;font-weight:600}tbody td{border-bottom:1px solid #EDEFEC}tbody tr{page-break-inside:avoid}.foot{padding:16px 34px;border-top:1px solid #E2E6E1;font-family:'IBM Plex Mono';font-size:9px;color:#74837C;text-transform:uppercase;letter-spacing:1px;display:flex;justify-content:space-between;gap:12px}.btn-p{position:fixed;bottom:22px;right:22px;padding:12px 22px;background:#2FA873;color:#0C231B;border:none;cursor:pointer;font-family:'IBM Plex Sans';font-size:13px;font-weight:700;box-shadow:0 8px 24px -8px rgba(47,168,115,.8)}@media print{@page{margin:14mm 0 12mm}@page :first{margin:0 0 12mm}}`;
+    const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet"><style>${estilos}</style></head><body>
+<div class="wrap">
+  <div class="header"><div class="brand">${orgLogo?`<div class="logo-chip"><img src="${orgLogo}" alt=""></div>`:''}<div class="org">${orgNome}<small>Lista de Inscritos</small></div></div><div class="ev"><div class="nm">${ev.nome}</div><div class="dt">${dataEv}</div><div class="lc">${ev.local||''}</div></div></div>
+  <div class="meta"><div><div class="l">Registros</div><div class="v">${inscritos.length}</div></div><div style="text-align:right"><div class="l">Filtro aplicado</div><div class="v" style="font-size:11px;font-weight:600;color:#3A4A43;text-transform:none;font-family:'IBM Plex Sans'">${filtroTxt}</div></div></div>
+  <div class="section"><div class="sec-title">Inscritos (${inscritos.length})</div>
+    <table><thead><tr><th style="width:34px">#</th><th>Nome</th><th>Email</th><th>Lote</th><th style="text-align:center;width:90px">Status</th><th style="text-align:center;width:70px">Check-in</th></tr></thead><tbody>${linhas}</tbody></table>
+  </div>
+  <div class="foot"><span>${orgNome} · Gerado em ${new Date().toLocaleString('pt-BR')}</span><span>${ev.nome}</span></div>
+</div>
+<button class="btn-p np" onclick="window.print()">Imprimir / Salvar PDF</button>
+<script>window.onload=function(){setTimeout(function(){window.print();},500);};</script>
+</body></html>`;
+    res.setHeader('Content-Type','text/html; charset=utf-8');
+    res.send(html);
+  } catch(e) { res.status(500).send('Erro: '+e.message); }
+});
 router.get('/eventos/:id/inscricoes/:iid/cracha', requireAuth, async (req, res) => {
   try {
     const [inscR, evR, config] = await Promise.all([
