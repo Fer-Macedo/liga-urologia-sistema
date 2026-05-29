@@ -1,0 +1,86 @@
+/* ============================================================
+   TEMA LAURO — camada de override visual (verde/quadrado)
+   Carregar DEPOIS de style.css e admin-modern.css.
+   Reveste as classes legadas sem mexer no markup das páginas.
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap');
+
+:root{
+  --cor-primaria:#1C5A41 !important;
+  --cor:#1C5A41 !important;
+  --lauro-green-900:#0C231B; --lauro-green-700:#15402F; --lauro-green-600:#1C5A41;
+  --lauro-green-500:#23704F; --lauro-accent:#2FA873; --lauro-accent-br:#37C98B;
+  --lauro-ink:#10201A; --lauro-faint:#74837C; --lauro-line:#E2E6E1; --lauro-line2:#CDD4CE;
+  --lauro-paper:#F2F4F0; --lauro-amber:#C98A1E; --lauro-red:#C0392B; --lauro-purple:#6D4FB3;
+}
+
+/* ---- base ---- */
+body{
+  font-family:'IBM Plex Sans',system-ui,sans-serif !important;
+  color:var(--lauro-ink) !important;
+  background-color:var(--lauro-paper) !important;
+  background-image:linear-gradient(rgba(16,32,26,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(16,32,26,.022) 1px,transparent 1px) !important;
+  background-size:34px 34px !important;
+}
+
+/* ---- títulos ---- */
+.page-titulo,.section-header,.modal-titulo,h1.page-titulo{
+  font-family:'Archivo',sans-serif !important; font-weight:800 !important; letter-spacing:-.3px !important; color:var(--lauro-ink) !important;
+}
+
+/* ---- botões ---- */
+.btn,.btn-sm,.btn-primario{
+  border-radius:3px !important; font-family:'IBM Plex Sans',sans-serif !important; font-weight:600 !important;
+  transition:.16s ease !important;
+}
+.btn,.btn-sm{
+  background:#fff !important; color:var(--lauro-ink) !important; border:1px solid var(--lauro-line2) !important; box-shadow:none !important;
+}
+.btn:hover,.btn-sm:hover{ border-color:var(--lauro-accent) !important; color:var(--lauro-green-600) !important; }
+.btn-primario,.btn.btn-primario{
+  background:var(--lauro-accent) !important; color:var(--lauro-green-900) !important; border:1px solid var(--lauro-accent) !important;
+}
+.btn-primario:hover,.btn.btn-primario:hover{ background:var(--lauro-accent-br) !important; color:var(--lauro-green-900) !important; box-shadow:0 8px 20px -8px rgba(47,168,115,.6) !important; }
+
+/* ---- cards / superfícies ---- */
+.card,.stat-box,.stat-card,.table-moderna,.table-card,.modal,.box,.painel,.panel{
+  border-radius:3px !important; border:1px solid var(--lauro-line) !important;
+}
+.stat-box,.stat-card{ transition:border-color .18s,transform .18s,box-shadow .18s !important; }
+.stat-box:hover,.stat-card:hover{ transform:translateY(-3px) !important; box-shadow:0 12px 28px -14px rgba(16,32,26,.28) !important; border-color:var(--lauro-line2) !important; }
+.stat-box::before,.stat-card::before{ background:var(--lauro-accent) !important; }
+.stat-num{ font-family:'Archivo',sans-serif !important; font-weight:800 !important; letter-spacing:-1px !important; color:var(--lauro-ink) !important; }
+.stat-lab{ font-family:'IBM Plex Mono',monospace !important; letter-spacing:1.2px !important; }
+
+/* ---- abas ---- */
+.tab-nav,.ev-tabs{ border-bottom:1px solid var(--lauro-line) !important; }
+.tab-btn,.ev-tab{ font-family:'IBM Plex Sans',sans-serif !important; font-weight:600 !important; }
+.tab-btn.ativo,.ev-tab.ativo{ color:var(--lauro-green-600) !important; border-bottom-color:var(--lauro-accent) !important; }
+.tab-btn:hover,.ev-tab:hover{ color:var(--lauro-ink) !important; }
+
+/* ---- inputs ---- */
+.input,select.input,textarea.input,input.input{
+  border-radius:3px !important; border:1px solid var(--lauro-line2) !important; font-family:'IBM Plex Sans',sans-serif !important;
+}
+.input:focus,select.input:focus,textarea.input:focus{
+  border-color:var(--lauro-accent) !important; box-shadow:0 0 0 3px rgba(47,168,115,.12) !important; outline:none !important;
+}
+.label{ font-family:'IBM Plex Mono',monospace !important; letter-spacing:1px !important; text-transform:uppercase !important; font-size:10.5px !important; color:var(--lauro-faint) !important; }
+
+/* ---- tabelas ---- */
+.table-moderna thead th{ font-family:'IBM Plex Mono',monospace !important; letter-spacing:1.1px !important; }
+
+/* ---- alertas ---- */
+.alerta{ border-radius:3px !important; }
+.alerta-ok{ background:#EDF6F1 !important; color:var(--lauro-green-500) !important; border:1px solid rgba(35,112,79,.35) !important; }
+.alerta-erro{ background:#FBE9E7 !important; color:var(--lauro-red) !important; border:1px solid rgba(192,57,43,.3) !important; }
+
+/* ---- pills de status (eventos) ---- */
+.status-ativo,.evento-status.status-ativo{ background:#EDF6F1 !important; color:var(--lauro-green-500) !important; border-radius:3px !important; }
+.status-encerrado{ background:#FBE9E7 !important; color:var(--lauro-red) !important; border-radius:3px !important; }
+.status-cancelado{ background:#FBF3E0 !important; color:var(--lauro-amber) !important; border-radius:3px !important; }
+.status-rascunho{ background:#F1F3F1 !important; color:var(--lauro-faint) !important; border-radius:3px !important; }
+
+/* ---- modal ---- */
+.modal-overlay{ background:rgba(12,35,27,.55) !important; }
+.icon-btn{ border-radius:3px !important; }
