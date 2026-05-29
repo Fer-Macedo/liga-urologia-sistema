@@ -11,22 +11,24 @@ var nomeUsuario   = (L.usuario && (L.usuario.nome || L.usuario.usuario)) || 'Adm
 var perfilUsuario = (L.usuario && (L.usuario.perfil || L.usuario.cargo)) || 'ADMIN';
 var orgNome       = (L.config && L.config.org_nome) || 'LAURO — Liga Acadêmica de Urologia';
 var dataHoje      = L.dataHoje || (function(){
-  try { return new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }
+  try { return new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'America/Asuncion'}); }
   catch(e){ return ''; }
 })();
 
-var totMembros    = (L.totalMembros    != null) ? L.totalMembros    : (L.totalMembrosAtivos != null ? L.totalMembrosAtivos : 0);
-var pagosN        = (L.pagamentosEmDia  != null) ? L.pagamentosEmDia : (L.totalPagas != null ? L.totalPagas : 0);
-var pagosValor    = (L.valorRecebido    != null) ? L.valorRecebido   : (L.somaPagas  != null ? L.somaPagas  : 0);
-var pendN         = (L.pendentes        != null) ? L.pendentes       : (L.totalPendentes != null ? L.totalPendentes : 0);
-var pendValor     = (L.valorPendente    != null) ? L.valorPendente   : 0;
-var atrasoN       = (L.emAtraso         != null) ? L.emAtraso         : (L.totalAtrasadas != null ? L.totalAtrasadas : 0);
-var atrasoValor   = (L.valorAtraso      != null) ? L.valorAtraso      : 0;
+var num = function(v){ var n = parseInt(v,10); return isNaN(n) ? 0 : n; };
+var S = L.stats || {};
+var totMembros    = num(S.total);
+var pagosN        = num(S.pagos);
+var pagosValor    = (S.totalRecebido != null) ? S.totalRecebido : 0;
+var pendN         = num(S.pendentes);
+var pendValor     = (S.totalPendente != null) ? S.totalPendente : 0;
+var atrasoN       = num(S.atrasados);
+var atrasoValor   = (S.totalAtrasado != null) ? S.totalAtrasado : 0;
 
 var brl = function(v){ try { return Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); } catch(e){ return '0,00'; } };
 
-var cobrancasRecentes = Array.isArray(L.cobrancasRecentes) ? L.cobrancasRecentes : [];
-var proxAniversarios  = Array.isArray(L.proximosAniversarios) ? L.proximosAniversarios : [];
+var cobrancasRecentes = Array.isArray(L.recentes) ? L.recentes : (Array.isArray(L.cobrancasRecentes) ? L.cobrancasRecentes : []);
+var proxAniversarios  = Array.isArray(L.aniversariantes) ? L.aniversariantes : (Array.isArray(L.proximosAniversarios) ? L.proximosAniversarios : []);
 
 /* permissões: se houver lista, filtra a sidebar; senão mostra tudo */
 var perms = (L.usuario && Array.isArray(L.usuario.permissoes)) ? L.usuario.permissoes : null;
@@ -287,11 +289,14 @@ var pode = function(mod){ return !perms || perms.indexOf(mod) !== -1; };
                  var st = (c.status||'').toLowerCase();
                  var pillCls = st.indexOf('atras')>-1 ? 'late' : (st.indexOf('pend')>-1 ? 'soon' : 'ok');
                  var pillTxt = st.indexOf('atras')>-1 ? 'Em atraso' : (st.indexOf('pend')>-1 ? 'Pendente' : 'Pago');
+                 var valor = (c.valor_desconto != null && Number(c.valor_desconto) > 0) ? c.valor_desconto : c.valor_cheio;
+                 var quando = '';
+                 try { if (L.dayjs && c.criado_em) quando = L.dayjs(c.criado_em).format('DD/MM/YYYY'); } catch(e){}
             %>
             <div class="row">
               <div class="row-ic"><svg viewBox="0 0 24 24" class="ic"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.3 3-5.5 7-5.5s7 2.2 7 5.5"/></svg></div>
-              <div class="row-main"><b><%= c.nome || 'Membro' %></b><span><%= (c.metodo||'PIX') %><% if (c.data) { %> · <%= c.data %><% } %></span></div>
-              <div style="text-align:right"><div class="row-amt">R$ <%= brl(c.valor) %></div><span class="pill <%= pillCls %>"><%= pillTxt %></span></div>
+              <div class="row-main"><b><%= c.nome || 'Membro' %></b><span><%= quando %></span></div>
+              <div style="text-align:right"><div class="row-amt">R$ <%= brl(valor) %></div><span class="pill <%= pillCls %>"><%= pillTxt %></span></div>
             </div>
             <% }); %>
           <% } else { %>
@@ -305,11 +310,18 @@ var pode = function(mod){ return !perms || perms.indexOf(mod) !== -1; };
             <a href="/aniversarios">Ver todos <svg viewBox="0 0 24 24" class="ic"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div>
           <% if (proxAniversarios.length) { %>
-            <% proxAniversarios.slice(0,4).forEach(function(a){ %>
+            <% proxAniversarios.slice(0,4).forEach(function(a){
+                 var tipoTxt = (a.tipo === 'diretivo') ? 'Diretivo' : 'Ligante';
+                 var diaTxt = '';
+                 try {
+                   if (a.aniv) { var p = String(a.aniv).split('-'); diaTxt = p[1] + '/' + p[0]; }
+                   else if (L.dayjs && a.data_nascimento) { diaTxt = L.dayjs(a.data_nascimento).format('DD/MM'); }
+                 } catch(e){}
+            %>
             <div class="row">
               <div class="row-ic"><svg viewBox="0 0 24 24" class="ic"><rect x="4" y="9" width="16" height="11"/><path d="M4 13h16M12 9V6"/></svg></div>
-              <div class="row-main"><b><%= a.nome || 'Membro' %></b><span><%= a.detalhe || a.tipo || '' %></span></div>
-              <div style="text-align:right"><span class="pill soon"><%= a.dia || a.data || '' %></span></div>
+              <div class="row-main"><b><%= a.nome || 'Membro' %></b><span><%= tipoTxt %></span></div>
+              <div style="text-align:right"><span class="pill soon"><%= diaTxt %></span></div>
             </div>
             <% }); %>
           <% } else { %>
