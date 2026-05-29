@@ -51,7 +51,7 @@
       <h1 class="page-titulo">Presenças — <%= evento.nome %></h1>
       <div class="topbar-acoes">
         <a href="/eventos/<%= evento.id %>" class="btn btn-sm">Voltar</a>
-        <button onclick="window.print()" class="btn btn-sm">Imprimir</button>
+        <a href="/eventos/<%= evento.id %>/presencas-pdf" target="_blank" class="btn btn-sm">Imprimir</a>
       </div>
     </div>
 
