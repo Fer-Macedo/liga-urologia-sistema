@@ -389,7 +389,7 @@
                 <% if(l.data_inicio){%><div style="font-size:11px;color:var(--texto2);margin-top:2px"><%= new Date(l.data_inicio).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) %> até <%= new Date(l.data_fim).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) %></div><%}%>
               </div>
               <div style="display:flex;gap:6px">
-                <button onclick="editarLote(<%= l.id %>,'<%= l.nome %>',<%= l.preco %>,<%= l.vagas %>,'<%= l.data_inicio?new Date(l.data_inicio).toISOString().slice(0,16):'' %>','<%= l.data_fim?new Date(l.data_fim).toISOString().slice(0,16):'' %>')" class="btn-xs azul">Editar</button>
+        <button onclick="editarLote(<%= l.id %>,'<%= l.nome %>',<%= l.preco %>,<%= l.vagas %>,'<%= l.data_inicio? new Date(new Date(l.data_inicio).getTime() - new Date(l.data_inicio).getTimezoneOffset()*60000).toISOString().slice(0,16):'' %>','<%= l.data_fim? new Date(new Date(l.data_fim).getTime() - new Date(l.data_fim).getTimezoneOffset()*60000).toISOString().slice(0,16):'' %>')" class="btn-xs azul">Editar</button>
                 <form method="POST" action="/eventos/<%= evento.id %>/lotes/<%= l.id %>/deletar" onsubmit="return confirm('Excluir lote?')" style="display:inline">
                   <button type="submit" class="btn-xs verm">Excluir</button>
                 </form>
