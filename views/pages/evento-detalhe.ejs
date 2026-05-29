@@ -703,8 +703,8 @@
           pagsPagos.forEach(p => {
             const v = Number(p.valor) || 0;
             bruto += v;
-            if (p.metodo === 'pix') taxas += v * 0.0099;
-            else if (p.metodo === 'cartao') taxas += v * 0.0299 + 0.40;
+           if (p.metodo === 'pix') taxas += v * 0.018;
+            else if (p.metodo === 'cartao') taxas += v * 0.04;
           });
           const liquido = bruto - taxas;
           const taxaPct = bruto > 0 ? (taxas / bruto * 100) : 0;
