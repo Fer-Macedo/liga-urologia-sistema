@@ -81,6 +81,14 @@ body{
 .status-cancelado{ background:#FBF3E0 !important; color:var(--lauro-amber) !important; border-radius:3px !important; }
 .status-rascunho{ background:#F1F3F1 !important; color:var(--lauro-faint) !important; border-radius:3px !important; }
 
+/* ---- cards de cor por classe (check-in e outras telas) ---- */
+.stat-card.azul::before{ background:var(--lauro-accent) !important; opacity:1 !important; }
+.stat-card.verde::before{ background:var(--lauro-accent) !important; opacity:1 !important; }
+.stat-card.amr::before{ background:var(--lauro-amber) !important; opacity:1 !important; }
+.stat-card.azul .stat-num{ color:var(--lauro-green-600) !important; }
+.stat-card.verde .stat-num{ color:var(--lauro-green-500) !important; }
+.stat-card.amr .stat-num{ color:var(--lauro-amber) !important; }
+
 /* ---- modal ---- */
 .modal-overlay{ background:rgba(12,35,27,.55) !important; }
 .icon-btn{ border-radius:3px !important; }
