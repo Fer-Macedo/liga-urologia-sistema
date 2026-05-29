@@ -1419,5 +1419,56 @@ function imprimirInscritos(){
 }
 document.addEventListener('DOMContentLoaded', function(){ if(document.getElementById('tabela-inscritos')) filtrarInscritos(); });
 </script>
+<script>
+// ===== Filtros + paginação da aba Pagamentos =====
+var _pgPagina = 1;
+var _pgFiltradas = [];
+function filtrarPagamentos() {
+  var busca = (document.getElementById('pg-busca')?.value || '').toLowerCase();
+  var status = document.getElementById('pg-status')?.value || '';
+  var metodo = document.getElementById('pg-metodo')?.value || '';
+  var de = document.getElementById('pg-data-de')?.value || '';
+  var ate = document.getElementById('pg-data-ate')?.value || '';
+  var rows = Array.prototype.slice.call(document.querySelectorAll('.pagamento-row'));
+  _pgFiltradas = rows.filter(function(r){
+    var n = r.dataset.nome||'';
+    if (busca && n.indexOf(busca)<0) return false;
+    if (status && r.dataset.status !== status) return false;
+    if (metodo && r.dataset.metodo !== metodo) return false;
+    var d = r.dataset.data || '';
+    if (de && (!d || d < de)) return false;
+    if (ate && (!d || d > ate)) return false;
+    return true;
+  });
+  _pgPagina = 1;
+  renderPagamentos();
+}
+function renderPagamentos() {
+  var pp = parseInt(document.getElementById('pg-por-pagina')?.value) || 25;
+  var total = _pgFiltradas.length;
+  var totalP = Math.ceil(total / pp) || 1;
+  if (_pgPagina > totalP) _pgPagina = totalP;
+  var ini = (_pgPagina - 1) * pp, fim = ini + pp;
+  document.querySelectorAll('.pagamento-row').forEach(function(r){ r.style.display='none'; });
+  _pgFiltradas.forEach(function(r,i){ r.style.display = (i>=ini && i<fim) ? '' : 'none'; });
+  var cf = document.getElementById('pg-count-filt'); if (cf) cf.textContent = total;
+  var pi = document.getElementById('pg-paginacao');
+  if (!pi) return;
+  var bs = 'display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 8px;border-radius:3px;border:1px solid var(--borda);background:var(--card);color:var(--texto2);font-size:12px;font-weight:600;cursor:pointer;';
+  var ba = 'display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 8px;border-radius:3px;border:1px solid var(--cor-primaria);background:var(--cor-primaria);color:#fff;font-size:12px;font-weight:700;cursor:pointer;';
+  var h = '<button onclick="pgPag(-1)" style="'+bs+'" '+(_pgPagina<=1?'disabled':'')+'>&#8592;</button>';
+  var start = Math.max(1, _pgPagina-2), end = Math.min(totalP, start+4);
+  if (end-start<4) start = Math.max(1, end-4);
+  if (start>1) { h += '<button onclick="pgNum(1)" style="'+bs+'">1</button>'; if (start>2) h += '<span style="padding:0 4px;color:var(--texto2)">...</span>'; }
+  for (var p=start; p<=end; p++) h += '<button onclick="pgNum('+p+')" style="'+(_pgPagina===p?ba:bs)+'">'+p+'</button>';
+  if (end<totalP) { if (end<totalP-1) h += '<span style="padding:0 4px;color:var(--texto2)">...</span>'; h += '<button onclick="pgNum('+totalP+')" style="'+bs+'">'+totalP+'</button>'; }
+  h += '<button onclick="pgPag(1)" style="'+bs+'" '+(_pgPagina>=totalP?'disabled':'')+'>&#8594;</button>';
+  pi.innerHTML = h;
+}
+function pgNum(n){ var pp=parseInt(document.getElementById('pg-por-pagina')?.value)||25; var tp=Math.ceil(_pgFiltradas.length/pp)||1; _pgPagina=Math.max(1,Math.min(tp,n)); renderPagamentos(); document.getElementById('tabela-pagamentos')?.scrollIntoView({behavior:'smooth',block:'start'}); }
+function pgPag(d){ pgNum(_pgPagina + d); }
+function limparFiltrosPagamentos(){ ['pg-busca','pg-status','pg-metodo','pg-data-de','pg-data-ate'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); filtrarPagamentos(); }
+document.addEventListener('DOMContentLoaded', function(){ if(document.getElementById('tabela-pagamentos')) filtrarPagamentos(); });
+</script>
 </body>
 </html>
