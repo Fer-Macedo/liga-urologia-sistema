@@ -322,7 +322,7 @@
                   <input type="hidden" name="descricao" id="descricao-hidden">
                 </div>
                 <div class="campo"><label class="label">Data/hora início</label><input type="datetime-local" name="data_inicio" class="input" value="<%= evento.data_inicio? new Date(new Date(evento.data_inicio).getTime() - new Date(evento.data_inicio).getTimezoneOffset()*60000).toISOString().slice(0,16):'' %>"></div>
-                <div class="campo"><label class="label">Data/hora fim</label><input type="datetime-local" name="data_fim" class="input" value="<%= evento.data_fim?new Date(evento.data_fim).toISOString().slice(0,16):'' %>"></div>
+              <div class="campo"><label class="label">Data/hora fim</label><input type="datetime-local" name="data_fim" class="input" value="<%= evento.data_fim? new Date(new Date(evento.data_fim).getTime() - new Date(evento.data_fim).getTimezoneOffset()*60000).toISOString().slice(0,16):'' %>"></div>
                 <div class="campo"><label class="label">Local</label><input name="local" class="input" value="<%= evento.local||'' %>"></div>
                 <div class="campo"><label class="label">Total de vagas</label><input type="number" name="vagas_total" class="input" value="<%= evento.vagas_total %>"></div>
                 <div class="campo"><label class="label">Endereço</label><input name="endereco" class="input" value="<%= evento.endereco||'' %>"></div>
