@@ -3589,8 +3589,8 @@ router.get('/eventos/:id/relatorio-pdf', requireAuth, async (req, res) => {
     let bruto=0, taxas=0;
     pagamentos.forEach(p=>{
       const v=Number(p.valor)||0; bruto+=v;
-      if(p.metodo==='pix') taxas+=v*0.0099;
-      else if(p.metodo==='cartao') taxas+=v*0.0299+0.40;
+     if(p.metodo==='pix') taxas+=v*0.018;
+      else if(p.metodo==='cartao') taxas+=v*0.04;
     });
     const liquido = bruto-taxas;
     const brl = (v)=>Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
