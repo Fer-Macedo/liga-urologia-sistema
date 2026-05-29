@@ -1309,5 +1309,61 @@ function enviarLinksLive() {
     });
 }
 </script>
+<script>
+// ===== Filtros + paginação + impressão da aba Inscritos =====
+var _insPagina = 1;
+var _insFiltradas = [];
+function filtrarInscritos() {
+  var busca = (document.getElementById('ins-busca')?.value || '').toLowerCase();
+  var status = document.getElementById('ins-status')?.value || '';
+  var tipo = document.getElementById('ins-tipo')?.value || '';
+  var lote = document.getElementById('ins-lote')?.value || '';
+  var rows = Array.prototype.slice.call(document.querySelectorAll('.inscrito-row'));
+  _insFiltradas = rows.filter(function(r){
+    var n = r.dataset.nome||'', e = r.dataset.email||'';
+    if (busca && n.indexOf(busca)<0 && e.indexOf(busca)<0) return false;
+    if (status && r.dataset.status !== status) return false;
+    if (tipo && r.dataset.isento !== tipo) return false;
+    if (lote && String(r.dataset.lote||'') !== lote) return false;
+    return true;
+  });
+  _insPagina = 1;
+  renderInscritos();
+}
+function renderInscritos() {
+  var pp = parseInt(document.getElementById('ins-por-pagina')?.value) || 25;
+  var total = _insFiltradas.length;
+  var totalP = Math.ceil(total / pp) || 1;
+  if (_insPagina > totalP) _insPagina = totalP;
+  var ini = (_insPagina - 1) * pp, fim = ini + pp;
+  document.querySelectorAll('.inscrito-row').forEach(function(r){ r.style.display='none'; });
+  _insFiltradas.forEach(function(r,i){ r.style.display = (i>=ini && i<fim) ? '' : 'none'; });
+  var cf = document.getElementById('ins-count-filt'); if (cf) cf.textContent = total;
+  var pi = document.getElementById('ins-paginacao');
+  if (!pi) return;
+  var bs = 'display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 8px;border-radius:3px;border:1px solid var(--borda);background:var(--card);color:var(--texto2);font-size:12px;font-weight:600;cursor:pointer;';
+  var ba = 'display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 8px;border-radius:3px;border:1px solid var(--cor-primaria);background:var(--cor-primaria);color:#fff;font-size:12px;font-weight:700;cursor:pointer;';
+  var h = '<button onclick="insPag(-1)" style="'+bs+'" '+(_insPagina<=1?'disabled':'')+'>&#8592;</button>';
+  var start = Math.max(1, _insPagina-2), end = Math.min(totalP, start+4);
+  if (end-start<4) start = Math.max(1, end-4);
+  if (start>1) { h += '<button onclick="insNum(1)" style="'+bs+'">1</button>'; if (start>2) h += '<span style="padding:0 4px;color:var(--texto2)">...</span>'; }
+  for (var p=start; p<=end; p++) h += '<button onclick="insNum('+p+')" style="'+(_insPagina===p?ba:bs)+'">'+p+'</button>';
+  if (end<totalP) { if (end<totalP-1) h += '<span style="padding:0 4px;color:var(--texto2)">...</span>'; h += '<button onclick="insNum('+totalP+')" style="'+bs+'">'+totalP+'</button>'; }
+  h += '<button onclick="insPag(1)" style="'+bs+'" '+(_insPagina>=totalP?'disabled':'')+'>&#8594;</button>';
+  pi.innerHTML = h;
+}
+function insNum(n){ var pp=parseInt(document.getElementById('ins-por-pagina')?.value)||25; var tp=Math.ceil(_insFiltradas.length/pp)||1; _insPagina=Math.max(1,Math.min(tp,n)); renderInscritos(); document.getElementById('tabela-inscritos')?.scrollIntoView({behavior:'smooth',block:'start'}); }
+function insPag(d){ insNum(_insPagina + d); }
+function limparFiltrosInscritos(){ ['ins-busca','ins-status','ins-tipo','ins-lote'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value=''; }); filtrarInscritos(); }
+function imprimirInscritos(){
+  var p = new URLSearchParams();
+  var b=document.getElementById('ins-busca')?.value||''; if(b)p.set('busca',b);
+  var s=document.getElementById('ins-status')?.value||''; if(s)p.set('status',s);
+  var t=document.getElementById('ins-tipo')?.value||''; if(t)p.set('tipo',t);
+  var l=document.getElementById('ins-lote')?.value||''; if(l)p.set('lote',l);
+  window.open('/eventos/<%= evento.id %>/inscritos-pdf?'+p.toString(),'_blank');
+}
+document.addEventListener('DOMContentLoaded', function(){ if(document.getElementById('tabela-inscritos')) filtrarInscritos(); });
+</script>
 </body>
 </html>
