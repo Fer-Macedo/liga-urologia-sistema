@@ -1,311 +1,231 @@
+<%
+var cfg = (typeof config !== 'undefined' && config) ? config : {};
+var orgNome = cfg.org_nome || 'LAURO — Liga Acadêmica de Urologia';
+var orgLogo = cfg.org_logo || '/img/logo-lauro.png';
+%>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Login — <%= config.org_nome || 'Liga Urologia' %></title>
+  <title>Login — <%= orgNome %></title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
   <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --ink:#10201A; --ink-soft:#3A4A43; --ink-faint:#74837C;
+      --line:#E2E6E1; --line-strong:#CDD4CE; --paper:#F2F4F0; --card:#FFFFFF;
+      --green-900:#0C231B; --green-800:#103024; --green-700:#15402F; --green-600:#1C5A41;
+      --green-500:#23704F; --accent:#2FA873; --accent-bright:#37C98B;
+      --red:#C0392B; --red-bg:#FBE9E7;
+    }
+    body{
+      font-family:'IBM Plex Sans',system-ui,sans-serif; color:var(--ink);
+      background:var(--paper); min-height:100vh; display:flex;
+      -webkit-font-smoothing:antialiased;
+    }
+    svg{display:block}
+    .ic{stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:square;stroke-linejoin:miter}
 
-    :root { --cor: <%= config.org_cor || '#1a56db' %>; }
+    /* ===== PAINEL ESQUERDO (marca) ===== */
+    .brand-panel{
+      flex:0 0 42%; max-width:520px; position:relative; overflow:hidden;
+      background:
+        radial-gradient(120% 130% at 0% 0%,rgba(47,168,115,.22),transparent 55%),
+        linear-gradient(150deg,var(--green-800),var(--green-900));
+      color:#fff; padding:48px 44px;
+      display:flex; flex-direction:column; justify-content:space-between;
+    }
+    .brand-panel::after{
+      content:""; position:absolute; inset:0; pointer-events:none;
+      background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+      background-size:46px 46px;
+      -webkit-mask:radial-gradient(120% 90% at 20% 10%,#000,transparent 75%);
+      mask:radial-gradient(120% 90% at 20% 10%,#000,transparent 75%);
+    }
+    .brand-top{position:relative;z-index:1;display:flex;align-items:center;gap:14px}
+    .brand-logo{
+      width:54px;height:54px;flex:0 0 54px;background:#fff;border:1px solid rgba(255,255,255,.14);
+      display:grid;place-items:center;overflow:hidden;
+    }
+    .brand-logo img{width:46px;height:46px;object-fit:contain;display:block}
+    .brand-top b{font-family:'Archivo';font-weight:800;font-size:17px;letter-spacing:.3px;line-height:1.1;display:block}
+    .brand-top span{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:2.5px;color:var(--accent-bright);text-transform:uppercase;display:block;margin-top:4px}
+    .brand-mid{position:relative;z-index:1}
+    .brand-tag{
+      display:inline-flex;align-items:center;gap:8px;
+      font-family:'IBM Plex Mono';font-size:10px;letter-spacing:2.5px;text-transform:uppercase;
+      color:var(--accent-bright);border:1px solid rgba(47,168,115,.4);padding:5px 11px;margin-bottom:20px;
+    }
+    .brand-tag .ic{width:13px;height:13px;stroke:var(--accent-bright)}
+    .brand-mid h2{font-family:'Archivo';font-weight:800;font-size:30px;line-height:1.1;letter-spacing:-.5px;max-width:11ch}
+    .brand-mid p{margin-top:14px;color:#A9C2B6;font-size:14px;line-height:1.6;max-width:34ch}
+    .brand-foot{position:relative;z-index:1;font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:1px;color:#5E7A6D}
 
-    body {
-      font-family: 'Outfit', system-ui, sans-serif;
-      background: #f1f5f9;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-    }
+    /* ===== LADO DIREITO (form) ===== */
+    .form-side{flex:1;display:flex;align-items:center;justify-content:center;padding:40px 24px}
+    .form-box{width:100%;max-width:380px;animation:rise .45s cubic-bezier(.16,1,.3,1) both}
+    @keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
 
-    /* CARD CENTRAL */
-    .card {
-      background: white;
-      border-radius: 20px;
-      padding: 48px 44px;
-      width: 100%;
-      max-width: 420px;
-      box-shadow:
-        0 1px 3px rgba(0,0,0,.06),
-        0 8px 32px rgba(0,0,0,.08),
-        0 24px 64px rgba(0,0,0,.05);
-      animation: slideUp .4s cubic-bezier(.16,1,.3,1) both;
-    }
+    .form-head{margin-bottom:26px}
+    .form-head h1{font-family:'Archivo';font-weight:800;font-size:24px;letter-spacing:-.4px;color:var(--ink)}
+    .form-head p{margin-top:6px;color:var(--ink-faint);font-size:13.5px}
 
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
+    .alerta{
+      display:flex;align-items:center;gap:9px;padding:11px 13px;font-size:13px;font-weight:500;
+      margin-bottom:18px;border:1px solid var(--line-strong);
     }
+    .alerta .ic{width:16px;height:16px;flex:0 0 16px}
+    .alerta-ok{background:#EDF6F1;color:var(--green-500);border-color:rgba(35,112,79,.35)}
+    .alerta-ok .ic{stroke:var(--green-500)}
+    .alerta-erro{background:var(--red-bg);color:var(--red);border-color:rgba(192,57,43,.3)}
+    .alerta-erro .ic{stroke:var(--red)}
 
-    /* LOGO */
-    .logo-area {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin-bottom: 32px;
-    }
+    .campo{margin-bottom:18px}
+    .label{display:block;font-family:'IBM Plex Mono';font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink-faint);margin-bottom:8px}
+    .campo-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+    .campo-row .label{margin:0}
+    .link-esqueceu{font-size:11.5px;font-weight:600;color:var(--accent);text-decoration:none;font-family:'IBM Plex Sans'}
+    .link-esqueceu:hover{color:var(--green-500)}
 
-    .logo-box {
-      width: 72px; height: 72px;
-      border-radius: 18px;
-      background: linear-gradient(135deg, var(--cor), #1e3a8a);
-      display: grid;
-      place-items: center;
-      margin-bottom: 16px;
-      box-shadow: 0 6px 20px rgba(26,86,219,.25);
-      overflow: hidden;
+    .input-wrap{position:relative;display:flex;align-items:center;border:1px solid var(--line-strong);background:#fff;transition:border-color .16s ease,box-shadow .16s ease}
+    .input-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(47,168,115,.12)}
+    .input-icon{display:grid;place-items:center;width:42px;flex:0 0 42px;color:var(--ink-faint)}
+    .input-icon .ic{width:18px;height:18px}
+    .input{
+      flex:1;width:100%;border:none;outline:none;background:none;
+      padding:12px 14px 12px 0; font-family:'IBM Plex Sans';font-size:14px;color:var(--ink);
     }
-    .logo-box img {
-      width: 60px; height: 60px;
-      object-fit: contain;
+    .input::placeholder{color:#AEB8B2}
+    .toggle-senha{
+      background:none;border:none;cursor:pointer;color:var(--ink-faint);
+      width:42px;flex:0 0 42px;display:grid;place-items:center;transition:color .15s;
     }
-    .logo-initials {
-      font-size: 26px;
-      font-weight: 800;
-      color: white;
-    }
+    .toggle-senha:hover{color:var(--ink)}
+    .toggle-senha .ic{width:18px;height:18px}
 
-    .org-nome {
-      font-size: 17px;
-      font-weight: 700;
-      color: #0f172a;
-      text-align: center;
-      letter-spacing: -.01em;
-      margin-bottom: 4px;
+    .btn-login{
+      width:100%;margin-top:6px;padding:13px;border:1px solid var(--accent);
+      background:var(--accent);color:var(--green-900);
+      font-family:'IBM Plex Sans';font-size:14px;font-weight:700;letter-spacing:.2px;
+      cursor:pointer;position:relative;overflow:hidden;
+      display:flex;align-items:center;justify-content:center;gap:9px;
+      transition:background .16s ease,box-shadow .16s ease,transform .12s ease;
     }
-    .org-sub {
-      font-size: 13px;
-      color: #94a3b8;
-      text-align: center;
-      font-weight: 400;
-    }
+    .btn-login .ic{width:17px;height:17px;stroke:var(--green-900)}
+    .btn-login:hover{background:var(--accent-bright);box-shadow:0 8px 20px -8px rgba(47,168,115,.7)}
+    .btn-login:active{transform:translateY(1px)}
+    .btn-login.loading{pointer-events:none;opacity:.85}
+    .btn-login.loading .btn-text,.btn-login.loading .ic{opacity:0}
+    .btn-login .spinner{display:none;position:absolute;inset:0;align-items:center;justify-content:center}
+    .btn-login.loading .spinner{display:flex}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .spinner-ring{width:18px;height:18px;border:2px solid rgba(12,35,27,.3);border-top-color:var(--green-900);border-radius:50%;animation:spin .7s linear infinite}
 
-    /* DIVISOR */
-    .divisor {
-      height: 1px;
-      background: #f1f5f9;
-      margin: 0 0 28px;
-    }
+    .rodape{margin-top:26px;text-align:center;font-family:'IBM Plex Mono';font-size:10px;letter-spacing:1px;color:var(--ink-faint)}
 
-    /* TÍTULO DO FORM */
-    .form-titulo {
-      font-size: 20px;
-      font-weight: 700;
-      color: #0f172a;
-      margin-bottom: 4px;
-      letter-spacing: -.01em;
-    }
-    .form-sub {
-      font-size: 13px;
-      color: #94a3b8;
-      margin-bottom: 24px;
-    }
-
-    /* ALERTAS */
-    .alerta {
-      border-radius: 10px;
-      padding: 11px 14px;
-      font-size: 13px;
-      font-weight: 500;
-      margin-bottom: 18px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .alerta-ok   { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
-    .alerta-erro { background: #fff1f2; color: #be123c; border: 1px solid #fecdd3; }
-
-    /* CAMPOS */
-    .campo { margin-bottom: 18px; }
-
-    .label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: #374151;
-      margin-bottom: 7px;
-    }
-
-    .input-wrap { position: relative; }
-
-    .input-icon {
-      position: absolute;
-      left: 13px;
-      top: 50%;
-      transform: translateY(-50%);
-      font-size: 15px;
-      color: #cbd5e1;
-      pointer-events: none;
-    }
-
-    .input {
-      width: 100%;
-      padding: 12px 14px 12px 40px;
-      background: #f8fafc;
-      border: 1.5px solid #e2e8f0;
-      border-radius: 10px;
-      font-family: 'Outfit', sans-serif;
-      font-size: 14px;
-      color: #0f172a;
-      outline: none;
-      transition: all .2s ease;
-    }
-    .input::placeholder { color: #cbd5e1; }
-    .input:focus {
-      background: white;
-      border-color: var(--cor);
-      box-shadow: 0 0 0 3px rgba(26,86,219,.10);
-    }
-
-    .toggle-senha {
-      position: absolute;
-      right: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      cursor: pointer;
-      font-size: 15px;
-      color: #cbd5e1;
-      padding: 0;
-      line-height: 1;
-      transition: color .15s;
-    }
-    .toggle-senha:hover { color: #64748b; }
-
-    .campo-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 7px;
-    }
-    .link-esqueceu {
-      font-size: 12.5px;
-      color: var(--cor);
-      text-decoration: none;
-      font-weight: 500;
-    }
-    .link-esqueceu:hover { text-decoration: underline; }
-
-    /* BOTÃO */
-    .btn-login {
-      width: 100%;
-      padding: 13px;
-      background: linear-gradient(135deg, #1a56db, #1e3a8a);
-      color: white;
-      font-family: 'Outfit', sans-serif;
-      font-size: 15px;
-      font-weight: 700;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: all .2s ease;
-      box-shadow: 0 4px 14px rgba(26,86,219,.3);
-      margin-top: 4px;
-      position: relative;
-      overflow: hidden;
-    }
-    .btn-login:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 8px 22px rgba(26,86,219,.4);
-    }
-    .btn-login:active { transform: translateY(0); }
-    .btn-login.loading { pointer-events: none; opacity: .8; }
-    .btn-login .btn-text { transition: opacity .2s; }
-    .btn-login .spinner { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; }
-    .btn-login.loading .btn-text { opacity: 0; }
-    .btn-login.loading .spinner { display: flex; }
-
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .spinner-ring {
-      width: 20px; height: 20px;
-      border: 2px solid rgba(255,255,255,.3);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin .7s linear infinite;
-    }
-
-    .rodape {
-      margin-top: 28px;
-      text-align: center;
-      font-size: 12px;
-      color: #cbd5e1;
+    @media(max-width:860px){
+      body{flex-direction:column}
+      .brand-panel{flex:none;max-width:none;width:100%;padding:26px 24px;flex-direction:row;align-items:center;justify-content:flex-start;gap:14px}
+      .brand-panel .brand-mid,.brand-panel .brand-foot{display:none}
+      .form-side{padding:34px 22px}
     }
   </style>
 </head>
 <body>
 
-  <div class="card">
-
-    <!-- LOGO -->
-    <div class="logo-area">
-      <div class="logo-box">
-        <% if (config.org_logo) { %>
-          <img src="<%= config.org_logo %>" alt="Logo">
-        <% } else { %>
-          <span class="logo-initials">LU</span>
-        <% } %>
+  <!-- ===== PAINEL DA MARCA ===== -->
+  <aside class="brand-panel">
+    <div class="brand-top">
+      <div class="brand-logo">
+        <% if (orgLogo) { %><img src="<%= orgLogo %>" alt="Logo"><% } %>
       </div>
-      <div class="org-nome"><%= config.org_nome || 'Liga Acadêmica de Urologia' %></div>
-      <div class="org-sub">Sistema de Gestão Interno</div>
+      <div>
+        <b>LAURO</b>
+        <span>Painel Interno</span>
+      </div>
     </div>
 
-    <div class="divisor"></div>
+    <div class="brand-mid">
+      <div class="brand-tag">
+        <svg viewBox="0 0 24 24" class="ic"><rect x="4" y="4" width="16" height="16"/><path d="M9 9h6v6H9z"/></svg>
+        Sistema de Gestão
+      </div>
+      <h2>Gestão acadêmica, no controle.</h2>
+      <p>Membros, eventos, cobranças e frequência da Liga Acadêmica de Urologia em um só painel.</p>
+    </div>
 
-    <div class="form-titulo">Entrar na sua conta</div>
-    <div class="form-sub">Preencha suas credenciais para acessar o painel.</div>
+    <div class="brand-foot"><%= orgNome %></div>
+  </aside>
 
-    <!-- ALERTAS -->
-    <% if (msg && msg.length > 0) { %>
-      <div class="alerta alerta-ok">✅ <%= msg[0] %></div>
-    <% } %>
-    <% if (erro && erro.length > 0) { %>
-      <div class="alerta alerta-erro">❌ <%= erro[0] %></div>
-    <% } %>
+  <!-- ===== FORMULÁRIO ===== -->
+  <main class="form-side">
+    <div class="form-box">
 
-    <!-- FORMULÁRIO -->
-    <form action="/login" method="POST" id="form-login">
-      <div class="campo">
-        <label class="label">E-mail</label>
-        <div class="input-wrap">
-          <span class="input-icon">✉️</span>
-          <input type="email" name="email" class="input"
-            placeholder="seu@email.com" required autofocus>
-        </div>
+      <div class="form-head">
+        <h1>Entrar na sua conta</h1>
+        <p>Preencha suas credenciais para acessar o painel.</p>
       </div>
 
-      <div class="campo">
-        <div class="campo-row">
-          <label class="label" style="margin:0">Senha</label>
-          <a href="/recuperar-senha" class="link-esqueceu">Esqueceu a senha?</a>
+      <% if (typeof msg !== 'undefined' && msg && msg.length > 0) { %>
+        <div class="alerta alerta-ok">
+          <svg viewBox="0 0 24 24" class="ic"><path d="M20 6L9 17l-5-5"/></svg>
+          <span><%= msg[0] %></span>
         </div>
-        <div class="input-wrap">
-          <span class="input-icon">🔒</span>
-          <input type="password" name="senha" class="input" id="campo-senha"
-            placeholder="••••••••" required>
-          <button type="button" class="toggle-senha" id="toggle-senha">👁️</button>
+      <% } %>
+      <% if (typeof erro !== 'undefined' && erro && erro.length > 0) { %>
+        <div class="alerta alerta-erro">
+          <svg viewBox="0 0 24 24" class="ic"><path d="M12 3L2 20h20z"/><path d="M12 10v5M12 17.5v.5"/></svg>
+          <span><%= erro[0] %></span>
         </div>
-      </div>
+      <% } %>
 
-      <button type="submit" class="btn-login" id="btn-entrar">
-        <span class="btn-text">Entrar no sistema →</span>
-        <span class="spinner"><div class="spinner-ring"></div></span>
-      </button>
-    </form>
+      <form action="/login" method="POST" id="form-login">
+        <div class="campo">
+          <label class="label">E-mail</label>
+          <div class="input-wrap">
+            <span class="input-icon"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="5" width="18" height="14"/><path d="M3 6l9 7 9-7"/></svg></span>
+            <input type="email" name="email" class="input" placeholder="seu@email.com" required autofocus>
+          </div>
+        </div>
 
-    <div class="rodape"><%= config.org_nome || 'LAURO' %> · Painel Interno</div>
-  </div>
+        <div class="campo">
+          <div class="campo-row">
+            <label class="label">Senha</label>
+            <a href="/recuperar-senha" class="link-esqueceu">Esqueceu a senha?</a>
+          </div>
+          <div class="input-wrap">
+            <span class="input-icon"><svg viewBox="0 0 24 24" class="ic"><rect x="4" y="10" width="16" height="11"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></span>
+            <input type="password" name="senha" class="input" id="campo-senha" placeholder="••••••••" required>
+            <button type="button" class="toggle-senha" id="toggle-senha" aria-label="Mostrar senha">
+              <svg viewBox="0 0 24 24" class="ic" id="eye-open"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg viewBox="0 0 24 24" class="ic" id="eye-off" style="display:none"><path d="M2 12s4-7 10-7c2 0 3.8.6 5.3 1.5M22 12s-4 7-10 7c-2 0-3.8-.6-5.3-1.5"/><path d="M9.5 9.5a3 3 0 0 0 4 4"/><path d="M3 3l18 18"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn-login" id="btn-entrar">
+          <span class="btn-text">Entrar no sistema</span>
+          <svg viewBox="0 0 24 24" class="ic"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          <span class="spinner"><span class="spinner-ring"></span></span>
+        </button>
+      </form>
+
+      <div class="rodape"><%= orgNome %> · Painel Interno</div>
+    </div>
+  </main>
 
   <script>
     document.getElementById('toggle-senha').addEventListener('click', function() {
-      const input = document.getElementById('campo-senha');
-      const isText = input.type === 'text';
-      input.type = isText ? 'password' : 'text';
-      this.textContent = isText ? '👁️' : '🙈';
+      var input = document.getElementById('campo-senha');
+      var open = document.getElementById('eye-open');
+      var off  = document.getElementById('eye-off');
+      var show = input.type === 'password';
+      input.type = show ? 'text' : 'password';
+      open.style.display = show ? 'none' : 'block';
+      off.style.display  = show ? 'block' : 'none';
     });
     document.getElementById('form-login').addEventListener('submit', function() {
       document.getElementById('btn-entrar').classList.add('loading');
