@@ -1,15 +1,104 @@
 <%
 const pa = typeof paginaAtual !== 'undefined' ? paginaAtual : '';
 const usuarioPerfil = (typeof usuario !== 'undefined' && usuario && usuario.perfil) ? usuario.perfil : 'visualizador';
-const orgLogo = (typeof config !== 'undefined' && config && config.org_logo) ? config.org_logo : null;
+const orgLogo = (typeof config !== 'undefined' && config && config.org_logo) ? config.org_logo : '/img/logo-lauro.png';
 const orgNome = (typeof config !== 'undefined' && config && config.org_nome) ? config.org_nome : 'LAURO';
 %>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* ===== NOVA SIDEBAR LAURO — autossuficiente, sobrepõe admin-modern.css ===== */
+aside.sidebar{
+  position:fixed; left:0; top:0; bottom:0; width:240px;
+  background:#0C231B; color:#CFE0D7;
+  display:flex; flex-direction:column;
+  border-right:1px solid #06160F; z-index:60;
+  font-family:'IBM Plex Sans',system-ui,sans-serif;
+}
+aside.sidebar a{ text-decoration:none; }
+aside.sidebar .sidebar-brand{
+  display:flex; align-items:center; gap:12px;
+  padding:18px 18px; border-bottom:1px solid rgba(255,255,255,.07);
+}
+aside.sidebar .sidebar-brand-logo{
+  width:44px; height:44px; flex:0 0 44px;
+  background:#fff; border:1px solid rgba(255,255,255,.12); border-radius:3px;
+  display:grid; place-items:center; overflow:hidden;
+  font-family:'Archivo'; font-weight:800; color:#15402F; font-size:15px;
+}
+aside.sidebar .sidebar-brand-logo img{ width:38px; height:38px; object-fit:contain; display:block; border-radius:0 !important; }
+aside.sidebar .sidebar-brand-text strong{
+  display:block; font-family:'Archivo'; font-weight:800; font-size:14px;
+  letter-spacing:.3px; color:#fff; line-height:1.15;
+}
+aside.sidebar .sidebar-brand-text span{
+  display:block; font-family:'IBM Plex Mono'; font-size:9.5px;
+  letter-spacing:2px; color:#2FA873; margin-top:3px; text-transform:uppercase;
+}
+aside.sidebar .sidebar-nav{ flex:1; overflow-y:auto; padding:12px 10px; }
+aside.sidebar .sidebar-nav::-webkit-scrollbar{ width:5px; }
+aside.sidebar .sidebar-nav::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.12); }
+aside.sidebar .nav-group{ margin-bottom:14px; }
+aside.sidebar .nav-group-title{
+  font-family:'IBM Plex Mono'; font-size:9.5px; letter-spacing:2.5px;
+  color:#5E7A6D; padding:0 10px 7px; text-transform:uppercase;
+}
+aside.sidebar .nav-item{
+  display:flex; align-items:center; gap:11px; padding:8px 10px;
+  color:#AFC4B9; font-size:13px; font-weight:500;
+  border-left:2px solid transparent; border-radius:0;
+  transition:color .16s ease, background .16s ease, border-color .16s ease;
+}
+aside.sidebar .nav-item:hover{
+  background:rgba(47,168,115,.10); color:#EAF4EE; border-left-color:#2E9168;
+}
+aside.sidebar .nav-item.ativo{
+  background:rgba(47,168,115,.16); color:#fff; border-left-color:#37C98B;
+}
+aside.sidebar .nav-icon{ display:flex; align-items:center; transition:color .16s ease, transform .16s ease; }
+aside.sidebar .nav-icon svg{ width:17px; height:17px; stroke-width:1.7; }
+aside.sidebar .nav-item:hover .nav-icon{ color:#37C98B; transform:translateX(1px); }
+aside.sidebar .nav-item.ativo .nav-icon{ color:#37C98B; }
+aside.sidebar .sidebar-footer{
+  border-top:1px solid rgba(255,255,255,.07); padding:14px 16px;
+  display:flex; align-items:center; gap:11px;
+}
+aside.sidebar .sidebar-user{ display:flex; align-items:center; gap:11px; min-width:0; }
+aside.sidebar .sidebar-user-avatar{
+  width:34px; height:34px; flex:0 0 34px; border-radius:3px;
+  background:#2FA873; color:#0C231B; display:grid; place-items:center;
+  font-family:'Archivo'; font-weight:800; font-size:15px;
+}
+aside.sidebar .sidebar-user-info{ min-width:0; }
+aside.sidebar .sidebar-user-info strong{ display:block; color:#fff; font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+aside.sidebar .sidebar-user-info span{ display:block; font-family:'IBM Plex Mono'; font-size:9px; letter-spacing:2px; color:#5E7A6D; text-transform:uppercase; }
+aside.sidebar .sidebar-logout{
+  margin-left:auto; color:#8FA89C; background:none;
+  border:1px solid rgba(255,255,255,.12); border-radius:0;
+  padding:7px 12px; font-size:11.5px; font-weight:600; font-family:'IBM Plex Sans';
+  transition:.16s ease; white-space:nowrap;
+}
+aside.sidebar .sidebar-logout:hover{ color:#fff; border-color:#C0392B; background:rgba(192,57,43,.18); }
+
+/* mobile: colapsa em coluna de ícones */
+@media (max-width:820px){
+  aside.sidebar{ width:64px; }
+  aside.sidebar .sidebar-brand{ justify-content:center; padding:14px 0; }
+  aside.sidebar .sidebar-brand-text,
+  aside.sidebar .sidebar-user-info,
+  aside.sidebar .nav-group-title,
+  aside.sidebar .sidebar-logout,
+  aside.sidebar .nav-item span:not(.nav-icon){ display:none !important; }
+  aside.sidebar .nav-item{ justify-content:center !important; padding:10px 0; }
+  aside.sidebar .sidebar-footer{ justify-content:center; }
+}
+</style>
 <aside class="sidebar">
 
+  <a href="/dashboard" style="text-decoration:none;color:inherit">
   <div class="sidebar-brand">
-    <div class="sidebar-brand-logo <%= orgLogo ? 'sidebar-brand-logo--img' : '' %>">
+    <div class="sidebar-brand-logo">
       <% if (orgLogo) { %>
-        <img src="<%= orgLogo %>" alt="Logo" style="width:34px;height:34px;object-fit:contain;display:block;border-radius:8px;">
+        <img src="<%= orgLogo %>" alt="Logo">
       <% } else { %>LU<% } %>
     </div>
     <div class="sidebar-brand-text">
@@ -17,12 +106,13 @@ const orgNome = (typeof config !== 'undefined' && config && config.org_nome) ? c
       <span>Painel Interno</span>
     </div>
   </div>
+  </a>
 
   <nav class="sidebar-nav">
 
     <div class="nav-group">
       <div class="nav-group-title">Visão geral</div>
-            <a href="/calendario" class="nav-item <%= pa === 'calendario' ? 'ativo' : '' %>">
+      <a href="/calendario" class="nav-item <%= pa === 'calendario' ? 'ativo' : '' %>">
         <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>
         <span>Calendário</span>
       </a>
@@ -42,7 +132,6 @@ const orgNome = (typeof config !== 'undefined' && config && config.org_nome) ? c
         <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></span>
         <span>Diretivos</span>
       </a>
-
       <a href="/aniversarios" class="nav-item <%= pa === 'aniversarios' ? 'ativo' : '' %>">
         <span class="nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3v4M8 3v4M3 11h18"/></svg></span>
         <span>Aniversários</span>
@@ -174,3 +263,38 @@ const orgNome = (typeof config !== 'undefined' && config && config.org_nome) ? c
     <a href="/logout" class="sidebar-logout">Sair</a>
   </div>
 </aside>
+
+<script>
+// Polling automático de pendências a cada 30 segundos
+(function() {
+  function verificarPendencias() {
+    fetch('/api/pendencias')
+      .then(r => r.json())
+      .then(data => {
+        const badgeLig = document.getElementById('badge-pendentes-ligantes');
+        if (badgeLig) { badgeLig.textContent = data.ligantes; badgeLig.style.display = data.ligantes > 0 ? 'inline-flex' : 'none'; }
+        const badgeDir = document.getElementById('badge-pendentes-diretivos');
+        if (badgeDir) { badgeDir.textContent = data.diretivos; badgeDir.style.display = data.diretivos > 0 ? 'inline-flex' : 'none'; }
+        const badgePal = document.getElementById('badge-pendentes-palestrantes');
+        if (badgePal) { badgePal.textContent = data.palestrantes; badgePal.style.display = data.palestrantes > 0 ? 'inline-flex' : 'none'; }
+        let alertaGlobal = document.getElementById('alerta-pendencias-global');
+        if (data.total > 0) {
+          if (!alertaGlobal) {
+            alertaGlobal = document.createElement('div');
+            alertaGlobal.id = 'alerta-pendencias-global';
+            alertaGlobal.style.cssText = 'position:fixed;top:16px;right:16px;background:#C98A1E;color:#fff;padding:12px 18px;font-size:13px;font-weight:700;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.25);cursor:pointer';
+            alertaGlobal.onclick = () => alertaGlobal.style.display = 'none';
+            document.body.appendChild(alertaGlobal);
+          }
+          alertaGlobal.textContent = data.total + ' pendencia(s) aguardando aprovacao - clique para fechar';
+          alertaGlobal.style.display = 'block';
+        } else if (alertaGlobal) {
+          alertaGlobal.style.display = 'none';
+        }
+      })
+      .catch(() => {});
+  }
+  verificarPendencias();
+  setInterval(verificarPendencias, 30000);
+})();
+</script>
