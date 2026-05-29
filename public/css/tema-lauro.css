@@ -85,7 +85,15 @@ body{
 .modal-overlay{ background:rgba(12,35,27,.55) !important; }
 .icon-btn{ border-radius:3px !important; }
 
-/* ---- cabeçalho: separar botões dos cards ---- */
-.topbar{ flex-wrap:wrap !important; gap:10px !important; padding-bottom:18px !important; margin-bottom:18px !important; border-bottom:1px solid var(--lauro-line) !important; align-items:center !important; }
-.topbar-acoes{ display:flex !important; flex-wrap:wrap !important; gap:8px !important; }
+/* ---- cabeçalho: destravar altura fixa (60px) do style.css e separar dos cards ---- */
+.topbar,.main .topbar,.main > .topbar{
+  height:auto !important; min-height:0 !important; max-height:none !important;
+  position:static !important; top:auto !important; z-index:auto !important;
+  flex-wrap:wrap !important; gap:12px !important;
+  padding:16px 28px !important; margin:0 0 18px !important;
+  border-bottom:1px solid var(--lauro-line) !important; align-items:center !important;
+  overflow:visible !important;
+}
+.topbar-acoes{ display:flex !important; flex-wrap:wrap !important; gap:8px !important; align-items:center !important; }
 .topbar .btn,.topbar .btn-sm{ margin:0 !important; }
+.content{ padding-top:8px !important; }
