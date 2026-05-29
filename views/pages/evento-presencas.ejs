@@ -133,7 +133,8 @@
               const segP = Number(i.segundos_presencial || 0);
               const segO = Number(i.segundos_online || 0);
               const seg = Math.max(segP, segO);
-              const tipo = segP > segO ? 'presencial' : segO > 0 ? 'online' : 'presencial';
+              const tipoEv = (evento.tipo_evento || 'presencial');
+              const tipo = segP > segO ? 'presencial' : segO > segP ? 'online' : (tipoEv === 'hibrido' ? '' : tipoEv);
               const minutos = Math.floor(seg / 60);
               const horas = Math.floor(minutos / 60);
               const mins = minutos % 60;
@@ -148,7 +149,7 @@
               </td>
               <td>
                 <span class="tipo-badge tipo-<%= tipo %>">
-                  <%= tipo === 'presencial' ? 'Presencial' : 'Online' %>
+                  <%= tipo === 'presencial' ? 'Presencial' : tipo === 'online' ? 'Online' : '—' %>
                 </span>
               </td>
               <td style="text-align:center;font-weight:600;font-family:'Outfit',sans-serif">
