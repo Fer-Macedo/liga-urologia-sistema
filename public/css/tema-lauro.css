@@ -85,9 +85,11 @@ body{
 .stat-card.azul::before{ background:var(--lauro-accent) !important; opacity:1 !important; }
 .stat-card.verde::before{ background:var(--lauro-accent) !important; opacity:1 !important; }
 .stat-card.amr::before{ background:var(--lauro-amber) !important; opacity:1 !important; }
+.stat-card.verm::before{ background:var(--lauro-red) !important; opacity:1 !important; }
 .stat-card.azul .stat-num{ color:var(--lauro-green-600) !important; }
 .stat-card.verde .stat-num{ color:var(--lauro-green-500) !important; }
 .stat-card.amr .stat-num{ color:var(--lauro-amber) !important; }
+.stat-card.verm .stat-num{ color:var(--lauro-red) !important; }
 
 /* ---- modal ---- */
 .modal-overlay{ background:rgba(12,35,27,.55) !important; }
