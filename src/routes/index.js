@@ -1757,6 +1757,65 @@ router.get('/eventos/:id/presencas', requireAuth, async (req, res) => {
     res.render('pages/evento-presencas',{config,evento:ev,inscricoes:inscrR.rows,duracaoSeg,usuario:req.session.usuario,msg:req.flash('msg')});
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
+router.get('/eventos/:id/presencas-pdf', requireAuth, async (req, res) => {
+  try {
+    const config = await getConfig();
+    const evR = await query('SELECT * FROM eventos WHERE id=$1',[req.params.id]);
+    const ev = evR.rows[0];
+    if (!ev) return res.status(404).send('Evento nao encontrado');
+    const inscrR = await query(
+      `SELECT i.*,
+        COALESCE((SELECT SUM(EXTRACT(EPOCH FROM (COALESCE(saida_em,NOW())-entrada_em))) FROM evento_presencas_tempo WHERE inscricao_id=i.id),0) as segundos_presencial,
+        COALESCE((SELECT tempo_total_segundos FROM evento_presencas_online WHERE inscricao_id=i.id AND evento_id=$1),0) as segundos_online
+       FROM evento_inscricoes i WHERE i.evento_id=$1 AND i.status='confirmado' ORDER BY i.nome`,
+      [ev.id]
+    );
+    const inscricoes = inscrR.rows;
+    const duracaoSeg = (ev.duracao_minutos||0)*60;
+    const orgNome = config.org_nome||'LAURO';
+    const orgLogo = config.org_logo||null;
+    const tipoEv = ev.tipo_evento||'presencial';
+    const dataEv = ev.data_inicio?new Date(ev.data_inicio).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):'';
+    const fmtDur = (seg)=>{ const m=Math.floor(seg/60); const h=Math.floor(m/60); const mm=m%60; return h>0?(h+'h '+mm+'min'):(mm+'min'); };
+    let aptos=0, risco=0, naoApt=0;
+    const linhas = inscricoes.map((i,idx)=>{
+      const segP=Number(i.segundos_presencial||0), segO=Number(i.segundos_online||0);
+      const seg=Math.max(segP,segO);
+      const tipo = segP>segO ? 'presencial' : segO>segP ? 'online' : (tipoEv==='hibrido'?'':tipoEv);
+      const tipoLabel = tipo==='presencial'?'Presencial':tipo==='online'?'Online':'—';
+      const pct = duracaoSeg>0 ? Math.min(100, Math.round(seg/duracaoSeg*100)) : 0;
+      let stTxt, stBg, stCo;
+      if (pct>=75){ stTxt='Apto'; stBg='#EDF6F1'; stCo='#23704F'; aptos++; }
+      else if (pct>=50){ stTxt='Em risco'; stBg='#FBF3E0'; stCo='#C98A1E'; risco++; }
+      else { stTxt='Não apto'; stBg='#FBE9E7'; stCo='#C0392B'; naoApt++; }
+      const corPct = pct>=75?'#23704F':pct>=50?'#C98A1E':'#C0392B';
+      return `<tr style="background:${idx%2===0?'#F6F8F5':'#ffffff'}"><td style="padding:7px 10px;font-size:10.5px;color:#74837C">${idx+1}</td><td style="padding:7px 10px;font-size:11px;font-weight:600;color:#10201A">${i.nome}<div style="font-size:9px;color:#74837C;font-weight:400">${i.email||''}</div></td><td style="padding:7px 10px;text-align:center"><span style="font-family:'IBM Plex Mono';font-size:9px;color:#3A4A43;border:1px solid #CDD4CE;padding:2px 7px">${tipoLabel}</span></td><td style="padding:7px 10px;font-size:10.5px;text-align:center;color:#3A4A43">${seg>0?fmtDur(seg):'—'}</td><td style="padding:7px 10px;text-align:center;font-family:'Archivo';font-weight:700;font-size:11px;color:${corPct}">${pct}%</td><td style="padding:7px 10px;text-align:center"><span style="background:${stBg};color:${stCo};padding:2px 8px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${stTxt}</span></td></tr>`;
+    }).join('');
+    const minPct = 75;
+    const minSeg = Math.round(duracaoSeg*minPct/100);
+    const estilos=`*{margin:0;padding:0;box-sizing:border-box}@page{size:A4;margin:0}body{font-family:'IBM Plex Sans',Arial,sans-serif;color:#10201A;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{.np{display:none}}.wrap{max-width:820px;margin:0 auto}.header{background:linear-gradient(135deg,#103024,#0C231B);padding:26px 34px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{display:flex;align-items:center;gap:14px}.logo-chip{width:54px;height:54px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}.logo-chip img{width:54px;height:54px;object-fit:cover;border-radius:50%}.org{font-family:'Archivo';font-weight:800;font-size:15px;letter-spacing:.3px;line-height:1.15}.org small{display:block;font-family:'IBM Plex Mono';font-size:8.5px;letter-spacing:2px;color:#37C98B;text-transform:uppercase;margin-top:4px;font-weight:500}.ev{text-align:right}.ev .nm{font-family:'Archivo';font-size:18px;font-weight:800;line-height:1.15}.ev .dt{font-size:11.5px;color:#A9C2B6;margin-top:5px;text-transform:capitalize}.ev .lc{font-size:10.5px;color:#7E988B;margin-top:1px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:18px 34px;background:#F2F4F0;border-bottom:1px solid #E2E6E1}.stat{background:#fff;border:1px solid #E2E6E1;padding:13px 14px;position:relative;overflow:hidden}.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--bar,#2FA873)}.stat .n{font-family:'Archivo';font-size:21px;font-weight:800;letter-spacing:-.5px;color:var(--c,#15402F)}.stat .l{font-family:'IBM Plex Mono';font-size:8.5px;color:#74837C;font-weight:500;text-transform:uppercase;letter-spacing:1px;margin-top:4px}.section{padding:20px 34px}.sec-title{font-family:'Archivo';font-size:13px;font-weight:800;letter-spacing:.2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:7px;border-bottom:2px solid #2FA873;color:#10201A}.dur{display:flex;gap:40px;border:1px solid #E2E6E1;padding:16px 20px}.dur .l{font-family:'IBM Plex Mono';font-size:9px;color:#74837C;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}.dur .v{font-family:'Archivo';font-size:16px;font-weight:800;color:#15402F}table{width:100%;border-collapse:collapse;border:1px solid #E2E6E1}thead{display:table-header-group}thead th{background:#15402F;color:#fff;padding:9px 10px;font-family:'IBM Plex Mono';font-size:9px;text-align:left;text-transform:uppercase;letter-spacing:1px;font-weight:600}tbody td{border-bottom:1px solid #EDEFEC}tbody tr{page-break-inside:avoid}.foot{padding:16px 34px;border-top:1px solid #E2E6E1;font-family:'IBM Plex Mono';font-size:9px;color:#74837C;text-transform:uppercase;letter-spacing:1px;display:flex;justify-content:space-between;gap:12px}.btn-p{position:fixed;bottom:22px;right:22px;padding:12px 22px;background:#2FA873;color:#0C231B;border:none;cursor:pointer;font-family:'IBM Plex Sans';font-size:13px;font-weight:700;box-shadow:0 8px 24px -8px rgba(47,168,115,.8)}@media print{@page{margin:14mm 0 12mm}@page :first{margin:0 0 12mm}}`;
+    const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet"><style>${estilos}</style></head><body>
+<div class="wrap">
+  <div class="header"><div class="brand">${orgLogo?`<div class="logo-chip"><img src="${orgLogo}" alt=""></div>`:''}<div class="org">${orgNome}<small>Relatório de Presenças</small></div></div><div class="ev"><div class="nm">${ev.nome}</div><div class="dt">${dataEv}</div><div class="lc">${ev.local||''}</div></div></div>
+  <div class="stats">
+    <div class="stat" style="--bar:#2FA873;--c:#15402F"><div class="n">${inscricoes.length}</div><div class="l">Total confirmados</div></div>
+    <div class="stat" style="--bar:#2FA873;--c:#23704F"><div class="n">${aptos}</div><div class="l">Aptos (≥75%)</div></div>
+    <div class="stat" style="--bar:#C98A1E;--c:#C98A1E"><div class="n">${risco}</div><div class="l">Em risco (50–74%)</div></div>
+    <div class="stat" style="--bar:#C0392B;--c:#C0392B"><div class="n">${naoApt}</div><div class="l">Não aptos (&lt;50%)</div></div>
+  </div>
+  <div class="section"><div class="dur"><div><div class="l">Duração total do evento</div><div class="v">${duracaoSeg>0?fmtDur(duracaoSeg):'Não definida'}</div></div><div><div class="l">Mínimo para certificado</div><div class="v" style="color:#23704F">${minPct}% — ${duracaoSeg>0?fmtDur(minSeg):'—'}</div></div></div></div>
+  <div class="section"><div class="sec-title">Lista de presenças (${inscricoes.length})</div>
+    <table><thead><tr><th style="width:34px">#</th><th>Participante</th><th style="text-align:center;width:78px">Tipo</th><th style="text-align:center;width:90px">Tempo assistido</th><th style="text-align:center;width:64px">% Presença</th><th style="text-align:center;width:80px">Status</th></tr></thead><tbody>${linhas}</tbody></table>
+  </div>
+  <div class="foot"><span>${orgNome} · Gerado em ${new Date().toLocaleString('pt-BR')}</span><span>${ev.nome}</span></div>
+</div>
+<button class="btn-p np" onclick="window.print()">Imprimir / Salvar PDF</button>
+<script>window.onload=function(){setTimeout(function(){window.print();},500);};</script>
+</body></html>`;
+    res.setHeader('Content-Type','text/html; charset=utf-8');
+    res.send(html);
+  } catch(e) { res.status(500).send('Erro: '+e.message); }
+});
 
 router.get('/certificado/validar/:codigo', async (req, res) => {
   try {
