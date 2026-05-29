@@ -529,7 +529,10 @@
                   <label for="ap-conf" style="font-size:13px;cursor:pointer">Apenas confirmados</label>
                 </div>
               </div>
-              <div class="campo" style="grid-column:1/-1"><label class="label">Mensagem</label><textarea name="mensagem" class="input" rows="4" required></textarea></div>
+              <div class="campo" style="grid-column:1/-1"><label class="label">Mensagem</label>
+                <div id="quill-massa-evento" style="background:#fff;min-height:180px"></div>
+                <textarea name="mensagem" id="massa-mensagem-hidden" hidden></textarea>
+              </div>
             </div>
             <button type="submit" class="btn btn-primario" onclick="return confirm('Enviar email para todos os inscritos selecionados?')">Enviar email em massa</button>
           </form>
@@ -1132,6 +1135,11 @@ function initQuilMala() {
     modules: { toolbar: [[{'font':[]},{'size':['small',false,'large','huge']}],['bold','italic','underline','strike'],[{'color':[]},{'background':[]}],[{'align':[]}],[{'list':'ordered'},{'list':'bullet'}],['link','image'],['clean']] }
   });
 }
+var _qMassaEv = new Quill('#quill-massa-evento', {
+  theme: 'snow',
+  placeholder: 'Escreva a mensagem do email...',
+  modules: { toolbar: [[{'font':[]},{'size':['small',false,'large','huge']}],['bold','italic','underline','strike'],[{'color':[]},{'background':[]}],[{'align':[]}],[{'list':'ordered'},{'list':'bullet'}],['link','image'],['clean']] }
+});
 const quill = new Quill('#editor-desc', {
   theme: 'snow',
   modules: { toolbar: [[{'header':[1,2,3,false]}],['bold','italic','underline'],[{'color':[]},{'background':[]}],[{'align':[]}],['link'],['clean']] }
