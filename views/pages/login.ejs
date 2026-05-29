@@ -48,9 +48,9 @@ var orgLogo = cfg.org_logo || '/img/logo-lauro.png';
     .brand-top{position:relative;z-index:1;display:flex;align-items:center;gap:14px}
     .brand-logo{
       width:54px;height:54px;flex:0 0 54px;background:#fff;border:1px solid rgba(255,255,255,.14);
-      display:grid;place-items:center;overflow:hidden;
+      border-radius:50%;display:grid;place-items:center;overflow:hidden;
     }
-    .brand-logo img{width:46px;height:46px;object-fit:contain;display:block}
+    .brand-logo img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50%}
     .brand-top b{font-family:'Archivo';font-weight:800;font-size:17px;letter-spacing:.3px;line-height:1.1;display:block}
     .brand-top span{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:2.5px;color:var(--accent-bright);text-transform:uppercase;display:block;margin-top:4px}
     .brand-mid{position:relative;z-index:1}
@@ -154,7 +154,7 @@ var orgLogo = cfg.org_logo || '/img/logo-lauro.png';
         Sistema de Gestão
       </div>
       <h2>Gestão acadêmica, no controle.</h2>
-      <p>Membros, eventos, cobranças e frequência da Liga Acadêmica de Urologia em um só painel.</p>
+      <p>Membros, Eventos, Cobranças, Frequências e toda Gestão de Liga Acadêmica em um só Painel.</p>
     </div>
 
     <div class="brand-foot"><%= orgNome %></div>
