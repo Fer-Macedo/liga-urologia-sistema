@@ -1,631 +1,325 @@
+<%
+/* ============================================================
+   DASHBOARD — LAURO (redesign)
+   Leitura defensiva: usa a variável da rota se existir,
+   senão cai num valor-padrão. Ajuste os nomes à direita
+   conforme o que seu res.render('pages/dashboard', {...}) passa.
+   ============================================================ */
+var L = locals || {};
+var pg            = L.paginaAtual || 'dashboard';
+var nomeUsuario   = (L.usuario && (L.usuario.nome || L.usuario.usuario)) || 'Administrador';
+var perfilUsuario = (L.usuario && (L.usuario.perfil || L.usuario.cargo)) || 'ADMIN';
+var orgNome       = (L.config && L.config.org_nome) || 'LAURO — Liga Acadêmica de Urologia';
+var dataHoje      = L.dataHoje || (function(){
+  try { return new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }
+  catch(e){ return ''; }
+})();
+
+var totMembros    = (L.totalMembros    != null) ? L.totalMembros    : (L.totalMembrosAtivos != null ? L.totalMembrosAtivos : 0);
+var pagosN        = (L.pagamentosEmDia  != null) ? L.pagamentosEmDia : (L.totalPagas != null ? L.totalPagas : 0);
+var pagosValor    = (L.valorRecebido    != null) ? L.valorRecebido   : (L.somaPagas  != null ? L.somaPagas  : 0);
+var pendN         = (L.pendentes        != null) ? L.pendentes       : (L.totalPendentes != null ? L.totalPendentes : 0);
+var pendValor     = (L.valorPendente    != null) ? L.valorPendente   : 0;
+var atrasoN       = (L.emAtraso         != null) ? L.emAtraso         : (L.totalAtrasadas != null ? L.totalAtrasadas : 0);
+var atrasoValor   = (L.valorAtraso      != null) ? L.valorAtraso      : 0;
+
+var brl = function(v){ try { return Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); } catch(e){ return '0,00'; } };
+
+var cobrancasRecentes = Array.isArray(L.cobrancasRecentes) ? L.cobrancasRecentes : [];
+var proxAniversarios  = Array.isArray(L.proximosAniversarios) ? L.proximosAniversarios : [];
+
+/* permissões: se houver lista, filtra a sidebar; senão mostra tudo */
+var perms = (L.usuario && Array.isArray(L.usuario.permissoes)) ? L.usuario.permissoes : null;
+var pode = function(mod){ return !perms || perms.indexOf(mod) !== -1; };
+%>
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard — <%= config.org_nome || 'Liga Urologia' %></title>
-  <link rel="stylesheet" href="/css/style.css">
-  <link rel="stylesheet" href="/css/admin-modern.css">
-  <style>
-    :root {
-      --cor-primaria: <%= config.org_cor || '#1a56db' %>;
-      --cor-primaria-light: <%= config.org_cor || '#1a56db' %>22;
-      --verde: #10b981;
-      --verde-light: #10b98115;
-      --amarelo: #f59e0b;
-      --amarelo-light: #f59e0b15;
-      --vermelho: #ef4444;
-      --vermelho-light: #ef444415;
-      --roxo: #8b5cf6;
-      --roxo-light: #8b5cf615;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><%= orgNome %> · Painel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#10201A; --ink-soft:#3A4A43; --ink-faint:#74837C;
+    --line:#E2E6E1; --line-strong:#CDD4CE; --paper:#F2F4F0; --card:#FFFFFF;
+    --green-900:#0C231B; --green-800:#103024; --green-700:#15402F; --green-600:#1C5A41;
+    --green-500:#23704F; --green-400:#2E9168; --accent:#2FA873; --accent-bright:#37C98B;
+    --amber:#C98A1E; --amber-bg:#FBF3E0; --red:#C0392B; --red-bg:#FBE9E7;
+    --blue:#2C6BB3; --blue-bg:#E8F0FA; --radius:3px;
+    --shadow-md:0 12px 28px -14px rgba(16,32,26,.28);
+  }
+  /* scope tudo em #lauro-dash pra não brigar com seu style.css global */
+  #lauro-dash *{box-sizing:border-box;margin:0;padding:0}
+  #lauro-dash{
+    font-family:'IBM Plex Sans',system-ui,sans-serif; background:var(--paper); color:var(--ink);
+    -webkit-font-smoothing:antialiased; display:flex; min-height:100vh;
+    background-image:linear-gradient(rgba(16,32,26,.022) 1px,transparent 1px),linear-gradient(90deg,rgba(16,32,26,.022) 1px,transparent 1px);
+    background-size:34px 34px;
+  }
+  #lauro-dash svg{display:block}
+  #lauro-dash .ic{width:20px;height:20px;stroke:currentColor;stroke-width:1.7;fill:none;stroke-linecap:square;stroke-linejoin:miter}
 
-    /* HERO — saudação moderna */
-    .dash-hero {
-      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, var(--cor-primaria) 100%);
-      padding: 28px 32px;
-      border-radius: 18px;
-      margin-bottom: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 20px;
-      flex-wrap: wrap;
-      box-shadow: 0 8px 24px rgba(15, 23, 42, .15);
-      position: relative;
-      overflow: hidden;
-    }
-    .dash-hero::before {
-      content: '';
-      position: absolute;
-      top: -50%;
-      right: -10%;
-      width: 400px;
-      height: 400px;
-      background: radial-gradient(circle, rgba(6,182,212,.18), transparent 70%);
-      pointer-events: none;
-    }
-    .dash-hero-left { position: relative; z-index: 1; }
-    .dash-hero h1 {
-      color: white;
-      font-family: 'Outfit', sans-serif;
-      font-size: 26px;
-      font-weight: 700;
-      margin: 0 0 6px;
-      letter-spacing: -.02em;
-    }
-    .dash-hero p {
-      color: rgba(255,255,255,0.75);
-      font-size: 14px;
-      margin: 0;
-    }
-    .dash-hero-actions {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      position: relative;
-      z-index: 1;
-      flex-wrap: wrap;
-    }
-    .btn-hero-ghost {
-      background: rgba(255,255,255,0.10);
-      border: 1px solid rgba(255,255,255,0.18);
-      color: white;
-      padding: 9px 16px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.18s ease;
-      text-decoration: none;
-      font-family: inherit;
-    }
-    .btn-hero-ghost:hover {
-      background: rgba(255,255,255,0.18);
-      transform: translateY(-1px);
-    }
-    .btn-hero-primary {
-      background: white;
-      color: #0f172a;
-      border: none;
-      padding: 9px 18px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: 13px;
-      font-weight: 700;
-      text-decoration: none;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      transition: all 0.18s ease;
-      box-shadow: 0 4px 14px rgba(0,0,0,.12);
-    }
-    .btn-hero-primary:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 6px 18px rgba(0,0,0,.16);
-    }
+  #lauro-dash .sidebar{width:248px;flex:0 0 248px;background:var(--green-900);color:#CFE0D7;display:flex;flex-direction:column;border-right:1px solid #06160F;position:sticky;top:0;height:100vh}
+  #lauro-dash .brand{display:flex;align-items:center;gap:12px;padding:20px;border-bottom:1px solid rgba(255,255,255,.07)}
+  #lauro-dash .brand-mark{width:40px;height:40px;flex:0 0 40px;border:1.5px solid var(--accent);display:grid;place-items:center;background:linear-gradient(135deg,var(--green-700),var(--green-900))}
+  #lauro-dash .brand-mark svg{width:22px;height:22px;stroke:var(--accent-bright)}
+  #lauro-dash .brand-txt b{display:block;font-family:'Archivo';font-weight:800;font-size:14px;letter-spacing:.3px;color:#fff;line-height:1.15}
+  #lauro-dash .brand-txt span{display:block;font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:2px;color:var(--accent);margin-top:3px}
+  #lauro-dash .nav{flex:1;overflow-y:auto;padding:14px 12px}
+  #lauro-dash .nav::-webkit-scrollbar{width:6px}
+  #lauro-dash .nav::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12)}
+  #lauro-dash .nav-group{margin-bottom:18px}
+  #lauro-dash .nav-label{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:2.5px;color:#5E7A6D;padding:0 10px 8px;text-transform:uppercase}
+  #lauro-dash .nav-item{display:flex;align-items:center;gap:11px;padding:9px 10px;color:#AFC4B9;text-decoration:none;font-size:13.5px;font-weight:500;border-left:2px solid transparent;transition:color .16s,background .16s,border-color .16s}
+  #lauro-dash .nav-item .ic{width:18px;height:18px;stroke-width:1.6;transition:stroke .16s,transform .16s}
+  #lauro-dash .nav-item:hover{background:rgba(47,168,115,.10);color:#EAF4EE;border-left-color:var(--green-400)}
+  #lauro-dash .nav-item:hover .ic{stroke:var(--accent-bright);transform:translateX(1px)}
+  #lauro-dash .nav-item.active{background:rgba(47,168,115,.16);color:#fff;border-left-color:var(--accent-bright)}
+  #lauro-dash .nav-item.active .ic{stroke:var(--accent-bright)}
+  #lauro-dash .sidebar-foot{border-top:1px solid rgba(255,255,255,.07);padding:14px 16px;display:flex;align-items:center;gap:11px}
+  #lauro-dash .avatar{width:34px;height:34px;flex:0 0 34px;background:var(--accent);color:var(--green-900);display:grid;place-items:center;font-family:'Archivo';font-weight:800;font-size:15px;text-transform:uppercase}
+  #lauro-dash .who b{display:block;color:#fff;font-size:13px;font-weight:600}
+  #lauro-dash .who span{display:block;font-family:'IBM Plex Mono';font-size:9px;letter-spacing:2px;color:#5E7A6D;text-transform:uppercase}
+  #lauro-dash .logout{margin-left:auto;color:#8FA89C;background:none;border:1px solid rgba(255,255,255,.1);width:32px;height:32px;display:grid;place-items:center;cursor:pointer;transition:.16s;text-decoration:none}
+  #lauro-dash .logout:hover{color:#fff;border-color:var(--red);background:rgba(192,57,43,.18)}
 
-    /* STATS */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
-      margin-bottom: 22px;
-    }
-    .stat-card-novo {
-      background: var(--card);
-      border-radius: 14px;
-      padding: 20px;
-      border: 1px solid var(--borda);
-      position: relative;
-      overflow: hidden;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .stat-card-novo:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
-    }
-    .stat-card-novo::before {
-      content: '';
-      position: absolute;
-      top: 0; right: 0;
-      width: 80px; height: 80px;
-      border-radius: 50%;
-      opacity: 0.08;
-    }
-    .stat-card-novo.azul::before { background: var(--cor-primaria); }
-    .stat-card-novo.verde::before { background: var(--verde); }
-    .stat-card-novo.amarelo::before { background: var(--amarelo); }
-    .stat-card-novo.vermelho::before { background: var(--vermelho); }
-    .stat-icone {
-      width: 44px; height: 44px;
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px;
-      margin-bottom: 14px;
-    }
-    .azul .stat-icone { background: var(--cor-primaria-light); }
-    .verde .stat-icone { background: var(--verde-light); }
-    .amarelo .stat-icone { background: var(--amarelo-light); }
-    .vermelho .stat-icone { background: var(--vermelho-light); }
-    .stat-label-novo {
-      font-size: 11.5px;
-      font-weight: 600;
-      color: var(--texto2);
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      margin-bottom: 6px;
-    }
-    .stat-valor-novo {
-      font-family: 'Outfit', sans-serif;
-      font-size: 30px;
-      font-weight: 700;
-      margin-bottom: 4px;
-      line-height: 1;
-      letter-spacing: -.02em;
-    }
-    .azul .stat-valor-novo { color: var(--cor-primaria); }
-    .verde .stat-valor-novo { color: var(--verde); }
-    .amarelo .stat-valor-novo { color: var(--amarelo); }
-    .vermelho .stat-valor-novo { color: var(--vermelho); }
-    .stat-sub-novo { font-size: 12px; color: var(--texto2); font-weight: 500; }
+  #lauro-dash .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  #lauro-dash .topbar{height:54px;display:flex;align-items:center;gap:18px;padding:0 28px;background:var(--card);border-bottom:1px solid var(--line)}
+  #lauro-dash .crumb{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:1.5px;color:var(--ink-faint);text-transform:uppercase}
+  #lauro-dash .crumb b{color:var(--ink)}
+  #lauro-dash .topbar-search{margin-left:auto;display:flex;align-items:center;gap:8px;border:1px solid var(--line-strong);padding:7px 12px;width:280px;color:var(--ink-faint);transition:.16s}
+  #lauro-dash .topbar-search:focus-within{border-color:var(--accent);color:var(--ink)}
+  #lauro-dash .topbar-search input{border:none;outline:none;font-family:inherit;font-size:13px;width:100%;background:none;color:var(--ink)}
+  #lauro-dash .topbar-search .ic{width:16px;height:16px}
+  #lauro-dash .content{padding:28px;max-width:1320px;width:100%}
 
-    /* ACESSO RÁPIDO */
-    .quick-grid {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 12px;
-      margin-bottom: 22px;
-    }
-    .quick-card {
-      background: var(--card);
-      border: 1px solid var(--borda);
-      border-radius: 12px;
-      padding: 16px 14px;
-      text-align: center;
-      text-decoration: none;
-      transition: all .18s ease;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-    }
-    .quick-card:hover {
-      transform: translateY(-2px);
-      border-color: var(--cor-primaria);
-      box-shadow: 0 8px 18px rgba(26, 86, 219, .12);
-    }
-    .quick-icone {
-      width: 42px; height: 42px;
-      border-radius: 11px;
-      display: grid; place-items: center;
-      font-size: 20px;
-      background: linear-gradient(135deg, var(--cor-primaria-light), var(--cor-primaria-light));
-    }
-    .quick-card.alt-1 .quick-icone { background: linear-gradient(135deg, #06b6d420, #06b6d410); }
-    .quick-card.alt-2 .quick-icone { background: linear-gradient(135deg, var(--verde-light), var(--verde-light)); }
-    .quick-card.alt-3 .quick-icone { background: linear-gradient(135deg, var(--amarelo-light), var(--amarelo-light)); }
-    .quick-card.alt-4 .quick-icone { background: linear-gradient(135deg, var(--roxo-light), var(--roxo-light)); }
-    .quick-card.alt-5 .quick-icone { background: linear-gradient(135deg, #ec489920, #ec489910); }
-    .quick-label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--texto);
-    }
+  #lauro-dash .hero{background:radial-gradient(120% 140% at 100% 0%,rgba(47,168,115,.22),transparent 60%),linear-gradient(120deg,var(--green-800),var(--green-900));border:1px solid var(--green-700);color:#fff;padding:30px 32px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;position:relative;overflow:hidden}
+  #lauro-dash .hero::after{content:"";position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);background-size:48px 48px;-webkit-mask:linear-gradient(90deg,transparent,#000 80%);mask:linear-gradient(90deg,transparent,#000 80%)}
+  #lauro-dash .hero-tag{display:inline-flex;align-items:center;gap:8px;font-family:'IBM Plex Mono';font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--accent-bright);border:1px solid rgba(47,168,115,.4);padding:5px 11px;margin-bottom:14px}
+  #lauro-dash .hero-tag .ic{width:13px;height:13px;stroke:var(--accent-bright)}
+  #lauro-dash .hero h1{font-family:'Archivo';font-weight:800;font-size:30px;letter-spacing:-.5px;line-height:1.05}
+  #lauro-dash .hero p{margin-top:8px;color:#A9C2B6;font-size:13.5px}
+  #lauro-dash .hero-actions{margin-left:auto;display:flex;gap:12px;position:relative;z-index:1}
+  #lauro-dash .btn{display:inline-flex;align-items:center;gap:9px;font-family:'IBM Plex Sans';font-weight:600;font-size:13px;padding:11px 18px;cursor:pointer;border:1px solid transparent;transition:.16s;text-decoration:none}
+  #lauro-dash .btn .ic{width:16px;height:16px}
+  #lauro-dash .btn-ghost{background:transparent;border-color:rgba(255,255,255,.25);color:#fff}
+  #lauro-dash .btn-ghost:hover{background:rgba(255,255,255,.10);border-color:#fff}
+  #lauro-dash .btn-primary{background:var(--accent);color:var(--green-900);border-color:var(--accent)}
+  #lauro-dash .btn-primary .ic{stroke:var(--green-900)}
+  #lauro-dash .btn-primary:hover{background:var(--accent-bright);box-shadow:0 8px 20px -8px rgba(47,168,115,.7)}
 
-    /* GRID INFERIOR */
-    .bottom-grid {
-      display: grid;
-      grid-template-columns: 1.6fr 1fr;
-      gap: 18px;
-    }
+  #lauro-dash .grid-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:18px}
+  #lauro-dash .stat{background:var(--card);border:1px solid var(--line);padding:20px;position:relative;overflow:hidden;transition:border-color .18s,transform .18s,box-shadow .18s}
+  #lauro-dash .stat::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--bar,var(--accent));transform:scaleX(0);transform-origin:left;transition:transform .28s cubic-bezier(.2,.7,.3,1)}
+  #lauro-dash .stat:hover{transform:translateY(-3px);box-shadow:var(--shadow-md);border-color:var(--line-strong)}
+  #lauro-dash .stat:hover::before{transform:scaleX(1)}
+  #lauro-dash .stat-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+  #lauro-dash .stat-icon{width:42px;height:42px;display:grid;place-items:center;border:1px solid var(--line-strong);color:var(--tint,var(--accent));background:var(--tint-bg,#EAF6F0);transition:transform .18s}
+  #lauro-dash .stat:hover .stat-icon{transform:scale(1.06) rotate(-2deg)}
+  #lauro-dash .stat-icon .ic{width:21px;height:21px;stroke:var(--tint,var(--accent))}
+  #lauro-dash .stat-label{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:1.8px;color:var(--ink-faint);text-transform:uppercase}
+  #lauro-dash .stat-value{font-family:'Archivo';font-weight:800;font-size:42px;line-height:1;letter-spacing:-1px;color:var(--ink)}
+  #lauro-dash .stat-value.tinted{color:var(--tint)}
+  #lauro-dash .stat-sub{margin-top:8px;font-size:12px;color:var(--ink-faint);font-family:'IBM Plex Mono'}
 
-    /* CARD MODERNO */
-    .card-moderno {
-      background: var(--card);
-      border: 1px solid var(--borda);
-      border-radius: 14px;
-      overflow: hidden;
-    }
-    .card-header {
-      padding: 16px 20px;
-      border-bottom: 1px solid var(--borda);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    .card-titulo {
-      font-family: 'Outfit', sans-serif;
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--texto);
-    }
-    .card-link {
-      font-size: 12px;
-      color: var(--cor-primaria);
-      text-decoration: none;
-      font-weight: 600;
-    }
-    .card-link:hover { text-decoration: underline; }
+  #lauro-dash .section-title{display:flex;align-items:center;gap:10px;margin:30px 0 14px}
+  #lauro-dash .section-title .ic{width:17px;height:17px;stroke:var(--green-500)}
+  #lauro-dash .section-title h2{font-family:'Archivo';font-weight:700;font-size:15px;letter-spacing:.2px;text-transform:uppercase}
+  #lauro-dash .section-title .rule{flex:1;height:1px;background:var(--line)}
 
-    /* TABELA */
-    .table-moderna { width: 100%; border-collapse: collapse; }
-    .table-moderna thead th {
-      padding: 10px 16px;
-      font-size: 10.5px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.8px;
-      color: var(--texto2);
-      background: var(--fundo);
-      text-align: left;
-    }
-    .table-moderna tbody tr {
-      border-bottom: 1px solid var(--borda);
-      transition: background 0.15s;
-    }
-    .table-moderna tbody tr:hover { background: var(--fundo); }
-    .table-moderna tbody tr:last-child { border-bottom: none; }
-    .table-moderna tbody td { padding: 12px 16px; font-size: 13px; }
+  #lauro-dash .grid-actions{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+  #lauro-dash .action{background:var(--card);border:1px solid var(--line);padding:22px 16px;display:flex;flex-direction:column;align-items:center;gap:13px;cursor:pointer;text-decoration:none;color:var(--ink);position:relative;overflow:hidden;transition:border-color .18s,transform .18s,box-shadow .18s}
+  #lauro-dash .action::after{content:"";position:absolute;top:0;right:0;width:0;height:0;border-style:solid;border-width:0 18px 18px 0;border-color:transparent var(--accent) transparent transparent;opacity:0;transition:opacity .18s}
+  #lauro-dash .action:hover{transform:translateY(-3px);border-color:var(--accent);box-shadow:var(--shadow-md)}
+  #lauro-dash .action:hover::after{opacity:1}
+  #lauro-dash .action-ic{width:50px;height:50px;display:grid;place-items:center;border:1px solid var(--line-strong);color:var(--green-600);transition:.2s}
+  #lauro-dash .action-ic .ic{width:25px;height:25px;stroke:var(--green-600);transition:stroke .2s}
+  #lauro-dash .action:hover .action-ic{background:var(--green-800);border-color:var(--green-800)}
+  #lauro-dash .action:hover .action-ic .ic{stroke:var(--accent-bright)}
+  #lauro-dash .action span{font-size:13px;font-weight:600}
 
-    /* AVATAR */
-    .avatar-mod {
-      width: 32px; height: 32px;
-      border-radius: 10px;
-      background: linear-gradient(135deg, var(--cor-primaria), #6366f1);
-      color: white;
-      font-size: 11px;
-      font-weight: 700;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .membro-mod { display: flex; align-items: center; gap: 10px; }
-    .membro-nome { font-weight: 600; font-size: 13px; }
+  #lauro-dash .grid-panels{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  #lauro-dash .panel{background:var(--card);border:1px solid var(--line)}
+  #lauro-dash .panel-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--line)}
+  #lauro-dash .panel-head .ttl{display:flex;align-items:center;gap:9px;font-family:'Archivo';font-weight:700;font-size:13px;letter-spacing:.3px;text-transform:uppercase}
+  #lauro-dash .panel-head .ttl .ic{width:16px;height:16px;stroke:var(--green-500)}
+  #lauro-dash .panel-head a{font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:1px;color:var(--accent);text-decoration:none;display:flex;align-items:center;gap:4px;transition:.16s}
+  #lauro-dash .panel-head a:hover{gap:7px;color:var(--green-500)}
+  #lauro-dash .panel-head a .ic{width:12px;height:12px;stroke:currentColor}
+  #lauro-dash .row{display:flex;align-items:center;gap:13px;padding:13px 18px;border-bottom:1px solid var(--line);transition:background .14s}
+  #lauro-dash .row:last-child{border-bottom:none}
+  #lauro-dash .row:hover{background:#F6F8F5}
+  #lauro-dash .row-ic{width:36px;height:36px;flex:0 0 36px;display:grid;place-items:center;border:1px solid var(--line-strong);color:var(--green-600)}
+  #lauro-dash .row-ic .ic{width:18px;height:18px;stroke:var(--green-600)}
+  #lauro-dash .row-main{flex:1;min-width:0}
+  #lauro-dash .row-main b{display:block;font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #lauro-dash .row-main span{display:block;font-size:11.5px;color:var(--ink-faint);font-family:'IBM Plex Mono';margin-top:2px}
+  #lauro-dash .row-amt{font-family:'IBM Plex Mono';font-weight:600;font-size:13px;text-align:right}
+  #lauro-dash .pill{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.8px;text-transform:uppercase;padding:3px 8px;border:1px solid var(--line-strong)}
+  #lauro-dash .pill.ok{color:var(--green-500);border-color:rgba(35,112,79,.35);background:#EDF6F1}
+  #lauro-dash .pill.late{color:var(--red);border-color:rgba(192,57,43,.3);background:var(--red-bg)}
+  #lauro-dash .pill.soon{color:var(--blue);border-color:rgba(44,107,179,.3);background:var(--blue-bg)}
+  #lauro-dash .empty{padding:26px 18px;text-align:center;color:var(--ink-faint);font-size:12.5px;font-family:'IBM Plex Mono'}
 
-    /* BADGE */
-    .badge-mod {
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700;
-      display: inline-block;
-    }
-    .badge-mod.pago { background: var(--verde-light); color: var(--verde); }
-    .badge-mod.pendente { background: var(--amarelo-light); color: var(--amarelo); }
-    .badge-mod.atrasado { background: var(--vermelho-light); color: var(--vermelho); }
-
-    /* ANIVERSÁRIOS */
-    .aniv-lista { padding: 4px 0; }
-    .aniv-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      padding: 12px 20px;
-      border-bottom: 1px solid var(--borda);
-      transition: background 0.15s;
-    }
-    .aniv-item:hover { background: var(--fundo); }
-    .aniv-item:last-child { border-bottom: none; }
-    .aniv-avatar {
-      width: 40px; height: 40px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #f59e0b, #ef4444);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-    .aniv-avatar.hoje {
-      background: linear-gradient(135deg, #10b981, var(--cor-primaria));
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0.4); }
-      50% { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
-    }
-    .aniv-info { flex: 1; min-width: 0; }
-    .aniv-nome-mod {
-      font-weight: 600;
-      font-size: 13px;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .aniv-data-mod {
-      font-size: 12px;
-      color: var(--texto2);
-      margin-top: 2px;
-    }
-    .badge-hoje {
-      background: linear-gradient(135deg, #10b981, var(--cor-primaria));
-      color: white;
-      padding: 3px 10px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    /* PROGRESSO */
-    .progresso-wrap { margin-top: 14px; padding: 0 20px 14px; }
-    .progresso-label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 12px;
-      color: var(--texto2);
-      margin-bottom: 6px;
-    }
-    .progresso-bar {
-      height: 6px;
-      background: var(--borda);
-      border-radius: 10px;
-      overflow: hidden;
-    }
-    .progresso-fill {
-      height: 100%;
-      border-radius: 10px;
-      background: linear-gradient(90deg, var(--verde), #34d399);
-      transition: width 0.5s;
-    }
-
-    /* VAZIO */
-    .vazio-mod {
-      padding: 40px 20px;
-      text-align: center;
-      color: var(--texto2);
-      font-size: 13px;
-    }
-
-    @media (max-width: 1200px) {
-      .quick-grid { grid-template-columns: repeat(3, 1fr); }
-    }
-    @media (max-width: 900px) {
-      .stats-grid { grid-template-columns: repeat(2, 1fr); }
-      .bottom-grid { grid-template-columns: 1fr; }
-      .quick-grid { grid-template-columns: repeat(2, 1fr); }
-    }
-  </style>
+  @media(max-width:1100px){#lauro-dash .grid-stats{grid-template-columns:repeat(2,1fr)}#lauro-dash .grid-actions{grid-template-columns:repeat(3,1fr)}#lauro-dash .grid-panels{grid-template-columns:1fr}}
+  @media(max-width:760px){#lauro-dash .sidebar{display:none}}
+</style>
 </head>
 <body>
-<div class="layout">
-  <%- include('../partials/sidebar', { paginaAtual: 'dashboard' }) %>
-  <main class="main">
-    <div class="content">
-      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
-      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
+<div id="lauro-dash">
 
-      <!-- HERO -->
-      <div class="dash-hero">
-        <div class="dash-hero-left">
-          <h1>Olá, <%= usuario.nome.split(' ')[0] %>! 👋</h1>
-          <p>Bem-vindo ao painel da <%= config.org_nome || 'Liga Acadêmica de Urologia' %></p>
+  <!-- ===== SIDEBAR =====
+       Se você já tem um partial (ex: include('../partials/sidebar')),
+       apague este <aside> e use seu include no lugar. -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark"><svg viewBox="0 0 24 24" class="ic"><path d="M9 3v7a3 3 0 0 0 6 0V3"/><path d="M9 3h6"/><path d="M12 13v8"/></svg></div>
+      <div class="brand-txt"><b>LAURO</b><span>PAINEL INTERNO</span></div>
+    </div>
+    <nav class="nav">
+      <div class="nav-group">
+        <div class="nav-label">Visão Geral</div>
+        <% if (pode('calendario')) { %><a class="nav-item <%= pg==='calendario'?'active':'' %>" href="/calendario"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="4" width="18" height="17"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>Calendário</a><% } %>
+        <a class="nav-item <%= pg==='dashboard'?'active':'' %>" href="/dashboard"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>Dashboard</a>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Pessoas</div>
+        <% if (pode('ligantes')) { %><a class="nav-item <%= pg==='ligantes'?'active':'' %>" href="/ligantes"><svg viewBox="0 0 24 24" class="ic"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 4.5a3 3 0 0 1 0 6M21 20c0-2.6-1.5-4.4-3.5-5"/></svg>Ligantes</a><% } %>
+        <% if (pode('diretivos')) { %><a class="nav-item <%= pg==='diretivos'?'active':'' %>" href="/diretivos"><svg viewBox="0 0 24 24" class="ic"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>Diretivos</a><% } %>
+        <% if (pode('aniversarios')) { %><a class="nav-item <%= pg==='aniversarios'?'active':'' %>" href="/aniversarios"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="9" width="18" height="12"/><path d="M3 13h18M12 9v12M12 9c-1.5-3-5-3-5-1s2 1 5 1zM12 9c1.5-3 5-3 5-1s-2 1-5 1z"/></svg>Aniversários</a><% } %>
+        <% if (pode('palestrantes')) { %><a class="nav-item <%= pg==='palestrantes'?'active':'' %>" href="/palestrantes"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="4" width="18" height="12"/><path d="M8 20h8M12 16v4M8 9l3 2.5L8 14M13 14h3"/></svg>Palestrantes</a><% } %>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Acadêmico</div>
+        <% if (pode('frequencia')) { %><a class="nav-item <%= pg==='frequencia'?'active':'' %>" href="/frequencia"><svg viewBox="0 0 24 24" class="ic"><rect x="5" y="3" width="14" height="18"/><path d="M9 3v3h6V3M8.5 10l1.5 1.5L13 8M8.5 16l1.5 1.5L13 14"/></svg>Frequência Ligantes</a><% } %>
+        <% if (pode('frequencia-diretivos')) { %><a class="nav-item <%= pg==='frequencia-diretivos'?'active':'' %>" href="/frequencia-diretivos"><svg viewBox="0 0 24 24" class="ic"><rect x="5" y="3" width="14" height="18"/><path d="M9 3v3h6V3M9 11h6M9 16h6"/></svg>Frequência Diretivos</a><% } %>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Eventos</div>
+        <% if (pode('eventos')) { %><a class="nav-item <%= pg==='eventos'?'active':'' %>" href="/eventos"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="4" width="18" height="17"/><path d="M3 9h18M8 2v4M16 2v4M9 14h6"/></svg>Eventos</a><% } %>
+        <% if (pode('cobrancas')) { %><a class="nav-item <%= pg==='cobrancas'?'active':'' %>" href="/cobrancas"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="6" width="18" height="13"/><path d="M3 10h18M7 15h4"/></svg>Cobranças</a><% } %>
+        <% if (pode('marketing')) { %><a class="nav-item <%= pg==='marketing'?'active':'' %>" href="/marketing"><svg viewBox="0 0 24 24" class="ic"><path d="M4 9v6h4l6 4V5L8 9z"/><path d="M17 9a4 4 0 0 1 0 6"/></svg>Marketing</a><% } %>
+      </div>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="avatar"><%= (nomeUsuario||'A').charAt(0) %></div>
+      <div class="who"><b><%= nomeUsuario %></b><span><%= perfilUsuario %></span></div>
+      <a class="logout" href="/logout" title="Sair"><svg viewBox="0 0 24 24" class="ic"><path d="M14 4H5v16h9M10 12h10M17 8l4 4-4 4"/></svg></a>
+    </div>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+    <header class="topbar">
+      <div class="crumb">LAURO / <b>Dashboard</b></div>
+      <form class="topbar-search" action="/buscar" method="get">
+        <svg viewBox="0 0 24 24" class="ic"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+        <input name="q" placeholder="Buscar membros, eventos, cobranças...">
+      </form>
+    </header>
+
+    <main class="content">
+
+      <section class="hero">
+        <div>
+          <div class="hero-tag"><svg viewBox="0 0 24 24" class="ic"><rect x="4" y="4" width="16" height="16"/><path d="M9 9h6v6H9z"/></svg>Painel de Controle</div>
+          <h1>Olá, <%= nomeUsuario %></h1>
+          <p><%= orgNome %><% if (dataHoje) { %> · <%= dataHoje %><% } %></p>
         </div>
-        <div class="dash-hero-actions">
-          <button onclick="abrirPerfil()" class="btn-hero-ghost">
-            👤 Meu Perfil
-          </button>
-          <a href="/cobrancas" class="btn-hero-primary">
-            ⚡ Gerar cobranças
-          </a>
+        <div class="hero-actions">
+          <a class="btn btn-ghost" href="/perfil"><svg viewBox="0 0 24 24" class="ic"><circle cx="12" cy="8" r="3.5"/><path d="M5 21c0-3.9 3.1-6.5 7-6.5s7 2.6 7 6.5"/></svg>Meu Perfil</a>
+          <a class="btn btn-primary" href="/cobrancas/gerar"><svg viewBox="0 0 24 24" class="ic"><path d="M13 3L4 14h7l-1 7 9-11h-7z"/></svg>Gerar Cobranças</a>
         </div>
+      </section>
+
+      <section class="grid-stats">
+        <div class="stat" style="--tint:var(--green-600);--tint-bg:#EAF6F0;--bar:var(--accent)">
+          <div class="stat-head"><div class="stat-icon"><svg viewBox="0 0 24 24" class="ic"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 4.5a3 3 0 0 1 0 6M21 20c0-2.6-1.5-4.4-3.5-5"/></svg></div></div>
+          <div class="stat-label">Total de Membros</div>
+          <div class="stat-value"><%= totMembros %></div>
+          <div class="stat-sub">membros ativos</div>
+        </div>
+        <div class="stat" style="--tint:var(--green-500);--tint-bg:#EAF6F0;--bar:var(--green-400)">
+          <div class="stat-head"><div class="stat-icon"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="6" width="18" height="12"/><circle cx="12" cy="12" r="2.5"/><path d="M6 9v6M18 9v6"/></svg></div></div>
+          <div class="stat-label">Pagamentos em Dia</div>
+          <div class="stat-value tinted"><%= pagosN %></div>
+          <div class="stat-sub">R$ <%= brl(pagosValor) %> recebido</div>
+        </div>
+        <div class="stat" style="--tint:var(--amber);--tint-bg:var(--amber-bg);--bar:var(--amber)">
+          <div class="stat-head"><div class="stat-icon"><svg viewBox="0 0 24 24" class="ic"><path d="M6 3h12M6 21h12M7 3c0 5 5 6 5 9s-5 4-5 9M17 3c0 5-5 6-5 9"/></svg></div></div>
+          <div class="stat-label">Pendentes</div>
+          <div class="stat-value tinted"><%= pendN %></div>
+          <div class="stat-sub">R$ <%= brl(pendValor) %> a receber</div>
+        </div>
+        <div class="stat" style="--tint:var(--red);--tint-bg:var(--red-bg);--bar:var(--red)">
+          <div class="stat-head"><div class="stat-icon"><svg viewBox="0 0 24 24" class="ic"><path d="M12 3L2 20h20z"/><path d="M12 10v5M12 17.5v.5"/></svg></div></div>
+          <div class="stat-label">Em Atraso</div>
+          <div class="stat-value tinted"><%= atrasoN %></div>
+          <div class="stat-sub">R$ <%= brl(atrasoValor) %> inadimplente</div>
+        </div>
+      </section>
+
+      <div class="section-title">
+        <svg viewBox="0 0 24 24" class="ic"><path d="M13 3L4 14h7l-1 7 9-11h-7z"/></svg>
+        <h2>Acesso Rápido</h2><span class="rule"></span>
       </div>
 
-      <!-- STATS -->
-      <div class="stats-grid">
-        <div class="stat-card-novo azul">
-          <div class="stat-icone">👥</div>
-          <div class="stat-label-novo">Total de membros</div>
-          <div class="stat-valor-novo"><%= stats.total %></div>
-          <div class="stat-sub-novo">membros ativos</div>
-        </div>
-        <div class="stat-card-novo verde">
-          <div class="stat-icone">✅</div>
-          <div class="stat-label-novo">Pagamentos em dia</div>
-          <div class="stat-valor-novo"><%= stats.pagos %></div>
-          <div class="stat-sub-novo">R$ <%= Number(stats.totalRecebido).toFixed(2).replace('.',',') %> recebido</div>
-        </div>
-        <div class="stat-card-novo amarelo">
-          <div class="stat-icone">⏳</div>
-          <div class="stat-label-novo">Pendentes</div>
-          <div class="stat-valor-novo"><%= stats.pendentes %></div>
-          <div class="stat-sub-novo">R$ <%= Number(stats.totalPendente).toFixed(2).replace('.',',') %> a receber</div>
-        </div>
-        <div class="stat-card-novo vermelho">
-          <div class="stat-icone">⚠️</div>
-          <div class="stat-label-novo">Em atraso</div>
-          <div class="stat-valor-novo"><%= stats.atrasados %></div>
-          <div class="stat-sub-novo">R$ <%= Number(stats.totalAtrasado).toFixed(2).replace('.',',') %> inadimplente</div>
-        </div>
-      </div>
+      <section class="grid-actions">
+        <a class="action" href="/ligantes"><div class="action-ic"><svg viewBox="0 0 24 24" class="ic"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 4.5a3 3 0 0 1 0 6M21 20c0-2.6-1.5-4.4-3.5-5"/></svg></div><span>Ligantes</span></a>
+        <a class="action" href="/frequencia"><div class="action-ic"><svg viewBox="0 0 24 24" class="ic"><rect x="5" y="3" width="14" height="18"/><path d="M9 3v3h6V3M8.5 10l1.5 1.5L13 8M8.5 16l1.5 1.5L13 14"/></svg></div><span>Frequência</span></a>
+        <a class="action" href="/eventos"><div class="action-ic"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="4" width="18" height="17"/><path d="M3 9h18M8 2v4M16 2v4M9 14h6"/></svg></div><span>Eventos</span></a>
+        <a class="action" href="/cobrancas"><div class="action-ic"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="6" width="18" height="13"/><path d="M3 10h18M7 15h4"/></svg></div><span>Cobranças</span></a>
+        <a class="action" href="/marketing"><div class="action-ic"><svg viewBox="0 0 24 24" class="ic"><path d="M4 9v6h4l6 4V5L8 9z"/><path d="M17 9a4 4 0 0 1 0 6"/></svg></div><span>Marketing</span></a>
+        <a class="action" href="/aniversarios"><div class="action-ic"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="9" width="18" height="12"/><path d="M3 13h18M12 9v12M12 9c-1.5-3-5-3-5-1s2 1 5 1zM12 9c1.5-3 5-3 5-1s-2 1-5 1z"/></svg></div><span>Aniversários</span></a>
+      </section>
 
-      <!-- ACESSO RÁPIDO -->
-      <div class="quick-grid">
-        <a href="/ligantes" class="quick-card">
-          <div class="quick-icone">🎓</div>
-          <div class="quick-label">Ligantes</div>
-        </a>
-        <a href="/frequencia" class="quick-card alt-1">
-          <div class="quick-icone">✅</div>
-          <div class="quick-label">Frequência</div>
-        </a>
-        <a href="/eventos" class="quick-card alt-2">
-          <div class="quick-icone">🎟️</div>
-          <div class="quick-label">Eventos</div>
-        </a>
-        <a href="/cobrancas" class="quick-card alt-3">
-          <div class="quick-icone">💰</div>
-          <div class="quick-label">Cobranças</div>
-        </a>
-        <a href="/marketing" class="quick-card alt-4">
-          <div class="quick-icone">📣</div>
-          <div class="quick-label">Marketing</div>
-        </a>
-        <a href="/aniversarios" class="quick-card alt-5">
-          <div class="quick-icone">🎂</div>
-          <div class="quick-label">Aniversários</div>
-        </a>
-      </div>
-
-      <% 
-        const totalMembros = Number(stats.total) || 1;
-        const pagos = Number(stats.pagos) || 0;
-        const pctPago = Math.round((pagos / totalMembros) * 100);
-      %>
-
-      <!-- GRID INFERIOR -->
-      <div class="bottom-grid">
-
-        <!-- COBRANÇAS RECENTES -->
-        <div class="card-moderno">
-          <div class="card-header">
-            <div class="card-titulo">📋 Cobranças recentes</div>
-            <a href="/cobrancas" class="card-link">Ver todas →</a>
+      <div class="grid-panels" style="margin-top:24px">
+        <section class="panel">
+          <div class="panel-head">
+            <div class="ttl"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="6" width="18" height="13"/><path d="M3 10h18M7 15h4"/></svg>Cobranças Recentes</div>
+            <a href="/cobrancas">Ver todas <svg viewBox="0 0 24 24" class="ic"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div>
-
-          <div class="progresso-wrap">
-            <div class="progresso-label">
-              <span>Taxa de pagamento este mês</span>
-              <span style="font-weight:700;color:var(--verde)"><%= pctPago %>%</span>
-            </div>
-            <div class="progresso-bar">
-              <div class="progresso-fill" style="width:<%= pctPago %>%"></div>
-            </div>
-          </div>
-
-          <% if (recentes.length === 0) { %>
-            <div class="vazio-mod">📭 Nenhuma cobrança ainda</div>
-          <% } else { %>
-          <table class="table-moderna">
-            <thead>
-              <tr>
-                <th>Membro</th>
-                <th>Referência</th>
-                <th>Vencimento</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <% recentes.forEach(c => { %>
-              <tr>
-                <td>
-                  <div class="membro-mod">
-                    <div class="avatar-mod"><%= c.nome.substring(0,2).toUpperCase() %></div>
-                    <span class="membro-nome"><%= c.nome.split(' ').slice(0,2).join(' ') %></span>
-                  </div>
-                </td>
-                <td style="color:var(--texto2);font-size:12px"><%= c.referencia %></td>
-                <td style="font-size:12px"><%= new Date(c.data_vencimento + 'T12:00:00').toLocaleDateString('pt-BR') %></td>
-                <td>
-                  <% if (c.status === 'pago') { %>
-                    <span class="badge-mod pago">✅ Pago</span>
-                  <% } else if (c.status === 'atrasado') { %>
-                    <span class="badge-mod atrasado">⚠️ Atrasado</span>
-                  <% } else { %>
-                    <span class="badge-mod pendente">⏳ Pendente</span>
-                  <% } %>
-                </td>
-              </tr>
-              <% }) %>
-            </tbody>
-          </table>
-          <% } %>
-        </div>
-
-        <!-- ANIVERSÁRIOS -->
-        <div class="card-moderno">
-          <div class="card-header">
-            <div class="card-titulo">🎂 Aniversários</div>
-            <a href="/aniversarios" class="card-link">Ver todos →</a>
-          </div>
-          <div class="aniv-lista">
-            <% if (aniversariantes.length === 0) { %>
-              <div class="vazio-mod">🎈 Nenhum aniversariante cadastrado</div>
-            <% } %>
-            <% aniversariantes.forEach(m => {
-              const hoje_md = new Date().toLocaleDateString('pt-BR',{month:'2-digit',day:'2-digit'}).split('/').reverse().join('-');
-              const md = m.data_nascimento ? m.data_nascimento.substring(5) : '';
-              const isHoje = md === hoje_md;
+          <% if (cobrancasRecentes.length) { %>
+            <% cobrancasRecentes.slice(0,4).forEach(function(c){
+                 var st = (c.status||'').toLowerCase();
+                 var pillCls = st.indexOf('atras')>-1 ? 'late' : (st.indexOf('pend')>-1 ? 'soon' : 'ok');
+                 var pillTxt = st.indexOf('atras')>-1 ? 'Em atraso' : (st.indexOf('pend')>-1 ? 'Pendente' : 'Pago');
             %>
-            <div class="aniv-item">
-              <div class="aniv-avatar <%= isHoje ? 'hoje' : '' %>">🎂</div>
-              <div class="aniv-info">
-                <div class="aniv-nome-mod"><%= m.nome.split(' ').slice(0,3).join(' ') %></div>
-                <div class="aniv-data-mod">
-                  <%= new Date(m.data_nascimento + 'T12:00:00').toLocaleDateString('pt-BR', {day:'numeric',month:'long'}) %>
-                </div>
-              </div>
-              <% if (isHoje) { %>
-                <span class="badge-hoje">🎉 Hoje!</span>
-              <% } %>
+            <div class="row">
+              <div class="row-ic"><svg viewBox="0 0 24 24" class="ic"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.3 3-5.5 7-5.5s7 2.2 7 5.5"/></svg></div>
+              <div class="row-main"><b><%= c.nome || 'Membro' %></b><span><%= (c.metodo||'PIX') %><% if (c.data) { %> · <%= c.data %><% } %></span></div>
+              <div style="text-align:right"><div class="row-amt">R$ <%= brl(c.valor) %></div><span class="pill <%= pillCls %>"><%= pillTxt %></span></div>
             </div>
-            <% }) %>
+            <% }); %>
+          <% } else { %>
+            <div class="empty">Sem cobranças recentes para exibir.</div>
+          <% } %>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div class="ttl"><svg viewBox="0 0 24 24" class="ic"><rect x="3" y="9" width="18" height="12"/><path d="M3 13h18M12 9v12M12 9c-1.5-3-5-3-5-1s2 1 5 1zM12 9c1.5-3 5-3 5-1s-2 1-5 1z"/></svg>Próximos Aniversários</div>
+            <a href="/aniversarios">Ver todos <svg viewBox="0 0 24 24" class="ic"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
           </div>
-        </div>
-
+          <% if (proxAniversarios.length) { %>
+            <% proxAniversarios.slice(0,4).forEach(function(a){ %>
+            <div class="row">
+              <div class="row-ic"><svg viewBox="0 0 24 24" class="ic"><rect x="4" y="9" width="16" height="11"/><path d="M4 13h16M12 9V6"/></svg></div>
+              <div class="row-main"><b><%= a.nome || 'Membro' %></b><span><%= a.detalhe || a.tipo || '' %></span></div>
+              <div style="text-align:right"><span class="pill soon"><%= a.dia || a.data || '' %></span></div>
+            </div>
+            <% }); %>
+          <% } else { %>
+            <div class="empty">Nenhum aniversário próximo.</div>
+          <% } %>
+        </section>
       </div>
-    </div>
-  </main>
-</div>
 
-<!-- MODAL MEU PERFIL -->
-<div id="modalPerfil" class="modal-overlay" style="display:none">
-  <div class="modal" style="max-width:480px">
-    <div class="modal-header">
-      <div class="modal-titulo">👤 Meu Perfil</div>
-      <button onclick="fecharPerfil()" style="background:none;border:none;font-size:20px;cursor:pointer;color:#666">✕</button>
-    </div>
-    <div class="info-box" style="margin-bottom:20px">
-      <strong>Usuário:</strong> <%= usuario.nome %><br>
-      <strong>E-mail atual:</strong> <%= usuario.email %><br>
-      <strong>Perfil:</strong> <span style="text-transform:capitalize"><%= usuario.perfil %></span>
-    </div>
-    <div style="display:flex;gap:4px;margin-bottom:20px;border-bottom:1px solid var(--borda)">
-      <button onclick="mostrarTab('senha')" id="tab-senha"
-        style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:600;color:var(--cor-primaria);border-bottom:2px solid var(--cor-primaria);font-family:inherit">
-        🔒 Alterar Senha
-      </button>
-      <button onclick="mostrarTab('email')" id="tab-email"
-        style="padding:8px 16px;border:none;background:none;cursor:pointer;font-size:13px;font-weight:500;color:var(--texto2);border-bottom:2px solid transparent;font-family:inherit">
-        📧 Alterar E-mail
-      </button>
-    </div>
-    <div id="form-senha">
-      <form action="/minha-senha" method="POST">
-        <div style="display:flex;flex-direction:column;gap:14px">
-          <div class="campo"><label class="label">Senha atual</label><input type="password" name="senha_atual" class="input" required placeholder="Digite sua senha atual"></div>
-          <div class="campo"><label class="label">Nova senha</label><input type="password" name="nova_senha" class="input" required placeholder="Mínimo 8 caracteres" minlength="8"></div>
-          <div class="campo"><label class="label">Confirmar nova senha</label><input type="password" name="confirmar_senha" class="input" required placeholder="Repita a nova senha"></div>
-          <button type="submit" class="btn btn-primario" style="width:100%;justify-content:center">🔒 Alterar senha</button>
-        </div>
-      </form>
-    </div>
-    <div id="form-email" style="display:none">
-      <form action="/meu-email" method="POST">
-        <div style="display:flex;flex-direction:column;gap:14px">
-          <div class="campo"><label class="label">Novo e-mail</label><input type="email" name="novo_email" class="input" required placeholder="novo@email.com"></div>
-          <div class="campo"><label class="label">Confirme sua senha</label><input type="password" name="senha_confirmacao" class="input" required placeholder="Digite sua senha para confirmar"></div>
-          <button type="submit" class="btn btn-primario" style="width:100%;justify-content:center">📧 Alterar e-mail</button>
-        </div>
-      </form>
-    </div>
+    </main>
   </div>
 </div>
-
-<script src="/js/app.js"></script>
-<script>
-function abrirPerfil() { document.getElementById('modalPerfil').style.display = 'flex'; }
-function fecharPerfil() { document.getElementById('modalPerfil').style.display = 'none'; }
-function mostrarTab(tab) {
-  document.getElementById('form-senha').style.display = tab === 'senha' ? 'block' : 'none';
-  document.getElementById('form-email').style.display = tab === 'email' ? 'block' : 'none';
-  document.getElementById('tab-senha').style.color = tab === 'senha' ? 'var(--cor-primaria)' : 'var(--texto2)';
-  document.getElementById('tab-senha').style.borderBottomColor = tab === 'senha' ? 'var(--cor-primaria)' : 'transparent';
-  document.getElementById('tab-email').style.color = tab === 'email' ? 'var(--cor-primaria)' : 'var(--texto2)';
-  document.getElementById('tab-email').style.borderBottomColor = tab === 'email' ? 'var(--cor-primaria)' : 'transparent';
-}
-document.getElementById('modalPerfil').addEventListener('click', function(e) { if (e.target === this) fecharPerfil(); });
-<% if (erro && erro.length > 0) { %>window.addEventListener('load', function() { abrirPerfil(); });<% } %>
-</script>
 </body>
 </html>
