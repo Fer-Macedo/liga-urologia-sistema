@@ -733,8 +733,8 @@
               <% pagsPagos.forEach(p => {
                 const v = Number(p.valor)||0;
                 let tx = 0;
-                if(p.metodo==='pix') tx = v*0.0099;
-                else if(p.metodo==='cartao') tx = v*0.0299+0.40;
+                if(p.metodo==='pix') tx = v*0.018;
+                else if(p.metodo==='cartao') tx = v*0.04;
                 const liq = v - tx;
               %>
               <tr>
