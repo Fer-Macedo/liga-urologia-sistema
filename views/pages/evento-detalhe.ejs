@@ -517,7 +517,7 @@
         </div>
       </div>
       <!-- INSCRITOS -->
-      <div class="tab-content" id="tab-inscritos">
+     <div class="tab-content" id="tab-inscritos">
         <div class="email-massa-box">
           <div style="font-weight:700;font-size:14px;margin-bottom:12px;font-family:'Outfit',sans-serif">Email em massa para inscritos</div>
           <form action="/eventos/<%= evento.id %>/email-massa" method="POST">
@@ -534,18 +534,61 @@
             <button type="submit" class="btn btn-primario" onclick="return confirm('Enviar email para todos os inscritos selecionados?')">Enviar email em massa</button>
           </form>
         </div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-sm" onclick="abrirModal('modal-inscricao-manual')">+ Manual</button>
+
+        <!-- FILTROS + PAGINAÇÃO -->
+        <div style="background:var(--card);border:1px solid var(--borda);border-radius:8px;padding:16px;margin-bottom:14px">
+          <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+            <div style="flex:1;min-width:180px">
+              <label class="label">Buscar</label>
+              <input type="text" id="ins-busca" class="input" style="width:100%;font-size:13px" placeholder="Nome ou email..." oninput="filtrarInscritos()">
+            </div>
+            <div style="min-width:130px">
+              <label class="label">Status</label>
+              <select id="ins-status" class="input" style="width:100%;font-size:13px" onchange="filtrarInscritos()">
+                <option value="">Todos</option><option value="confirmado">Confirmado</option><option value="pendente">Pendente</option><option value="cancelado">Cancelado</option>
+              </select>
+            </div>
+            <div style="min-width:120px">
+              <label class="label">Tipo</label>
+              <select id="ins-tipo" class="input" style="width:100%;font-size:13px" onchange="filtrarInscritos()">
+                <option value="">Todos</option><option value="isento">Isentos</option><option value="pagante">Pagantes</option>
+              </select>
+            </div>
+            <div style="min-width:140px">
+              <label class="label">Lote</label>
+              <select id="ins-lote" class="input" style="width:100%;font-size:13px" onchange="filtrarInscritos()">
+                <option value="">Todos</option>
+                <% lotes.forEach(l => { %><option value="<%= l.id %>"><%= l.nome %></option><% }) %>
+              </select>
+            </div>
+            <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+              <button class="btn btn-sm" onclick="abrirModal('modal-inscricao-manual')" style="white-space:nowrap">+ Manual</button>
+              <button class="btn btn-sm" onclick="limparFiltrosInscritos()" style="white-space:nowrap">Limpar</button>
+              <button class="btn btn-sm" onclick="imprimirInscritos()" style="white-space:nowrap;background:var(--cor-primaria);color:#fff;border-color:transparent">Imprimir filtrados</button>
+            </div>
           </div>
-          <input type="text" placeholder="Buscar..." class="input" style="width:220px;font-size:13px;padding:7px 12px" oninput="buscarInscrito(this.value)">
+          <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+            <div style="font-size:12px;color:var(--texto2)">Exibindo <span id="ins-count-filt" style="font-weight:700;color:var(--cor-primaria)">0</span> de <span id="ins-count-tot" style="font-weight:700"><%= inscricoes.length %></span> inscritos</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:12px;color:var(--texto2)">Por página:</span>
+              <select id="ins-por-pagina" class="input" style="font-size:12px;padding:4px 8px;width:74px" onchange="filtrarInscritos()">
+                <option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="9999">Todos</option>
+              </select>
+            </div>
+          </div>
         </div>
+
         <div class="section-card">
           <table class="tabela" id="tabela-inscritos">
             <thead><tr><th>#</th><th>Nome</th><th>Email</th><th>Lote</th><th>Status</th><th>Check-in</th><th>Ações</th></tr></thead>
             <tbody>
               <% inscricoes.forEach(i => { %>
-              <tr class="inscrito-row">
+              <tr class="inscrito-row"
+                data-nome="<%= (i.nome||'').toLowerCase() %>"
+                data-email="<%= (i.email||'').toLowerCase() %>"
+                data-status="<%= i.status %>"
+                data-isento="<%= i.isento ? 'isento' : 'pagante' %>"
+                data-lote="<%= i.lote_id||'' %>">
                 <td style="color:var(--texto2)"><%= i.id %></td>
                 <td style="font-weight:600"><%= i.nome %></td>
                 <td style="font-size:12px;color:var(--texto2)"><%= i.email %></td>
@@ -560,7 +603,7 @@
                     <button onclick="editarInscrito(<%= i.id %>,'<%= i.nome.replace(/'/g,"\\'") %>','<%= i.email %>','<%= i.whatsapp||'' %>','<%= i.cpf||'' %>','<%= i.instituicao||'' %>','<%= i.status %>')" class="btn-xs azul">Editar</button>
                     <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/confirmar" style="display:inline"><button class="btn-xs verde">Confirmar</button></form>
                     <a href="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/certificado" class="btn-xs roxo">Cert.</a>
-                    <a href="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/cracha" target="_blank" class="btn-xs" style="background:#0891b2;color:white;border-color:transparent">Cracha</a>
+                    <a href="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/cracha" target="_blank" class="btn-xs cyan">Cracha</a>
                     <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')"><button class="btn-xs verm">Excluir</button></form>
                   </div>
                 </td>
@@ -568,6 +611,7 @@
               <% }) %>
             </tbody>
           </table>
+          <div id="ins-paginacao" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:16px 0;flex-wrap:wrap"></div>
         </div>
       </div>
 
