@@ -1,0 +1,506 @@
+/* ============================================================
+   LIGA UROLOGIA — Painel Interno (v6 - FIXED SIDEBAR)
+   admin-modern.css
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden;
+}
+
+html { height: 100% !important; }
+
+body {
+  font-family: 'Plus Jakarta Sans', 'Outfit', system-ui, -apple-system, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh !important;
+}
+
+/* ============================================================
+   LAYOUT - sidebar FIXA, conteúdo com margin-left
+   ============================================================ */
+
+.layout,
+body > .layout,
+div.layout {
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  padding-left: 240px !important;  /* espaço reservado para sidebar fixa */
+  box-sizing: border-box !important;
+}
+
+.main,
+body .main,
+div.main,
+main.main {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  min-height: 100vh !important;
+}
+
+.content,
+body .content,
+div.content,
+.main .content,
+.main > .content {
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 24px 32px !important;
+  margin: 0 !important;
+  flex: 1 !important;
+  box-sizing: border-box !important;
+}
+
+.content > .freq-card,
+.content > .stat-card,
+.content > div,
+.freq-card {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* ============================================================
+   SIDEBAR — POSITION FIXED — sempre visível, sempre 100% altura
+   ============================================================ */
+
+.sidebar,
+aside.sidebar {
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%) !important;
+  color: #e2e8f0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 240px !important;
+  min-width: 240px !important;
+  max-width: 240px !important;
+  border: none !important;
+  box-sizing: border-box !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  bottom: 0 !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+  z-index: 100 !important;
+}
+
+.sidebar-brand {
+  display: flex !important;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  flex-shrink: 0 !important;
+  background: rgba(0,0,0,0.15);
+}
+.sidebar-brand-logo {
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #2563eb, #06b6d4);
+  display: grid;
+  place-items: center;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  font-size: 13px;
+  color: white;
+  box-shadow: 0 4px 14px rgba(37,99,235,.35);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar-brand-logo--img {
+  background: white !important;
+  padding: 4px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.25) !important;
+}
+.sidebar-brand-logo--img img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.sidebar-brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+  overflow: hidden;
+  flex: 1;
+}
+.sidebar-brand-text strong {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  color: white;
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-brand-text span {
+  font-size: 9.5px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-top: 1px;
+}
+
+.sidebar-nav {
+  flex: 1 1 auto !important;
+  padding: 12px 10px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  min-height: 0 !important;
+}
+
+.sidebar-nav::-webkit-scrollbar { width: 4px; }
+.sidebar-nav::-webkit-scrollbar-track { background: transparent; }
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.18);
+}
+
+.nav-group { margin-bottom: 14px; }
+.nav-group-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #64748b;
+  padding: 0 12px 6px;
+}
+
+.sidebar .nav-item {
+  display: flex !important;
+  align-items: center !important;
+  gap: 11px !important;
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  color: #cbd5e1 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  margin-bottom: 2px !important;
+  text-decoration: none !important;
+  transition: all .15s ease !important;
+  border: none !important;
+  background: transparent !important;
+}
+.sidebar .nav-item:hover {
+  background: rgba(255,255,255,.06) !important;
+  color: white !important;
+}
+.sidebar .nav-item.ativo {
+  background: linear-gradient(90deg, rgba(37,99,235,.22), rgba(6,182,212,.08)) !important;
+  color: white !important;
+  box-shadow: inset 3px 0 0 #06b6d4 !important;
+}
+.sidebar .nav-icon {
+  width: 20px;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-footer {
+  border-top: 1px solid rgba(255,255,255,.08);
+  padding: 12px 14px;
+  flex-shrink: 0 !important;
+  background: rgba(0,0,0,0.25);
+}
+.sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+.sidebar-user-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #06b6d4);
+  color: white;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.sidebar-user-info {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+.sidebar-user-info strong {
+  color: white;
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sidebar-user-info span {
+  color: #94a3b8;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+.sidebar-logout {
+  display: block;
+  text-align: center;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(220,38,38,.12);
+  color: #fca5a5;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all .15s ease;
+}
+.sidebar-logout:hover {
+  background: #dc2626;
+  color: white;
+}
+
+.topbar,
+.main .topbar,
+.main > .topbar {
+  background: #ffffff !important;
+  border-bottom: 1px solid #e6e9f2 !important;
+  padding: 16px 32px !important;
+  margin: 0 !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.page-titulo {
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 22px !important;
+  margin: 0 !important;
+  letter-spacing: -.01em;
+}
+
+.topbar-acoes {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.freq-card,
+.stat-card {
+  border-radius: 14px !important;
+  border: 1px solid #e6e9f2 !important;
+  box-shadow: 0 1px 3px rgba(15,23,42,.04) !important;
+  background: #ffffff !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  margin-bottom: 16px !important;
+}
+
+.btn {
+  border-radius: 9px !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  font-weight: 600 !important;
+  transition: all .15s ease !important;
+}
+.btn-primario {
+  background: linear-gradient(135deg, #1a56db, #1e3a8a) !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(30, 58, 138, .22) !important;
+  border: none !important;
+}
+.btn-primario:hover {
+  box-shadow: 0 6px 18px rgba(30, 58, 138, .32) !important;
+}
+
+.filtro-btn {
+  border-radius: 9px !important;
+  font-weight: 600 !important;
+}
+.filtro-btn.ativo {
+  background: linear-gradient(135deg, #1a56db, #1e3a8a) !important;
+  color: white !important;
+}
+
+.alerta {
+  border-radius: 12px !important;
+  border: 1px solid transparent !important;
+}
+.alerta-ok {
+  background: #d1fae5 !important;
+  color: #065f46 !important;
+  border-color: #a7f3d0 !important;
+}
+.alerta-erro {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+  border-color: #fecaca !important;
+}
+
+.modal-overlay {
+  background: rgba(15, 23, 42, .55) !important;
+  backdrop-filter: blur(3px);
+}
+.modal {
+  border-radius: 16px !important;
+  box-shadow: 0 20px 50px rgba(15,23,42,.18) !important;
+}
+
+.input {
+  border-radius: 9px !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+}
+.input:focus {
+  outline: none !important;
+  border-color: #1a56db !important;
+  box-shadow: 0 0 0 4px rgba(30, 58, 138, .10) !important;
+}
+
+.badge {
+  border-radius: 999px !important;
+  padding: 3px 10px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+}
+
+.stat-card { padding: 18px 22px !important; }
+.stat-valor {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 32px !important;
+  font-weight: 700 !important;
+}
+
+/* RESPONSIVO - sidebar collapsed em mobile */
+@media (max-width: 768px) {
+  .layout,
+  body > .layout,
+  div.layout {
+    padding-left: 64px !important;
+  }
+  .sidebar,
+  aside.sidebar {
+    width: 64px !important;
+    min-width: 64px !important;
+    max-width: 64px !important;
+  }
+  .sidebar-brand-text,
+  .sidebar-user-info,
+  .nav-group-title { display: none !important; }
+  .sidebar-brand-logo { margin: 0 auto; }
+  .sidebar .nav-item span:not(.nav-icon) { display: none !important; }
+  .sidebar .nav-item { justify-content: center !important; }
+  .content { padding: 16px !important; }
+  .topbar { padding: 14px 16px !important; }
+}
+
+/* ── Fonte global dos modais ── */
+.modal-titulo {
+  font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 18px !important;
+  letter-spacing: -0.3px !important;
+}
+.modal-header {
+  font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif !important;
+}
+.modal {
+  font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif !important;
+}
+.label {
+  font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif !important;
+  font-weight: 600 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LAURO SISTEMA — PADRÃO GLOBAL: CANTOS RETOS + HOVER
+   Carregado por último — sobrescreve tudo anterior
+═══════════════════════════════════════════════════════════════ */
+.btn, a.btn, button.btn,
+button[type="submit"], button[type="button"],
+.btn-primario, .btn-outline, .btn-cancelar, .btn-salvar,
+input:not([type="radio"]):not([type="checkbox"]),
+select, textarea, .input,
+.card, .modal-grande, .modal-box, .modal-ver, .modal,
+.filtros-card, .table-wrap,
+.badge-ativo, .badge-inativo, .resultado-badge, .tag-semestre,
+.stat-mini, .notif-card, .ligante-card,
+.cal-grid-wrap, .cal-lista,
+.preview-table th:first-child, .preview-table th:last-child,
+.ical-banner, .ical-btn, .cal-nav-btn, .hoje-btn,
+.cal-tab, .cal-tabs, .fil-btn,
+.kbb, .kb-btn, .btn-xs, .btn-send, .btn-env,
+.pag-btn, .rpb { border-radius: 0 !important; }
+
+.btn, a.btn, button.btn,
+.btn-primario, .btn-cancelar, .btn-salvar,
+.fil-btn, .ical-btn, .btn-xs, .btn-send {
+  transition: transform .12s ease, box-shadow .12s ease,
+    background .12s ease, color .12s ease,
+    border-color .12s ease, opacity .12s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+.btn:hover, a.btn:hover, button.btn:hover,
+.btn-primario:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,.18) !important;
+}
+.btn-outline:hover, .btn-cancelar:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,.1) !important;
+}
+
+/* === LOGO SIDEBAR SEMPRE CIRCULAR === */
+.sidebar-brand-logo,
+.sidebar-brand-logo img,
+aside.sidebar .sidebar-brand-logo,
+aside.sidebar .sidebar-brand-logo img { border-radius: 50% !important; overflow: hidden; }
+
+/* === DASHBOARD — TRAÇOS RETOS GLOBAL === */
+.main .card,
+.main [class*="card"],
+.main [class*="stat"],
+.main [class*="chart"],
+.main [class*="notif"],
+.main [class*="evento"],
+.main [class*="atividade"],
+.main [class*="badge"],
+.main [class*="btn"],
+.main [class*="modal"],
+.main input,
+.main select,
+.main textarea,
+.main table,
+.main thead,
+.main th,
+.main td { border-radius: 0 !important; }

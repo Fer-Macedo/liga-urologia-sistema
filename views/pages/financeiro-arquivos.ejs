@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Arquivos Financeiros</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin-modern.css">
@@ -57,7 +58,26 @@
     .btn-xs.verde{background:#059669;color:white;border-color:transparent;}
     .btn-xs.google{background:#4285f4;color:white;border-color:transparent;}
     .btn-xs.verm{color:#dc2626;border-color:#fecaca;}
-  </style>
+  
+    /* === PADRÃO VERDE ESCURO — Arquivos Financeiros === */
+    * { border-radius:0!important; }
+    .pasta-item, .pasta-card, .arquivo-card, .folder-card { border-radius:0!important; transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease; }
+    .pasta-item:hover, .pasta-card:hover, .arquivo-card:hover, .folder-card:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.12); border-color:#253d18; }
+    .pasta-item.ativo, .pasta-item.active { background:#f0f7eb!important; border-color:#1a3410!important; color:#1a3410!important; }
+    .card, .panel, .sidebar-pastas { border-radius:0!important; }
+    .modal-box { border-radius:0!important; }
+    .modal-head { border-radius:0!important; background:linear-gradient(135deg,#1a3410,#253d18)!important; }
+    .modal-close { border-radius:0!important; }
+    .btn { border-radius:0!important; transition:transform .12s ease, box-shadow .12s ease!important; }
+    .btn:hover { transform:translateY(-2px)!important; box-shadow:0 4px 10px rgba(0,0,0,.15)!important; }
+    .btn-primario, .btn-upload { border-radius:0!important; background:linear-gradient(135deg,#1a3410,#253d18)!important; }
+    .btn-google { border-radius:0!important; }
+    input, select, textarea { border-radius:0!important; }
+    input:focus, select:focus { border-color:#1a3410!important; box-shadow:0 0 0 3px rgba(37,61,24,.1)!important; }
+    table thead th { background:linear-gradient(135deg,#1a3410,#253d18)!important; color:#fff!important; }
+    table tbody tr:hover { background:#f0f7eb!important; }
+    .badge { border-radius:0!important; }
+</style>
 </head>
 <body>
 <div class="layout">
@@ -123,12 +143,12 @@
             <div class="vazio"><div style="font-size:48px;margin-bottom:12px">&#128194;</div><div style="font-size:14px;font-weight:600;color:var(--texto);margin-bottom:4px">Pasta vazia</div><div style="font-size:12px">Faca upload ou adicione um link do Google Drive</div></div>
             <%}%>
             <%arquivos.forEach(a=>{%>
-            <%let ic='📄';let bc='badge-upload';let bt='Arquivo';
-              if(a.tipo==='google'){ic='🔗';bc='badge-google';bt='Google';}
-              else if(a.mimetype&&a.mimetype.includes('pdf')){ic='📑';bc='badge-pdf';bt='PDF';}
-              else if(a.mimetype&&a.mimetype.includes('image')){ic='🖼️';bc='badge-img';bt='Imagem';}
-              else if(a.mimetype&&(a.mimetype.includes('sheet')||a.mimetype.includes('excel'))){ic='📊';bc='badge-sheet';bt='Planilha';}
-              else if(a.mimetype&&(a.mimetype.includes('word')||a.mimetype.includes('document'))){ic='📝';bc='badge-word';bt='Word';}%>
+            <%let ic='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';let bc='badge-upload';let bt='Arquivo';
+              if(a.tipo==='google'){ic='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';bc='badge-google';bt='Google';}
+              else if(a.mimetype&&a.mimetype.includes('pdf')){ic='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>';bc='badge-pdf';bt='PDF';}
+              else if(a.mimetype&&a.mimetype.includes('image')){ic='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>️';bc='badge-img';bt='Imagem';}
+              else if(a.mimetype&&(a.mimetype.includes('sheet')||a.mimetype.includes('excel'))){ic='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>';bc='badge-sheet';bt='Planilha';}
+              else if(a.mimetype&&(a.mimetype.includes('word')||a.mimetype.includes('document'))){ic='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';bc='badge-word';bt='Word';}%>
             <div class="arquivo-card" id="card-<%=a.id%>" draggable="true" ondragstart="dragStart(event,'arquivo',<%=a.id%>)" ondragend="dragEnd(event)" onclick="abrirArquivo(<%=a.id%>)">
               <div class="arquivo-acoes">
                 <button class="btn-acao-mini edit" onclick="event.stopPropagation();renomear('arquivo',<%=a.id%>,'<%=a.nome%>')">&#9998;</button>

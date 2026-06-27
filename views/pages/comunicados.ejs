@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Comunicados</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%= config.org_cor||'#1a56db' %>;--rad:2px;}
+    .com-card{background:var(--card);border:1px solid var(--borda);border-radius:var(--rad);padding:16px 20px;margin-bottom:10px;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+    .com-titulo{font-size:14px;font-weight:700;color:var(--texto);margin-bottom:4px}
+    .com-texto{font-size:13px;color:var(--texto2);line-height:1.5;margin-bottom:6px}
+    .com-data{font-size:11px;color:var(--texto3)}
+    .tag-dest{font-size:11px;font-weight:700;padding:2px 8px;border-radius:var(--rad)}
+    .tag-todos{background:#eff6ff;color:#1d4ed8}
+    .tag-ligantes{background:#ecfdf5;color:#047857}
+    .tag-diretivos{background:#fff7ed;color:#c2410c}
+    .tag-inativo{background:#f3f4f6;color:#6b7280}
+    .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:20px}
+    .modal-box{background:var(--card);width:100%;max-width:560px;border-radius:var(--rad);overflow:hidden}
+    .modal-header{padding:16px 20px;border-bottom:1px solid var(--borda);display:flex;align-items:center;justify-content:space-between}
+    .form-label{font-size:12px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px}
+    .form-control{width:100%;padding:9px 12px;border:1px solid var(--borda);border-radius:var(--rad);font-size:13px;font-family:inherit;outline:none;background:var(--fundo);color:var(--texto);margin-bottom:12px}
+    .form-control:focus{border-color:var(--cor-primaria)}
+    .btn-danger-sm{padding:5px 10px;font-size:12px;border:1px solid #fecaca;background:#fef2f2;cursor:pointer;border-radius:var(--rad);color:#b91c1c;font-family:inherit}
+    .btn-sm{padding:5px 10px;font-size:12px;border:1px solid var(--borda);background:var(--card);cursor:pointer;border-radius:var(--rad);color:var(--texto2);font-family:inherit}
+    .empty{text-align:center;padding:40px;color:var(--texto2);font-size:14px}
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'comunicados' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Comunicados</h1>
+      <button onclick="document.getElementById('modal-novo').style.display='flex'" class="btn btn-primary" style="display:flex;align-items:center;gap:6px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Novo Comunicado
+      </button>
+    </div>
+
+    <div class="page-body">
+      <% if(locals.ok){ %><div class="alert alert-success" style="margin-bottom:12px"><%=ok%></div><% } %>
+      <% if(locals.erro){ %><div class="alert alert-danger" style="margin-bottom:12px"><%=erro%></div><% } %>
+
+      <% if(comunicados.length===0){ %>
+      <div class="empty">Nenhum comunicado cadastrado. Clique em "Novo Comunicado" para criar.</div>
+      <% } %>
+
+      <% comunicados.forEach(function(c){ %>
+      <div class="com-card">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
+            <span class="com-titulo"><%=c.titulo%></span>
+            <span class="tag-dest tag-<%=c.destinatarios%>"><%=c.destinatarios==='todos'?'Todos':c.destinatarios==='ligantes'?'Ligantes':'Diretivos'%></span>
+            <% if(!c.ativo){ %><span class="tag-dest tag-inativo">Inativo</span><% } %>
+          </div>
+          <div class="com-texto" style="white-space:pre-wrap"><%=c.texto%></div>
+          <div class="com-data"><%=new Date(c.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%><% if(c.autor_nome){ %> · <%=c.autor_nome%><% } %></div>
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;margin-top:2px">
+          <form method="POST" action="/comunicados/<%=c.id%>/toggle" style="margin:0">
+            <button type="submit" class="btn-sm"><%=c.ativo?'Desativar':'Ativar'%></button>
+          </form>
+          <form method="POST" action="/comunicados/<%=c.id%>/excluir" onsubmit="return confirm('Excluir este comunicado?')" style="margin:0">
+            <button type="submit" class="btn-danger-sm">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            </button>
+          </form>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  </main>
+</div>
+
+<div id="modal-novo" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span style="font-size:15px;font-weight:700;color:var(--texto)">Novo Comunicado</span>
+      <button onclick="document.getElementById('modal-novo').style.display='none'" style="background:none;border:none;cursor:pointer;color:var(--texto2)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <form method="POST" action="/comunicados/novo" style="padding:20px">
+      <label class="form-label">Titulo</label>
+      <input type="text" name="titulo" required placeholder="Titulo do comunicado" class="form-control">
+      <label class="form-label">Mensagem</label>
+      <textarea name="texto" required rows="4" placeholder="Texto do comunicado..." class="form-control" style="resize:vertical"></textarea>
+      <label class="form-label">Destinatarios</label>
+      <select name="destinatarios" class="form-control">
+        <option value="todos">Todos (ligantes e diretivos)</option>
+        <option value="ligantes">Somente ligantes</option>
+        <option value="diretivos">Somente diretivos</option>
+      </select>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:4px">
+        <button type="button" onclick="document.getElementById('modal-novo').style.display='none'" class="btn btn-secondary">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Publicar</button>
+      </div>
+    </form>
+  </div>
+</div>
+</body>
+</html>

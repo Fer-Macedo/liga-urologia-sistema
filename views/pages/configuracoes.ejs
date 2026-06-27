@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Configuracoes</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin-modern.css">
@@ -152,6 +153,10 @@
               <div class="campo"><label class="label">Assinatura Dir. Financeiro(a) (PNG)</label><input type="file" name="assinatura_financeiro" class="input" accept="image/*"><%if(config.assinatura_financeiro_chave){%><span class="assin-ok">Assinatura cadastrada</span><%}%></div>
               <div class="campo"><label class="label">Nome do Orientador</label><input name="orientador_nome" class="input" value="<%=config.orientador_nome||''%>"></div>
               <div class="campo"><label class="label">Assinatura do Orientador (PNG)</label><input type="file" name="assinatura_orientador" class="input" accept="image/*"><%if(config.assinatura_orientador_chave){%><span class="assin-ok">Assinatura cadastrada</span><%}%></div>
+              <div class="campo"><label class="label">Nome do Director de Enseñanza</label><input name="director_ensino_nome" class="input" value="<%=config.director_ensino_nome||''%>" placeholder="Director responsable de proyectos de Enseñanza"></div>
+              <div class="campo"><label class="label">Assinatura del Director de Enseñanza (PNG)</label><input type="file" name="assinatura_director_ensino" class="input" accept="image/*"><%if(config.assinatura_director_ensino_chave){%><span class="assin-ok">Assinatura cadastrada</span><%}%></div>
+              <div class="campo"><label class="label">Nome do Director de Extensión</label><input name="director_extension_nome" class="input" value="<%=config.director_extension_nome||''%>" placeholder="Director responsable de proyectos de Extensión"></div>
+              <div class="campo"><label class="label">Assinatura del Director de Extensión (PNG)</label><input type="file" name="assinatura_director_extension" class="input" accept="image/*"><%if(config.assinatura_director_extension_chave){%><span class="assin-ok">Assinatura cadastrada</span><%}%></div>
               <div class="campo" style="grid-column:1/-1"><label class="label">Papel Timbrado A4</label><input type="file" name="timbrado" class="input" accept="image/*"><%if(config.timbrado_chave){%><span class="assin-ok">Timbrado cadastrado</span><%}%></div>
             </div>
           </div>
@@ -159,6 +164,19 @@
         <div style="display:flex;justify-content:flex-end;margin-top:8px;margin-bottom:24px">
           <button type="submit" class="btn btn-primario" style="padding:12px 32px">Salvar configuracoes</button>
         </div>
+      <div class="cfg-card">
+        <div class="cfg-header">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+          Email de los Proyectos Academicos
+        </div>
+        <div class="cfg-body">
+          <div class="dica-box">El secretario envia los proyectos a la Coordinacion desde el email oficial de la liga. Configure aqui ambos correos.</div>
+          <div class="cfg-grid">
+            <div class="campo"><label class="label">Email oficial de la liga (remitente)</label><input name="email_liga_oficial" type="text" class="input" value="<%=config.email_liga_oficial||''%>" placeholder="lauroucpcde@lauroucpcde.com"></div>
+            <div class="campo"><label class="label">Email de la Coordinacion de Ligas (destinatario)</label><input name="email_coordenacion_ligas" type="text" class="input" value="<%=config.email_coordenacion_ligas||''%>" placeholder="coordinacion@ucp.edu.py"></div>
+          </div>
+        </div>
+      </div>
       </form>
     </div>
   </main>

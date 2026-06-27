@@ -1,0 +1,158 @@
+<%
+// ── Painel do FLUJO DE APROBACIÓN ──
+var cfg = (typeof config !== "undefined" && config) ? config : {};
+var __perfil = (typeof usuario !== "undefined" && usuario) ? usuario.perfil : "";
+var ehAdmin = (typeof ehAdmin !== "undefined") ? ehAdmin : (__perfil === "admin" || __perfil === "presidencia");
+var ehSec = (typeof ehSec !== "undefined") ? ehSec : (__perfil === "secretaria" || ehAdmin);
+var ehEnsino = (typeof ehEnsino !== "undefined") ? ehEnsino : (p.tipo === "ensino");
+var etapa = p.etapa_atual || 'rascunho';
+var etapaMap = {
+  rascunho:               {t:'Borrador — Enseñanza/Extensión', bg:'#EEF0ED', cor:'#5F6E66'},
+  aguardando_presidencia: {t:'Pendiente de Presidencia',       bg:'#FBF3E0', cor:'#C98A1E'},
+  aguardando_secretaria:  {t:'Pendiente de Secretaría',        bg:'#FBF3E0', cor:'#C98A1E'},
+  enviado_coordinacion:   {t:'Enviado a Coordinación de Ligas',bg:'#E8F0FA', cor:'#2C6BB3'},
+  en_correccion:          {t:'En corrección',                  bg:'#FBE9E7', cor:'#C0392B'},
+  aprobado_final:         {t:'Aprobado y Finalizado',          bg:'#E2F3EA', cor:'#23704F'}
+};
+var et = etapaMap[etapa] || {t:etapa, bg:'#EEF0ED', cor:'#5F6E66'};
+var anexosList = (typeof anexos !== 'undefined' && anexos) ? anexos : [];
+var anexoTipoLabel = {
+  documento_final: 'Documento final (con membrete)',
+  correcao_presidencia: 'Corrección de Presidencia',
+  pedido_correccion: 'Pedido de corrección (Coordinación)',
+  correccion_enseñanza: 'Corrección de Enseñanza/Extensión',
+  aprobado_final: 'Documento aprobado y firmado'
+};
+var emailCoord = cfg.email_coordenacion_ligas || '';
+// Quem é Enseñanza/Extensión: admin/presidencia OU tem o módulo (não dá pra checar módulo na view, então usamos editavel)
+var ehEnsinoExt = ehAdmin || (typeof editavel !== 'undefined' && editavel);
+var temDocFinal = anexosList.some(function(a){ return a.tipo==='documento_final'; });
+%>
+
+<div class="card" style="border-left:3px solid <%= et.cor %>">
+  <div class="card-h">Flujo de aprobación</div>
+  <div class="card-b">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <span style="font-size:11px;color:var(--ink-faint)">Etapa actual:</span>
+      <span style="background:<%= et.bg %>;color:<%= et.cor %>;padding:3px 10px;border-radius:3px;font-size:12px;font-weight:600"><%= et.t %></span>
+    </div>
+
+    <%- include('_timeline-projeto') %>
+
+    <!-- ░░ ENSEÑANZA/EXTENSIÓN: anexar documento final + enviar a presidencia ░░ -->
+    <% if (ehEnsinoExt && (etapa==='rascunho' || etapa==='en_correccion')) { %>
+      <div style="background:var(--blue-bg);border:1px solid #B9D2EC;border-radius:3px;padding:12px;margin-bottom:10px">
+        <p style="font-size:12.5px;color:var(--blue);margin-bottom:8px;font-weight:600">Paso 1 — Generar documento con membrete</p>
+        <p style="font-size:11.5px;color:var(--ink-soft);margin-bottom:8px">El sistema genera el documento completo con el membrete de la UCP, listo para descargar y anexar. Editable en Word o Google Docs.</p>
+        <button type="button" class="btn btn-pri" style="width:100%;margin-bottom:8px;justify-content:center;text-align:center" id="btn-gen-timbrado" onclick="generarTimbrado()">Generar documento timbrado</button>
+        <div style="border-top:1px dashed var(--line);margin:10px 0;padding-top:10px"></div>
+        <p style="font-size:11.5px;color:var(--ink-soft);margin-bottom:6px">O adjunte manualmente un documento:</p>
+        <form method="POST" action="/projetos/<%= p.id %>/anexar" enctype="multipart/form-data">
+          <input type="hidden" name="tipo_anexo" value="<%= etapa==='en_correccion' ? 'correccion_enseñanza' : 'documento_final' %>">
+          <input type="file" name="arquivo" accept=".pdf,.doc,.docx" required class="input" style="padding:7px;margin-bottom:6px;width:100%">
+          <button type="submit" class="btn btn-sec" style="width:100%;justify-content:center;text-align:center">Adjuntar documento manualmente</button>
+        </form>
+      <% if (temDocFinal || etapa==='en_correccion') { %>
+        <button class="btn btn-pri" id="btn-env-pres" style="width:100%;justify-content:center;text-align:center" onclick="accionFlujo('enviar-presidencia','¿Enviar a Presidencia para aprobación?')">Enviar a Presidencia</button>
+      <% } %>
+    <% } %>
+
+    <!-- ░░ PRESIDENCIA: revisar, anexar corregido, enviar a secretaria ░░ -->
+    <% if (ehAdmin && etapa==='aguardando_presidencia') { %>
+      <div style="background:#FBF3E0;border:1px solid #EAD9B0;border-radius:3px;padding:12px;margin-bottom:10px">
+        <p style="font-size:12.5px;color:#9A6B14;margin-bottom:8px;font-weight:600">Revisión de Presidencia</p>
+        <p style="font-size:11.5px;color:var(--ink-soft);margin-bottom:8px">Descargue el documento, revise/corrija manualmente y, si hubo cambios, adjunte la versión corregida. Luego envíe a Secretaría.</p>
+        <form method="POST" action="/projetos/<%= p.id %>/anexar" enctype="multipart/form-data" style="margin-bottom:8px">
+          <input type="hidden" name="tipo_anexo" value="correcao_presidencia">
+          <input type="file" name="arquivo" accept=".pdf,.doc,.docx" class="input" style="padding:7px;margin-bottom:6px;width:100%">
+          <button type="submit" class="btn btn-sec" style="width:100%;justify-content:center;text-align:center">Adjuntar versión corregida (opcional)</button>
+        </form>
+      </div>
+      <button class="btn btn-pri" id="btn-env-sec" style="width:100%;justify-content:center;text-align:center" onclick="accionFlujo('enviar-secretaria','¿Aprobar y enviar a Secretaría?')">Aprobar y enviar a Secretaría</button>
+      <form method="POST" action="/projetos/<%= p.id %>/devolver-correccion" enctype="multipart/form-data" style="margin-top:8px">
+        <p style="font-size:11.5px;color:var(--ink-soft);margin-bottom:6px">¿Necesita correcciones? Devuelva a Enseñanza/Extensión:</p>
+        <textarea name="observacao" placeholder="Qué debe corregirse (opcional)" style="width:100%;padding:7px;margin-bottom:6px;font-size:12px;border:1px solid var(--line-strong);border-radius:3px;resize:vertical" rows="2"></textarea>
+        <input type="file" name="arquivo" accept=".pdf,.doc,.docx" style="font-size:11px;margin-bottom:6px;width:100%">
+        <button type="submit" class="btn btn-danger" style="width:100%;justify-content:center;text-align:center">Devolver para corrección</button>
+      </form>
+    <% } %>
+
+    <!-- ░░ SECRETARÍA: enviar a coordinación (email en la misma thread) ░░ -->
+    <% if (ehSec && etapa==='aguardando_secretaria') { %>
+      <div style="background:#E8F0FA;border:1px solid #B9D2EC;border-radius:3px;padding:12px;margin-bottom:10px">
+        <p style="font-size:12.5px;color:var(--blue);margin-bottom:6px;font-weight:600">Envío a Coordinación de Ligas</p>
+        <% if (!emailCoord) { %>
+          <p style="font-size:11.5px;color:var(--red)">Configure el email de la Coordinación en Configuraciones antes de enviar.</p>
+        <% } else { %>
+          <p style="font-size:11.5px;color:var(--ink-soft)">Se enviará el documento por email desde la cuenta oficial de la liga a: <strong><%= emailCoord %></strong>. Toda la conversación de este proyecto se mantiene en el mismo hilo.</p>
+        <% } %>
+      </div>
+      <button class="btn btn-pri" id="btn-env-coord" style="width:100%;justify-content:center;text-align:center" <%= emailCoord ? '' : 'disabled' %> onclick="accionFlujo('enviar-coordinacion','¿Enviar el proyecto a la Coordinación de Ligas por email?')">Enviar a Coordinación de Ligas</button>
+    <% } %>
+
+    <!-- ░░ SECRETARÍA: recibió corrección de la coordinación → devolver a enseñanza ░░ -->
+    <% if (ehSec && etapa==='enviado_coordinacion') { %>
+      <div style="background:#FBE9E7;border:1px solid #F0C5C0;border-radius:3px;padding:12px;margin-bottom:10px">
+        <p style="font-size:12.5px;color:var(--red);margin-bottom:8px;font-weight:600">¿La Coordinación pidió correcciones?</p>
+        <p style="font-size:11.5px;color:var(--ink-soft);margin-bottom:8px">Adjunte el documento/email con las correcciones solicitadas y devuelva a Enseñanza/Extensión.</p>
+        <form method="POST" action="/projetos/<%= p.id %>/devolver-correccion" enctype="multipart/form-data">
+          <input type="file" name="arquivo" accept=".pdf,.doc,.docx,.eml,.msg" class="input" style="padding:7px;margin-bottom:6px;width:100%">
+          <textarea name="observacao" placeholder="Resumen de las correcciones solicitadas..." class="input" style="padding:7px;margin-bottom:6px;width:100%;min-height:50px"></textarea>
+          <button type="submit" class="btn btn-danger" style="width:100%;justify-content:center;text-align:center">Devolver para corrección</button>
+        </form>
+      </div>
+      <div style="border-top:1px solid var(--line);padding-top:10px;margin-top:6px">
+        <p style="font-size:11.5px;color:var(--ink-soft);margin-bottom:6px">Si la Coordinación <strong>aprobó</strong> el proyecto:</p>
+        <form method="POST" action="/projetos/<%= p.id %>/aprobar-final" enctype="multipart/form-data">
+          <input type="file" name="arquivo" accept=".pdf,.doc,.docx" class="input" style="padding:7px;margin-bottom:6px;width:100%">
+          <button type="submit" class="btn btn-pri" style="width:100%;justify-content:center;text-align:center">Adjuntar aprobado y finalizar</button>
+        </form>
+      </div>
+    <% } %>
+
+    <!-- ░░ APROBADO FINAL ░░ -->
+    <% if (etapa==='aprobado_final') { %>
+      <div style="background:#E2F3EA;border:1px solid #B5DCC6;border-radius:3px;padding:12px">
+        <p style="font-size:12.5px;color:#1B6E47;font-weight:600">Proyecto aprobado y archivado.</p>
+      </div>
+    <% } %>
+
+    <!-- ░░ Lista de documentos adjuntos (todas las etapas) ░░ -->
+    <% if (anexosList.length) { %>
+      <div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px">
+        <p style="font-size:11px;color:var(--ink-faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Documentos del proyecto</p>
+        <% anexosList.forEach(function(a){ %>
+          <a href="/projetos/<%= p.id %>/anexo/<%= a.id %>" target="_blank" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;text-decoration:none;color:var(--ink-soft);font-size:12px;border:1px solid var(--line);margin-bottom:5px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            <span style="flex:1"><strong style="color:var(--ink)"><%= anexoTipoLabel[a.tipo] || a.tipo %></strong><br><span style="color:var(--ink-faint);font-size:11px"><%= a.nome_original %></span></span>
+          </a>
+        <% }); %>
+      </div>
+    <% } %>
+  </div>
+</div>
+
+<script>
+async function generarTimbrado() {
+  var b = document.getElementById('btn-gen-timbrado');
+  if (b) { b.disabled = true; b.textContent = 'Generando…'; }
+  try {
+    var r = await fetch('/projetos/<%= p.id %>/gerar-timbrado', { method:'POST' });
+    var d = await r.json();
+    if (d.ok) { alert('Documento generado y adjuntado: ' + d.anexo_nome); location.reload(); }
+    else { if (b){ b.disabled=false; b.textContent='Generar documento timbrado'; } alert('Error: '+d.erro); }
+  } catch(e) { if (b){ b.disabled=false; b.textContent='Generar documento timbrado'; } alert('Error de conexión'); }
+}
+async function accionFlujo(accion, confirmacion) {
+  if (!confirm(confirmacion)) return;
+  var btnId = {'enviar-presidencia':'btn-env-pres','enviar-secretaria':'btn-env-sec','enviar-coordinacion':'btn-env-coord'}[accion];
+  var b = btnId ? document.getElementById(btnId) : null;
+  if (b) { b.disabled = true; b.textContent = 'Procesando…'; }
+  try {
+    var r = await fetch('/projetos/<%= p.id %>/' + accion, { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+    var d = await r.json();
+    if (d.ok) { location.reload(); }
+    else { if (b) { b.disabled = false; } alert('Error: ' + (d.erro||'desconocido')); }
+  } catch(e) { if (b) { b.disabled = false; } alert('Error de conexión'); }
+}
+</script>

@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Assistente Virtual — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    .av-wrap { display:grid; grid-template-columns:1fr 310px; height:calc(100vh - 60px); overflow:hidden; }
+    /* CHAT */
+    .chat-panel { display:flex; flex-direction:column; background:#f8fafc; overflow:hidden; }
+    .chat-hdr { background:#fff; border-bottom:1px solid #e2e8f0; padding:14px 20px; display:flex; align-items:center; gap:12px; flex-shrink:0; }
+    .chat-av { width:40px; height:40px; background:linear-gradient(135deg,#1a3410,#253d18); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:15px; flex-shrink:0; }
+    .chat-hdr-info h3 { font-size:14px; font-weight:700; color:#0f172a; display:flex; align-items:center; gap:6px; margin:0; }
+    .chat-hdr-info p { font-size:11px; color:#64748b; margin:2px 0 0; }
+    .online { width:8px; height:8px; background:#22c55e; border-radius:50%; display:inline-block; }
+    .chat-msgs { flex:1; overflow-y:auto; padding:20px; display:flex; flex-direction:column; gap:14px; }
+    .msg { display:flex; gap:8px; max-width:86%; animation:fin .2s ease; }
+    @keyframes fin{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+    .msg.admin { align-self:flex-end; flex-direction:row-reverse; }
+    .m-av { width:30px; height:30px; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:11px; font-weight:800; color:#fff; }
+    .msg.lauro .m-av { background:linear-gradient(135deg,#1a3410,#253d18); }
+    .msg.admin .m-av { background:#334155; }
+    .m-bub { padding:11px 15px; font-size:13.5px; line-height:1.65; }
+    .msg.lauro .m-bub { background:#fff; border:1px solid #e2e8f0; color:#1e293b; box-shadow:0 1px 3px rgba(0,0,0,.05); }
+    .msg.admin .m-bub { background:linear-gradient(135deg,#1a3410,#2b5018); color:#fff; }
+    .aps { margin-top:10px; display:flex; flex-direction:column; gap:5px; }
+    .ap { background:#f0f7eb; border-left:3px solid #253d18; padding:8px 10px; }
+    .ap-q { font-size:10.5px; font-weight:700; color:#1a4002; text-transform:uppercase; letter-spacing:.3px; margin-bottom:3px; }
+    .ap-r { font-size:12px; color:#374151; line-height:1.5; }
+    .ld-bub { display:flex; gap:5px; align-items:center; padding:14px 16px; }
+    .dot { width:7px; height:7px; background:#94a3b8; border-radius:50%; animation:bo .8s infinite; }
+    .dot:nth-child(2){animation-delay:.15s}.dot:nth-child(3){animation-delay:.3s}
+    @keyframes bo{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-7px)}}
+    .chat-inp { background:#fff; border-top:1px solid #e2e8f0; padding:14px 20px; flex-shrink:0; }
+    .inp-row { display:flex; gap:8px; align-items:flex-end; }
+    .txt { flex:1; border:1.5px solid #e2e8f0; padding:11px 13px; font-size:13.5px; font-family:inherit; resize:none; min-height:46px; max-height:120px; transition:border-color .15s; line-height:1.5; }
+    .txt:focus { outline:none; border-color:#253d18; }
+    .btn-env { background:linear-gradient(135deg,#1a3410,#253d18); color:#fff; border:none; padding:11px 18px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; transition:opacity .15s,transform .12s; height:46px; white-space:nowrap; }
+    .btn-env:hover { opacity:.88; transform:translateY(-1px); }
+    .btn-env:disabled { background:#94a3b8; cursor:not-allowed; transform:none; opacity:1; }
+    .inp-hint { font-size:11px; color:#94a3b8; margin-top:5px; }
+
+    .inp-toolbar { display:flex; align-items:flex-end; gap:8px; }
+    .btn-anexo { background:#f1f5f9; border:1.5px solid #e2e8f0; color:#64748b; padding:11px 13px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background .12s, border-color .12s; height:46px; flex-shrink:0; }
+    .btn-anexo:hover { background:#e2e8f0; border-color:#253d18; color:#253d18; }
+    .arquivo-preview { display:none; align-items:center; gap:8px; background:#f0f7eb; border:1px solid #b8dea0; padding:7px 12px; margin-bottom:8px; }
+    .arquivo-preview-nome { font-size:12px; font-weight:600; color:#1a3410; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .arquivo-preview-tipo { font-size:10px; color:#64748b; background:#fff; border:1px solid #e2e8f0; padding:2px 6px; }
+    .arquivo-preview-rm { background:none; border:none; color:#dc2626; cursor:pointer; font-size:16px; line-height:1; padding:0 2px; }
+    .msg-arquivo { display:flex; align-items:center; gap:7px; background:rgba(255,255,255,.15); padding:6px 10px; margin-bottom:8px; font-size:12px; }
+
+    /* KB PANEL */
+    .kb-panel { border-left:1px solid #e2e8f0; background:#fff; display:flex; flex-direction:column; overflow:hidden; }
+    .kb-hdr { padding:14px 15px; border-bottom:1px solid #e2e8f0; flex-shrink:0; }
+    .kb-hdr h4 { font-size:12px; font-weight:700; color:#0f172a; display:flex; align-items:center; gap:6px; margin:0 0 2px; }
+    .kb-hdr p { font-size:11px; color:#64748b; margin:0; }
+    .kb-sts { display:flex; gap:6px; margin-top:10px; }
+    .kbs { flex:1; border:1px solid #e2e8f0; padding:8px; text-align:center; }
+    .kbs-n { font-size:20px; font-weight:800; color:#1a3410; line-height:1; }
+    .kbs-l { font-size:9px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:.4px; margin-top:2px; }
+    .kb-list { flex:1; overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:5px; }
+    .kbi { border:1px solid #e2e8f0; padding:9px 10px; transition:opacity .2s; }
+    .kbi.off { opacity:.35; }
+    .kbi-q { font-size:11px; font-weight:700; color:#1a3410; line-height:1.4; margin-bottom:3px; }
+    .kbi-r { font-size:10.5px; color:#64748b; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .kbi-acts { display:flex; gap:3px; margin-top:6px; }
+    .kbb { font-size:9px; font-weight:700; padding:3px 7px; border:1px solid #e2e8f0; background:#f8fafc; color:#64748b; cursor:pointer; transition:background .12s; }
+    .kbb:hover { background:#e2e8f0; }
+    .kbb.del:hover { background:#fee2e2; color:#dc2626; border-color:#fecaca; }
+    .kbb.on { background:#dcfce7; color:#15803d; border-color:#bbf7d0; }
+    .kb-empty { text-align:center; padding:32px 16px; color:#94a3b8; }
+
+    .edit-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:center; justify-content:center; padding:20px; }
+    .edit-modal.open { display:flex; }
+    .edit-box { background:#fff; width:100%; max-width:520px; box-shadow:0 8px 40px rgba(0,0,0,.2); }
+    .edit-head { background:linear-gradient(135deg,#1a3410,#253d18); padding:16px 20px; display:flex; align-items:center; justify-content:space-between; }
+    .edit-head h4 { color:#fff; font-size:15px; font-weight:700; margin:0; display:flex; align-items:center; gap:8px; }
+    .edit-close { background:rgba(255,255,255,.2); border:none; color:#fff; width:28px; height:28px; cursor:pointer; font-size:18px; display:flex; align-items:center; justify-content:center; }
+    .edit-body { padding:20px; }
+    .edit-label { font-size:11px; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:.4px; margin-bottom:5px; display:block; }
+    .edit-field { width:100%; border:1.5px solid #e2e8f0; padding:10px 12px; font-size:13px; font-family:inherit; transition:border-color .15s; box-sizing:border-box; }
+    .edit-field:focus { outline:none; border-color:#253d18; }
+    textarea.edit-field { resize:vertical; min-height:90px; }
+    .edit-foot { padding:0 20px 20px; display:flex; gap:8px; justify-content:flex-end; }
+    .btn-cancel { background:#f1f5f9; color:#374151; border:none; padding:9px 18px; font-size:13px; font-weight:600; cursor:pointer; }
+    .btn-save { background:linear-gradient(135deg,#1a3410,#253d18); color:#fff; border:none; padding:9px 22px; font-size:13px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; }
+    .btn-save:hover { opacity:.88; }
+
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'assistente-virtual' }) %>
+  <main class="main">
+    <div class="topbar"><h1 class="page-titulo">Assistente Virtual</h1></div>
+    <div class="av-wrap">
+
+      <!-- CHAT -->
+      <div class="chat-panel">
+        <div class="chat-hdr">
+          <div class="chat-av">L</div>
+          <div class="chat-hdr-info">
+            <h3><span class="online"></span> Lauro — Atendente Virtual</h3>
+            <p>Ensine informações para que o Lauro responda com mais precisão no WhatsApp</p>
+          </div>
+        </div>
+        <div class="chat-msgs" id="msgs">
+          <div class="msg lauro">
+            <div class="m-av">L</div>
+            <div class="m-bub">
+              <strong>Olá!  Estou pronto para aprender.</strong><br><br>
+              Me conte qualquer coisa sobre a Liga — eventos, datas, regras, procedimentos, perguntas frequentes. Vou guardar tudo e usar para responder melhor no WhatsApp. <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg><br><br>
+              Escreva de forma natural, como se estivesse me explicando algo!
+            </div>
+          </div>
+        </div>
+        <div class="chat-inp">
+          <div class="arquivo-preview" id="arquivoPreview">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#1a3410" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            <span class="arquivo-preview-nome" id="arquivoNome"></span>
+            <span class="arquivo-preview-tipo" id="arquivoTipo"></span>
+            <button class="arquivo-preview-rm" onclick="removerArquivo()" title="Remover">×</button>
+          </div>
+          <input type="file" id="fileInput" style="display:none" accept="image/*,.pdf,.txt,.doc,.docx" onchange="selecionarArquivo(this)">
+          <div class="inp-toolbar">
+            <button class="btn-anexo" onclick="document.getElementById('fileInput').click()" title="Anexar arquivo ou imagem">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+            </button>
+            <textarea class="txt" id="inp" placeholder="Ex: O Taller de Intracavernosa acontece dia 04/06 às 19h pelo Google Meet..." rows="2"></textarea>
+            <button class="btn-env" id="sendBtn" onclick="enviar()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Enviar
+            </button>
+          </div>
+          <div class="inp-hint">Enter para enviar &nbsp;•&nbsp; Shift+Enter para nova linha &nbsp;•&nbsp; <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg> Anexe imagens ou PDFs</div>
+        </div>
+      </div>
+
+      <!-- BASE DE CONHECIMENTO + USO API -->
+      <div class="kb-panel">
+        <!-- Widget Uso API -->
+        <div style="padding:10px 14px;border-bottom:1px solid #e2e8f0;flex-shrink:0">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:7px">
+            <span style="font-size:10px;font-weight:800;color:#1a3d2b;text-transform:uppercase;letter-spacing:.5px">⏱ Uso da API — IA</span>
+            <a href="https://console.anthropic.com/settings/billing" target="_blank" style="background:#1a3d2b;color:#fff;border-radius:2px;padding:3px 8px;font-size:9px;font-weight:700;text-decoration:none">$ Recarregar</a>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center">
+            <div style="background:#f0fdf4;border:1px solid #dcfce7;padding:5px 2px"><div style="font-size:11px;font-weight:800;color:#166534" id="uso-hoje-custo">—</div><div style="font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase">Hoje</div></div>
+            <div style="background:#f0fdf4;border:1px solid #dcfce7;padding:5px 2px"><div style="font-size:11px;font-weight:800;color:#166534" id="uso-mes-custo">—</div><div style="font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase">Mês</div></div>
+            <div style="background:#f0fdf4;border:1px solid #dcfce7;padding:5px 2px"><div style="font-size:11px;font-weight:800;color:#166534" id="uso-total-custo">—</div><div style="font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase">Total</div></div>
+          </div>
+          <div style="margin-top:4px;font-size:9px;color:#94a3b8;text-align:center">Saldo em <a href="https://console.anthropic.com/settings/billing" target="_blank" style="color:#1a3d2b;font-weight:700">console.anthropic.com</a></div>
+        </div>
+        <div class="kb-hdr">
+          <h4>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            Base de Conhecimento
+          </h4>
+          <p>O que o Lauro já sabe</p>
+          <div class="kb-sts">
+            <div class="kbs"><div class="kbs-n" id="kbTot"><%= conhecimento.length %></div><div class="kbs-l">Total</div></div>
+            <div class="kbs"><div class="kbs-n" id="kbAtv"><%= conhecimento.filter(k=>k.ativo==1||k.ativo===true).length %></div><div class="kbs-l">Ativos</div></div>
+          </div>
+        </div>
+        <div class="kb-list" id="kbList">
+          <% if(conhecimento.length===0){ %>
+          <div class="kb-empty">
+            <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.2;display:block;margin:0 auto 8px"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            <div style="font-size:12px;font-weight:600">Nenhum conhecimento ainda</div>
+            <div style="font-size:11px;margin-top:3px">Comece ensinando o Lauro!</div>
+          </div>
+          <% } %>
+          <% conhecimento.forEach(k=>{ const ativo=k.ativo==1||k.ativo===true; %>
+          <div class="kbi <%=ativo?'':'off'%>" id="kb-<%=k.id%>">
+            <div class="kbi-q"><%=k.pergunta%></div>
+            <div class="kbi-r"><%=k.resposta%></div>
+            <div class="kbi-acts">
+              <button class="kbb" style="color:#0891b2;border-color:#bae6fd" onclick="editKb(<%=k.id%>,`<%=k.pergunta.replace(/`/g,'\\`')%>`,`<%=k.resposta.replace(/`/g,'\\`')%>`)">Editar</button>
+              <button class="kbb <%=ativo?'on':''%>" onclick="togKb(<%=k.id%>,this)"><%=ativo?'Ativo':'Inativo'%></button>
+              <button class="kbb del" onclick="delKb(<%=k.id%>)">Excluir</button>
+            </div>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script>
+const msgs=document.getElementById('msgs'),inp=document.getElementById('inp'),sendBtn=document.getElementById('sendBtn');
+function sc(){msgs.scrollTop=msgs.scrollHeight;}
+function addMsg(t,h){const d=document.createElement('div');d.className='msg '+t;d.innerHTML=`<div class="m-av">${t==='admin'?'A':'L'}</div><div class="m-bub">${h}</div>`;msgs.appendChild(d);sc();return d;}
+function ld(){const d=document.createElement('div');d.className='msg lauro';d.innerHTML='<div class="m-av">L</div><div class="m-bub ld-bub"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>';msgs.appendChild(d);sc();return d;}
+let arquivoAnexo=null;
+function selecionarArquivo(input){
+  const file=input.files[0]; if(!file)return;
+  const ext=file.name.split('.').pop().toUpperCase();
+  const reader=new FileReader();
+  reader.onload=e=>{
+    arquivoAnexo={nome:file.name,tipo:file.type||'text/plain',base64:e.target.result.split(',')[1]};
+    document.getElementById('arquivoPreview').style.display='flex';
+    document.getElementById('arquivoNome').textContent=file.name;
+    document.getElementById('arquivoTipo').textContent=ext;
+  };
+  reader.readAsDataURL(file);
+  input.value='';
+}
+function removerArquivo(){
+  arquivoAnexo=null;
+  document.getElementById('arquivoPreview').style.display='none';
+  document.getElementById('arquivoNome').textContent='';
+}
+async function enviar(){
+  const txt=inp.value.trim();
+  if(!txt&&!arquivoAnexo)return;
+  if(sendBtn.disabled)return;
+  let adminHtml='';
+  if(arquivoAnexo){
+    const icone=arquivoAnexo.tipo.startsWith('image/')
+      ?'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>'
+      :'<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+    adminHtml+=`<div class="msg-arquivo">${icone} ${arquivoAnexo.nome}</div>`;
+  }
+  if(txt) adminHtml+=txt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+  addMsg('admin',adminHtml);
+  inp.value='';inp.style.height='';sendBtn.disabled=true;
+  const payload={mensagem:txt||'Analise este arquivo e extraia as informações relevantes para a base de conhecimento da Liga.'};
+  if(arquivoAnexo) payload.arquivo=arquivoAnexo;
+  const arqBackup=arquivoAnexo; removerArquivo();
+  const l=ld();
+  try{
+    const r=await fetch('/assistente-virtual/aprender',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d=await r.json();l.remove();
+    if(d.erro){addMsg('lauro','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> '+d.erro);}
+    else{
+      let h=(d.resposta||'').replace(/\n/g,'<br>');
+      if(d.aprendizados&&d.aprendizados.length){
+        h+='<div class="aps">';
+        d.aprendizados.forEach(ap=>{h+=`<div class="ap"><div class="ap-q"> ${ap.pergunta}</div><div class="ap-r"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> ${ap.resposta}</div></div>`;addKbI(ap);});
+        h+='</div>';updStats();
+      }
+      addMsg('lauro',h);
+    }
+  }catch(e){l.remove();addMsg('lauro','<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Erro de conexão.');}
+  sendBtn.disabled=false;inp.focus();
+}
+function addKbI(ap){
+  const list=document.getElementById('kbList');
+  const em=list.querySelector('.kb-empty');if(em)em.remove();
+  const d=document.createElement('div');d.className='kbi';if(ap.id)d.id='kb-'+ap.id;
+  d.innerHTML=`<div class="kbi-q">${ap.pergunta}</div><div class="kbi-r">${ap.resposta}</div><div class="kbi-acts"><button class="kbb on" onclick="togKb(${ap.id||0},this)">Ativo</button><button class="kbb del" onclick="delKb(${ap.id||0})">Excluir</button></div>`;
+  list.insertBefore(d,list.firstChild);
+}
+function updStats(){
+  document.getElementById('kbTot').textContent=document.querySelectorAll('.kbi').length;
+  document.getElementById('kbAtv').textContent=document.querySelectorAll('.kbi:not(.off)').length;
+}
+async function togKb(id,btn){
+  if(!id)return;const r=await fetch(`/assistente-virtual/conhecimento/${id}/toggle`,{method:'POST'});
+  const d=await r.json();if(d.ok){const el=document.getElementById('kb-'+id);if(el){el.classList.toggle('off');const on=!el.classList.contains('off');btn.textContent=on?'Ativo':'Inativo';btn.className='kbb '+(on?'on':'');}updStats();}
+}
+async function delKb(id){
+  if(!id||!confirm('Excluir este conhecimento?'))return;
+  const r=await fetch(`/assistente-virtual/conhecimento/${id}/deletar`,{method:'POST'});
+  const d=await r.json();if(d.ok){const el=document.getElementById('kb-'+id);if(el)el.remove();updStats();}
+}
+inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();enviar();}});
+
+let editId=null;
+function editKb(id,perg,resp){
+  editId=id;
+  document.getElementById('editPergunta').value=perg;
+  document.getElementById('editResposta').value=resp;
+  document.getElementById('editModal').classList.add('open');
+  setTimeout(()=>document.getElementById('editPergunta').focus(),100);
+}
+function fecharEdit(){
+  document.getElementById('editModal').classList.remove('open');
+  editId=null;
+}
+async function salvarEdit(){
+  if(!editId)return;
+  const p=document.getElementById('editPergunta').value.trim();
+  const r=document.getElementById('editResposta').value.trim();
+  if(!p||!r){alert('Preencha pergunta e resposta.');return;}
+  const btn=document.querySelector('.btn-save');
+  btn.textContent='Salvando...'; btn.disabled=true;
+  try{
+    const res=await fetch(`/assistente-virtual/conhecimento/${editId}/editar`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({pergunta:p,resposta:r})
+    });
+    const d=await res.json();
+    if(d.ok){
+      const el=document.getElementById('kb-'+editId);
+      if(el){
+        el.querySelector('.kbi-q').textContent=p;
+        el.querySelector('.kbi-r').textContent=r;
+      }
+      fecharEdit();
+    } else { alert('Erro ao salvar.'); }
+  }catch(e){ alert('Erro de conexão.'); }
+  btn.innerHTML='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Salvar alteração';
+  btn.disabled=false;
+}
+document.getElementById('editModal').addEventListener('click',e=>{if(e.target===e.currentTarget)fecharEdit();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')fecharEdit();});
+
+inp.addEventListener('input',()=>{inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,120)+'px';});
+sc();
+</script>
+
+<div class="edit-modal" id="editModal">
+  <div class="edit-box">
+    <div class="edit-head">
+      <h4>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Editar Conhecimento
+      </h4>
+      <button class="edit-close" onclick="fecharEdit()">×</button>
+    </div>
+    <div class="edit-body">
+      <label class="edit-label">Pergunta</label>
+      <input type="text" class="edit-field" id="editPergunta" placeholder="Pergunta que o membro faria...">
+      <div style="height:14px"></div>
+      <label class="edit-label">Resposta</label>
+      <textarea class="edit-field" id="editResposta" placeholder="Resposta completa e útil..."></textarea>
+    </div>
+    <div class="edit-foot">
+      <button class="btn-cancel" onclick="fecharEdit()">Cancelar</button>
+      <button class="btn-save" onclick="salvarEdit()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Salvar alteração
+      </button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

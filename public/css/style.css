@@ -394,11 +394,15 @@ select.input { cursor: pointer; }
   inset: 0;
   background: rgba(0,0,0,0.5);
   backdrop-filter: blur(4px);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   z-index: 200;
   padding: 20px;
+}
+.modal-overlay.open,
+.modal-overlay[style*="flex"] {
+  display: flex !important;
 }
 
 .modal {

@@ -2,45 +2,48 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cadastro de Diretivo — <%= config.org_nome || 'Liga Acadêmica de Urologia' %></title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
-    body { background: #f0f4ff; min-height: 100vh; padding: 32px 16px; }
-    .container { max-width: 720px; margin: 0 auto; }
-    .header { text-align: center; margin-bottom: 32px; }
-    .logo { max-height: 80px; max-width: 200px; object-fit: contain; margin-bottom: 16px; }
-    .header h1 { font-size: 24px; font-weight: 700; color: #1a56db; margin-bottom: 6px; }
-    .header p { color: #6b7280; font-size: 14px; }
-    .card { background: white; border-radius: 16px; padding: 32px; box-shadow: 0 4px 24px rgba(0,0,0,0.07); margin-bottom: 20px; }
-    .card-titulo { font-size: 15px; font-weight: 700; color: #1a56db; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb; display: flex; align-items: center; gap: 8px; }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-    .grid-1 { grid-template-columns: 1fr; }
-    .grid-3 { grid-template-columns: 1fr 1fr 1fr; }
-    .campo { display: flex; flex-direction: column; gap: 6px; }
-    .campo.full { grid-column: 1 / -1; }
-    label { font-size: 13px; font-weight: 600; color: #374151; }
-    label span { color: #ef4444; margin-left: 2px; }
-    input, select, textarea { padding: 10px 14px; border: 1.5px solid #e5e7eb; border-radius: 10px; font-size: 14px; color: #111827; background: #f9fafb; transition: border-color 0.2s, box-shadow 0.2s; font-family: 'Inter', sans-serif; }
-    input:focus, select:focus, textarea:focus { outline: none; border-color: #1a56db; box-shadow: 0 0 0 3px rgba(26,86,219,0.1); background: white; }
-    textarea { resize: vertical; min-height: 80px; }
-    .radio-group { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
-    .radio-option { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1.5px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
-    .radio-option input { width: auto; margin: 0; }
-    .radio-option:has(input:checked) { border-color: #1a56db; background: #eff6ff; color: #1a56db; font-weight: 600; }
-    .checkbox-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
-    .checkbox-option { display: flex; align-items: center; gap: 6px; padding: 8px 14px; border: 1.5px solid #e5e7eb; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
-    .checkbox-option input { width: auto; margin: 0; }
-    .checkbox-option:has(input:checked) { border-color: #1a56db; background: #eff6ff; color: #1a56db; font-weight: 600; }
-    .btn-submit { width: 100%; padding: 14px; background: linear-gradient(135deg, #1a56db, #1e40af); color: white; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.2s; margin-top: 8px; }
-    .btn-submit:hover { opacity: 0.95; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(26,86,219,0.3); }
-    .alerta { padding: 14px 18px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; font-weight: 500; }
-    .alerta-ok { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
-    .alerta-erro { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-    .footer { text-align: center; margin-top: 24px; color: #9ca3af; font-size: 12px; }
-    #campos-transporte { display: none; margin-top: 12px; }
-    @media (max-width: 600px) { .grid, .grid-3 { grid-template-columns: 1fr; } .card { padding: 20px; } }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Inter',sans-serif; border-radius:0!important; }
+    body { background:#f0f4f0; min-height:100vh; }
+    .container { max-width:720px; margin:0 auto; }
+    .header { background:linear-gradient(160deg,#0a1a08 0%,#1a3410 50%,#253d18 100%); text-align:center; padding:40px 24px 48px; position:relative; }
+    .header::after { content:''; position:absolute; bottom:0; left:0; right:0; height:4px; background:linear-gradient(90deg,#253d18,#4a8a20,#253d18); }
+    .logo { width:96px; height:96px; object-fit:cover; border-radius:50%!important; border:3px solid rgba(255,255,255,.35); display:block; margin:0 auto 16px; box-shadow:0 6px 24px rgba(0,0,0,.3); }
+    .header h1 { font-size:24px; font-weight:800; color:#fff; margin-bottom:6px; letter-spacing:-.3px; }
+    .header p { color:rgba(255,255,255,.7); font-size:14px; }
+    .form-area { padding:24px 16px 40px; }
+    .card { background:white; border:1px solid #e2e8f0; padding:28px; box-shadow:0 1px 6px rgba(0,0,0,.06); margin-bottom:16px; }
+    .card-titulo { font-size:12px; font-weight:700; color:#1a3410; margin-bottom:20px; padding-bottom:10px; border-bottom:2px solid #d1e8c8; display:flex; align-items:center; gap:8px; text-transform:uppercase; letter-spacing:.05em; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .grid-1 { grid-template-columns:1fr; }
+    .grid-3 { grid-template-columns:1fr 1fr 1fr; }
+    .campo { display:flex; flex-direction:column; gap:6px; }
+    .campo.full { grid-column:1/-1; }
+    label { font-size:12px; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:.04em; }
+    label span { color:#ef4444; margin-left:2px; }
+    input, select, textarea { padding:10px 14px; border:1.5px solid #e2e8f0; font-size:14px; color:#111827; background:#fafafa; transition:border-color .2s, box-shadow .2s; font-family:'Inter',sans-serif; width:100%; }
+    input:focus, select:focus, textarea:focus { outline:none; border-color:#253d18; box-shadow:0 0 0 3px rgba(37,61,24,.1); background:white; }
+    textarea { resize:vertical; min-height:80px; }
+    .radio-group { display:flex; gap:12px; flex-wrap:wrap; margin-top:4px; }
+    .radio-option { display:flex; align-items:center; gap:6px; padding:8px 14px; border:1.5px solid #e2e8f0; cursor:pointer; font-size:13px; transition:all .2s; }
+    .radio-option input { width:auto; margin:0; }
+    .radio-option:has(input:checked) { border-color:#253d18; background:#f0f7eb; color:#1a3410; font-weight:600; }
+    .checkbox-group { display:flex; gap:10px; flex-wrap:wrap; margin-top:4px; }
+    .checkbox-option { display:flex; align-items:center; gap:6px; padding:8px 14px; border:1.5px solid #e2e8f0; cursor:pointer; font-size:13px; transition:all .2s; }
+    .checkbox-option input { width:auto; margin:0; }
+    .checkbox-option:has(input:checked) { border-color:#253d18; background:#f0f7eb; color:#1a3410; font-weight:600; }
+    .btn-submit { width:100%; padding:14px; background:linear-gradient(135deg,#1a3410,#253d18); color:white; border:none; font-size:15px; font-weight:700; cursor:pointer; transition:transform .12s ease, box-shadow .12s ease; margin-top:8px; display:flex; align-items:center; justify-content:center; gap:8px; }
+    .btn-submit:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(37,61,24,.35); }
+    .alerta { padding:14px 18px; margin-bottom:16px; font-size:14px; font-weight:500; display:flex; align-items:center; gap:8px; }
+    .alerta-ok { background:#dcfce7; color:#166534; border:1px solid #86efac; border-left:4px solid #16a34a; }
+    .alerta-erro { background:#fee2e2; color:#991b1b; border:1px solid #fca5a5; border-left:4px solid #dc2626; }
+    .footer { text-align:center; padding:20px; color:#9ca3af; font-size:12px; background:white; border-top:1px solid #e2e8f0; }
+    #campos-transporte { display:none; margin-top:12px; }
+    @media(max-width:600px) { .grid,.grid-3{grid-template-columns:1fr} .card{padding:20px} }
   </style>
 </head>
 <body>
@@ -52,15 +55,15 @@
     <h1>Cadastro de Diretivo</h1>
     <p><%= config.org_nome || 'Liga Acadêmica de Urologia' %> — Preencha todos os campos obrigatórios</p>
   </div>
+  <div class="form-area">
+  <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <%= msg[0] %></div><% } %>
+  <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> <%= erro[0] %></div><% } %>
 
-  <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
-  <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
-
-  <form action="/cadastro-diretivo" method="POST">
+  <form action="/cadastro-diretivo" method="POST" enctype="multipart/form-data" onsubmit="validarForm(event)">
 
     <!-- DADOS PESSOAIS -->
     <div class="card">
-      <div class="card-titulo">👤 Dados Pessoais</div>
+      <div class="card-titulo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Dados Pessoais</div>
       <div class="grid">
         <div class="campo full">
           <label>Nome Completo <span>*</span></label>
@@ -72,7 +75,7 @@
         </div>
         <div class="campo">
           <label>CPF</label>
-          <input name="cpf" placeholder="000.000.000-00" value="<%= form.cpf || '' %>">
+          <input name="cpf" placeholder="000.000.000-00" oninput="this.value=mascaraCPF(this.value)" value="<%= form.cpf || '' %>">
         </div>
         <div class="campo">
           <label>Data de Nascimento <span>*</span></label>
@@ -83,8 +86,20 @@
           <input name="email" type="email" required placeholder="seu@email.com" value="<%= form.email || '' %>">
         </div>
         <div class="campo">
-          <label>WhatsApp <span>*</span></label>
-          <input name="whatsapp" required placeholder="+55 (00) 00000-0000" value="<%= form.whatsapp || '' %>">
+          <label>WhatsApp / Telefone <span>*</span></label>
+          <div style="display:flex;gap:8px">
+            <select name="ddi" style="width:130px;flex-shrink:0;padding:10px 8px;border:1.5px solid #e5e7eb;border-radius:10px;font-size:13px;background:#f9fafb">
+              <option value="+595" <%= (form.ddi||'+595')==='+595'?'selected':'' %>><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">PY</span> +595</option>
+              <option value="+55" <%= (form.ddi||'')==='+55'?'selected':'' %>><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">BR</span> +55</option>
+              <option value="+54" <%= (form.ddi||'')==='+54'?'selected':'' %>><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">AR</span> +54</option>
+              <option value="+1" <%= (form.ddi||'')==='+1'?'selected':'' %>><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">US</span> +1</option>
+              <option value="+351" <%= (form.ddi||'')==='+351'?'selected':'' %>><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">PT</span> +351</option>
+              <option value="+598" <%= (form.ddi||'')==='+598'?'selected':'' %>><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">UY</span> +598</option>
+              <option value="+56" <%= (form.ddi||'')==='+56'?'selected':'' %>><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">CL</span> +56</option>
+              <option value="+57" <%= (form.ddi||'')==='+57'?'selected':'' %>><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">CO</span> +57</option>
+            </select>
+            <input name="whatsapp_num" required placeholder="(00) 00000-0000" value="<%= form.whatsapp_num || form.whatsapp || '' %>" style="flex:1">
+          </div>
         </div>
         <div class="campo">
           <label>Instagram</label>
@@ -99,7 +114,7 @@
 
     <!-- DADOS ACADÊMICOS -->
     <div class="card">
-      <div class="card-titulo">🎓 Dados Acadêmicos</div>
+      <div class="card-titulo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg> Dados Acadêmicos</div>
       <div class="grid">
         <div class="campo">
           <label>Catraca (matrícula)</label>
@@ -130,33 +145,33 @@
 
     <!-- DADOS DA LIGA -->
     <div class="card">
-      <div class="card-titulo">🏥 Dados na Liga</div>
+      <div class="card-titulo"> Dados na Liga</div>
       <div class="grid">
         <div class="campo full">
           <label>Cargo na Liga <span>*</span></label>
           <select name="cargo" required>
             <option value="">Selecione seu cargo...</option>
-            <option value="Presidente(a)" <%= form.cargo === 'Presidente(a)' ? 'selected' : '' %>>👑 Presidente(a)</option>
-            <option value="Vice-presidente(a)" <%= form.cargo === 'Vice-presidente(a)' ? 'selected' : '' %>>🥈 Vice-presidente(a)</option>
-            <option value="Secretário(a)" <%= form.cargo === 'Secretário(a)' ? 'selected' : '' %>>📋 Secretário(a)</option>
-            <option value="Diretor(a) Financeiro(a)" <%= form.cargo === 'Diretor(a) Financeiro(a)' ? 'selected' : '' %>>💰 Diretor(a) Financeiro(a)</option>
-            <option value="Diretor(a) Científico" <%= form.cargo === 'Diretor(a) Científico' ? 'selected' : '' %>>🔬 Diretor(a) Científico</option>
-            <option value="Vice Diretor(a) Científico" <%= form.cargo === 'Vice Diretor(a) Científico' ? 'selected' : '' %>>🔬 Vice Diretor(a) Científico</option>
-            <option value="Diretor(a) de Extensão" <%= form.cargo === 'Diretor(a) de Extensão' ? 'selected' : '' %>>🌐 Diretor(a) de Extensão</option>
-            <option value="Vice Diretor(a) de Extensão" <%= form.cargo === 'Vice Diretor(a) de Extensão' ? 'selected' : '' %>>🌐 Vice Diretor(a) de Extensão</option>
-            <option value="Diretor(a) de Ensino" <%= form.cargo === 'Diretor(a) de Ensino' ? 'selected' : '' %>>📚 Diretor(a) de Ensino</option>
-            <option value="Vice Diretor(a) de Ensino" <%= form.cargo === 'Vice Diretor(a) de Ensino' ? 'selected' : '' %>>📚 Vice Diretor(a) de Ensino</option>
-            <option value="Diretor(a) de Marketing" <%= form.cargo === 'Diretor(a) de Marketing' ? 'selected' : '' %>>📣 Diretor(a) de Marketing</option>
-            <option value="Vice Diretor(a) de Marketing" <%= form.cargo === 'Vice Diretor(a) de Marketing' ? 'selected' : '' %>>📣 Vice Diretor(a) de Marketing</option>
+            <option value="Presidente(a)" <%= form.cargo === 'Presidente(a)' ? 'selected' : '' %>> Presidente(a)</option>
+            <option value="Vice-presidente(a)" <%= form.cargo === 'Vice-presidente(a)' ? 'selected' : '' %>> Vice-presidente(a)</option>
+            <option value="Secretário(a)" <%= form.cargo === 'Secretário(a)' ? 'selected' : '' %>>Secretário(a)</option>
+            <option value="Diretor(a) Financeiro(a)" <%= form.cargo === 'Diretor(a) Financeiro(a)' ? 'selected' : '' %>> Diretor(a) Financeiro(a)</option>
+            <option value="Diretor(a) Científico" <%= form.cargo === 'Diretor(a) Científico' ? 'selected' : '' %>> Diretor(a) Científico</option>
+            <option value="Vice Diretor(a) Científico" <%= form.cargo === 'Vice Diretor(a) Científico' ? 'selected' : '' %>> Vice Diretor(a) Científico</option>
+            <option value="Diretor(a) de Extensão" <%= form.cargo === 'Diretor(a) de Extensão' ? 'selected' : '' %>> Diretor(a) de Extensão</option>
+            <option value="Vice Diretor(a) de Extensão" <%= form.cargo === 'Vice Diretor(a) de Extensão' ? 'selected' : '' %>> Vice Diretor(a) de Extensão</option>
+            <option value="Diretor(a) de Ensino" <%= form.cargo === 'Diretor(a) de Ensino' ? 'selected' : '' %>>Diretor(a) de Ensino</option>
+            <option value="Vice Diretor(a) de Ensino" <%= form.cargo === 'Vice Diretor(a) de Ensino' ? 'selected' : '' %>>Vice Diretor(a) de Ensino</option>
+            <option value="Diretor(a) de Marketing" <%= form.cargo === 'Diretor(a) de Marketing' ? 'selected' : '' %>> Diretor(a) de Marketing</option>
+            <option value="Vice Diretor(a) de Marketing" <%= form.cargo === 'Vice Diretor(a) de Marketing' ? 'selected' : '' %>> Vice Diretor(a) de Marketing</option>
           </select>
         </div>
         <div class="campo full">
           <label>Disponibilidade <span>*</span></label>
           <div class="checkbox-group">
-            <label class="checkbox-option"><input type="checkbox" name="disponibilidade" value="Manhã" <%= (form.disponibilidade||'').includes('Manhã') ? 'checked' : '' %>> 🌅 Manhã</label>
-            <label class="checkbox-option"><input type="checkbox" name="disponibilidade" value="Tarde" <%= (form.disponibilidade||'').includes('Tarde') ? 'checked' : '' %>> ☀️ Tarde</label>
-            <label class="checkbox-option"><input type="checkbox" name="disponibilidade" value="Noite" <%= (form.disponibilidade||'').includes('Noite') ? 'checked' : '' %>> 🌙 Noite</label>
-            <label class="checkbox-option"><input type="checkbox" name="disponibilidade" value="Integral" <%= (form.disponibilidade||'').includes('Integral') ? 'checked' : '' %>> 🕐 Integral</label>
+            <label class="checkbox-option"><input type="checkbox" name="disponibilidade" value="Manhã" <%= (form.disponibilidade||'').includes('Manhã') ? 'checked' : '' %>>  Manhã</label>
+            <label class="checkbox-option"><input type="checkbox" name="disponibilidade" value="Tarde" <%= (form.disponibilidade||'').includes('Tarde') ? 'checked' : '' %>> ️ Tarde</label>
+            <label class="checkbox-option"><input type="checkbox" name="disponibilidade" value="Noite" <%= (form.disponibilidade||'').includes('Noite') ? 'checked' : '' %>>  Noite</label>
+            <label class="checkbox-option"><input type="checkbox" name="disponibilidade" value="Integral" <%= (form.disponibilidade||'').includes('Integral') ? 'checked' : '' %>>  Integral</label>
           </div>
         </div>
         <div class="campo">
@@ -173,15 +188,81 @@
       </div>
     </div>
 
-    <button type="submit" class="btn-submit">✅ Enviar Cadastro</button>
+    <div class="card">
+      <div class="card-titulo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto do Diretivo</div>
+      <div class="campo full">
+        <label>Foto (JPG, PNG ou WebP — opcional)</label>
+        <input type="file" name="foto" accept="image/*" style="padding:8px;background:#f9fafb;border:1.5px solid #e5e7eb;border-radius:10px;font-size:14px">
+        <div style="font-size:12px;color:#6b7280;margin-top:4px">Envie uma foto de perfil para facilitar sua identificação.</div>
+      </div>
+    </div>
+    <button type="submit" class="btn-submit"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Enviar Cadastro</button>
   </form>
 
   <div class="footer">
-    <%= config.org_nome || 'Liga Acadêmica de Urologia' %> — Cadastro registrado em <%= new Date().toLocaleString('pt-BR') %>
+    <%= config.org_nome || 'Liga Acadêmica de Urologia' %> — Cadastro registrado em <%= new Date(new Date().toLocaleString('en-US',{timeZone:'America/Asuncion'})).toLocaleString('pt-BR') %>
   </div>
 </div>
 
 <script>
+// ── Validação CPF ──
+function validarCPF(cpf) {
+  cpf = cpf.replace(/[^\d]/g,'');
+  if (cpf.length !== 11 || /^(\d)+$/.test(cpf)) return false;
+  let soma = 0;
+  for (let i=0; i<9; i++) soma += parseInt(cpf[i])*(10-i);
+  let r = (soma*10)%11; if(r===10||r===11) r=0;
+  if(r !== parseInt(cpf[9])) return false;
+  soma=0;
+  for (let i=0; i<10; i++) soma += parseInt(cpf[i])*(11-i);
+  r = (soma*10)%11; if(r===10||r===11) r=0;
+  return r === parseInt(cpf[10]);
+}
+
+// ── Validação Email ──
+function validarEmail(e) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e); }
+
+// ── Máscara CPF ──
+function mascaraCPF(v) {
+  v=v.replace(/\D/g,'').substring(0,11);
+  if(v.length>9) v=v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/,'$1.$2.$3-$4');
+  else if(v.length>6) v=v.replace(/(\d{3})(\d{3})(\d+)/,'$1.$2.$3');
+  else if(v.length>3) v=v.replace(/(\d{3})(\d+)/,'$1.$2');
+  return v;
+}
+
+// ── Validação formulário ──
+function validarForm(e) {
+  const erros = [];
+  const nome = document.querySelector('[name=nome]').value.trim();
+  const cpf = document.querySelector('[name=cpf]')?.value.trim();
+  const email = document.querySelector('[name=email]').value.trim();
+  const whatsapp = document.querySelector('[name=whatsapp]').value.trim();
+  const rg = document.querySelector('[name=rg]')?.value.trim();
+  const nascimento = document.querySelector('[name=data_nascimento]')?.value;
+
+  if (nome.length < 5) erros.push('Nome completo muito curto (mínimo 5 caracteres).');
+  if (!/^[a-zA-ZÀ-ÿ\s]+$/.test(nome)) erros.push('Nome deve conter apenas letras.');
+  if (cpf && cpf.replace(/\D/g,'').length > 0 && !validarCPF(cpf)) erros.push('CPF inválido. Verifique o número digitado.');
+  if (!validarEmail(email)) erros.push('E-mail inválido.');
+  if (whatsapp.replace(/\D/g,'').length < 8) erros.push('WhatsApp/telefone muito curto.');
+  if (rg && rg.length < 5) erros.push('RG/CI muito curto.');
+  if (nascimento) {
+    const dn = new Date(nascimento);
+    const hoje = new Date();
+    const idade = (hoje-dn)/(1000*60*60*24*365.25);
+    if (idade < 14 || idade > 80) erros.push('Data de nascimento inválida.');
+  }
+
+  if (erros.length > 0) {
+    e.preventDefault();
+    let div = document.getElementById('erros-validacao');
+    if (!div) { div = document.createElement('div'); div.id='erros-validacao'; div.className='alerta alerta-erro'; document.querySelector('form').prepend(div); }
+    div.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> ' + erros.join('<br><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> ');
+    div.scrollIntoView({behavior:'smooth',block:'center'});
+  }
+}
+
 function toggleTransporte(sim) {
   document.getElementById('campos-transporte').style.display = sim ? 'block' : 'none';
 }

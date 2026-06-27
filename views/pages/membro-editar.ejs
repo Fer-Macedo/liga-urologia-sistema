@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Editar Membro — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin-modern.css">
@@ -121,7 +122,7 @@
                 </div>
                 <div class="form-group">
                   <label>Data de nascimento</label>
-                  <input name="data_nascimento" type="date" value="<%= membro.data_nascimento ? new Date(membro.data_nascimento).toISOString().slice(0,10) : '' %>">
+                  <input name="data_nascimento" type="date" value="<%= membro.data_nascimento ? String(membro.data_nascimento).substring(0,10) : '' %>">
                 </div>
                 <div class="form-group">
                   <label>E-mail</label>
@@ -131,19 +132,19 @@
                   <label>WhatsApp</label>
                   <div class="phone-wrap">
                     <select id="paisCodigo" class="phone-pais" onchange="atualizarWhatsapp()">
-                      <option value="55">🇧🇷 Brasil (+55)</option>
-                      <option value="595">🇵🇾 Paraguay (+595)</option>
-                      <option value="54">🇦🇷 Argentina (+54)</option>
-                      <option value="598">🇺🇾 Uruguai (+598)</option>
-                      <option value="591">🇧🇴 Bolívia (+591)</option>
-                      <option value="56">🇨🇱 Chile (+56)</option>
-                      <option value="57">🇨🇴 Colômbia (+57)</option>
-                      <option value="51">🇵🇪 Peru (+51)</option>
-                      <option value="58">🇻🇪 Venezuela (+58)</option>
-                      <option value="1">🇺🇸 EUA/Canadá (+1)</option>
-                      <option value="351">🇵🇹 Portugal (+351)</option>
-                      <option value="34">🇪🇸 Espanha (+34)</option>
-                      <option value="outro">🌍 Outro</option>
+                      <option value="55"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">BR</span> Brasil (+55)</option>
+                      <option value="595"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">PY</span> Paraguay (+595)</option>
+                      <option value="54"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">AR</span> Argentina (+54)</option>
+                      <option value="598"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">UY</span> Uruguai (+598)</option>
+                      <option value="591"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">BO</span> Bolívia (+591)</option>
+                      <option value="56"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">CL</span> Chile (+56)</option>
+                      <option value="57"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">CO</span> Colômbia (+57)</option>
+                      <option value="51"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">PE</span> Peru (+51)</option>
+                      <option value="58"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">VE</span> Venezuela (+58)</option>
+                      <option value="1"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">US</span> EUA/Canadá (+1)</option>
+                      <option value="351"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">PT</span> Portugal (+351)</option>
+                      <option value="34"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">ES</span> Espanha (+34)</option>
+                      <option value="outro"> Outro</option>
                     </select>
                     <input id="numeroWhatsapp" class="phone-numero" placeholder="DDD + número" oninput="atualizarWhatsapp()">
                   </div>

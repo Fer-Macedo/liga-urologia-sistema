@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instagram — LAURO</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .ig-header { background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045); padding: 24px 32px; border-radius: 12px; color: white; margin-bottom: 24px; }
+    .ig-header h1 { margin: 0; font-size: 24px; }
+    .ig-tabs { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+    .ig-tab { padding: 10px 20px; border-radius: 8px; border: 2px solid #e2e8f0; background: white; cursor: pointer; font-weight: 600; color: #64748b; transition: all .2s; }
+    .ig-tab.active { background: linear-gradient(135deg, #833ab4, #fd1d1d); color: white; border-color: transparent; }
+    .ig-section { display: none; }
+    .ig-section.active { display: block; }
+    .ig-form { background: white; border-radius: 12px; padding: 24px; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+    .ig-form label { display: block; font-weight: 600; color: #374151; margin-bottom: 6px; margin-top: 16px; }
+    .ig-form input, .ig-form textarea, .ig-form select { width: 100%; padding: 10px 14px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box; }
+    .ig-form textarea { min-height: 100px; resize: vertical; }
+    .ig-tipo-btns { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+    .ig-tipo-btn { padding: 8px 16px; border-radius: 8px; border: 2px solid #e2e8f0; background: white; cursor: pointer; font-size: 13px; font-weight: 600; color: #64748b; }
+    .ig-tipo-btn.selected { background: #1a3d2b; color: white; border-color: #1a3d2b; }
+    .ig-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-top: 16px; }
+    .ig-post-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+    .ig-post-img { width: 100%; height: 160px; object-fit: cover; background: #f1f5f9; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 32px; }
+    .ig-post-info { padding: 12px; }
+    .ig-post-caption { font-size: 12px; color: #64748b; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+    .ig-post-stats { display: flex; gap: 12px; margin-top: 8px; font-size: 12px; color: #94a3b8; }
+    .ig-agendado-card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.1); margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
+    .badge-agendado { background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .badge-publicado { background: #d1fae5; color: #065f46; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .badge-erro { background: #fee2e2; color: #991b1b; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+    .agendar-toggle { display: flex; align-items: center; gap: 10px; margin-top: 16px; padding: 12px; background: #f8fafc; border-radius: 8px; }
+    .carousel-urls { display: flex; flex-direction: column; gap: 8px; }
+    .carousel-url-item { display: flex; gap: 8px; }
+    .btn-add-url { margin-top: 8px; padding: 6px 12px; background: #f1f5f9; border: 1px dashed #cbd5e1; border-radius: 6px; cursor: pointer; font-size: 13px; color: #64748b; width: 100%; }
+  </style>
+</head>
+<body>
+<%- include('../partials/sidebar') %>
+<div class="main-content">
+  <div class="ig-header">
+    <h1>📸 Instagram — @lauroucp.cde</h1>
+    <p style="margin:4px 0 0;opacity:.85">Gerencie posts, stories, reels e agendamentos</p>
+  </div>
+
+  <% if (ok) { %>
+    <div class="alert alert-success" style="margin-bottom:16px">✅ <%= ok %></div>
+  <% } %>
+  <% if (erro) { %>
+    <div class="alert alert-danger" style="margin-bottom:16px">❌ <%= erro %></div>
+  <% } %>
+
+  <div class="ig-tabs">
+    <button class="ig-tab active" onclick="showTab('publicar')">📤 Publicar</button>
+    <button class="ig-tab" onclick="showTab('agendados')">📅 Agendados</button>
+    <button class="ig-tab" onclick="showTab('feed')">🖼️ Feed</button>
+    <button class="ig-tab" onclick="showTab('config')">⚙️ Automações</button>
+  </div>
+
+  <!-- ABA PUBLICAR -->
+  <div class="ig-section active" id="tab-publicar">
+    <div class="ig-form">
+      <h3 style="margin-top:0">Novo Post</h3>
+      <form method="POST" action="/instagram/publicar" id="formPublicar">
+        <input type="hidden" name="tipo" id="tipoInput" value="feed">
+        <input type="hidden" name="midias" id="midiasInput">
+
+        <label>Tipo de publicação</label>
+        <div class="ig-tipo-btns">
+          <button type="button" class="ig-tipo-btn selected" onclick="setTipo('feed', this)">📸 Foto (Feed)</button>
+          <button type="button" class="ig-tipo-btn" onclick="setTipo('carousel', this)">🎠 Carrossel</button>
+          <button type="button" class="ig-tipo-btn" onclick="setTipo('story', this)">⭕ Story</button>
+          <button type="button" class="ig-tipo-btn" onclick="setTipo('reel', this)">🎬 Reel</button>
+        </div>
+
+        <!-- URL ÚNICA (feed, story, reel) -->
+        <div id="campoUrlUnica">
+          <label id="labelUrl">URL da imagem (pública, hospedada no Cloudflare R2)</label>
+          <input type="url" name="midia_url" id="midiaUrl" placeholder="https://...">
+        </div>
+
+        <!-- CARROSSEL -->
+        <div id="campoCarrossel" style="display:none">
+          <label>URLs das imagens (mínimo 2, máximo 10)</label>
+          <div class="carousel-urls" id="carouselUrls">
+            <div class="carousel-url-item"><input type="url" placeholder="URL imagem 1" class="carousel-url"></div>
+            <div class="carousel-url-item"><input type="url" placeholder="URL imagem 2" class="carousel-url"></div>
+          </div>
+          <button type="button" class="btn-add-url" onclick="addCarouselUrl()">+ Adicionar imagem</button>
+        </div>
+
+        <!-- LEGENDA (não para story) -->
+        <div id="campoLegenda">
+          <label>Legenda</label>
+          <textarea name="legenda" placeholder="Digite a legenda do post... Use # para hashtags"></textarea>
+        </div>
+
+        <!-- AGENDAR -->
+        <div class="agendar-toggle">
+          <input type="checkbox" id="agendarCheck" name="agendar" value="1" onchange="toggleAgendar()">
+          <label for="agendarCheck" style="margin:0;font-weight:600">📅 Agendar para data/hora específica</label>
+        </div>
+        <div id="campoAgendar" style="display:none;margin-top:8px">
+          <label>Data e hora de publicação</label>
+          <input type="datetime-local" name="agendado_para" id="agendadoPara">
+        </div>
+
+        <div style="margin-top:20px;display:flex;gap:12px">
+          <button type="submit" class="btn btn-primario" style="background:linear-gradient(135deg,#833ab4,#fd1d1d)">
+            <span id="btnTexto">📤 Publicar agora</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ABA AGENDADOS -->
+  <div class="ig-section" id="tab-agendados">
+    <% const agendados = posts.filter(p => p.status === 'agendado'); %>
+    <% const historico = posts.filter(p => p.status !== 'agendado'); %>
+
+    <h3>Posts agendados (<%= agendados.length %>)</h3>
+    <% if (agendados.length === 0) { %>
+      <div style="background:white;padding:32px;border-radius:12px;text-align:center;color:#94a3b8">
+        Nenhum post agendado. Crie um na aba "Publicar" marcando "Agendar".
+      </div>
+    <% } %>
+    <% agendados.forEach(p => { %>
+      <div class="ig-agendado-card">
+        <div>
+          <div style="font-weight:700;color:#0f172a"><%= p.tipo.toUpperCase() %></div>
+          <div style="font-size:12px;color:#64748b;margin-top:2px"><%= p.legenda ? p.legenda.substring(0,80)+'...' : '(sem legenda)' %></div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:4px">📅 <%= new Date(p.agendado_para).toLocaleString('pt-BR') %></div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+          <span class="badge-agendado">AGENDADO</span>
+          <form method="POST" action="/instagram/agendar/<%= p.id %>/excluir" onsubmit="return confirm('Excluir este agendamento?')">
+            <button type="submit" style="background:#fee2e2;color:#991b1b;border:none;padding:4px 10px;border-radius:6px;cursor:pointer;font-size:12px">🗑 Excluir</button>
+          </form>
+        </div>
+      </div>
+    <% }); %>
+
+    <h3 style="margin-top:24px">Histórico (<%= historico.length %>)</h3>
+    <% historico.forEach(p => { %>
+      <div class="ig-agendado-card">
+        <div>
+          <div style="font-weight:700;color:#0f172a"><%= p.tipo.toUpperCase() %></div>
+          <div style="font-size:12px;color:#64748b;margin-top:2px"><%= p.legenda ? p.legenda.substring(0,80) : '(sem legenda)' %></div>
+          <div style="font-size:11px;color:#94a3b8;margin-top:4px"><%= p.publicado_em ? '✅ Publicado em: ' + new Date(p.publicado_em).toLocaleString('pt-BR') : '' %></div>
+          <% if (p.erro_msg) { %><div style="font-size:11px;color:#ef4444;margin-top:2px">❌ <%= p.erro_msg %></div><% } %>
+        </div>
+        <span class="<%= p.status === 'publicado' ? 'badge-publicado' : 'badge-erro' %>"><%= p.status.toUpperCase() %></span>
+      </div>
+    <% }); %>
+  </div>
+
+  <!-- ABA FEED -->
+  <div class="ig-section" id="tab-feed">
+    <h3>Posts recentes no Instagram</h3>
+    <% if (feedPosts.length === 0) { %>
+      <div style="background:white;padding:32px;border-radius:12px;text-align:center;color:#94a3b8">
+        Nenhum post encontrado ou erro ao carregar o feed.
+      </div>
+    <% } %>
+    <div class="ig-grid">
+      <% feedPosts.forEach(p => { %>
+        <div class="ig-post-card">
+          <% if (p.media_url || p.thumbnail_url) { %>
+            <img src="<%= p.media_url || p.thumbnail_url %>" class="ig-post-img" alt="post" onerror="this.style.display='none'">
+          <% } else { %>
+            <div class="ig-post-img">📷</div>
+          <% } %>
+          <div class="ig-post-info">
+            <div class="ig-post-caption"><%= p.caption || '(sem legenda)' %></div>
+            <div class="ig-post-stats">
+              <span>❤️ <%= p.like_count || 0 %></span>
+              <span>💬 <%= p.comments_count || 0 %></span>
+              <span style="font-size:10px"><%= new Date(p.timestamp).toLocaleDateString('pt-BR') %></span>
+            </div>
+          </div>
+        </div>
+      <% }); %>
+    </div>
+  </div>
+
+  <!-- ABA AUTOMAÇÕES -->
+  <div class="ig-section" id="tab-config">
+    <div class="ig-form">
+      <h3 style="margin-top:0">⚙️ Automações do Instagram</h3>
+      <form method="POST" action="/instagram/config">
+        <div style="background:#f8fafc;border-radius:10px;padding:16px;margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-weight:700">🎂 Post automático de aniversariantes</div>
+              <div style="font-size:13px;color:#64748b;margin-top:4px">Publica automaticamente às 9h no dia do aniversário de cada membro</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" name="instagram_aniversario_ativo" value="1" <%= config.instagram_aniversario_ativo === '1' ? 'checked' : '' %>>
+              <span class="slider"></span>
+            </label>
+          </div>
+          <label style="margin-top:12px">URL da imagem de aniversário (template)</label>
+          <input type="url" name="instagram_aniversario_imagem" value="<%= config.instagram_aniversario_imagem || '' %>" placeholder="https://... (imagem padrão de aniversário)">
+          <div style="font-size:12px;color:#94a3b8;margin-top:4px">A legenda é gerada automaticamente com o nome do membro</div>
+        </div>
+
+        <button type="submit" class="btn btn-primario">💾 Salvar configurações</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function showTab(tab) {
+  document.querySelectorAll('.ig-section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.ig-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function setTipo(tipo, btn) {
+  document.querySelectorAll('.ig-tipo-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('tipoInput').value = tipo;
+
+  const urlUnica = document.getElementById('campoUrlUnica');
+  const carrossel = document.getElementById('campoCarrossel');
+  const legenda = document.getElementById('campoLegenda');
+  const labelUrl = document.getElementById('labelUrl');
+
+  urlUnica.style.display = tipo === 'carousel' ? 'none' : 'block';
+  carrossel.style.display = tipo === 'carousel' ? 'block' : 'none';
+  legenda.style.display = tipo === 'story' ? 'none' : 'block';
+
+  if (tipo === 'reel') labelUrl.textContent = 'URL do vídeo (MP4 público)';
+  else if (tipo === 'story') labelUrl.textContent = 'URL da imagem do story (pública)';
+  else labelUrl.textContent = 'URL da imagem (pública, hospedada no Cloudflare R2)';
+}
+
+function addCarouselUrl() {
+  const container = document.getElementById('carouselUrls');
+  const count = container.children.length + 1;
+  if (count > 10) return alert('Máximo 10 imagens no carrossel');
+  const div = document.createElement('div');
+  div.className = 'carousel-url-item';
+  div.innerHTML = `<input type="url" placeholder="URL imagem ${count}" class="carousel-url" style="flex:1">
+    <button type="button" onclick="this.parentElement.remove()" style="padding:8px;background:#fee2e2;border:none;border-radius:6px;cursor:pointer;color:#991b1b">✕</button>`;
+  container.appendChild(div);
+}
+
+function toggleAgendar() {
+  const checked = document.getElementById('agendarCheck').checked;
+  document.getElementById('campoAgendar').style.display = checked ? 'block' : 'none';
+  document.getElementById('btnTexto').textContent = checked ? '📅 Agendar post' : '📤 Publicar agora';
+}
+
+document.getElementById('formPublicar').addEventListener('submit', function() {
+  const tipo = document.getElementById('tipoInput').value;
+  if (tipo === 'carousel') {
+    const urls = [...document.querySelectorAll('.carousel-url')].map(i => i.value).filter(v => v);
+    if (urls.length < 2) { alert('Adicione pelo menos 2 imagens no carrossel'); return false; }
+    document.getElementById('midiasInput').value = JSON.stringify(urls.map(url => ({ url })));
+  }
+});
+</script>
+</body>
+</html>

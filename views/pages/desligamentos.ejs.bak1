@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Desligamentos</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%= config.org_cor||'#1a56db' %>;}
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;}
+    .stat-box{background:var(--card);border:1px solid var(--borda);border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:14px;position:relative;overflow:hidden;}
+    .stat-box::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--cor-stat,var(--cor-primaria));}
+    .stat-icon{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .stat-num{font-family:'Outfit',sans-serif;font-size:22px;font-weight:700;line-height:1;margin-bottom:2px;}
+    .stat-lab{font-size:12px;color:var(--texto2);font-weight:600;}
+    .config-card{background:var(--card);border:1px solid var(--borda);border-radius:14px;overflow:hidden;margin-bottom:20px;}
+    .config-header{padding:14px 18px;border-bottom:1px solid var(--borda);font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;display:flex;align-items:center;gap:8px;}
+    .config-body{padding:18px;}
+    .table-card{background:var(--card);border:1px solid var(--borda);border-radius:14px;overflow:hidden;}
+    .table-header{padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+    .table-titulo{font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;}
+    table.tabela{width:100%;border-collapse:collapse;}
+    table.tabela thead th{background:var(--fundo);padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--texto2);text-align:left;border-bottom:1px solid var(--borda);}
+    table.tabela tbody tr{border-bottom:1px solid var(--borda);transition:background .15s;}
+    table.tabela tbody tr:last-child{border-bottom:none;}
+    table.tabela tbody tr:hover{background:var(--fundo);}
+    table.tabela tbody td{padding:12px 14px;font-size:13px;color:var(--texto);vertical-align:middle;}
+    .badge-status{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;}
+    .badge-pendente{background:#fef3c7;color:#92400e;}
+    .badge-enviado{background:#dbeafe;color:#1e40af;}
+    .badge-assinado{background:#ede9fe;color:#4c1d95;}
+    .badge-concluido{background:#dcfce7;color:#166534;}
+    .btn-xs{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:600;border:1px solid var(--borda);background:var(--fundo);color:var(--texto);cursor:pointer;text-decoration:none;transition:all .15s;font-family:inherit;white-space:nowrap;}
+    .btn-xs:hover{border-color:var(--cor-primaria);color:var(--cor-primaria);}
+    .btn-xs.roxo{background:#6366f1;color:white;border-color:transparent;}
+    .btn-xs.verde{background:#059669;color:white;border-color:transparent;}
+    .btn-xs.amarelo{background:#f59e0b;color:white;border-color:transparent;}
+    .btn-xs.azul{background:#0891b2;color:white;border-color:transparent;}
+    .btn-xs.verm{color:#dc2626;border-color:#fecaca;}
+    .btn-xs.verm:hover{background:#fee2e2;}
+    .membro-nome{font-weight:600;font-size:13px;}
+    .membro-email{font-size:11px;color:var(--texto2);margin-top:1px;}
+    .search-bar{display:flex;align-items:center;gap:8px;background:var(--fundo);border:1px solid var(--borda);border-radius:8px;padding:0 12px;height:34px;}
+    .search-bar input{border:none;background:transparent;font-size:13px;color:var(--texto);outline:none;width:160px;font-family:inherit;}
+    .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+    @media(max-width:768px){.stats-row{grid-template-columns:repeat(2,1fr);}.grid-3{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'desligamentos' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Desligamentos</h1>
+      <div class="topbar-acoes">
+        <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-novo')">+ Novo desligamento</button>
+      </div>
+    </div>
+    <div class="content">
+      <%if(msg&&msg.length>0){%><div class="alerta alerta-ok"><%=msg[0]%></div><%}%>
+      <%if(erro&&erro.length>0){%><div class="alerta alerta-erro"><%=erro[0]%></div><%}%>
+      <%
+        const total=desligamentos.length;
+        const pendentes=desligamentos.filter(d=>d.status==='pendente').length;
+        const enviados=desligamentos.filter(d=>d.status==='enviado').length;
+        const concluidos=desligamentos.filter(d=>d.status==='concluido'||d.status==='assinado').length;
+      %>
+      <div class="stats-row">
+        <div class="stat-box" style="--cor-stat:var(--cor-primaria)">
+          <div class="stat-icon" style="background:#eff6ff"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1a56db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <div><div class="stat-num" style="color:var(--cor-primaria)"><%=total%></div><div class="stat-lab">Total</div></div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#f59e0b">
+          <div class="stat-icon" style="background:#fffbeb"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div><div class="stat-num" style="color:#f59e0b"><%=pendentes%></div><div class="stat-lab">Pendentes</div></div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#1d4ed8">
+          <div class="stat-icon" style="background:#dbeafe"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+          <div><div class="stat-num" style="color:#1d4ed8"><%=enviados%></div><div class="stat-lab">Enviados</div></div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#10b981">
+          <div class="stat-icon" style="background:#f0fdf4"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div><div class="stat-num" style="color:#10b981"><%=concluidos%></div><div class="stat-lab">Concluidos</div></div>
+        </div>
+      </div>
+      <div class="config-card">
+        <div class="config-header">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+          Configuracoes do Documento
+        </div>
+        <div class="config-body">
+          <form action="/desligamentos/configurar" method="POST" enctype="multipart/form-data">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;align-items:start">
+              <!-- TIMBRADO -->
+              <div style="background:var(--fundo);border:1px solid var(--borda);border-radius:12px;padding:16px">
+                <div style="font-size:12px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Papel Timbrado</div>
+                <div class="campo">
+                  <label class="label">Arquivo (PDF ou PNG)</label>
+                  <input type="file" name="timbrado" class="input" accept=".pdf,.png,.jpg">
+                </div>
+                <%if(config.timbrado_chave){%>
+                <div style="margin-top:8px;display:flex;align-items:center;gap:6px;font-size:12px;color:#10b981;font-weight:600">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Timbrado configurado
+                </div>
+                <%}else{%>
+                <div style="margin-top:8px;font-size:11px;color:var(--texto2)">Nenhum timbrado configurado</div>
+                <%}%>
+              </div>
+              <!-- PRESIDENTE -->
+              <div style="background:var(--fundo);border:1px solid var(--borda);border-radius:12px;padding:16px">
+                <div style="font-size:12px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Presidente</div>
+                <div class="campo" style="margin-bottom:10px">
+                  <label class="label">Nome</label>
+                  <input name="presidente_nome" class="input" value="<%=config.presidente_nome||'Manuel Fernando Macedo Neto'%>">
+                </div>
+                <div class="campo">
+                  <label class="label">Assinatura (PNG)</label>
+                  <input type="file" name="assinatura_presidente" class="input" accept=".png,.jpg">
+                </div>
+                <%if(config.assinatura_presidente_chave){%>
+                <div style="margin-top:8px;display:flex;align-items:center;gap:6px;font-size:12px;color:#10b981;font-weight:600">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Assinatura configurada
+                </div>
+                <%}else{%>
+                <div style="margin-top:8px;font-size:11px;color:var(--texto2)">Nenhuma assinatura configurada</div>
+                <%}%>
+              </div>
+              <!-- SECRETARIO -->
+              <div style="background:var(--fundo);border:1px solid var(--borda);border-radius:12px;padding:16px">
+                <div style="font-size:12px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Secretario</div>
+                <div class="campo" style="margin-bottom:10px">
+                  <label class="label">Nome</label>
+                  <input name="secretario_nome" class="input" value="<%=config.secretario_nome||'Kaue Teixeira Lacerda'%>">
+                </div>
+                <div class="campo">
+                  <label class="label">Assinatura (PNG)</label>
+                  <input type="file" name="assinatura_secretario" class="input" accept=".png,.jpg">
+                </div>
+                <%if(config.assinatura_secretario_chave){%>
+                <div style="margin-top:8px;display:flex;align-items:center;gap:6px;font-size:12px;color:#10b981;font-weight:600">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Assinatura configurada
+                </div>
+                <%}else{%>
+                <div style="margin-top:8px;font-size:11px;color:var(--texto2)">Nenhuma assinatura configurada</div>
+                <%}%>
+              </div>
+            </div>
+            <div style="margin-top:16px;display:flex;justify-content:flex-end">
+              <button type="submit" class="btn btn-primario">Salvar configuracoes</button>
+            </div>
+          </form>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-titulo">Todos os desligamentos (<%=total%>)</span>
+          <div class="search-bar">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--texto2)"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>
+            <input type="text" placeholder="Buscar membro..." oninput="filtrar(this.value)">
+          </div>
+        </div>
+        <table class="tabela" id="tabela-deslig">
+          <thead><tr>
+            <th>Membro</th><th>Solicitacao</th><th>Status</th>
+            <th>Enviado em</th><th>Assinado em</th><th>Acoes</th>
+          </tr></thead>
+          <tbody>
+          <%if(desligamentos.length===0){%>
+          <tr><td colspan="6" style="text-align:center;padding:48px;color:var(--texto2)">
+            <div style="font-size:32px;margin-bottom:12px">&#128203;</div>
+            <div style="font-weight:600;margin-bottom:4px">Nenhum desligamento registrado</div>
+            <div style="font-size:12px">Clique em + Novo desligamento para comecar</div>
+          </td></tr>
+          <%}%>
+          <%desligamentos.forEach(d=>{%>
+          <tr class="deslig-row">
+            <td><div class="membro-nome"><%=d.membro_nome%></div><div class="membro-email"><%=d.membro_email||''%></div></td>
+            <td style="color:var(--texto2);white-space:nowrap"><%=new Date(d.data_solicitacao).toLocaleDateString('pt-BR')%></td>
+            <td>
+              <%if(d.status==='pendente'){%><span class="badge-status badge-pendente">Pendente</span>
+              <%}else if(d.status==='enviado'){%><span class="badge-status badge-enviado">Enviado</span>
+              <%}else if(d.status==='assinado'){%><span class="badge-status badge-assinado">Assinado</span>
+              <%}else{%><span class="badge-status badge-concluido">Concluido</span><%}%>
+            </td>
+            <td style="color:var(--texto2);font-size:12px"><%=d.enviado_em?new Date(d.enviado_em).toLocaleDateString('pt-BR'):'&#8212;'%></td>
+            <td style="color:var(--texto2);font-size:12px"><%=d.assinado_em?new Date(d.assinado_em).toLocaleDateString('pt-BR'):'&#8212;'%></td>
+            <td><div style="display:flex;gap:5px;flex-wrap:wrap">
+              <a href="/desligamentos/<%=d.id%>/visualizar" target="_blank" class="btn-xs">Ver</a>
+              <a href="/desligamentos/<%=d.id%>/imprimir" target="_blank" class="btn-xs roxo">Imprimir</a>
+              <%if(d.status==='pendente'){%>
+              <form method="POST" action="/desligamentos/<%=d.id%>/enviar" style="display:inline;margin:0" onsubmit="return confirm('Enviar?')"><button type="submit" class="btn-xs azul">Enviar</button></form>
+              <%}%>
+              <%if(d.status==='enviado'){%>
+              <form method="POST" action="/desligamentos/<%=d.id%>/reenviar" style="display:inline;margin:0"><button type="submit" class="btn-xs amarelo">Reenviar</button></form>
+              <button class="btn-xs verde" onclick="abrirUploadAssinado(<%=d.id%>,'<%=d.membro_nome%>')">Anexar</button>
+              <%}%>
+              <%if(d.pdf_assinado_chave){%>
+              <a href="/desligamentos/<%=d.id%>/assinado" target="_blank" class="btn-xs azul">Assinado</a>
+              <%}%>
+              <button class="btn-xs" onclick="abrirSubstituirDeslig(<%=d.id%>,'<%=d.membro_nome%>')">Substituir</button>
+              <form action="/desligamentos/<%=d.id%>/deletar" method="POST" style="display:inline;margin:0" onsubmit="return confirm('Apagar?')"><button type="submit" class="btn-xs verm">Excluir</button></form>
+            </div></td>
+          </tr>
+          <%});%>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="modal-overlay" id="modal-novo" style="display:none">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-titulo">Novo Desligamento</span><button class="icon-btn" onclick="fecharModal('modal-novo')">&#x2715;</button></div>
+    <form action="/desligamentos" method="POST">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo"><label class="label">Tipo de solicitante *</label>
+          <select class="input" id="select-tipo-solicitante" onchange="atualizarListaMembros()">
+            <option value="membro">Membro (paga mensalidade)</option>
+            <option value="ligante">Ligante</option>
+            <option value="diretivo">Diretivo</option>
+          </select>
+        </div>
+        <div class="campo" id="campo-membro"><label class="label">Selecione o membro *</label>
+          <select name="membro_id" class="input" id="select-membro">
+            <option value="">Selecione...</option>
+            <%membros.forEach(m=>{%><option value="<%=m.id%>"><%=m.nome%><%=m.cargo?' — '+m.cargo:''%></option><%});%>
+          </select>
+        </div>
+        <div class="campo" id="campo-ligante" style="display:none"><label class="label">Selecione o ligante *</label>
+          <select name="ligante_id" class="input" id="sel-ligante">
+            <option value="">Selecione...</option>
+            <%ligantes.forEach(l=>{%><option value="<%=l.id%>"><%=l.nome%> — Turma <%=l.turma||'?'%></option><%});%>
+          </select>
+        </div>
+        <div class="campo" id="campo-diretivo" style="display:none"><label class="label">Selecione o diretivo *</label>
+          <select name="diretivo_id" class="input" id="sel-diretivo">
+            <option value="">Selecione...</option>
+            <%diretivos.forEach(d=>{%><option value="<%=d.id%>"><%=d.nome%> — <%=d.cargo||''%></option><%});%>
+          </select>
+        </div>
+        <div class="campo"><label class="label">Tipo de membro *</label>
+          <select name="tipo_membro" class="input" required>
+            <option value="LIGANTE">LIGANTE</option><option value="DIRETIVO">DIRETIVO</option>
+            <option value="PRESIDENTE">PRESIDENTE</option><option value="VICE-PRESIDENTE">VICE-PRESIDENTE</option>
+            <option value="SECRETARIO">SECRETARIO</option>
+          </select>
+        </div>
+        <div class="campo"><label class="label">Data da solicitacao</label>
+          <input name="data_solicitacao" type="date" class="input" value="<%=new Date().toISOString().split('T')[0]%>">
+        </div>
+        <div class="campo"><label class="label">Motivo (opcional)</label>
+          <textarea name="motivo" class="input" rows="3" placeholder="Motivo para registro interno..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-novo')">Cancelar</button><button type="submit" class="btn btn-primario">Gerar documento</button></div>
+    </form>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-assinado" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <span class="modal-titulo" id="titulo-assinado">Anexar documento assinado</span>
+      <button class="icon-btn" onclick="fecharModal('modal-assinado')">&#x2715;</button>
+    </div>
+    <form id="form-assinado" action="" method="POST" enctype="multipart/form-data">
+      <div style="background:var(--fundo);border:2px dashed var(--borda);border-radius:10px;padding:20px;text-align:center;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">Documento assinado (PDF)</div>
+        <input type="file" name="pdf_assinado" class="input" accept=".pdf" required style="max-width:260px;margin:0 auto">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-assinado')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Anexar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-substituir-deslig" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header">
+      <span class="modal-titulo" id="titulo-substituir-deslig">Substituir documento</span>
+      <button class="icon-btn" onclick="fecharModal('modal-substituir-deslig')">&#x2715;</button>
+    </div>
+    <form id="form-substituir-deslig" action="" method="POST" enctype="multipart/form-data">
+      <div style="background:var(--fundo);border:2px dashed var(--borda);border-radius:10px;padding:20px;text-align:center;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:4px">Novo documento (PDF)</div>
+        <input type="file" name="pdf_assinado" class="input" accept=".pdf" required style="max-width:260px;margin:0 auto">
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-substituir-deslig')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Substituir</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script src="/js/app.js"></script>
+<script>
+function atualizarListaMembros(){
+  const tipo=document.getElementById('select-tipo-solicitante').value;
+  document.getElementById('campo-membro').style.display=tipo==='membro'?'':'none';
+  document.getElementById('campo-ligante').style.display=tipo==='ligante'?'':'none';
+  document.getElementById('campo-diretivo').style.display=tipo==='diretivo'?'':'none';
+}
+function abrirUploadAssinado(id,nome){
+  document.getElementById('titulo-assinado').textContent='Anexar assinado — '+nome;
+  document.getElementById('form-assinado').action='/desligamentos/'+id+'/assinado';
+  abrirModal('modal-assinado');
+}
+function abrirSubstituirDeslig(id,nome){
+  document.getElementById('titulo-substituir-deslig').textContent='Substituir — '+nome;
+  document.getElementById('form-substituir-deslig').action='/desligamentos/'+id+'/substituir';
+  abrirModal('modal-substituir-deslig');
+}
+function filtrar(q){
+  document.querySelectorAll('.deslig-row').forEach(r=>{
+    r.style.display=r.textContent.toLowerCase().includes(q.toLowerCase())?'':' none';
+  });
+}
+</script>
+</body>
+</html>

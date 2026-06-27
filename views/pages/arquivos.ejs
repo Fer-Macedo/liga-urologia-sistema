@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Arquivos — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin-modern.css">
@@ -132,7 +133,7 @@
             <div class="pasta-item <%= pastaAtual && pastaAtual.id == pasta.id ? 'ativa' : '' %>"
               style="<%= pasta.cor ? 'border-left:3px solid '+pasta.cor : '' %>"
               onclick="<%= subs.length > 0 ? 'toggleSub('+pasta.id+')' : 'navegarPasta('+pasta.id+')' %>">
-              <%if(pasta.icone && pasta.icone!=='📁'){%><span><%=pasta.icone%></span><%}else{%>
+              <%if(pasta.icone && pasta.icone!=='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>'){%><span><%=pasta.icone%></span><%}else{%>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="<%= pasta.cor||'#f59e0b' %>" stroke="none"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
             <%}%>
               <span><%= pasta.nome %></span>
@@ -142,7 +143,7 @@
             <div class="pasta-subs" id="subs-<%= pasta.id %>">
               <% subs.forEach(sub => { %>
               <div class="pasta-item sub <%= pastaAtual && pastaAtual.id == sub.id ? 'ativa' : '' %>" onclick="navegarPasta(<%= sub.id %>)">
-                <span><%= sub.icone || '📄' %></span><span><%= sub.nome %></span>
+                <span><%- sub.icone || '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' %></span><span><%= sub.nome %></span>
               </div>
               <% }) %>
             </div>
@@ -150,7 +151,7 @@
           </div>
           <% }) %>
           <div class="pasta-item <%= lixeiraMode ? 'ativa' : '' %>" onclick="navegarPasta('lixeira')" style="margin-top:8px;color:#dc2626">
-            🗑 Lixeira (<%= lixeiraCount %>)
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Lixeira (<%= lixeiraCount %>)
           </div>
         </div>
 
@@ -172,7 +173,7 @@
               <% } %>
               <% if (pastaAtual) { %>
               <span style="margin-left:8px;color:var(--texto2)">|</span>
-              <button class="btn-mini" onclick="editarPasta(<%= pastaAtual.id %>, '<%= pastaAtual.nome %>', '<%= pastaAtual.icone||'📁' %>', '<%= pastaAtual.cor||'' %>')">Editar pasta</button>
+              <button class="btn-mini" onclick="editarPasta(<%= pastaAtual.id %>, '<%= pastaAtual.nome %>', '<%- pastaAtual.icone||'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' %>', '<%= pastaAtual.cor||'' %>')">Editar pasta</button>
               <button class="btn-mini" onclick="moverPasta(<%= pastaAtual.id %>)">Mover</button>
               <button class="btn-mini" style="color:#dc2626" onclick="excluirPasta(<%= pastaAtual.id %>)">Excluir</button>
               <% } %>
@@ -180,7 +181,7 @@
             <div class="files-toolbar">
               <input type="text" class="search-input" id="search-input" placeholder="Buscar..." oninput="buscar(this.value)">
               <button class="view-btn ativo" id="btn-grid" onclick="setView('grid')" title="Grade">⊞</button>
-              <button class="view-btn" id="btn-lista" onclick="setView('lista')" title="Lista">☰</button>
+              <button class="view-btn" id="btn-lista" onclick="setView('lista')" title="Lista"></button>
             </div>
           </div>
 
@@ -208,7 +209,7 @@
                 </div>
                 <div onclick="navegarPasta(<%= pasta.id %>)">
                   <div class="pasta-card-icone" style="font-size:0">
-                    <% if(pasta.icone && pasta.icone !== '📁'){%><%=pasta.icone%><%}else{%>
+                    <% if(pasta.icone && pasta.icone !== '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>'){%><%=pasta.icone%><%}else{%>
                     <svg width="36" height="36" viewBox="0 0 24 24" fill="<%= pasta.cor||'#f59e0b' %>" stroke="<%= pasta.cor ? pasta.cor : '#d97706' %>" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                     <%}%>
                   </div>
@@ -286,9 +287,9 @@
                   <div class="meta"><%= a.tamanho_fmt || '' %> • <%= new Date(a.criado_em).toLocaleDateString('pt-BR') %></div>
                 </div>
                 <div class="acoes" onclick="event.stopPropagation()">
-                  <a href="/arquivos/<%= a.id %>/download" class="btn" style="font-size:11px;padding:4px 8px">⬇️</a>
+                  <a href="/arquivos/<%= a.id %>/download" class="btn" style="font-size:11px;padding:4px 8px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>
                   <% if (!lixeiraMode) { %>
-                  <button onclick="moverLixeira(<%= a.id %>)" class="btn" style="font-size:11px;padding:4px 8px;color:#dc2626">🗑</button>
+                  <button onclick="moverLixeira(<%= a.id %>)" class="btn" style="font-size:11px;padding:4px 8px;color:#dc2626"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                   <% } else { %>
                   <button onclick="restaurarArquivo(<%= a.id %>)" class="btn" style="font-size:11px;padding:4px 8px;color:#16a34a">↩️</button>
                   <% } %>
@@ -308,8 +309,8 @@
   <div class="viewer-header">
     <span id="viewer-titulo" style="font-weight:600;flex:1"></span>
     <a id="viewer-externo" href="#" target="_blank" style="color:#90cdf4;font-size:13px">↗ Abrir externamente</a>
-    <a id="viewer-baixar" href="#" style="color:#90cdf4;font-size:13px;margin-left:12px">⬇️ Baixar</a>
-    <button onclick="fecharViewer()" style="background:#ef4444;border:none;color:white;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:14px;margin-left:12px">✕ Fechar</button>
+    <a id="viewer-baixar" href="#" style="color:#90cdf4;font-size:13px;margin-left:12px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar</a>
+    <button onclick="fecharViewer()" style="background:#ef4444;border:none;color:white;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:14px;margin-left:12px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Fechar</button>
   </div>
   <div class="viewer-body">
     <iframe id="viewer-iframe" class="viewer-iframe" allowfullscreen allow="camera;microphone"></iframe>
@@ -356,8 +357,8 @@
 <div class="modal-overlay" id="modal-substituir" style="display:none">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-titulo">🔄 Substituir arquivo</span>
-      <button class="icon-btn" onclick="fecharModal('modal-substituir')">✕</button>
+      <span class="modal-titulo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Substituir arquivo</span>
+      <button class="icon-btn" onclick="fecharModal('modal-substituir')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <form id="form-substituir" action="" method="POST" enctype="multipart/form-data">
       <div style="margin-bottom:14px;font-size:13px;color:var(--texto2)" id="substituir-nome"></div>
@@ -374,8 +375,8 @@
 <div class="modal-overlay" id="modal-renomear-arq" style="display:none">
   <div class="modal" style="max-width:400px">
     <div class="modal-header">
-      <span class="modal-titulo">✏️ Renomear arquivo</span>
-      <button class="icon-btn" onclick="document.getElementById('modal-renomear-arq').style.display='none'">✕</button>
+      <span class="modal-titulo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Renomear arquivo</span>
+      <button class="icon-btn" onclick="document.getElementById('modal-renomear-arq').style.display='none'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="campo" style="margin:16px 0">
       <label class="label">Novo nome</label>
@@ -383,7 +384,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="document.getElementById('modal-renomear-arq').style.display='none'">Cancelar</button>
-      <button class="btn btn-primario" onclick="confirmarRenomearArquivo()">✏️ Salvar</button>
+      <button class="btn btn-primario" onclick="confirmarRenomearArquivo()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Salvar</button>
     </div>
   </div>
 </div>
@@ -393,14 +394,14 @@
   <div class="modal" style="max-width:400px">
     <div class="modal-header">
       <span class="modal-titulo">↕️ Mover para pasta</span>
-      <button class="icon-btn" onclick="document.getElementById('modal-mover').style.display='none'">✕</button>
+      <button class="icon-btn" onclick="document.getElementById('modal-mover').style.display='none'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="campo" style="margin:16px 0">
       <label class="label">Selecione a pasta de destino</label>
       <select id="select-mover" class="input">
-        <option value="">🏠 Raiz (sem pasta)</option>
+        <option value=""> Raiz (sem pasta)</option>
         <% todasPastas.filter(p=>!p.lixeira).sort((a,b)=>a.nome.localeCompare(b.nome)).forEach(p => { %>
-        <option value="<%= p.id %>"><%= p.icone || '📁' %> <%= p.nome %></option>
+        <option value="<%= p.id %>"><%- p.icone || '' %> <%= p.nome %></option>
         <% }) %>
       </select>
     </div>
@@ -495,7 +496,7 @@ function toggleSub(id) {
   const toggle = document.getElementById('toggle-' + id);
   if (!subs) { navegarPasta(id); return; }
   if (subs.classList.contains('aberta')) { subs.classList.remove('aberta'); toggle.textContent = '▶'; }
-  else { subs.classList.add('aberta'); toggle.textContent = '▼'; navegarPasta(id); }
+  else { subs.classList.add('aberta'); toggle.textContent = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg>'; navegarPasta(id); }
 }
 
 // Abre pasta pai automaticamente
@@ -503,7 +504,7 @@ function toggleSub(id) {
 document.addEventListener('DOMContentLoaded', function() {
   const subs = document.getElementById('subs-<%= pastaAtual.pasta_pai_id %>');
   const toggle = document.getElementById('toggle-<%= pastaAtual.pasta_pai_id %>');
-  if (subs) { subs.classList.add('aberta'); if(toggle) toggle.textContent = '▼'; }
+  if (subs) { subs.classList.add('aberta'); if(toggle) toggle.textContent = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg>'; }
 });
 <% } %>
 
@@ -656,7 +657,7 @@ function excluirPasta(id) {
 
 // Editar pasta
 function editarPasta(id, nome, icone, cor) {
-  document.getElementById('titulo-modal-pasta').textContent = '✏️ Editar Pasta';
+  document.getElementById('titulo-modal-pasta').textContent = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar Pasta';
   document.getElementById('btn-salvar-pasta').textContent = 'Salvar alterações';
   document.getElementById('form-pasta').action = '/arquivos/pasta/' + id + '/editar';
   document.getElementById('pasta-edit-id').value = id;

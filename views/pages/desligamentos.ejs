@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Desligamentos</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin-modern.css">
@@ -44,7 +45,29 @@
     .search-bar input{border:none;background:transparent;font-size:13px;color:var(--texto);outline:none;width:160px;font-family:inherit;}
     .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
     @media(max-width:768px){.stats-row{grid-template-columns:repeat(2,1fr);}.grid-3{grid-template-columns:1fr;}}
-  </style>
+  
+    /* === PADRÃO VERDE ESCURO — Desligamentos === */
+    * { border-radius:0!important; }
+    .stat-box, .stat-card, .stat-item { border-radius:0!important; transition:transform .12s ease, box-shadow .12s ease; }
+    .stat-box:hover, .stat-card:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.1); }
+    .card, .config-card, .doc-config { border-radius:0!important; }
+    table thead th { background:linear-gradient(135deg,#1a3410,#253d18)!important; color:#fff!important; border-bottom:none!important; }
+    table tbody tr:hover { background:#f0f7eb!important; }
+    .badge, .status-badge { border-radius:0!important; }
+    .modal-box, .modal { border-radius:0!important; }
+    .modal-head, .modal-header { border-radius:0!important; background:linear-gradient(135deg,#1a3410,#253d18)!important; }
+    .modal-head h3, .modal-header h3 { color:#fff!important; }
+    .modal-close { border-radius:0!important; }
+    .btn { border-radius:0!important; transition:transform .12s ease, box-shadow .12s ease!important; }
+    .btn:hover { transform:translateY(-2px)!important; box-shadow:0 4px 10px rgba(0,0,0,.15)!important; }
+    .btn-primario, .btn-novo { border-radius:0!important; background:linear-gradient(135deg,#1a3410,#253d18)!important; }
+    .btn-salvar { border-radius:0!important; background:linear-gradient(135deg,#1a3410,#253d18)!important; color:#fff!important; }
+    .btn-cancelar { border-radius:0!important; }
+    input, select, textarea, input[type=file] { border-radius:0!important; }
+    input:focus, select:focus, textarea:focus { border-color:#1a3410!important; box-shadow:0 0 0 3px rgba(37,61,24,.1)!important; }
+    .config-section { border-radius:0!important; border:1px solid #e2e8f0!important; }
+    .config-section-title { background:#f8faf6!important; color:#1a3410!important; border-bottom:2px solid #d1e8c8!important; }
+</style>
 </head>
 <body>
 <div class="layout">

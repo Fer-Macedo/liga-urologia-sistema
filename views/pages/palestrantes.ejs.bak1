@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Palestrantes — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root { --cor: <%= config.org_cor || '#2b6803' %>; }
+    .pg { padding: 0 32px 40px; }
+
+    /* HEADER STATS */
+    .pal-stats { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap: 14px; margin-bottom: 28px; }
+    .stat-card { background: #fff; border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 4px rgba(0,0,0,.07); border-top: 3px solid var(--cor); }
+    .stat-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #6b7280; margin-bottom: 6px; }
+    .stat-val { font-size: 26px; font-weight: 800; color: var(--cor); }
+    .stat-sub { font-size: 12px; color: #9ca3af; margin-top: 2px; }
+
+    /* TABELA */
+    .pal-table-wrap { background: #fff; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.07); overflow: hidden; }
+    .pal-table-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 22px; border-bottom: 1px solid #f1f5f9; gap: 12px; flex-wrap: wrap; }
+    .pal-table-titulo { font-size: 15px; font-weight: 700; color: #1a2e0e; }
+    .search-wrap { display: flex; align-items: center; gap: 8px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 7px 12px; }
+    .search-wrap input { border: none; background: transparent; outline: none; font-size: 13px; color: #374151; width: 200px; }
+
+    table.pal-table { width: 100%; border-collapse: collapse; }
+    table.pal-table thead th { background: #f8fafc; padding: 11px 16px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #6b7280; border-bottom: 1px solid #e9eef4; white-space: nowrap; }
+    table.pal-table tbody tr { border-bottom: 1px solid #f1f5f9; transition: .15s; cursor: pointer; }
+    table.pal-table tbody tr:last-child { border-bottom: none; }
+    table.pal-table tbody tr:hover { background: #f8fafc; }
+    table.pal-table td { padding: 13px 16px; font-size: 13px; color: #374151; vertical-align: middle; }
+
+    .modal-box { max-height: 90vh; display: flex; flex-direction: column; width: min(680px, 95vw) !important; max-width: 95vw !important; }
+    .modal-overlay { padding: 16px; }
+    .modal-body { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent; }
+    .modal-body::-webkit-scrollbar { width: 4px; }
+    .modal-body::-webkit-scrollbar-track { background: transparent; }
+    .modal-body::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+    #modalEditar .form-row { grid-template-columns: 1fr 1fr !important; }
+    #modalEditar .form-row.full { grid-template-columns: 1fr !important; }
+    #modalEditar .form-row.tri { grid-template-columns: 1fr 1fr 1fr !important; }
+    .badge-preenchido { background: #dcfce7; color: #16a34a; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+    .badge-pendente { background: #fef3c7; color: #d97706; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; }
+
+    .acoes { display: flex; gap: 6px; }
+    .btn-sm-icon { border: none; background: transparent; cursor: pointer; padding: 5px 7px; border-radius: 6px; color: #9ca3af; transition: .2s; }
+    .btn-sm-icon:hover { background: #f1f5f9; color: var(--cor); }
+    .btn-sm-icon.del:hover { color: #dc2626; background: #fee2e2; }
+    .btn-sm-icon.link:hover { color: #3b82f6; background: #eff6ff; }
+
+    /* VAZIO */
+    .pal-vazio { text-align: center; padding: 56px; color: #9ca3af; }
+    .pal-vazio svg { display: block; margin: 0 auto 14px; opacity: .2; }
+
+    /* MODAL EDIÇÃO */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: #fff; border-radius: 16px; width: 100%; max-width: 640px; max-height: 92vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+    .modal-head { padding: 20px 24px; background: linear-gradient(135deg, var(--cor), #1a4002); border-radius: 16px 16px 0 0; display: flex; align-items: center; justify-content: space-between; }
+    .modal-head h3 { color: #fff; font-size: 17px; font-weight: 700; margin: 0; }
+    .modal-close { background: rgba(255,255,255,.2); border: none; color: #fff; border-radius: 8px; width: 32px; height: 32px; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+    .modal-close:hover { background: rgba(255,255,255,.35); }
+    .modal-body { padding: 24px; }
+    .form-section { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #6b7280; margin: 20px 0 12px; padding-bottom: 6px; border-bottom: 1px solid #f1f5f9; }
+    .form-section:first-child { margin-top: 0; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+    .form-row.tri { grid-template-columns: 1fr 1fr 1fr; }
+    .form-row.full { grid-template-columns: 1fr; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: .4px; }
+    .form-group input, .form-group select, .form-group textarea { border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 9px 12px; font-size: 14px; color: #1f2937; transition: .2s; background: #fafafa; font-family: inherit; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--cor); background: #fff; }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 0 24px 24px; }
+    .btn-cancelar { background: #f1f5f9; color: #374151; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-salvar { background: var(--cor); color: #fff; border: none; border-radius: 8px; padding: 10px 24px; font-size: 14px; font-weight: 700; cursor: pointer; }
+
+    /* MODAL LINK */
+    .link-box { background: #f0f7eb; border: 1.5px solid #b8dea0; border-radius: 10px; padding: 14px 16px; font-size: 13px; font-family: monospace; word-break: break-all; color: #1a4002; margin-bottom: 14px; }
+    .btn-copiar { background: var(--cor); color: #fff; border: none; border-radius: 8px; padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; }
+    .btn-copiar:hover { filter: brightness(.9); }
+
+    .flash-ok { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 14px; font-weight: 600; }
+    .flash-err { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 14px; font-weight: 600; }
+
+    @media(max-width:768px){ .pg{padding:0 16px 40px;} .form-row,.form-row.tri{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'palestrantes' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Dados de Palestrantes</h1>
+      <div class="topbar-acoes" style="display:flex;gap:10px;">
+        <button class="btn btn-secundario btn-sm" onclick="gerarLink()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Enviar Link ao Palestrante</button>
+        <button class="btn btn-primario btn-sm" onclick="novoPalestrante()">+ Cadastrar Manualmente</button>
+      </div>
+    </div>
+    <div class="content">
+      <div class="pg">
+
+        <% if(typeof pendentesCount !== 'undefined' && pendentesCount > 0){ %>
+        <div style="background:#fef3c7;border:1.5px solid #f59e0b;border-radius:10px;padding:12px 18px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></span>
+          <div>
+            <strong style="color:#92400e">Atenção!</strong>
+            <span style="color:#78350f"> Há <strong><%= pendentesCount %></strong> palestrante(s) aguardando aprovação.</span>
+            <a href="/palestrantes?status=pendente" style="color:#d97706;font-weight:600;margin-left:8px">Ver pendentes →</a>
+          </div>
+        </div>
+        <% } %>
+
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <a href="/palestrantes" class="btn btn-sm <% if(statusFiltro==='todos'){ %>btn-primario<% }else{ %>btn-secundario<% } %>">Todos</a>
+          <a href="/palestrantes?status=pendente" class="btn btn-sm <% if(statusFiltro==='pendente'){ %>btn-primario<% }else{ %>btn-secundario<% } %>" style="<% if(pendentesCount>0){ %>animation:pisca 1.2s infinite;<% } %>"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg> Pendentes <% if(pendentesCount>0){ %><span style="background:#f59e0b;color:#fff;border-radius:20px;padding:1px 7px;font-size:11px;margin-left:4px"><%= pendentesCount %></span><% } %></a>
+          <a href="/palestrantes?status=aprovado" class="btn btn-sm <% if(statusFiltro==='aprovado'){ %>btn-primario<% }else{ %>btn-secundario<% } %>"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Aprovados</a>
+        </div>
+
+        <% if(msg&&msg.length){ %>
+          <% if(msg[0].startsWith('link:')){ %>
+            <% const token = msg[0].replace('link:',''); %>
+            <div class="flash-ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Link gerado com sucesso! Copie abaixo e envie ao palestrante.</div>
+            <div style="background:#f0f7eb;border:1.5px solid #b8dea0;border-radius:12px;padding:16px 20px;margin-bottom:20px;">
+              <div style="font-size:12px;font-weight:700;color:#2b6803;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Link para o palestrante</div>
+              <div style="font-size:13px;font-family:monospace;word-break:break-all;color:#1a4002;background:#fff;padding:10px 14px;border-radius:8px;border:1px solid #b8dea0;margin-bottom:10px;" id="linkGerado"><%= (config.app_url || 'https://sistema.lauroucpcde.com') %>/palestrante/form/<%= token %></div>
+              <button onclick="copiarLinkGerado()" style="background:#2b6803;color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Copiar Link</button>
+            </div>
+          <% } else { %>
+            <div class="flash-ok"><%= msg[0] %></div>
+          <% } %>
+        <% } %>
+        <% if(erro&&erro.length){ %><div class="flash-err"><%= erro[0] %></div><% } %>
+
+        <!-- STATS -->
+        <div class="pal-stats">
+          <div class="stat-card">
+            <div class="stat-label">Total</div>
+            <div class="stat-val"><%= statsTotal %></div>
+            <div class="stat-sub">palestrantes cadastrados</div>
+          </div>
+          <div class="stat-card" style="border-color:#16a34a">
+            <div class="stat-label">Completos</div>
+            <div class="stat-val" style="color:#16a34a"><%= statsCompletos %></div>
+            <div class="stat-sub">formulários preenchidos</div>
+          </div>
+          <div class="stat-card" style="border-color:#d97706">
+            <div class="stat-label">Aguardando</div>
+            <div class="stat-val" style="color:#d97706"><%= statsAguardando %></div>
+            <div class="stat-sub">links não preenchidos</div>
+          </div>
+        </div>
+
+        <!-- TABELA -->
+        <div class="pal-table-wrap">
+          <div class="pal-table-header">
+            <div class="pal-table-titulo">Palestrantes</div>
+            <div class="search-wrap">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="busca" placeholder="Buscar nome ou e-mail..." oninput="buscar()">
+            </div>
+          </div>
+
+          <% if(palestrantes.length === 0){ %>
+            <div class="pal-vazio">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              <p style="font-size:15px;font-weight:600;color:#374151;margin-bottom:6px">Nenhum palestrante ainda</p>
+              <p style="font-size:13px">Clique em "+ Novo Palestrante" para gerar o link de cadastro</p>
+            </div>
+          <% } else { %>
+          <div style="overflow-x:auto;">
+          <table class="pal-table" id="tabela">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>E-mail</th>
+                <th>Especialidade</th>
+                <th>RG/C.I</th>
+                <th>Status</th>
+                <th>Preenchido em</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="tbody">
+              <% palestrantes.forEach(p => { %>
+              <tr data-busca="<%= (p.nome_completo||'').toLowerCase() %> <%= (p.email||'').toLowerCase() %>">
+                <td style="font-weight:600"><%= p.nome_completo || '—' %></td>
+                <td><%= p.email || '—' %></td>
+                <td><%= p.especialidade || '—' %></td>
+                <td><%= p.rg_ci || '—' %></td>
+                <td>
+                  <% if(p.preenchido_em){ %>
+                    <span class="badge-preenchido">✓ Preenchido</span>
+                  <% } else if(p.criado_por && !p.token_form){ %>
+                    <span class="badge-preenchido">✓ Manual</span>
+                  <% } else if(p.token_form && !p.preenchido_em){ %>
+                    <span style="background:#dbeafe;color:#1e40af;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Link Enviado</span>
+                  <% } else { %>
+                    <span class="badge-pendente"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg> Aguardando</span>
+                  <% } %>
+                </td>
+                <td><%= p.preenchido_em ? new Date(p.preenchido_em).toLocaleDateString('pt-BR', {timeZone:'America/Asuncion'}) + ' ' + new Date(p.preenchido_em).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit',timeZone:'America/Asuncion'}) : '—' %></td>
+                <td>
+                  <div class="acoes">
+                    <button class="btn-sm-icon" title="Editar" onclick='abrirEditar(<%- JSON.stringify(p) %>)'>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                    <button class="btn-sm-icon link" title="Copiar link" onclick="copiarLink('<%= p.token_form %>')">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                    </button>
+                    <% if(p.pendente && p.preenchido_em){ %>
+                    <form method="POST" action="/palestrantes/<%= p.id %>/aprovar" style="display:inline">
+                      <button class="btn-sm-icon" title="Aprovar" style="color:#16a34a" onclick="return confirm('Aprovar este palestrante?')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+                    </form>
+                    <form method="POST" action="/palestrantes/<%= p.id %>/recusar" style="display:inline">
+                      <button class="btn-sm-icon del" title="Recusar" onclick="return confirm('Recusar e remover?')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                    </form>
+                    <% } else { %>
+                    <button class="btn-sm-icon del" title="Excluir" onclick="excluir(<%= p.id %>, this.dataset.nome)" data-nome="<%= p.nome_completo||'Palestrante' %>">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                    </button>
+                    <% } %>
+                  </div>
+                </td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+          </div>
+          <% } %>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL GERAR LINK -->
+<div class="modal-overlay" id="modalGerarLink">
+  <div class="modal-box" style="max-width:500px;">
+    <div class="modal-head">
+      <h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Enviar Link ao Palestrante</h3>
+      <button class="modal-close" onclick="fecharModal('modalGerarLink')">×</button>
+    </div>
+    <form method="POST" action="/palestrantes/gerar-link" id="formGerarLink">
+      <div class="modal-body">
+        <p style="font-size:14px;color:#374151;margin-bottom:20px;line-height:1.6;">
+          Informe os dados básicos do palestrante. O sistema vai gerar um link personalizado para ele preencher o formulário completo.
+        </p>
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Nome (opcional)</label>
+            <input type="text" name="nome_completo" placeholder="Dr. João Silva">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>E-mail (opcional)</label>
+            <input type="email" name="email" placeholder="doutor@email.com">
+          </div>
+          <div class="form-group">
+            <label>WhatsApp (opcional)</label>
+            <input type="text" name="whatsapp" placeholder="+55 11 99999-9999">
+          </div>
+        </div>
+        <div style="background:#f0f7eb;border-radius:10px;padding:12px 14px;font-size:13px;color:#2b6803;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="3"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="2" y1="12" x2="3" y2="12"/><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg> Após criar, você receberá um link para copiar e enviar por WhatsApp ou e-mail. O palestrante preenche o formulário e os dados aparecem automaticamente aqui.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancelar" onclick="fecharModal('modalGerarLink')">Cancelar</button>
+        <button type="submit" class="btn-salvar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Gerar Link</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL EDITAR/VER -->
+<div class="modal-overlay" id="modalEditar">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="modalTitulo">Dados do Palestrante</h3>
+      <button class="modal-close" onclick="fecharModal('modalEditar')">×</button>
+    </div>
+    <form method="POST" action="" id="formEditar">
+      <div class="modal-body">
+
+        <div class="form-section">Identificação</div>
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Nome Completo *</label>
+            <input type="text" name="nome_completo" id="fNome" required maxlength="255">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>E-mail *</label>
+            <input type="email" name="email" id="fEmail" required>
+          </div>
+          <div class="form-group">
+            <label>WhatsApp</label>
+            <div style="display:flex;gap:6px">
+              <select name="ddi_whatsapp" id="fDdi" style="width:105px;border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 6px;font-size:12px;background:#fafafa;font-family:inherit">
+                <option value="+55">🇧🇷 +55</option>
+                <option value="+595">🇵🇾 +595</option>
+                <option value="+54">🇦🇷 +54</option>
+                <option value="+56">🇨🇱 +56</option>
+                <option value="+57">🇨🇴 +57</option>
+                <option value="+51">🇵🇪 +51</option>
+                <option value="+598">🇺🇾 +598</option>
+                <option value="+1">🇺🇸 +1</option>
+                <option value="+34">🇪🇸 +34</option>
+                <option value="+351">🇵🇹 +351</option>
+              </select>
+              <input type="text" name="whatsapp" id="fWhatsapp" placeholder="99999-9999" style="flex:1;min-width:0">
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>RG / C.I.</label>
+            <input type="text" name="rg_ci" id="fRgCi">
+          </div>
+          <div class="form-group">
+            <label>Nº Registro Profissional</label>
+            <input type="text" name="registro_profissional" id="fRegistro" placeholder="Ex: CRM 12345/SP">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Especialidade</label>
+            <input type="text" name="especialidade" id="fEspecialidade" placeholder="Ex: Urologia, Andrologia...">
+          </div>
+          <div class="form-group">
+            <label>Instituição / Hospital</label>
+            <input type="text" name="instituicao" id="fInstituicao" placeholder="Ex: Hospital das Clínicas">
+          </div>
+        </div>
+        <div id="fBlocoEndereco">
+          <div class="form-section">Endereço</div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>País</label>
+              <select name="endereco_pais" id="fPais" onchange="toggleEndereco(this.value)" style="border:1.5px solid #e2e8f0;border-radius:10px;padding:10px 12px;font-size:13px;width:100%;background:#fafafa;font-family:inherit">
+                <option value="Brasil">🇧🇷 Brasil</option>
+                <option value="Paraguai">🇵🇾 Paraguai</option>
+                <option value="Argentina">🇦🇷 Argentina</option>
+                <option value="Chile">🇨🇱 Chile</option>
+                <option value="Colombia">🇨🇴 Colômbia</option>
+                <option value="Peru">🇵🇪 Peru</option>
+                <option value="Uruguai">🇺🇾 Uruguai</option>
+                <option value="Outro">🌎 Outro</option>
+              </select>
+            </div>
+            <div class="form-group" id="fCepWrap">
+              <label>CEP</label>
+              <input type="text" name="endereco_cep" id="fCep" placeholder="00000-000">
+            </div>
+          </div>
+          <div id="fEnderecoCompleto">
+            <div class="form-row full">
+              <div class="form-group">
+                <label>Rua / Av.</label>
+                <input type="text" name="endereco_rua" id="fRua">
+              </div>
+            </div>
+            <div class="form-row tri">
+              <div class="form-group">
+                <label>Número</label>
+                <input type="text" name="endereco_numero" id="fNumero">
+              </div>
+              <div class="form-group">
+                <label>Complemento</label>
+                <input type="text" name="endereco_complemento" id="fComplemento" placeholder="Apto, Bloco...">
+              </div>
+              <div class="form-group">
+                <label>Bairro</label>
+                <input type="text" name="endereco_bairro" id="fBairro">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Cidade</label>
+                <input type="text" name="endereco_cidade" id="fCidade">
+              </div>
+              <div class="form-group">
+                <label>Estado / Departamento</label>
+                <input type="text" name="endereco_estado" id="fEstado">
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-section">Observações Internas</div>
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Observações (uso interno)</label>
+            <textarea name="observacoes" id="fObs" placeholder="Anotações internas sobre este palestrante..."></textarea>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancelar" onclick="fecharModal('modalEditar')">Cancelar</button>
+        <button type="submit" class="btn-salvar">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL LINK -->
+<div class="modal-overlay" id="modalLink">
+  <div class="modal-box" style="max-width:480px;">
+    <div class="modal-head">
+      <h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Link para o Palestrante</h3>
+      <button class="modal-close" onclick="fecharModal('modalLink')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:#374151;margin-bottom:16px;line-height:1.6">
+        Envie este link para o palestrante preencher os dados. O formulário é público e não requer login.
+      </p>
+      <div class="link-box" id="linkBox"></div>
+      <button class="btn-copiar" onclick="copiarLinkModal()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Copiar Link</button>
+      <div style="margin-top:12px;background:#fef3c7;border-radius:8px;padding:10px 14px;font-size:12px;color:#92400e;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="3"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="2" y1="12" x2="3" y2="12"/><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg> Você pode enviar este link por WhatsApp ou e-mail. O palestrante preenche e os dados aparecem automaticamente aqui no sistema.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const BASE_URL = window.location.origin;
+
+function buscar(){
+  const q = document.getElementById('busca').value.toLowerCase();
+  document.querySelectorAll('#tbody tr').forEach(tr => {
+    tr.style.display = tr.dataset.busca.includes(q) ? '' : 'none';
+  });
+}
+
+function copiarLinkGerado(){
+  const url = document.getElementById('linkGerado')?.textContent;
+  if(!url) return;
+  navigator.clipboard.writeText(url).then(()=>{
+    alert('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Link copiado!\n\nEnvie por WhatsApp ou e-mail para o palestrante preencher.');
+  }).catch(()=>{ prompt('Copie este link:', url); });
+}
+
+function gerarLink(){
+  document.getElementById('formGerarLink').reset();
+  document.getElementById('modalGerarLink').classList.add('open');
+}
+
+function novoPalestrante(){
+  toggleEndereco('Brasil');
+  document.getElementById('formEditar').action = '/palestrantes/novo';
+  document.getElementById('modalTitulo').textContent = 'Novo Palestrante';
+  document.getElementById('formEditar').reset();
+  document.getElementById('fPais').value = 'Brasil';
+  document.getElementById('modalEditar').classList.add('open');
+}
+
+function toggleEndereco(pais) {
+  const brasil = (pais === 'Brasil' || !pais);
+  const bloco = document.getElementById('fBlocoEndereco');
+  const el = document.getElementById('fEnderecoCompleto');
+  const cepWrap = document.getElementById('fCepWrap');
+  if(bloco) bloco.style.display = '';
+  if(el) el.style.display = brasil ? '' : 'none';
+  if(cepWrap) cepWrap.style.display = brasil ? '' : 'none';
+}
+function abrirEditar(p){
+  document.getElementById('formEditar').action = '/palestrantes/'+p.id+'/editar';
+  document.getElementById('modalTitulo').textContent = 'Editar — ' + (p.nome_completo||'Palestrante');
+  document.getElementById('fNome').value = p.nome_completo||'';
+  document.getElementById('fEmail').value = p.email||'';
+  document.getElementById('fWhatsapp').value = p.whatsapp||'';
+  document.getElementById('fRgCi').value = p.rg_ci||'';
+  document.getElementById('fEspecialidade').value = p.especialidade||'';
+  document.getElementById('fInstituicao').value = p.instituicao||'';
+  const paisEl = document.getElementById('fPais');
+  paisEl.value = p.endereco_pais||'Brasil';
+  toggleEndereco(paisEl.value);
+  document.getElementById('fRegistro').value = p.registro_profissional||'';
+  if(p.ddi_whatsapp) document.getElementById('fDdi').value = p.ddi_whatsapp||'+55';
+  document.getElementById('fCep').value = p.endereco_cep||'';
+  document.getElementById('fRua').value = p.endereco_rua||'';
+  document.getElementById('fNumero').value = p.endereco_numero||'';
+  document.getElementById('fComplemento').value = p.endereco_complemento||'';
+  document.getElementById('fBairro').value = p.endereco_bairro||'';
+  document.getElementById('fCidade').value = p.endereco_cidade||'';
+  document.getElementById('fEstado').value = p.endereco_estado||'';
+  document.getElementById('fObs').value = p.observacoes||'';
+  document.getElementById('modalEditar').classList.add('open');
+}
+
+function copiarLink(token){
+  const url = BASE_URL + '/palestrante/form/' + token;
+  document.getElementById('linkBox').textContent = url;
+  document.getElementById('modalLink').classList.add('open');
+}
+
+function copiarLinkModal(){
+  const url = document.getElementById('linkBox').textContent;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.querySelector('.btn-copiar');
+    btn.textContent = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copiado!';
+    setTimeout(() => btn.textContent = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Copiar Link', 2000);
+  }).catch(() => { prompt('Copie este link:', url); });
+}
+
+function fecharModal(id){ document.getElementById(id).classList.remove('open'); }
+
+function excluir(id, nome){
+  if(!confirm('Excluir palestrante "'+nome+'"?\nEsta ação não pode ser desfeita.')) return;
+  const f=document.createElement('form'); f.method='POST'; f.action='/palestrantes/'+id+'/excluir';
+  document.body.appendChild(f); f.submit();
+}
+
+document.getElementById('modalEditar').addEventListener('click', e=>{ if(e.target===e.currentTarget) fecharModal('modalEditar'); });
+document.getElementById('modalLink').addEventListener('click', e=>{ if(e.target===e.currentTarget) fecharModal('modalLink'); });
+document.getElementById('modalGerarLink').addEventListener('click', e=>{ if(e.target===e.currentTarget) fecharModal('modalGerarLink'); });
+</script>
+</body>
+</html>

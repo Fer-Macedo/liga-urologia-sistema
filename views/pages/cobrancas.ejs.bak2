@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cobranças — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#2b6803' %>; }
+    .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:1px; margin-bottom:20px; border:1px solid var(--borda); background:var(--borda); }
+    .stat-box { background:var(--card); padding:16px 18px; display:flex; align-items:center; gap:14px; position:relative; transition:transform .15s ease, box-shadow .15s ease, background .12s; cursor:default; }
+    .stat-box:hover { transform:translateY(-3px); box-shadow:0 8px 20px rgba(0,0,0,.09); z-index:2; }
+    .stat-box:hover::before { width:6px; }
+    .stat-box:hover .stat-icon { transform:scale(1.08); border-color:var(--cor-stat,var(--cor-primaria)); }
+    .stat-box::before { content:''; position:absolute; top:0; left:0; bottom:0; width:3px; background:var(--cor-stat,var(--cor-primaria)); transition:width .15s ease; }
+    .stat-icon { width:40px; height:40px; border:1px solid var(--borda); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:transform .15s ease, border-color .15s ease; }
+    .stat-icon svg { width:18px; height:18px; }
+    .stat-num { font-family:'Outfit',sans-serif; font-size:22px; font-weight:700; line-height:1; margin-bottom:3px; letter-spacing:-.5px; }
+    .stat-lab { font-size:11px; color:var(--texto2); font-weight:600; text-transform:uppercase; letter-spacing:.6px; }
+    .filtros { display:flex; gap:0; margin-bottom:16px; border:1px solid var(--borda); width:fit-content; }
+    .filtro-pill { padding:7px 16px; font-size:12px; font-weight:600; border:none; border-right:1px solid var(--borda); background:var(--card); color:var(--texto2); text-decoration:none; transition:background .12s,color .12s; cursor:pointer; white-space:nowrap; }
+    .filtro-pill:last-child { border-right:none; }
+    .filtro-pill:hover { background:var(--fundo); color:var(--texto); }
+    .filtro-pill.ativo { background:var(--cor-primaria); color:white; }
+    .filtro-pill.vermelho { color:#dc2626; }
+    .filtro-pill.vermelho.ativo { background:#dc2626; color:white; }
+    .table-card { background:var(--card); border:1px solid var(--borda); }
+    .table-header { padding:12px 16px; border-bottom:1px solid var(--borda); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .table-titulo { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--texto2); }
+    table.tabela { width:100%; border-collapse:collapse; }
+    table.tabela thead th { background:var(--fundo); padding:9px 14px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--texto2); text-align:left; border-bottom:1px solid var(--borda); white-space:nowrap; }
+    table.tabela tbody tr { border-bottom:1px solid var(--borda); transition:background .1s; }
+    table.tabela tbody tr:last-child { border-bottom:none; }
+    table.tabela tbody tr:hover { background:var(--fundo); }
+    table.tabela tbody td { padding:10px 14px; font-size:13px; color:var(--texto); vertical-align:middle; }
+    .membro-info { display:flex; align-items:center; gap:10px; }
+    .avatar-sm { width:32px; height:32px; background:var(--cor-primaria); color:white; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; letter-spacing:.5px; }
+    .membro-nome { font-weight:600; font-size:13px; }
+    .badge-status { display:inline-flex; align-items:center; gap:5px; padding:3px 8px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; border-left:2px solid transparent; }
+    .badge-pago     { background:#dcfce7; color:#166534; border-color:#16a34a; }
+    .badge-pendente { background:#fef3c7; color:#92400e; border-color:#d97706; }
+    .badge-atrasado { background:#fee2e2; color:#991b1b; border-color:#dc2626; }
+    .badge-cancelado { background:#f1f5f9; color:#64748b; border-color:#94a3b8; }
+    .acoes { display:flex; gap:3px; flex-wrap:wrap; align-items:center; }
+    .btn-acao { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid var(--borda); background:var(--card); color:var(--texto2); cursor:pointer; transition:all .12s; text-decoration:none; }
+    .btn-acao:hover { border-color:var(--cor-primaria); color:var(--cor-primaria); background:var(--fundo); }
+    .btn-acao.confirmar { color:#16a34a; border-color:#bbf7d0; background:#f0fdf4; }
+    .btn-acao.confirmar:hover { background:#dcfce7; border-color:#16a34a; }
+    .btn-acao.pix { color:#1d4ed8; border-color:#bfdbfe; background:#eff6ff; }
+    .btn-acao.pix:hover { background:#dbeafe; }
+    .btn-acao.cartao { color:#7e22ce; border-color:#e9d5ff; background:#fdf4ff; }
+    .btn-acao.notif { color:#c2410c; border-color:#fed7aa; background:#fff7ed; }
+    .search-bar { display:flex; align-items:center; gap:8px; background:var(--fundo); border:1px solid var(--borda); padding:0 12px; height:32px; }
+    .search-bar svg { width:13px; height:13px; fill:var(--texto2); flex-shrink:0; }
+    .search-bar input { border:none; background:transparent; font-size:13px; color:var(--texto); outline:none; width:160px; font-family:inherit; }
+    .qr-box { text-align:center; padding:4px 0; }
+    .qr-box img { width:200px; height:200px; border:1px solid var(--borda); display:block; margin:0 auto 12px; }
+    .pix-copia { background:var(--fundo); border:1px solid var(--borda); padding:10px 14px; font-size:11px; word-break:break-all; font-family:monospace; margin:10px 0; cursor:pointer; text-align:left; transition:background .15s; }
+    .pix-copia:hover { background:#eff6ff; }
+    .btn-acao { transition:transform .12s ease, background .12s ease, color .12s ease, border-color .12s ease; }
+    .btn-acao:hover { transform:translateY(-2px) scale(1.06); }
+    .btn-acao.notif-email:hover { background:#eff6ff; border-color:#1a56db; color:#1a56db; }
+    .btn-acao.notif-wpp:hover { background:#ecfdf5; border-color:#16a34a; color:#16a34a; }
+    @media(max-width:768px) { .stats-row { grid-template-columns:repeat(2,1fr); } .filtros { flex-wrap:wrap; border:none; gap:4px; } .filtro-pill { border:1px solid var(--borda); } }
+
+      /* === Modais (estilo dashboard) === */
+    .modal-overlay .modal { border-radius:0 !important; border:1px solid var(--borda); box-shadow:0 14px 44px rgba(0,0,0,.18); }
+    .modal-overlay .modal-header { border-bottom:1px solid var(--borda); padding-bottom:12px; margin-bottom:4px; }
+    .modal-overlay .modal-titulo { display:inline-flex; align-items:center; gap:9px; font-weight:700; }
+    .modal-overlay .modal-titulo svg { width:17px; height:17px; stroke:var(--cor-primaria); flex-shrink:0; }
+    .modal-overlay .icon-btn { width:30px; height:30px; border:1px solid var(--borda); border-radius:0; background:var(--card); display:inline-flex; align-items:center; justify-content:center; color:var(--texto2); transition:background .12s ease, border-color .12s ease, color .12s ease, transform .12s ease; }
+    .modal-overlay .icon-btn:hover { background:#fee2e2; border-color:#dc2626; color:#dc2626; transform:scale(1.06); }
+    .modal-overlay .icon-btn svg { width:14px; height:14px; }
+    .modal-overlay .input, .modal-overlay select.input { border-radius:0 !important; }
+    .modal-overlay .input:focus { border-color:var(--cor-primaria); box-shadow:0 0 0 3px rgba(43,104,3,.12); }
+    .modal-overlay .btn { border-radius:0 !important; display:inline-flex; align-items:center; justify-content:center; gap:7px; transition:transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease, color .12s ease; }
+    .modal-overlay .btn svg { width:14px; height:14px; }
+    .modal-overlay .btn:hover { transform:translateY(-1px); box-shadow:0 5px 14px rgba(0,0,0,.12); }
+    .modal-overlay .btn:not(.btn-primario):hover { border-color:var(--texto2); }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'cobrancas' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Cobranças</h1>
+      <div class="topbar-acoes">
+        <form action="/cobrancas/gerar" method="POST" style="display:inline">
+          <button class="btn btn-sm" onclick="return confirm('Gerar cobranças do mês atual?')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+            Gerar do mês
+          </button>
+        </form>
+        <button class="btn btn-sm" onclick="abrirModal('modal-nova')">+ Nova cobrança</button>
+        <button class="btn btn-sm" onclick="abrirModal('modal-relatorio')" style="background:#374151;color:white">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Relatório PDF
+          </button>
+          <a href="/carta-cobranca" class="btn btn-sm" style="background:#dc2626;color:white;text-decoration:none">Carta de Cobrança</a>
+      </div>
+    </div>
+
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
+
+      <%
+        const totalCob = cobrancas.length;
+        const pagas = cobrancas.filter(c=>c.status==='pago');
+        const pendentes = cobrancas.filter(c=>c.status==='pendente');
+        const atrasadas = cobrancas.filter(c=>c.status==='atrasado');
+        const receitaTotal = pagas.reduce((s,c)=>s+Number(c.valor_desconto||0),0);
+      %>
+
+      <!-- STATS -->
+      <div class="stats-row">
+        <div class="stat-box" style="--cor-stat:var(--cor-primaria)">
+          <div class="stat-icon" style="background:#eff6ff">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#1a56db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+          </div>
+          <div>
+            <div class="stat-num" style="color:var(--cor-primaria)"><%= totalTodas %></div>
+            <div class="stat-lab">Total cobranças</div>
+          </div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#10b981">
+          <div class="stat-icon" style="background:#f0fdf4">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <div>
+            <div class="stat-num" style="color:#10b981"><%= totalPagas %></div>
+            <div class="stat-lab">Pagas · R$ <%= somaPagas.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
+          </div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#f59e0b">
+          <div class="stat-icon" style="background:#fffbeb">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div>
+            <div class="stat-num" style="color:#f59e0b"><%= totalPendentes %></div>
+            <div class="stat-lab">Pendentes</div>
+          </div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#dc2626">
+          <div class="stat-icon" style="background:#fef2f2">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div>
+            <div class="stat-num" style="color:#dc2626"><%= totalAtrasadas %></div>
+            <div class="stat-lab">Atrasadas</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FILTROS -->
+      <div class="filtros">
+        <a href="/cobrancas" class="filtro-pill <%= filtro==='todas'?'ativo':'' %>">Todas (<%= totalTodas %>)</a>
+        <a href="/cobrancas?filtro=pagas" class="filtro-pill <%= filtro==='pagas'?'ativo':'' %>">Pagas (<%= totalPagas %>)</a>
+        <a href="/cobrancas?filtro=pendentes" class="filtro-pill <%= filtro==='pendentes'?'ativo':'' %>">Pendentes (<%= totalPendentes %>)</a>
+        <a href="/cobrancas?filtro=atrasadas" class="filtro-pill vermelho <%= filtro==='atrasadas'?'ativo':'' %>">Atrasadas (<%= totalAtrasadas %>)</a>
+      </div>
+
+      <!-- TABELA -->
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-titulo">
+            <% if(filtro==='pagas') { %>Cobranças pagas
+            <% } else if(filtro==='pendentes') { %>Cobranças pendentes
+            <% } else if(filtro==='atrasadas') { %>Cobranças atrasadas
+            <% } else { %>Todas as cobranças<% } %>
+            (<%= cobrancas.length %>)
+          </span>
+          <div class="search-bar">
+            <svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>
+            <input type="text" placeholder="Buscar membro..." oninput="filtrarTabela(this.value)">
+          </div>
+        </div>
+
+        <table class="tabela" id="tabela-cobrancas">
+          <thead>
+            <tr>
+              <th>Membro</th>
+              <th>Referência</th>
+              <th>Vencimento</th>
+              <th>Valor cheio</th>
+              <th>Com desconto</th>
+              <th>Taxa banco</th>
+              <th>Líquido</th>
+              <th>Status</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (cobrancas.length === 0) { %>
+            <tr><td colspan="7" style="text-align:center;padding:48px;color:var(--texto2)">
+              <div style="font-size:32px;margin-bottom:12px"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.25"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg></div>
+              <div style="font-weight:600;margin-bottom:4px">Nenhuma cobrança encontrada</div>
+              <div style="font-size:12px">Tente outro filtro ou gere as cobranças do mês</div>
+            </td></tr>
+            <% } %>
+            <% cobrancas.forEach(c => { %>
+            <tr class="cob-row">
+              <td>
+                <div class="membro-info">
+                  <div class="avatar-sm"><%= c.nome.substring(0,2).toUpperCase() %></div>
+                  <div class="membro-nome"><%= c.nome %></div>
+                </div>
+              </td>
+              <td style="font-family:monospace;font-size:12px;color:var(--texto2)"><%= c.referencia %></td>
+              <td style="color:var(--texto2);white-space:nowrap"><%= new Date(c.data_vencimento+'T12:00:00').toLocaleDateString('pt-BR') %></td>
+              <td style="font-weight:600">R$ <%= Number(c.valor_cheio).toFixed(2).replace('.',',') %></td>
+              <td style="color:var(--cor-primaria);font-weight:700">R$ <%= Number(c.valor_desconto).toFixed(2).replace('.',',') %></td>
+              <td style="color:#ef4444;font-size:12px">
+                <% const taxa = Number(c.valor_desconto)*0.0099; %>
+                R$ <%= taxa.toLocaleString('pt-BR',{minimumFractionDigits:2}) %>
+                <div style="font-size:10px;color:var(--texto2)">0,99% PIX</div>
+              </td>
+              <td style="color:#10b981;font-weight:700">
+                <% const liq = Number(c.valor_desconto) - taxa; %>
+                R$ <%= liq.toLocaleString('pt-BR',{minimumFractionDigits:2}) %>
+              </td>
+              <td>
+                <% if (c.status==='pago') { %>
+                <span class="badge-status badge-pago">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Pago
+                </span>
+                <% } else if (c.status==='atrasado') { %>
+                <span class="badge-status badge-atrasado">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  Atrasado
+                </span>
+                <% } else { %>
+                <span class="badge-status badge-pendente">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  Pendente
+                </span>
+                <% } %>
+              </td>
+              <td>
+                <div class="acoes">
+                  <% if (c.status !== 'pago') { %>
+                  <form method="POST" action="/cobrancas/<%= c.id %>/confirmar" style="display:inline;margin:0" onsubmit="return confirm('Confirmar pagamento manual?')">
+                    <button type="submit" class="btn-acao confirmar" title="Confirmar pagamento manual">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                    </button>
+                  </form>
+                  <% if (c.pix_qr_code || c.pix_qr_code_base64) { %>
+                  <button class="btn-acao pix" title="Ver QR Code PIX"
+                    onclick="abrirPix('<%= c.id %>')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/></svg>
+                  </button>
+                  <% } %>
+                  <% if (c.pagbank_link) { %>
+                  <a href="<%= c.pagbank_link %>" target="_blank" class="btn-acao cartao" title="Link cartão crédito">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                  </a>
+                  <% } %>
+                  <form action="/cobrancas/<%= c.id %>/notificar" method="POST" style="display:inline;margin:0">
+                    <button class="btn-acao notif-email" title="Cobrar por e-mail" name="canal" value="email">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></button><button class="btn-acao notif-wpp" title="Cobrar por WhatsApp" name="canal" value="whatsapp"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6.09 6.09l1.07-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                    </button>
+                  </form>
+                  <% } %>
+                </div>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal QR Code PIX -->
+<div class="modal-overlay" id="modal-pix" style="display:none">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header">
+      <span class="modal-titulo" id="pix-titulo">QR Code PIX</span>
+      <button class="icon-btn" onclick="fecharModal('modal-pix')">✕</button>
+    </div>
+    <div class="qr-box">
+      <p style="font-size:13px;color:var(--texto2);margin-bottom:12px">Escaneie ou copie o código Pix abaixo</p>
+      <img id="pix-qr-img" src="" alt="QR Code PIX">
+      <div style="background:var(--fundo);border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-size:11px;color:var(--texto2);font-weight:600;margin-bottom:4px">Valor a pagar</div>
+        <div id="pix-valor" style="font-size:22px;font-weight:800;color:var(--cor-primaria);font-family:'Outfit',sans-serif"></div>
+      </div>
+      <div style="font-size:11px;color:var(--texto2);font-weight:600;margin-bottom:4px;text-align:left">Pix Copia e Cola:</div>
+      <div class="pix-copia" id="pix-codigo" onclick="copiarPix()"></div>
+      <button class="btn btn-primario" style="width:100%;margin-top:4px" onclick="copiarPix()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        Copiar código PIX
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal nova cobrança -->
+<div class="modal-overlay" id="modal-nova" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>Nova cobrança manual</span>
+      <button class="icon-btn" onclick="fecharModal('modal-nova')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <form action="/cobrancas/nova" method="POST">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="campo">
+          <label class="label">Membro *</label>
+          <select name="membro_id" class="input" required>
+            <option value="">Selecione o membro...</option>
+          </select>
+        </div>
+        <div class="grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="campo">
+            <label class="label">Referência</label>
+            <input name="referencia" class="input" required placeholder="ID-AAAA-MM">
+          </div>
+          <div class="campo">
+            <label class="label">Vencimento</label>
+            <input name="data_vencimento" type="date" class="input" required>
+          </div>
+          <div class="campo">
+            <label class="label">Valor cheio (R$)</label>
+            <input name="valor_cheio" type="number" step="0.01" class="input" required>
+          </div>
+          <div class="campo">
+            <label class="label">Com desconto (R$)</label>
+            <input name="valor_desconto" type="number" step="0.01" class="input" required>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-nova')">Cancelar</button>
+        <button type="submit" class="btn btn-primario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Criar cobrança</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const pixData = {};
+<% cobrancas.forEach(c => { %>
+  <% if (c.pix_qr_code || c.pix_qr_code_base64) { %>
+  pixData['<%= c.id %>'] = {
+    qr_code: `<%= c.pix_qr_code || '' %>`,
+    qr_code_base64: '<%= c.pix_qr_code_base64 || "" %>',
+    valor: 'R$ <%= Number(c.valor_desconto).toFixed(2).replace(".",",") %>',
+    nome: '<%= c.nome.split(" ")[0] %>'
+  };
+  <% } %>
+<% }) %>
+
+function abrirPix(id) {
+  const d = pixData[id];
+  if (!d) return;
+  document.getElementById('pix-titulo').textContent = 'PIX — ' + d.nome;
+  document.getElementById('pix-valor').textContent = d.valor;
+  document.getElementById('pix-codigo').textContent = d.qr_code;
+  const img = document.getElementById('pix-qr-img');
+  if (d.qr_code_base64) {
+    img.src = 'data:image/png;base64,' + d.qr_code_base64;
+    img.style.display = 'block';
+  } else {
+    img.style.display = 'none';
+  }
+  abrirModal('modal-pix');
+}
+
+function copiarPix() {
+  const codigo = document.getElementById('pix-codigo').textContent;
+  navigator.clipboard.writeText(codigo).then(() => {
+    const btn = document.querySelector('#modal-pix .btn-primario');
+    const orig = btn.innerHTML;
+    btn.innerHTML = 'Copiado!';
+    btn.style.background = '#10b981';
+    setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 2000);
+  });
+}
+
+function gerarRelatorioPDF() {
+  fecharModal('modal-relatorio');
+  const w = window.open('', '_blank');
+  const statusFiltro = document.getElementById('rel-status').value;
+  const nomeF = (document.getElementById('rel-nome').value||'').toLowerCase().trim();
+  const dataIni = document.getElementById('rel-data-ini').value;
+  const dataFim = document.getElementById('rel-data-fim').value;
+  const colRef    = document.getElementById('rel-col-ref').checked;
+  const colVenc   = document.getElementById('rel-col-venc').checked;
+  const colTaxa   = document.getElementById('rel-col-taxa').checked;
+  const colStatus = document.getElementById('rel-col-status').checked;
+  const fLabel = {todas:'Todas',pago:'Pagas',pendente:'Pendentes',atrasado:'Atrasadas'}[statusFiltro]||'Todas';
+  const todas = <%- JSON.stringify(cobrancas) %>;
+  const rows = todas.filter(c => {
+    if (statusFiltro !== 'todas' && c.status !== statusFiltro) return false;
+    if (nomeF && !c.nome.toLowerCase().includes(nomeF)) return false;
+    if (dataIni && c.data_vencimento < dataIni) return false;
+    if (dataFim && c.data_vencimento > dataFim) return false;
+    return true;
+  });
+  const orgNome = '<%= config.org_nome || "LAURO" %>';
+  const corP = '<%= config.org_cor || "#1a56db" %>';
+  const orgLogo = '<%= config.org_logo || "" %>';
+  const logoH = orgLogo ? `<div class="logo-badge"><img src="${orgLogo}"></div>` : `<span style="font-size:18px;font-weight:800;color:white">${orgNome}</span>`;
+  let tBruto=0, tTaxa=0, tLiq=0;
+  const linhas = rows.map(r => {
+    const vD = Number(r.valor_desconto)||0;
+    const vT = vD*0.0099; const vL = vD-vT;
+    tBruto+=vD; tTaxa+=vT; tLiq+=vL;
+    const st = r.status;
+    const bg = st==='pago'?'#dcfce7':st==='atrasado'?'#fee2e2':'#fef3c7';
+    const ct = st==='pago'?'#166534':st==='atrasado'?'#991b1b':'#92400e';
+    const stLabel = st==='pago'?'Pago':st==='atrasado'?'Atrasado':'Pendente';
+    const venc = r.data_vencimento ? new Date(r.data_vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    let cols = `<td style="font-weight:600">${r.nome}</td>`;
+    if(colRef) cols += `<td>${r.referencia||'—'}</td>`;
+    if(colVenc) cols += `<td>${venc}</td>`;
+    cols += `<td>R$ ${vD.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>`;
+    if(colTaxa) cols += `<td style="color:#ef4444">R$ ${vT.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td style="color:#10b981;font-weight:700">R$ ${vL.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>`;
+    if(colStatus) cols += `<td><span style="background:${bg};color:${ct};padding:2px 8px;border-radius:0;font-size:11px;font-weight:700">${stLabel}</span></td>`;
+    return `<tr>${cols}</tr>`;
+  }).join('');
+  const css=`*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,Helvetica,sans-serif;color:#1f2937}@media print{.np{display:none}}.hdr{background:${corP};padding:24px 32px;display:flex;justify-content:space-between;align-items:center;color:white}.logo-badge{width:56px;height:56px;border-radius:50%;background:white;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 2px 10px rgba(0,0,0,.18);flex-shrink:0}.logo-badge img{width:46px;height:46px;object-fit:contain}.hdr-title{text-align:right}.hdr-title .t{font-size:19px;font-weight:800;letter-spacing:-.3px}.hdr-title .s{font-size:12px;opacity:.88;margin-top:3px}.sts{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e5e7eb;border-bottom:1px solid #e5e7eb}.st{background:white;padding:16px 20px;position:relative}.st::before{content:'';position:absolute;top:0;left:0;bottom:0;width:3px;background:var(--bar,${corP})}.stn{font-size:21px;font-weight:800;letter-spacing:-.5px}.stl{font-size:10px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-top:5px}table{width:calc(100% - 64px);margin:18px 32px;border-collapse:collapse;border:1px solid #e5e7eb}th{background:${corP};color:white;padding:9px 11px;font-size:10px;text-align:left;text-transform:uppercase;letter-spacing:.05em;font-weight:700}td{padding:8px 11px;font-size:12px;border-bottom:1px solid #eceef1}tbody tr:nth-child(even){background:#fafbfc}.tr{background:#eef2f7 !important;font-weight:700}.bp{position:fixed;bottom:20px;right:20px;padding:12px 24px;background:${corP};color:white;border:none;border-radius:0;cursor:pointer;font-size:14px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.22)}`;
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>${css}</style></head><body>`
+    +`<div class="hdr">${logoH}<div class="hdr-title"><div class="t">Relatório de Cobranças</div><div class="s">Filtro: ${fLabel} &middot; ${new Date(new Date().toLocaleString('en-US',{timeZone:'America/Asuncion'})).toLocaleDateString('pt-BR')}</div></div></div>`
+    +`<div class="sts"><div class="st" style="--bar:${corP}"><div class="stn" style="color:${corP}">R$ ${tBruto.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="stl">Receita Bruta</div></div><div class="st" style="--bar:#ef4444"><div class="stn" style="color:#ef4444">R$ ${tTaxa.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="stl">Taxas (0,99%)</div></div><div class="st" style="--bar:#10b981"><div class="stn" style="color:#10b981">R$ ${tLiq.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="stl">Receita Líquida</div></div></div>`
+    +(() => {
+    let th = '<th>Membro</th>';
+    if(colRef) th+='<th>Referência</th>';
+    if(colVenc) th+='<th>Vencimento</th>';
+    th+='<th>Bruto</th>';
+    if(colTaxa) th+='<th>Taxa</th><th>Líquido</th>';
+    if(colStatus) th+='<th>Status</th>';
+    let totCols = 1+(colRef?1:0)+(colVenc?1:0)+1+(colTaxa?2:0)+(colStatus?1:0);
+    return `<table><thead><tr>${th}</tr></thead><tbody>${linhas}<tr class="tr"><td colspan="${totCols-3}">TOTAL (${rows.length})</td><td>R$ ${tBruto.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>${colTaxa?`<td style="color:#ef4444">R$ ${tTaxa.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td><td style="color:#10b981">R$ ${tLiq.toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>`:''}</tr></tbody></table>`;
+  })()
+    +`<button class="bp np" onclick="window.print()">Imprimir / Salvar PDF</button><script>window.onload=()=>window.print();<\/script></body></html>`;
+  w.document.write(html); w.document.close();
+}
+function filtrarTabela(q) {
+  document.querySelectorAll('.cob-row').forEach(r => {
+    r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+  });
+}
+</script>
+<div class="modal-overlay" id="modal-relatorio" style="display:none">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <span class="modal-titulo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Gerar Relatório PDF</span>
+      <button class="icon-btn" onclick="fecharModal('modal-relatorio')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px;padding:4px 0">
+      <div class="campo"><label class="label">Status</label>
+        <select id="rel-status" class="input">
+          <option value="todas">Todas</option>
+          <option value="pago">Pagas</option>
+          <option value="pendente">Pendentes</option>
+          <option value="atrasado">Atrasadas</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="campo"><label class="label">Vencimento de</label><input type="date" id="rel-data-ini" class="input"></div>
+        <div class="campo"><label class="label">Vencimento ate</label><input type="date" id="rel-data-fim" class="input"></div>
+      </div>
+      <div class="campo"><label class="label">Buscar por nome</label><input type="text" id="rel-nome" class="input" placeholder="Ex: Joao..."></div>
+      <div style="background:var(--fundo);border-radius:0;padding:14px 16px;border:1px solid var(--borda)">
+        <div style="font-size:12px;font-weight:700;color:var(--texto);margin-bottom:10px">Incluir no relatorio</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="rel-col-ref" checked style="width:15px;height:15px;accent-color:var(--cor-primaria)"> Referencia</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="rel-col-venc" checked style="width:15px;height:15px;accent-color:var(--cor-primaria)"> Vencimento</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="rel-col-taxa" checked style="width:15px;height:15px;accent-color:var(--cor-primaria)"> Taxa e liquido</label>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="rel-col-status" checked style="width:15px;height:15px;accent-color:var(--cor-primaria)"> Status</label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" onclick="fecharModal('modal-relatorio')">Cancelar</button>
+      <button type="button" class="btn btn-primario" onclick="gerarRelatorioPDF()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Gerar PDF</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -7,7 +7,17 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('render.com')
     ? { rejectUnauthorized: false }
-    : false
+    : false,
+  // Robustez para eventos com muitos acessos simultâneos
+  max: 25,                        // até 25 conexões simultâneas (Postgres aceita 100)
+  idleTimeoutMillis: 30000,       // libera conexão ociosa após 30s
+  connectionTimeoutMillis: 5000,  // desiste de pegar conexão após 5s (evita travar)
+  maxUses: 7500                   // recicla conexão após 7500 usos (evita memory leak)
+});
+
+// Log de erros do pool (não derruba o processo se uma conexão falhar)
+pool.on('error', function(err){
+  console.error('Pool PG erro inesperado:', err.message);
 });
 
 async function query(text, params) {

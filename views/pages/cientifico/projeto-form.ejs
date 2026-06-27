@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <title><%=projeto?'Editar':'Novo'%> Projeto — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%=config.org_cor||'#1a56db'%>}
+    .form-wrap{max-width:720px}
+    .form-card{background:var(--card);border:1px solid var(--borda);padding:28px;margin-bottom:20px}
+    .form-card h2{font-size:15px;font-weight:700;color:var(--texto);margin:0 0 20px;padding-bottom:12px;border-bottom:1px solid var(--borda)}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .form-group{margin-bottom:16px}
+    .form-group label{display:block;font-size:12px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+    .form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;border:1px solid var(--borda);background:var(--fundo);color:var(--texto);font-size:13px;border-radius:0;font-family:inherit;box-sizing:border-box}
+    .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--cor-primaria)}
+    .form-group textarea{resize:vertical;min-height:80px}
+    .file-area{border:1.5px dashed var(--borda);padding:20px;text-align:center;cursor:pointer;background:var(--fundo)}
+    .file-area:hover{border-color:var(--cor-primaria)}
+    .file-area p{font-size:12.5px;color:var(--texto2);margin:6px 0 0}
+    .file-atual{font-size:12px;color:var(--texto2);margin-top:8px;padding:8px 12px;background:var(--hover);border:1px solid var(--borda);display:flex;align-items:center;gap:8px}
+    .btn{padding:9px 18px;font-size:13px;font-weight:600;border:1px solid var(--borda);background:var(--card);color:var(--texto);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:7px;border-radius:0}
+    .btn.pri{background:var(--cor-primaria);color:#fff;border-color:var(--cor-primaria)}
+    .btn.pri:hover{opacity:.9}
+    .pg-header{display:flex;align-items:center;gap:14px;margin-bottom:28px}
+    .pg-header a{color:var(--texto2);text-decoration:none;font-size:13px;display:flex;align-items:center;gap:5px}
+    .pg-header a:hover{color:var(--texto)}
+    .pg-header h1{font-size:20px;font-weight:700;color:var(--texto);margin:0}
+    .alert-err{padding:12px 16px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:13px;margin-bottom:20px}
+  </style>
+</head>
+<body>
+<%- include('../../partials/sidebar',{paginaAtual:'cientifico',config,usuario,permissoesAtivas:permissoesAtivas||[]}) %>
+<div style="margin-left:240px;padding:32px 36px;min-height:100vh;background:var(--fundo)">
+<%- include('../../partials/_notificacoes') %>
+<%if(erro&&erro.length){%><div class="alert-err"><%=erro[0]%></div><%}%>
+<div class="pg-header">
+  <a href="/cientifico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Voltar</a>
+  <h1><%=projeto?'Editar Projeto':'Novo Projeto Cientifico'%></h1>
+</div>
+<div class="form-wrap">
+<form method="POST" action="<%=projeto?'/cientifico/projeto/'+projeto.id+'/editar':'/cientifico/novo'%>" enctype="multipart/form-data">
+  <div class="form-card">
+    <h2>Informacoes do Projeto</h2>
+    <div class="form-group">
+      <label>Titulo do Projeto / Evento / Revista *</label>
+      <input type="text" name="titulo" required value="<%=projeto?projeto.titulo:''%>" placeholder="Ex: Congresso Brasileiro de Urologia 2025">
+    </div>
+    <div class="form-group">
+      <label>Descricao</label>
+      <textarea name="descricao" placeholder="Descricao opcional do projeto"><%=projeto?projeto.descricao||'':''%></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Prazo de Submissao</label>
+        <input type="date" name="prazo" value="<%=projeto&&projeto.prazo?new Date(projeto.prazo).toISOString().split('T')[0]:''%>">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select name="status">
+          <option value="aberto" <%=!projeto||projeto.status==='aberto'?'selected':''%>>Aberto</option>
+          <option value="revisao" <%=projeto&&projeto.status==='revisao'?'selected':''%>>Em Revisao</option>
+          <option value="encerrado" <%=projeto&&projeto.status==='encerrado'?'selected':''%>>Encerrado</option>
+        </select>
+      </div>
+    </div>
+  </div>
+  <div class="form-card">
+    <h2>Documentos do Projeto</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Edital (PDF)</label>
+        <%if(projeto&&projeto.edital_nome){%>
+        <div class="file-atual">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <%=projeto.edital_nome%>
+        </div>
+        <p style="font-size:11px;color:var(--texto2);margin:4px 0">Selecionar novo arquivo substitui o atual</p>
+        <%}%>
+        <div class="file-area" onclick="document.getElementById('edital').click()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p>Clique para selecionar o edital</p>
+        </div>
+        <input type="file" id="edital" name="edital" accept=".pdf,.doc,.docx" style="display:none" onchange="mostrarArquivo(this,'edital')">
+        <div id="nome-edital" style="font-size:11px;color:var(--cor-primaria);margin-top:4px"></div>
+      </div>
+      <div class="form-group">
+        <label>Modelo de Documento</label>
+        <%if(projeto&&projeto.modelo_nome){%>
+        <div class="file-atual">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <%=projeto.modelo_nome%>
+        </div>
+        <p style="font-size:11px;color:var(--texto2);margin:4px 0">Selecionar novo arquivo substitui o atual</p>
+        <%}%>
+        <div class="file-area" onclick="document.getElementById('modelo').click()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <p>Clique para selecionar o modelo</p>
+        </div>
+        <input type="file" id="modelo" name="modelo" accept=".pdf,.doc,.docx" style="display:none" onchange="mostrarArquivo(this,'modelo')">
+        <div id="nome-modelo" style="font-size:11px;color:var(--cor-primaria);margin-top:4px"></div>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px">
+    <button type="submit" class="btn pri"><%=projeto?'Salvar alteracoes':'Criar projeto'%></button>
+    <a href="/cientifico" class="btn">Cancelar</a>
+  </div>
+</form>
+</div>
+</div>
+<script>
+function mostrarArquivo(input,id){
+  var d=document.getElementById('nome-'+id);
+  d.textContent=input.files[0]?input.files[0].name:'';
+}
+</script>
+</body></html>

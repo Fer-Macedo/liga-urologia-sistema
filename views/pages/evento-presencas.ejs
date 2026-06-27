@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Presenças — <%= evento.nome %></title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin-modern.css">
@@ -111,11 +112,9 @@
 
       <!-- TABELA -->
       <div class="table-moderna">
-        <div style="padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-          <span style="font-size:14px;font-weight:700;font-family:'Outfit',sans-serif">Lista de presenças</span>
-          <input type="text" class="input" placeholder="Buscar participante..."
-            style="width:240px;font-size:13px;padding:7px 12px"
-            oninput="buscar(this.value)">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px">
+          <span style="font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;align-self:center;margin-right:auto">Lista de presenças</span>
+          <div style="min-width:160px"><label style="font-size:11px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px">Buscar</label><input type="text" class="input" id="pr-busca" placeholder="Buscar..." style="width:100%;font-size:13px;padding:7px 12px" oninput="filtrarPresencas()"></div><div style="min-width:130px"><label style="font-size:11px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px">Status</label><select id="pr-status" class="input" style="width:100%;font-size:13px;padding:7px 12px" onchange="filtrarPresencas()"><option value="">Todos</option><option value="apto">Apto</option><option value="risco">Em risco</option><option value="inapto">Nao apto</option></select></div><div style="min-width:120px"><label style="font-size:11px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px">Tipo</label><select id="pr-tipo" class="input" style="width:100%;font-size:13px;padding:7px 12px" onchange="filtrarPresencas()"><option value="">Todos</option><option value="presencial">Presencial</option><option value="online">Online</option></select></div><div style="min-width:90px"><label style="font-size:11px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px">Por pag.</label><select id="pr-por-pagina" class="input" style="width:100%;font-size:13px;padding:7px 12px" onchange="filtrarPresencas()"><option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="9999">Todos</option></select></div><div style="margin-left:auto;font-size:12px;color:var(--texto2)">Exibindo <span id="pr-count-filt" style="font-weight:700;color:var(--cor-primaria)">0</span> de <span id="pr-count-tot"><%= inscricoes.length %></span></div>
         </div>
         <table>
           <thead>
@@ -142,7 +141,7 @@
               const pct = duracaoSeg2 > 0 ? Math.min(100, Math.round(seg / duracaoSeg2 * 100)) : 0;
               const corBarra = pct >= 75 ? '#10b981' : pct >= 50 ? '#f59e0b' : '#ef4444';
             %>
-            <tr data-busca="<%= (i.nome + ' ' + (i.email||'')).toLowerCase() %>">
+            <% const _st = pct >= 75 ? 'apto' : pct >= 50 ? 'risco' : 'inapto'; %><tr class="pr-row" data-busca="<%= (i.nome + ' ' + (i.email||'')).toLowerCase() %>" data-status="<%= _st %>" data-tipo="<%= tipo %>">
               <td>
                 <div style="font-weight:600"><%= i.nome %></div>
                 <div style="font-size:11px;color:var(--texto2)"><%= i.email %></div>
@@ -187,17 +186,47 @@
             <% }) %>
           </tbody>
         </table>
+        <div id="pr-paginacao" style="display:flex;align-items:center;justify-content:center;gap:6px;padding:16px 0;flex-wrap:wrap"></div>
       </div>
     </div>
   </main>
 </div>
 <script>
-function buscar(t) {
-  t = t.toLowerCase();
-  document.querySelectorAll('#tbody tr[data-busca]').forEach(r => {
-    r.style.display = !t || r.dataset.busca.includes(t) ? '' : 'none';
-  });
-}
-</script>
+var _prPagina=1,_prFiltradas=[];
+  function filtrarPresencas(){
+    var b=(document.getElementById('pr-busca').value||'').toLowerCase();
+    var sv=document.getElementById('pr-status').value||'';
+    var tv=document.getElementById('pr-tipo').value||'';
+    _prFiltradas=Array.prototype.slice.call(document.querySelectorAll('#tbody tr.pr-row')).filter(function(r){
+      if(b && (r.dataset.busca||'').indexOf(b)<0) return false;
+      if(sv && r.dataset.status!==sv) return false;
+      if(tv && r.dataset.tipo!==tv) return false;
+      return true;
+    });
+    _prPagina=1; renderPresencas();
+  }
+  function renderPresencas(){
+    var pp=parseInt(document.getElementById('pr-por-pagina').value)||25;
+    var total=_prFiltradas.length, totalP=Math.ceil(total/pp)||1;
+    if(_prPagina>totalP)_prPagina=totalP;
+    var ini=(_prPagina-1)*pp, fim=ini+pp;
+    document.querySelectorAll('#tbody tr.pr-row').forEach(function(r){r.style.display='none';});
+    _prFiltradas.forEach(function(r,i){r.style.display=(i>=ini&&i<fim)?'':'none';});
+    var cf=document.getElementById('pr-count-filt'); if(cf)cf.textContent=total;
+    var pi=document.getElementById('pr-paginacao'); if(!pi)return;
+    var bs='display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 8px;border-radius:3px;border:1px solid var(--borda);background:var(--card);color:var(--texto2);font-size:12px;font-weight:600;cursor:pointer;';
+    var ba='display:inline-flex;align-items:center;justify-content:center;min-width:32px;height:32px;padding:0 8px;border-radius:3px;border:1px solid var(--cor-primaria);background:var(--cor-primaria);color:#fff;font-size:12px;font-weight:700;cursor:pointer;';
+    var h='<button onclick="prPag(-1)" style="'+bs+'" '+(_prPagina<=1?'disabled':'')+'>&#8592;</button>';
+    var start=Math.max(1,_prPagina-2),end=Math.min(totalP,start+4); if(end-start<4)start=Math.max(1,end-4);
+    if(start>1){h+='<button onclick="prNum(1)" style="'+bs+'">1</button>'; if(start>2)h+='<span style="padding:0 4px;color:var(--texto2)">...</span>';}
+    for(var p=start;p<=end;p++)h+='<button onclick="prNum('+p+')" style="'+(_prPagina===p?ba:bs)+'">'+p+'</button>';
+    if(end<totalP){if(end<totalP-1)h+='<span style="padding:0 4px;color:var(--texto2)">...</span>';h+='<button onclick="prNum('+totalP+')" style="'+bs+'">'+totalP+'</button>';}
+    h+='<button onclick="prPag(1)" style="'+bs+'" '+(_prPagina>=totalP?'disabled':'')+'>&#8594;</button>';
+    pi.innerHTML=h;
+  }
+  function prNum(n){var pp=parseInt(document.getElementById('pr-por-pagina').value)||25;var tp=Math.ceil(_prFiltradas.length/pp)||1;_prPagina=Math.max(1,Math.min(tp,n));renderPresencas();}
+  function prPag(d){prNum(_prPagina+d);}
+  document.addEventListener('DOMContentLoaded',function(){ if(document.getElementById('tbody')) filtrarPresencas(); });
+  </script>
 </body>
 </html>

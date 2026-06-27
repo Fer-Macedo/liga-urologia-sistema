@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Roleta — <%= config.org_nome %></title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root { --verde: #2b6803; }
+    :root { --verde: <%= config.org_cor || '#2b6803' %>; --rad: 2px; }
 
     body {
       font-family: 'DM Sans', sans-serif;
@@ -17,7 +18,8 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
     /* FUNDO */
@@ -28,20 +30,23 @@
     .roleta-logo { display: flex; align-items: center; gap: 12px; }
     .roleta-logo img { width: 44px; height: 44px; border-radius: 50%; border: 2px solid rgba(92,184,6,.3); }
     .roleta-org { font-size: 14px; font-weight: 700; color: rgba(255,255,255,.6); }
-    .roleta-back { color: rgba(255,255,255,.4); font-size: 13px; text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    .roleta-back { color: rgba(255,255,255,.4); font-size: 13px; text-decoration: none; display: flex; align-items: center; gap: 6px; transition: color .15s; }
     .roleta-back:hover { color: rgba(255,255,255,.7); }
 
     /* TELA CONFIGURAÇÃO */
     .config-screen { text-align: center; padding: 40px 24px; max-width: 600px; width: 100%; }
-    .config-titulo { font-family: 'DM Serif Display', serif; font-size: clamp(28px,4vw,42px); color: #fff; margin-bottom: 8px; }
+    .config-titulo { font-family: 'DM Serif Display', serif; font-size: clamp(28px,4vw,42px); color: #fff; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 12px; }
+    .config-titulo svg { opacity: .8; }
     .config-sub { font-size: 15px; color: rgba(255,255,255,.5); margin-bottom: 40px; }
-    .config-card { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: 16px; padding: 28px; margin-bottom: 20px; text-align: left; }
+    .config-card { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); border-radius: var(--rad); padding: 28px; margin-bottom: 20px; text-align: left; }
     .config-label { font-size: 11px; font-weight: 700; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .6px; margin-bottom: 8px; }
-    .config-select { width: 100%; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 10px; padding: 12px 14px; font-size: 14px; color: #fff; font-family: 'DM Sans', sans-serif; margin-bottom: 16px; }
+    .config-select { width: 100%; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: var(--rad); padding: 12px 14px; font-size: 14px; color: #fff; font-family: 'DM Sans', sans-serif; margin-bottom: 16px; transition: border-color .15s; }
+    .config-select:focus { outline: none; border-color: var(--verde); }
     .config-select option { background: #1a2e0e; }
-    .config-textarea { width: 100%; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 10px; padding: 12px 14px; font-size: 13px; color: #fff; font-family: 'DM Sans', sans-serif; resize: vertical; min-height: 120px; }
+    .config-textarea { width: 100%; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: var(--rad); padding: 12px 14px; font-size: 13px; color: #fff; font-family: 'DM Sans', sans-serif; resize: vertical; min-height: 120px; transition: border-color .15s; }
     .config-textarea::placeholder { color: rgba(255,255,255,.3); }
-    .btn-iniciar { background: linear-gradient(135deg, var(--verde), #3d8f04); color: #fff; border: none; border-radius: 12px; padding: 16px 40px; font-size: 18px; font-weight: 800; cursor: pointer; font-family: 'DM Sans', sans-serif; box-shadow: 0 4px 20px rgba(43,104,3,.4); transition: all .2s; width: 100%; margin-top: 8px; }
+    .config-textarea:focus { outline: none; border-color: var(--verde); }
+    .btn-iniciar { background: linear-gradient(135deg, var(--verde), #3d8f04); color: #fff; border: none; border-radius: var(--rad); padding: 16px 40px; font-size: 18px; font-weight: 800; cursor: pointer; font-family: 'DM Sans', sans-serif; box-shadow: 0 4px 20px rgba(43,104,3,.4); transition: all .2s; width: 100%; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 10px; }
     .btn-iniciar:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(43,104,3,.5); }
 
     /* TELA ROLETA */
@@ -49,7 +54,7 @@
     .roleta-titulo { font-family: 'DM Serif Display', serif; font-size: clamp(16px,2vw,22px); color: rgba(255,255,255,.5); margin-bottom: 32px; letter-spacing: 1px; text-transform: uppercase; }
 
     /* DISPLAY PRINCIPAL */
-    .roleta-display { width: min(700px, 95vw); background: linear-gradient(160deg, #0d2001, #1a4002); border-radius: 24px; padding: 48px 40px; text-align: center; position: relative; overflow: hidden; box-shadow: 0 0 60px rgba(43,104,3,.3), inset 0 1px 0 rgba(255,255,255,.1); margin-bottom: 40px; }
+    .roleta-display { width: min(700px, 95vw); background: linear-gradient(160deg, #0d2001, #1a4002); border-radius: var(--rad); padding: 48px 40px; text-align: center; position: relative; overflow: hidden; box-shadow: 0 0 60px rgba(43,104,3,.3), inset 0 1px 0 rgba(255,255,255,.1); margin-bottom: 40px; }
     .roleta-display::before { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 0%, rgba(92,184,6,.12), transparent 60%); }
     .roleta-display-label { font-size: 12px; font-weight: 700; color: rgba(255,255,255,.3); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 20px; position: relative; }
     .roleta-nome { font-family: 'DM Serif Display', serif; font-size: clamp(32px,6vw,72px); color: #fff; line-height: 1.1; min-height: 90px; display: flex; align-items: center; justify-content: center; word-break: break-word; position: relative; transition: all .05s; }
@@ -63,11 +68,11 @@
 
     /* BOTÕES */
     .roleta-btns { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
-    .btn-girar { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; border: none; border-radius: 14px; padding: 18px 56px; font-size: 20px; font-weight: 800; cursor: pointer; font-family: 'DM Sans', sans-serif; box-shadow: 0 4px 24px rgba(245,158,11,.5); transition: all .2s; }
+    .btn-girar { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; border: none; border-radius: var(--rad); padding: 18px 56px; font-size: 20px; font-weight: 800; cursor: pointer; font-family: 'DM Sans', sans-serif; box-shadow: 0 4px 24px rgba(245,158,11,.5); transition: all .2s; display: flex; align-items: center; gap: 10px; }
     .btn-girar:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(245,158,11,.6); }
     .btn-girar:disabled { opacity: .4; cursor: not-allowed; transform: none; }
-    .btn-reiniciar { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.7); border-radius: 12px; padding: 14px 28px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: .2s; }
-    .btn-reiniciar:hover { background: rgba(255,255,255,.18); }
+    .btn-reiniciar { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); color: rgba(255,255,255,.7); border-radius: var(--rad); padding: 14px 28px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: .2s; display: flex; align-items: center; gap: 8px; }
+    .btn-reiniciar:hover { background: rgba(255,255,255,.18); transform: translateY(-1px); }
 
     /* LISTA LATERAL */
     .roleta-lista-wrap { position: fixed; right: 24px; top: 50%; transform: translateY(-50%); width: 200px; display: none; }
@@ -76,20 +81,22 @@
     .roleta-lista::-webkit-scrollbar { width: 4px; }
     .roleta-lista::-webkit-scrollbar-track { background: rgba(255,255,255,.05); border-radius: 4px; }
     .roleta-lista::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 4px; }
-    .lista-item { font-size: 12px; color: rgba(255,255,255,.4); padding: 5px 10px; border-radius: 6px; transition: .2s; }
+    .lista-item { font-size: 12px; color: rgba(255,255,255,.4); padding: 5px 10px; border-radius: var(--rad); transition: .2s; }
     .lista-item.ativo { background: rgba(92,184,6,.15); color: #a8e063; font-weight: 700; }
     .lista-item.eliminado { text-decoration: line-through; opacity: .3; }
 
     /* GANHADOR OVERLAY */
     .ganhador-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.8); z-index: 100; align-items: center; justify-content: center; flex-direction: column; text-align: center; padding: 24px; }
     .ganhador-overlay.show { display: flex; }
-    .ganhador-trophy { font-size: 80px; margin-bottom: 16px; animation: troféuBounce .6s cubic-bezier(.34,1.56,.64,1); }
+    .ganhador-trophy { margin-bottom: 16px; animation: troféuBounce .6s cubic-bezier(.34,1.56,.64,1); color: #fbbf24; }
     @keyframes troféuBounce { from{transform:scale(0) rotate(-20deg)} to{transform:scale(1) rotate(0)} }
     .ganhador-titulo { font-size: 18px; font-weight: 600; color: rgba(255,255,255,.6); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 2px; }
     .ganhador-nome-overlay { font-family: 'DM Serif Display', serif; font-size: clamp(36px,8vw,80px); color: #fbbf24; text-shadow: 0 0 60px rgba(251,191,36,.4); margin-bottom: 32px; line-height: 1.1; }
     .ganhador-overlay-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
-    .btn-prox { background: linear-gradient(135deg, var(--verde), #3d8f04); color: #fff; border: none; border-radius: 12px; padding: 14px 32px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; }
-    .btn-fechar-overlay { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); color: #fff; border-radius: 12px; padding: 14px 32px; font-size: 16px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+    .btn-prox { background: linear-gradient(135deg, var(--verde), #3d8f04); color: #fff; border: none; border-radius: var(--rad); padding: 14px 32px; font-size: 16px; font-weight: 700; cursor: pointer; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all .2s; }
+    .btn-prox:hover { transform: translateY(-1px); filter: brightness(1.1); }
+    .btn-fechar-overlay { background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); color: #fff; border-radius: var(--rad); padding: 14px 32px; font-size: 16px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; display: flex; align-items: center; gap: 8px; transition: all .2s; }
+    .btn-fechar-overlay:hover { background: rgba(255,255,255,.18); transform: translateY(-1px); }
 
     /* CONFETES */
     .confete-piece { position: fixed; pointer-events: none; z-index: 200; animation: confeteFall linear forwards; }
@@ -114,26 +121,53 @@
 
 <!-- TELA DE CONFIGURAÇÃO -->
 <div class="config-screen" id="configScreen">
-  <h1 class="config-titulo">🎰 Roleta Animada</h1>
+  <h1 class="config-titulo">
+    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+    Roleta Animada
+  </h1>
   <p class="config-sub">Configure os participantes e inicie o sorteio</p>
 
   <div class="config-card">
     <div class="config-label">Fonte dos participantes</div>
     <select class="config-select" id="fonteSelect" onchange="atualizarFonte()">
       <option value="manual">Lista manual (digitar nomes)</option>
-      <option value="ligantes">Ligantes ativos do sistema</option>
-      <option value="diretivos">Diretivos ativos do sistema</option>
-      <option value="ambos">Ligantes + Diretivos</option>
+      <option value="selecao" selected>Selecionar da lista (ligantes + diretivos)</option>
+      <option value="ligantes">Todos os ligantes ativos</option>
+      <option value="diretivos">Todos os diretivos ativos</option>
+      <option value="ambos">Todos (ligantes + diretivos)</option>
     </select>
-
-    <div id="campoManual">
+    <div id="campoManual" style="display:none">
       <div class="config-label">Participantes (um por linha)</div>
       <textarea class="config-textarea" id="participantesTexto" placeholder="João Silva&#10;Maria Santos&#10;Pedro Lima&#10;Ana Costa"></textarea>
     </div>
-
+    <div id="campoSelecao" style="display:none">
+      <div class="config-label" style="margin-bottom:8px">Selecione os participantes</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <button onclick="selecionarTodos('ligantes')" style="background:rgba(168,224,99,.15);border:1px solid rgba(168,224,99,.4);color:#a8e063;padding:4px 12px;font-size:12px;cursor:pointer;border-radius:4px">+ Todos ligantes</button>
+        <button onclick="selecionarTodos('diretivos')" style="background:rgba(99,179,224,.15);border:1px solid rgba(99,179,224,.4);color:#63b3e0;padding:4px 12px;font-size:12px;cursor:pointer;border-radius:4px">+ Todos diretivos</button>
+        <button onclick="desmarcarTodos()" style="background:rgba(255,100,100,.1);border:1px solid rgba(255,100,100,.3);color:#ff8080;padding:4px 12px;font-size:12px;cursor:pointer;border-radius:4px">Limpar</button>
+      </div>
+      <div style="max-height:220px;overflow-y:auto;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.1);padding:8px;margin-bottom:10px">
+        <div style="font-size:11px;color:rgba(255,255,255,.4);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Ligantes</div>
+        <% ligantes.forEach(function(nome){ %>
+        <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:13px;color:#fff">
+          <input type="checkbox" class="chk-part chk-ligante" value="<%=nome%>" onchange="atualizarContador()" style="accent-color:#a8e063;width:14px;height:14px"> <%=nome%>
+        </label>
+        <% }); %>
+        <div style="font-size:11px;color:rgba(255,255,255,.4);margin:10px 0 6px;text-transform:uppercase;letter-spacing:1px">Diretivos</div>
+        <% diretivos.forEach(function(nome){ %>
+        <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer;font-size:13px;color:#fff">
+          <input type="checkbox" class="chk-part chk-diretivo" value="<%=nome%>" onchange="atualizarContador()" style="accent-color:#63b3e0;width:14px;height:14px"> <%=nome%>
+        </label>
+        <% }); %>
+      </div>
+      <div class="config-label" style="margin-bottom:4px;margin-top:12px">Adicionar externos (opcional, um por linha)</div>
+      <textarea class="config-textarea" id="participantesExtra" placeholder="Participante externo 1&#10;Participante externo 2" style="min-height:100px"></textarea>
+      <div id="contadorSelecao" style="font-size:12px;color:rgba(255,255,255,.5);margin-top:6px;margin-bottom:16px">0 selecionados</div>
+    </div>
     <div id="campoSistema" style="display:none">
-      <div style="font-size:13px;color:rgba(255,255,255,.5);text-align:center;padding:16px 0">
-        Carregando participantes do sistema...
+      <div style="font-size:13px;color:rgba(255,255,255,.5);text-align:center;padding:16px 0" id="sistemaInfo">
+        Carregando participantes...
       </div>
     </div>
   </div>
@@ -143,7 +177,10 @@
     <input type="text" class="config-textarea" style="min-height:auto;padding:10px 14px;font-size:14px;" id="tituloSorteio" placeholder="Ex: Sorteio de Natal — Liga Urologia">
   </div>
 
-  <button class="btn-iniciar" onclick="iniciarRoleta()">🎯 Iniciar Roleta</button>
+  <button class="btn-iniciar" onclick="iniciarRoleta()">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+    Iniciar Roleta
+  </button>
 </div>
 
 <!-- TELA DA ROLETA -->
@@ -158,8 +195,14 @@
   <div class="roleta-count" id="roletaCount"></div>
 
   <div class="roleta-btns">
-    <button class="btn-girar" id="btnGirar" onclick="girar()">🎰 Girar!</button>
-    <button class="btn-reiniciar" onclick="reiniciar()">↩ Recomeçar</button>
+    <button class="btn-girar" id="btnGirar" onclick="girar()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+      Girar!
+    </button>
+    <button class="btn-reiniciar" onclick="reiniciar()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.5"/></svg>
+      Recomeçar
+    </button>
   </div>
 </div>
 
@@ -171,12 +214,20 @@
 
 <!-- OVERLAY GANHADOR -->
 <div class="ganhador-overlay" id="ganhadorOverlay">
-  <div class="ganhador-trophy">🏆</div>
+  <div class="ganhador-trophy">
+    <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>
+  </div>
   <div class="ganhador-titulo">Ganhador</div>
   <div class="ganhador-nome-overlay" id="ganhadorNomeOverlay"></div>
   <div class="ganhador-overlay-btns">
-    <button class="btn-prox" onclick="proximoGanhador()" id="btnProxGanhador">Próximo Ganhador</button>
-    <button class="btn-fechar-overlay" onclick="fecharOverlay()">Continuar</button>
+    <button class="btn-prox" onclick="proximoGanhador()" id="btnProxGanhador">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      Próximo Ganhador
+    </button>
+    <button class="btn-fechar-overlay" onclick="fecharOverlay()">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      Continuar
+    </button>
   </div>
 </div>
 
@@ -189,30 +240,40 @@ let disponiveis = [];
 let ganhadores = [];
 let rodando = false;
 
-function atualizarFonte(){
+function atualizarFonte() {
   const v = document.getElementById('fonteSelect').value;
-  document.getElementById('campoManual').style.display = v==='manual'?'block':'none';
-  document.getElementById('campoSistema').style.display = v!=='manual'?'block':'none';
-
-  let nomes = [];
-  if(v==='ligantes') nomes = ligantesDoSistema;
-  else if(v==='diretivos') nomes = diretivosDoSistema;
-  else if(v==='ambos') nomes = [...ligantesDoSistema,...diretivosDoSistema];
-
-  if(v !== 'manual'){
-    document.getElementById('campoSistema').innerHTML = `
-      <div style="font-size:13px;color:rgba(255,255,255,.6);padding:12px;background:rgba(255,255,255,.05);border-radius:8px;">
-        <strong style="color:#a8e063">${nomes.length} participantes</strong> carregados:<br>
-        <span style="color:rgba(255,255,255,.4);font-size:12px">${nomes.slice(0,5).join(', ')}${nomes.length>5?'...':''}</span>
-      </div>`;
-  }
+  document.getElementById('campoManual').style.display = v==='manual' ? 'block' : 'none';
+  document.getElementById('campoSelecao').style.display = v==='selecao' ? 'block' : 'none';
+  document.getElementById('campoSistema').style.display = ['ligantes','diretivos','ambos'].includes(v) ? 'block' : 'none';
+  if(v==='ligantes') document.getElementById('sistemaInfo').innerHTML = '<strong style="color:#a8e063">'+ligantesDoSistema.length+' ligantes</strong> carregados';
+  else if(v==='diretivos') document.getElementById('sistemaInfo').innerHTML = '<strong style="color:#63b3e0">'+diretivosDoSistema.length+' diretivos</strong> carregados';
+  else if(v==='ambos') document.getElementById('sistemaInfo').innerHTML = '<strong style="color:#a8e063">'+(ligantesDoSistema.length+diretivosDoSistema.length)+' participantes</strong> carregados';
 }
+function atualizarContador() {
+  const n = document.querySelectorAll('.chk-part:checked').length;
+  const extras = (document.getElementById('participantesExtra')?.value||'').split('\n').filter(x=>x.trim()).length;
+  document.getElementById('contadorSelecao').textContent = (n+extras) + ' selecionados';
+}
+function selecionarTodos(tipo) {
+  document.querySelectorAll('.chk-'+tipo).forEach(c=>c.checked=true);
+  atualizarContador();
+}
+function desmarcarTodos() {
+  document.querySelectorAll('.chk-part').forEach(c=>c.checked=false);
+  if(document.getElementById('participantesExtra')) document.getElementById('participantesExtra').value='';
+  atualizarContador();
+}
+
 
 function iniciarRoleta(){
   const fonte = document.getElementById('fonteSelect').value;
   if(fonte === 'manual'){
     const texto = document.getElementById('participantesTexto').value.trim();
     participantes = texto.split('\n').map(n=>n.trim()).filter(n=>n.length>0);
+  } else if(fonte === 'selecao'){
+    const selecionados = [...document.querySelectorAll('.chk-part:checked')].map(c=>c.value);
+    const extras = (document.getElementById('participantesExtra')?.value||'').split('\n').map(n=>n.trim()).filter(n=>n);
+    participantes = [...selecionados, ...extras];
   } else if(fonte === 'ligantes'){
     participantes = [...ligantesDoSistema];
   } else if(fonte === 'diretivos'){
@@ -220,12 +281,10 @@ function iniciarRoleta(){
   } else {
     participantes = [...ligantesDoSistema,...diretivosDoSistema];
   }
-
   if(participantes.length < 2){
     alert('Adicione pelo menos 2 participantes!');
     return;
   }
-
   disponiveis = [...participantes].sort(()=>Math.random()-.5);
   ganhadores = [];
 
@@ -271,16 +330,14 @@ function girar(){
     count++;
     if(count >= total){
       clearInterval(interval);
-      // Escolher ganhador
       const idx = Math.floor(Math.random()*disponiveis.length);
       const ganhador = disponiveis[idx];
       disponiveis.splice(idx, 1);
       ganhadores.push(ganhador);
 
       nome.className = 'roleta-nome ganhador';
-      nome.textContent = '🏆 ' + ganhador;
+      nome.textContent = ' ' + ganhador;
 
-      // Highlight na lista
       const el = document.getElementById('lp-'+ganhador.replace(/\s/g,'_'));
       if(el){ el.className='lista-item ativo'; setTimeout(()=>{ el.className='lista-item eliminado'; },3000); }
 
@@ -304,7 +361,7 @@ function mostrarOverlay(nome){
 function fecharOverlay(){
   document.getElementById('ganhadorOverlay').classList.remove('show');
   document.getElementById('roletaNome').className = 'roleta-nome';
-  document.getElementById('roletaNome').textContent = disponiveis.length > 0 ? 'Clique em Girar!' : '✅ Fim!';
+  document.getElementById('roletaNome').textContent = disponiveis.length > 0 ? 'Clique em Girar!' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg> Fim!';
   if(disponiveis.length > 0) document.getElementById('btnGirar').disabled = false;
   atualizarLista();
 }
@@ -333,11 +390,126 @@ function lancarConfetes(){
     const div=document.createElement('div');
     div.className='confete-piece';
     const size=Math.random()*12+6;
-    div.style.cssText=`left:${Math.random()*100}vw;top:-10px;background:${cores[Math.floor(Math.random()*cores.length)]};width:${size}px;height:${size}px;border-radius:${Math.random()>.5?'50%':'3px'};animation-duration:${Math.random()*2+1.5}s;animation-delay:${Math.random()*.8}s;`;
+    div.style.cssText=`left:${Math.random()*100}vw;top:-10px;background:${cores[Math.floor(Math.random()*cores.length)]};width:${size}px;height:${size}px;border-radius:${Math.random()>.5?'50%':'2px'};animation-duration:${Math.random()*2+1.5}s;animation-delay:${Math.random()*.8}s;`;
     document.body.appendChild(div);
     setTimeout(()=>div.remove(),5000);
   }
 }
+function atualizarContador() {
+  const n = document.querySelectorAll('.chk-part:checked').length;
+  const extras = (document.getElementById('participantesExtra')?.value||'').split('\n').filter(x=>x.trim()).length;
+  document.getElementById('contadorSelecao').textContent = (n+extras) + ' selecionados';
+}
+function selecionarTodos(tipo) {
+  document.querySelectorAll('.chk-'+tipo).forEach(c=>c.checked=true);
+  atualizarContador();
+}
+function desmarcarTodos() {
+  document.querySelectorAll('.chk-part').forEach(c=>c.checked=false);
+  if(document.getElementById('participantesExtra')) document.getElementById('participantesExtra').value='';
+  atualizarContador();
+}
+
+
+
+function atualizarLista(){
+  const lista = document.getElementById('listaParticipantes');
+  lista.innerHTML = '';
+  participantes.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'lista-item' + (ganhadores.includes(p)?' eliminado':'');
+    div.id = 'lp-'+p.replace(/\s/g,'_');
+    div.textContent = p;
+    lista.appendChild(div);
+  });
+}
+
+function atualizarContador(){
+  document.getElementById('roletaCount').textContent = disponiveis.length + ' participante' + (disponiveis.length!==1?'s':'') + ' restante' + (disponiveis.length!==1?'s':'');
+}
+
+function girar(){
+  if(rodando || disponiveis.length === 0) return;
+  rodando = true;
+  document.getElementById('btnGirar').disabled = true;
+
+  const nome = document.getElementById('roletaNome');
+  nome.className = 'roleta-nome rolando';
+
+  let count = 0;
+  const total = 35 + Math.floor(Math.random()*25);
+  const interval = setInterval(()=>{
+    nome.textContent = disponiveis[Math.floor(Math.random()*disponiveis.length)];
+    count++;
+    if(count >= total){
+      clearInterval(interval);
+      const idx = Math.floor(Math.random()*disponiveis.length);
+      const ganhador = disponiveis[idx];
+      disponiveis.splice(idx, 1);
+      ganhadores.push(ganhador);
+
+      nome.className = 'roleta-nome ganhador';
+      nome.textContent = ' ' + ganhador;
+
+      const el = document.getElementById('lp-'+ganhador.replace(/\s/g,'_'));
+      if(el){ el.className='lista-item ativo'; setTimeout(()=>{ el.className='lista-item eliminado'; },3000); }
+
+      atualizarContador();
+      lancarConfetes();
+
+      setTimeout(()=>{
+        mostrarOverlay(ganhador);
+        rodando = false;
+      }, 1500);
+    }
+  }, 75);
+}
+
+function mostrarOverlay(nome){
+  document.getElementById('ganhadorNomeOverlay').textContent = nome;
+  document.getElementById('btnProxGanhador').style.display = disponiveis.length > 0 ? '' : 'none';
+  document.getElementById('ganhadorOverlay').classList.add('show');
+}
+
+function fecharOverlay(){
+  document.getElementById('ganhadorOverlay').classList.remove('show');
+  document.getElementById('roletaNome').className = 'roleta-nome';
+  document.getElementById('roletaNome').textContent = disponiveis.length > 0 ? 'Clique em Girar!' : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg> Fim!';
+  if(disponiveis.length > 0) document.getElementById('btnGirar').disabled = false;
+  atualizarLista();
+}
+
+function proximoGanhador(){
+  fecharOverlay();
+}
+
+function reiniciar(){
+  if(!confirm('Reiniciar do zero?')) return;
+  document.getElementById('ganhadorOverlay').classList.remove('show');
+  document.getElementById('roletaScreen').style.display = 'none';
+  document.getElementById('listaWrap').style.display = 'none';
+  document.getElementById('configScreen').style.display = 'block';
+  rodando = false;
+  ganhadores = [];
+  disponiveis = [];
+  document.getElementById('roletaNome').className = 'roleta-nome';
+  document.getElementById('roletaNome').textContent = 'Clique em Girar!';
+  document.getElementById('btnGirar').disabled = false;
+}
+
+function lancarConfetes(){
+  const cores=['#2b6803','#5cb806','#f59e0b','#3b82f6','#ec4899','#fbbf24','#a8e063'];
+  for(let i=0;i<100;i++){
+    const div=document.createElement('div');
+    div.className='confete-piece';
+    const size=Math.random()*12+6;
+    div.style.cssText=`left:${Math.random()*100}vw;top:-10px;background:${cores[Math.floor(Math.random()*cores.length)]};width:${size}px;height:${size}px;border-radius:${Math.random()>.5?'50%':'2px'};animation-duration:${Math.random()*2+1.5}s;animation-delay:${Math.random()*.8}s;`;
+    document.body.appendChild(div);
+    setTimeout(()=>div.remove(),5000);
+  }
+}
+// Inicializa a tela correta ao carregar
+atualizarFonte();
 </script>
 </body>
 </html>

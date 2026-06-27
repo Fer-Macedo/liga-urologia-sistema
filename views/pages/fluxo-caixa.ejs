@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fluxo de Caixa — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin-modern.css">
@@ -100,6 +101,27 @@ table.fc-table td { padding:12px 16px; font-size:13px; color:#374151; vertical-a
 .flash-msg.ok { background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; }
 .flash-msg.err { background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; }
 @media(max-width:640px){ .fc-page{padding:16px;} .form-row{grid-template-columns:1fr;} .fc-cards{grid-template-columns:1fr 1fr;} }
+
+    /* === PADRÃO VERDE ESCURO — Fluxo de Caixa === */
+    * { border-radius:0!important; }
+    .stat-card, .stat-box { border-radius:0!important; transition:transform .12s ease, box-shadow .12s ease; }
+    .stat-card:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.1); }
+    .card, .table-wrap, .lancamentos-card { border-radius:0!important; }
+    .fil-btn { border-radius:0!important; }
+    .fil-btn.fil-ativo, .fil-btn.ativo { background:linear-gradient(135deg,#1a3410,#253d18)!important; color:#fff!important; border-color:#1a3410!important; }
+    .fil-btn:hover { border-color:#253d18!important; color:#1a3410!important; background:#f0f7eb!important; }
+    table thead th { background:linear-gradient(135deg,#1a3410,#253d18)!important; color:#fff!important; border-bottom:none!important; }
+    table tbody tr:hover { background:#f0f7eb!important; }
+    .badge { border-radius:0!important; }
+    .modal-box { border-radius:0!important; }
+    .modal-head { border-radius:0!important; background:linear-gradient(135deg,#1a3410,#253d18)!important; }
+    .modal-close { border-radius:0!important; }
+    input, select, textarea { border-radius:0!important; }
+    input:focus, select:focus, textarea:focus { border-color:#1a3410!important; box-shadow:0 0 0 3px rgba(37,61,24,.1)!important; }
+    .btn { border-radius:0!important; }
+    .btn-entrada { background:linear-gradient(135deg,#166534,#16a34a)!important; border-radius:0!important; }
+    .btn-saida { background:linear-gradient(135deg,#991b1b,#dc2626)!important; border-radius:0!important; }
+    select.mes-select { border-radius:0!important; }
 </style>
 </head>
 <body>
@@ -132,6 +154,10 @@ table.fc-table td { padding:12px 16px; font-size:13px; color:#374151; vertical-a
           <% }} %>
         </select>
       </div>
+      <button class="btn-export" onclick="abrirGraficos()" style="background:#1a3410;color:#fff;border-color:#1a3410">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Gráficos
+      </button>
       <button class="btn-export" onclick="exportarCSV()">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
         Exportar CSV
@@ -158,10 +184,10 @@ table.fc-table td { padding:12px 16px; font-size:13px; color:#374151; vertical-a
       <div class="fc-card-valor">R$ <%= totalSaidas.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
       <div class="fc-card-sub"><%= qtdSaidas %> lançamento<%= qtdSaidas!==1?'s':'' %></div>
     </div>
-    <div class="fc-card <%= saldo>=0?'saldo-p':'saldo-n' %>">
-      <div class="fc-card-label">Saldo do Mês</div>
-      <div class="fc-card-valor"><%= saldo<0?'-':'' %>R$ <%= Math.abs(saldo).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
-      <div class="fc-card-sub"><%= saldo>=0?'✓ Positivo':'⚠ Negativo' %></div>
+    <div class="fc-card <%= saldoAcumulado>=0?'saldo-p':'saldo-n' %>">
+      <div class="fc-card-label">Saldo Acumulado</div>
+      <div class="fc-card-valor"><%= saldoAcumulado<0?'-':'' %>R$ <%= Math.abs(saldoAcumulado).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
+      <div class="fc-card-sub" style="font-size:10px;color:#6b7280">Mes: <%=saldo>=0?'+':''%>R$ <%=saldo.toLocaleString('pt-BR',{minimumFractionDigits:2})%> &nbsp;|&nbsp; Anterior: R$ <%=saldoAnterior.toLocaleString('pt-BR',{minimumFractionDigits:2})%></div>
     </div>
     <div class="fc-card lanctos">
       <div class="fc-card-label">Lançamentos</div>
@@ -192,12 +218,22 @@ table.fc-table td { padding:12px 16px; font-size:13px; color:#374151; vertical-a
         <p>Nenhum lançamento neste mês.</p>
       </div>
     <% } else { %>
+    <div id="barra-selecao" style="display:none;align-items:center;gap:10px;margin-bottom:10px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:4px">
+      <span id="sel-count" style="font-size:13px;font-weight:600;color:#b91c1c">0 selecionados</span>
+      <form method="POST" action="/fluxo-caixa/excluir-lote" id="form-excluir-lote" onsubmit="return confirm('Excluir todos os itens selecionados?')">
+        <input type="hidden" name="mes" value="<%=mesAtual%>">
+        <div id="inputs-ids"></div>
+        <button type="submit" style="padding:6px 14px;background:#dc2626;color:white;border:none;font-size:12px;font-weight:700;cursor:pointer;border-radius:4px;font-family:inherit">Excluir selecionados</button>
+      </form>
+      <button onclick="limparSelecao()" style="padding:6px 14px;background:#fff;border:1px solid #e5e7eb;font-size:12px;cursor:pointer;border-radius:4px;font-family:inherit">Cancelar</button>
+    </div>
     <div style="overflow-x:auto;">
     <table class="fc-table">
       <thead>
         <tr>
+          <th style="width:32px"><input type="checkbox" id="sel-todos" title="Selecionar todos" style="cursor:pointer;width:15px;height:15px;accent-color:var(--cor-primaria)"></th>
           <th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th>
-          <th style="text-align:right">Valor</th><th>NF/Comprovante</th><th>Observações</th><th></th>
+          <th style="text-align:right">Valor</th><th>NF/Comprovante</th><th>Observações</th><th class="col-acoes"></th>
         </tr>
       </thead>
       <tbody id="corpoTabela">
@@ -208,6 +244,7 @@ table.fc-table td { padding:12px 16px; font-size:13px; color:#374151; vertical-a
           var lJson=JSON.stringify(l).replace(/"/g,'&quot;');
         %>
         <tr data-tipo="<%= l.tipo %>" data-desc="<%= l.descricao.toLowerCase().replace(/"/g,'') %>">
+          <td><input type="checkbox" class="sel-item" value="<%= l.id %>" style="cursor:pointer;width:15px;height:15px;accent-color:var(--cor-primaria)"></td>
           <td style="white-space:nowrap"><%= dtStr %></td>
           <td>
             <span class="badge-tipo <%= l.tipo %>">
@@ -221,19 +258,37 @@ table.fc-table td { padding:12px 16px; font-size:13px; color:#374151; vertical-a
           </td>
           <td>
             <% if(l.nf_chave){ %>
-              <button class="nf-btn" onclick="verNF(<%= l.id %>,'<%= (l.nf_nome_original||'Comprovante').replace(/'/g,"\\'") %>')">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                Ver NF
-              </button>
+              <div style="display:flex;flex-direction:column;gap:3px">
+                <div style="display:flex;gap:4px;align-items:center">
+                  <button class="btn-icon" title="Visualizar" onclick="visualizarNF('<%=l.nf_chave%>')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                  <button class="btn-icon" title="Baixar" onclick="baixarNF('<%=l.nf_chave%>','<%=(l.nf_nome_original||'doc').replace(/'/g,'')%>')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  </button>
+                  <span style="font-size:10px;color:#6b7280" title="<%=l.nf_nome_original||''%>">Doc 1</span>
+                </div>
+                <% if(l.nf_chave2){ %>
+                <div style="display:flex;gap:4px;align-items:center">
+                  <button class="btn-icon" title="Visualizar doc 2" onclick="visualizarNF('<%=l.nf_chave2%>')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                  <button class="btn-icon" title="Baixar doc 2" onclick="baixarNF('<%=l.nf_chave2%>','<%=(l.nf_nome_original2||'doc2').replace(/'/g,'')%>')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  </button>
+                  <span style="font-size:10px;color:#6b7280" title="<%=l.nf_nome_original2||''%>">Doc 2</span>
+                </div>
+                <% } %>
+              </div>
             <% }else{ %><span class="nf-sem">—</span><% } %>
           </td>
           <td style="max-width:180px;color:#6b7280;font-size:12px"><%= l.observacoes||'' %></td>
-          <td>
+          <td class="col-acoes">
             <div class="fc-acoes">
-              <button class="btn-icon" title="Editar" onclick='editarLancamento(<%= lJson %>)'>
+              <button class="btn-icon" title="Editar" data-l="<%- JSON.stringify(l).replace(/"/g,'&quot;') %>" onclick='editarLancamento(JSON.parse(this.dataset.l))'>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               </button>
-              <button class="btn-icon del" title="Excluir" onclick="excluir(<%= l.id %>,'<%= l.descricao.replace(/'/g,"\\'").replace(/"/g,'') %>')">
+              <button class="btn-icon del" title="Excluir" onclick="excluir(<%= l.id %>,'<%= l.descricao.replace(/'/g,"\'").replace(/"/g,'') %>')">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
               </button>
             </div>
@@ -298,9 +353,18 @@ table.fc-table td { padding:12px 16px; font-size:13px; color:#374151; vertical-a
         </div>
         <div class="form-row full">
           <div class="form-group">
-            <label>Nota Fiscal / Comprovante</label>
+            <label id="labelNF">Nota Fiscal / Comprovante <span id="nfObrigatorio" style="color:#dc2626;display:none">*</span></label>
             <div class="upload-area">
-              <input type="file" name="nf" id="fNF" accept="image/*,.pdf" onchange="previewNF(this)">
+              <input type="file" name="nf" id="fNF" accept="image/*,.pdf" onchange="previewNF(this,'uploadNome','uploadPreview')">
+            </div>
+            <div class="upload-area" style="margin-top:8px">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span id="uploadNome2" style="font-size:12px">2º Documento (opcional — Nota Fiscal, Comprovante Guarani...)</span>
+              <div id="uploadPreview2" style="display:none;align-items:center;gap:6px;font-size:12px;color:#16a34a">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+                <span id="uploadNome2txt"></span>
+              </div>
+              <input type="file" name="nf2" id="fNF2" accept="image/*,.pdf" onchange="previewNF2(this)">
               <div class="upload-label">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" style="display:block;margin:0 auto 8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                 Clique para anexar imagem ou PDF
@@ -317,7 +381,7 @@ table.fc-table td { padding:12px 16px; font-size:13px; color:#374151; vertical-a
       </div>
       <div class="modal-footer">
         <button type="button" class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
-        <button type="submit" class="btn-salvar se" id="btnSalvar">Salvar Entrada</button>
+        <button type="button" class="btn-salvar se" id="btnSalvar" onclick="validarESalvar()">Salvar Entrada</button>
       </div>
     </form>
   </div>
@@ -352,6 +416,8 @@ function abrirModal(tipo){
   document.getElementById('modalHead').className='modal-head h'+tipo;
   document.getElementById('modalTitulo').textContent=isE?'+ Nova Entrada':'− Nova Saída';
   document.getElementById('fTipo').value=isE?'E':'S';
+  document.getElementById('fNF').dataset.existente='';
+  atualizarObrigatoriedadeNF();
   document.getElementById('btnSalvar').className='btn-salvar '+(isE?'se':'ss');
   document.getElementById('btnSalvar').textContent='Salvar '+(isE?'Entrada':'Saída');
   document.getElementById('fData').value=new Date().toISOString().split('T')[0];
@@ -365,6 +431,9 @@ function editarLancamento(l){
   document.getElementById('modalTitulo').textContent='Editar Lançamento';
   document.getElementById('fTipo').value=l.tipo;
   document.getElementById('btnSalvar').className='btn-salvar '+(isE?'se':'ss');
+  const nfInput = document.getElementById('fNF');
+  if(nfInput) nfInput.dataset.existente = l.nf_chave ? '1' : '';
+  atualizarObrigatoriedadeNF();
   document.getElementById('btnSalvar').textContent='Salvar';
   const d=new Date(l.data_lancamento); d.setMinutes(d.getMinutes()+d.getTimezoneOffset());
   document.getElementById('fData').value=d.toISOString().split('T')[0];
@@ -376,7 +445,33 @@ function editarLancamento(l){
   document.getElementById('modalLancamento').classList.add('open');
 }
 function fecharModal(){ document.getElementById('modalLancamento').classList.remove('open'); }
+function validarESalvar() {
+  const tipo = document.getElementById('fTipo').value;
+  const nf1 = document.getElementById('fNF');
+  const nf1Existente = document.getElementById('fNF').dataset.existente;
+  const temArquivo = (nf1 && nf1.files && nf1.files.length > 0) || nf1Existente;
+  if (tipo === 'S' && !temArquivo) {
+    alert('Para lançamentos de SAÍDA é obrigatório anexar ao menos um comprovante ou nota fiscal!');
+    document.getElementById('fNF').focus();
+    return;
+  }
+  document.getElementById('formLancamento').submit();
+}
+function atualizarObrigatoriedadeNF() {
+  const tipo = document.getElementById('fTipo').value;
+  const span = document.getElementById('nfObrigatorio');
+  if(span) span.style.display = tipo === 'S' ? 'inline' : 'none';
+}
 function previewNF(inp){ if(inp.files&&inp.files[0]){ document.getElementById('uploadNome').textContent=inp.files[0].name; document.getElementById('uploadPreview').style.display='flex'; } }
+function previewNF2(inp){ if(inp.files&&inp.files[0]){ document.getElementById('uploadNome2').style.display='none'; document.getElementById('uploadNome2txt').textContent=inp.files[0].name; document.getElementById('uploadPreview2').style.display='flex'; } }
+function visualizarNF(chave) {
+  if(!chave) return;
+  window.open('/fluxo-caixa/doc/visualizar?chave='+encodeURIComponent(chave), '_blank');
+}
+function baixarNF(chave, nome) {
+  if(!chave) return;
+  window.location.href='/fluxo-caixa/doc/baixar?chave='+encodeURIComponent(chave)+'&nome='+encodeURIComponent(nome||'documento');
+}
 function removerNF(){ document.getElementById('fNF').value=''; document.getElementById('uploadPreview').style.display='none'; }
 function excluir(id,desc){ if(!confirm('Excluir: "'+desc+'"?\nEsta ação não pode ser desfeita.'))return; const f=document.createElement('form');f.method='POST';f.action='/fluxo-caixa/'+id+'/excluir';document.body.appendChild(f);f.submit(); }
 async function verNF(id,nome){
@@ -409,5 +504,118 @@ document.getElementById('modalNF').addEventListener('click',e=>{if(e.target===e.
 </script>
   </main>
 </div>
+
+<!-- MODAL GRÁFICOS -->
+<div id="modalGraficos" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:#fff;width:min(900px,96vw);max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25)">
+    <div style="background:linear-gradient(135deg,#1a3410,#253d18);padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+      <h3 style="color:#fff;font-size:17px;font-weight:700;margin:0;display:flex;align-items:center;gap:8px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Gráficos — Fluxo de Caixa
+      </h3>
+      <button onclick="fecharGraficos()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:32px;height:32px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div style="padding:8px 24px 0;border-bottom:1px solid #e2e8f0;display:flex;gap:0">
+      <button onclick="trocarAba('mensal')" id="aba-mensal" style="padding:12px 20px;border:none;background:none;font-size:13px;font-weight:700;color:#1a3410;border-bottom:3px solid #1a3410;cursor:pointer">Mensal</button>
+      <button onclick="trocarAba('semanal')" id="aba-semanal" style="padding:12px 20px;border:none;background:none;font-size:13px;font-weight:600;color:#6b7280;border-bottom:3px solid transparent;cursor:pointer">Semanal</button>
+      <button onclick="trocarAba('anual')" id="aba-anual" style="padding:12px 20px;border:none;background:none;font-size:13px;font-weight:600;color:#6b7280;border-bottom:3px solid transparent;cursor:pointer">Anual</button>
+      <button onclick="trocarAba('categorias')" id="aba-categorias" style="padding:12px 20px;border:none;background:none;font-size:13px;font-weight:600;color:#6b7280;border-bottom:3px solid transparent;cursor:pointer">Categorias</button>
+    </div>
+    <div style="padding:24px">
+      <div id="grafico-mensal"><canvas id="chartMensal" height="100"></canvas></div>
+      <div id="grafico-semanal" style="display:none"><canvas id="chartSemanal" height="100"></canvas></div>
+      <div id="grafico-anual" style="display:none"><canvas id="chartAnual" height="100"></canvas></div>
+      <div id="grafico-categorias" style="display:none"><canvas id="chartCat" height="120"></canvas></div>
+      <div id="grafico-loading" style="text-align:center;padding:40px;color:#6b7280;display:none">Carregando dados...</div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+let chartsCarregados=false, chartMensalInst, chartSemanalInst, chartAnualInst, chartCatInst;
+const cVerde='#1a3410', cVerdeCl='rgba(26,61,16,.15)', cVerm='#dc2626', cVermCl='rgba(220,38,38,.12)';
+
+async function abrirGraficos(){
+  document.getElementById('modalGraficos').style.display='flex';
+  if(chartsCarregados) return;
+  document.getElementById('grafico-loading').style.display='block';
+  document.getElementById('grafico-mensal').style.display='none';
+  try {
+    const d=await fetch('/fluxo-caixa/graficos-data').then(r=>r.json());
+    chartsCarregados=true;
+    document.getElementById('grafico-loading').style.display='none';
+    document.getElementById('grafico-mensal').style.display='block';
+
+    // MENSAL
+    const mLabels=d.mensal.map(x=>{const[y,m]=x.mes.split('-');return['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][parseInt(m)-1]+'/'+y.slice(2)});
+    chartMensalInst=new Chart(document.getElementById('chartMensal'),{type:'bar',data:{labels:mLabels,datasets:[
+      {label:'Entradas',data:d.mensal.map(x=>parseFloat(x.entradas)||0),backgroundColor:'rgba(22,163,74,.7)',borderColor:'#16a34a',borderWidth:2,borderRadius:0},
+      {label:'Saídas',data:d.mensal.map(x=>parseFloat(x.saidas)||0),backgroundColor:'rgba(220,38,38,.65)',borderColor:'#dc2626',borderWidth:2,borderRadius:0}
+    ]},options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true,ticks:{callback:v=>'R$'+v.toLocaleString('pt-BR')}}}}});
+
+    // SEMANAL
+    chartSemanalInst=new Chart(document.getElementById('chartSemanal'),{type:'line',data:{labels:d.semanal.map(x=>x.semana),datasets:[
+      {label:'Entradas',data:d.semanal.map(x=>parseFloat(x.entradas)||0),borderColor:'#16a34a',backgroundColor:'rgba(22,163,74,.1)',tension:.4,fill:true,pointRadius:5},
+      {label:'Saídas',data:d.semanal.map(x=>parseFloat(x.saidas)||0),borderColor:'#dc2626',backgroundColor:'rgba(220,38,38,.08)',tension:.4,fill:true,pointRadius:5}
+    ]},options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true,ticks:{callback:v=>'R$'+v.toLocaleString('pt-BR')}}}}});
+
+    // ANUAL
+    chartAnualInst=new Chart(document.getElementById('chartAnual'),{type:'bar',data:{labels:d.anual.map(x=>x.ano),datasets:[
+      {label:'Entradas',data:d.anual.map(x=>parseFloat(x.entradas)||0),backgroundColor:'rgba(22,163,74,.7)',borderColor:'#16a34a',borderWidth:2,borderRadius:0},
+      {label:'Saídas',data:d.anual.map(x=>parseFloat(x.saidas)||0),backgroundColor:'rgba(220,38,38,.65)',borderColor:'#dc2626',borderWidth:2,borderRadius:0}
+    ]},options:{responsive:true,plugins:{legend:{position:'top'}},scales:{y:{beginAtZero:true,ticks:{callback:v=>'R$'+v.toLocaleString('pt-BR')}}}}});
+
+    // CATEGORIAS
+    const cats=d.categorias.filter(x=>x.tipo==='S');
+    chartCatInst=new Chart(document.getElementById('chartCat'),{type:'doughnut',data:{
+      labels:cats.map(x=>x.categoria||'Sem categoria'),
+      datasets:[{data:cats.map(x=>parseFloat(x.total)||0),backgroundColor:['#dc2626','#f59e0b','#3b82f6','#8b5cf6','#10b981','#ef4444','#6366f1','#14b8a6'],borderWidth:2}]
+    },options:{responsive:true,plugins:{legend:{position:'right'},title:{display:true,text:'Saídas por Categoria — Mês Atual'}}}});
+  } catch(e){ document.getElementById('grafico-loading').innerHTML='Erro ao carregar: '+e.message; }
+}
+function fecharGraficos(){ document.getElementById('modalGraficos').style.display='none'; }
+function trocarAba(aba){
+  ['mensal','semanal','anual','categorias'].forEach(a=>{
+    document.getElementById('grafico-'+a).style.display=a===aba?'block':'none';
+    const btn=document.getElementById('aba-'+a);
+    btn.style.color=a===aba?'#1a3410':'#6b7280';
+    btn.style.borderBottom=a===aba?'3px solid #1a3410':'3px solid transparent';
+    btn.style.fontWeight=a===aba?'700':'600';
+  });
+}
+document.getElementById('modalGraficos').addEventListener('click',function(e){if(e.target===this)fecharGraficos();});
+
+// Selecao multipla
+document.getElementById('sel-todos').addEventListener('change',function(){
+  document.querySelectorAll('.sel-item').forEach(function(cb){cb.checked=this.checked;},this);
+  atualizarBarra();
+});
+document.addEventListener('change',function(e){
+  if(e.target.classList.contains('sel-item')) atualizarBarra();
+});
+function atualizarBarra(){
+  var sels=document.querySelectorAll('.sel-item:checked');
+  var barra=document.getElementById('barra-selecao');
+  var count=document.getElementById('sel-count');
+  var inputs=document.getElementById('inputs-ids');
+  if(sels.length>0){
+    barra.style.display='flex';
+    count.textContent=sels.length+' selecionado(s)';
+    inputs.innerHTML='';
+    sels.forEach(function(cb){
+      var inp=document.createElement('input');
+      inp.type='hidden'; inp.name='ids'; inp.value=cb.value;
+      inputs.appendChild(inp);
+    });
+  } else {
+    barra.style.display='none';
+  }
+}
+function limparSelecao(){
+  document.querySelectorAll('.sel-item').forEach(function(cb){cb.checked=false;});
+  document.getElementById('sel-todos').checked=false;
+  document.getElementById('barra-selecao').style.display='none';
+}
+</script>
 </body>
 </html>

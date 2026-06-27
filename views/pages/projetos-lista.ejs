@@ -1,0 +1,149 @@
+<%
+var cfg = (typeof config !== 'undefined' && config) ? config : {};
+var orgNome = cfg.org_nome || 'LAURO';
+var ehEnsino = tipo === 'ensino';
+var tituloPag = ehEnsino ? 'Proyectos de Enseñanza' : 'Proyectos de Extensión';
+var stMap = {
+  rascunho:  {t:'Rascunho',              bg:'#EEF0ED', cor:'#5F6E66'},
+  pendente:  {t:'Pendiente aprobación',  bg:'#FBF3E0', cor:'#C98A1E'},
+  liberado:  {t:'Liberado p/ Secretaría',bg:'#DCF3EE', cor:'#0E7A60'},
+  revisao:   {t:'Enviado a la UCP',      bg:'#E8F0FA', cor:'#2C6BB3'},
+  aprovado:  {t:'Aprobado UCP',          bg:'#E2F3EA', cor:'#23704F'},
+  andamento: {t:'En curso',              bg:'#EEE9F7', cor:'#6D4FB3'},
+  concluido: {t:'Concluido',             bg:'#D9EFE1', cor:'#15633B'},
+  cancelado: {t:'Cancelado',             bg:'#FBE9E7', cor:'#C0392B'}
+};
+var fmtD = function(d){ try { return d ? new Date(d).toLocaleDateString('es-PY') : '—'; } catch(e){ return '—'; } };
+%>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= tituloPag %> — <%= orgNome %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --ink:#10201A; --ink-soft:#3A4A43; --ink-faint:#74837C;
+      --line:#E2E6E1; --line-strong:#CDD4CE; --paper:#F2F4F0; --card:#FFFFFF;
+      --green-700:#15402F; --green-600:#1C5A41; --accent:#2FA873; --accent-bright:#37C98B;
+      --amber:#C98A1E; --red:#C0392B; --blue:#2C6BB3; --purple:#6D4FB3;
+      --shadow-md:0 12px 28px -14px rgba(16,32,26,.28);
+    }
+    body{font-family:'IBM Plex Sans',system-ui,sans-serif;color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased}
+    #pj-page{margin-left:240px;min-height:100vh;padding:28px 32px}
+    @media(max-width:900px){#pj-page{margin-left:0;padding:18px 14px}}
+    .pj-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+    .pj-head h1{font-family:'Archivo',sans-serif;font-size:24px;font-weight:800;color:var(--green-700)}
+    .pj-head p{font-size:13px;color:var(--ink-faint);margin-top:3px}
+    .btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border:none;border-radius:3px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;text-decoration:none;transition:all .15s}
+    .btn-pri{background:var(--green-600);color:#fff}
+    .btn-pri:hover{background:var(--green-700)}
+    .btn-sec{background:var(--card);color:var(--ink-soft);border:1px solid var(--line-strong)}
+    .btn-sec:hover{border-color:var(--accent);color:var(--accent)}
+    .aviso{border-radius:3px;padding:11px 16px;font-size:13px;font-weight:600;margin-bottom:12px}
+    .aviso.amber{background:#FBF3E0;color:#8A5E12;border:1px solid #EAD7A8}
+    .aviso.teal{background:#DCF3EE;color:#0E7A60;border:1px solid #B8E2D6}
+    .aviso a{color:inherit}
+    .filtros{display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:3px;padding:12px 16px;margin-bottom:18px}
+    .filtros select,.filtros input{padding:9px 12px;border:1px solid var(--line-strong);border-radius:3px;font-family:inherit;font-size:13px;background:#fff;color:var(--ink)}
+    .filtros input{flex:1;min-width:180px}
+    .tabela{background:var(--card);border:1px solid var(--line);border-radius:3px;overflow:hidden;box-shadow:var(--shadow-md)}
+    table{width:100%;border-collapse:collapse}
+    thead th{background:var(--green-700);color:#fff;padding:11px 16px;text-align:left;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+    td{padding:13px 16px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle}
+    tbody tr:last-child td{border-bottom:none}
+    tbody tr:hover{background:#F4F8F4}
+    .pj-nome{font-weight:600;color:var(--ink);text-decoration:none}
+    .pj-nome:hover{color:var(--accent)}
+    .pj-criador{font-size:12px;color:var(--ink-faint);margin-top:2px}
+    .badge{display:inline-block;padding:4px 11px;border-radius:3px;font-size:11.5px;font-weight:600;white-space:nowrap}
+    .gdoc-link{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border:1px solid var(--line-strong);border-radius:3px;font-size:12px;color:var(--blue);text-decoration:none}
+    .gdoc-link:hover{border-color:var(--blue);background:#E8F0FA}
+    .acoes a{display:inline-flex;padding:6px 9px;border-radius:3px;color:var(--ink-faint);text-decoration:none;font-size:15px}
+    .acoes a:hover{background:var(--paper);color:var(--accent)}
+    .vazio{text-align:center;padding:64px 20px;color:var(--ink-faint)}
+    .vazio .ic{font-size:42px;opacity:.3;margin-bottom:10px}
+  </style>
+</head>
+<body>
+<%- include('../partials/sidebar', { paginaAtual: tipo }) %>
+<div id="pj-page">
+
+  <div class="pj-head">
+    <div>
+      <h1><%= tituloPag %></h1>
+      <p>Liga Académica de Urología – LAURO | UCP Ciudad del Este</p>
+    </div>
+    <% if (editavel) { %>
+    <a href="/projetos/novo/<%= tipo %>" class="btn btn-pri">+ Nuevo proyecto</a>
+    <% } %>
+  </div>
+
+  <% var perfilL = usuario.perfil; var ehAdminL = perfilL==='admin'||perfilL==='presidencia'; var pend = (typeof pendencias!=='undefined'&&pendencias)||{}; %>
+  <% if (ehAdminL && pend.pendente) { %>
+  <div class="aviso amber"><a href="/<%= tipo %>?status=pendente"><%= pend.pendente %> proyecto(s) pendiente(s) de aprobación de la Presidencia — clic para revisar</a></div>
+  <% } %>
+  <% if ((perfilL==='secretaria'||ehAdminL) && pend.liberado) { %>
+  <div class="aviso teal"><a href="/<%= tipo %>?status=liberado"><%= pend.liberado %> proyecto(s) liberado(s) esperando generación del Doc y envío a la UCP por Secretaría — clic para ver</a></div>
+  <% } %>
+  <form class="filtros" method="GET">
+    <select name="status" onchange="this.form.submit()">
+      <option value="">Todos los estados</option>
+      <% Object.keys(stMap).forEach(function(s){ %>
+      <option value="<%= s %>" <%= filtros.status===s?'selected':'' %>><%= stMap[s].t %></option>
+      <% }) %>
+    </select>
+    <input type="text" name="q" placeholder="Buscar por nombre…" value="<%= filtros.q %>">
+    <button type="submit" class="btn btn-sec">Buscar</button>
+    <% if (filtros.status || filtros.q) { %>
+    <a href="/<%= tipo %>" class="btn btn-sec">Limpiar</a>
+    <% } %>
+  </form>
+
+  <% if (!projetos.length) { %>
+  <div class="tabela"><div class="vazio">
+    <div class="ic"><% if (ehEnsino) { %><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg><% } else { %><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><% } %></div>
+    <p>Ningún proyecto encontrado</p>
+    <% if (editavel) { %>
+    <p style="margin-top:14px"><a href="/projetos/novo/<%= tipo %>" class="btn btn-pri">Crear primer proyecto</a></p>
+    <% } %>
+  </div></div>
+  <% } else { %>
+  <div class="tabela">
+    <table>
+      <thead><tr>
+        <th>Proyecto</th><th>Docente responsable</th><th>Fecha</th>
+        <th>Estado</th><th style="width:90px"></th>
+      </tr></thead>
+      <tbody>
+      <% projetos.forEach(function(p){
+        var st = stMap[p.status] || {t:p.status,bg:'#EEF0ED',cor:'#5F6E66'};
+      %>
+      <tr>
+        <td>
+          <a href="/projetos/<%= p.id %>" class="pj-nome"><%= p.nome %></a>
+          <div class="pj-criador"><%= p.criador_nome || '' %></div>
+        </td>
+        <td style="color:var(--ink-soft)"><%= p.docente_responsavel || '—' %></td>
+        <td style="color:var(--ink-soft)"><%= fmtD(p.data_execucao_inicio) %></td>
+        <td><span class="badge" style="background:<%= st.bg %>;color:<%= st.cor %>"><%= st.t %></span></td>
+        <td class="acoes">
+          <a href="/projetos/<%= p.id %>" title="Ver"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg></a>
+          <% if (editavel && p.status==='rascunho') { %>
+          <a href="/projetos/<%= p.id %>/editar" title="Editar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7.5 20.5 3 21l1-4.5Z"/></svg></a>
+          <% } %>
+        </td>
+      </tr>
+      <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <% } %>
+
+</div>
+</body>
+</html>

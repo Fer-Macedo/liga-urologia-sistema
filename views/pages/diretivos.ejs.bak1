@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diretivos — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+    .stats-row { display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px; }
+    .stat-mini { background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:18px 20px;position:relative;overflow:hidden; }
+    .stat-mini::before { content:'';position:absolute;top:0;left:0;right:0;height:3px; }
+    .stat-mini.azul::before  { background:linear-gradient(90deg,#1a56db,#06b6d4); }
+    .stat-mini.verde::before { background:linear-gradient(90deg,#10b981,#34d399); }
+    .stat-mini.amr::before   { background:linear-gradient(90deg,#f59e0b,#fbbf24); }
+    .stat-mini.roxo::before  { background:linear-gradient(90deg,#8b5cf6,#a78bfa); }
+    .stat-mini .num { font-family:'Outfit',sans-serif;font-size:30px;font-weight:700;margin-bottom:4px; }
+    .stat-mini.azul  .num { color:#1a56db; }
+    .stat-mini.verde .num { color:#10b981; }
+    .stat-mini.amr   .num { color:#f59e0b; }
+    .stat-mini.roxo  .num { color:#8b5cf6; }
+    .stat-mini .lab { font-size:11.5px;color:var(--texto2);font-weight:600;text-transform:uppercase;letter-spacing:.06em; }
+    .filtros-row { display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center; }
+    .link-box { background:var(--fundo);border:1.5px dashed var(--borda);border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap; }
+    .link-box-label { font-size:12px;font-weight:600;color:var(--texto2);margin-bottom:3px; }
+    .link-box-url { font-size:13px;color:var(--cor-primaria);font-weight:600;word-break:break-all; }
+    .diretivos-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px; }
+    .dir-card { background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:18px;transition:all .18s ease;position:relative; }
+    .dir-card:hover { border-color:var(--cor-primaria);box-shadow:0 6px 20px rgba(26,86,219,.10);transform:translateY(-2px); }
+    .dir-avatar { width:48px;height:48px;border-radius:13px;background:linear-gradient(135deg,var(--cor-primaria),#6366f1);color:white;font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0; }
+    .dir-header { display:flex;align-items:flex-start;gap:12px;margin-bottom:12px; }
+    .dir-nome { font-family:'Outfit',sans-serif;font-size:14.5px;font-weight:700;letter-spacing:-.01em;margin-bottom:5px; }
+    .dir-cargo-badge { display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;background:var(--cor-primaria)18;color:var(--cor-primaria); }
+    .dir-info { display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--texto2);margin-bottom:12px; }
+    .dir-info-row { display:flex;align-items:center;gap:7px; }
+    .dir-info-icon { width:16px;color:var(--texto2);flex-shrink:0; }
+    .card-acoes { display:flex;gap:6px;padding-top:12px;border-top:1px solid var(--borda); }
+    .btn-sm { font-size:12px !important;padding:6px 12px !important; }
+    .btn-danger-soft { background:transparent !important;border:1px solid var(--borda) !important;color:#dc2626 !important;border-radius:9px !important;padding:6px 10px !important;font-size:12px !important;cursor:pointer;transition:all .15s ease; }
+    .btn-danger-soft:hover { background:#fee2e2 !important;border-color:#fecaca !important; }
+    .modal-overlay { display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(3px); }
+    .modal-overlay.aberto { display:flex; }
+    @keyframes piscar { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.05)} }
+    .btn-pendente-piscar { animation: piscar 1.2s ease-in-out infinite; }
+    .modal-grande { background:var(--card);border-radius:18px;padding:28px;max-width:680px;width:95%;max-height:88vh;overflow-y:auto;box-shadow:0 24px 60px rgba(15,23,42,.18);animation:popIn .18s ease; }
+    @keyframes popIn { from{opacity:0;transform:scale(.96)} to{opacity:1;transform:scale(1)} }
+    .modal-tabs { display:flex;margin-bottom:20px;border-bottom:1.5px solid var(--borda); }
+    .modal-tab { padding:8px 18px;font-size:13px;font-weight:600;cursor:pointer;color:var(--texto2);border-bottom:2.5px solid transparent;margin-bottom:-1.5px;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit;transition:all .15s; }
+    .modal-tab.ativo { color:var(--cor-primaria);border-bottom-color:var(--cor-primaria); }
+    .tab-content { display:none; }
+    .tab-content.ativo { display:block; }
+    .detalhe-grid { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+    .detalhe-item { display:flex;flex-direction:column;gap:2px; }
+    .detalhe-label { font-size:10.5px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.06em; }
+    .detalhe-valor { font-size:13.5px;color:var(--texto);font-weight:500; }
+    .detalhe-full { grid-column:1/-1; }
+    .foto-preview { width:80px;height:80px;border-radius:12px;object-fit:cover;border:2px solid var(--borda);display:block; }
+    .modal-titulo { font-family:'Plus Jakarta Sans','Outfit',sans-serif !important; font-weight:700 !important; font-size:18px !important; }
+    .modal-header { font-family:'Plus Jakarta Sans','Outfit',sans-serif !important; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'diretivos' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Diretivos</h1>
+      <div class="topbar-acoes">
+        <button class="btn btn-sm" onclick="navigator.clipboard.writeText('<%= appUrl %>/cadastro-diretivo').then(()=>alert('Link copiado!'))"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Link de cadastro</button>
+        <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-cadastrar')">+ Cadastrar diretivo</button>
+      </div>
+    </div>
+
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
+
+      <% const cargosCount = {}; diretivos.forEach(d => { cargosCount[d.cargo] = (cargosCount[d.cargo]||0)+1; }); %>
+      <div class="stats-row">
+        <div class="stat-mini azul">
+          <div class="num"><%= diretivos.length %></div>
+          <div class="lab">Total diretivos</div>
+        </div>
+        <div class="stat-mini verde">
+          <div class="num"><%= (cargosCount['Presidente(a)']||0) + (cargosCount['Vice-presidente(a)']||0) %></div>
+          <div class="lab">Presidência</div>
+        </div>
+        <div class="stat-mini amr">
+          <div class="num"><%= diretivos.filter(d => d.cargo && (d.cargo.startsWith('Diretor') || d.cargo.startsWith('Secretário') || d.cargo.startsWith('Secretaria'))).length %></div>
+          <div class="lab">Diretores e Secretaria</div>
+        </div>
+        <div class="stat-mini roxo">
+          <div class="num"><%= diretivos.filter(d => d.cargo && d.cargo.startsWith('Vice Dir')).length %></div>
+          <div class="lab">Vice-Diretores</div>
+        </div>
+      </div>
+
+      <div class="filtros-row">
+        <input type="text" class="input" placeholder="Buscar por nome ou cargo..." id="busca" oninput="filtrar()" style="flex:1;max-width:340px">
+        <select class="input" id="filtro-cargo" onchange="filtrar()" style="width:210px">
+          <option value="">Todos os cargos</option>
+          <option>Presidente(a)</option><option>Vice-presidente(a)</option>
+          <option>Secretário(a)</option><option>Diretor(a) Financeiro(a)</option>
+          <option>Diretor(a) Científico</option><option>Vice Diretor(a) Científico</option>
+          <option>Diretor(a) de Extensão</option><option>Vice Diretor(a) de Extensão</option>
+          <option>Diretor(a) de Ensino</option><option>Vice Diretor(a) de Ensino</option>
+          <option>Diretor(a) de Marketing</option><option>Vice Diretor(a) de Marketing</option>
+        </select>
+        <div style="display:flex;gap:4px">
+          <% const sf = typeof statusFiltro !== 'undefined' ? statusFiltro : 'ativos'; %>
+          <a href="/diretivos?status=ativos" class="btn btn-sm" style="<%= sf==='ativos'||!sf ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">Ativos</a>
+          <a href="/diretivos?status=inativos" class="btn btn-sm" style="<%= sf==='inativos' ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">Inativos</a>
+          <a href="/diretivos?status=todos" class="btn btn-sm" style="<%= sf==='todos' ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">Todos</a>
+        <% if(typeof pendentesCount!=='undefined'&&pendentesCount>0){ %>
+        <button class="btn btn-sm btn-pendente-piscar" style="background:#f59e0b;color:white;border-color:#f59e0b;font-weight:700" onclick="window.location='/diretivos?status=pendente'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg> Pendentes (<%= pendentesCount %>)</button>
+        <% } else { %>
+        <button class="btn btn-sm" style="background:#22c55e;color:white;border-color:#16a34a;font-weight:600" onclick="window.location='/diretivos?status=pendente'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Pendentes</button>
+        <% } %>
+        </div>
+        <span id="contador" style="font-size:13px;color:var(--texto2)"><%= diretivos.length %> diretivos</span>
+      </div>
+
+      <div class="diretivos-grid" id="lista-diretivos">
+        <% if (diretivos.length === 0) { %>
+          <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--texto2)">Nenhum diretivo cadastrado.</div>
+        <% } %>
+        <% diretivos.forEach(d => { %>
+        <div class="dir-card" data-nome="<%= d.nome.toLowerCase() %>" data-cargo="<%= d.cargo || '' %>">
+          <% if (d.ativo == 0) { %>
+            <div style="position:absolute;top:12px;right:12px;background:#fee2e2;color:#991b1b;font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:999px">Inativo</div>
+          <% } %>
+          <div class="dir-header">
+            <% if (d.foto_chave) { %>
+        <img src="/diretivos/<%= d.id %>/foto" class="dir-avatar" style="object-fit:cover;padding:0" alt="<%= d.nome %>">
+        <% } else { %>
+        <div class="dir-avatar"><%= d.nome.substring(0,2).toUpperCase() %></div>
+        <% } %>
+            <div style="flex:1;min-width:0">
+              <div class="dir-nome"><%= d.nome %></div>
+              <span class="dir-cargo-badge"><%= d.cargo || 'Sem cargo' %></span>
+            </div>
+          </div>
+          <div class="dir-info">
+            <% if (d.email) { %><div class="dir-info-row"><svg class="dir-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><%= d.email %></div><% } %>
+            <% if (d.whatsapp) { %><div class="dir-info-row"><svg class="dir-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 5.49 5.49l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16.92z"/></svg><%= d.whatsapp %></div><% } %>
+            <% if (d.semestre_turma) { %><div class="dir-info-row"><svg class="dir-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg><%= d.semestre_turma %></div><% } %>
+            <% if (d.onde_reside) { %><div class="dir-info-row"><svg class="dir-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><%= d.onde_reside %></div><% } %>
+          </div>
+          <div class="card-acoes">
+            <button class="btn btn-primario btn-sm" onclick="abrirVisualizar(<%= d.id %>)">Ver detalhes</button>
+            <% if(d.ativo == 0 && statusFiltro === 'pendente'){ %>
+            <button class="btn btn-sm" style="background:#22c55e;color:white;border:none;font-weight:600" onclick="if(confirm('Liberar este cadastro?')) window.location='/diretivos/<%= d.id %>/toggle'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Liberar</button>
+            <button class="btn btn-sm" style="background:#ef4444;color:white;border:none;font-weight:600" onclick="if(confirm('Recusar e excluir permanentemente?')) window.location='/diretivos/<%= d.id %>/excluir'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Recusar</button>
+            <% } else { %>
+            <button class="btn btn-sm" onclick="abrirEditar(<%= d.id %>)">Editar</button>
+            <% } %>
+            <% if(statusFiltro !== 'pendente') { %>
+            <form action="/diretivos/<%= d.id %>/toggle" method="POST" style="display:inline;margin:0;margin-left:auto">
+              <% if (d.ativo == 0) { %>
+                <button type="submit" class="btn btn-sm" style="color:#16a34a;border:1px solid #bbf7d0;background:#f0fdf4" onclick="return confirm('Reativar <%= d.nome.replace(/'/g,"\\'") %>?')">Reativar</button>
+              <% } else { %>
+                <button type="button" class="btn-danger-soft" onclick="abrirInativD(<%= d.id %>)" title="Desativar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+                </button>
+              <% } %>
+            </form>
+            <% } %>
+          </div>
+        </div>
+        <% }) %>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL VISUALIZAR -->
+<div class="modal-overlay" id="modal-visualizar" onclick="fecharModalClick(event,'modal-visualizar')">
+  <div class="modal-grande">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <span style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:700" id="vis-titulo">Detalhes</span>
+      <button onclick="document.getElementById('modal-visualizar').style.display='none'; document.body.style.overflow=''" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--texto2);line-height:1">✕</button>
+    </div>
+    <div class="modal-tabs">
+      <button class="modal-tab ativo" onclick="trocarTab('dados',this)">Dados pessoais</button>
+      <button class="modal-tab" onclick="trocarTab('academico',this)">Acadêmico</button>
+      <button class="modal-tab" onclick="trocarTab('perfil',this)">Perfil</button>
+    </div>
+    <div id="tab-dados" class="tab-content ativo"></div>
+    <div id="tab-academico" class="tab-content"></div>
+    <div id="tab-perfil" class="tab-content"></div>
+  </div>
+</div>
+
+<!-- MODAL CADASTRAR -->
+<div class="modal-overlay" id="modal-cadastrar" style="display:none">
+  <div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto">
+    <div class="modal-header">
+      <span class="modal-titulo">Cadastrar Diretivo</span>
+      <button class="icon-btn" onclick="fecharModal('modal-cadastrar')">✕</button>
+    </div>
+    <form action="/diretivos" method="POST">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="campo" style="grid-column:1/-1"><label class="label">Nome completo *</label><input name="nome" class="input" required></div>
+        <div class="campo"><label class="label">RG / C.I.</label><input name="rg" class="input"></div>
+        <div class="campo"><label class="label">CPF</label><input name="cpf" class="input"></div>
+        <div class="campo"><label class="label">E-mail *</label><input name="email" type="email" class="input" required></div>
+        <div class="campo"><label class="label">WhatsApp *</label><div style="display:flex;gap:8px">
+                <select id="dir-ddi-wpp" class="input" style="width:150px" onchange="atualizarDirWpp()">
+                  <option value="55">Brasil (+55)</option>
+                  <option value="595">Paraguai (+595)</option>
+                  <option value="54">Argentina (+54)</option>
+                  <option value="598">Uruguai (+598)</option>
+                  <option value="591">Bolívia (+591)</option>
+                  <option value="56">Chile (+56)</option>
+                  <option value="57">Colômbia (+57)</option>
+                  <option value="1">EUA/Canadá (+1)</option>
+                </select>
+                <input id="dir-num-wpp" class="input" placeholder="DDD + número" oninput="atualizarDirWpp()" style="flex:1">
+              </div>
+              <input type="hidden" name="whatsapp" id="dir-wpp-final">
+              <div id="dir-wpp-preview" style="font-size:11px;color:var(--texto2);margin-top:4px"></div></div>
+        <div class="campo" style="grid-column:1/-1">
+          <label class="label">Cargo *</label>
+          <select name="cargo" class="input" required>
+            <option value="">Selecione...</option>
+            <option>Presidente(a)</option><option>Vice-presidente(a)</option>
+            <option>Secretário(a)</option><option>Diretor(a) Financeiro(a)</option>
+            <option>Diretor(a) Científico</option><option>Vice Diretor(a) Científico</option>
+            <option>Diretor(a) de Extensão</option><option>Vice Diretor(a) de Extensão</option>
+            <option>Diretor(a) de Ensino</option><option>Vice Diretor(a) de Ensino</option>
+            <option>Diretor(a) de Marketing</option><option>Vice Diretor(a) de Marketing</option>
+          </select>
+        </div>
+        <div class="campo"><label class="label">Semestre/Turma</label><input name="semestre_turma" class="input"></div>
+        <div class="campo"><label class="label">Data de nascimento</label><input name="data_nascimento" type="date" class="input"></div>
+        <div class="campo"><label class="label">Onde reside</label><input name="onde_reside" class="input"></div>
+        <div class="campo"><label class="label">Disponibilidade</label><input name="disponibilidade" class="input"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-cadastrar')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Cadastrar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL EDITAR — com upload de foto -->
+<div class="modal-overlay" id="modal-editar" style="display:none">
+  <div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto">
+    <div class="modal-header">
+      <span class="modal-titulo">Editar Diretivo</span>
+      <button class="icon-btn" onclick="fecharModal('modal-editar')">✕</button>
+    </div>
+    <form id="form-editar" action="" method="POST" enctype="multipart/form-data">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="campo" style="grid-column:1/-1"><label class="label">Nome completo *</label><input name="nome" id="e-nome" class="input" required></div>
+        <div class="campo"><label class="label">RG / C.I.</label><input name="rg" id="e-rg" class="input"></div>
+        <div class="campo"><label class="label">CPF</label><input name="cpf" id="e-cpf" class="input"></div>
+        <div class="campo"><label class="label">E-mail</label><input name="email" id="e-email" type="email" class="input"></div>
+        <div class="campo"><label class="label">WhatsApp</label><input name="whatsapp" id="e-whatsapp" class="input" placeholder="+55DDD00000000"></div>
+        <div class="campo"><label class="label">Instagram</label><input name="instagram" id="e-instagram" class="input"></div>
+        <div class="campo"><label class="label">Catraca</label><input name="catraca" id="e-catraca" class="input"></div>
+        <div class="campo" style="grid-column:1/-1">
+          <label class="label">Cargo</label>
+          <select name="cargo" id="e-cargo" class="input">
+            <option>Presidente(a)</option><option>Vice-presidente(a)</option>
+            <option>Secretário(a)</option><option>Diretor(a) Financeiro(a)</option>
+            <option>Diretor(a) Científico</option><option>Vice Diretor(a) Científico</option>
+            <option>Diretor(a) de Extensão</option><option>Vice Diretor(a) de Extensão</option>
+            <option>Diretor(a) de Ensino</option><option>Vice Diretor(a) de Ensino</option>
+            <option>Diretor(a) de Marketing</option><option>Vice Diretor(a) de Marketing</option>
+          </select>
+        </div>
+        <div class="campo"><label class="label">Semestre/Turma</label><input name="semestre_turma" id="e-semestre" class="input"></div>
+        <div class="campo"><label class="label">Data de nascimento</label><input name="data_nascimento" id="e-nascimento" type="date" class="input"></div>
+        <div class="campo"><label class="label">Onde reside</label><input name="onde_reside" id="e-reside" class="input"></div>
+        <div class="campo"><label class="label">Disponibilidade</label><input name="disponibilidade" id="e-disponibilidade" class="input"></div>
+        <div class="campo"><label class="label">Ano ingresso</label><input name="ano_ingresso" id="e-ingresso" class="input"></div>
+        <div class="campo"><label class="label">ORCID</label><input name="orcid" id="e-orcid" class="input"></div>
+        <div class="campo" style="grid-column:1/-1"><label class="label">Graduação/Curso técnico</label><input name="graduacao" id="e-graduacao" class="input"></div>
+        <div class="campo" style="grid-column:1/-1"><label class="label">Experiência com Urologia</label><textarea name="experiencia_urologia" id="e-experiencia" class="input" style="min-height:70px"></textarea></div>
+        <div class="campo"><label class="label">Transporte próprio</label>
+          <select name="transporte_proprio" id="e-transporte" class="input"><option value="">-</option><option>Sim</option><option>Não</option></select>
+        </div>
+        <div class="campo"><label class="label">Tipo de transporte</label><input name="tipo_transporte" id="e-tipo-transporte" class="input"></div>
+
+        <!-- FOTO -->
+        <div class="campo" style="grid-column:1/-1">
+          <label class="label">Foto do diretivo</label>
+          <div id="e-foto-preview" style="margin-bottom:10px;display:none">
+            <img id="e-foto-img" class="foto-preview" src="" alt="Foto atual">
+            <div style="margin-top:6px">
+              <a id="e-foto-download" href="" target="_blank" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white;border-radius:8px;font-size:12px;font-weight:600;text-decoration:none">
+                Baixar foto atual
+              </a>
+            </div>
+          </div>
+          <input type="file" name="foto" class="input" accept="image/*" style="padding:8px">
+          <div style="font-size:11px;color:var(--texto2);margin-top:4px">Deixe em branco para manter a foto atual. Formatos: JPG, PNG, WebP.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-editar')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const diretivos = <%- JSON.stringify(diretivos) %>;
+
+function filtrar() {
+  const busca = document.getElementById('busca').value.toLowerCase();
+  const cargo = document.getElementById('filtro-cargo').value;
+  let vis = 0;
+  document.querySelectorAll('.dir-card').forEach(c => {
+    const ok = (!busca || c.dataset.nome.includes(busca) || c.dataset.cargo.toLowerCase().includes(busca))
+      && (!cargo || c.dataset.cargo === cargo);
+    c.style.display = ok ? '' : 'none';
+    if (ok) vis++;
+  });
+  document.getElementById('contador').textContent = vis + ' diretivos';
+}
+
+function copiarLink() {
+  navigator.clipboard.writeText(document.getElementById('link-publico').textContent)
+    .then(() => alert('Link copiado!'));
+}
+
+function trocarTab(tab, btn) {
+  document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('ativo'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('ativo'));
+  btn.classList.add('ativo');
+  document.getElementById('tab-' + tab).classList.add('ativo');
+}
+
+function campo(label, valor, full) {
+  return '<div class="detalhe-item ' + (full ? 'detalhe-full' : '') + '">'
+    + '<span class="detalhe-label">' + label + '</span>'
+    + '<span class="detalhe-valor">' + (valor || '—') + '</span>'
+    + '</div>';
+}
+
+function abrirVisualizar(id) {
+  const d = diretivos.find(x => x.id == id);
+  if (!d) return;
+  document.getElementById('vis-titulo').textContent = d.nome;
+
+  // FOTO — usa "d" (correto)
+  const fotoHtml = d.foto_chave
+    ? '<div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding:16px;background:var(--fundo);border-radius:12px;border:1px solid var(--borda)">'
+      + '<img src="/diretivos/' + d.id + '/foto" style="width:72px;height:72px;border-radius:12px;object-fit:cover;border:2px solid var(--borda);flex-shrink:0" alt="Foto">'
+      + '<div>'
+      + '<div style="font-weight:700;font-size:14px;margin-bottom:6px">' + d.nome.split(' ')[0] + '</div>'
+      + '<a href="/diretivos/' + d.id + '/foto" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white;border-radius:9px;font-size:12.5px;font-weight:600;text-decoration:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar foto</a>'
+      + '<div style="font-size:11px;color:var(--texto2);margin-top:5px">Abre em nova aba para salvar</div>'
+      + '</div></div>'
+    : '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:14px 16px;background:var(--fundo);border-radius:12px;border:1px solid var(--borda);color:var(--texto2);font-size:13px">'
+      + '<span>Sem foto cadastrada.</span></div>';
+
+  document.getElementById('tab-dados').innerHTML = fotoHtml
+    + '<div class="detalhe-grid">'
+    + campo('Nome completo', d.nome, true)
+    + campo('E-mail', d.email)
+    + campo('WhatsApp', d.whatsapp)
+    + campo('Instagram', d.instagram)
+    + campo('RG / C.I.', d.rg)
+    + campo('CPF', d.cpf)
+    + campo('Catraca', d.catraca)
+    + campo('Cargo', d.cargo)
+    + campo('Data de nascimento', d.data_nascimento ? new Date(d.data_nascimento + 'T12:00:00').toLocaleDateString('pt-BR') : null)
+    + campo('Onde reside', d.onde_reside)
+    + campo('Disponibilidade', d.disponibilidade)
+    + campo('Cadastrado em', d.cadastrado_em ? new Date(d.cadastrado_em).toLocaleString('pt-BR') : null)
+    + '</div>'
+    + '<div style="margin-top:16px;display:flex;gap:8px">'
+    + '<button class="btn btn-primario btn-sm" onclick="document.getElementById(\'modal-visualizar\').classList.remove(\'aberto\');abrirEditar(' + id + ')">Editar dados</button>'
+    + '</div>';
+
+  document.getElementById('tab-academico').innerHTML = '<div class="detalhe-grid">'
+    + campo('Semestre / Turma', d.semestre_turma)
+    + campo('Ano de ingresso', d.ano_ingresso)
+    + campo('Graduação / Curso', d.graduacao)
+    + campo('ORCID', d.orcid)
+    + campo('Transporte próprio', d.transporte_proprio)
+    + campo('Tipo de transporte', d.tipo_transporte)
+    + campo('Experiência com Urologia', d.experiencia_urologia, true)
+    + '</div>';
+
+  document.getElementById('tab-perfil').innerHTML = '<div class="detalhe-grid">'
+    + campo('Disponibilidade', d.disponibilidade, true)
+    + '</div>';
+
+  document.querySelectorAll('.modal-tab').forEach((t, i) => t.classList.toggle('ativo', i === 0));
+  document.querySelectorAll('.tab-content').forEach((t, i) => t.classList.toggle('ativo', i === 0));
+  const mv = document.getElementById('modal-visualizar'); mv.style.display='flex'; document.body.style.overflow='hidden';
+}
+
+function abrirEditar(id) {
+  const d = diretivos.find(x => x.id == id);
+  if (!d) return;
+  document.getElementById('form-editar').action = '/diretivos/' + id + '/editar';
+  document.getElementById('e-nome').value = d.nome || '';
+  document.getElementById('e-rg').value = d.rg || '';
+  document.getElementById('e-cpf').value = d.cpf || '';
+  document.getElementById('e-email').value = d.email || '';
+  document.getElementById('e-whatsapp').value = d.whatsapp || '';
+  document.getElementById('e-instagram').value = d.instagram || '';
+  document.getElementById('e-catraca').value = d.catraca || '';
+  document.getElementById('e-cargo').value = d.cargo || '';
+  document.getElementById('e-semestre').value = d.semestre_turma || '';
+  document.getElementById('e-nascimento').value = d.data_nascimento ? d.data_nascimento.substring(0,10) : '';
+  document.getElementById('e-reside').value = d.onde_reside || '';
+  document.getElementById('e-disponibilidade').value = d.disponibilidade || '';
+  document.getElementById('e-ingresso').value = d.ano_ingresso || '';
+  document.getElementById('e-orcid').value = d.orcid || '';
+  document.getElementById('e-graduacao').value = d.graduacao || '';
+  document.getElementById('e-experiencia').value = d.experiencia_urologia || '';
+  document.getElementById('e-transporte').value = d.transporte_proprio || '';
+  document.getElementById('e-tipo-transporte').value = d.tipo_transporte || '';
+
+  // Foto
+  const preview = document.getElementById('e-foto-preview');
+  const img = document.getElementById('e-foto-img');
+  const link = document.getElementById('e-foto-download');
+  if (d.foto_chave) {
+    img.src = '/diretivos/' + id + '/foto';
+    link.href = '/diretivos/' + id + '/foto';
+    preview.style.display = 'block';
+  } else {
+    preview.style.display = 'none';
+  }
+
+  abrirModal('modal-editar');
+}
+
+function fecharModalClick(e, id) {
+  if (e.target.id === id) { 
+    document.getElementById(id).style.display='none'; 
+    document.body.style.overflow=''; 
+  }
+}
+</script>
+
+<div class="modal-overlay" id="modal-inativ-d" style="display:none">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <span class="modal-titulo">Inativar diretivo</span>
+      <button class="icon-btn" onclick="fecharModal('modal-inativ-d')">&#x2715;</button>
+    </div>
+    <p style="font-size:13px;color:var(--texto2);margin:0 0 16px;line-height:1.6">
+      Ao inativar, o diretivo nao receberao mais notificacoes do sistema.
+    </p>
+    <div class="campo" style="margin-bottom:12px">
+      <label class="label">Motivo *</label>
+      <select id="sel-motivo-d" class="input" onchange="atualizarMotivoD()">
+        <option value="">Selecione...</option>
+        <option>Desligamento voluntario</option>
+        <option>Conclusao de mandato</option>
+        <option>Conclusao de curso</option>
+        <option>Transferencia de instituicao</option>
+        <option>Desempenho insatisfatorio</option>
+        <option>Outro</option>
+      </select>
+    </div>
+    <div id="outro-d" style="display:none;margin-bottom:12px">
+      <label class="label">Especifique *</label>
+      <textarea id="txt-outro-d" class="input" rows="2" oninput="atualizarMotivoD()"></textarea>
+    </div>
+    <form id="form-inativ-d" action="" method="POST">
+      <input type="hidden" name="motivo" id="motivo-d">
+      <div class="modal-footer" style="padding:0;margin-top:8px">
+        <button type="button" class="btn" onclick="fecharModal('modal-inativ-d')">Cancelar</button>
+        <button type="submit" class="btn btn-primario" onclick="return validarD()"
+          style="background:linear-gradient(135deg,#dc2626,#b91c1c)">Confirmar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function abrirInativD(id){
+  document.getElementById('form-inativ-d').action='/diretivos/'+id+'/toggle';
+  document.getElementById('sel-motivo-d').value='';
+  document.getElementById('motivo-d').value='';
+  document.getElementById('outro-d').style.display='none';
+  abrirModal('modal-inativ-d');
+}
+function atualizarMotivoD(){
+  const s=document.getElementById('sel-motivo-d').value;
+  document.getElementById('outro-d').style.display=s==='Outro'?'':'none';
+  document.getElementById('motivo-d').value=s==='Outro'?document.getElementById('txt-outro-d').value:s;
+}
+function validarD(){
+  if(!document.getElementById('motivo-d').value){alert('Informe o motivo.');return false;}
+  return true;
+}
+</script>
+</body>
+</html>

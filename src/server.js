@@ -11,14 +11,35 @@ const { iniciarAgendamentos } = require('./services/agendamentos');
 const { agendarBackup } = require('./services/backup');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 3000;
+const http = require('http');
+const { Server: SocketServer } = require('socket.io');
+const httpServer = http.createServer(app);
+const io = new SocketServer(httpServer, { cors: { origin: '*' } });
+app._io = io;
+io.on('connection', (socket) => {
+  const tipo = socket.handshake.auth?.tipo;
+  const id = socket.handshake.auth?.id;
+  if (tipo && id) socket.join('membro_' + tipo + '_' + id);
+  socket.on('chat_msg', async (data) => {
+    try {
+      if (!data.texto || !tipo || !id) return;
+      const { query } = require('./models/database');
+      const r = await query('INSERT INTO portal_mensagens (origem_tipo, origem_id, autor, texto) VALUES ($1,$2,$3,$4) RETURNING id, criado_em', [tipo, id, 'membro', data.texto]);
+      socket.emit('chat_msg_ok', { id: r.rows[0].id, texto: data.texto, criado_em: r.rows[0].criado_em, autor: 'membro' });
+      io.to('admins').emit('chat_novo', { tipo, id, texto: data.texto });
+    } catch(e) { console.error('chat_msg error:', e.message); }
+  });
+  socket.on('join_admin', () => { socket.join('admins'); });
+});
 
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
 
 app.use(express.static(path.join(__dirname, '../public')));
-app.use(express.urlencoded({ extended: true }));
-app.use(express.json());
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use(express.json({ limit: '50mb' }));
 app.use(methodOverride('_method'));
 app.use(session({
   secret: process.env.SESSION_SECRET || 'liga-urologia-secret-2024',
@@ -30,6 +51,7 @@ app.use(flash());
 
 app.use((req, res, next) => {
   res.locals.usuarioLogado = req.session.usuario || null;
+  res.locals.permissoesAtivas = req.session.permissoesAtivas || [];
   next();
 });
 
@@ -48,7 +70,7 @@ async function start() {
     await initSchema();
     iniciarAgendamentos();
     agendarBackup();
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       console.log('\n🏥 Liga Urologia — Sistema de Cobranças');
       console.log('🌐 Porta: ' + PORT);
       console.log('📧 Login: admin@liga.org.br | Senha: admin123\n');

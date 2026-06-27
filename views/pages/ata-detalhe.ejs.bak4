@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ata <%=ata.numero||('#'+ata.id)%></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%=config.org_cor||'#1a3d2b'%>;--rad:2px;}
+    .btn{border:none;border-radius:6px;padding:9px 18px;font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+    .btn-primary{background:var(--cor-primaria);color:#fff;}
+    .btn-secondary{background:#f1f5f9;color:#374151;}
+    .status-badge{display:inline-flex;align-items:center;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;text-transform:uppercase;}
+    .status-rascunho{background:#fef3c7;color:#92400e;}
+    .status-em_assinatura{background:#dbeafe;color:#1e40af;}
+    .status-finalizada{background:#dcfce7;color:#166534;}
+    .card{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:20px;margin-bottom:16px;}
+    .card-titulo{font-size:12px;font-weight:800;color:#374151;text-transform:uppercase;letter-spacing:.5px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid #f1f5f9;}
+    .info-row{display:flex;gap:8px;margin-bottom:8px;font-size:13px;}
+    .info-label{color:#64748b;font-weight:600;min-width:120px;flex-shrink:0;}
+    .tab-btn{padding:9px 18px;border:none;background:transparent;font-weight:600;font-size:13px;cursor:pointer;border-bottom:2px solid transparent;color:#64748b;}
+    .tab-btn.ativo{border-bottom-color:var(--cor-primaria);color:var(--cor-primaria);}
+    .tab-content{display:none;padding-top:16px;}
+    .tab-content.ativo{display:block;}
+    .membro-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px;margin-bottom:10px;}
+    .sig-canvas{border:2px dashed #e2e8f0;border-radius:6px;cursor:crosshair;background:#fafafa;touch-action:none;display:block;}
+    .sig-canvas:hover{border-color:var(--cor-primaria);}
+    .pdf-preview{background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:50px 60px;font-family:Georgia,serif;}
+    .pdf-titulo{font-size:17px;font-weight:700;color:#1a3d2b;text-align:center;margin:20px 0 8px;text-transform:uppercase;}
+    .pdf-corpo{font-size:13px;line-height:1.9;color:#1a1a1a;white-space:pre-wrap;}
+    .pdf-sigs{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:50px;}
+    .pdf-sig-box{text-align:center;font-size:11px;padding-top:4px;}
+    .pdf-sig-line{border-top:1px solid #333;margin-bottom:6px;}
+    .upload-area{border:2px dashed #e2e8f0;border-radius:8px;padding:40px;text-align:center;cursor:pointer;transition:.2s;}
+    .upload-area:hover{border-color:var(--cor-primaria);background:#f0fdf4;}
+  </style>
+</head>
+<body>
+<div class="layout">
+<%- include('../partials/sidebar', { paginaAtual: 'atas' }) %>
+<main class="main">
+<div class="content">
+
+  <div style="display:flex;align-items:center;gap:16px;margin-bottom:24px;flex-wrap:wrap">
+    <a href="/atas" style="color:#64748b;text-decoration:none;font-size:13px;display:flex;align-items:center;gap:4px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg> Voltar
+    </a>
+    <div style="flex:1">
+      <h1 style="font-size:20px;font-weight:800;margin:0;color:#0f172a">Ata <%=ata.numero||('#'+ata.id)%> — Reunião <%=ata.tipo==='ordinaria'?'Ordinária':ata.tipo==='extraordinaria'?'Extraordinária':'Especial'%></h1>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:6px">
+        <span class="status-badge status-<%=ata.status%>"><%=ata.status==='rascunho'?'Rascunho':ata.status==='em_assinatura'?'Em Assinatura':'Finalizada'%></span>
+        <span style="font-size:12px;color:#64748b"><%=new Date(ata.data_reuniao).toLocaleDateString('pt-BR',{timeZone:'UTC'})%></span>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <% if(ata.status==='rascunho'){%><button class="btn btn-secondary" onclick="mudarStatus('em_assinatura')">Enviar para Assinatura</button><%}%>
+      <% if(ata.status==='em_assinatura'){%><button class="btn btn-primary" onclick="mudarStatus('finalizada')">Finalizar Ata</button><%}%>
+      <a href="/atas/<%=ata.id%>/docx" class="btn btn-primary" style="text-decoration:none">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Baixar DOCX
+      </a>
+    </div>
+  </div>
+
+  <div style="border-bottom:1px solid #e2e8f0;margin-bottom:4px;display:flex">
+    <button class="tab-btn ativo" onclick="showTab('info',this)">Informações</button>
+    <button class="tab-btn" onclick="showTab('assinaturas',this)">Assinaturas (<%=presentes.length%>)</button>
+    <button class="tab-btn" onclick="showTab('preview',this)">Preview PDF</button>
+    <button class="tab-btn" onclick="showTab('upload',this)">PDF Físico</button>
+  </div>
+
+  <!-- TAB INFO -->
+  <div class="tab-content ativo" id="tab-info">
+    <div class="card">
+      <div class="card-titulo">Dados da Reunião</div>
+      <div class="info-row"><span class="info-label">Data:</span><span><%=new Date(ata.data_reuniao).toLocaleDateString('pt-BR',{timeZone:'UTC'})%></span></div>
+      <%if(ata.hora_inicio){%><div class="info-row"><span class="info-label">Horário:</span><span><%=ata.hora_inicio%><%if(ata.hora_fim){%> às <%=ata.hora_fim%><%}%></span></div><%}%>
+      <div class="info-row"><span class="info-label">Local:</span><span><%=ata.local||'—'%></span></div>
+      <div class="info-row"><span class="info-label">Tipo:</span><span><%=ata.tipo==='ordinaria'?'Ordinária':ata.tipo==='extraordinaria'?'Extraordinária':'Especial'%></span></div>
+    </div>
+    <%if(ata.pauta){%><div class="card"><div class="card-titulo">Pauta</div><div style="font-size:13px;line-height:1.7;white-space:pre-wrap;color:#374151"><%=ata.pauta%></div></div><%}%>
+    <%if(ata.corpo){%><div class="card"><div class="card-titulo">Corpo da Ata</div><div style="font-size:13px;line-height:1.8;white-space:pre-wrap;color:#374151"><%=ata.corpo%></div></div><%}%>
+  </div>
+
+  <!-- TAB ASSINATURAS -->
+  <div class="tab-content" id="tab-assinaturas">
+    <!-- Painel adicionar membro -->
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:2px;padding:12px;margin-bottom:16px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="add-tipo" class="input" style="width:130px" onchange="carregarAddMembros()"><option value="diretivo">Directivo</option><option value="ligante">Ligante</option></select>
+      <select id="add-membro" class="input" style="flex:1;min-width:200px"><option value="">Selecione...</option></select>
+      <button onclick="adicionarPresente()" style="background:var(--cor-primaria);color:#fff;border:none;border-radius:2px;padding:9px 16px;cursor:pointer;font-weight:700;font-size:13px;white-space:nowrap;display:flex;align-items:center;gap:5px">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Agregar miembro
+      </button>
+    </div>
+    <%if(!presentes.length){%><div style="text-align:center;padding:40px;color:#94a3b8">Ningún miembro registrado en esta acta.</div>
+    <%}else{%>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+    <%presentes.forEach(p=>{%>
+    <div class="membro-card">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+        <div style="width:36px;height:36px;border-radius:50%;background:<%=p.membro_tipo==='diretivo'?'#1a3d2b':'#0284c7'%>;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0"><%=p.membro_nome.substring(0,1).toUpperCase()%></div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13px;color:#0f172a"><%=p.membro_nome%></div>
+          <div style="font-size:11px;color:#64748b"><%=p.membro_cargo||p.membro_tipo%></div>
+        </div>
+        <button class="btn-remover-presente" data-presente-id="<%=p.id%>" title="Remover membro" style="background:#fee2e2;border:none;color:#dc2626;border-radius:2px;width:26px;height:26px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s">×</button>
+        <%if(p.assinatura_digital||p.assinatura_url){%>
+        <span style="background:#dcfce7;color:#166534;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;flex-shrink:0">ASSINOU</span>
+        <%}else{%>
+        <span style="background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;padding:3px 8px;border-radius:10px;flex-shrink:0">PENDENTE</span>
+        <%}%>
+      </div>
+      <%if(p.assinatura_digital){%>
+      <img src="<%=p.assinatura_digital%>" style="max-width:200px;max-height:70px;border:1px solid #e2e8f0;border-radius:4px;display:block">
+      <div style="font-size:10px;color:#94a3b8;margin-top:4px"><%=p.assinou_em?new Date(p.assinou_em).toLocaleString('pt-BR'):'—'%></div>
+      <%}else{%>
+      <div style="font-size:12px;color:#64748b;margin-bottom:6px">Assinatura digital:</div>
+      <canvas id="canvas-<%=p.id%>" class="sig-canvas" width="250" height="80"></canvas>
+      <div style="display:flex;gap:6px;margin-top:8px">
+        <button class="btn btn-secondary" onclick="limparCanvas(<%=p.id%>)" style="padding:5px 10px;font-size:11px">Limpar</button>
+        <button class="btn btn-primary" onclick="salvarAssinatura(<%=p.id%>,<%=ata.id%>)" style="padding:5px 12px;font-size:11px">Salvar</button>
+      </div>
+      <%}%>
+    </div>
+    <%})%>
+    </div>
+    <%}%>
+  </div>
+
+  <!-- TAB PREVIEW -->
+  <div class="tab-content" id="tab-preview">
+    <div style="margin-bottom:12px">
+      <button class="btn btn-primary" onclick="gerarPDF()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Baixar / Imprimir PDF
+      </button>
+    </div>
+    <div class="pdf-preview" id="pdf-area">
+
+      <div class="pdf-titulo">ATA <%=ata.numero||('Nº '+ata.id)%> — REUNIÃO <%=(ata.tipo==='ordinaria'?'ORDINÁRIA':ata.tipo==='extraordinaria'?'EXTRAORDINÁRIA':'ESPECIAL')%></div>
+      <div style="font-size:12px;text-align:center;color:#64748b;margin-bottom:24px">
+        <%=new Date(ata.data_reuniao).toLocaleDateString('pt-BR',{timeZone:'UTC',weekday:'long',year:'numeric',month:'long',day:'numeric'})%>
+        <%if(ata.hora_inicio){%> | <%=ata.hora_inicio%><%if(ata.hora_fim){%> às <%=ata.hora_fim%><%}%><%}%>
+        <%if(ata.local){%> | <%=ata.local%><%}%>
+      </div>
+      <%if(ata.pauta){%>
+      <div style="margin-bottom:20px"><div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#1a3d2b">PAUTA:</div><div class="pdf-corpo"><%=ata.pauta%></div></div>
+      <%}%>
+      <%if(ata.corpo){%>
+      <div style="margin-bottom:20px"><div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#1a3d2b">ATA:</div><div class="pdf-corpo"><%=ata.corpo%></div></div>
+      <%}%>
+      <%if(presentes.length){%>
+      <div style="margin-top:50px">
+        <div style="font-weight:700;font-size:13px;text-align:center;margin-bottom:24px;color:#1a3d2b">ASSINATURAS DOS PRESENTES</div>
+        <div class="pdf-sigs">
+          <%presentes.forEach(p=>{%>
+          <div class="pdf-sig-box">
+            <%if(p.assinatura_digital){%><img src="<%=p.assinatura_digital%>" style="max-width:160px;max-height:60px;display:block;margin:0 auto 2px"><%}else{%><div style="height:60px"></div><%}%>
+            <div class="pdf-sig-line"></div>
+            <div style="font-weight:700;font-size:12px;margin-top:4px"><%=p.membro_nome%></div>
+            <%if(p.membro_cargo){%><div style="color:#64748b;font-size:10px"><%=p.membro_cargo%></div><%}%>
+          </div>
+          <%})%>
+        </div>
+      </div>
+      <%}%>
+    </div>
+  </div>
+
+  <!-- TAB UPLOAD PDF FÍSICO -->
+  <div class="tab-content" id="tab-upload">
+    <div class="card">
+      <div class="card-titulo">Upload de PDF Assinado Fisicamente</div>
+      <p style="font-size:13px;color:#64748b;margin-bottom:16px">Imprima o PDF, colete as assinaturas físicas, digitalize e faça o upload aqui para registro permanente.</p>
+      <%if(ata.pdf_assinado_url){%>
+      <div style="background:#dcfce7;border:1px solid #86efac;border-radius:8px;padding:14px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>
+        <div><div style="font-weight:700;font-size:13px;color:#166534">PDF físico registrado</div><a href="<%=ata.pdf_assinado_url%>" target="_blank" style="font-size:12px;color:#1a3d2b">Visualizar PDF</a></div>
+      </div>
+      <%}%>
+      <div class="upload-area" onclick="document.getElementById('file-pdf').click()">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5" style="margin-bottom:10px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        <div style="font-size:14px;font-weight:600;color:#374151">Clique para selecionar o PDF assinado</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:4px">Apenas arquivos PDF</div>
+        <input type="file" id="file-pdf" accept=".pdf" style="display:none" onchange="uploadPDF(this)">
+      </div>
+      <div id="upload-status" style="margin-top:10px;font-size:13px"></div>
+    </div>
+  </div>
+
+</div>
+</main>
+</div>
+<script>
+const _diretivos=<%- JSON.stringify(diretivos||[]) %>;
+const _ligantes=<%- JSON.stringify(ligantes||[]) %>;
+const _ataId=<%=ata.id%>;
+
+function carregarAddMembros(){
+  const tipo=document.getElementById('add-tipo').value;
+  const sel=document.getElementById('add-membro');
+  const lista=tipo==='diretivo'?_diretivos:_ligantes;
+  sel.innerHTML='<option value="">Selecione...</option>'+
+    lista.map(m=>`<option value="${m.id}" data-nome="${m.nome}" data-cargo="${m.cargo||''}">${m.nome}${m.cargo?' — '+m.cargo:''}</option>`).join('');
+}
+carregarAddMembros();
+
+function adicionarPresente(){
+  const tipo=document.getElementById('add-tipo').value;
+  const sel=document.getElementById('add-membro');
+  const opt=sel.options[sel.selectedIndex];
+  if(!opt||!opt.value)return alert('Selecione um membro.');
+  fetch('/atas/'+_ataId+'/presentes',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({membro_id:opt.value,membro_tipo:tipo,membro_nome:opt.dataset.nome,membro_cargo:opt.dataset.cargo||''})
+  }).then(r=>r.json()).then(d=>{if(d.ok)location.reload();else alert('Erro ao adicionar.');});
+}
+
+document.addEventListener('click', function(e){
+  var btn = e.target.closest('.btn-remover-presente');
+  if(!btn) return;
+  var presenteId = btn.dataset.presenteId;
+  removerPresente(presenteId);
+});
+function removerPresente(presenteId){
+  if(!confirm('Remover este membro da ata?'))return;
+  fetch('/atas/'+_ataId+'/presentes/'+presenteId,{method:'DELETE',credentials:'same-origin',headers:{'Accept':'application/json'}})
+  .then(r=>{if(r.status===401){alert('Sessão expirada. Faça login novamente.');location.href='/login';return null;}return r.json();})
+  .then(d=>{if(!d)return;if(d.ok)location.reload();else alert('Erro ao remover: '+(d.erro||''));});
+}
+
+function showTab(id,btn){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('ativo'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('ativo'));
+  document.getElementById('tab-'+id).classList.add('ativo');
+  if(btn)btn.classList.add('ativo');
+  if(id==='assinaturas') setTimeout(initAllCanvas,100);
+}
+function initAllCanvas(){
+  document.querySelectorAll('canvas[id^="canvas-"]').forEach(c=>initCanvas(c.id.replace('canvas-','')));
+}
+const _ctxs={};
+function initCanvas(id){
+  const canvas=document.getElementById('canvas-'+id);
+  if(!canvas||_ctxs[id])return;
+  const ctx=canvas.getContext('2d');
+  ctx.strokeStyle='#1a3d2b';ctx.lineWidth=2;ctx.lineCap='round';
+  let drawing=false,lx=0,ly=0;
+  function pos(e){const r=canvas.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return{x:(t.clientX-r.left)*(canvas.width/r.width),y:(t.clientY-r.top)*(canvas.height/r.height)};}
+  canvas.addEventListener('mousedown',e=>{drawing=true;const p=pos(e);lx=p.x;ly=p.y;});
+  canvas.addEventListener('mousemove',e=>{if(!drawing)return;const p=pos(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.stroke();lx=p.x;ly=p.y;});
+  canvas.addEventListener('mouseup',()=>drawing=false);
+  canvas.addEventListener('mouseleave',()=>drawing=false);
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();drawing=true;const p=pos(e);lx=p.x;ly=p.y;},{passive:false});
+  canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!drawing)return;const p=pos(e);ctx.beginPath();ctx.moveTo(lx,ly);ctx.lineTo(p.x,p.y);ctx.stroke();lx=p.x;ly=p.y;},{passive:false});
+  canvas.addEventListener('touchend',()=>drawing=false);
+  _ctxs[id]=ctx;
+}
+function limparCanvas(id){const c=document.getElementById('canvas-'+id);c.getContext('2d').clearRect(0,0,c.width,c.height);}
+function salvarAssinatura(presenteId,ataId){
+  const canvas=document.getElementById('canvas-'+presenteId);
+  const dataUrl=canvas.toDataURL('image/png');
+  fetch('/atas/'+ataId+'/assinatura',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({presente_id:presenteId,assinatura_digital:dataUrl})})
+  .then(r=>r.json()).then(d=>{if(d.ok)location.reload();else alert('Erro ao salvar assinatura');});
+}
+function mudarStatus(status){
+  const labels={em_assinatura:'Enviar para Assinatura?',finalizada:'Finalizar esta ata?'};
+  if(!confirm(labels[status]))return;
+  fetch('/atas/<%=ata.id%>/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})})
+  .then(r=>r.json()).then(()=>location.reload());
+}
+function gerarPDF(){
+  // Coletar apenas os dados necessários, sem o header duplicado
+  const ataNum = '<%=ata.numero||ata.id%>';
+  const ataTipo = '<%=ata.tipo==="ordinaria"?"ORDINARIA":ata.tipo==="extraordinaria"?"EXTRAORDINARIA":"ESPECIAL"%>';
+  const ataData = '<%=new Date(ata.data_reuniao).toLocaleDateString("es-PY",{timeZone:"UTC",weekday:"long",year:"numeric",month:"long",day:"numeric"})%>';
+  const ataLocal = '<%=ata.local||""  %>';
+  const ataHora = '<%=(ata.hora_inicio||"")+(ata.hora_fim?" — "+ata.hora_fim:"")%>';
+  const ataPauta = `<%- (ata.pauta||"").replace(/`/g,"'") %>`;
+  const ataCorpo = `<%- (ata.corpo||"").replace(/`/g,"'") %>`;
+  const timbradoUrl = window.location.origin + '/img/timbrado-lauro.jpg';
+
+  // Coletar assinaturas
+  const sigBoxes = Array.from(document.querySelectorAll('#pdf-area .pdf-sig-box')).map(b=>b.outerHTML).join('');
+
+  const win = window.open('','_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Acta ${ataNum}</title>
+  <style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    @page{margin:0;size:A4 portrait;}
+    body{font-family:"Times New Roman",Georgia,serif;background:white;}
+    .pagina{
+      width:210mm;min-height:297mm;margin:0 auto;
+      padding:130px 65px 190px 65px;
+      background-image:url('${timbradoUrl}');
+      background-size:cover;background-repeat:no-repeat;
+      -webkit-print-color-adjust:exact;print-color-adjust:exact;
+    }
+    .acta-titulo{font-size:14px;font-weight:bold;color:#1a3d2b;text-align:center;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:5px;}
+    .acta-sub{font-size:10px;text-align:center;color:#444;margin-bottom:20px;border-bottom:1px solid #1a3d2b;padding-bottom:12px;}
+    .seccion-titulo{font-size:11px;font-weight:bold;text-transform:uppercase;color:#1a3d2b;margin:14px 0 4px;letter-spacing:.5px;}
+    .pauta-item{font-size:11px;line-height:1.7;color:#222;margin-left:8px;}
+    .corpo-bloco{margin-bottom:10px;}
+    .corpo-titulo{font-size:10px;font-weight:bold;text-transform:uppercase;color:#1a3d2b;margin-bottom:3px;}
+    .corpo-texto{font-size:11px;line-height:1.75;color:#222;text-align:justify;white-space:pre-wrap;}
+    .sigs-titulo{font-size:11px;font-weight:bold;text-align:center;text-transform:uppercase;color:#1a3d2b;margin:30px 0 20px;}
+    .sigs-grid{display:grid;grid-template-columns:1fr 1fr;gap:30px 40px;}
+    .pdf-sig-box{text-align:center;}
+    .pdf-sig-line{border-top:1px solid #333;margin-bottom:4px;}
+    .pdf-sig-nome{font-weight:bold;font-size:11px;}
+    .pdf-sig-cargo{color:#555;font-size:10px;}
+    @media print{
+      body{margin:0;}
+      .pagina{background-image:url('${timbradoUrl}') !important;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important;}
+    }
+  </style></head><body>
+  <div class="pagina">
+    <div class="acta-titulo">ACTA ${ataNum} — REUNIÓN ${ataTipo}</div>
+    <div class="acta-sub">${ataData}${ataHora?' | '+ataHora:''}${ataLocal?' | '+ataLocal:''}</div>
+    ${ataPauta?`<div class="seccion-titulo">Orden del Día:</div>
+    <div>${ataPauta.split('\n').map(l=>`<div class="pauta-item">${l}</div>`).join('')}</div>`:''}
+    ${ataCorpo?`<div class="seccion-titulo" style="margin-top:16px">Desarrollo del Acta:</div>
+    ${ataCorpo.split('\n\n').map(bloco=>{
+      const linhas=bloco.split('\n');
+      const titulo=linhas[0].endsWith(':')?linhas.shift():'';
+      return `<div class="corpo-bloco">${titulo?`<div class="corpo-titulo">${titulo}</div>`:''}
+      <div class="corpo-texto">${linhas.join('\n')}</div></div>`;
+    }).join('')}`:''}
+    ${sigBoxes?`<div class="sigs-titulo">FIRMAS DE LOS PRESENTES</div><div class="sigs-grid">${sigBoxes}</div>`:''}
+  </div></body></html>`);
+  win.document.close();
+  setTimeout(()=>win.print(),1000);
+}
+function uploadPDF(input){
+  const file=input.files[0];if(!file)return;
+  const status=document.getElementById('upload-status');
+  status.innerHTML='<span style="color:#64748b">Enviando...</span>';
+  const fd=new FormData();fd.append('pdf',file);
+  fetch('/atas/<%=ata.id%>/pdf-upload',{method:'POST',body:fd})
+  .then(r=>r.json()).then(d=>{
+    if(d.ok){status.innerHTML='<span style="color:#166534;font-weight:700">Enviado com sucesso!</span>';setTimeout(()=>location.reload(),1500);}
+    else status.innerHTML='<span style="color:#dc2626">'+(d.erro||'Erro ao enviar')+'</span>';
+  });
+}
+</script>
+</body></html>

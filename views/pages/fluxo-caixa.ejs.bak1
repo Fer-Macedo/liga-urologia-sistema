@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fluxo de Caixa — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+<style>
+.fc-page { padding: 28px 32px; max-width: 1400px; }
+.fc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; flex-wrap:wrap; gap:12px; }
+.fc-titulo { font-size:22px; font-weight:700; color:#1a2e0e; display:flex; align-items:center; gap:10px; }
+.fc-titulo svg { color:#2b6803; }
+.fc-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+.fc-filtro { display:flex; align-items:center; gap:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:6px 14px; }
+.fc-filtro select { border:none; background:transparent; font-size:14px; color:#374151; font-weight:600; cursor:pointer; outline:none; }
+.fc-cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:16px; margin-bottom:28px; }
+.fc-card { background:#fff; border-radius:12px; padding:20px 22px; box-shadow:0 1px 4px rgba(0,0,0,.07); border-top:4px solid transparent; }
+.fc-card.entrada { border-color:#16a34a; } .fc-card.saida { border-color:#dc2626; }
+.fc-card.saldo-p { border-color:#2b6803; } .fc-card.saldo-n { border-color:#dc2626; }
+.fc-card.lanctos { border-color:#3b82f6; }
+.fc-card-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.6px; color:#6b7280; margin-bottom:8px; }
+.fc-card-valor { font-size:24px; font-weight:800; line-height:1; }
+.fc-card.entrada .fc-card-valor { color:#16a34a; } .fc-card.saida .fc-card-valor { color:#dc2626; }
+.fc-card.saldo-p .fc-card-valor { color:#2b6803; } .fc-card.saldo-n .fc-card-valor { color:#dc2626; }
+.fc-card.lanctos .fc-card-valor { color:#3b82f6; }
+.fc-card-sub { font-size:12px; color:#9ca3af; margin-top:5px; }
+.btn-entrada { background:#16a34a; color:#fff; border:none; border-radius:8px; padding:9px 18px; font-size:14px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; transition:.2s; }
+.btn-entrada:hover { background:#15803d; }
+.btn-saida { background:#dc2626; color:#fff; border:none; border-radius:8px; padding:9px 18px; font-size:14px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:6px; transition:.2s; }
+.btn-saida:hover { background:#b91c1c; }
+.btn-export { background:#fff; color:#374151; border:1px solid #d1d5db; border-radius:8px; padding:9px 16px; font-size:14px; cursor:pointer; display:flex; align-items:center; gap:6px; }
+.btn-export:hover { background:#f9fafb; }
+.fc-table-wrap { background:#fff; border-radius:12px; box-shadow:0 1px 4px rgba(0,0,0,.07); overflow:hidden; }
+.fc-table-header { display:flex; align-items:center; justify-content:space-between; padding:16px 22px; border-bottom:1px solid #f1f5f9; gap:12px; flex-wrap:wrap; }
+.fc-table-title { font-size:15px; font-weight:700; color:#1a2e0e; }
+.fc-search { display:flex; align-items:center; gap:8px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:7px 12px; }
+.fc-search input { border:none; background:transparent; outline:none; font-size:13px; color:#374151; width:180px; }
+.fc-filter-tipo { display:flex; gap:6px; }
+.fc-filter-tipo button { background:#f1f5f9; border:none; border-radius:6px; padding:5px 12px; font-size:12px; font-weight:600; cursor:pointer; color:#6b7280; transition:.2s; }
+.fc-filter-tipo button.at { background:#374151; color:#fff; }
+.fc-filter-tipo button.ae { background:#16a34a; color:#fff; }
+.fc-filter-tipo button.as { background:#dc2626; color:#fff; }
+table.fc-table { width:100%; border-collapse:collapse; }
+table.fc-table thead th { background:#f8fafc; padding:11px 16px; text-align:left; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:#6b7280; border-bottom:1px solid #e9eef4; white-space:nowrap; }
+table.fc-table tbody tr { border-bottom:1px solid #f1f5f9; transition:.15s; }
+table.fc-table tbody tr:last-child { border-bottom:none; }
+table.fc-table tbody tr:hover { background:#f8fafc; }
+table.fc-table td { padding:12px 16px; font-size:13px; color:#374151; vertical-align:middle; }
+.badge-tipo { display:inline-flex; align-items:center; gap:5px; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; }
+.badge-tipo.E { background:#dcfce7; color:#16a34a; } .badge-tipo.S { background:#fee2e2; color:#dc2626; }
+.badge-cat { background:#f1f5f9; color:#475569; padding:2px 9px; border-radius:6px; font-size:11px; font-weight:600; white-space:nowrap; }
+.nf-btn { display:inline-flex; align-items:center; gap:4px; color:#2b6803; font-size:12px; font-weight:600; cursor:pointer; background:#f0f7eb; padding:3px 9px; border-radius:6px; border:none; }
+.nf-btn:hover { background:#dbefd3; }
+.nf-sem { color:#d1d5db; font-size:12px; }
+.fc-acoes { display:flex; gap:4px; }
+.btn-icon { border:none; background:transparent; cursor:pointer; padding:5px 7px; border-radius:6px; color:#9ca3af; transition:.2s; }
+.btn-icon:hover { background:#f1f5f9; color:#2b6803; }
+.btn-icon.del:hover { color:#dc2626; background:#fee2e2; }
+.fc-empty { text-align:center; padding:56px; color:#9ca3af; }
+.fc-empty svg { display:block; margin:0 auto 12px; opacity:.25; }
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:center; justify-content:center; padding:20px; }
+.modal-overlay.open { display:flex; }
+.modal-box { background:#fff; border-radius:16px; width:100%; max-width:560px; box-shadow:0 20px 60px rgba(0,0,0,.2); max-height:92vh; overflow-y:auto; }
+.modal-head { padding:20px 24px; border-radius:16px 16px 0 0; display:flex; align-items:center; justify-content:space-between; }
+.modal-head.hentrada { background:linear-gradient(135deg,#16a34a,#15803d); }
+.modal-head.hsaida { background:linear-gradient(135deg,#dc2626,#b91c1c); }
+.modal-head h3 { color:#fff; font-size:17px; font-weight:700; margin:0; }
+.modal-close { background:rgba(255,255,255,.2); border:none; color:#fff; border-radius:8px; width:32px; height:32px; cursor:pointer; font-size:20px; display:flex; align-items:center; justify-content:center; }
+.modal-close:hover { background:rgba(255,255,255,.35); }
+.modal-body { padding:24px; }
+.form-row { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:14px; }
+.form-row.full { grid-template-columns:1fr; }
+.form-group { display:flex; flex-direction:column; gap:5px; }
+.form-group label { font-size:11px; font-weight:700; color:#374151; text-transform:uppercase; letter-spacing:.4px; }
+.form-group input, .form-group select, .form-group textarea { border:1.5px solid #e2e8f0; border-radius:8px; padding:9px 12px; font-size:14px; color:#1f2937; transition:.2s; background:#fafafa; font-family:inherit; }
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline:none; border-color:#2b6803; background:#fff; }
+.form-group textarea { resize:vertical; min-height:72px; }
+.upload-area { border:2px dashed #d1d5db; border-radius:10px; padding:20px; text-align:center; cursor:pointer; transition:.2s; background:#fafafa; position:relative; }
+.upload-area:hover { border-color:#2b6803; background:#f0f7eb; }
+.upload-area input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.upload-label { font-size:13px; color:#6b7280; pointer-events:none; }
+.upload-label span { display:block; font-size:11px; color:#9ca3af; margin-top:3px; }
+.upload-preview { display:none; margin-top:10px; align-items:center; gap:10px; background:#f0f7eb; border-radius:8px; padding:8px 12px; }
+.upload-preview-nome { font-size:12px; color:#2b6803; font-weight:600; flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.upload-preview-del { background:none; border:none; color:#dc2626; cursor:pointer; font-size:18px; padding:0 4px; line-height:1; }
+.modal-footer { display:flex; justify-content:flex-end; gap:10px; padding:0 24px 24px; }
+.btn-cancelar { background:#f1f5f9; color:#374151; border:none; border-radius:8px; padding:10px 20px; font-size:14px; font-weight:600; cursor:pointer; }
+.btn-cancelar:hover { background:#e5e7eb; }
+.btn-salvar { border:none; border-radius:8px; padding:10px 24px; font-size:14px; font-weight:700; cursor:pointer; color:#fff; }
+.btn-salvar.se { background:#16a34a; } .btn-salvar.se:hover { background:#15803d; }
+.btn-salvar.ss { background:#dc2626; } .btn-salvar.ss:hover { background:#b91c1c; }
+.modal-nf-box { background:#fff; border-radius:16px; width:100%; max-width:700px; max-height:90vh; overflow-y:auto; }
+.modal-nf-head { padding:18px 22px; border-bottom:1px solid #f1f5f9; display:flex; align-items:center; justify-content:space-between; }
+.modal-nf-head h3 { font-size:15px; font-weight:700; color:#1a2e0e; margin:0; }
+.modal-nf-body { padding:22px; text-align:center; }
+.modal-nf-body img { max-width:100%; border-radius:10px; border:1px solid #e2e8f0; max-height:65vh; object-fit:contain; }
+.nf-pdf-link { display:inline-flex; align-items:center; gap:8px; background:#f0f7eb; color:#2b6803; padding:14px 24px; border-radius:10px; font-weight:700; text-decoration:none; font-size:14px; margin-top:12px; }
+.nf-pdf-link:hover { background:#dbefd3; }
+.flash-msg { padding:12px 18px; border-radius:8px; margin-bottom:16px; font-size:14px; font-weight:600; }
+.flash-msg.ok { background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; }
+.flash-msg.err { background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; }
+@media(max-width:640px){ .fc-page{padding:16px;} .form-row{grid-template-columns:1fr;} .fc-cards{grid-template-columns:1fr 1fr;} }
+</style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'fluxo-caixa' }) %>
+  <main class="main">
+
+
+<div class="fc-page">
+  <% if(msg&&msg.length){ %><div class="flash-msg ok"><%= msg[0] %></div><% } %>
+  <% if(erro&&erro.length){ %><div class="flash-msg err"><%= erro[0] %></div><% } %>
+
+  <div class="fc-header">
+    <div class="fc-titulo">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Fluxo de Caixa
+    </div>
+    <div class="fc-actions">
+      <div class="fc-filtro">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6b7280" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <select id="filtroMes" onchange="filtrarMes()">
+          <% const mesesNomes=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+             const hoje=new Date();
+             for(let a=hoje.getFullYear();a>=hoje.getFullYear()-2;a--){
+               const mMax=(a===hoje.getFullYear())?hoje.getMonth():11;
+               for(let m=mMax;m>=0;m--){
+                 const val=`${a}-${String(m+1).padStart(2,'0')}`;
+                 const sel=val===mesAtual?'selected':''; %>
+            <option value="<%= val %>" <%= sel %>><%= mesesNomes[m] %> <%= a %></option>
+          <% }} %>
+        </select>
+      </div>
+      <button class="btn-export" onclick="exportarCSV()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Exportar CSV
+      </button>
+      <button class="btn-entrada" onclick="abrirModal('entrada')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nova Entrada
+      </button>
+      <button class="btn-saida" onclick="abrirModal('saida')">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Nova Saída
+      </button>
+    </div>
+  </div>
+
+  <div class="fc-cards">
+    <div class="fc-card entrada">
+      <div class="fc-card-label">Total Entradas</div>
+      <div class="fc-card-valor">R$ <%= totalEntradas.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
+      <div class="fc-card-sub"><%= qtdEntradas %> lançamento<%= qtdEntradas!==1?'s':'' %></div>
+    </div>
+    <div class="fc-card saida">
+      <div class="fc-card-label">Total Saídas</div>
+      <div class="fc-card-valor">R$ <%= totalSaidas.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
+      <div class="fc-card-sub"><%= qtdSaidas %> lançamento<%= qtdSaidas!==1?'s':'' %></div>
+    </div>
+    <div class="fc-card <%= saldo>=0?'saldo-p':'saldo-n' %>">
+      <div class="fc-card-label">Saldo do Mês</div>
+      <div class="fc-card-valor"><%= saldo<0?'-':'' %>R$ <%= Math.abs(saldo).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
+      <div class="fc-card-sub"><%= saldo>=0?'✓ Positivo':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Negativo' %></div>
+    </div>
+    <div class="fc-card lanctos">
+      <div class="fc-card-label">Lançamentos</div>
+      <div class="fc-card-valor"><%= qtdEntradas+qtdSaidas %></div>
+      <div class="fc-card-sub">no mês selecionado</div>
+    </div>
+  </div>
+
+  <div class="fc-table-wrap">
+    <div class="fc-table-header">
+      <div class="fc-table-title">Lançamentos — <%= mesNome %></div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <div class="fc-filter-tipo">
+          <button id="btnT" class="at" onclick="filtroTipo('T',this)">Todos</button>
+          <button id="btnE" onclick="filtroTipo('E',this)">Entradas</button>
+          <button id="btnS" onclick="filtroTipo('S',this)">Saídas</button>
+        </div>
+        <div class="fc-search">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="buscaTxt" placeholder="Buscar descrição..." oninput="buscar()">
+        </div>
+      </div>
+    </div>
+
+    <% if(lancamentos.length===0){ %>
+      <div class="fc-empty">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        <p>Nenhum lançamento neste mês.</p>
+      </div>
+    <% } else { %>
+    <div style="overflow-x:auto;">
+    <table class="fc-table">
+      <thead>
+        <tr>
+          <th>Data</th><th>Tipo</th><th>Categoria</th><th>Descrição</th>
+          <th style="text-align:right">Valor</th><th>NF/Comprovante</th><th>Observações</th><th></th>
+        </tr>
+      </thead>
+      <tbody id="corpoTabela">
+        <% lancamentos.forEach(function(l){ 
+          var dt=new Date(l.data_lancamento);
+          dt.setMinutes(dt.getMinutes()+dt.getTimezoneOffset());
+          var dtStr=dt.toLocaleDateString('pt-BR');
+          var lJson=JSON.stringify(l).replace(/"/g,'&quot;');
+        %>
+        <tr data-tipo="<%= l.tipo %>" data-desc="<%= l.descricao.toLowerCase().replace(/"/g,'') %>">
+          <td style="white-space:nowrap"><%= dtStr %></td>
+          <td>
+            <span class="badge-tipo <%= l.tipo %>">
+              <% if(l.tipo==='E'){ %>+ Entrada<% }else{ %>− Saída<% } %>
+            </span>
+          </td>
+          <td><span class="badge-cat"><%= l.categoria %></span></td>
+          <td style="max-width:260px"><%= l.descricao %></td>
+          <td style="text-align:right;font-weight:700;color:<%= l.tipo==='E'?'#16a34a':'#dc2626' %>">
+            <%= l.tipo==='S'?'-':'' %>R$ <%= parseFloat(l.valor).toLocaleString('pt-BR',{minimumFractionDigits:2}) %>
+          </td>
+          <td>
+            <% if(l.nf_chave){ %>
+              <button class="nf-btn" onclick="verNF(<%= l.id %>,'<%= (l.nf_nome_original||'Comprovante').replace(/'/g,"\\'") %>')">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Ver NF
+              </button>
+            <% }else{ %><span class="nf-sem">—</span><% } %>
+          </td>
+          <td style="max-width:180px;color:#6b7280;font-size:12px"><%= l.observacoes||'' %></td>
+          <td>
+            <div class="fc-acoes">
+              <button class="btn-icon" title="Editar" onclick='editarLancamento(<%= lJson %>)'>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button class="btn-icon del" title="Excluir" onclick="excluir(<%= l.id %>,'<%= l.descricao.replace(/'/g,"\\'").replace(/"/g,'') %>')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    </div>
+    <% } %>
+  </div>
+</div>
+
+<!-- MODAL LANÇAMENTO -->
+<div class="modal-overlay" id="modalLancamento">
+  <div class="modal-box">
+    <div class="modal-head hentrada" id="modalHead">
+      <h3 id="modalTitulo">Novo Lançamento</h3>
+      <button class="modal-close" onclick="fecharModal()">×</button>
+    </div>
+    <form id="formLancamento" method="POST" action="/fluxo-caixa/novo" enctype="multipart/form-data">
+      <input type="hidden" name="tipo" id="fTipo" value="E">
+      <input type="hidden" name="id" id="fId">
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Data *</label>
+            <input type="date" name="data_lancamento" id="fData" required>
+          </div>
+          <div class="form-group">
+            <label>Valor (R$) *</label>
+            <input type="number" name="valor" id="fValor" step="0.01" min="0.01" placeholder="0,00" required>
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Descrição *</label>
+            <input type="text" name="descricao" id="fDesc" placeholder="Descreva o lançamento" required maxlength="255">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Categoria *</label>
+            <select name="categoria" id="fCat" required>
+              <option value="">Selecione...</option>
+              <optgroup label="Entradas">
+                <option>Mensalidade</option><option>Inscrições</option><option>Doações</option>
+                <option>Rendimento</option><option>Eventos</option><option>Saldo Anterior</option><option>Outras Entradas</option>
+              </optgroup>
+              <optgroup label="Saídas">
+                <option>Fatura/Cartão</option><option>Tecnologia</option><option>Alimentação</option>
+                <option>Brindes/Presentes</option><option>Decoração/Material</option><option>Transporte</option>
+                <option>Fardamento</option><option>Material Médico</option><option>Materiais Evento</option>
+                <option>Repasse/Pagamento</option><option>Outras Saídas</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Forma / Observação</label>
+            <input type="text" name="observacoes" id="fObs" placeholder="PIX, Cartão, CAIXA...">
+          </div>
+        </div>
+        <div class="form-row full">
+          <div class="form-group">
+            <label>Nota Fiscal / Comprovante</label>
+            <div class="upload-area">
+              <input type="file" name="nf" id="fNF" accept="image/*,.pdf" onchange="previewNF(this)">
+              <div class="upload-label">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5" style="display:block;margin:0 auto 8px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                Clique para anexar imagem ou PDF
+                <span>JPG, PNG, PDF — máx. 10MB</span>
+              </div>
+            </div>
+            <div class="upload-preview" id="uploadPreview">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2b6803" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <span class="upload-preview-nome" id="uploadNome"></span>
+              <button type="button" class="upload-preview-del" onclick="removerNF()">×</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn-salvar se" id="btnSalvar">Salvar Entrada</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL VER NF -->
+<div class="modal-overlay" id="modalNF">
+  <div class="modal-nf-box">
+    <div class="modal-nf-head">
+      <h3 id="nfTitulo">Comprovante</h3>
+      <button class="modal-close" style="background:#f1f5f9;color:#374151;" onclick="fecharNF()">×</button>
+    </div>
+    <div class="modal-nf-body" id="nfConteudo"><p style="color:#9ca3af">Carregando...</p></div>
+  </div>
+</div>
+
+<script>
+const mesAtual='<%= mesAtual %>';
+function filtrarMes(){ window.location.href='/fluxo-caixa?mes='+document.getElementById('filtroMes').value; }
+function filtroTipo(t,btn){
+  document.querySelectorAll('.fc-filter-tipo button').forEach(b=>b.className='');
+  btn.className=t==='T'?'at':t==='E'?'ae':'as';
+  document.querySelectorAll('#corpoTabela tr').forEach(tr=>{ tr.style.display=(t==='T'||tr.dataset.tipo===t)?'':'none'; });
+}
+function buscar(){ const q=document.getElementById('buscaTxt').value.toLowerCase(); document.querySelectorAll('#corpoTabela tr').forEach(tr=>{ tr.style.display=tr.dataset.desc.includes(q)?'':'none'; }); }
+function abrirModal(tipo){
+  const isE=tipo==='entrada';
+  document.getElementById('formLancamento').action='/fluxo-caixa/novo';
+  document.getElementById('fId').value='';
+  document.getElementById('formLancamento').reset();
+  document.getElementById('uploadPreview').style.display='none';
+  document.getElementById('modalHead').className='modal-head h'+tipo;
+  document.getElementById('modalTitulo').textContent=isE?'+ Nova Entrada':'− Nova Saída';
+  document.getElementById('fTipo').value=isE?'E':'S';
+  document.getElementById('btnSalvar').className='btn-salvar '+(isE?'se':'ss');
+  document.getElementById('btnSalvar').textContent='Salvar '+(isE?'Entrada':'Saída');
+  document.getElementById('fData').value=new Date().toISOString().split('T')[0];
+  document.getElementById('modalLancamento').classList.add('open');
+}
+function editarLancamento(l){
+  const isE=l.tipo==='E';
+  document.getElementById('formLancamento').action='/fluxo-caixa/'+l.id+'/editar';
+  document.getElementById('fId').value=l.id;
+  document.getElementById('modalHead').className='modal-head h'+(isE?'entrada':'saida');
+  document.getElementById('modalTitulo').textContent='Editar Lançamento';
+  document.getElementById('fTipo').value=l.tipo;
+  document.getElementById('btnSalvar').className='btn-salvar '+(isE?'se':'ss');
+  document.getElementById('btnSalvar').textContent='Salvar';
+  const d=new Date(l.data_lancamento); d.setMinutes(d.getMinutes()+d.getTimezoneOffset());
+  document.getElementById('fData').value=d.toISOString().split('T')[0];
+  document.getElementById('fValor').value=parseFloat(l.valor);
+  document.getElementById('fDesc').value=l.descricao;
+  document.getElementById('fCat').value=l.categoria;
+  document.getElementById('fObs').value=l.observacoes||'';
+  document.getElementById('uploadPreview').style.display='none';
+  document.getElementById('modalLancamento').classList.add('open');
+}
+function fecharModal(){ document.getElementById('modalLancamento').classList.remove('open'); }
+function previewNF(inp){ if(inp.files&&inp.files[0]){ document.getElementById('uploadNome').textContent=inp.files[0].name; document.getElementById('uploadPreview').style.display='flex'; } }
+function removerNF(){ document.getElementById('fNF').value=''; document.getElementById('uploadPreview').style.display='none'; }
+function excluir(id,desc){ if(!confirm('Excluir: "'+desc+'"?\nEsta ação não pode ser desfeita.'))return; const f=document.createElement('form');f.method='POST';f.action='/fluxo-caixa/'+id+'/excluir';document.body.appendChild(f);f.submit(); }
+async function verNF(id,nome){
+  document.getElementById('nfTitulo').textContent=nome;
+  document.getElementById('nfConteudo').innerHTML='<p style="color:#9ca3af;padding:24px">Carregando...</p>';
+  document.getElementById('modalNF').classList.add('open');
+  try{
+    const r=await fetch('/fluxo-caixa/'+id+'/nf-url');
+    const data=await r.json();
+    if(data.url){
+      const ext=(data.nome||'').split('.').pop().toLowerCase();
+      if(ext==='pdf') document.getElementById('nfConteudo').innerHTML=`<a href="${data.url}" target="_blank" class="nf-pdf-link">Abrir PDF em nova aba</a>`;
+      else document.getElementById('nfConteudo').innerHTML=`<img src="${data.url}" alt="NF"><br><a href="${data.url}" target="_blank" class="nf-pdf-link" style="margin-top:12px;display:inline-flex">Abrir em nova aba</a>`;
+    }else{ document.getElementById('nfConteudo').innerHTML='<p style="color:#dc2626">Arquivo não encontrado.</p>'; }
+  }catch(e){ document.getElementById('nfConteudo').innerHTML='<p style="color:#dc2626">Erro ao carregar.</p>'; }
+}
+function fecharNF(){ document.getElementById('modalNF').classList.remove('open'); }
+function exportarCSV(){
+  const rows=[['Data','Tipo','Categoria','Descrição','Valor','Observações']];
+  document.querySelectorAll('#corpoTabela tr').forEach(tr=>{
+    if(tr.style.display==='none')return;
+    const tds=tr.querySelectorAll('td'); if(tds.length<7)return;
+    rows.push([tds[0].textContent.trim(),tds[1].textContent.trim(),tds[2].textContent.trim(),tds[3].textContent.trim(),tds[4].textContent.trim(),tds[6].textContent.trim()]);
+  });
+  const csv=rows.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv); a.download='fluxo-caixa-<%=mesAtual%>.csv'; a.click();
+}
+document.getElementById('modalLancamento').addEventListener('click',e=>{if(e.target===e.currentTarget)fecharModal();});
+document.getElementById('modalNF').addEventListener('click',e=>{if(e.target===e.currentTarget)fecharNF();});
+</script>
+  </main>
+</div>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Editar Ligante — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#2b6803' %>; }
+    .page-titulo { font-family:'Plus Jakarta Sans','Outfit',sans-serif !important; font-weight:700 !important; }
+    .label { font-family:'Plus Jakarta Sans','Outfit',sans-serif !important; font-weight:600 !important; }
+    .card-form { background:var(--card);border:1.5px solid var(--borda);border-radius:14px;padding:24px;margin-bottom:20px; }
+    .card-form-titulo { font-family:'Plus Jakarta Sans','Outfit',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--cor-primaria);margin-bottom:18px;padding-bottom:10px;border-bottom:1.5px solid var(--borda); }
+    .form-grid { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
+    .form-full { grid-column:1/-1; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'ligantes' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">✏️ Editar Ligante</h1>
+      <a href="/ligantes" class="btn">← Voltar</a>
+    </div>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok">✅ <%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro">❌ <%= erro[0] %></div><% } %>
+
+      <form action="/ligantes/<%= ligante.id %>/editar" method="POST" enctype="multipart/form-data">
+        <div class="card" style="margin-bottom:20px">
+          <div style="font-size:14px;font-weight:700;margin-bottom:16px">👤 Dados Pessoais</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="campo" style="grid-column:1/-1"><label class="label">Nome Completo *</label><input name="nome" class="input" required value="<%= ligante.nome||'' %>"></div>
+            <div class="campo"><label class="label">Data de Nascimento</label><input name="data_nascimento" type="date" class="input" value="<%= ligante.data_nascimento ? new Date(ligante.data_nascimento).toISOString().split('T')[0] : '' %>"></div>
+            <div class="campo"><label class="label">Sexo</label>
+              <select name="sexo" class="input">
+                <option value="">Selecione...</option>
+                <option value="Masculino" <%= ligante.sexo==='Masculino'?'selected':'' %>>Masculino</option>
+                <option value="Feminino" <%= ligante.sexo==='Feminino'?'selected':'' %>>Feminino</option>
+                <option value="Prefiro não informar" <%= ligante.sexo==='Prefiro não informar'?'selected':'' %>>Prefiro não informar</option>
+              </select>
+            </div>
+            <div class="campo"><label class="label">E-mail *</label><input name="email" type="email" class="input" required value="<%= ligante.email||'' %>"></div>
+            <div class="campo"><label class="label">E-mail alternativo</label><input name="email_alternativo" class="input" value="<%= ligante.email_alternativo||'' %>"></div>
+            <div class="campo">
+              <label class="label">WhatsApp *</label>
+              <div style="display:flex;gap:8px">
+                <select id="ddi-wpp" class="input" style="width:150px" onchange="atualizarWpp()">
+                  <option value="55">Brasil (+55)</option>
+                  <option value="595">Paraguai (+595)</option>
+                  <option value="54">Argentina (+54)</option>
+                  <option value="598">Uruguai (+598)</option>
+                  <option value="591">Bolívia (+591)</option>
+                  <option value="56">Chile (+56)</option>
+                  <option value="57">Colômbia (+57)</option>
+                  <option value="1">EUA/Canadá (+1)</option>
+                </select>
+                <input id="num-wpp" class="input" placeholder="DDD + número" oninput="atualizarWpp()" style="flex:1">
+              </div>
+              <input type="hidden" name="whatsapp" id="wpp-final" value="<%= ligante.whatsapp||'' %>">
+              <div id="wpp-preview" style="font-size:11px;color:var(--texto2);margin-top:4px"></div>
+            </div>
+            <div class="campo"><label class="label">RG / C.I. / D.N.I.</label><input name="rg" class="input" value="<%= ligante.rg||'' %>"></div>
+            <div class="campo"><label class="label">CPF</label><input name="cpf" class="input" value="<%= ligante.cpf||'' %>"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div style="font-size:14px;font-weight:700;margin-bottom:16px">🎓 Dados Acadêmicos</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+            <div class="campo"><label class="label">Semestre</label><input name="semestre" class="input" value="<%= ligante.semestre||'' %>"></div>
+            <div class="campo"><label class="label">Turma</label><input name="turma" class="input" placeholder="Ex: 2B, 5A..." value="<%= ligante.turma||'' %>"></div>
+            <div class="campo"><label class="label">Catraca</label><input name="catraca" class="input" value="<%= ligante.catraca||'' %>"></div>
+            <div class="campo"><label class="label">ORCID</label><input name="orcid" class="input" value="<%= ligante.orcid||'' %>"></div>
+            <div class="campo"><label class="label">Tem formação?</label>
+              <select name="tem_formacao" class="input">
+                <option value="">-</option>
+                <option value="Sim" <%= ligante.tem_formacao==='Sim'?'selected':'' %>>Sim</option>
+                <option value="Não" <%= ligante.tem_formacao==='Não'?'selected':'' %>>Não</option>
+              </select>
+            </div>
+            <div class="campo"><label class="label">Qual formação?</label><input name="qual_formacao" class="input" value="<%= ligante.qual_formacao||'' %>"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:20px">
+          <div style="font-size:14px;font-weight:700;margin-bottom:16px">💡 Perfil e Motivação</div>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <div class="campo"><label class="label">Habilidades</label><textarea name="habilidades" class="input" rows="2"><%= ligante.habilidades||'' %></textarea></div>
+            <div class="campo"><label class="label">Aceita cargo?</label>
+              <select name="aceita_cargo" class="input">
+                <option value="">-</option>
+                <option value="Sim" <%= ligante.aceita_cargo==='Sim'?'selected':'' %>>Sim</option>
+                <option value="Não" <%= ligante.aceita_cargo==='Não'?'selected':'' %>>Não</option>
+                <option value="Talvez" <%= ligante.aceita_cargo==='Talvez'?'selected':'' %>>Talvez</option>
+              </select>
+            </div>
+            <div class="campo"><label class="label">Qual cargo?</label><input name="qual_cargo" class="input" value="<%= ligante.qual_cargo||'' %>"></div>
+            <div class="campo"><label class="label">Contribuição em grupo</label><input name="contribuicao_grupo" class="input" value="<%= ligante.contribuicao_grupo||'' %>"></div>
+            <div class="campo"><label class="label">Ideia inovadora</label><textarea name="ideia_inovadora" class="input" rows="2"><%= ligante.ideia_inovadora||'' %></textarea></div>
+            <div class="campo"><label class="label">Tema de interesse</label><input name="tema_interesse" class="input" value="<%= ligante.tema_interesse||'' %>"></div>
+            <div class="campo"><label class="label">Por que a LAURO? *</label><textarea name="porque_lauro" class="input" required rows="3"><%= ligante.porque_lauro||'' %></textarea></div>
+            <div class="campo"><label class="label">Apresentação *</label><textarea name="apresentacao" class="input" required rows="3"><%= ligante.apresentacao||'' %></textarea></div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:12px;justify-content:flex-end">
+          <a href="/ligantes" class="btn">Cancelar</a>
+          <div class="campo" style="margin-bottom:16px">
+            <label class="label">📷 Foto do Ligante</label>
+            <% if (ligante.foto_chave) { %>
+            <div style="margin-bottom:8px"><img src="/ligantes/<%= ligante.id %>/foto" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid var(--borda)"></div>
+            <% } %>
+            <input type="file" name="foto" class="input" accept="image/*">
+            <span style="font-size:11px;color:var(--texto2)">Deixe em branco para manter a foto atual</span>
+          </div>
+          <button type="submit" class="btn btn-primario">💾 Salvar alterações</button>
+        </div>
+      </form>
+    </div>
+  </main>
+</div>
+<script src="/js/app.js"><script>
+function atualizarWpp() {
+  const ddi = document.getElementById('ddi-wpp').value;
+  const num = document.getElementById('num-wpp').value.replace(/\D/g,'');
+  const final = ddi + num;
+  document.getElementById('wpp-final').value = final;
+  document.getElementById('wpp-preview').textContent = num ? 'Número: +' + final : '';
+}
+// Inicializar com valor atual
+(function() {
+  const atual = '<%= ligante.whatsapp||"" %>';
+  if (!atual) return;
+  const ddis = ['595','55','54','598','591','56','57','1'];
+  for (const d of ddis) {
+    if (atual.startsWith(d)) {
+      document.getElementById('ddi-wpp').value = d;
+      document.getElementById('num-wpp').value = atual.slice(d.length);
+      document.getElementById('wpp-preview').textContent = 'Número: +' + atual;
+      break;
+    }
+  }
+})();
+</script>
+</body>
+</html>

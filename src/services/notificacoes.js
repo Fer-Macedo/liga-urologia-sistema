@@ -10,6 +10,10 @@ require('dotenv').config();
 const filaEnvio = [];
 let filaProcessando = false;
 
+// MODO AQUECIMENTO: suspende disparos proativos de WhatsApp (cobrança, frequência, etc)
+// Manter true até o número estar aquecido (~10 dias). Só o assistente virtual funciona.
+const WAPP_SOMENTE_RESPOSTA = process.env.WAPP_SOMENTE_RESPOSTA === 'true';
+
 const LOTE_TAM         = parseInt(process.env.WAPP_LOTE_TAM)        || 5;   // msgs por lote
 const INTERVALO_MSG    = parseInt(process.env.WAPP_INTERVALO_MSG)    || 30;  // segundos entre mensagens
 const INTERVALO_LOTE   = parseInt(process.env.WAPP_INTERVALO_LOTE)  || 120; // segundos entre lotes
@@ -18,64 +22,88 @@ function sleep(segundos) {
   return new Promise(r => setTimeout(r, segundos * 1000));
 }
 
+const LIMITE_DIARIO = parseInt(process.env.WAPP_LIMITE_DIARIO) || 50;
+const HORA_INICIO   = parseInt(process.env.WAPP_HORA_INICIO)   || 8;
+const HORA_FIM      = parseInt(process.env.WAPP_HORA_FIM)      || 20;
+let enviosHoje = 0;
+let ultimoResetDia = new Date().toDateString();
+function resetarContadorDiario() {
+  const hoje = new Date().toDateString();
+  if (hoje !== ultimoResetDia) { enviosHoje = 0; ultimoResetDia = hoje; console.log('[FILA WAPP] Contador diário resetado'); }
+}
+function dentroHorarioPermitido() {
+  const hora = parseInt(new Date().toLocaleString('pt-BR', { timeZone: 'America/Asuncion', hour: 'numeric', hour12: false }));
+  return hora >= HORA_INICIO && hora < HORA_FIM;
+}
 async function processarFila() {
   if (filaProcessando || filaEnvio.length === 0) return;
   filaProcessando = true;
-  console.log(`[FILA WAPP] Iniciando envio de ${filaEnvio.length} mensagem(ns) em lotes de ${LOTE_TAM}`);
-
-  let enviados = 0;
-  let erros = 0;
-
+  resetarContadorDiario();
+  if (!dentroHorarioPermitido()) {
+    console.log(`[FILA WAPP] Fora do horário (${HORA_INICIO}h-${HORA_FIM}h). Tentando em 30min...`);
+    filaProcessando = false;
+    setTimeout(processarFila, 30 * 60 * 1000);
+    return;
+  }
+  // PROTECAO ANTI-SPAM: nunca processar mais de LOTE_TAM msgs sem pausa
+  if (filaEnvio.length > LOTE_TAM) {
+    console.log(`[FILA WAPP] Fila grande (${filaEnvio.length} msgs) - processando em lotes com pausa obrigatoria`);
+  }
+  console.log(`[FILA WAPP] Iniciando ${filaEnvio.length} msg(s) | lote=${LOTE_TAM} | hoje=${enviosHoje}/${LIMITE_DIARIO}`);
+  let enviados = 0, erros = 0;
   while (filaEnvio.length > 0) {
+    resetarContadorDiario();
+    if (enviosHoje >= LIMITE_DIARIO) { console.warn(`[FILA WAPP] Limite diário ${LIMITE_DIARIO} atingido. ${filaEnvio.length} msg(s) pendentes.`); break; }
+    if (!dentroHorarioPermitido()) { console.log('[FILA WAPP] Saiu do horário. Pausando.'); break; }
     const lote = filaEnvio.splice(0, LOTE_TAM);
-
     for (let i = 0; i < lote.length; i++) {
       const { numero, mensagem, resolve } = lote[i];
+      if (enviosHoje >= LIMITE_DIARIO) { filaEnvio.unshift(...lote.slice(i)); resolve({ ok: false }); break; }
       try {
         const result = await _enviarWhatsAppDireto(numero, mensagem);
         resolve(result);
-        if (result.ok) enviados++;
-        else erros++;
-      } catch(e) {
-        resolve({ ok: false });
-        erros++;
-      }
-
-      // Intervalo entre mensagens dentro do lote (exceto na última)
+        if (result.ok) { enviados++; enviosHoje++; } else erros++;
+      } catch(e) { resolve({ ok: false }); erros++; }
       if (i < lote.length - 1) {
-        const intervalo = INTERVALO_MSG + Math.floor(Math.random() * 10); // +0-10s aleatório
-        console.log(`[FILA WAPP] Aguardando ${intervalo}s antes da próxima...`);
+        const intervalo = INTERVALO_MSG + Math.floor(Math.random() * 15);
+        console.log(`[FILA WAPP] Aguardando ${intervalo}s... (${enviosHoje}/${LIMITE_DIARIO} hoje)`);
         await sleep(intervalo);
       }
     }
-
-    // Intervalo entre lotes (se ainda houver mensagens)
-    if (filaEnvio.length > 0) {
-      console.log(`[FILA WAPP] Lote concluído. Aguardando ${INTERVALO_LOTE}s antes do próximo lote... (${filaEnvio.length} restantes)`);
+    if (filaEnvio.length > 0 && enviosHoje < LIMITE_DIARIO && dentroHorarioPermitido()) {
+      console.log(`[FILA WAPP] Lote ok. Aguardando ${INTERVALO_LOTE}s... (${filaEnvio.length} restantes)`);
       await sleep(INTERVALO_LOTE);
     }
   }
-
-  console.log(`[FILA WAPP] Envio concluído — ${enviados} ok, ${erros} erros`);
+  console.log(`[FILA WAPP] Sessão ok — ${enviados} enviados, ${erros} erros, ${enviosHoje}/${LIMITE_DIARIO} hoje`);
   filaProcessando = false;
 }
 
-// Envia direto para a W-API (sem fila)
+function formatarNumero(numero) {
+  // Remove tudo que nao for numero
+  let n = (numero || '').replace(/[^0-9]/g, '');
+  // Remove espacos e caracteres especiais
+  if (!n) return '';
+  return n;
+}
+
+// Envia direto para a Z-API (sem fila)
 async function _enviarWhatsAppDireto(numero, mensagem) {
-  const token = process.env.ZAPAPI_TOKEN;
-  const instanceId = process.env.ZAPAPI_INSTANCE;
-  if (!token || !instanceId) { console.warn('W-API nao configurada'); return { ok: false }; }
+  const instanceId = process.env.ZAPI_INSTANCE;
+  const token = process.env.ZAPI_TOKEN;
+  if (!token || !instanceId) { console.warn('Z-API nao configurada'); return { ok: false }; }
   const fone = formatarNumero(numero);
   try {
+    const url = 'https://api.z-api.io/instances/' + instanceId + '/token/' + token + '/send-text';
     const { data, status } = await axios.post(
-      'https://api.w-api.app/v1/message/send-text?instanceId=' + instanceId,
-      { phone: fone, message: mensagem, instanceId: instanceId, delayMessage: 1 },
-      { headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }, timeout: 20000 }
+      url,
+      { phone: fone, message: mensagem },
+      { headers: { 'Content-Type': 'application/json', 'client-token': process.env.ZAPI_CLIENT_TOKEN }, timeout: 20000 }
     );
-    console.log('WhatsApp OK ' + fone + ' — ' + status);
+    console.log('WhatsApp Z-API OK ' + fone + ' — ' + status);
     return { ok: true, data };
   } catch (err) {
-    console.error('W-API ERRO ' + fone + ': ' + (err.response ? err.response.status : err.message));
+    console.error('Z-API ERRO ' + fone + ': ' + (err.response ? err.response.status : err.message));
     return { ok: false };
   }
 }
@@ -91,6 +119,14 @@ async function enviarWhatsAppFila(numero, mensagem) {
 
 // Envio imediato SEM fila (para mensagens urgentes/individuais)
 async function enviarWhatsApp(numero, mensagem, opts = {}) {
+  // PROTECAO: verificar se envio externo esta permitido
+  try {
+    const cfg = await query('SELECT valor FROM configuracoes WHERE chave=$1',['wapp_somente_cron']);
+    if (cfg.rows.length && cfg.rows[0].valor === '1' && opts.externo) {
+      console.warn('[WAPP BLOQUEADO] Envio externo bloqueado - use apenas o cron automatico');
+      return { ok: false, blocked: true };
+    }
+  } catch(e) {}
   if (opts.urgente) {
     // Urgente = direto, sem esperar fila (ex: confirmação de inscrição individual)
     return await _enviarWhatsAppDireto(numero, mensagem);
@@ -149,6 +185,7 @@ function htmlCobranca(opts) {
   const mensagem=opts.mensagem||'';
   const linkCartao=opts.linkCartao||null;
   const pixCode=opts.pixCode||null;
+  const qrBase64=opts.qrBase64||null;
   const orgNome=opts.orgNome||'Liga Academica de Urologia';
   const orgCor=opts.orgCor||'#1a56db';
   const orgLogo=opts.orgLogo||null;
@@ -175,9 +212,11 @@ function htmlCobranca(opts) {
      +'<span style="background:rgba(255,255,255,0.15);color:white;font-size:10px;padding:2px 10px;border-radius:3px;font-weight:600">RECOMENDADO</span>'
      +'</div>'
      +'<div style="background:#f0fdf4;padding:20px">'
+     +(qrBase64?'<div style="text-align:center;margin-bottom:16px"><img src="data:image/png;base64,'+qrBase64+'" alt="QR Code PIX" style="width:180px;height:180px;display:block;margin:0 auto"><p style="margin:8px 0 0;font-size:11px;color:#065f46">Escaneie o QR Code acima</p></div>':'')
      +'<p style="margin:0 0 10px;font-size:12px;color:#374151;line-height:1.6">Abra o aplicativo do seu banco, acesse a opcao <strong>PIX</strong>, selecione <strong>Pix Copia e Cola</strong> e insira o codigo abaixo:</p>'
      +'<div style="background:white;border:1px solid #a7f3d0;border-radius:8px;padding:12px;font-family:monospace;font-size:10px;color:#065f46;word-break:break-all;line-height:1.6;margin-bottom:10px">'+pixCode+'</div>'
-     +'<p style="margin:0;font-size:11px;color:#6b7280">O codigo tambem foi enviado separadamente pelo WhatsApp para facilitar a copia.</p>'
+     +'<p style="margin:0 0 8px;font-size:11px;color:#6b7280">Voce tambem pode acessar o portal do membro para visualizar e pagar:</p>'
+     +'<div style="text-align:center"><a href="https://membro.lauroucpcde.com" style="display:inline-block;background:#0F6E56;color:white;padding:10px 24px;border-radius:6px;text-decoration:none;font-weight:700;font-size:12px">Acessar Portal do Membro</a></div>'
      +'</div></div>'
     :'<div style="margin:0 0 16px;border-radius:12px;background:#f8fafc;border:1.5px solid #e2e8f0;padding:16px 20px">'
      +'<p style="margin:0;font-size:12px;color:#64748b;line-height:1.6">Para pagamento via <strong>PIX</strong>, entre em contato com a Diretoria Financeira pelo WhatsApp.</p>'
@@ -185,7 +224,7 @@ function htmlCobranca(opts) {
   const scartao=linkCartao
     ?'<div style="margin:0 0 16px;border-radius:12px;overflow:hidden;border:1.5px solid #bfdbfe"><div style="background:#1e3a8a;padding:12px 20px"><span style="color:white;font-weight:700;font-size:13px;letter-spacing:0.5px;text-transform:uppercase">Pagamento com Cartao de Credito</span></div><div style="background:#eff6ff;padding:20px;text-align:center"><p style="margin:0 0 16px;font-size:12px;color:#374151;line-height:1.6">Clique no botao abaixo para ser redirecionado ao ambiente seguro de pagamento:</p><a href="'+linkCartao+'" style="display:inline-block;background:'+orgCor+';color:white;padding:13px 40px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.5px;text-transform:uppercase">Pagar com Cartao</a><p style="margin:12px 0 0;font-size:10px;color:#94a3b8">Ambiente seguro — processado pelo PagBank</p></div></div>'
     :'';
-  return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f1f5f9"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px"><tr><td>'+cab+'</td></tr><tr><td style="background:white;padding:36px 40px"><div style="border-left:3px solid '+faixaCor+';padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:'+faixaCor+';letter-spacing:1.5px;text-transform:uppercase">'+faixaLabel+'</p><h2 style="margin:4px 0 0;font-size:18px;font-weight:700;color:#0f172a;line-height:1.3">'+titulo+'</h2></div><p style="margin:0 0 28px;font-size:14px;color:#475569;line-height:1.7">'+mensagem+'</p><div style="height:1px;background:#e2e8f0;margin:0 0 24px"></div><p style="margin:0 0 16px;font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:2px;text-transform:uppercase">Opcoes de pagamento</p>'+spix+scartao+'<div style="background:#f8fafc;border-radius:8px;padding:16px 20px;margin-top:8px;border:1px solid #e2e8f0"><p style="margin:0;font-size:12px;color:#64748b;line-height:1.7">Em caso de duvidas ou para confirmar o pagamento, entre em contato com a Diretoria Financeira respondendo este e-mail ou via WhatsApp.</p></div></td></tr><tr><td style="background:#0f172a;padding:24px 40px"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">'+orgNome+'</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">Mensagem automatica</p></td><td align="right"><p style="margin:0;color:rgba(255,255,255,0.3);font-size:9px;letter-spacing:1.5px;text-transform:uppercase">Powered by PagBank</p></td></tr></table></td></tr></table></td></tr></table></body></html>';
+  return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f1f5f9"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px"><tr><td>'+cab+'</td></tr><tr><td style="background:white;padding:36px 40px"><div style="border-left:3px solid '+faixaCor+';padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:'+faixaCor+';letter-spacing:1.5px;text-transform:uppercase">'+faixaLabel+'</p><h2 style="margin:4px 0 0;font-size:18px;font-weight:700;color:#0f172a;line-height:1.3">'+titulo+'</h2></div><p style="margin:0 0 28px;font-size:14px;color:#475569;line-height:1.7">'+mensagem+'</p><div style="height:1px;background:#e2e8f0;margin:0 0 24px"></div><p style="margin:0 0 16px;font-size:10px;font-weight:700;color:#94a3b8;letter-spacing:2px;text-transform:uppercase">Opcoes de pagamento</p>'+spix+scartao+'<div style="background:#f0fdf4;border-radius:8px;padding:20px;margin-top:16px;border:1px solid #86efac;text-align:center"><p style="margin:0 0 6px;font-size:13px;font-weight:700;color:#166534">🎓 Portal do Membro LAURO</p><p style="margin:0 0 14px;font-size:12px;color:#374151;line-height:1.6">Acesse o portal e acompanhe sua frequência, pagamentos, comunicados e atividades da Liga — tudo em um só lugar!</p><a href="https://membro.lauroucpcde.com" style="display:inline-block;background:#166534;color:white;padding:11px 28px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px">Acessar Portal do Membro</a></div>'+'<div style="background:#f8fafc;border-radius:8px;padding:16px 20px;margin-top:12px;border:1px solid #e2e8f0"><p style="margin:0;font-size:12px;color:#64748b;line-height:1.7">Em caso de duvidas ou para confirmar o pagamento, entre em contato com a Diretoria Financeira respondendo este e-mail ou via WhatsApp.</p></div></td></tr><tr><td style="background:#0f172a;padding:24px 40px"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">'+orgNome+'</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">Mensagem automatica</p></td><td align="right"><p style="margin:0;color:rgba(255,255,255,0.3);font-size:9px;letter-spacing:1.5px;text-transform:uppercase">Powered by PagBank</p></td></tr></table></td></tr></table></td></tr></table></body></html>';
 }
 
 function preencherTemplate(tpl, dados) {
@@ -271,8 +310,9 @@ async function notificarCobranca(opts) {
       + 'Por favor, regularize sua situação. 🙏'
   };
 
-  // ── WhatsApp
-  if (membro.whatsapp) {
+  // ── WhatsApp (suspenso no modo aquecimento)
+  const isAtrasado = tipo === 'pos'; // cobrancas de atrasados sempre disparam (max 5/dia, anti-ban ativo)
+  if (membro.whatsapp && opts.canal !== 'email' && (!WAPP_SOMENTE_RESPOSTA || isAtrasado)) {
     let wppOk = false;
 
     // Mensagem 1 — principal com instruções
@@ -292,7 +332,7 @@ async function notificarCobranca(opts) {
   }
 
   // ── Email
-  if (membro.email) {
+  if (membro.email && opts.canal !== 'whatsapp') {
     const msgHtml = htmlCobranca({
       titulo:     tituloMap[tipo] || '',
       mensagem:   'Prezado(a) ' + dados.nome + ', segue abaixo as opcoes para pagamento da sua mensalidade de ' + dados.valor_desc + ' (com desconto de pontualidade).',
@@ -360,4 +400,4 @@ async function notificarAniversario(opts) {
   }
 }
 
-module.exports = { enviarWhatsApp, enviarWhatsAppFila, enviarEmail, notificarCobranca, notificarAniversario, statusFila };
+module.exports = { enviarWhatsApp, enviarWhatsAppFila, enviarEmail, notificarCobranca, notificarAniversario, statusFila, htmlCobranca };

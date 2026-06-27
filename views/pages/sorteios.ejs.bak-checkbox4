@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sorteios — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#2b6803' %>; --rad: 2px; }
+    .page-content { padding: 0 32px 40px; }
+    .sorteios-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-top: 24px; }
+
+    /* CARDS DE TIPO */
+    .tipo-cards { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 32px; }
+    .tipo-card { background: #fff; border-radius: var(--rad); padding: 24px; box-shadow: 0 1px 4px rgba(0,0,0,.07); border: 2px solid transparent; cursor: pointer; transition: all .2s; text-align: center; }
+    .tipo-card:hover { border-color: var(--cor-primaria); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(43,104,3,.12); }
+    .tipo-card-icon { width: 56px; height: 56px; border-radius: var(--rad); display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; }
+    .tipo-card-titulo { font-size: 15px; font-weight: 700; color: #1a2e0e; margin-bottom: 4px; }
+    .tipo-card-desc { font-size: 12px; color: #6b7280; line-height: 1.5; }
+
+    /* SORTEIO CARD */
+    .sorteio-card { background: #fff; border-radius: var(--rad); box-shadow: 0 1px 4px rgba(0,0,0,.07); overflow: hidden; transition: .2s; }
+    .sorteio-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); transform: translateY(-2px); }
+    .sorteio-card-head { padding: 16px 18px 12px; display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .sorteio-card-nome { font-size: 15px; font-weight: 700; color: #1a2e0e; }
+    .sorteio-card-tipo { font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: var(--rad); white-space: nowrap; }
+    .tipo-interno { background: #dbefd3; color: #2b6803; }
+    .tipo-externo { background: #dbeafe; color: #1e40af; }
+    .sorteio-card-body { padding: 0 18px 14px; }
+    .sorteio-card-desc { font-size: 13px; color: #6b7280; margin-bottom: 12px; line-height: 1.5; }
+    .sorteio-card-meta { display: flex; gap: 12px; flex-wrap: wrap; }
+    .sorteio-meta-item { font-size: 11px; color: #9ca3af; display: flex; align-items: center; gap: 4px; }
+    .sorteio-card-footer { padding: 12px 18px; border-top: 1px solid #f1f5f9; display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+
+    /* STATUS BADGES */
+    .badge-status { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: var(--rad); }
+    .status-rascunho { background: #f1f5f9; color: #6b7280; }
+    .status-ativo { background: #dcfce7; color: #16a34a; }
+    .status-encerrado { background: #fee2e2; color: #dc2626; }
+    .status-sorteado { background: #fef3c7; color: #d97706; }
+
+    /* BOTÕES */
+    .btn-sorteio { background: var(--cor-primaria); color: #fff; border: none; border-radius: var(--rad); padding: 7px 14px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all .18s; text-decoration: none; }
+    .btn-sorteio svg { width: 13px; height: 13px; }
+    .btn-sorteio:hover { filter: brightness(.9); transform: translateY(-1px); }
+    .btn-outline { background: transparent; color: var(--cor-primaria); border: 1.5px solid var(--cor-primaria); }
+    .btn-outline:hover { background: var(--cor-primaria); color: #fff; }
+    .btn-del { color: #dc2626; background: transparent; border: 1.5px solid #fee2e2; }
+    .btn-del:hover { background: #fee2e2; transform: translateY(-1px); }
+
+    /* VAZIO */
+    .sorteios-vazio { text-align: center; padding: 64px 24px; color: #9ca3af; }
+    .sorteios-vazio svg { display: block; margin: 0 auto 16px; opacity: .2; }
+
+    /* MODAL */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1000; align-items: center; justify-content: center; padding: 20px; }
+    .modal-overlay.open { display: flex; }
+    .modal-box { background: #fff; border-radius: var(--rad); width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
+    .modal-head { padding: 20px 24px; background: linear-gradient(135deg, var(--cor-primaria), #1a4002); border-radius: 0; display: flex; align-items: center; justify-content: space-between; }
+    .modal-head h3 { color: #fff; font-size: 17px; font-weight: 700; margin: 0; display: flex; align-items: center; gap: 8px; }
+    .modal-close { background: rgba(255,255,255,.2); border: none; color: #fff; border-radius: var(--rad); width: 32px; height: 32px; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; transition: background .15s; }
+    .modal-close:hover { background: rgba(255,255,255,.35); }
+    .modal-body { padding: 24px; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; margin-bottom: 16px; }
+    .form-group label { font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: .4px; }
+    .form-group input, .form-group select, .form-group textarea { border: 1.5px solid #e2e8f0; border-radius: var(--rad); padding: 9px 12px; font-size: 14px; color: #1f2937; transition: border-color .15s; background: #fafafa; font-family: inherit; }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--cor-primaria); background: #fff; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-group textarea { resize: vertical; min-height: 80px; }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 0 24px 24px; }
+    .btn-cancelar { background: #f1f5f9; color: #374151; border: none; border-radius: var(--rad); padding: 10px 20px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .btn-cancelar:hover { background: #e2e8f0; transform: translateY(-1px); }
+    .btn-salvar { background: var(--cor-primaria); color: #fff; border: none; border-radius: var(--rad); padding: 10px 24px; font-size: 14px; font-weight: 700; cursor: pointer; transition: all .15s; }
+    .btn-salvar:hover { filter: brightness(.9); transform: translateY(-1px); }
+
+    /* TAREFAS */
+    .tarefas-list { display: flex; flex-direction: column; gap: 8px; }
+    .tarefa-item { display: flex; gap: 8px; align-items: center; }
+    .tarefa-item input[type=text] { flex: 1; border: 1.5px solid #e2e8f0; border-radius: var(--rad); padding: 7px 10px; font-size: 13px; background: #fafafa; transition: border-color .15s; }
+    .tarefa-item input[type=text]:focus { outline: none; border-color: var(--cor-primaria); }
+    .btn-rem-tarefa { background: none; border: none; color: #dc2626; cursor: pointer; font-size: 18px; padding: 0 4px; }
+    .btn-add-tarefa { background: #f0f7eb; color: var(--cor-primaria); border: 1.5px dashed var(--cor-primaria); border-radius: var(--rad); padding: 7px 14px; font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; margin-top: 6px; transition: background .15s; }
+    .btn-add-tarefa:hover { background: #dbefd3; }
+
+    .tipo-toggle { display: flex; gap: 8px; margin-bottom: 16px; }
+    .tipo-btn { flex: 1; padding: 10px; border: 2px solid #e2e8f0; border-radius: var(--rad); background: #fafafa; cursor: pointer; font-size: 13px; font-weight: 600; color: #6b7280; text-align: center; transition: all .18s; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .tipo-btn svg { width: 15px; height: 15px; }
+    .tipo-btn:hover { border-color: #cbd5e1; transform: translateY(-1px); }
+    .tipo-btn.ativo-interno { border-color: #2b6803; background: #f0f7eb; color: #2b6803; }
+    .tipo-btn.ativo-externo { border-color: #1e40af; background: #eff6ff; color: #1e40af; }
+
+    .secao-interno { display: none; }
+    .secao-externo { display: none; }
+
+    .flash-ok { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; border-radius: var(--rad); padding: 12px 16px; margin-bottom: 16px; font-size: 14px; font-weight: 600; }
+    .flash-err { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; border-radius: var(--rad); padding: 12px 16px; margin-bottom: 16px; font-size: 14px; font-weight: 600; }
+
+    @media(max-width:768px){ .tipo-cards{grid-template-columns:1fr;} .sorteios-grid{grid-template-columns:1fr;} .form-row{grid-template-columns:1fr;} .page-content{padding:0 16px 40px;} }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'sorteios' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Sorteios</h1>
+      <div class="topbar-acoes">
+        <button class="btn btn-primario btn-sm" onclick="abrirModalNovo()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Novo Sorteio</button>
+      </div>
+    </div>
+    <div class="content">
+      <div class="page-content">
+
+        <% if(msg&&msg.length){ %><div class="flash-ok"><%= msg[0] %></div><% } %>
+        <% if(erro&&erro.length){ %><div class="flash-err"><%= erro[0] %></div><% } %>
+
+        <!-- CARDS DE ACESSO RÁPIDO -->
+        <div class="tipo-cards">
+          <div class="tipo-card" onclick="abrirModalNovo('interno')">
+            <div class="tipo-card-icon" style="background:#f0f7eb;">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2b6803" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div class="tipo-card-titulo">Sorteio Interno</div>
+            <div class="tipo-card-desc">Entre ligantes, diretivos ou lista manual. Roleta animada para telão.</div>
+          </div>
+          <div class="tipo-card" onclick="abrirModalNovo('externo')">
+            <div class="tipo-card-icon" style="background:#eff6ff;">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#1e40af" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+            </div>
+            <div class="tipo-card-titulo">Sorteio Externo</div>
+            <div class="tipo-card-desc">Com inscrições públicas, tarefas de engajamento e validação do ganhador.</div>
+          </div>
+          <div class="tipo-card" onclick="window.location='/sorteios/roleta'">
+            <div class="tipo-card-icon" style="background:#fef3c7;">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#d97706" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            </div>
+            <div class="tipo-card-titulo">Roleta Animada</div>
+            <div class="tipo-card-desc">Visualização dramática para usar no telão durante eventos presenciais.</div>
+          </div>
+        </div>
+
+        <!-- LISTA DE SORTEIOS -->
+        <% if(sorteios.length === 0){ %>
+          <div class="sorteios-vazio">
+            <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            <p style="font-size:15px;font-weight:600;color:#374151;margin-bottom:6px">Nenhum sorteio ainda</p>
+            <p style="font-size:13px">Crie seu primeiro sorteio usando os cards acima!</p>
+          </div>
+        <% } else { %>
+          <div style="font-size:13px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px">
+            Sorteios (<%= sorteios.length %>)
+          </div>
+          <div class="sorteios-grid">
+            <% sorteios.forEach(s => { %>
+            <div class="sorteio-card">
+              <div class="sorteio-card-head">
+                <div>
+                  <div class="sorteio-card-nome"><%= s.nome %></div>
+                  <div style="margin-top:4px">
+                    <span class="sorteio-card-tipo <%= s.tipo==='interno'?'tipo-interno':'tipo-externo' %>">
+                      <%= s.tipo==='interno'?'Interno':'Externo' %>
+                    </span>
+                  </div>
+                </div>
+                <span class="badge-status status-<%= s.status %>"><%= s.status %></span>
+              </div>
+              <div class="sorteio-card-body">
+                <% if(s.descricao){ %><div class="sorteio-card-desc"><%= s.descricao %></div><% } %>
+                <div class="sorteio-card-meta">
+                  <span class="sorteio-meta-item">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    <%= new Date(s.criado_em).toLocaleDateString('pt-BR') %>
+                  </span>
+                  <% if(s.qtd_ganhadores > 1){ %>
+                  <span class="sorteio-meta-item">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <%= s.qtd_ganhadores %> ganhadores
+                  </span>
+                  <% } %>
+                  <% if(s.ganhador_nome){ %>
+                  <span class="sorteio-meta-item" style="color:#d97706;font-weight:700;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> <%= s.ganhador_nome %>
+                  </span>
+                  <% } %>
+                </div>
+              </div>
+              <div class="sorteio-card-footer">
+                <div style="display:flex;gap:6px;">
+                  <a href="/sorteios/<%= s.id %>" class="btn-sorteio">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Abrir
+                  </a>
+                  <% if(s.tipo==='interno' && s.status !== 'sorteado'){ %>
+                  <a href="/sorteios/<%= s.id %>/realizar" class="btn-sorteio" style="background:#f59e0b;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
+                    Sortear
+                  </a>
+                  <% } %>
+                </div>
+                <button class="btn-sorteio btn-del" onclick="excluir(<%= s.id %>,'<%= s.nome.replace(/'/g,"\\'") %>')">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+                </button>
+              </div>
+            </div>
+            <% }) %>
+          </div>
+        <% } %>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL NOVO SORTEIO -->
+<div class="modal-overlay" id="modalNovo">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> Novo Sorteio</h3>
+      <button class="modal-close" onclick="fecharModal()">&#x2715;</button>
+    </div>
+    <form method="POST" action="/sorteios/criar" id="formNovo">
+      <input type="hidden" name="tipo" id="fTipo" value="interno">
+      <div class="modal-body">
+
+        <!-- TIPO -->
+        <div class="tipo-toggle">
+          <div class="tipo-btn ativo-interno" id="btnInterno" onclick="setTipo('interno')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Interno (Ligantes/Diretivos)
+          </div>
+          <div class="tipo-btn" id="btnExterno" onclick="setTipo('externo')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> Externo (Público)
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Nome do Sorteio *</label>
+          <input type="text" name="nome" placeholder="Ex: Sorteio de Natal da Liga" required maxlength="255">
+        </div>
+        <div class="form-group">
+          <label>Descrição</label>
+          <textarea name="descricao" placeholder="Descreva o sorteio..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Qtd. Ganhadores</label>
+            <input type="number" name="qtd_ganhadores" value="1" min="1" max="50">
+          </div>
+          <div class="form-group" id="grpPublicoAlvo">
+            <label>Público (sorteio interno)</label>
+            <select name="publico_alvo" id="fPublicoAlvo">
+              <option value="ligantes">Ligantes ativos</option>
+              <option value="diretivos">Diretivos ativos</option>
+              <option value="ambos">Ligantes + Diretivos</option>
+              <option value="selecao">Selecionar individualmente</option>
+              <option value="manual">Lista manual</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- SEÇÃO SELEÇÃO INDIVIDUAL -->
+        <div class="secao-interno" id="secaoSelecao" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease">
+          <div class="form-group">
+            <label style="font-weight:700;color:#1a3d2b;margin-bottom:8px;display:block">Selecione os participantes:</label>
+            <div style="display:flex;gap:8px;margin-bottom:10px">
+              <button type="button" onclick="selecionarTodos(true)" style="font-size:11px;padding:4px 10px;background:#e8f5e9;border:1px solid #a5d6a7;border-radius:4px;cursor:pointer;color:#1a3d2b;font-weight:600">Marcar todos</button>
+              <button type="button" onclick="selecionarTodos(false)" style="font-size:11px;padding:4px 10px;background:#fce4ec;border:1px solid #f48fb1;border-radius:4px;cursor:pointer;color:#c62828;font-weight:600">Desmarcar todos</button>
+            </div>
+            <% if(ligantes && ligantes.length){ %>
+            <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Ligantes</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px;max-height:200px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:10px;margin-bottom:10px;background:#f8fafc">
+              <% ligantes.forEach(function(l){ %>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:3px 0">
+                <input type="checkbox" name="participantes_selecao[]" value="<%=l.nome%>" class="chk-participante">
+                <span><%=l.nome%></span>
+              </label>
+              <% }); %>
+            </div>
+            <% } %>
+            <% if(diretivos && diretivos.length){ %>
+            <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">Diretivos</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:4px;max-height:200px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:10px;background:#f8fafc">
+              <% diretivos.forEach(function(d){ %>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;padding:3px 0">
+                <input type="checkbox" name="participantes_selecao[]" value="<%=d.nome%>" class="chk-participante">
+                <span><%=d.nome%></span>
+              </label>
+              <% }); %>
+            </div>
+            <% } %>
+            <div style="margin-top:12px">
+              <label style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px">Adicionar participantes externos (opcional)</label>
+              <textarea name="participantes_extra" placeholder="Um nome por linha&#10;Ex: João da Silva&#10;Maria Santos" style="width:100%;min-height:80px;border:1px solid #e2e8f0;border-radius:6px;padding:8px 10px;font-size:13px;resize:vertical;font-family:inherit"></textarea>
+              <div style="font-size:11px;color:#94a3b8;margin-top:4px">Pessoas de fora da liga que devem participar do sorteio</div>
+            </div>
+            <div style="margin-top:8px;font-size:12px;color:#64748b" id="contadorSelecionados">0 selecionados</div>
+          </div>
+        </div>
+
+        <!-- SEÇÃO INTERNO -->
+        <div class="secao-interno" id="secaoManual">
+          <div class="form-group">
+            <label>Participantes (um por linha)</label>
+            <textarea name="participantes_manual" placeholder="João Silva&#10;Maria Santos&#10;Pedro Lima" style="min-height:120px;"></textarea>
+          </div>
+        </div>
+
+        <!-- SEÇÃO EXTERNO -->
+        <div class="secao-externo" id="secaoExterno">
+          <div class="form-group">
+            <label>Instagram da Liga</label>
+            <input type="text" name="instagram_liga" placeholder="@lauro_urologia">
+          </div>
+          <div class="form-group">
+            <label>Tarefas de Engajamento</label>
+            <div class="tarefas-list" id="tarefasList">
+              <div class="tarefa-item">
+                <input type="text" name="tarefas[]" placeholder="Ex: Seguir @lauro_urologia no Instagram">
+                <button type="button" class="btn-rem-tarefa" onclick="remTarefa(this)">&#x2715;</button>
+              </div>
+            </div>
+            <button type="button" class="btn-add-tarefa" onclick="addTarefa()">+ Adicionar tarefa</button>
+          </div>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn-salvar">Criar Sorteio</button>
+      </div>
+      <div id="hidden-selecao-container"></div>
+    </form>
+  </div>
+</div>
+
+<script>
+function abrirModalNovo(tipo){
+  document.getElementById('modalNovo').classList.add('open');
+  if(tipo) setTipo(tipo);
+}
+function fecharModal(){ document.getElementById('modalNovo').classList.remove('open'); }
+
+// checkboxes enviados diretamente — sem intercept necessario
+
+function setTipo(tipo){
+  document.getElementById('fTipo').value = tipo;
+  document.getElementById('btnInterno').className = 'tipo-btn' + (tipo==='interno'?' ativo-interno':'');
+  document.getElementById('btnExterno').className = 'tipo-btn' + (tipo==='externo'?' ativo-externo':'');
+  document.getElementById('grpPublicoAlvo').style.display = tipo==='interno'?'':'none';
+  document.getElementById('secaoExterno').style.display = tipo==='externo'?'block':'none';
+
+  // Mostrar campo manual se publico_alvo = manual
+  const pa = document.getElementById('fPublicoAlvo');
+  if(tipo==='interno') pa.addEventListener('change', toggleManual);
+  document.getElementById('secaoManual').style.display = 'none';
+}
+
+function toggleManual(){
+  const v = document.getElementById('fPublicoAlvo').value;
+  document.getElementById('secaoManual').style.display = v==='manual'?'block':'none';
+  document.getElementById('secaoSelecao').style.maxHeight = v==='selecao'?'800px':'0';
+  document.getElementById('secaoSelecao').style.overflow = v==='selecao'?'visible':'hidden';
+}
+function selecionarTodos(marcar){
+  document.querySelectorAll('.chk-participante').forEach(function(c){ c.checked = marcar; });
+  atualizarContador();
+}
+function atualizarContador(){
+  const total = document.querySelectorAll('.chk-participante:checked').length;
+  const el = document.getElementById('contadorSelecionados');
+  if(el) el.textContent = total + ' selecionado(s)';
+}
+document.addEventListener('change', function(e){
+  if(e.target.classList.contains('chk-participante')) atualizarContador();
+});
+
+document.getElementById('fPublicoAlvo').addEventListener('change', toggleManual);
+
+function addTarefa(){
+  const list = document.getElementById('tarefasList');
+  const div = document.createElement('div');
+  div.className = 'tarefa-item';
+  div.innerHTML = `<input type="text" name="tarefas[]" placeholder="Descreva a tarefa..."><button type="button" class="btn-rem-tarefa" onclick="remTarefa(this)">&#x2715;</button>`;
+  list.appendChild(div);
+}
+function remTarefa(btn){ btn.parentElement.remove(); }
+
+function excluir(id, nome){
+  if(!confirm('Excluir sorteio "'+nome+'"?\nEsta ação não pode ser desfeita.')) return;
+  const f=document.createElement('form'); f.method='POST'; f.action='/sorteios/'+id+'/excluir';
+  document.body.appendChild(f); f.submit();
+}
+
+document.getElementById('modalNovo').addEventListener('click', e=>{ if(e.target===e.currentTarget) fecharModal(); });
+setTipo('interno');
+</script>
+
+
+</body>
+</html>

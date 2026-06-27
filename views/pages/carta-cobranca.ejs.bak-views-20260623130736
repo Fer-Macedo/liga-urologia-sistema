@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cartas de Cobrança</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+    .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; margin-bottom:20px; border:1px solid var(--borda); background:var(--borda); }
+    .stat-box { background:var(--card); padding:16px 18px; display:flex; align-items:center; gap:14px; position:relative; transition:transform .15s ease, box-shadow .15s ease, background .12s; cursor:default; }
+    .stat-box::before { content:''; position:absolute; top:0; left:0; bottom:0; width:3px; background:var(--cor-stat,var(--cor-primaria)); transition:width .15s ease; }
+    .stat-box:hover { transform:translateY(-3px); box-shadow:0 8px 20px rgba(0,0,0,.09); z-index:2; }
+    .stat-box:hover::before { width:6px; }
+    .stat-box:hover .stat-icon { transform:scale(1.08); border-color:var(--cor-stat,var(--cor-primaria)); }
+    .stat-icon { width:40px; height:40px; border:1px solid var(--borda); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:transform .15s ease, border-color .15s ease; }
+    .stat-icon svg { width:18px; height:18px; }
+    .stat-num { font-family:'Outfit',sans-serif; font-size:22px; font-weight:700; line-height:1; margin-bottom:3px; letter-spacing:-.5px; }
+    .stat-lab { font-size:11px; color:var(--texto2); font-weight:600; text-transform:uppercase; letter-spacing:.6px; }
+    .table-card { background:var(--card); border:1px solid var(--borda); overflow:hidden; }
+    .table-header { padding:14px 18px; border-bottom:1px solid var(--borda); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .table-titulo { font-size:14px; font-weight:700; font-family:'Outfit',sans-serif; }
+    table.tabela { width:100%; border-collapse:collapse; }
+    table.tabela thead th { background:var(--fundo); padding:10px 14px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--texto2); text-align:left; border-bottom:1px solid var(--borda); }
+    table.tabela tbody tr { border-bottom:1px solid var(--borda); transition:background .15s; }
+    table.tabela tbody tr:last-child { border-bottom:none; }
+    table.tabela tbody tr:hover { background:var(--fundo); }
+    table.tabela tbody td { padding:12px 14px; font-size:13px; color:var(--texto); vertical-align:middle; }
+    .pessoa-info { display:flex; align-items:center; gap:10px; }
+    .avatar-sm { width:34px; height:34px; background:linear-gradient(135deg,var(--cor-primaria),var(--cor-primaria)99); color:white; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .pessoa-nome { font-weight:600; font-size:13px; }
+    .pessoa-email { font-size:11px; color:var(--texto2); margin-top:1px; }
+    .badge-status { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; border-left:2px solid transparent; }
+    .badge-enviado { background:#dbeafe; color:#1e40af; border-color:#1d4ed8; }
+    .badge-pendente { background:#fef3c7; color:#92400e; border-color:#d97706; }
+    .btn-xs { display:inline-flex; align-items:center; gap:5px; padding:5px 9px; font-size:11px; font-weight:600; border:1px solid var(--borda); background:var(--fundo); color:var(--texto); cursor:pointer; text-decoration:none; transition:transform .12s ease, background .12s ease, border-color .12s ease, color .12s ease; font-family:inherit; white-space:nowrap; }
+    .btn-xs svg { width:13px; height:13px; }
+    .btn-xs:hover { border-color:var(--cor-primaria); color:var(--cor-primaria); transform:translateY(-1px); }
+    .btn-xs.roxo { background:#6366f1; color:white; border-color:transparent; }
+    .btn-xs.roxo:hover { background:#4f46e5; color:white; }
+    .btn-xs.verde { background:#059669; color:white; border-color:transparent; }
+    .btn-xs.verde:hover { background:#047857; color:white; }
+    .btn-xs.amarelo { background:#f59e0b; color:white; border-color:transparent; }
+    .btn-xs.amarelo:hover { background:#d97706; color:white; }
+    .btn-xs.verm { color:#dc2626; border-color:#fecaca; }
+    .btn-xs.verm:hover { background:#fee2e2; color:#dc2626; }
+    .search-bar { display:flex; align-items:center; gap:8px; background:var(--fundo); border:1px solid var(--borda); padding:0 12px; height:34px; }
+    .search-bar input { border:none; background:transparent; font-size:13px; color:var(--texto); outline:none; width:160px; font-family:inherit; }
+    .topbar-acoes .btn { border-radius:0; display:inline-flex; align-items:center; gap:6px; transition:transform .12s ease, box-shadow .12s ease, background .12s ease; }
+    .topbar-acoes .btn:hover { transform:translateY(-1px); box-shadow:0 4px 12px rgba(0,0,0,.1); }
+    .topbar-acoes .btn svg { width:14px; height:14px; }
+    .modal-overlay .modal { border-radius:0; border:1px solid var(--borda); box-shadow:0 14px 44px rgba(0,0,0,.18); }
+    .modal-overlay .modal-header { border-bottom:1px solid var(--borda); padding-bottom:12px; margin-bottom:4px; }
+    .modal-overlay .modal-titulo { display:inline-flex; align-items:center; gap:9px; font-weight:700; }
+    .modal-overlay .modal-titulo svg { width:17px; height:17px; stroke:var(--cor-primaria); flex-shrink:0; }
+    .modal-overlay .icon-btn { width:30px; height:30px; border:1px solid var(--borda); border-radius:0; background:var(--card); display:inline-flex; align-items:center; justify-content:center; color:var(--texto2); transition:background .12s ease, border-color .12s ease, color .12s ease, transform .12s ease; }
+    .modal-overlay .icon-btn:hover { background:#fee2e2; border-color:#dc2626; color:#dc2626; transform:scale(1.06); }
+    .modal-overlay .icon-btn svg { width:14px; height:14px; }
+    .modal-overlay .input, .modal-overlay select.input { border-radius:0; }
+    .modal-overlay .input:focus { border-color:var(--cor-primaria); box-shadow:0 0 0 3px rgba(43,104,3,.12); }
+    .modal-overlay .btn { border-radius:0; display:inline-flex; align-items:center; justify-content:center; gap:7px; transition:transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease, color .12s ease; }
+    .modal-overlay .btn svg { width:14px; height:14px; }
+    .modal-overlay .btn:hover { transform:translateY(-1px); box-shadow:0 5px 14px rgba(0,0,0,.12); }
+  
+    /* === PADRÃO VERDE ESCURO — Cartas de Cobrança === */
+    * { border-radius:0!important; }
+    .stat-box, .stat-card { border-radius:0!important; transition:transform .12s ease, box-shadow .12s ease; }
+    .stat-box:hover, .stat-card:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,.1); }
+    .stat-box::before, .stat-card::before { background:linear-gradient(90deg,#1a3410,#253d18)!important; opacity:1!important; height:3px!important; }
+    .stat-num, .stat-val { color:#1a3410!important; }
+    .stat-icon { border-radius:0!important; }
+    table thead th { background:linear-gradient(135deg,#1a3410,#253d18)!important; color:#fff!important; border-bottom:none!important; }
+    table tbody tr:hover { background:#f0f7eb!important; }
+    .badge { border-radius:0!important; }
+    .card, .table-wrap, .lista-card { border-radius:0!important; }
+    .modal-box { border-radius:0!important; }
+    .modal-head { border-radius:0!important; background:linear-gradient(135deg,#1a3410,#253d18)!important; }
+    .modal-close { border-radius:0!important; }
+    .btn-primario { background:linear-gradient(135deg,#1a3410,#253d18)!important; border-radius:0!important; }
+    .btn { border-radius:0!important; }
+    input, select, textarea { border-radius:0!important; }
+    input:focus, select:focus, textarea:focus { border-color:#1a3410!important; box-shadow:0 0 0 3px rgba(37,61,24,.1)!important; }
+    .input { border-radius:0!important; }
+</style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'cobrancas' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Cartas de Cobrança</h1>
+      <div class="topbar-acoes">
+        <a href="/cobrancas" class="btn btn-sm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>Voltar</a>
+        <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-nova')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nova Carta</button>
+      </div>
+    </div>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
+      <% const total=cartas.length; const enviadas=cartas.filter(c=>c.status==='enviado').length; const pendentes=total-enviadas; %>
+      <div class="stats-row">
+        <div class="stat-box" style="--cor-stat:var(--cor-primaria)">
+          <div class="stat-icon" style="background:#eff6ff"><svg viewBox="0 0 24 24" fill="none" stroke="#1a56db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <div><div class="stat-num" style="color:var(--cor-primaria)"><%= total %></div><div class="stat-lab">Total de cartas</div></div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#1d4ed8">
+          <div class="stat-icon" style="background:#dbeafe"><svg viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+          <div><div class="stat-num" style="color:#1d4ed8"><%= enviadas %></div><div class="stat-lab">Enviadas</div></div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#f59e0b">
+          <div class="stat-icon" style="background:#fffbeb"><svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div><div class="stat-num" style="color:#f59e0b"><%= pendentes %></div><div class="stat-lab">Pendentes</div></div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-titulo">Todas as cartas (<%= total %>)</span>
+          <div class="search-bar">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--texto2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="Buscar pessoa..." oninput="filtrar(this.value)">
+          </div>
+        </div>
+        <table class="tabela">
+          <thead><tr><th>Destinatário</th><th>Mês Ref.</th><th>Vencimento</th><th>Status</th><th>Enviado em</th><th>Ações</th></tr></thead>
+          <tbody>
+            <% if (!cartas.length) { %>
+            <tr><td colspan="6" style="text-align:center;padding:48px;color:var(--texto2)">
+              <div style="margin-bottom:12px;display:flex;justify-content:center"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--texto2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity:.4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+              <div style="font-weight:600;margin-bottom:4px">Nenhuma carta criada</div>
+              <div style="font-size:12px">Clique em Nova Carta para começar</div>
+            </td></tr>
+            <% } %>
+            <% cartas.forEach(d => { %>
+            <tr class="carta-row">
+              <td>
+                <div class="pessoa-info">
+                  <div class="avatar-sm"><%= (d.pessoa_nome||'?').substring(0,2).toUpperCase() %></div>
+                  <div>
+                    <div class="pessoa-nome"><%= d.pessoa_nome || '—' %></div>
+                    <div class="pessoa-email"><%= d.pessoa_email || '—' %></div>
+                  </div>
+                </div>
+              </td>
+              <td style="color:var(--texto2)"><%= d.mes_referencia || '—' %></td>
+              <td style="color:var(--texto2);white-space:nowrap"><%= d.vencimento ? new Date(d.vencimento).toLocaleDateString('pt-BR') : '—' %></td>
+              <td>
+                <% if (d.status === 'enviado') { %>
+                <span class="badge-status badge-enviado">Enviada</span>
+                <% } else { %>
+                <span class="badge-status badge-pendente">Pendente</span>
+                <% } %>
+              </td>
+              <td style="color:var(--texto2);font-size:12px"><%= d.enviado_em ? new Date(d.enviado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—' %></td>
+              <td>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  <a href="/carta-cobranca/<%= d.id %>/visualizar" target="_blank" class="btn-xs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Ver</a>
+                  <a href="/carta-cobranca/<%= d.id %>/imprimir" target="_blank" class="btn-xs roxo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimir</a>
+                  <% if (d.status !== 'enviado') { %>
+                  <form method="POST" action="/carta-cobranca/<%= d.id %>/enviar" style="display:inline;margin:0"><button type="submit" class="btn-xs verde"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Enviar</button></form>
+                  <% } else { %>
+                  <form method="POST" action="/carta-cobranca/<%= d.id %>/reenviar" style="display:inline;margin:0"><button type="submit" class="btn-xs amarelo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Reenviar</button></form>
+                  <% } %>
+                  <% if (usuario.perfil === 'admin' || usuario.perfil === 'presidencia' || usuario.perfil === 'financeiro') { %>
+                  <form method="POST" action="/carta-cobranca/<%= d.id %>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')"><button type="submit" class="btn-xs verm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Excluir</button></form>
+                  <% } %>
+                </div>
+              </td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="modal-overlay" id="modal-nova" style="display:none">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-titulo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Nova Carta de Cobrança</span>
+      <button class="icon-btn" onclick="fecharModal('modal-nova')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <form action="/carta-cobranca" method="POST">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo">
+          <label class="label">Tipo de destinatário</label>
+          <select id="tipo-dest" class="input" onchange="trocarTipo(this.value)"><option value="membro">Membro</option><option value="ligante">Ligante</option></select>
+        </div>
+        <div class="campo" id="campo-membro">
+          <label class="label">Membro *</label>
+          <select name="membro_id" class="input"><option value="">Selecione...</option><% membros.forEach(m => { %><option value="<%= m.id %>"><%= m.nome %></option><% }) %></select>
+        </div>
+        <div class="campo" id="campo-ligante" style="display:none">
+          <label class="label">Ligante *</label>
+          <select name="ligante_id" class="input"><option value="">Selecione...</option><% ligantes.forEach(l => { %><option value="<%= l.id %>"><%= l.nome %></option><% }) %></select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="campo"><label class="label">Mês de referência</label><input type="text" name="mes_referencia" class="input" placeholder="Maio 2026" required></div>
+          <div class="campo"><label class="label">Data de vencimento</label><input type="date" name="vencimento" class="input"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-nova')">Cancelar</button>
+        <button type="submit" class="btn btn-primario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Criar carta</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script src="/js/app.js"></script>
+<script>
+function trocarTipo(t){document.getElementById('campo-membro').style.display=t==='membro'?'':'none';document.getElementById('campo-ligante').style.display=t==='ligante'?'':'none';}
+function filtrar(q){document.querySelectorAll('.carta-row').forEach(r=>{r.style.display=r.textContent.toLowerCase().includes(q.toLowerCase())?'':'none';});}
+</script>
+</body>
+</html>

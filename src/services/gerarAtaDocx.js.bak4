@@ -1,0 +1,307 @@
+const {
+  Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
+  AlignmentType, BorderStyle, WidthType, Header, Footer, ImageRun,
+  ShadingType, PageNumber, UnderlineType, VerticalAlign
+} = require('docx');
+const fs = require('fs');
+const path = require('path');
+
+// Mapa de cargos PT -> ES
+const CARGOS_ES = {
+  'Presidente(a)': 'Presidente/a',
+  'Vice-presidente(a)': 'Vicepresidente/a',
+  'Secretário(a)': 'Secretario/a',
+  'Diretor(a) Financeiro(a)': 'Director/a Financiero/a',
+  'Diretor(a) Científico': 'Director/a Científico/a',
+  'Vice Diretor(a) Científico': 'Vicedirector/a Científico/a',
+  'Diretor(a) de Extensão': 'Director/a de Extensión',
+  'Vice Diretor(a) de Extensão': 'Vicedirector/a de Extensión',
+  'Diretor(a) de Ensino': 'Director/a de Enseñanza',
+  'Vice Diretor(a) de Ensino': 'Vicedirector/a de Enseñanza',
+  'Diretor(a) de Marketing': 'Director/a de Marketing',
+  'Vice Diretor(a) de Marketing': 'Vicedirector/a de Marketing',
+  'Ligante': 'Ligante',
+};
+
+function traduzirCargo(cargo) {
+  if (!cargo) return '';
+  return CARGOS_ES[cargo] || cargo;
+}
+
+async function gerarAtaDocx(ata, presentes) {
+  // Carregar header e footer recortados do timbrado
+  let headerBuf = null;
+  let footerBuf = null;
+  try {
+    headerBuf = fs.readFileSync(path.join(__dirname, '../../public/img/header-lauro.jpg'));
+  } catch(e) {}
+  try {
+    footerBuf = fs.readFileSync(path.join(__dirname, '../../public/img/footer-ucp.jpg'));
+  } catch(e) {}
+
+  // Helper parágrafo simples
+  const p = (text, opts = {}) => new Paragraph({
+    alignment: opts.center ? AlignmentType.CENTER : opts.justify ? AlignmentType.JUSTIFIED : AlignmentType.LEFT,
+    spacing: { before: opts.before || 0, after: opts.after || 80 },
+    indent: opts.indent ? { left: opts.indent } : undefined,
+    border: opts.borderBottom ? { bottom: { style: BorderStyle.SINGLE, size: 4, color: '1a3d2b', space: 4 } } : undefined,
+    children: [new TextRun({
+      text: text || '',
+      bold: opts.bold || false,
+      size: opts.size || 22,
+      font: 'Times New Roman',
+      color: opts.color || '000000',
+      italics: opts.italic || false,
+    })]
+  });
+
+  const pEmpty = (before) => new Paragraph({
+    spacing: { before: before || 0, after: 0 },
+    children: [new TextRun({ text: '', size: 22 })]
+  });
+
+  // Processar pauta — cada linha é um item
+  const pautaItems = (ata.pauta || '').split('\n').filter(l => l.trim());
+
+  // Processar corpo — separar blocos por linha dupla, linhas simples dentro do bloco
+  const corpoBlocos = (ata.corpo || '').split('\n\n').filter(b => b.trim());
+
+  const noBorder = { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' };
+  const sigBorder = { style: BorderStyle.SINGLE, size: 6, color: '1a3d2b' };
+
+  // Assinaturas em grid 2 colunas
+  const sigRows = [];
+  for (let i = 0; i < presentes.length; i += 2) {
+    const left = presentes[i];
+    const right = presentes[i + 1];
+
+    sigRows.push(
+      new Table({
+        width: { size: 9026, type: WidthType.DXA },
+        columnWidths: [4313, 400, 4313],
+        rows: [
+          // Espaço para assinatura
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 4313, type: WidthType.DXA },
+                borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+                children: [new Paragraph({ spacing: { before: 720, after: 0 }, children: [new TextRun('')] })]
+              }),
+              new TableCell({ width: { size: 400, type: WidthType.DXA }, borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, children: [pEmpty()] }),
+              new TableCell({
+                width: { size: 4313, type: WidthType.DXA },
+                borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+                children: [new Paragraph({ spacing: { before: 720, after: 0 }, children: [new TextRun('')] })]
+              }),
+            ]
+          }),
+          // Nome e cargo abaixo da linha
+          new TableRow({
+            children: [
+              new TableCell({
+                width: { size: 4313, type: WidthType.DXA },
+                borders: { top: sigBorder, bottom: noBorder, left: noBorder, right: noBorder },
+                margins: { top: 60, bottom: 60, left: 120, right: 120 },
+                children: [
+                  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 40, after: 0 }, children: [new TextRun({ text: left.membro_nome || '', bold: true, size: 20, font: 'Times New Roman' })] }),
+                  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 80 }, children: [new TextRun({ text: traduzirCargo(left.membro_cargo), size: 18, font: 'Times New Roman', color: '555555', italics: true })] }),
+                ]
+              }),
+              new TableCell({ width: { size: 400, type: WidthType.DXA }, borders: { top: noBorder, bottom: noBorder, left: noBorder, right: noBorder }, children: [pEmpty()] }),
+              new TableCell({
+                width: { size: 4313, type: WidthType.DXA },
+                borders: { top: right ? sigBorder : noBorder, bottom: noBorder, left: noBorder, right: noBorder },
+                margins: { top: 60, bottom: 60, left: 120, right: 120 },
+                children: right ? [
+                  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 40, after: 0 }, children: [new TextRun({ text: right.membro_nome || '', bold: true, size: 20, font: 'Times New Roman' })] }),
+                  new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 0, after: 80 }, children: [new TextRun({ text: traduzirCargo(right.membro_cargo), size: 18, font: 'Times New Roman', color: '555555', italics: true })] }),
+                ] : [pEmpty()]
+              }),
+            ]
+          }),
+        ]
+      })
+    );
+    // Espaço entre pares de assinaturas
+    sigRows.push(pEmpty(80));
+  }
+
+  // Conteúdo principal
+  const children = [
+    // Título
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      spacing: { before: 40, after: 60 },
+      children: [new TextRun({
+        text: `ACTA N° ${ata.numero || ata.id} — REUNIÓN ${(ata.tipo === 'ordinaria' ? 'ORDINARIA' : ata.tipo === 'extraordinaria' ? 'EXTRAORDINARIA' : 'ESPECIAL').toUpperCase()}`,
+        bold: true, size: 28, font: 'Times New Roman', color: '1a3d2b'
+      })]
+    }),
+    // Linha verde separadora
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: '1a3d2b', space: 4 } },
+      spacing: { before: 0, after: 160 },
+      children: [new TextRun({
+        text: [
+          ata.data_reuniao ? new Date(ata.data_reuniao).toLocaleDateString('es-PY', { timeZone: 'UTC', weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : '',
+          ata.hora_inicio ? `${ata.hora_inicio}${ata.hora_fim ? ' — ' + ata.hora_fim : ''}` : '',
+          ata.local || ''
+        ].filter(Boolean).join(' | '),
+        size: 20, font: 'Times New Roman', color: '444444'
+      })]
+    }),
+
+    // Presentes
+    ...(presentes.length ? [
+      p('PRESENTES:', { bold: true, size: 22, color: '1a3d2b', before: 120, after: 40 }),
+      ...presentes.map(pr => new Paragraph({
+        spacing: { before: 0, after: 40 },
+        indent: { left: 360 },
+        children: [
+          new TextRun({ text: pr.membro_nome || '', bold: true, size: 22, font: 'Times New Roman' }),
+          new TextRun({ text: pr.membro_cargo ? ` — ${traduzirCargo(pr.membro_cargo)}` : '', size: 22, font: 'Times New Roman', color: '555555' }),
+        ]
+      })),
+      pEmpty(80),
+    ] : []),
+
+    // Pauta
+    ...(pautaItems.length ? [
+      p('ORDEN DEL DÍA:', { bold: true, size: 22, color: '1a3d2b', before: 120, after: 60 }),
+      ...pautaItems.map((item, idx) => new Paragraph({
+        spacing: { before: 0, after: 60 },
+        indent: { left: 360 },
+        children: [new TextRun({ text: `${idx + 1}. ${item.replace(/^\d+[\.\)]\s*/, '')}`, size: 22, font: 'Times New Roman' })]
+      })),
+      pEmpty(80),
+    ] : []),
+
+    // Corpo — blocos separados por linha dupla, linhas simples viram parágrafos separados
+    ...(corpoBlocos.length ? [
+      p('DESARROLLO:', { bold: true, size: 22, color: '1a3d2b', before: 120, after: 80 }),
+      ...corpoBlocos.flatMap(bloco => {
+        const linhas = bloco.split('\n').filter(l => l !== undefined);
+        const primeiraLinha = linhas[0] || '';
+        const ehTitulo = primeiraLinha.trim().endsWith(':') && linhas.length > 1;
+
+        if (ehTitulo) {
+          const titulo = linhas.shift();
+          return [
+            new Paragraph({
+              spacing: { before: 140, after: 40 },
+              children: [new TextRun({ text: titulo.trim(), bold: true, size: 22, font: 'Times New Roman', color: '1a3d2b' })]
+            }),
+            ...linhas.map(linha => new Paragraph({
+              alignment: AlignmentType.JUSTIFIED,
+              spacing: { before: 0, after: 60 },
+              children: [new TextRun({ text: linha.trim(), size: 22, font: 'Times New Roman' })]
+            })),
+          ];
+        } else {
+          // Cada linha do bloco = parágrafo separado
+          return linhas.map(linha => new Paragraph({
+            alignment: AlignmentType.JUSTIFIED,
+            spacing: { before: 0, after: 60 },
+            children: [new TextRun({ text: linha.trim(), size: 22, font: 'Times New Roman' })]
+          }));
+        }
+      }),
+      pEmpty(80),
+    ] : []),
+
+    // Encerramento
+    p('No habiendo más puntos que tratar, se da por finalizada la reunión.', { justify: true, before: 160, after: 200 }),
+
+    // Assinaturas
+    ...(sigRows.length ? [
+      new Paragraph({
+        alignment: AlignmentType.CENTER,
+        spacing: { before: 300, after: 200 },
+        children: [new TextRun({ text: 'FIRMAS DE LOS PRESENTES', bold: true, size: 22, font: 'Times New Roman', color: '1a3d2b' })]
+      }),
+      ...sigRows,
+    ] : []),
+  ];
+
+  // Header: logo LAURO (topo do timbrado)
+  // A4 content width = 9026 DXA = ~595pt
+  // Imagem header: 1242x386px -> proporcional: 595 x (386/1242*595) = 595 x 185
+  const headerChildren = headerBuf ? [
+    new Paragraph({
+      alignment: AlignmentType.LEFT,
+      spacing: { before: 0, after: 0 },
+      indent: { left: -1134, right: -1134 },
+      children: [
+        new ImageRun({
+          data: headerBuf,
+          type: 'jpg',
+          transformation: {
+            width: 794,
+            height: 247,
+          },
+        })
+      ]
+    })
+  ] : [
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      children: [new TextRun({ text: 'LAURO — Liga Académica de Urología | UCP | CDE', bold: true, size: 18, font: 'Times New Roman', color: '1a3d2b' })]
+    })
+  ];
+
+  // Footer: logo UCP (base do timbrado)
+  // Imagem footer: 1242x316px -> proporcional: 595 x (316/1242*595) = 595 x 152
+  const footerChildren = footerBuf ? [
+    new Paragraph({
+      alignment: AlignmentType.LEFT,
+      spacing: { before: 0, after: 0 },
+      indent: { left: -1134, right: -1134 },
+      children: [
+        new ImageRun({
+          data: footerBuf,
+          type: 'jpg',
+          transformation: {
+            width: 794,
+            height: 202,
+          },
+        })
+      ]
+    })
+  ] : [
+    new Paragraph({
+      alignment: AlignmentType.CENTER,
+      border: { top: { style: BorderStyle.SINGLE, size: 4, color: '1a3d2b', space: 4 } },
+      spacing: { before: 80, after: 0 },
+      children: [
+        new TextRun({ text: 'LAURO — Liga Académica de Urología | UCP | Ciudad del Este | ', size: 16, font: 'Times New Roman', color: '666666' }),
+        new TextRun({ children: [PageNumber.CURRENT], size: 16, font: 'Times New Roman', color: '666666' }),
+        new TextRun({ text: ' / ', size: 16, font: 'Times New Roman', color: '666666' }),
+        new TextRun({ children: [PageNumber.TOTAL_PAGES], size: 16, font: 'Times New Roman', color: '666666' }),
+      ]
+    })
+  ];
+
+  const doc = new Document({
+    sections: [{
+      properties: {
+        page: {
+          size: { width: 11906, height: 16838 }, // A4
+          margin: { top: 3905, right: 1134, bottom: 1701, left: 1134, header: 0, footer: 0 }
+        }
+      },
+      headers: {
+        default: new Header({ children: headerChildren })
+      },
+      footers: {
+        default: new Footer({ children: footerChildren })
+      },
+      children,
+    }]
+  });
+
+  return await Packer.toBuffer(doc);
+}
+
+module.exports = { gerarAtaDocx };

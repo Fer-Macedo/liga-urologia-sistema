@@ -95,4 +95,14 @@ async function listarArquivos(prefixo) {
   return r.Contents || [];
 }
 
-module.exports = { upload, uploadArquivo, deletarArquivo, gerarUrlDownload, listarArquivos, iconeArquivo, categoriaArquivo };
+async function gerarUrlInline(chave) {
+  const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: chave });
+  return getSignedUrl(R2, cmd, { expiresIn: 86400 });
+}
+
+async function gerarUrlTemporaria(chave, expiresIn) {
+  const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: chave });
+  return getSignedUrl(R2, cmd, { expiresIn: expiresIn || 300 });
+}
+
+module.exports = { upload, uploadArquivo, deletarArquivo, gerarUrlDownload, listarArquivos, iconeArquivo, categoriaArquivo, gerarUrlInline, gerarUrlTemporaria, getSignedDownloadUrl: gerarUrlInline };

@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Recuperar Senha — <%= config.org_nome || 'Liga Urologia' %></title>
   <link rel="stylesheet" href="/css/style.css">
@@ -21,10 +22,10 @@
       </div>
 
       <% if (msg && msg.length > 0) { %>
-        <div class="alerta alerta-ok">✅ <%= msg[0] %></div>
+        <div class="alerta alerta-ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <%= msg[0] %></div>
       <% } %>
       <% if (erro && erro.length > 0) { %>
-        <div class="alerta alerta-erro">❌ <%= erro[0] %></div>
+        <div class="alerta alerta-erro"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> <%= erro[0] %></div>
       <% } %>
 
       <% if (!enviado) { %>
@@ -38,12 +39,12 @@
           <input type="email" name="email" class="input" placeholder="seu@email.com" required autofocus>
         </div>
         <button type="submit" class="btn btn-primario" style="width:100%;justify-content:center;padding:12px">
-          📧 Enviar link de recuperação
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg> Enviar link de recuperação
         </button>
       </form>
       <% } else { %>
       <div style="text-align:center;padding:20px 0">
-        <div style="font-size:48px;margin-bottom:16px">📬</div>
+        <div style="font-size:48px;margin-bottom:16px"></div>
         <p style="font-size:14px;color:var(--texto);margin-bottom:8px;font-weight:600">E-mail enviado!</p>
         <p style="font-size:13px;color:var(--texto2)">
           Verifique sua caixa de entrada e clique no link para redefinir sua senha.<br>

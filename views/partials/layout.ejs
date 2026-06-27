@@ -63,5 +63,6 @@
 
 </div>
 <script src="/js/app.js"></script>
+  <% if (typeof usuario !== 'undefined' && usuario) { %><%- include('_notificacoes') %><% } %>
 </body>
 </html>

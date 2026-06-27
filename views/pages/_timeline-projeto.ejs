@@ -1,0 +1,103 @@
+<%
+// ══ LINHA DO TEMPO DO PROCESSO (visível para todos) ══
+// Mapa de etapas -> índice na sequência. Etapas de correção apontam para onde "voltou".
+var etapasFase1 = [
+  { key:'rascunho',               t1:'Borrador',    t2:'Enseñanza' },
+  { key:'aguardando_presidencia', t1:'Revisar',     t2:'Presidencia' },
+  { key:'aguardando_secretaria',  t1:'Enviar',      t2:'Secretaría' },
+  { key:'enviado_coordinacion',   t1:'Enviado',     t2:'Coordinación' },
+  { key:'aprobado_final',         t1:'Proyecto',    t2:'Aprobado' }
+];
+var etapasFase2 = [
+  { key:'pendiente_informe',      t1:'Pendiente',   t2:'Informe' },
+  { key:'informe_enviado',        t1:'Informe a',   t2:'Coordinación' },
+  { key:'concluido',              t1:'Concluido',   t2:'' }
+];
+var etapaAtual = p.etapa_atual || 'rascunho';
+// índice "linear" das fases para saber o que já passou
+var ordemFase1 = etapasFase1.map(function(e){return e.key;});
+var ordemFase2 = etapasFase2.map(function(e){return e.key;});
+var emCorreccion = (etapaAtual === 'en_correccion');
+var emCorreccionInforme = (etapaAtual === 'informe_correccion');
+
+// Determina o índice ativo em cada fase
+function idxDe(ordem, key){ return ordem.indexOf(key); }
+var idxF1 = idxDe(ordemFase1, etapaAtual);
+var idxF2 = idxDe(ordemFase2, etapaAtual);
+// Se está em correção do projeto, destaca a 1ª etapa da fase 1 (volta pra Enseñanza) e marca devolução
+if (emCorreccion) { idxF1 = 0; }
+// Se ainda está na fase 1 (ou correção dela), a fase 2 fica inteira "futura"
+var naFase2 = (idxF2 >= 0) || emCorreccionInforme || (etapaAtual==='concluido');
+
+function estadoEtapa(faseOrdem, i, idxAtivo, ehFase2){
+  // retorna: 'done' | 'current' | 'future' | 'returned' | 'correccion'
+  if (ehFase2 && !naFase2) return 'future';
+  if (!ehFase2 && naFase2) return 'done'; // fase 1 toda concluída quando já está na fase 2
+  if (idxAtivo < 0) return 'future';
+  if (i < idxAtivo) return 'done';
+  if (i === idxAtivo) return 'current';
+  return 'future';
+}
+%>
+<div style="margin-bottom:14px">
+  <% if (emCorreccion || emCorreccionInforme) { %>
+    <div style="font-size:12px;color:#C0392B;margin-bottom:8px;display:flex;align-items:center;gap:5px">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      Devuelto por la Coordinación para corrección
+    </div>
+  <% } %>
+
+  <!-- FASE 1 -->
+  <p style="font-size:10.5px;color:var(--ink-faint);margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em">Fase 1 — Proyecto</p>
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;position:relative;gap:2px;margin-bottom:14px">
+    <div style="position:absolute;top:12px;left:6%;right:6%;height:2px;background:var(--line);z-index:0"></div>
+    <% etapasFase1.forEach(function(e, i){
+        var est = estadoEtapa(ordemFase1, i, idxF1, false);
+        var esDevuelto = (emCorreccion && e.key==='enviado_coordinacion');
+        var bg, bd, cor, icone;
+        if (esDevuelto) { bg='#FAEEDA'; bd='#BA7517'; cor='#854F0B'; icone='back'; }
+        else if (est==='done')    { bg='#DCF3EE'; bd='#0F6E56'; cor='#0F6E56'; icone='check'; }
+        else if (est==='current' && emCorreccion) { bg='#FCEBEB'; bd='#A32D2D'; cor='#A32D2D'; icone='pencil'; }
+        else if (est==='current') { bg='#E8F0FA'; bd='#185FA5'; cor='#185FA5'; icone='clock'; }
+        else { bg='#EEF0ED'; bd='var(--line-strong)'; cor='var(--ink-faint)'; icone='num'; }
+    %>
+    <div style="display:flex;flex-direction:column;align-items:center;flex:1;z-index:1">
+      <div style="width:26px;height:26px;border-radius:50%;background:<%= bg %>;border:2px solid <%= bd %>;display:flex;align-items:center;justify-content:center;color:<%= cor %>">
+        <% if (icone==='check') { %><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        <% } else if (icone==='clock') { %><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        <% } else if (icone==='pencil') { %><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7.5 20.5 3 21l1-4.5Z"/></svg>
+        <% } else if (icone==='back') { %><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+        <% } else { %><span style="font-size:11px"><%= i+1 %></span><% } %>
+      </div>
+      <span style="font-size:10px;color:<%= (est==='current'||esDevuelto)?cor:'var(--ink-faint)' %>;<%= (est==='current'||esDevuelto)?'font-weight:600;':'' %>text-align:center;margin-top:5px;line-height:1.2"><%= e.t1 %><br><%= e.t2 %></span>
+    </div>
+    <% }); %>
+  </div>
+
+  <!-- FASE 2 -->
+  <div style="<%= naFase2 ? '' : 'opacity:.5' %>">
+    <p style="font-size:10.5px;color:var(--ink-faint);margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em">Fase 2 — Informe final</p>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;position:relative;gap:2px">
+      <div style="position:absolute;top:12px;left:9%;right:9%;height:2px;background:var(--line);z-index:0"></div>
+      <% etapasFase2.forEach(function(e, i){
+          var est = estadoEtapa(ordemFase2, i, idxF2, true);
+          var esDevuelto = (emCorreccionInforme && e.key==='informe_enviado');
+          var bg, bd, cor, icone;
+          if (esDevuelto) { bg='#FAEEDA'; bd='#BA7517'; cor='#854F0B'; icone='back'; }
+          else if (est==='done')    { bg='#DCF3EE'; bd='#0F6E56'; cor='#0F6E56'; icone='check'; }
+          else if (est==='current') { bg='#E8F0FA'; bd='#185FA5'; cor='#185FA5'; icone='clock'; }
+          else { bg='#EEF0ED'; bd='var(--line-strong)'; cor='var(--ink-faint)'; icone='num'; }
+      %>
+      <div style="display:flex;flex-direction:column;align-items:center;flex:1;z-index:1">
+        <div style="width:26px;height:26px;border-radius:50%;background:<%= bg %>;border:2px solid <%= bd %>;display:flex;align-items:center;justify-content:center;color:<%= cor %>">
+          <% if (icone==='check') { %><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <% } else if (icone==='clock') { %><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <% } else if (icone==='back') { %><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/></svg>
+          <% } else { %><span style="font-size:11px"><%= i+6 %></span><% } %>
+        </div>
+        <span style="font-size:10px;color:<%= est==='current'?cor:'var(--ink-faint)' %>;<%= est==='current'?'font-weight:600;':'' %>text-align:center;margin-top:5px;line-height:1.2"><%= e.t1 %><% if (e.t2) { %><br><%= e.t2 %><% } %></span>
+      </div>
+      <% }); %>
+    </div>
+  </div>
+</div>

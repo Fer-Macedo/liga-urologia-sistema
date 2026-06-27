@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Contratos Diretivos</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin-modern.css">
+  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
   <style>
     :root{--cor-primaria:<%= config.org_cor||'#1a56db' %>;}
     .table-card{background:var(--card);border:1px solid var(--borda);border-radius:14px;overflow:hidden;margin-bottom:16px;}
-    .table-header{padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;align-items:center;justify-content:space-between;}
+    .table-header{padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
     table.tabela{width:100%;border-collapse:collapse;}
     table.tabela thead th{background:var(--fundo);padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--texto2);text-align:left;border-bottom:1px solid var(--borda);}
     table.tabela tbody tr{border-bottom:1px solid var(--borda);transition:background .15s;}
@@ -26,10 +28,13 @@
     .btn-xs.roxo{background:#7c3aed;color:white;border-color:transparent;}
     .btn-xs.verm{background:#ef4444;color:white;border-color:transparent;}
     .btn-xs.amarelo{background:#f59e0b;color:white;border-color:transparent;}
-    .editor-contrato{width:100%;min-height:300px;font-family:'Times New Roman',serif;font-size:13px;line-height:1.6;padding:16px;border:1px solid var(--borda);border-radius:8px;background:var(--fundo);resize:vertical;}
-  </style>
-  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
-  <style>
+    .filtro-turmas{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+    .filtro-btn{padding:5px 14px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--borda);background:var(--fundo);color:var(--texto2);cursor:pointer;text-decoration:none;transition:all .15s;}
+    .filtro-btn:hover,.filtro-btn.ativo{background:var(--cor-primaria);color:white;border-color:var(--cor-primaria);}
+    .stats-row{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;}
+    .stat-card{flex:1;min-width:120px;background:var(--card);border:1px solid var(--borda);border-radius:12px;padding:14px 18px;text-align:center;}
+    .stat-num{font-size:24px;font-weight:800;line-height:1;}
+    .stat-label{font-size:11px;color:var(--texto2);margin-top:4px;}
     .ql-container{font-family:'Times New Roman',serif;font-size:13px;min-height:280px;border-radius:0 0 8px 8px;}
     .ql-toolbar{border-radius:8px 8px 0 0;background:var(--fundo);}
   </style>
@@ -41,43 +46,106 @@
     <div class="topbar">
       <h1 class="page-titulo">Contratos Diretivos</h1>
       <div class="topbar-acoes">
-        <button class="btn btn-sm" onclick="abrirModal('modal-timbrado')">&#128247; Timbrado Contrato</button>
-        <button class="btn btn-sm" onclick="abrirModal('modal-texto-global')">&#128196; Texto do Contrato</button>
-        <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-novo')">+ Novo Contrato</button>
+        <button class="btn btn-sm" onclick="abrirModal('modal-timbrado')">&#128247; Timbrado</button>
+        <button class="btn btn-sm" onclick="abrirModal('modal-texto-global')">&#128196; Texto</button>
+        <button class="btn btn-sm" onclick="abrirModal('modal-turma')">&#128101; Gerar por Turma</button>
+        <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-novo')">+ Novo Individual</button>
       </div>
     </div>
     <div class="content">
       <%if(msg&&msg.length>0){%><div class="alerta alerta-ok"><%=msg[0]%></div><%}%>
       <%if(erro&&erro.length>0){%><div class="alerta alerta-erro"><%=erro[0]%></div><%}%>
+
+      <div class="filtro-turmas" style="margin-bottom:16px">
+        <span style="font-size:12px;font-weight:600;color:var(--texto2)">Turma:</span>
+        <a href="/contratos-diretivos" class="filtro-btn <%=!turmaFiltro&&!statusFiltro?'ativo':''%>">Todas</a>
+        <%turmas.forEach(t=>{%>
+        <a href="/contratos-diretivos?turma=<%=t.turma%>" class="filtro-btn <%=turmaFiltro===t.turma&&!statusFiltro?'ativo':''%>"><%=t.turma%></a>
+        <%});%>
+        <span style="font-size:12px;font-weight:600;color:var(--texto2);margin-left:8px">Status:</span>
+        <a href="/contratos-diretivos?status=rascunho<%=turmaFiltro?'&turma='+turmaFiltro:''%>" class="filtro-btn" style="<%=statusFiltro==='rascunho'?'background:#475569;color:white;border-color:#475569':''%>"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Rascunho</a>
+        <a href="/contratos-diretivos?status=enviado<%=turmaFiltro?'&turma='+turmaFiltro:''%>" class="filtro-btn" style="<%=statusFiltro==='enviado'?'background:#1e40af;color:white;border-color:#1e40af':''%>"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>️ Enviados</a>
+        <a href="/contratos-diretivos?status=assinado<%=turmaFiltro?'&turma='+turmaFiltro:''%>" class="filtro-btn" style="<%=statusFiltro==='assinado'?'background:#166534;color:white;border-color:#166534':''%>"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Assinados</a>
+      </div>
+
+      <%
+        const total = contratos.length;
+        const enviados = contratos.filter(c=>c.enviado_em).length;
+        const assinados = contratos.filter(c=>c.status==='assinado').length;
+        const rascunhos = contratos.filter(c=>c.status==='rascunho').length;
+        const pendentesAssinatura = contratos.filter(c=>c.status!=='assinado').length;
+      %>
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-num"><%=total%></div><div class="stat-label">Total</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#475569"><%=rascunhos%></div><div class="stat-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Rascunho</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#1e40af"><%=enviados%></div><div class="stat-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>️ Enviados</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#166534"><%=assinados%></div><div class="stat-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Assinados</div></div>
+        <div class="stat-card"><div class="stat-num" style="color:#b45309"><%=pendentesAssinatura%></div><div class="stat-label"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg> Pendente Assinatura</div></div>
+      </div>
+
+      <%if(semContrato.length>0){%>
+      <div class="table-card" style="border:1.5px solid #f59e0b">
+        <div class="table-header" style="background:#fff7ed">
+          <span style="font-size:14px;font-weight:700;color:#92400e"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> <%=semContrato.length%> diretivo(s) SEM contrato<%=turmaFiltro?' na turma '+turmaFiltro:''%></span>
+          <form method="POST" action="/contratos-diretivos" onsubmit="return confirm('Gerar contratos para todos os pendentes?')">
+            <input type="hidden" name="turma_gerar" value="<%=turmaFiltro||'todos'%>">
+            <input type="hidden" name="data_inicio" value="<%=new Date().toISOString().split('T')[0]%>">
+            <button type="submit" class="btn-xs amarelo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Gerar para Pendentes</button>
+          </form>
+        </div>
+        <table class="tabela"><thead><tr><th>Diretivo</th><th>Turma</th><th>Situacao</th></tr></thead><tbody>
+        <%semContrato.forEach(d=>{%>
+        <tr style="background:#fff7ed">
+          <td><div style="font-weight:600;color:#92400e"><%=d.nome%></div><div style="font-size:11px;color:#b45309"><%=d.email||''%></div></td>
+          <td><span style="font-size:12px;font-weight:600;color:#b45309"><%=d.ano_ingresso||'-'%></span></td>
+          <td><span class="badge-status" style="background:#fef3c7;color:#92400e"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Sem contrato</span></td>
+        </tr>
+        <%});%>
+        </tbody></table>
+      </div>
+      <%}%>
+
       <div class="table-card">
-        <div class="table-header"><span style="font-size:14px;font-weight:700"><%=contratos.length%> contrato(s)</span></div>
+        <div class="table-header">
+          <span style="font-size:14px;font-weight:700"><%=total%> contrato(s)<%=turmaFiltro?' — Turma '+turmaFiltro:''%></span>
+        </div>
         <table class="tabela"><thead><tr>
-          <th>Diretivo</th><th>Status</th><th>Criado em</th><th>Enviado em</th><th>Assinado em</th><th>Acoes</th>
+          <th>Diretivo</th><th>Turma</th><th>Status</th><th>Enviado em</th><th>Assinado em</th><th>Acoes</th>
         </tr></thead><tbody>
         <%if(contratos.length===0){%>
         <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--texto2)">
-          <div style="font-size:28px;margin-bottom:8px">&#128196;</div>
-          <div style="font-weight:600">Nenhum contrato gerado ainda</div>
+          <div style="font-size:28px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+          <div style="font-weight:600">Nenhum contrato encontrado</div>
+          <div style="font-size:12px;margin-top:4px">Use "Gerar por Turma" para criar os contratos</div>
         </td></tr><%}%>
         <%contratos.forEach(ct=>{%>
         <tr>
-          <td><div style="font-weight:600"><%=ct.diretivo_nome%></div>
-            <div style="font-size:11px;color:var(--texto2)"><%=ct.diretivo_email||''%></div></td>
-          <td><span class="badge-status status-<%=ct.status%>"><%=ct.status%></span></td>
-          <td style="font-size:12px;color:var(--texto2)"><%=new Date(ct.criado_em).toLocaleDateString('pt-BR')%></td>
+          <td>
+            <div style="font-weight:600"><%=ct.diretivo_nome%>
+              <%if(ct.diretivo_ativo===0){%><span style="background:#fee2e2;color:#991b1b;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:4px">Inativo</span><%}%>
+            </div>
+            <div style="font-size:11px;color:var(--texto2)"><%=ct.diretivo_email||''%></div>
+          </td>
+          <td><span style="font-size:12px;font-weight:600;color:var(--texto2)"><%=ct.diretivo_turma||'-'%></span></td>
+          <td>
+            <span class="badge-status status-<%=ct.status%>">
+              <%-ct.status==='rascunho'?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Rascunho':ct.status==='enviado'?'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>️ Enviado':'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Assinado'%>
+            </span>
+            <%if(ct.status==='enviado'){%><div style="font-size:10px;color:#b45309;margin-top:3px;font-weight:600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg> Aguardando assinatura</div><%}%>
+          </td>
           <td style="font-size:12px;color:var(--texto2)"><%=ct.enviado_em?new Date(ct.enviado_em).toLocaleDateString('pt-BR'):'-'%></td>
-          <td style="font-size:12px;color:var(--texto2)"><%=ct.assinado_em?new Date(ct.assinado_em).toLocaleDateString('pt-BR'):'-'%></td>
+          <td style="font-size:12px"><%if(ct.assinado_em){%><%=new Date(ct.assinado_em).toLocaleDateString('pt-BR')%><%}else{%><span style="color:#b45309;font-weight:600">Pendente</span><%}%></td>
           <td><div style="display:flex;gap:5px;flex-wrap:wrap">
             <a href="/contratos-diretivos/<%=ct.id%>/pdf" target="_blank" class="btn-xs">Ver</a>
             <a href="/contratos-diretivos/<%=ct.id%>/imprimir" target="_blank" class="btn-xs roxo">Imprimir</a>
-            <form method="POST" action="/contratos-diretivos/<%=ct.id%>/enviar" style="display:inline;margin:0"><button type="submit" class="btn-xs verde">Enviar</button></form>
+            <form method="POST" action="/contratos-diretivos/<%=ct.id%>/enviar" style="display:inline;margin:0"><input type="hidden" name="turma" value="<%=turmaFiltro||''%>"><button type="submit" class="btn-xs verde">Enviar</button></form>
             <%if(ct.status==='enviado'||ct.status==='assinado'){%>
-            <button class="btn-xs verde" onclick="abrirUpload(<%=ct.id%>,'<%=ct.diretivo_nome%>')">Anexar Assinado</button>
+            <button class="btn-xs amarelo" onclick="abrirUpload(<%=ct.id%>,'<%=ct.diretivo_nome%>')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg> Anexar Assinado</button>
             <%}%>
             <%if(ct.pdf_assinado_chave){%>
             <a href="/contratos-diretivos/<%=ct.id%>/assinado" target="_blank" class="btn-xs azul">Ver Assinado</a>
             <%}%>
-            <form method="POST" action="/contratos-diretivos/<%=ct.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')">
+            <form method="POST" action="/contratos-diretivos/<%=ct.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')"><input type="hidden" name="turma" value="<%=turmaFiltro||''%>">
               <button type="submit" class="btn-xs verm">Excluir</button></form>
           </div></td>
         </tr>
@@ -87,9 +155,42 @@
     </div>
   </main>
 </div>
+
+<!-- Modal Gerar por Turma -->
+<div class="modal-overlay" id="modal-turma" style="display:none">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header"><span class="modal-titulo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Gerar Contratos por Turma</span><button class="icon-btn" onclick="fecharModal('modal-turma')">&#x2715;</button></div>
+    <form action="/contratos-diretivos" method="POST">
+      <input type="hidden" name="diretivo_id" value="">
+      <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;padding:20px 24px">
+        <div class="campo"><label class="label">Turma *</label>
+          <select name="turma_gerar" class="input" required>
+            <option value="">Selecione a turma...</option>
+            <%turmas.forEach(t=>{%><option value="<%=t.turma%>"><%=t.turma%></option><%});%>
+            <%diretivos.filter((d,i,a)=>a.findIndex(x=>x.ano_ingresso===d.ano_ingresso)===i&&d.ano_ingresso).forEach(d=>{%>
+            <%if(!turmas.find(t=>t.turma===d.ano_ingresso)){%><option value="<%=d.ano_ingresso%>"><%=d.ano_ingresso%></option><%}%>
+            <%});%>
+          </select>
+        </div>
+        <div class="campo"><label class="label">Data de Inicio *</label>
+          <input type="date" name="data_inicio" class="input" required>
+        </div>
+        <div style="background:#eff6ff;border-radius:8px;padding:12px;font-size:12px;color:#1e40af">
+          ️ Serao gerados contratos apenas para diretivos que ainda nao possuem contrato nesta turma.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-turma')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Gerar para Toda a Turma</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Novo Individual -->
 <div class="modal-overlay" id="modal-novo" style="display:none">
-  <div class="modal" style="max-width:700px">
-    <div class="modal-header"><span class="modal-titulo">Novo Contrato Diretivo</span><button class="icon-btn" onclick="fecharModal('modal-novo')">&#x2715;</button></div>
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header"><span class="modal-titulo">Novo Contrato Individual</span><button class="icon-btn" onclick="fecharModal('modal-novo')">&#x2715;</button></div>
     <form action="/contratos-diretivos" method="POST">
       <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;padding:20px 24px">
         <div class="campo"><label class="label">Diretivo *</label>
@@ -98,9 +199,8 @@
             <%diretivos.forEach(d=>{%><option value="<%=d.id%>"><%=d.nome%> — <%=d.cargo||'Diretivo'%></option><%});%>
           </select>
         </div>
-        <div class="campo"><label class="label">Data de Início do Contrato *</label>
+        <div class="campo"><label class="label">Data de Inicio *</label>
           <input type="date" name="data_inicio" class="input" required>
-          <span style="font-size:11px;color:var(--texto2)">Data em que o contrato entra em vigor</span>
         </div>
       </div>
       <div class="modal-footer">
@@ -110,29 +210,16 @@
     </form>
   </div>
 </div>
-<div class="modal-overlay" id="modal-editar" style="display:none">
-  <div class="modal" style="max-width:700px">
-    <div class="modal-header"><span class="modal-titulo">Editar Contrato</span><button class="icon-btn" onclick="fecharModal('modal-editar')">&#x2715;</button></div>
-    <form id="form-editar" action="" method="POST">
-      <div class="campo" style="margin-bottom:16px"><label class="label">Texto do Contrato</label>
-        <div id="editor-editar" style="min-height:280px;border:1px solid var(--borda);border-radius:8px"></div>
-        <textarea name="texto_contrato" id="txt-editar" style="display:none"></textarea>
-        <div style="font-size:11px;color:var(--texto2);margin-top:4px">Use {nome} {rg} {catraca} {turma} {semestre} {data} {presidente} {vice} {secretario} {orientador}</div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn" onclick="fecharModal('modal-editar')">Cancelar</button>
-        <button type="submit" class="btn btn-primario">Salvar</button>
-      </div>
-    </form>
-  </div>
-</div>
+
+<!-- Modal Upload -->
 <div class="modal-overlay" id="modal-upload" style="display:none">
   <div class="modal" style="max-width:440px">
     <div class="modal-header"><span class="modal-titulo" id="titulo-upload">Anexar Assinado</span><button class="icon-btn" onclick="fecharModal('modal-upload')">&#x2715;</button></div>
     <form id="form-upload" action="" method="POST" enctype="multipart/form-data">
-      <div style="background:var(--fundo);border:2px dashed var(--borda);border-radius:10px;padding:20px;text-align:center;margin-bottom:16px">
+      <input type="hidden" name="turma" id="upload-turma" value="<%=turmaFiltro||''%>">
+      <div style="background:var(--fundo);border:2px dashed var(--borda);border-radius:10px;padding:20px;text-align:center;margin:16px 24px">
+        <div style="font-size:32px;margin-bottom:8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></div>
         <div style="font-size:13px;font-weight:600;margin-bottom:4px">Contrato assinado (PDF)</div>
-        <div style="font-size:11px;color:var(--texto2);margin-bottom:10px">Selecione o PDF do contrato assinado</div>
         <input type="file" name="pdf_assinado" class="input" accept=".pdf" required>
       </div>
       <div class="modal-footer">
@@ -142,35 +229,34 @@
     </form>
   </div>
 </div>
-<!-- Modal Timbrado Contrato -->
+
+<!-- Modal Timbrado -->
 <div class="modal-overlay" id="modal-timbrado" style="display:none">
   <div class="modal" style="max-width:440px">
-    <div class="modal-header"><span class="modal-titulo">&#128247; Timbrado do Contrato</span><button class="icon-btn" onclick="fecharModal('modal-timbrado')">&#x2715;</button></div>
+    <div class="modal-header"><span class="modal-titulo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Timbrado do Contrato</span><button class="icon-btn" onclick="fecharModal('modal-timbrado')">&#x2715;</button></div>
     <form action="/contratos-diretivos/timbrado" method="POST" enctype="multipart/form-data">
-      <div style="background:var(--fundo);border:2px dashed var(--borda);border-radius:10px;padding:20px;text-align:center;margin-bottom:16px">
-        <div style="font-size:13px;font-weight:600;margin-bottom:4px">Papel Timbrado (PNG ou JPG)</div>
-        <div style="font-size:11px;color:var(--texto2);margin-bottom:10px">Imagem A4 usada como fundo do contrato</div>
+      <div style="background:var(--fundo);border:2px dashed var(--borda);border-radius:10px;padding:20px;text-align:center;margin:16px 24px">
         <input type="file" name="timbrado_contrato" class="input" accept="image/*" required>
-        <%if(config.timbrado_contrato_chave){%><div style="margin-top:8px;font-size:11px;color:#10b981;font-weight:600">&#10003; Timbrado configurado</div><%}%>
+        <%if(config.timbrado_contrato_chave){%><div style="margin-top:8px;font-size:11px;color:#10b981;font-weight:600"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg> Timbrado configurado</div><%}%>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-timbrado')">Cancelar</button>
-        <button type="submit" class="btn btn-primario">Salvar Timbrado</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
       </div>
     </form>
   </div>
 </div>
+
 <!-- Modal Texto Global -->
 <div class="modal-overlay" id="modal-texto-global" style="display:none">
   <div class="modal" style="max-width:750px">
-    <div class="modal-header"><span class="modal-titulo">&#128196; Texto do Contrato</span><button class="icon-btn" onclick="fecharModal('modal-texto-global')">&#x2715;</button></div>
+    <div class="modal-header"><span class="modal-titulo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Texto do Contrato</span><button class="icon-btn" onclick="fecharModal('modal-texto-global')">&#x2715;</button></div>
     <form id="form-texto-global" action="/contratos-diretivos/texto-global" method="POST">
-      <div style="font-size:12px;color:var(--texto2);margin-bottom:10px;padding:8px;background:var(--fundo);border-radius:8px">
-        Este texto sera aplicado a <strong>todos os contratos</strong> existentes e futuros. Use as variaveis: <code>{nome}</code> <code>{rg}</code> <code>{catraca}</code> <code>{data_ingresso}</code> <code>{data}</code>
+      <div style="font-size:12px;color:var(--texto2);margin:12px 24px;padding:8px;background:var(--fundo);border-radius:8px">
+        Variaveis: <code>{nome}</code> <code>{rg}</code> <code>{cargo}</code> <code>{data_ingresso}</code> <code>{data}</code>
       </div>
-      <div class="campo" style="margin-bottom:16px">
+      <div class="campo" style="margin:0 24px 16px">
         <div id="editor-global" style="min-height:320px;border:1px solid var(--borda);border-radius:8px"></div>
-        <textarea name="texto_contrato" id="txt-global" style="display:none"></textarea>
         <script>window._textoGlobal=<%- JSON.stringify(textoGlobalDir||'') %>;</script>
       </div>
       <div class="modal-footer">
@@ -181,25 +267,38 @@
     </form>
   </div>
 </div>
+
+<!-- Modal Editar -->
+<div class="modal-overlay" id="modal-editar" style="display:none">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header"><span class="modal-titulo">Editar Contrato</span><button class="icon-btn" onclick="fecharModal('modal-editar')">&#x2715;</button></div>
+    <form id="form-editar" action="" method="POST">
+      <input type="hidden" name="turma" id="editar-turma" value="<%=turmaFiltro||''%>">
+      <div class="campo" style="margin:16px 24px">
+        <div id="editor-editar" style="min-height:280px;border:1px solid var(--borda);border-radius:8px"></div>
+        <textarea name="texto_contrato" id="txt-editar" style="display:none"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-editar')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <script src="/js/app.js"></script>
 <script>
-let quillNovo, quillEditar, quillGlobal;
+let quillEditar, quillGlobal;
 document.addEventListener("DOMContentLoaded",()=>{
   const AlignClass = Quill.import('attributors/class/align');
   Quill.register(AlignClass, true);
   quillGlobal=new Quill("#editor-global",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],['bold','italic','underline'],[{list:'ordered'},{list:'bullet'}],[{align:['','center','right','justify']}],['clean']]}});
   if(window._textoGlobal)quillGlobal.root.innerHTML=window._textoGlobal;
-  document.querySelector("form[action='/contratos-diretivos/texto-global']").addEventListener("submit",()=>{
-    document.getElementById("txt-global").value=quillGlobal.root.innerHTML;
+  quillEditar=new Quill("#editor-editar",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],['bold','italic','underline'],[{list:'ordered'},{list:'bullet'}],[{align:['','center','right','justify']}],['clean']]}});
+  document.getElementById("form-editar").addEventListener("submit",()=>{
+    document.getElementById("txt-editar").value=quillEditar.root.innerHTML;
   });
-
-  if(document.getElementById("editor-editar")){
-    quillEditar=new Quill("#editor-editar",{theme:"snow",modules:{toolbar:[[{header:[1,2,3,false]}],['bold','italic','underline'],[{list:'ordered'},{list:'bullet'}],[{align:['',"center","right","justify"]}],['clean']]}});
-    document.getElementById("form-editar").addEventListener("submit",()=>{
-      document.getElementById("txt-editar").value=quillEditar.root.innerHTML;
-    });
-  }
 });
 function editarContrato(id,textoEnc){
   document.getElementById("form-editar").action="/contratos-diretivos/"+id+"/editar";
@@ -208,17 +307,18 @@ function editarContrato(id,textoEnc){
   abrirModal("modal-editar");
 }
 function prepararSalvar(){
-  const editor = quillGlobal.root;
-  const clone = editor.cloneNode(true);
+  const editor=quillGlobal.root;
+  const clone=editor.cloneNode(true);
   clone.querySelectorAll('.ql-align-center').forEach(el=>el.setAttribute('style','text-align:center'));
   clone.querySelectorAll('.ql-align-right').forEach(el=>el.setAttribute('style','text-align:right'));
   clone.querySelectorAll('.ql-align-justify').forEach(el=>el.setAttribute('style','text-align:justify'));
-  document.getElementById('txt-global-hidden').value = clone.innerHTML;
-  console.log("SALVANDO:", clone.innerHTML.substring(0,200));
+  document.getElementById('txt-global-hidden').value=clone.innerHTML;
 }
 function abrirUpload(id,nome){
   document.getElementById("titulo-upload").textContent="Anexar Assinado — "+nome;
   document.getElementById("form-upload").action="/contratos-diretivos/"+id+"/assinado";
+  const ti = document.getElementById("upload-turma");
+  if(ti) ti.value = document.getElementById("editar-turma")?.value || "";
   abrirModal("modal-upload");
 }
 </script>

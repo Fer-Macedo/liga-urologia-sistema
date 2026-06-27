@@ -2,6 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= evento.nome %> — LAURO</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -17,7 +18,7 @@
       --sh: 0 1px 3px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.05);
       --sh-sm: 0 1px 2px rgba(0,0,0,.05);
       --sh-lg: 0 10px 40px rgba(0,0,0,.12),0 2px 8px rgba(0,0,0,.06);
-      --r: 12px; --r-sm: 8px; --r-lg: 16px;
+      --r: 4px; --r-sm: 2px; --r-lg: 4px;
     }
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
     html{scroll-behavior:smooth}
@@ -73,7 +74,7 @@
 
     /* CARD */
     .card{background:var(--sur);border-radius:var(--r-lg);box-shadow:var(--sh);border:1px solid var(--bdr);overflow:hidden;margin-bottom:20px}
-    .card-hd{padding:20px 26px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between}
+    .card-hd{padding:20px 26px 16px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:flex-start;gap:10px;flex-direction:row}
     .card-hd-l{display:flex;align-items:center;gap:10px}
     .card-hd-ic{width:32px;height:32px;border-radius:8px;background:var(--p-light);display:flex;align-items:center;justify-content:center;flex-shrink:0}
     .card-hd-ic svg{width:15px;height:15px;fill:var(--p)}
@@ -182,7 +183,7 @@
     .pales-inst{font-size:11px;color:var(--p);margin-top:4px;font-weight:600}
     .pales-bio-wrap{max-height:0;overflow:hidden;transition:max-height .3s ease}
     .pales-bio-wrap.open{max-height:500px}
-    .pales-bio{padding:12px 0 4px;font-size:13px;color:var(--ink2);line-height:1.7;text-align:justify;border-top:1px solid color-mix(in srgb,var(--p) 20%,transparent);margin-top:12px}
+    .pales-bio{padding:12px 0 4px;font-size:13px;color:var(--ink2);line-height:1.7;text-align:justify;border-top:1px solid color-mix(in srgb,var(--p) 20%,transparent);margin-top:12px;white-space:pre-wrap}
     .pales-size-hint{font-size:10px;color:var(--ink4);text-align:center;margin-top:12px}
 
     /* CONTATO */
@@ -302,6 +303,82 @@
     footer strong{color:rgba(255,255,255,.85)}
     footer a{color:rgba(255,255,255,.5);text-decoration:none;transition:color .18s}
     footer a:hover{color:rgba(255,255,255,.85)}
+  
+#pales-modal ::-webkit-scrollbar { width: 4px; }
+#pales-modal ::-webkit-scrollbar-track { background: transparent; }
+#pales-modal ::-webkit-scrollbar-thumb { background: rgba(0,0,0,.12); border-radius: 99px; }
+#pales-modal ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.22); }
+#pales-modal > div { scrollbar-width: thin; scrollbar-color: rgba(0,0,0,.12) transparent; }
+
+#pm-btn-link { transition: background .2s, box-shadow .2s, transform .15s; }
+#pm-btn-link:hover { background: #1D9E75 !important; box-shadow: 0 6px 24px rgba(15,110,86,.4); transform: translateY(-1px); }
+#pm-btn-link:active { transform: translateY(0); }
+#pales-modal .btn-fechar { transition: background .2s, color .2s; }
+#pales-modal .btn-fechar:hover { background: #f3f4f6; color: #111; }
+
+#pales-modal .btn-fechar:hover { background: #1D9E75 !important; color: white !important; border-color: #1D9E75 !important; }
+#pales-modal .btn-close-x { transition: color .2s, border-color .2s, background .2s; }
+#pales-modal .btn-close-x:hover { color: white !important; border-color: #1D9E75 !important; background: #1D9E75 !important; }
+
+    /* MODERNIZAÇÃO */
+    .card { border-radius: 4px !important; }
+    .card-hd { display: flex; align-items: center; gap: 10px; }
+    .card-hd h2 { font-size: 12px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--ink2); }
+
+    .lote { border-radius: 4px !important; transition: border-color .2s, background .2s, transform .15s !important; }
+    .lote:hover { transform: translateX(3px); }
+    .lote::before { border-radius: 0 !important; }
+    .btn-prox { border-radius: 2px !important; transition: background .2s, transform .15s !important; }
+    .btn-prox:hover { transform: translateY(-2px) !important; }
+    .btn-sub { border-radius: 2px !important; transition: background .2s !important; }
+    .btn-sub:hover { background: #0F6E56 !important; opacity: 1 !important; transform: none !important; }
+    .cupom-btn { border-radius: 2px !important; }
+    .cupom-in { border-radius: 2px !important; }
+    .tipo-opt { border-radius: 2px !important; }
+    .contact-btn { border-radius: 2px !important; transition: border-color .18s, background .18s, transform .15s !important; }
+    .contact-btn:hover { transform: translateY(-2px) !important; }
+    .prog-item { border-radius: 0 2px 2px 0 !important; transition: border-color .2s, background .2s, transform .15s !important; }
+    .prog-item:hover { transform: translateX(4px); }
+    .s-btn { border-radius: 2px !important; }
+    .resumo-card { border-radius: 4px !important; }
+    .resumo-btn { border-radius: 2px !important; }
+    .s-card { border-radius: 4px !important; }
+    .modal-box { border-radius: 4px !important; }
+    .pales-card { border-radius: 4px !important; transition: border-color .22s, box-shadow .22s, transform .22s !important; }
+    .pales-card:hover { transform: translateY(-4px) !important; }
+    .pales-foto { border-radius: 4px !important; }
+    .pales-ph { border-radius: 4px !important; }
+    .patroc-item { border-radius: 4px !important; transition: border-color .22s, box-shadow .22s, transform .2s !important; }
+    .patroc-item:hover { transform: translateY(-3px) !important; }
+    .wpp-join { border-radius: 2px !important; }
+    .lote-badge { border-radius: 2px !important; }
+    .badge-free { border-radius: 2px !important; }
+    .qty-btn { border-radius: 0 !important; }
+    .qty-ctrl { border-radius: 2px !important; }
+    .org-strip { border-radius: 2px !important; }
+    .org-logo-box { border-radius: 2px !important; }
+    .i-icon { border-radius: 2px !important; }
+    .info-it { transition: background .18s; }
+    .s-btn-logo { border-radius: 2px !important; }
+    .suc-icon { border-radius: 4px !important; }
+    .suc-btn { border-radius: 2px !important; }
+    .modal-close { border-radius: 2px !important; }
+    .modal-ok { border-radius: 2px !important; }
+    .nav-cta { border-radius: 2px !important; }
+    .nav-a { border-radius: 2px !important; }
+
+  
+
+
+  
+    .card-hd { justify-content: flex-start !important; }
+    .card-hd-l { display: flex; align-items: center; gap: 10px; }
+
+  
+    .c-send { transition: background .2s, transform .15s !important; }
+    .c-send:hover { background: #1D9E75 !important; transform: translateY(-2px); }
+    .c-send:active { transform: translateY(0); }
+
   </style>
 </head>
 <body>
@@ -335,12 +412,12 @@
 
 <% if(typeof erro !== 'undefined' && erro){ %>
 <div class="wrap" style="padding-top:32px;padding-bottom:0">
-  <div class="alerta-dup">
-    <div class="alerta-dup-icon">
-      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+  <div class="alerta-dup" style="border-color:#22c55e;background:#f0fdf4">
+    <div class="alerta-dup-icon" style="background:#dcfce7">
+      <svg viewBox="0 0 24 24" style="fill:#15803d"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
     </div>
-    <h2>Inscrição já realizada</h2>
-    <p><%= erro %></p>
+    <h2 style="color:#15803d">Você já está inscrito(a)!</h2>
+    <p style="color:#374151">Já existe uma inscrição confirmada neste evento com seu e-mail ou documento. <strong>Não é necessário fazer nada mais.</strong><br><br>Caso não tenha recebido o e-mail de confirmação, verifique sua caixa de spam ou entre em contato conosco.</p>
     <div class="alerta-dup-btns">
       <a href="/inscricao/<%= evento.id %>" class="alerta-btn-s">Voltar ao evento</a>
       <a href="mailto:lauroucpcde@lauroucpcde.com" class="alerta-btn-p">Entrar em contato</a>
@@ -400,32 +477,6 @@
         <span><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}) %></span>
       </div>
       <% } %>
-      <% if(evento.data_inicio && new Date(evento.data_inicio) > new Date()) { %>
-      <div id="countdown-wrap" style="margin-top:16px;background:linear-gradient(135deg,rgba(0,0,0,.3),rgba(0,0,0,.15));border:1px solid rgba(255,255,255,.15);border-radius:14px;padding:18px 24px;display:inline-flex;gap:0;align-items:center;flex-wrap:wrap;gap:8px">
-        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.7);width:100%;margin-bottom:8px">Faltam para o evento</div>
-        <div style="display:flex;gap:12px;align-items:center">
-          <div style="text-align:center">
-            <div id="cd-dias" style="font-size:32px;font-weight:800;color:white;font-family:'Outfit',sans-serif;line-height:1">00</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.6);font-weight:600;text-transform:uppercase;letter-spacing:.06em">dias</div>
-          </div>
-          <div style="font-size:24px;color:rgba(255,255,255,.4);font-weight:300">:</div>
-          <div style="text-align:center">
-            <div id="cd-horas" style="font-size:32px;font-weight:800;color:white;font-family:'Outfit',sans-serif;line-height:1">00</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.6);font-weight:600;text-transform:uppercase;letter-spacing:.06em">horas</div>
-          </div>
-          <div style="font-size:24px;color:rgba(255,255,255,.4);font-weight:300">:</div>
-          <div style="text-align:center">
-            <div id="cd-min" style="font-size:32px;font-weight:800;color:white;font-family:'Outfit',sans-serif;line-height:1">00</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.6);font-weight:600;text-transform:uppercase;letter-spacing:.06em">min</div>
-          </div>
-          <div style="font-size:24px;color:rgba(255,255,255,.4);font-weight:300">:</div>
-          <div style="text-align:center">
-            <div id="cd-seg" style="font-size:32px;font-weight:800;color:white;font-family:'Outfit',sans-serif;line-height:1">00</div>
-            <div style="font-size:10px;color:rgba(255,255,255,.6);font-weight:600;text-transform:uppercase;letter-spacing:.06em">seg</div>
-          </div>
-        </div>
-      </div>
-      <% } %>
       <% if(evento.local&&evento.tipo_evento!=='online'){ %>
       <div class="t-chip">
         <div class="t-chip-icon"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div>
@@ -474,8 +525,9 @@
     </div>
     <div style="display:flex;align-items:center;gap:8px">
       <span style="font-size:11px;color:var(--ink3);font-weight:500">Vagas preenchidas</span>
-      <div style="width:90px;height:5px;background:var(--sur3);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:linear-gradient(90deg,#22c55e,#16a34a);width:73%"></div></div>
-      <span style="font-size:11px;font-weight:700;color:#16a34a">73%</span>
+      <% const pct = evento.vagas_total>0 ? Math.round((evento.total_inscritos||0)/evento.vagas_total*100) : 0; %>
+      <div style="width:90px;height:5px;background:var(--sur3);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:linear-gradient(90deg,#22c55e,#16a34a);width:<%= pct %>%"></div></div>
+      <span style="font-size:11px;font-weight:700;color:#16a34a"><%= pct %>%</span>
     </div>
   </div>
 </div>
@@ -496,7 +548,15 @@
       </div>
       <% } %>
 
-      <% if(lotes.length>0){ %>
+      <% if(typeof encerrado !== 'undefined' && encerrado){ %>
+      <div class="card" id="inscricao">
+        <div class="card-bd" style="text-align:center;padding:40px 28px">
+          <div style="width:72px;height:72px;border-radius:50%;background:#fef2f2;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:38px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+          <h2 style="font-size:20px;color:#991b1b;margin-bottom:10px">Inscripciones cerradas</h2>
+          <p style="font-size:14px;color:var(--ink3);line-height:1.7">Las inscripciones para este evento ya fueron cerradas.<br>¡Gracias por tu interés! Síguenos en nuestras redes para enterarte de los próximos eventos.</p>
+        </div>
+      </div>
+      <% } else if(lotes.length>0){ %>
       <div class="card" id="inscricao">
         <div class="card-hd">
           <div class="card-hd-l">
@@ -546,6 +606,9 @@
             <div class="cupom-lbl">Cupom de desconto</div>
             <div class="cupom-row">
               <input id="cupom-in" class="cupom-in" placeholder="CÓDIGO DO CUPOM" oninput="this.value=this.value.toUpperCase()" value="<%= typeof cupomUrl !== 'undefined' && cupomUrl ? cupomUrl : '' %>">
+              <% if(typeof cupomUrl !== 'undefined' && cupomUrl){ %>
+              <script>window._autoCupom=true;</script>
+              <% } %>
               <button type="button" class="cupom-btn" onclick="aplicarCupom()">Aplicar</button>
             </div>
             <div id="cupom-msg" style="display:none"></div>
@@ -578,7 +641,7 @@
             <form action="/inscricao/<%= evento.id %>" method="POST" id="form-ins">
               <input type="hidden" name="lote_id" id="lote-sel" value="<%= lotes[0]?.id %>">
               <input type="hidden" name="quantidade" id="campo-qty" value="1">
-              <input type="hidden" name="cupom" id="campo-cupom" value="">
+              <input type="hidden" name="cupom_codigo" id="campo-cupom" value="">
               <input type="hidden" name="tipo_participante" id="campo-tipo" value="ucp">
               <div style="margin-bottom:20px">
                 <div class="sec-title">Tipo de participante</div>
@@ -601,7 +664,7 @@
                 <div class="campo"><label>E-mail <span class="req">*</span></label><input name="email" class="inp" type="email" required placeholder="email@exemplo.com"></div>
                 <div class="campo"><label>WhatsApp <span class="req">*</span></label>
                   <div class="inp-group">
-                    <select name="whatsapp_pais" class="inp" style="max-width:86px;flex-shrink:0"><option value="+595">🇵🇾 +595</option><option value="+55">🇧🇷 +55</option><option value="+54">🇦🇷 +54</option><option value="+598">🇺🇾 +598</option><option value="+1">🇺🇸 +1</option></select>
+                    <select name="whatsapp_pais" class="inp" style="max-width:86px;flex-shrink:0"><option value="+595"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">PY</span> +595</option><option value="+55"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">BR</span> +55</option><option value="+54"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">AR</span> +54</option><option value="+598"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">UY</span> +598</option><option value="+1"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">US</span> +1</option></select>
                     <input name="whatsapp" class="inp" placeholder="99 999 9999" required>
                   </div>
                 </div>
@@ -610,7 +673,7 @@
                 <div class="campo" id="campo-catraca"><label>Catraca UCP <span class="req">*</span></label><input name="catraca" id="inp-catraca" class="inp" required placeholder="Número da catraca"></div>
                 <div class="campo" id="campo-instituicao" style="display:none"><label>Instituição <span class="req">*</span></label><input name="instituicao" id="inp-instituicao" class="inp" placeholder="Nome da sua universidade"></div>
                 <div class="campo"><label>Semestre <span class="req">*</span></label>
-                  <select name="semestre" class="inp" required><option value="">Selecione...</option><% for(let s=1;s<=10;s++){ %><option value="<%= s %>º"><%= s %>º Semestre</option><% } %></select>
+                  <select name="semestre" class="inp" required><option value="">Selecione...</option><% for(let s=1;s<=12;s++){ %><option value="<%= s %>º"><%= s %>º Semestre</option><% } %></select>
                 </div>
                 <div class="campo"><label>Turma <span class="req">*</span></label>
                   <select name="turma" class="inp" required><option value="">Selecione...</option><% 'ABCDEFGHIJKLMNOP'.split('').forEach(t=>{ %><option value="<%= t %>">Turma <%= t %></option><% }) %></select>
@@ -648,7 +711,7 @@
           <div class="prog-item" id="prog-item-<%= i %>" onclick="togProg(<%= i %>)">
             <div class="prog-item-hd">
               <div style="flex:1"><div class="prog-hora"><%= p.horario %><% if(p.local){ %> · <%= p.local %><% } %></div><div class="prog-titulo"><%= p.titulo %></div></div>
-              <% if(p.descricao){ %><span class="prog-chevron">▼</span><% } %>
+              <% if(p.descricao){ %><span class="prog-chevron"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg></span><% } %>
             </div>
             <% if(p.descricao){ %><div class="prog-desc" id="prog-desc-<%= i %>"><div class="prog-desc-inner"><%= p.descricao %></div></div><% } %>
           </div>
@@ -663,13 +726,13 @@
         <div class="card-bd">
           <div class="pales-grid">
             <% palestrantes.forEach((p,i)=>{ %>
-            <div class="pales-card" id="pales-<%= i %>" onclick="togPales(<%= i %>)">
+            <div class="pales-card" id="pales-<%= i %>" onclick="togPales(<%= i %>)" data-link="<%= p.link_externo||'' %>">
               <% if(p.foto_chave){ %>
               <div class="pales-foto-wrap"><img src="/eventos/palestrantes/<%= p.id %>/foto" class="pales-foto" alt="<%= p.nome %>"><div class="pales-foto-ring"></div></div>
               <% } else { %><div class="pales-ph"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div><% } %>
               <div class="pales-nome"><%= p.nome %></div>
               <% if(p.instituicao){ %><div class="pales-inst"><%= p.instituicao %></div><% } %>
-              <% if(p.bio){ %><div class="pales-bio-wrap" id="pbio-<%= i %>"><div class="pales-bio"><%= p.bio %></div></div><% } %>
+              <% if(p.bio){ %><div class="pales-bio-wrap" id="pbio-<%= i %>"><div class="pales-bio"><%- p.bio %></div></div><% } %>
             </div>
             <% }) %>
           </div>
@@ -682,13 +745,13 @@
         <div class="card-bd">
           <div class="contact-grid">
             <a href="mailto:lauroucpcde@lauroucpcde.com" class="contact-btn"><div class="contact-ic" style="background:#fee2e2"><svg style="fill:#dc2626" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div><div><div class="contact-lbl">E-mail</div><div class="contact-val" style="font-size:12px">lauroucpcde@lauroucpcde.com</div></div></a>
-            <a href="https://wa.me/595994225753" target="_blank" class="contact-btn"><div class="contact-ic" style="background:#dcfce7"><svg style="fill:#16a34a" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div><div><div class="contact-lbl">WhatsApp</div><div class="contact-val">+595 994 225 753</div></div></a>
+            <a href="https://wa.me/595994868368" target="_blank" class="contact-btn"><div class="contact-ic" style="background:#dcfce7"><svg style="fill:#16a34a" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div><div><div class="contact-lbl">WhatsApp</div><div class="contact-val">+595 994 868 368</div></div></a>
           </div>
           <div style="margin-top:10px">
             <div class="contact-btn" onclick="togForm()" style="width:100%">
               <div class="contact-ic" style="background:var(--sur3)"><svg style="fill:var(--ink3)" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg></div>
               <div style="flex:1"><div class="contact-lbl">Mensagem</div><div class="contact-val">Enviar mensagem para a equipe</div></div>
-              <span id="form-arrow" style="color:var(--ink4);font-size:11px;transition:transform .25s">▼</span>
+              <span id="form-arrow" style="color:var(--ink4);font-size:11px;transition:transform .25s"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg></span>
             </div>
             <div class="c-form" id="c-form">
               <form action="/contato-evento/<%= evento.id %>" method="POST" style="margin-top:12px">
@@ -713,9 +776,9 @@
         <div class="resumo-preco" id="res-preco"><%= parseFloat(lotes[0]?.preco||0)===0?'Gratuito':'R$ '+Number(lotes[0]?.preco||0).toFixed(2).replace('.',',') %></div>
         <div style="height:1px;background:rgba(255,255,255,.12);margin:14px 0;position:relative;z-index:1"></div>
         <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;position:relative;z-index:1">
-          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="width:15px;height:15px;border-radius:50%;background:rgba(74,222,128,.2);display:flex;align-items:center;justify-content:center;font-size:9px;color:#4ade80;flex-shrink:0">✓</span>Acesso completo ao evento</div>
-          <% if(evento.carga_horaria){ %><div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="width:15px;height:15px;border-radius:50%;background:rgba(74,222,128,.2);display:flex;align-items:center;justify-content:center;font-size:9px;color:#4ade80;flex-shrink:0">✓</span>Certificado digital <%= evento.carga_horaria %>h</div><% } %>
-          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="width:15px;height:15px;border-radius:50%;background:rgba(74,222,128,.2);display:flex;align-items:center;justify-content:center;font-size:9px;color:#4ade80;flex-shrink:0">✓</span>Confirmação por e-mail</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="width:15px;height:15px;border-radius:50%;background:rgba(74,222,128,.2);display:flex;align-items:center;justify-content:center;font-size:9px;color:#4ade80;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg></span>Acesso completo ao evento</div>
+          <% if(evento.carga_horaria){ %><div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="width:15px;height:15px;border-radius:50%;background:rgba(74,222,128,.2);display:flex;align-items:center;justify-content:center;font-size:9px;color:#4ade80;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg></span>Certificado digital <%= evento.carga_horaria %>h</div><% } %>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="width:15px;height:15px;border-radius:50%;background:rgba(74,222,128,.2);display:flex;align-items:center;justify-content:center;font-size:9px;color:#4ade80;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg></span>Confirmação por e-mail</div>
         </div>
         <button class="resumo-btn" onclick="abrirForm()">
           <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
@@ -763,7 +826,7 @@
       <div class="s-card">
         <div class="s-title">Siga a LAURO</div>
         <div class="social-list">
-          <a href="https://wa.me/595994225753" target="_blank" class="s-btn s-btn-wpp">
+          <a href="https://wa.me/595994868368" target="_blank" class="s-btn s-btn-wpp">
             <div class="s-btn-logo"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
             <div><div class="s-btn-lbl">Atendimento via</div><div class="s-btn-name">WhatsApp</div></div>
           </a>
@@ -784,13 +847,13 @@
 
 <% if(evento.termos_texto){ %>
 <div class="modal-wrap" id="modal-termos" onclick="if(event.target===this)fecharModal('modal-termos')">
-  <div class="modal-box"><div class="modal-hd"><h3>Termos de Participação</h3><button class="modal-close" onclick="fecharModal('modal-termos')">✕</button></div><div class="modal-body"><%= evento.termos_texto %></div><div class="modal-ft"><button class="modal-ok" onclick="fecharModal('modal-termos')">Entendi</button></div></div>
+  <div class="modal-box"><div class="modal-hd"><h3>Termos de Participação</h3><button class="modal-close" onclick="fecharModal('modal-termos')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div class="modal-body"><%- evento.termos_texto %></div><div class="modal-ft"><button class="modal-ok" onclick="fecharModal('modal-termos')">Entendi</button></div></div>
 </div>
 <% } %>
 
 <div class="modal-wrap" id="modal-lgpd" onclick="if(event.target===this)fecharModal('modal-lgpd')">
-  <div class="modal-box"><div class="modal-hd"><h3>Política de Privacidade</h3><button class="modal-close" onclick="fecharModal('modal-lgpd')">✕</button></div>
-  <div class="modal-body"><% if(evento.lgpd_texto){ %><%= evento.lgpd_texto %><% } else { %>Liga Académica de Urología — LAURO
+  <div class="modal-box"><div class="modal-hd"><h3>Política de Privacidade</h3><button class="modal-close" onclick="fecharModal('modal-lgpd')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+  <div class="modal-body"><% if(evento.lgpd_texto){ %><%- evento.lgpd_texto %><% } else { %>Liga Académica de Urología — LAURO
 Política de Privacidade e Proteção de Dados (LGPD)
 
 1. RESPONSÁVEL PELO TRATAMENTO
@@ -816,13 +879,13 @@ Ao marcar esta opção, você consente com o tratamento dos seus dados.<% } %></
   <div class="modal-ft"><button class="modal-ok" onclick="fecharModal('modal-lgpd')">Entendi</button></div></div>
 </div>
 
-<a href="https://wa.me/595994225753" target="_blank" class="wpp-float" title="Fale conosco">
+<a href="https://wa.me/595994868368" target="_blank" class="wpp-float" title="Fale conosco">
   <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
 </a>
 
 <footer>
   <strong>LAURO</strong> — Liga Académica de Urología · Universidad Central del Paraguay<br>
-  <span style="margin-top:6px;display:block"><a href="mailto:lauroucpcde@lauroucpcde.com">lauroucpcde@lauroucpcde.com</a> · +595 994 225 753</span>
+  <span style="margin-top:6px;display:block"><a href="mailto:lauroucpcde@lauroucpcde.com">lauroucpcde@lauroucpcde.com</a> · +595 994 868 368</span>
 </footer>
 
 <script>
@@ -929,6 +992,12 @@ function aplicarCupom(){
       else{msg.className='cupom-err';msg.textContent=d.msg||'Cupom inválido ou expirado';}
     }).catch(()=>{document.getElementById('cupom-msg').className='cupom-err';document.getElementById('cupom-msg').textContent='Erro ao verificar o cupom';document.getElementById('cupom-msg').style.display='block';});
 }
+// Auto-aplicar cupom se vier na URL
+if(window._autoCupom) {
+  window.addEventListener('load', function() {
+    setTimeout(function() { aplicarCupom(); }, 800);
+  });
+}
 function togProg(i){
   const item=document.getElementById('prog-item-'+i),desc=document.getElementById('prog-desc-'+i);
   if(!desc)return;
@@ -936,10 +1005,24 @@ function togProg(i){
   item.classList.toggle('open',open);
 }
 function togPales(i){
-  const card=document.getElementById('pales-'+i),bio=document.getElementById('pbio-'+i);
-  if(!bio)return;
-  const open=bio.classList.toggle('open');
-  card.classList.toggle('open',open);
+  const card=document.getElementById('pales-'+i);
+  const nome=card.querySelector('.pales-nome')?.innerText||'';
+  const inst=card.querySelector('.pales-inst')?.innerText||'';
+  const bioEl=card.querySelector('.pales-bio');
+  const bio=bioEl?bioEl.innerHTML:'';
+  const link=card.dataset.link||'';
+  const fotoEl=card.querySelector('.pales-foto');
+  const fotoSrc=fotoEl?fotoEl.src:'';
+  document.getElementById('pm-nome').innerText=nome;
+  document.getElementById('pm-inst').innerText=inst;
+  document.getElementById('pm-bio').innerHTML=bio;
+  const fotoBox=document.getElementById('pm-foto');
+  if(fotoSrc){fotoBox.innerHTML='<img src="'+fotoSrc+'" style="width:90px;height:90px;object-fit:cover;border-radius:4px;border:2px solid rgba(255,255,255,0.15)">';}
+  else{fotoBox.innerHTML='';}
+  const btnLink=document.getElementById('pm-btn-link');
+  if(link){btnLink.href=link;btnLink.style.display='flex';}else{btnLink.style.display='none';}
+  document.getElementById('pales-modal').style.display='flex';
+  document.body.style.overflow='hidden';
 }
 function togForm(){
   const f=document.getElementById('c-form'),a=document.getElementById('form-arrow');
@@ -967,7 +1050,7 @@ function entrarEspera(){
   if(!nome){alert('Informe seu nome.');return;}
   fetch('/inscricao/<%= evento.id %>/lista-espera',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,email,whatsapp:wpp})})
   .then(r=>r.json()).then(d=>{
-    if(d.ok){document.getElementById('modal-espera').querySelector('div').innerHTML='<div style="text-align:center;padding:20px"><div style="font-size:40px">✅</div><h3>Voce esta na lista!</h3><p style="color:#6b7280;font-size:14px;margin:8px 0">'+d.msg+'</p><button onclick="fecharEspera()" style="margin-top:12px;padding:10px 24px;background:#1a56db;color:white;border:none;border-radius:8px;cursor:pointer">Fechar</button></div>';}
+    if(d.ok){document.getElementById('modal-espera').querySelector('div').innerHTML='<div style="text-align:center;padding:20px"><div style="font-size:40px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><h3>Voce esta na lista!</h3><p style="color:#6b7280;font-size:14px;margin:8px 0">'+d.msg+'</p><button onclick="fecharEspera()" style="margin-top:12px;padding:10px 24px;background:#1a56db;color:white;border:none;border-radius:8px;cursor:pointer">Fechar</button></div>';}
     else{alert(d.msg||'Erro.');}
   });
 }
@@ -1014,5 +1097,33 @@ function entrarEspera(){
     </div>
   </div>
 </div>
+
+<div id="pales-modal" onclick="if(event.target===this)fecharPales()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9999;align-items:center;justify-content:center;padding:24px;backdrop-filter:blur(6px)">
+  <div style="background:white;border-radius:4px;max-width:660px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.35);">
+    <div style="background:#0a1f0f;padding:28px 32px;display:flex;align-items:center;gap:22px;position:relative">
+      <button onclick="fecharPales()" class="btn-close-x" style="position:absolute;top:14px;right:14px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(255,255,255,.45);font-size:18px;border:0.5px solid rgba(255,255,255,.15);border-radius:2px;background:transparent;transition:color .2s,border-color .2s"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      <div id="pm-foto" style="flex-shrink:0"></div>
+      <div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#1D9E75;margin-bottom:6px">Palestrante</div>
+        <div id="pm-nome" style="font-size:20px;font-weight:500;color:white;line-height:1.2;margin-bottom:10px"></div>
+        <div id="pm-inst" style="font-size:12px;color:rgba(255,255,255,.5);letter-spacing:.3px"></div>
+      </div>
+    </div>
+    <div style="height:3px;background:linear-gradient(90deg,#1D9E75,#0F6E56,transparent)"></div>
+    <div style="padding:28px 32px">
+      <div style="font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:#9ca3af;margin-bottom:14px">Biografia</div>
+      <div id="pm-bio" style="font-size:14px;color:#374151;line-height:1.85;text-align:justify"></div>
+    </div>
+    <div style="padding:16px 32px 24px;display:flex;gap:10px;border-top:1px solid #f3f4f6">
+      <a id="pm-btn-link" href="#" target="_blank" rel="noopener" style="display:none;flex:1;padding:12px;border-radius:2px;background:#0F6E56;color:white;border:none;font-size:13px;cursor:pointer;text-decoration:none;align-items:center;justify-content:center;gap:8px;font-weight:600">
+        <svg style="width:15px;height:15px;fill:white;flex-shrink:0" viewBox="0 0 24 24"><path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3zM5 5h6v2H7v10h10v-4h2v6H5V5z"/></svg>
+        Ver perfil completo
+      </a>
+      <button onclick="fecharPales()" class="btn-fechar" style="padding:12px 20px;border-radius:2px;background:transparent;color:#6b7280;border:1px solid #e5e7eb;font-size:13px;cursor:pointer">Fechar</button>
+    </div>
+  </div>
+</div>
+<script>function fecharPales(){document.getElementById('pales-modal').style.display='none';document.body.style.overflow='';}</script>
+
 </body>
 </html>

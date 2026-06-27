@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Materiais de Estudo — Portal do Membro</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#F4F6F5;color:#0C231B;min-height:100vh}
+.header{background:#0C231B;padding:0 16px;height:56px;display:flex;align-items:center;justify-content:space-between}
+.header-logo{color:#fff;font-size:14px;font-weight:700}
+.header-user{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.7);font-size:13px}
+.header-user a{color:#4ade80;text-decoration:none;font-size:12px;border:1px solid #1a3d2e;padding:4px 10px}
+.nav{background:#fff;border-bottom:1px solid #E5EBE8;overflow-x:auto;white-space:nowrap}
+.nav a{display:inline-block;padding:14px 16px;font-size:13px;font-weight:500;color:#6B7A72;text-decoration:none;border-bottom:2px solid transparent}
+.nav a.ativo,.nav a:hover{color:#0F6E56;border-bottom-color:#0F6E56}
+.container{max-width:960px;margin:0 auto;padding:16px}
+.page-titulo{font-size:18px;font-weight:700;color:#0C231B;margin-bottom:4px}
+.page-sub{font-size:13px;color:#6B7A72;margin-bottom:20px}
+.cat-titulo{font-size:11px;font-weight:700;color:#6B7A72;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #E5EBE8}
+.cat-bloco{margin-bottom:28px}
+.materiais-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:12px}
+.mat-card{background:#fff;border:1px solid #E5EBE8;padding:16px;display:flex;flex-direction:column;gap:12px}
+.mat-icone{width:40px;height:40px;background:#f0f7eb;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mat-info{flex:1;min-width:0}
+.mat-titulo{font-size:14px;font-weight:700;color:#0C231B;line-height:1.3}
+.mat-desc{font-size:12px;color:#6B7A72;margin-top:4px;line-height:1.4}
+.mat-acoes{display:flex;gap:8px}
+.btn-ver{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#0C231B;color:#fff;padding:9px 14px;text-decoration:none;font-size:13px;font-weight:600;border:none;cursor:pointer}
+.btn-ver:hover{background:#1a3d2b}
+.btn-baixar{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:#f0f7eb;color:#0F6E56;padding:9px 12px;text-decoration:none;font-size:12px;font-weight:600;border:1px solid #c6e6b0}
+.empty{text-align:center;padding:48px;color:#6B7A72;font-size:13px;background:#fff;border:1px solid #E5EBE8}
+</style>
+</head>
+<body>
+<%- include('../../partials/membro-nav', {membro, paginaAtiva:'materiais', comunicadosNaoLidos: locals.comunicadosNaoLidos||0, grupos: locals.grupos||[]}) %>
+<div class="container">
+
+  <div class="page-titulo">Materiais de Estudo</div>
+  <div class="page-sub">Acesse os materiais disponibilizados pela Liga Academica de Urologia</div>
+
+  <% if(materiais.length === 0){ %>
+  <div class="empty">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;display:block;opacity:.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <p style="font-weight:600;margin-bottom:4px">Nenhum material disponivel no momento</p>
+    <p style="font-size:12px">Em breve novos materiais serao adicionados pela equipe da Liga</p>
+  </div>
+  <% } else { %>
+  <%
+    var categorias = {};
+    materiais.forEach(function(m){
+      var cat = m.categoria || 'Geral';
+      if(!categorias[cat]) categorias[cat] = [];
+      categorias[cat].push(m);
+    });
+  %>
+  <% Object.keys(categorias).forEach(function(cat){ %>
+  <div class="cat-bloco">
+    <div class="cat-titulo"><%=cat%></div>
+    <div class="materiais-grid">
+      <% categorias[cat].forEach(function(m){ %>
+      <%
+        var isVideo = m.arquivo_tipo && m.arquivo_tipo.startsWith('video/');
+        var isPdf = m.arquivo_tipo && m.arquivo_tipo.includes('pdf');
+        var isImagem = m.arquivo_tipo && m.arquivo_tipo.startsWith('image/');
+        var isPpt = m.arquivo_tipo && (m.arquivo_tipo.includes('powerpoint') || m.arquivo_tipo.includes('presentation'));
+        var isDoc = m.arquivo_tipo && (m.arquivo_tipo.includes('word') || m.arquivo_tipo.includes('document'));
+        var isExcel = m.arquivo_tipo && (m.arquivo_tipo.includes('excel') || m.arquivo_tipo.includes('spreadsheet'));
+      %>
+      <div class="mat-card">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <div class="mat-icone">
+            <% if(isPdf){ %>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <% } else if(isVideo){ %>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+            <% } else if(isImagem){ %>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            <% } else if(isPpt){ %>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 8h5a2 2 0 0 1 0 4H8z"/><line x1="8" y1="16" x2="8" y2="12"/></svg>
+            <% } else if(isDoc){ %>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            <% } else if(isExcel){ %>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+            <% } else { %>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+            <% } %>
+          </div>
+          <div class="mat-info">
+            <div class="mat-titulo"><%=m.titulo%></div>
+            <% if(m.descricao){ %><div class="mat-desc"><%=m.descricao%></div><% } %>
+          </div>
+        </div>
+        <div class="mat-acoes">
+          <% if(m.arquivo_chave){ %>
+          <a href="/materiais/<%=m.id%>/arquivo" target="_blank" class="btn-ver">
+            <% if(isVideo){ %>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Assistir
+            <% } else { %>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Visualizar
+            <% } %>
+          </a>
+          <% if(m.permite_download){ %>
+          <a href="/materiais/<%=m.id%>/arquivo" download class="btn-baixar">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar
+          </a>
+          <% } %>
+          <% } else { %>
+          <span style="font-size:12px;color:#94a3b8;font-style:italic">Arquivo nao disponivel</span>
+          <% } %>
+        </div>
+      </div>
+      <% }); %>
+    </div>
+  </div>
+  <% }); %>
+  <% } %>
+
+</div>
+<%- include('../../partials/membro-footer') %>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <title>Novo Grupo — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%=config.org_cor||'#1a56db'%>}
+    .pg-header{display:flex;align-items:center;gap:14px;margin-bottom:28px}
+    .pg-header a{color:var(--texto2);text-decoration:none;font-size:13px;display:flex;align-items:center;gap:5px}
+    .pg-header h1{font-size:20px;font-weight:700;color:var(--texto);margin:0}
+    .form-card{background:var(--card);border:1px solid var(--borda);padding:28px;max-width:520px}
+    .form-card h2{font-size:15px;font-weight:700;color:var(--texto);margin:0 0 20px;padding-bottom:12px;border-bottom:1px solid var(--borda)}
+    .form-group{margin-bottom:16px}
+    .form-group label{display:block;font-size:12px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+    .form-group input{width:100%;padding:9px 12px;border:1px solid var(--borda);background:var(--fundo);color:var(--texto);font-size:13px;border-radius:0;font-family:inherit;box-sizing:border-box}
+    .form-group input:focus{outline:none;border-color:var(--cor-primaria)}
+    .btn{padding:9px 18px;font-size:13px;font-weight:600;border:1px solid var(--borda);background:var(--card);color:var(--texto);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:7px;border-radius:0}
+    .btn.pri{background:var(--cor-primaria);color:#fff;border-color:var(--cor-primaria)}
+    .btn.pri:hover{opacity:.9}
+    .alert-err{padding:12px 16px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:13px;margin-bottom:20px}
+  </style>
+</head>
+<body>
+<%- include('../../partials/sidebar',{paginaAtual:'cientifico',config,usuario,permissoesAtivas:permissoesAtivas||[]}) %>
+<div style="margin-left:240px;padding:32px 36px;min-height:100vh;background:var(--fundo)">
+<%- include('../../partials/_notificacoes') %>
+<%if(erro&&erro.length){%><div class="alert-err"><%=erro[0]%></div><%}%>
+<div class="pg-header">
+  <a href="/cientifico/projeto/<%=projeto.id%>"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg><%=projeto.titulo%></a>
+  <h1>Novo Grupo</h1>
+</div>
+<div class="form-card">
+  <h2>Informacoes do Grupo</h2>
+  <form method="POST" action="/cientifico/projeto/<%=projeto.id%>/grupo/novo">
+    <div class="form-group">
+      <label>Nome do Grupo *</label>
+      <input type="text" name="nome" required placeholder="Ex: Grupo A — Relato de Caso" autofocus>
+    </div>
+    <div class="form-group">
+      <label>Tipo de Trabalho *</label>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px">
+        <label style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid var(--borda);cursor:pointer;background:var(--fundo)">
+          <input type="radio" name="tipo_trabalho" value="colaborativo" checked style="margin-top:3px">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--texto)">Colaborativo</div>
+            <div style="font-size:12px;color:var(--texto2);margin-top:2px">O grupo trabalha junto em um unico trabalho. Todos os membros veem e enviam a mesma versao.</div>
+          </div>
+        </label>
+        <label style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border:1px solid var(--borda);cursor:pointer;background:var(--fundo)">
+          <input type="radio" name="tipo_trabalho" value="individual" style="margin-top:3px">
+          <div>
+            <div style="font-size:13px;font-weight:600;color:var(--texto)">Individual</div>
+            <div style="font-size:12px;color:var(--texto2);margin-top:2px">Cada membro envia o trabalho dele, privado. So o autor e os revisores veem. O chat continua compartilhado.</div>
+          </div>
+        </label>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button type="submit" class="btn pri">Criar grupo</button>
+      <a href="/cientifico/projeto/<%=projeto.id%>" class="btn">Cancelar</a>
+    </div>
+  </form>
+</div>
+</div>
+</body></html>

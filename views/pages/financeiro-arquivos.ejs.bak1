@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arquivos Financeiros</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%= config.org_cor||'#1a56db' %>;}
+    .fin-layout{display:grid;grid-template-columns:240px 1fr;gap:16px;height:calc(100vh - 130px);}
+    .fin-sidebar{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:16px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;}
+    .sidebar-title{font-size:11px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--borda);}
+    .pasta-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:all .15s;color:var(--texto);border:1px solid transparent;}
+    .pasta-item:hover{background:var(--fundo);border-color:var(--borda);}
+    .pasta-item.ativa{background:#eff6ff;color:var(--cor-primaria);font-weight:600;border-color:#bfdbfe;}
+    .pasta-item.sub{padding-left:26px;font-size:12px;}
+    .pasta-item.drag-over{background:#f0fdf4;border-color:#86efac;}
+    .pasta-del{margin-left:auto;opacity:0;transition:.15s;color:#dc2626;font-size:12px;padding:2px 6px;border-radius:4px;background:transparent;border:none;cursor:pointer;}
+    .pasta-item:hover .pasta-del{opacity:1;}
+    .fin-main{display:flex;flex-direction:column;gap:12px;overflow:hidden;}
+    .fin-topbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;background:var(--card);border:1px solid var(--borda);border-radius:12px;padding:12px 16px;}
+    .breadcrumb{display:flex;align-items:center;gap:6px;font-size:13px;flex-wrap:wrap;}
+    .breadcrumb a{color:var(--cor-primaria);cursor:pointer;font-weight:600;text-decoration:none;}
+    .breadcrumb .atual{color:var(--texto);font-weight:600;}
+    .barra-selecao{display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:10px 16px;align-items:center;gap:12px;}
+    .barra-selecao.visivel{display:flex;}
+    .drop-zona{display:none;border:2px dashed var(--borda);border-radius:10px;padding:16px;text-align:center;color:var(--texto2);font-size:13px;}
+    .drop-zona.ativa{display:block;border-color:var(--cor-primaria);background:#eff6ff;color:var(--cor-primaria);}
+    .arquivos-scroll{flex:1;overflow-y:auto;}
+    .arquivos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;}
+    .arquivo-card{background:var(--card);border:1.5px solid var(--borda);border-radius:12px;padding:16px 12px;text-align:center;cursor:pointer;transition:all .15s;position:relative;user-select:none;}
+    .arquivo-card:hover{border-color:var(--cor-primaria);box-shadow:0 2px 12px rgba(0,0,0,.06);transform:translateY(-1px);}
+    .arquivo-card.dragging{opacity:.4;transform:scale(.96);}
+    .arquivo-card.drag-over{border-color:#16a34a;background:#f0fdf4;}
+    .arquivo-card[draggable]{cursor:grab;}
+    .arquivo-icon{font-size:36px;margin-bottom:8px;line-height:1;}
+    .arquivo-nome{font-size:11px;font-weight:600;word-break:break-word;line-height:1.4;}
+    .arquivo-meta{font-size:10px;color:var(--texto2);margin-top:4px;}
+    .arquivo-acoes{position:absolute;top:6px;right:6px;display:none;gap:3px;}
+    .arquivo-card:hover .arquivo-acoes{display:flex;}
+    .btn-acao-mini{width:24px;height:24px;border-radius:5px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:11px;}
+    .btn-acao-mini.edit{background:#dbeafe;color:#1e40af;}
+    .btn-acao-mini.del{background:#fee2e2;color:#dc2626;}
+    .btn-acao-mini.down{background:#dcfce7;color:#16a34a;text-decoration:none;}
+    .tipo-badge{position:absolute;bottom:6px;left:50%;transform:translateX(-50%);padding:2px 8px;border-radius:999px;font-size:9px;font-weight:700;white-space:nowrap;}
+    .badge-google{background:#dbeafe;color:#1e40af;}.badge-upload{background:#dcfce7;color:#166534;}
+    .badge-pdf{background:#fee2e2;color:#991b1b;}.badge-img{background:#fef3c7;color:#92400e;}
+    .badge-sheet{background:#d1fae5;color:#065f46;}.badge-word{background:#ede9fe;color:#4c1d95;}
+    .viewer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:2000;flex-direction:column;}
+    .viewer-overlay.aberto{display:flex;}
+    .viewer-header{background:#0f172a;padding:12px 20px;display:flex;justify-content:space-between;align-items:center;color:white;flex-shrink:0;}
+    .viewer-body{flex:1;display:flex;overflow:hidden;}
+    .viewer-iframe{width:100%;height:100%;border:none;}
+    .vazio{grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:var(--texto2);text-align:center;}
+    .btn-xs{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:7px;font-size:11px;font-weight:600;border:1px solid var(--borda);background:var(--fundo);color:var(--texto);cursor:pointer;text-decoration:none;transition:all .15s;font-family:inherit;white-space:nowrap;}
+    .btn-xs:hover{border-color:var(--cor-primaria);color:var(--cor-primaria);}
+    .btn-xs.verde{background:#059669;color:white;border-color:transparent;}
+    .btn-xs.google{background:#4285f4;color:white;border-color:transparent;}
+    .btn-xs.verm{color:#dc2626;border-color:#fecaca;}
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'cobrancas' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Arquivos Financeiros</h1>
+      <div class="topbar-acoes"><a href="/cobrancas" class="btn btn-sm">Voltar</a><button class="btn btn-sm" onclick="abrirModal('modal-pasta')">+ Nova pasta</button><button class="btn btn-sm verde" onclick="abrirModal('modal-upload')" style="background:#059669;color:white">&#8679; Upload</button><button class="btn btn-sm" onclick="abrirModal('modal-google')" style="background:#4285f4;color:white">&#128279; Google</button></div>
+    </div>
+    <div class="content" style="padding-bottom:0">
+      <%if(msg&&msg.length>0){%><div class="alerta alerta-ok"><%=msg[0]%></div><%}%>
+      <%if(erro&&erro.length>0){%><div class="alerta alerta-erro"><%=erro[0]%></div><%}%>
+      <div class="fin-layout">
+        <div class="fin-sidebar">
+          <div class="sidebar-title">Pastas</div>
+          <div class="pasta-item <%=!pastaAtual?'ativa':''%>" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="dropNaPasta(event,null)" onclick="irPasta(null)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg> Raiz
+          </div>
+          <%function renderPastas(pastas,pai,nivel){pastas.filter(p=>p.pai_id==pai).forEach(p=>{%>
+          <div class="pasta-item <%=String(pastaAtual)===String(p.id)?'ativa':''%> <%=nivel>0?'sub':''%>" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="dropNaPasta(event,<%=p.id%>)" onclick="irPasta(<%=p.id%>)">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+            <%=p.nome%>
+            <button class="pasta-del" onclick="event.stopPropagation();deletarPasta(<%=p.id%>,'<%=p.nome%>')">&#x2715;</button>
+          </div>
+          <%renderPastas(pastas,p.id,nivel+1);}); }renderPastas(pastas,null,0);%>
+          <div style="margin-top:auto;padding-top:12px;border-top:1px solid var(--borda)">
+            <button class="btn-xs" style="width:100%;justify-content:center" onclick="abrirModal('modal-pasta')">+ Nova pasta</button>
+          </div>
+        </div>
+        <div class="fin-main">
+          <div class="fin-topbar">
+            <div class="breadcrumb">
+              <%if(pastaAtual){%><button onclick="voltarPasta()" class="btn-xs" style="margin-right:4px">&#8592; Voltar</button><%}%>
+              <a onclick="irPasta(null)">Raiz</a>
+              <%if(pastaAtual){let cam=[];let pid=pastaAtual;let s=0;while(pid&&s<10){const pp=pastas.find(x=>String(x.id)===String(pid));if(!pp)break;cam.unshift(pp);pid=pp.pai_id;s++;}cam.forEach((pp,i)=>{%>
+              <span>&#8250;</span>
+              <%if(i<cam.length-1){%><a onclick="irPasta(<%=pp.id%>)"><%=pp.nome%></a><%}else{%><span class="atual"><%=pp.nome%></span><%}}); }%>
+              <span style="margin-left:8px;font-size:11px;color:var(--texto2);font-weight:600"><%=arquivos.length%> arquivo(s)</span>
+            </div>
+            <div style="display:flex;gap:6px">
+              <button class="btn-xs verde" onclick="abrirModal('modal-upload')">&#8679; Upload</button>
+              <button class="btn-xs google" onclick="abrirModal('modal-google')">&#128279; Google</button>
+            </div>
+          </div>
+          <div class="barra-selecao" id="barra-selecao">
+            <span id="count-sel" style="font-weight:600;color:#dc2626;font-size:13px">0 selecionados</span>
+            <button class="btn-xs verm" onclick="deletarSelecionados()">Excluir selecionados</button>
+            <button class="btn-xs" onclick="limparSelecao()">Cancelar</button>
+          </div>
+          <div id="drop-zona-principal" class="drop-zona">Solte aqui para mover</div>
+          <div class="arquivos-scroll"><div class="arquivos-grid">
+            <%pastas.filter(p=>String(p.pai_id)===String(pastaAtual)||(!p.pai_id&&!pastaAtual)).forEach(p=>{%>
+            <div class="arquivo-card" draggable="true" ondragstart="dragStart(event,'pasta',<%=p.id%>)" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="drop(event,'pasta',<%=p.id%>)" onclick="irPasta(<%=p.id%>)">
+              <div class="arquivo-acoes">
+                <button class="btn-acao-mini edit" onclick="event.stopPropagation();renomear('pasta',<%=p.id%>,'<%=p.nome%>')">&#9998;</button>
+                <button class="btn-acao-mini del" onclick="event.stopPropagation();deletarPasta(<%=p.id%>,'<%=p.nome%>')">&#128465;</button>
+              </div>
+              <div class="arquivo-icon"><svg width="36" height="36" viewBox="0 0 24 24" fill="#fbbf24" stroke="#f59e0b" stroke-width="1"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
+              <div class="arquivo-nome"><%=p.nome%></div>
+            </div>
+            <%});%>
+            <%if(arquivos.length===0&&pastas.filter(p=>String(p.pai_id)===String(pastaAtual)||(!p.pai_id&&!pastaAtual)).length===0){%>
+            <div class="vazio"><div style="font-size:48px;margin-bottom:12px">&#128194;</div><div style="font-size:14px;font-weight:600;color:var(--texto);margin-bottom:4px">Pasta vazia</div><div style="font-size:12px">Faca upload ou adicione um link do Google Drive</div></div>
+            <%}%>
+            <%arquivos.forEach(a=>{%>
+            <%let ic='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';let bc='badge-upload';let bt='Arquivo';
+              if(a.tipo==='google'){ic='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>';bc='badge-google';bt='Google';}
+              else if(a.mimetype&&a.mimetype.includes('pdf')){ic='📑';bc='badge-pdf';bt='PDF';}
+              else if(a.mimetype&&a.mimetype.includes('image')){ic='🖼️';bc='badge-img';bt='Imagem';}
+              else if(a.mimetype&&(a.mimetype.includes('sheet')||a.mimetype.includes('excel'))){ic='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>';bc='badge-sheet';bt='Planilha';}
+              else if(a.mimetype&&(a.mimetype.includes('word')||a.mimetype.includes('document'))){ic='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';bc='badge-word';bt='Word';}%>
+            <div class="arquivo-card" id="card-<%=a.id%>" draggable="true" ondragstart="dragStart(event,'arquivo',<%=a.id%>)" ondragend="dragEnd(event)" onclick="abrirArquivo(<%=a.id%>)">
+              <div class="arquivo-acoes">
+                <button class="btn-acao-mini edit" onclick="event.stopPropagation();renomear('arquivo',<%=a.id%>,'<%=a.nome%>')">&#9998;</button>
+                <button class="btn-acao-mini del" onclick="event.stopPropagation();deletarArquivo(<%=a.id%>,'<%=a.nome%>')">&#128465;</button>
+                <%if(a.tipo!=='google'){%><a class="btn-acao-mini down" href="/financeiro-arquivos/<%=a.id%>/download" onclick="event.stopPropagation()">&#8681;</a><%}%>
+              </div>
+              <div class="arquivo-icon"><%=ic%></div>
+              <div class="arquivo-nome"><%=a.nome%></div>
+              <div class="arquivo-meta"><%=new Date(a.criado_em).toLocaleDateString('pt-BR')%></div>
+              <span class="tipo-badge <%=bc%>"><%=bt%></span>
+            </div>
+            <%});%>
+          </div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="viewer-overlay" id="viewer">
+  <div class="viewer-header">
+    <span id="viewer-titulo" style="font-weight:600;font-size:14px"></span>
+    <div style="display:flex;gap:10px;align-items:center">
+      <a id="viewer-baixar" href="#" target="_blank" style="color:#93c5fd;font-size:12px;text-decoration:none">&#8681; Baixar</a>
+      <a id="viewer-link-externo" href="#" target="_blank" style="color:#93c5fd;font-size:12px;text-decoration:none">&#8599; Abrir original</a>
+      <button onclick="fecharViewer()" style="background:#ef4444;border:none;color:white;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">Fechar</button>
+    </div>
+  </div>
+  <div class="viewer-body"><iframe id="viewer-iframe" class="viewer-iframe" allowfullscreen></iframe></div>
+</div>
+<div class="modal-overlay" id="modal-pasta" style="display:none">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-titulo">Nova Pasta</span><button class="icon-btn" onclick="fecharModal('modal-pasta')">&#x2715;</button></div>
+    <form action="/financeiro-arquivos/pasta" method="POST">
+      <input type="hidden" name="pai_id" value="<%=pastaAtual||''%>">
+      <div class="campo" style="margin-bottom:16px"><label class="label">Nome *</label><input name="nome" class="input" required placeholder="Ex: Comprovantes Maio 2026"></div>
+      <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-pasta')">Cancelar</button><button type="submit" class="btn btn-primario">Criar</button></div>
+    </form>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-renomear" style="display:none">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header"><span class="modal-titulo">Renomear</span><button class="icon-btn" onclick="fecharModal('modal-renomear')">&#x2715;</button></div>
+    <div style="padding:4px 0 16px"><div class="campo"><label class="label">Novo nome</label><input id="input-renomear" class="input"></div></div>
+    <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-renomear')">Cancelar</button><button type="button" class="btn btn-primario" onclick="confirmarRenomear()">Renomear</button></div>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-upload" style="display:none">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-titulo">Upload</span><button class="icon-btn" onclick="fecharModal('modal-upload')">&#x2715;</button></div>
+    <form action="/financeiro-arquivos/upload" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="pasta_id" value="<%=pastaAtual||''%>">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo"><label class="label">Nome (opcional)</label><input name="nome" class="input" placeholder="Deixe em branco para usar o nome original"></div>
+        <div style="background:var(--fundo);border:2px dashed var(--borda);border-radius:10px;padding:20px;text-align:center">
+          <div style="font-size:13px;font-weight:600;margin-bottom:4px">Selecione os arquivos</div>
+          <div style="font-size:11px;color:var(--texto2);margin-bottom:10px">PDF, Excel, Word, Imagens</div>
+          <input type="file" name="arquivos" class="input" required accept="image/*,.pdf,.xlsx,.xls,.csv,.docx,.doc,.pptx,.ppt,.txt" multiple style="max-width:260px;margin:0 auto">
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-upload')">Cancelar</button><button type="submit" class="btn btn-primario">Enviar</button></div>
+    </form>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-google" style="display:none">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-titulo">Link Google</span><button class="icon-btn" onclick="fecharModal('modal-google')">&#x2715;</button></div>
+    <form action="/financeiro-arquivos/google" method="POST">
+      <input type="hidden" name="pasta_id" value="<%=pastaAtual||''%>">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="campo"><label class="label">Nome *</label><input name="nome" class="input" required placeholder="Ex: Planilha Maio 2026"></div>
+        <div class="campo"><label class="label">Link Google Drive *</label><input name="google_url" class="input" required placeholder="https://docs.google.com/..." oninput="gerarEmbed(this.value)"></div>
+        <div class="campo"><label class="label">Tipo</label>
+          <select name="google_tipo" class="input"><option value="docs">Google Docs</option><option value="sheets">Google Sheets</option><option value="slides">Google Slides</option><option value="drive">Google Drive</option></select></div>
+        <div id="preview-embed" style="display:none;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px;font-size:12px;color:#166534;font-weight:600">Link valido detectado</div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-google')">Cancelar</button><button type="submit" class="btn btn-primario" style="background:#4285f4">Adicionar</button></div>
+    </form>
+  </div>
+</div>
+<script src="/js/app.js"></script>
+<script>
+const arquivosData=<%- JSON.stringify(arquivos) %>;
+const pastasData=<%- JSON.stringify(pastas) %>;
+const pastaAtualId=<%- JSON.stringify(pastaAtual) %>;
+function irPasta(id){const u=new URL(window.location.href);if(id)u.searchParams.set('pasta',id);else u.searchParams.delete('pasta');window.location.href=u.toString();}
+function voltarPasta(){if(!pastaAtualId)return;const p=pastasData.find(p=>String(p.id)===String(pastaAtualId));irPasta(p&&p.pai_id?p.pai_id:null);}
+const sel=new Set();
+function atualizarBarra(){const b=document.getElementById('barra-selecao');document.getElementById('count-sel').textContent=sel.size+' selecionado(s)';b.classList.toggle('visivel',sel.size>0);}
+function limparSelecao(){sel.forEach(id=>document.getElementById('card-'+id)?.classList.remove('selecionado'));sel.clear();atualizarBarra();}
+async function deletarSelecionados(){if(!sel.size||!confirm('Excluir '+sel.size+' arquivo(s)?'))return;for(const id of sel)await fetch('/financeiro-arquivos/'+id+'/deletar',{method:'POST'});window.location.reload();}
+function abrirArquivo(id){
+  const a=arquivosData.find(x=>x.id===id);if(!a)return;
+  document.getElementById('viewer-titulo').textContent=a.nome;
+  document.getElementById('viewer-baixar').href='/financeiro-arquivos/'+id+'/download';
+  const ex=document.getElementById('viewer-link-externo');
+  const fr=document.getElementById('viewer-iframe');
+  if(a.tipo==='google'&&a.google_embed){
+    ex.href=a.google_url||'#';ex.style.display='';fr.src=a.google_embed;
+    document.getElementById('viewer').classList.add('aberto');return;}
+  const e=(a.nome||'').split('.').pop().toLowerCase();
+  if(e==='pdf'||('jpg,jpeg,png,gif,webp').includes(e)){
+    ex.style.display='none';fr.src='/financeiro-arquivos/'+id+'/visualizar';}
+  else{fetch('/financeiro-arquivos/'+id+'/url').then(r=>r.json()).then(d=>{
+    if(!d.url)return;ex.href=d.url;ex.style.display='';
+    fr.src='https://view.officeapps.live.com/op/embed.aspx?src='+encodeURIComponent(d.url);});}
+  document.getElementById('viewer').classList.add('aberto');}
+function fecharViewer(){document.getElementById('viewer').classList.remove('aberto');document.getElementById('viewer-iframe').src='';}
+function gerarEmbed(url){document.getElementById('preview-embed').style.display=url.includes('google.com')?'block':'none';}
+function deletarArquivo(id,nome){if(!confirm('Excluir "'+nome+'"?'))return;
+  const f=document.createElement('form');f.method='POST';
+  f.action='/financeiro-arquivos/'+id+'/deletar';document.body.appendChild(f);f.submit();}
+function deletarPasta(id,nome){if(!confirm('Excluir pasta "'+nome+'"?'))return;
+  const f=document.createElement('form');f.method='POST';
+  f.action='/financeiro-pastas/'+id+'/deletar';document.body.appendChild(f);f.submit();}
+let dT=null,dI=null;
+function dragStart(e,t,id){dT=t;dI=id;e.dataTransfer.effectAllowed='move';
+  e.target.classList.add('dragging');document.getElementById('drop-zona-principal').classList.add('ativa');}
+function dragEnd(e){e.target.classList.remove('dragging');
+  document.getElementById('drop-zona-principal').classList.remove('ativa');
+  document.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over'));}
+function dragOver(e){e.preventDefault();e.target.closest('.arquivo-card')?.classList.add('drag-over');}
+function dragLeave(e){e.target.closest('.arquivo-card')?.classList.remove('drag-over');}
+function drop(e,t,id){e.preventDefault();e.stopPropagation();
+  e.target.closest('.arquivo-card')?.classList.remove('drag-over');
+  if(t==='pasta'&&dT==='arquivo')moverArq(dI,id);
+  else if(t==='pasta'&&dT==='pasta'&&dI!==id)moverPst(dI,id);}
+function dropNaPasta(e,dest){e.preventDefault();e.stopPropagation();
+  document.querySelectorAll('.drag-over').forEach(el=>el.classList.remove('drag-over'));
+  document.getElementById('drop-zona-principal').classList.remove('ativa');
+  if(!dI)return;dT==='arquivo'?moverArq(dI,dest):moverPst(dI,dest);}
+async function moverArq(aid,pid){
+  const r=await fetch('/financeiro-arquivos/'+aid+'/mover',
+    {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pasta_id:pid})});
+  if(r.ok)window.location.reload();}
+async function moverPst(pid,dest){
+  if(String(pid)===String(dest))return;
+  const r=await fetch('/financeiro-pastas/'+pid+'/mover',
+    {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pai_id:dest})});
+  if(r.ok)window.location.reload();}
+let _rT=null,_rI=null;
+function renomear(t,id,n){_rT=t;_rI=id;document.getElementById('input-renomear').value=n;abrirModal('modal-renomear');}
+async function confirmarRenomear(){
+  const n=document.getElementById('input-renomear').value.trim();if(!n)return;
+  const u=_rT==='pasta'?'/financeiro-pastas/'+_rI+'/renomear':'/financeiro-arquivos/'+_rI+'/renomear';
+  const r=await fetch(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:n})});
+  if(r.ok)window.location.reload();}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')fecharViewer();});
+</script>
+</body>
+</html>

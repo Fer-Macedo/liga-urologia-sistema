@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Usuarios</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin-modern.css">
@@ -71,6 +72,10 @@
             <%}else if(u.perfil==='presidencia'){%><span class="badge-perfil badge-presidencia">Presidencia</span>
             <%}else if(u.perfil==='financeiro'){%><span class="badge-perfil badge-financeiro">Financeiro</span>
             <%}else if(u.perfil==='secretaria'){%><span class="badge-perfil badge-secretaria">Secretaria</span>
+            <%}else if(u.perfil==='marketing'){%><span class="badge-perfil" style="background:#fce7f3;color:#9d174d">Marketing</span>
+            <%}else if(u.perfil==='ensino'){%><span class="badge-perfil" style="background:#e0f2fe;color:#0369a1">Ensino</span>
+            <%}else if(u.perfil==='extensao'){%><span class="badge-perfil" style="background:#f0fdf4;color:#166534">Extensao</span>
+            <%}else if(u.perfil==='cientifico'){%><span class="badge-perfil" style="background:#fef3c7;color:#92400e">Cientifico</span>
             <%}else{%><span class="badge-perfil badge-visualizador">Visualizador</span><%}%>
           </td>
           <td><%if(u.ativo){%><span class="badge-ativo">Ativo</span><%}else{%><span class="badge-inativo">Inativo</span><%}%></td>
@@ -82,6 +87,9 @@
                 <button type="submit" class="btn-xs"><%=u.ativo?'Desativar':'Ativar'%></button>
               </form>
               <button class="btn-xs amarelo" onclick="abrirSenha(<%=u.id%>,'<%=u.nome%>')">Senha</button>
+              <form action="/usuarios/<%=u.id%>/excluir" method="POST" style="display:inline;margin:0" onsubmit="return confirm('Excluir o usuário <%=u.nome%> permanentemente? Esta ação não pode ser desfeita.')">
+                <button type="submit" class="btn-xs" style="background:#dc2626;color:white;border-color:transparent">Excluir</button>
+              </form>
             </div>
           <%}else{%><span style="color:var(--texto2);font-size:12px">Admin principal</span><%}%></td>
         </tr>
@@ -95,6 +103,10 @@
           <div class="perfil-card"><div class="perfil-card-nome" style="color:#166534">Presidencia</div><div class="perfil-card-desc">Permissoes personalizadas para a diretoria</div></div>
           <div class="perfil-card"><div class="perfil-card-nome" style="color:#92400e">Financeiro</div><div class="perfil-card-desc">Gerencia membros, cobrancas e notificacoes</div></div>
           <div class="perfil-card"><div class="perfil-card-nome" style="color:#4c1d95">Secretaria</div><div class="perfil-card-desc">Lanca frequencias e atividades das turmas</div></div>
+          <div class="perfil-card"><div class="perfil-card-nome" style="color:#9d174d">Marketing</div><div class="perfil-card-desc">Gerencia redes sociais e comunicacao</div></div>
+          <div class="perfil-card"><div class="perfil-card-nome" style="color:#0369a1">Ensino</div><div class="perfil-card-desc">Gerencia projetos e atividades de ensino</div></div>
+          <div class="perfil-card"><div class="perfil-card-nome" style="color:#166534">Extensao</div><div class="perfil-card-desc">Gerencia projetos e atividades de extensao</div></div>
+          <div class="perfil-card"><div class="perfil-card-nome" style="color:#92400e">Cientifico</div><div class="perfil-card-desc">Gerencia projetos e atividades cientificas</div></div>
           <div class="perfil-card"><div class="perfil-card-nome" style="color:#6b7280">Visualizador</div><div class="perfil-card-desc">Somente visualizacao sem alteracoes</div></div>
         </div>
       </div>
@@ -114,6 +126,10 @@
             <option value="presidencia">Presidencia</option>
             <option value="secretaria">Secretaria</option>
             <option value="financeiro">Financeiro</option>
+            <option value="marketing">Marketing</option>
+            <option value="ensino">Ensino</option>
+            <option value="extensao">Extensao</option>
+            <option value="cientifico">Cientifico</option>
             <option value="visualizador">Visualizador</option>
           </select>
         </div>
@@ -126,12 +142,17 @@
   </div>
 </div>
 <div class="modal-overlay" id="modal-permissoes" style="display:none">
-  <div class="modal" style="max-width:520px">
-    <div class="modal-header"><span class="modal-titulo" id="titulo-permissoes">Permissoes</span><button class="icon-btn" onclick="fecharModal('modal-permissoes')">&#x2715;</button></div>
-    <p style="font-size:13px;color:var(--texto2);margin-bottom:16px">Marque os modulos que este usuario pode acessar.</p>
+  <div class="modal" style="max-width:560px;border-radius:2px;overflow:hidden;padding:0">
+    <div style="background:var(--cor-primaria,#1a3d2b);padding:18px 24px;display:flex;align-items:center;justify-content:space-between">
+      <h2 id="titulo-permissoes" style="color:#fff;font-size:16px;font-weight:800;margin:0">Permissões</h2>
+      <button onclick="fecharModal('modal-permissoes')" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:32px;height:32px;border-radius:2px;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:background .15s;line-height:1">&times;</button>
+    </div>
+    <div style="padding:20px 24px 0;max-height:70vh;overflow-y:auto;">
+    <p style="font-size:13px;color:var(--texto2);margin-bottom:16px">Marque os módulos que este usuário pode acessar.</p>
     <form id="form-permissoes" action="" method="POST">
       <div class="perm-grid" id="grid-permissoes"></div>
       <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-permissoes')">Cancelar</button><button type="submit" class="btn btn-primario">Salvar</button></div>
+    </div>
     </form>
   </div>
 </div>
@@ -147,16 +168,24 @@
 <script src="/js/app.js"></script>
 <script>
 const TODOS_MODULOS=[
-  {id:"dashboard",label:"Dashboard"},{id:"membros",label:"Membros"},
-  {id:"diretivos",label:"Diretivos"},{id:"ligantes",label:"Ligantes"},
-  {id:"arquivos",label:"Arquivos"},{id:"frequencia",label:"Frequencia Membros"},
-  {id:"frequencia-diretivos",label:"Frequencia Diretivos"},{id:"cobrancas",label:"Cobrancas"},
-  {id:"aniversarios",label:"Aniversarios"},{id:"auditoria",label:"Auditoria"},
-  {id:"notificacoes",label:"Notificacoes"},{id:"configuracoes",label:"Configuracoes"},
-  {id:"usuarios",label:"Usuarios"},{id:"desligamentos",label:"Desligamentos"},
-  {id:"desvinculacoes",label:"Desvinculacoes"},{id:"carta-cobranca",label:"Carta Cobranca"},
-  {id:"lista-assinaturas",label:"Lista Assinaturas"},{id:"marketing",label:"Marketing"},
-  {id:"eventos",label:"Eventos"}
+  {id:"dashboard",label:"Dashboard"},
+  {id:"ligantes",label:"Ligantes"},{id:"diretivos",label:"Diretivos"},
+  {id:"aniversarios",label:"Aniversários"},{id:"palestrantes",label:"Palestrantes"},
+  {id:"frequencia",label:"Frequência Ligantes"},{id:"frequencia-diretivos",label:"Frequência Diretivos"},
+  {id:"ensino",label:"Ensino"},{id:"extensao",label:"Extensão"},{id:"cientifico",label:"Científico"},
+  {id:"eventos",label:"Eventos"},{id:"lista-assinaturas",label:"Lista de Assinaturas"},
+  {id:"membros",label:"Membros"},{id:"cobrancas",label:"Cobranças"},
+  {id:"carta-cobranca",label:"Carta Cobrança"},{id:"financeiro-arquivos",label:"Arquivos Financeiros"},
+  {id:"fluxo-caixa",label:"Fluxo de Caixa"},
+  {id:"desligamentos",label:"Desligamentos"},{id:"contratos",label:"Contratos Ligantes"},
+  {id:"contratos-diretivos",label:"Contratos Diretivos"},{id:"desvinculacoes",label:"Desvinculações"},
+  {id:"arquivos",label:"Arquivos"},{id:"atas",label:"Atas de Reunião"},
+  {id:"sorteios",label:"Sorteios"},{id:"marketing",label:"Marketing"},
+  {id:"comunicados",label:"Comunicados"},{id:"atendimentos",label:"Atendimentos WA"},
+  {id:"processo-seletivo",label:"Proc. Seletivo"},{id:"notificacoes",label:"Notificações"},
+  {id:"assistente-virtual",label:"Assistente Virtual"},{id:"inventario",label:"Inventário"},
+  {id:"calendario",label:"Calendário"},{id:"usuarios",label:"Usuários"},
+  {id:"auditoria",label:"Auditoria"},{id:"configuracoes",label:"Configurações"}
 ];
 const PERMISSOES_PADRAO={
   presidencia:["dashboard","membros","diretivos","ligantes","arquivos","frequencia","frequencia-diretivos","cobrancas","aniversarios","auditoria","notificacoes","desligamentos","desvinculacoes","carta-cobranca","lista-assinaturas","marketing","eventos"],

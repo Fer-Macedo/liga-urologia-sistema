@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Diretivos — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin-modern.css">
@@ -38,8 +39,11 @@
     .btn-sm { font-size:12px !important;padding:6px 12px !important; }
     .btn-danger-soft { background:transparent !important;border:1px solid var(--borda) !important;color:#dc2626 !important;border-radius:9px !important;padding:6px 10px !important;font-size:12px !important;cursor:pointer;transition:all .15s ease; }
     .btn-danger-soft:hover { background:#fee2e2 !important;border-color:#fecaca !important; }
-    .modal-overlay { display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(3px); }
+    .modal-overlay { display:none!important;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(3px); }
+    .modal-overlay.aberto,.modal-overlay[style*='flex'] { display:flex!important; }
     .modal-overlay.aberto { display:flex; }
+    @keyframes piscar { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.7;transform:scale(1.05)} }
+    .btn-pendente-piscar { animation: piscar 1.2s ease-in-out infinite; }
     .modal-grande { background:var(--card);border-radius:18px;padding:28px;max-width:680px;width:95%;max-height:88vh;overflow-y:auto;box-shadow:0 24px 60px rgba(15,23,42,.18);animation:popIn .18s ease; }
     @keyframes popIn { from{opacity:0;transform:scale(.96)} to{opacity:1;transform:scale(1)} }
     .modal-tabs { display:flex;margin-bottom:20px;border-bottom:1.5px solid var(--borda); }
@@ -53,7 +57,45 @@
     .detalhe-valor { font-size:13.5px;color:var(--texto);font-weight:500; }
     .detalhe-full { grid-column:1/-1; }
     .foto-preview { width:80px;height:80px;border-radius:12px;object-fit:cover;border:2px solid var(--borda);display:block; }
-  </style>
+    .modal-titulo { font-family:'Plus Jakarta Sans','Outfit',sans-serif !important; font-weight:700 !important; font-size:18px !important; }
+    .modal-header { font-family:'Plus Jakarta Sans','Outfit',sans-serif !important; }
+  
+    /* === REDESIGN DIRETIVOS — padrão ligantes === */
+    .stat-mini { border-radius:0!important; }
+    .dir-card { border-radius:0!important; padding:0!important; overflow:hidden; transition:transform .15s ease, box-shadow .15s ease!important; }
+    .dir-card:hover { transform:translateY(-3px)!important; box-shadow:0 8px 28px rgba(0,0,0,.13)!important; border-color:transparent!important; }
+    .dir-foto-hero { height:190px; position:relative; overflow:hidden; background:linear-gradient(135deg,#1a3410,#253d18); flex-shrink:0; }
+    .dir-foto-hero img { width:100%; height:100%; object-fit:cover; object-position:top center; transition:transform .3s ease; display:block; }
+    .dir-card:hover .dir-foto-hero img { transform:scale(1.05); }
+    .dir-foto-initials { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-size:52px; font-weight:800; color:rgba(255,255,255,.55); letter-spacing:-.02em; }
+    .dir-foto-overlay { position:absolute; bottom:0; left:0; right:0; padding:32px 14px 12px; background:linear-gradient(transparent,rgba(0,0,0,.75)); }
+    .dir-nome { font-size:15px; font-weight:700; color:#fff; line-height:1.2; text-shadow:0 1px 4px rgba(0,0,0,.4); margin-bottom:3px; }
+    .dir-cargo-badge { font-size:11px; color:rgba(255,255,255,.8); background:transparent!important; padding:0!important; border-radius:0!important; font-weight:600; }
+    .dir-body { padding:14px 16px 12px; }
+    .dir-info { margin-bottom:10px; gap:6px; }
+    .dir-info-row { font-size:12px; }
+    .card-acoes .btn { border-radius:0!important; font-size:12px!important; padding:6px 12px!important; display:inline-flex!important; align-items:center!important; gap:5px!important; transition:transform .12s ease, box-shadow .12s ease!important; }
+    .card-acoes .btn:hover { transform:translateY(-1px)!important; box-shadow:0 3px 8px rgba(0,0,0,.15)!important; }
+    .btn-danger-soft { border-radius:0!important; }
+    .modal-grande { border-radius:0!important; }
+    .modal-tab { border-radius:0!important; }
+    .input { border-radius:0!important; }
+    /* Filter buttons */
+    .fil-btn { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600; padding:7px 14px; border:1.5px solid var(--borda); background:#fff; color:var(--texto); text-decoration:none; transition:transform .12s ease, box-shadow .12s ease, background .12s ease, color .12s ease, border-color .12s ease; border-radius:0!important; }
+    .fil-btn:hover { background:#f0f7eb; border-color:#253d18; color:#253d18; transform:translateY(-1px); box-shadow:0 3px 8px rgba(37,61,24,.15); text-decoration:none; }
+    .fil-btn.fil-ativo { background:linear-gradient(135deg,#1a3410,#253d18); color:#fff!important; border-color:transparent; box-shadow:0 2px 8px rgba(37,61,24,.25); }
+    .fil-btn.fil-ativo:hover { opacity:.9; transform:translateY(-1px); }
+    .fil-btn.fil-pendente { background:#f59e0b; color:#fff!important; border-color:transparent; animation:piscar 1.2s ease-in-out infinite; }
+    .fil-btn.fil-ok { background:#22c55e; color:#fff!important; border-color:#16a34a; }
+    /* Paginacao */
+    .pag-wrap { display:flex; gap:5px; align-items:center; justify-content:center; padding:24px 0 8px; flex-wrap:wrap; }
+    .pag-btn { width:36px; height:36px; border:1.5px solid var(--borda); background:#fff; color:var(--texto); font-size:13px; font-weight:600; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .12s ease; border-radius:0!important; }
+    .pag-btn:hover:not([disabled]) { background:#f0f7eb; border-color:#253d18; color:#253d18; transform:translateY(-1px); }
+    .pag-btn.pag-ativo { background:linear-gradient(135deg,#1a3410,#253d18); color:#fff; border-color:transparent; }
+    .pag-btn.pn { width:auto; padding:0 14px; font-size:12px; gap:4px; }
+    .pag-btn[disabled] { opacity:.3; cursor:default; }
+    .pag-info { font-size:12px; color:var(--texto2); padding:0 8px; }
+</style>
 </head>
 <body>
 <div class="layout">
@@ -62,7 +104,8 @@
     <div class="topbar">
       <h1 class="page-titulo">Diretivos</h1>
       <div class="topbar-acoes">
-        <a href="/cadastro-diretivo" target="_blank" class="btn btn-sm">Link de cadastro</a>
+        <button class="btn btn-sm" id="btnCopiarLink" onclick="copiarLinkDiretivo(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Link de cadastro</button>
+        <a href="/diretivos/relatorio" class="btn btn-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Relatório</a>
         <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-cadastrar')">+ Cadastrar diretivo</button>
       </div>
     </div>
@@ -70,14 +113,6 @@
     <div class="content">
       <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
       <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
-
-      <div class="link-box">
-        <div>
-          <div class="link-box-label">Link de cadastro público para diretivos</div>
-          <div class="link-box-url" id="link-publico"><%= appUrl %>/cadastro-diretivo</div>
-        </div>
-        <button class="btn btn-sm" onclick="copiarLink()">Copiar link</button>
-      </div>
 
       <% const cargosCount = {}; diretivos.forEach(d => { cargosCount[d.cargo] = (cargosCount[d.cargo]||0)+1; }); %>
       <div class="stats-row">
@@ -112,9 +147,14 @@
         </select>
         <div style="display:flex;gap:4px">
           <% const sf = typeof statusFiltro !== 'undefined' ? statusFiltro : 'ativos'; %>
-          <a href="/diretivos?status=ativos" class="btn btn-sm" style="<%= sf==='ativos'||!sf ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">Ativos</a>
-          <a href="/diretivos?status=inativos" class="btn btn-sm" style="<%= sf==='inativos' ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">Inativos</a>
-          <a href="/diretivos?status=todos" class="btn btn-sm" style="<%= sf==='todos' ? 'background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white' : 'background:var(--fundo);color:var(--texto);box-shadow:none;border:1px solid var(--borda)' %>">Todos</a>
+          <a href="/diretivos?status=ativos" class="fil-btn <%= sf==='ativos'||!sf?'fil-ativo':'' %>">Ativos</a>
+          <a href="/diretivos?status=inativos" class="fil-btn <%= sf==='inativos'?'fil-ativo':'' %>">Inativos</a>
+          <a href="/diretivos?status=todos" class="fil-btn <%= sf==='todos'?'fil-ativo':'' %>">Todos</a>
+        <% if(typeof pendentesCount!=='undefined'&&pendentesCount>0){ %>
+        <a href="/diretivos?status=pendente" class="fil-btn fil-pendente"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg> Pendentes (<%= pendentesCount %>)</a>
+        <% } else { %>
+        <a href="/diretivos?status=pendente" class="fil-btn fil-ok"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Pendentes</a>
+        <% } %>
         </div>
         <span id="contador" style="font-size:13px;color:var(--texto2)"><%= diretivos.length %> diretivos</span>
       </div>
@@ -125,16 +165,19 @@
         <% } %>
         <% diretivos.forEach(d => { %>
         <div class="dir-card" data-nome="<%= d.nome.toLowerCase() %>" data-cargo="<%= d.cargo || '' %>">
-          <% if (d.ativo == 0) { %>
-            <div style="position:absolute;top:12px;right:12px;background:#fee2e2;color:#991b1b;font-size:10.5px;font-weight:700;padding:3px 10px;border-radius:999px">Inativo</div>
-          <% } %>
-          <div class="dir-header">
-            <div class="dir-avatar"><%= d.nome.substring(0,2).toUpperCase() %></div>
-            <div style="flex:1;min-width:0">
+          <div class="dir-foto-hero">
+            <% if (d.foto_chave) { %>
+              <img src="/diretivos/<%= d.id %>/foto" alt="<%= d.nome %>">
+            <% } else { %>
+              <div class="dir-foto-initials"><%= d.nome.trim().split(/\s+/).filter(n=>n).map(n=>n[0]).join('').substring(0,2).toUpperCase() %></div>
+            <% } %>
+            <div class="dir-foto-overlay">
               <div class="dir-nome"><%= d.nome %></div>
-              <span class="dir-cargo-badge"><%= d.cargo || 'Sem cargo' %></span>
+              <div class="dir-cargo-badge"><%= d.cargo || 'Sem cargo' %></div>
             </div>
+            <% if (d.ativo == 0) { %><div style="position:absolute;top:10px;right:10px;background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;padding:3px 9px">Inativo</div><% } %>
           </div>
+          <div class="dir-body">
           <div class="dir-info">
             <% if (d.email) { %><div class="dir-info-row"><svg class="dir-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg><%= d.email %></div><% } %>
             <% if (d.whatsapp) { %><div class="dir-info-row"><svg class="dir-info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 5.49 5.49l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16.92z"/></svg><%= d.whatsapp %></div><% } %>
@@ -143,7 +186,13 @@
           </div>
           <div class="card-acoes">
             <button class="btn btn-primario btn-sm" onclick="abrirVisualizar(<%= d.id %>)">Ver detalhes</button>
+            <% if(statusFiltro === 'pendente' && d.pendente){ %>
+            <a href="/diretivos/<%= d.id %>/aprovar" class="btn btn-sm" style="background:#22c55e;color:white;border:none;font-weight:600;text-decoration:none" onclick="return confirm('Liberar este cadastro?')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Liberar</a>
+            <a href="/diretivos/<%= d.id %>/excluir" class="btn btn-sm" style="background:#ef4444;color:white;border:none;font-weight:600;text-decoration:none" onclick="return confirm('Recusar e excluir permanentemente?')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Recusar</a>
+            <% } else { %>
             <button class="btn btn-sm" onclick="abrirEditar(<%= d.id %>)">Editar</button>
+            <% } %>
+            <% if(statusFiltro !== 'pendente') { %>
             <form action="/diretivos/<%= d.id %>/toggle" method="POST" style="display:inline;margin:0;margin-left:auto">
               <% if (d.ativo == 0) { %>
                 <button type="submit" class="btn btn-sm" style="color:#16a34a;border:1px solid #bbf7d0;background:#f0fdf4" onclick="return confirm('Reativar <%= d.nome.replace(/'/g,"\\'") %>?')">Reativar</button>
@@ -153,20 +202,23 @@
                 </button>
               <% } %>
             </form>
+            <% } %>
+          </div>
           </div>
         </div>
         <% }) %>
+      <div class="pag-wrap" id="paginacao-dir"></div>
       </div>
     </div>
   </main>
 </div>
 
 <!-- MODAL VISUALIZAR -->
-<div class="modal-overlay" id="modal-visualizar" onclick="fecharModalClick(event,'modal-visualizar')">
+<div class="modal-overlay" id="modal-visualizar" style="display:none" onclick="fecharModalClick(event,'modal-visualizar')">
   <div class="modal-grande">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <span style="font-family:'Outfit',sans-serif;font-size:18px;font-weight:700" id="vis-titulo">Detalhes</span>
-      <button onclick="document.getElementById('modal-visualizar').classList.remove('aberto')" style="background:none;border:none;font-size:22px;cursor:pointer;color:var(--texto2);line-height:1">✕</button>
+      <button onclick="document.getElementById('modal-visualizar').style.display='none'; document.body.style.overflow=''" style="background:#f1f5f9;border:none;width:30px;height:30px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--texto2)" onmouseover="this.style.background='#fee2e2';this.style.color='#dc2626'" onmouseout="this.style.background='#f1f5f9';this.style.color=''"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="modal-tabs">
       <button class="modal-tab ativo" onclick="trocarTab('dados',this)">Dados pessoais</button>
@@ -184,7 +236,7 @@
   <div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto">
     <div class="modal-header">
       <span class="modal-titulo">Cadastrar Diretivo</span>
-      <button class="icon-btn" onclick="fecharModal('modal-cadastrar')">✕</button>
+      <button class="icon-btn" onclick="fecharModal('modal-cadastrar')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <form action="/diretivos" method="POST">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
@@ -192,7 +244,21 @@
         <div class="campo"><label class="label">RG / C.I.</label><input name="rg" class="input"></div>
         <div class="campo"><label class="label">CPF</label><input name="cpf" class="input"></div>
         <div class="campo"><label class="label">E-mail *</label><input name="email" type="email" class="input" required></div>
-        <div class="campo"><label class="label">WhatsApp *</label><input name="whatsapp" class="input" required></div>
+        <div class="campo"><label class="label">WhatsApp *</label><div style="display:flex;gap:8px">
+                <select id="dir-ddi-wpp" class="input" style="width:150px" onchange="atualizarDirWpp()">
+                  <option value="55">Brasil (+55)</option>
+                  <option value="595">Paraguai (+595)</option>
+                  <option value="54">Argentina (+54)</option>
+                  <option value="598">Uruguai (+598)</option>
+                  <option value="591">Bolívia (+591)</option>
+                  <option value="56">Chile (+56)</option>
+                  <option value="57">Colômbia (+57)</option>
+                  <option value="1">EUA/Canadá (+1)</option>
+                </select>
+                <input id="dir-num-wpp" class="input" placeholder="DDD + número" oninput="atualizarDirWpp()" style="flex:1">
+              </div>
+              <input type="hidden" name="whatsapp" id="dir-wpp-final">
+              <div id="dir-wpp-preview" style="font-size:11px;color:var(--texto2);margin-top:4px"></div></div>
         <div class="campo" style="grid-column:1/-1">
           <label class="label">Cargo *</label>
           <select name="cargo" class="input" required>
@@ -223,15 +289,15 @@
   <div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto">
     <div class="modal-header">
       <span class="modal-titulo">Editar Diretivo</span>
-      <button class="icon-btn" onclick="fecharModal('modal-editar')">✕</button>
+      <button class="icon-btn" onclick="fecharModal('modal-editar')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
-    <form id="form-editar" action="" method="POST">
+    <form id="form-editar" action="" method="POST" enctype="multipart/form-data">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div class="campo" style="grid-column:1/-1"><label class="label">Nome completo *</label><input name="nome" id="e-nome" class="input" required></div>
         <div class="campo"><label class="label">RG / C.I.</label><input name="rg" id="e-rg" class="input"></div>
         <div class="campo"><label class="label">CPF</label><input name="cpf" id="e-cpf" class="input"></div>
         <div class="campo"><label class="label">E-mail</label><input name="email" id="e-email" type="email" class="input"></div>
-        <div class="campo"><label class="label">WhatsApp</label><input name="whatsapp" id="e-whatsapp" class="input"></div>
+        <div class="campo"><label class="label">WhatsApp</label><input name="whatsapp" id="e-whatsapp" class="input" placeholder="+55DDD00000000"></div>
         <div class="campo"><label class="label">Instagram</label><input name="instagram" id="e-instagram" class="input"></div>
         <div class="campo"><label class="label">Catraca</label><input name="catraca" id="e-catraca" class="input"></div>
         <div class="campo" style="grid-column:1/-1">
@@ -268,6 +334,9 @@
                 Baixar foto atual
               </a>
             </div>
+            <label style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;color:#b91c1c;cursor:pointer">
+              <input type="checkbox" name="remover_foto" value="1"> Remover foto atual
+            </label>
           </div>
           <input type="file" name="foto" class="input" accept="image/*" style="padding:8px">
           <div style="font-size:11px;color:var(--texto2);margin-top:4px">Deixe em branco para manter a foto atual. Formatos: JPG, PNG, WebP.</div>
@@ -328,7 +397,7 @@ function abrirVisualizar(id) {
       + '<img src="/diretivos/' + d.id + '/foto" style="width:72px;height:72px;border-radius:12px;object-fit:cover;border:2px solid var(--borda);flex-shrink:0" alt="Foto">'
       + '<div>'
       + '<div style="font-weight:700;font-size:14px;margin-bottom:6px">' + d.nome.split(' ')[0] + '</div>'
-      + '<a href="/diretivos/' + d.id + '/foto" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white;border-radius:9px;font-size:12.5px;font-weight:600;text-decoration:none">⬇ Baixar foto</a>'
+      + '<a href="/diretivos/' + d.id + '/foto" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;background:linear-gradient(135deg,#1a56db,#1e3a8a);color:white;border-radius:9px;font-size:12.5px;font-weight:600;text-decoration:none"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar foto</a>'
       + '<div style="font-size:11px;color:var(--texto2);margin-top:5px">Abre em nova aba para salvar</div>'
       + '</div></div>'
     : '<div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;padding:14px 16px;background:var(--fundo);border-radius:12px;border:1px solid var(--borda);color:var(--texto2);font-size:13px">'
@@ -344,7 +413,7 @@ function abrirVisualizar(id) {
     + campo('CPF', d.cpf)
     + campo('Catraca', d.catraca)
     + campo('Cargo', d.cargo)
-    + campo('Data de nascimento', d.data_nascimento ? new Date(d.data_nascimento + 'T12:00:00').toLocaleDateString('pt-BR') : null)
+    + campo('Data de nascimento', d.data_nascimento ? new Date(String(d.data_nascimento).substring(0,10) + 'T12:00:00').toLocaleDateString('pt-BR') : null)
     + campo('Onde reside', d.onde_reside)
     + campo('Disponibilidade', d.disponibilidade)
     + campo('Cadastrado em', d.cadastrado_em ? new Date(d.cadastrado_em).toLocaleString('pt-BR') : null)
@@ -369,7 +438,7 @@ function abrirVisualizar(id) {
 
   document.querySelectorAll('.modal-tab').forEach((t, i) => t.classList.toggle('ativo', i === 0));
   document.querySelectorAll('.tab-content').forEach((t, i) => t.classList.toggle('ativo', i === 0));
-  document.getElementById('modal-visualizar').classList.add('aberto');
+  const mv = document.getElementById('modal-visualizar'); mv.style.display='flex'; document.body.style.overflow='hidden';
 }
 
 function abrirEditar(id) {
@@ -411,8 +480,10 @@ function abrirEditar(id) {
 }
 
 function fecharModalClick(e, id) {
-  if (e.target === document.getElementById(id))
-    document.getElementById(id).classList.remove('aberto');
+  if (e.target.id === id) { 
+    document.getElementById(id).style.display='none'; 
+    document.body.style.overflow=''; 
+  }
 }
 </script>
 
@@ -467,6 +538,78 @@ function atualizarMotivoD(){
 function validarD(){
   if(!document.getElementById('motivo-d').value){alert('Informe o motivo.');return false;}
   return true;
+}
+
+// Paginacao diretivos 24/pag
+var _dP=1,_dN=24,_dQ='',_dC='';
+var _origFiltrar=window.filtrar;
+window.filtrar=function(){
+  _dQ=(document.getElementById('busca')||{value:''}).value.toLowerCase().trim();
+  _dC=(document.getElementById('filtro-cargo')||{value:''}).value;
+  _dP=1;_dAtualizar();
+};
+function _dAtualizar(){
+  var cards=Array.from(document.querySelectorAll('.dir-card'));
+  var vis=cards.filter(function(c){
+    var ok=true;
+    if(_dQ)ok=ok&&((c.dataset.nome||'').includes(_dQ)||(c.dataset.cargo||'').toLowerCase().includes(_dQ));
+    if(_dC)ok=ok&&(c.dataset.cargo||'')==_dC;
+    return ok;
+  });
+  cards.forEach(function(c){c.style.display='none';});
+  vis.slice((_dP-1)*_dN,_dP*_dN).forEach(function(c){c.style.display='';});
+  var cont=document.getElementById('contador');
+  if(cont)cont.textContent=vis.length+' diretivos';
+  _dRenderPag(vis.length);
+}
+function _dRenderPag(total){
+  var w=document.getElementById('paginacao-dir');if(!w)return;
+  var tp=Math.ceil(total/_dN);
+  if(tp<=1){w.innerHTML='';return;}
+  var SL='<svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"15 18 9 12 15 6\"/></svg>',SR='<svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><polyline points=\"9 18 15 12 9 6\"/></svg>';
+  var h='<button class="pag-btn pn"'+(_dP<=1?' disabled':'')+' onclick="_dIrPag('+(_dP-1)+')">'+SL+' Anterior</button>';
+  for(var p=1;p<=tp;p++){
+    if(p===1||p===tp||Math.abs(p-_dP)<=1)h+='<button class="pag-btn'+(_dP===p?' pag-ativo':'')+'" onclick="_dIrPag('+p+')">'+p+'</button>';
+    else if((p===2&&_dP>3)||(p===tp-1&&_dP<tp-2))h+='<span class="pag-info">...</span>';
+  }
+  h+='<button class="pag-btn pn"'+(_dP>=tp?' disabled':'')+' onclick="_dIrPag('+(_dP+1)+')">Próximo '+SR+'</button>';
+  h+='<span class="pag-info">Pág. '+_dP+'/'+tp+'</span>';
+  w.innerHTML=h;
+}
+function _dIrPag(p){
+  var cards=Array.from(document.querySelectorAll('.dir-card'));
+  var vis=cards.filter(function(c){
+    var ok=true;
+    if(_dQ)ok=ok&&((c.dataset.nome||'').includes(_dQ)||(c.dataset.cargo||'').toLowerCase().includes(_dQ));
+    if(_dC)ok=ok&&(c.dataset.cargo||'')==_dC;
+    return ok;
+  });
+  var tp=Math.ceil(vis.length/_dN);
+  if(p<1||p>tp)return;_dP=p;_dAtualizar();
+  var g=document.getElementById('lista-diretivos');
+  if(g)window.scrollTo({top:g.offsetTop-80,behavior:'smooth'});
+}
+document.addEventListener('DOMContentLoaded',function(){_dAtualizar();});
+function copiarLinkDiretivo(btn) {
+  const link = '<%= appUrl %>/cadastro-diretivo';
+  const input = document.createElement('textarea');
+  input.value = link;
+  input.style.position = 'fixed';
+  input.style.opacity = '0';
+  document.body.appendChild(input);
+  input.focus();
+  input.select();
+  try {
+    document.execCommand('copy');
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✅ Link copiado!';
+    btn.style.background = '#22c55e';
+    btn.style.color = '#fff';
+    setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; btn.style.color = ''; }, 2000);
+  } catch(e) {
+    window.prompt('Copie o link abaixo:', link);
+  }
+  document.body.removeChild(input);
 }
 </script>
 </body>

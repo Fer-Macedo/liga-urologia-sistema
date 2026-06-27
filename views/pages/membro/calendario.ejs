@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda — Portal do Membro LAURO</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#F4F6F5;color:#0C231B;min-height:100vh}
+.container{max-width:980px;margin:0 auto;padding:16px}
+.layout-cal{display:grid;grid-template-columns:1fr 300px;gap:16px}
+.pg-titulo{font-size:17px;font-weight:700;margin-bottom:16px}
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.cal-mes-titulo{font-size:15px;font-weight:700}
+.cal-btn{background:#fff;border:0.5px solid #E5EBE8;width:30px;height:30px;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.cal-btn:hover{background:#F4F6F5}
+.cal-grid{background:#fff;border:0.5px solid #E5EBE8;border-radius:8px;overflow:hidden}
+.cal-header{display:grid;grid-template-columns:repeat(7,1fr);background:#0C231B}
+.cal-header div{padding:8px 0;text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:.5px}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr)}
+.cal-day{height:80px;padding:5px;border-right:0.5px solid #F0F2F1;border-bottom:0.5px solid #F0F2F1;cursor:pointer;overflow:hidden}
+.cal-day:hover{background:#F9FAFB}
+.cal-day.outro-mes{background:#FAFAFA}
+.cal-day.outro-mes .cal-num{color:#C9D0CC}
+.cal-day.hoje{background:#f0fdf4}
+.cal-num{font-size:11px;font-weight:600;color:#374151;width:20px;height:20px;display:flex;align-items:center;justify-content:center;margin-bottom:3px}
+.cal-day.hoje .cal-num{background:#0F6E56;color:#fff;border-radius:50%}
+.cal-ev-pill{font-size:9px;font-weight:600;padding:1px 4px;border-radius:3px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;line-height:1.4}
+.cal-aniv-pill{font-size:9px;padding:1px 4px;border-radius:3px;background:#fef9c3;color:#854d0e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:2px;line-height:1.4}
+.cal-aniv-hoje{background:#fde68a;color:#78350f;font-weight:700}
+.sidebar-cal{display:flex;flex-direction:column;gap:12px}
+.side-card{background:#fff;border:0.5px solid #E5EBE8;border-radius:8px;overflow:hidden}
+.side-header{padding:11px 14px;border-bottom:0.5px solid #E5EBE8;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6B7A72}
+.side-body{padding:10px 14px}
+.ev-item{padding:8px 0;border-bottom:0.5px solid #F4F6F5;display:flex;gap:10px;align-items:flex-start}
+.ev-item:last-child{border-bottom:none}
+.ev-cor{width:3px;border-radius:2px;align-self:stretch;flex-shrink:0;min-height:28px}
+.ev-titulo{font-size:12px;font-weight:600;color:#0C231B;margin-bottom:2px}
+.ev-data{font-size:11px;color:#6B7A72}
+.ev-local{font-size:11px;color:#6B7A72;margin-top:1px}
+.aniv-item{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:0.5px solid #F4F6F5}
+.aniv-item:last-child{border-bottom:none}
+.aniv-item.aniv-hoje-item{background:#fef9c3;margin:0 -14px;padding:7px 14px}
+.aniv-foto{width:52px;height:52px;border-radius:4px;object-fit:cover;object-position:top center;background:#E5EBE8;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#0C231B;flex-shrink:0}
+.badge-hoje{background:#f59e0b;color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:3px;margin-left:4px;vertical-align:middle}
+.empty-side{font-size:12px;color:#9BA8A4;text-align:center;padding:14px 0}
+.modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:1000;align-items:center;justify-content:center;padding:16px}
+.modal-box{background:#fff;border-radius:8px;width:100%;max-width:380px}
+.modal-header{padding:14px 16px;border-bottom:0.5px solid #E5EBE8;display:flex;align-items:center;justify-content:space-between}
+.modal-titulo{font-size:14px;font-weight:700}
+.modal-close{background:none;border:none;cursor:pointer;color:#6B7A72}
+.modal-body{padding:16px;max-height:60vh;overflow-y:auto}
+.modal-ev{padding:10px;background:#F9FAFB;border-radius:6px;margin-bottom:8px;border-left:3px solid #0F6E56}
+.modal-ev-titulo{font-size:13px;font-weight:600;margin-bottom:3px}
+.modal-ev-info{font-size:11px;color:#6B7A72}
+.modal-aniv{display:flex;align-items:center;gap:10px;padding:8px;background:#fef9c3;border-radius:6px;margin-bottom:6px}
+.modal-aniv-foto{width:36px;height:36px;border-radius:50%;object-fit:cover;background:#fde68a;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.modal-vazio{text-align:center;padding:20px;color:#9BA8A4;font-size:13px}
+@media(max-width:680px){.layout-cal{grid-template-columns:1fr}.cal-day{height:60px}}
+</style>
+</head>
+<body>
+<%- include('../../partials/membro-nav', {membro, paginaAtiva:'agenda', comunicadosNaoLidos: locals.comunicadosNaoLidos||0, grupos: locals.grupos||[]}) %>
+<div class="container">
+  <div class="pg-titulo">Agenda</div>
+  <div class="layout-cal">
+    <div>
+      <div class="cal-nav">
+        <button class="cal-btn" onclick="mudarMes(-1)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <div class="cal-mes-titulo" id="cal-titulo"></div>
+        <button class="cal-btn" onclick="mudarMes(1)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></button>
+      </div>
+      <div class="cal-grid">
+        <div class="cal-header"><div>Dom</div><div>Seg</div><div>Ter</div><div>Qua</div><div>Qui</div><div>Sex</div><div>Sab</div></div>
+        <div class="cal-days" id="cal-days"></div>
+      </div>
+    </div>
+    <div class="sidebar-cal" style="margin-top:40px">
+      <div class="side-card">
+        <div class="side-header">Proximos Eventos</div>
+        <div class="side-body" id="proximos-ev"><div class="empty-side">Carregando...</div></div>
+      </div>
+      <div class="side-card">
+        <div class="side-header">Aniversariantes do Mes</div>
+        <div class="side-body">
+          <%if(!aniversariantes||aniversariantes.length===0){%><div class="empty-side">Nenhum aniversariante este mes</div><%}%>
+          <%var hoje=new Date();%>
+          <%if(aniversariantes){aniversariantes.forEach(function(a){
+            var dA=new Date((String(a.data_nascimento)).substring(0,10)+'T12:00:00');
+            var isHoje=dA.getDate()===hoje.getDate();
+            var ini=a.nome.split(' ').map(function(n){return n[0]}).slice(0,2).join('');
+          %>
+          <div class="aniv-item <%=isHoje?'aniv-hoje-item':''%>">
+            <%if(a.foto_chave){%>
+            <img src="/membro/foto/<%=a.tipo%>/<%=a.id%>" class="aniv-foto" style="object-position:top center;border-radius:4px;<%=isHoje?'border:2px solid #f59e0b':''%>" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+            <div class="aniv-foto" style="display:none;border-radius:4px;background:<%=isHoje?'#fde68a':'#E5EBE8'%>"><%=ini%></div>
+            <%}else{%>
+            <div class="aniv-foto" style="border-radius:4px;background:<%=isHoje?'#fde68a':'#E5EBE8'%>"><%=ini%></div>
+            <%}%>
+            <div>
+              <div style="font-size:12px;font-weight:600"><%=a.nome.split(' ')[0]%> <%=a.nome.split(' ').slice(-1)[0]%><%if(isHoje){%><span class="badge-hoje">Hoje</span><%}%></div>
+              <div style="font-size:10px;color:#6B7A72">Dia <%=dA.getDate()%><%=isHoje?' — Feliz Aniversario!':''%></div>
+            </div>
+          </div>
+          <%})}%>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="modal-dia" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-titulo" id="modal-titulo"></div>
+      <button class="modal-close" onclick="document.getElementById('modal-dia').style.display='none'"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+<script>
+var EVS=<%- JSON.stringify(eventos||[]) %>;
+var ANIVS=<%- JSON.stringify(aniversariantes||[]) %>;
+var hoje=new Date();
+var ano=hoje.getFullYear(), mes=hoje.getMonth();
+var MESES=['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+var MABREV=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+function renderProximos(){
+  var agora=new Date();
+  var prox=EVS.filter(function(e){return new Date(e.data_inicio)>=agora;}).slice(0,5);
+  var el=document.getElementById('proximos-ev');
+  if(!prox.length){el.innerHTML='<div class="empty-side">Nenhum evento futuro agendado</div>';return;}
+  el.innerHTML=prox.map(function(e){
+    var d=new Date(e.data_inicio);
+    return '<div class="ev-item"><div class="ev-cor" style="background:'+(e.cor||'#0F6E56')+'"></div><div><div class="ev-titulo">'+e.titulo+'</div><div class="ev-data">'+d.getDate()+' '+MABREV[d.getMonth()]+' &middot; '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'</div>'+(e.local?'<div class="ev-local">'+e.local+'</div>':'')+'</div></div>';
+  }).join('');
+}
+function abrirModal(dia,evs,anivs){
+  document.getElementById('modal-titulo').textContent=dia+' de '+MESES[mes]+' '+ano;
+  var html='';
+  if(!evs.length&&!anivs.length) html='<div class="modal-vazio">Nenhum evento ou aniversario neste dia.</div>';
+  evs.forEach(function(e){
+    var d=new Date(e.data_inicio);
+    html+='<div class="modal-ev" style="border-left-color:'+(e.cor||'#0F6E56')+'"><div class="modal-ev-titulo">'+e.titulo+'</div><div class="modal-ev-info">'+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+(e.local?' · '+e.local:'')+'</div></div>';
+  });
+  anivs.forEach(function(a){
+    var ini=a.nome.split(' ').map(function(n){return n[0];}).slice(0,2).join('');
+    var foto=a.foto_chave?'<img src="/uploads/'+a.foto_chave+'" style="width:36px;height:36px;border-radius:50%;object-fit:cover" onerror="this.style.display=\'none\'">':'<div class="modal-aniv-foto">'+ini+'</div>';
+    html+='<div class="modal-aniv">'+foto+'<div><div style="font-size:13px;font-weight:600">'+a.nome+'</div><div style="font-size:11px;color:#854d0e">Aniversario!</div></div></div>';
+  });
+  document.getElementById('modal-body').innerHTML=html;
+  document.getElementById('modal-dia').style.display='flex';
+}
+function renderCal(){
+  document.getElementById('cal-titulo').textContent=MESES[mes]+' '+ano;
+  var grid=document.getElementById('cal-days');
+  grid.innerHTML='';
+  var prim=new Date(ano,mes,1), ult=new Date(ano,mes+1,0);
+  var ini=prim.getDay();
+  for(var i=0;i<ini;i++){var prev=new Date(ano,mes,-(ini-i-1));var d=document.createElement('div');d.className='cal-day outro-mes';d.innerHTML='<div class="cal-num">'+prev.getDate()+'</div>';grid.appendChild(d);}
+  for(var dia=1;dia<=ult.getDate();dia++){
+    var d=document.createElement('div');
+    var isHoje=dia===hoje.getDate()&&mes===hoje.getMonth()&&ano===hoje.getFullYear();
+    d.className='cal-day'+(isHoje?' hoje':'');
+    var evs=EVS.filter(function(e){var de=new Date(e.data_inicio);return de.getFullYear()===ano&&de.getMonth()===mes&&de.getDate()===dia;});
+    var anivs=ANIVS.filter(function(a){var da=new Date(a.data_nascimento+'T12:00:00');return da.getMonth()===mes&&da.getDate()===dia;});
+    var html='<div class="cal-num">'+dia+'</div>';
+    evs.slice(0,2).forEach(function(e){html+='<div class="cal-ev-pill" style="background:'+(e.cor||'#0F6E56')+'">'+e.titulo+'</div>';});
+    anivs.slice(0,2).forEach(function(a){html+='<div class="cal-aniv-pill'+(isHoje?' cal-aniv-hoje':'')+'">'+a.nome.split(' ')[0]+'</div>';});
+    if(evs.length+anivs.length>2&&evs.length>1) html+='<div style="font-size:9px;color:#9BA8A4;padding:0 2px">+mais</div>';
+    d.innerHTML=html;
+    (function(dd,ee,aa){d.onclick=function(){abrirModal(dd,ee,aa);};})(dia,evs,anivs);
+    grid.appendChild(d);
+  }
+  var total=ini+ult.getDate(),resto=total%7===0?0:7-(total%7);
+  for(var i=1;i<=resto;i++){var d=document.createElement('div');d.className='cal-day outro-mes';d.innerHTML='<div class="cal-num">'+i+'</div>';grid.appendChild(d);}
+}
+document.getElementById('modal-dia').onclick=function(e){if(e.target===this)this.style.display='none';};
+function mudarMes(dir){mes+=dir;if(mes>11){mes=0;ano++;}if(mes<0){mes=11;ano--;}renderCal();}
+renderCal();
+renderProximos();
+</script>
+
+<%- include('../../partials/membro-footer') %>
+</body>
+</html>

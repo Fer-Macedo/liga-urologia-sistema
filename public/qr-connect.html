@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head><title>QR Code WhatsApp</title></head>
+<body style="background:#111;display:flex;flex-direction:column;justify-content:center;align-items:center;height:100vh;font-family:sans-serif;color:#fff">
+  <h2>Escaneie com o WhatsApp</h2>
+  <div id="qr" style="background:#fff;padding:16px;border-radius:8px;margin:20px 0">
+    <p style="color:#111">Carregando QR Code...</p>
+  </div>
+  <button onclick="gerarQR()" style="background:#25d366;color:#fff;border:none;padding:12px 24px;border-radius:8px;cursor:pointer;font-size:16px">Gerar novo QR Code</button>
+  <p id="status" style="margin-top:16px;color:#aaa"></p>
+  <script>
+    async function gerarQR() {
+      document.getElementById('status').textContent = 'Gerando...';
+      try {
+        const r = await fetch('/api/evolution-qr');
+        const d = await r.json();
+        if(d.base64) {
+          document.getElementById('qr').innerHTML = '<img src="'+d.base64+'" style="width:280px;height:280px">';
+          document.getElementById('status').textContent = 'QR Code pronto! Escaneie agora.';
+        } else {
+          document.getElementById('status').textContent = JSON.stringify(d);
+        }
+      } catch(e) {
+        document.getElementById('status').textContent = 'Erro: ' + e.message;
+      }
+    }
+    gerarQR();
+  </script>
+</body>
+</html>

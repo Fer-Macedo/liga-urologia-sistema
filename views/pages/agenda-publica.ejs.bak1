@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agenda — <%= config.org_nome %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --verde: #2b6803; --verde-dark: #1a4002; --verde-glass: rgba(43,104,3,.1);
+      --bg: #f7f9f5; --surface: #fff; --text: #0f1a08; --text-mid: #4a6030; --text-light: #8aaa6a;
+      --border: rgba(43,104,3,.12); --shadow-lg: 0 16px 56px rgba(43,104,3,.18);
+      --font-d: 'DM Serif Display',Georgia,serif; --font-b: 'DM Sans',system-ui,sans-serif;
+    }
+    body { font-family:var(--font-b); background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+
+    /* HERO */
+    .hero { background:linear-gradient(160deg,var(--verde-dark) 0%,var(--verde) 60%,#4aab06 100%); padding:32px 24px 52px; position:relative; overflow:hidden; }
+    .hero::before { content:''; position:absolute; inset:0; background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E"); }
+    .hero-inner { max-width:920px; margin:0 auto; position:relative; z-index:1; }
+    .hero-top { display:flex; align-items:center; gap:16px; margin-bottom:24px; }
+    .hero-logo { width:52px; height:52px; border-radius:14px; border:2px solid rgba(255,255,255,.3); object-fit:cover; }
+    .hero-org { flex:1; }
+    .hero-org h1 { font-family:var(--font-d); font-size:20px; color:#fff; }
+    .hero-org p { font-size:12px; color:rgba(255,255,255,.65); margin-top:2px; }
+    .hero-sync-btn { background:rgba(255,255,255,.15); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,.25); color:#fff; border-radius:10px; padding:9px 16px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; font-family:var(--font-b); transition:.2s; }
+    .hero-sync-btn:hover { background:rgba(255,255,255,.28); }
+    .hero-headline { font-family:var(--font-d); font-size:clamp(28px,5vw,44px); color:#fff; line-height:1.1; margin-bottom:8px; }
+    .hero-headline em { font-style:italic; color:rgba(255,255,255,.7); }
+    .hero-sub { font-size:14px; color:rgba(255,255,255,.65); }
+
+    /* CAL WRAP */
+    .cal-wrap { max-width:920px; margin:-28px auto 0; padding:0 20px 60px; position:relative; z-index:2; }
+    .cal-card { background:var(--surface); border-radius:20px; box-shadow:var(--shadow-lg); overflow:hidden; border:1px solid var(--border); }
+
+    /* NAV */
+    .cal-nav { display:flex; align-items:center; justify-content:space-between; padding:20px 24px 16px; border-bottom:1px solid var(--border); }
+    .cal-nav-mes { font-family:var(--font-d); font-size:24px; color:var(--text); }
+    .cal-nav-btns { display:flex; gap:8px; align-items:center; }
+    .nav-btn { width:36px; height:36px; border-radius:10px; border:1.5px solid var(--border); background:transparent; cursor:pointer; display:flex; align-items:center; justify-content:center; color:var(--text-mid); transition:.2s; }
+    .nav-btn:hover { background:var(--verde); border-color:var(--verde); color:#fff; transform:scale(1.06); }
+    .hoje-btn { font-size:12px; font-weight:700; color:var(--verde); background:var(--verde-glass); border:1.5px solid rgba(43,104,3,.2); border-radius:8px; padding:6px 14px; cursor:pointer; transition:.2s; font-family:var(--font-b); }
+    .hoje-btn:hover { background:var(--verde); color:#fff; }
+
+    /* LEGENDAS */
+    .cal-legs { display:flex; gap:8px; flex-wrap:wrap; padding:12px 24px; border-bottom:1px solid var(--border); background:rgba(247,249,245,.9); }
+    .leg { display:flex; align-items:center; gap:5px; font-size:11px; font-weight:700; color:var(--text-mid); cursor:pointer; padding:4px 11px; border-radius:20px; border:1.5px solid transparent; transition:.2s; user-select:none; }
+    .leg:hover { background:#f0f7eb; }
+    .leg.off { opacity:.3; }
+    .leg-dot { width:8px; height:8px; border-radius:50%; }
+
+    /* GRADE */
+    .cal-head { display:grid; grid-template-columns:repeat(7,1fr); padding:0 12px; }
+    .cal-head-dia { text-align:center; padding:10px 4px; font-size:10px; font-weight:700; letter-spacing:.6px; text-transform:uppercase; color:var(--text-light); }
+    .cal-grade { display:grid; grid-template-columns:repeat(7,1fr); padding:4px 12px 12px; gap:3px; }
+
+    .cal-dia { min-height:100px; border-radius:10px; padding:0; position:relative; cursor:pointer; transition:all .18s cubic-bezier(.34,1.4,.64,1); border:1.5px solid #f0f0ee; overflow:hidden; display:flex; flex-direction:column; }
+    .cal-dia:hover { transform:translateY(-2px) scale(1.02); box-shadow:0 6px 20px rgba(43,104,3,.15); border-color:rgba(43,104,3,.3); z-index:2; }
+    .cal-dia.outro { opacity:.35; pointer-events:none; }
+    .cal-dia.hoje { border-color:var(--verde) !important; box-shadow:0 0 0 2px rgba(43,104,3,.2); }
+    .cal-dia.hoje .dia-num { background:var(--verde); color:#fff; box-shadow:0 2px 8px rgba(43,104,3,.4); }
+
+    /* Número do dia — fica no topo */
+    .dia-top { padding:7px 8px 4px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; }
+    .dia-num { width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:var(--text); transition:.2s; }
+
+    /* Dia com 1 evento — fill total */
+    .cal-dia.ev-1 { cursor:pointer; }
+    .ev-fill { flex:1; display:flex; flex-direction:column; align-items:flex-start; justify-content:flex-end; padding:0 7px 8px; cursor:pointer; transition:.15s; }
+    .ev-fill-nome { font-size:10px; font-weight:800; line-height:1.3; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.2); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+    .ev-fill-hora { font-size:9px; color:rgba(255,255,255,.8); font-weight:600; margin-top:2px; }
+
+    /* Dia com múltiplos eventos */
+    .ev-multi-wrap { flex:1; display:flex; flex-direction:column; gap:2px; padding:2px 5px 5px; overflow:hidden; }
+    .ev-multi-item { border-radius:5px; padding:3px 6px; font-size:10px; font-weight:800; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; transition:.15s; text-shadow:0 1px 2px rgba(0,0,0,.15); line-height:1.4; }
+    .ev-multi-item:hover { filter:brightness(.88); transform:translateX(1px); }
+    .ev-mais { font-size:9px; color:var(--text-light); font-weight:700; padding:2px 6px; cursor:pointer; text-align:center; }
+    .ev-mais:hover { color:var(--verde); }
+
+    /* BACKDROP */
+    .backdrop { display:none; position:fixed; inset:0; background:rgba(10,20,5,.65); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); z-index:200; align-items:center; justify-content:center; padding:20px; }
+    .backdrop.open { display:flex; animation:bdfade .2s ease; }
+    @keyframes bdfade { from{opacity:0} to{opacity:1} }
+
+    .modal { background:var(--surface); border-radius:20px; width:100%; max-width:480px; max-height:90vh; overflow-y:auto; box-shadow:0 32px 80px rgba(0,0,0,.3); animation:mslide .25s cubic-bezier(.34,1.4,.64,1); }
+    @keyframes mslide { from{opacity:0;transform:translateY(24px) scale(.96)} to{opacity:1;transform:none} }
+
+    .m-head { padding:22px 22px 18px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+    .m-head-data { font-size:12px; font-weight:700; color:rgba(255,255,255,.7); margin-bottom:5px; letter-spacing:.3px; }
+    .m-head-title { font-family:var(--font-d); font-size:22px; color:#fff; line-height:1.2; }
+    .m-x { background:rgba(255,255,255,.2); border:none; color:#fff; width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:20px; display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:.2s; line-height:1; }
+    .m-x:hover { background:rgba(255,255,255,.38); transform:rotate(90deg); }
+
+    .m-body { padding:18px 22px; }
+    .m-row { display:flex; align-items:flex-start; gap:12px; margin-bottom:14px; }
+    .m-icon { width:34px; height:34px; border-radius:9px; background:var(--verde-glass); display:flex; align-items:center; justify-content:center; flex-shrink:0; color:var(--verde); }
+    .m-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--text-light); margin-bottom:2px; }
+    .m-val { font-size:14px; color:var(--text); font-weight:500; line-height:1.5; }
+    .m-link { color:var(--verde); font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:5px; }
+    .m-link:hover { text-decoration:underline; }
+    .m-badge { display:inline-flex; align-items:center; gap:5px; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:800; }
+
+    .m-foot { padding:14px 22px; border-top:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+    .m-foot-hint { font-size:11px; color:var(--text-light); }
+    .m-btn { background:var(--verde); color:#fff; border:none; border-radius:10px; padding:9px 22px; font-size:13px; font-weight:700; cursor:pointer; font-family:var(--font-b); transition:.2s; }
+    .m-btn:hover { background:var(--verde-dark); }
+    .m-btn.ghost { background:transparent; color:var(--text-mid); border:1.5px solid var(--border); }
+    .m-btn.ghost:hover { border-color:var(--verde); color:var(--verde); background:var(--verde-glass); }
+
+    /* MULTI EVENTOS */
+    .multi-lista { padding:12px 22px 8px; display:flex; flex-direction:column; gap:10px; }
+    .multi-item { border-radius:12px; overflow:hidden; cursor:pointer; transition:.2s; }
+    .multi-item:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,.12); }
+    .multi-item-head { padding:11px 14px 8px; display:flex; justify-content:space-between; align-items:center; }
+    .multi-item-titulo { font-weight:700; font-size:14px; color:#fff; }
+    .multi-item-hora { font-size:11px; color:rgba(255,255,255,.75); font-weight:600; }
+    .multi-item-body { background:rgba(255,255,255,.96); padding:8px 14px 10px; }
+    .multi-item-meta { font-size:12px; color:var(--text-mid); display:flex; gap:10px; flex-wrap:wrap; }
+
+    /* ICAL STRIP */
+    .ical-strip { max-width:920px; margin:0 auto 48px; padding:0 20px; }
+    .ical-inner { background:linear-gradient(135deg,var(--verde-dark),var(--verde)); border-radius:16px; padding:22px 26px; display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+    .ical-txt { flex:1; }
+    .ical-txt strong { display:block; font-size:15px; font-weight:700; color:#fff; margin-bottom:3px; }
+    .ical-txt span { font-size:13px; color:rgba(255,255,255,.7); }
+    .ical-btn { background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.28); color:#fff; border-radius:10px; padding:10px 18px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; font-family:var(--font-b); transition:.2s; }
+    .ical-btn:hover { background:rgba(255,255,255,.32); }
+
+    /* MODAL ICAL GUIA */
+    .ical-guia-lista { list-style:none; display:flex; flex-direction:column; gap:6px; }
+    .ical-guia-step { display:flex; gap:10px; align-items:flex-start; }
+    .step-num { width:22px; height:22px; border-radius:50%; background:var(--verde); color:#fff; font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+    .step-txt { font-size:13px; color:var(--text); line-height:1.6; }
+
+    @media(max-width:640px){
+      .cal-dia { min-height:60px; }
+      .ev-fill-nome { font-size:9px; }
+      .ev-multi-item { font-size:9px; }
+      .hero { padding:22px 16px 44px; }
+      .cal-wrap { padding:0 12px 40px; }
+      .m-head-title { font-size:18px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-inner">
+    <div class="hero-top">
+      <% if(config.org_logo){ %><img class="hero-logo" src="<%= config.org_logo %>" alt="Logo"><% } %>
+      <div class="hero-org">
+        <h1><%= config.org_nome %></h1>
+        <p>Agenda de Atividades</p>
+      </div>
+      <button class="hero-sync-btn" onclick="abrirGuia()">📅 Sincronizar Agenda</button>
+    </div>
+    <div class="hero-headline">Calendário <em>da Liga</em></div>
+    <div class="hero-sub">Acompanhe aulas, eventos e atividades em tempo real</div>
+  </div>
+</div>
+
+<div class="cal-wrap">
+  <div class="cal-card">
+    <div class="cal-nav">
+      <div class="cal-nav-mes" id="labelMes"></div>
+      <div class="cal-nav-btns">
+        <button class="hoje-btn" onclick="irHoje()">Hoje</button>
+        <button class="nav-btn" onclick="navMes(-1)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg></button>
+        <button class="nav-btn" onclick="navMes(1)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></button>
+      </div>
+    </div>
+    <div class="cal-legs" id="legs"></div>
+    <div class="cal-head">
+      <% ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].forEach(d=>{ %><div class="cal-head-dia"><%= d %></div><% }) %>
+    </div>
+    <div class="cal-grade" id="grade"></div>
+  </div>
+</div>
+
+<div class="ical-strip">
+  <div class="ical-inner">
+    <div class="ical-txt">
+      <strong>📱 Nunca perca uma atividade</strong>
+      <span>Sincronize com seu iPhone ou Android — atualiza automaticamente!</span>
+    </div>
+    <button class="ical-btn" onclick="abrirGuia()">Como adicionar no celular</button>
+    <button class="ical-btn" onclick="copiarLink()" style="background:rgba(255,255,255,.3);">📋 Copiar link</button>
+  </div>
+</div>
+
+<!-- MODAL EVENTO ÚNICO -->
+<div class="backdrop" id="bdEvento"><div class="modal" id="mEvento">
+  <div class="m-head" id="mHead"><div><div class="m-head-data" id="mData"></div><div class="m-head-title" id="mTitulo"></div></div><button class="m-x" onclick="fechar('bdEvento')">×</button></div>
+  <div class="m-body" id="mBody"></div>
+  <div class="m-foot"><button class="m-btn ghost" onclick="baixarEvento()">📅 Adicionar à minha agenda</button><button class="m-btn" onclick="fechar('bdEvento')">Fechar</button></div>
+</div></div>
+
+<!-- MODAL MULTI -->
+<div class="backdrop" id="bdMulti"><div class="modal">
+  <div class="m-head" style="background:linear-gradient(135deg,#1a4002,#2b6803)"><div><div class="m-head-data" id="mMData"></div><div class="m-head-title" id="mMTit"></div></div><button class="m-x" onclick="fechar('bdMulti')">×</button></div>
+  <div class="multi-lista" id="mMLista"></div>
+  <div class="m-foot"><div class="m-foot-hint">Clique para ver detalhes</div><button class="m-btn" onclick="fechar('bdMulti')">Fechar</button></div>
+</div></div>
+
+<!-- MODAL GUIA iCAL -->
+<div class="backdrop" id="bdIcal"><div class="modal">
+  <div class="m-head" style="background:linear-gradient(135deg,#1a4002,#3d8f04)"><div><div class="m-head-data">Sincronização automática</div><div class="m-head-title">Adicionar ao celular</div></div><button class="m-x" onclick="fechar('bdIcal')">×</button></div>
+  <div class="m-body">
+    <div style="margin-bottom:20px">
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--verde);margin-bottom:10px">📱 iPhone / iPad</div>
+      <ul class="ical-guia-lista">
+        <li class="ical-guia-step"><div class="step-num">1</div><div class="step-txt">Abra o app <strong>Calendário</strong> no seu iPhone</div></li>
+        <li class="ical-guia-step"><div class="step-num">2</div><div class="step-txt">Toque em <strong>Calendários</strong> na parte inferior</div></li>
+        <li class="ical-guia-step"><div class="step-num">3</div><div class="step-txt">Toque em <strong>Adicionar Calendário</strong> → <strong>Assinatura de Calendário</strong></div></li>
+        <li class="ical-guia-step"><div class="step-num">4</div><div class="step-txt">Cole o link abaixo e toque em <strong>Assinar</strong></div></li>
+      </ul>
+    </div>
+    <div style="margin-bottom:20px">
+      <div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--verde);margin-bottom:10px">🤖 Android / Google Calendar</div>
+      <ul class="ical-guia-lista">
+        <li class="ical-guia-step"><div class="step-num">1</div><div class="step-txt">Acesse <strong>calendar.google.com</strong> no computador</div></li>
+        <li class="ical-guia-step"><div class="step-num">2</div><div class="step-txt">Clique no <strong>+</strong> ao lado de "Outros calendários"</div></li>
+        <li class="ical-guia-step"><div class="step-num">3</div><div class="step-txt">Selecione <strong>"Da URL"</strong> e cole o link abaixo</div></li>
+      </ul>
+    </div>
+    <div style="background:#f0f7eb;border-radius:10px;padding:12px 14px;margin-bottom:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Link iCal</div>
+      <div style="font-size:12px;font-family:monospace;word-break:break-all;color:var(--text-mid)" id="linkDisplay"></div>
+    </div>
+    <div style="background:rgba(43,104,3,.08);border-radius:10px;padding:12px 14px;font-size:12px;color:var(--verde)">
+      💡 Após adicionar, novos eventos aparecem automaticamente — sem precisar fazer nada!
+    </div>
+  </div>
+  <div class="m-foot">
+    <button class="m-btn ghost" onclick="fechar('bdIcal')">Fechar</button>
+    <button class="m-btn" onclick="copiarLink()">📋 Copiar Link</button>
+  </div>
+</div></div>
+
+<script>
+const EVS = <%- JSON.stringify(atividades) %>;
+const ICAL = window.location.origin + '/calendario.ics';
+document.getElementById('linkDisplay').textContent = ICAL;
+
+const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DIAS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const CORES = {'Aula Pratica':'#2b6803','Aula Teorica':'#3b82f6','Evento Externo':'#f59e0b','Reuniao':'#8b5cf6','Prazo':'#dc2626','So Diretivos':'#374151','Outro':'#06b6d4'};
+const NOMES = {'Aula Pratica':'Aula Prática','Aula Teorica':'Aula Teórica','Evento Externo':'Evento Externo','Reuniao':'Reunião','Prazo':'Prazo','So Diretivos':'Só Diretivos','Outro':'Outro'};
+
+EVS.forEach(e=>{ if(!CORES[e.categoria]) CORES[e.categoria]=e.cor||'#06b6d4'; if(!NOMES[e.categoria]) NOMES[e.categoria]=e.categoria; });
+
+const hoje = new Date();
+let mes=hoje.getMonth(), ano=hoje.getFullYear();
+let off = new Set();
+
+function getCor(e){ return e.cor||CORES[e.categoria]||'#2b6803'; }
+function getNome(c){ return NOMES[c]||c; }
+function evsVisiveis(){ return EVS.filter(e=>!off.has(e.categoria)); }
+
+function render(){
+  document.getElementById('labelMes').textContent = MESES[mes]+' '+ano;
+  renderLegs(); renderGrade();
+}
+
+function renderLegs(){
+  const cats=[...new Set(EVS.map(e=>e.categoria))];
+  const w=document.getElementById('legs'); w.innerHTML='';
+  cats.forEach(c=>{
+    const cor=CORES[c]||'#6b7280';
+    const el=document.createElement('div');
+    el.className='leg'+(off.has(c)?' off':'');
+    el.innerHTML=`<div class="leg-dot" style="background:${cor}"></div>${getNome(c)}`;
+    el.onclick=()=>{ off.has(c)?off.delete(c):off.add(c); render(); };
+    w.appendChild(el);
+  });
+}
+
+function renderGrade(){
+  const g=document.getElementById('grade'); g.innerHTML='';
+  const p1=new Date(ano,mes,1).getDay();
+  const dm=new Date(ano,mes+1,0).getDate();
+  const dma=new Date(ano,mes,0).getDate();
+  const evs=evsVisiveis();
+
+  for(let i=0;i<42;i++){
+    let d,m2=mes,a2=ano,outro=false;
+    if(i<p1){d=dma-(p1-i-1);m2=mes-1;outro=true;if(m2<0){m2=11;a2--;}}
+    else if(i>=p1+dm){d=i-p1-dm+1;m2=mes+1;outro=true;if(m2>11){m2=0;a2++;}}
+    else d=i-p1+1;
+
+    const isHoje=!outro&&d===hoje.getDate()&&mes===hoje.getMonth()&&ano===hoje.getFullYear();
+    const evsDia=outro?[]:evs.filter(e=>{
+      const dt=new Date(e.data_inicio);
+      dt.setMinutes(dt.getMinutes()+dt.getTimezoneOffset());
+      return dt.getFullYear()===a2&&dt.getMonth()===m2&&dt.getDate()===d;
+    });
+
+    const el=document.createElement('div');
+    el.className='cal-dia'+(outro?' outro':'')+(isHoje?' hoje':'');
+
+    const cor1 = evsDia.length ? getCor(evsDia[0]) : null;
+
+    // Fundo do dia — se tem evento, preencher com gradiente da cor
+    if(evsDia.length===1){
+      el.style.background=`linear-gradient(160deg, ${cor1}22 0%, ${cor1}55 100%)`;
+      el.style.borderColor=`${cor1}55`;
+    } else if(evsDia.length>1){
+      el.style.background=`#fafffe`;
+      el.style.borderColor=`rgba(43,104,3,.12)`;
+    }
+
+    // Topo com número do dia
+    const top=document.createElement('div');
+    top.className='dia-top';
+    const num=document.createElement('div');
+    num.className='dia-num';
+    num.textContent=d;
+    if(evsDia.length===1) { num.style.color=cor1; num.style.fontWeight='900'; }
+    top.appendChild(num);
+    el.appendChild(top);
+
+    if(evsDia.length===1){
+      // Fill único evento
+      const dt=new Date(evsDia[0].data_inicio); dt.setMinutes(dt.getMinutes()+dt.getTimezoneOffset());
+      const hora=evsDia[0].dia_inteiro?'Dia inteiro':dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      const fill=document.createElement('div');
+      fill.className='ev-fill';
+      fill.style.background=`linear-gradient(180deg, transparent 0%, ${cor1}cc 100%)`;
+      fill.innerHTML=`<div class="ev-fill-nome">${evsDia[0].titulo}</div><div class="ev-fill-hora">${hora}</div>`;
+      fill.onclick=e=>{e.stopPropagation();abrirEvento(evsDia[0]);};
+      el.appendChild(fill);
+      el.onclick=()=>abrirEvento(evsDia[0]);
+
+    } else if(evsDia.length>1){
+      // Múltiplos eventos em pills dentro do quadrado
+      const wrap=document.createElement('div');
+      wrap.className='ev-multi-wrap';
+      const max=3;
+      evsDia.slice(0,max).forEach(ev=>{
+        const cor=getCor(ev);
+        const item=document.createElement('div');
+        item.className='ev-multi-item';
+        item.style.background=cor;
+        item.textContent=ev.titulo;
+        item.onclick=e=>{e.stopPropagation();abrirEvento(ev);};
+        wrap.appendChild(item);
+      });
+      if(evsDia.length>max){
+        const mais=document.createElement('div');
+        mais.className='ev-mais';
+        mais.textContent=`+${evsDia.length-max} mais`;
+        mais.onclick=e=>{e.stopPropagation();abrirMulti(d,m2,a2,evsDia);};
+        wrap.appendChild(mais);
+      }
+      el.appendChild(wrap);
+      el.onclick=()=>abrirMulti(d,m2,a2,evsDia);
+    }
+
+    g.appendChild(el);
+  }
+}
+
+let eventoAtual = null;
+
+function abrirEvento(ev){
+  eventoAtual = ev;
+  const cor=getCor(ev);
+  document.getElementById('mHead').style.background=`linear-gradient(135deg,${cor}dd,${cor})`;
+  const dt=new Date(ev.data_inicio); dt.setMinutes(dt.getMinutes()+dt.getTimezoneOffset());
+  document.getElementById('mData').textContent=DIAS[dt.getDay()]+', '+String(dt.getDate()).padStart(2,'0')+' de '+MESES[dt.getMonth()]+' de '+dt.getFullYear();
+  document.getElementById('mTitulo').textContent=ev.titulo;
+  const hora=ev.dia_inteiro?'Dia inteiro':dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  let dtf=''; if(ev.data_fim){const df=new Date(ev.data_fim);df.setMinutes(df.getMinutes()+df.getTimezoneOffset());dtf=' → '+df.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}
+
+  let b=`<div class="m-row"><div class="m-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div><div class="m-label">Horário</div><div class="m-val">${hora}${dtf}</div></div></div>`;
+  b+=`<div class="m-row"><div class="m-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg></div><div><div class="m-label">Categoria</div><div class="m-val"><span class="m-badge" style="background:${cor}18;color:${cor}">${getNome(ev.categoria)}</span></div></div></div>`;
+  if(ev.local) b+=`<div class="m-row"><div class="m-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div><div><div class="m-label">Local</div><div class="m-val">${ev.local}</div></div></div>`;
+  if(ev.descricao) b+=`<div class="m-row"><div class="m-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div><div><div class="m-label">Descrição</div><div class="m-val" style="white-space:pre-wrap">${ev.descricao}</div></div></div>`;
+  if(ev.link_externo) b+=`<div class="m-row"><div class="m-icon"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div><div><div class="m-label">Link</div><div class="m-val"><a class="m-link" href="${ev.link_externo}" target="_blank">Acessar link externo <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg></a></div></div></div>`;
+
+  document.getElementById('mBody').innerHTML=b;
+  abrir('bdEvento');
+}
+
+function abrirMulti(d,m2,a2,evsDia){
+  document.getElementById('mMData').textContent=DIAS[new Date(a2,m2,d).getDay()]+', '+String(d).padStart(2,'0')+' de '+MESES[m2]+' de '+a2;
+  document.getElementById('mMTit').textContent=evsDia.length+' atividade'+(evsDia.length>1?'s':'')+' neste dia';
+  const lista=document.getElementById('mMLista'); lista.innerHTML='';
+  evsDia.forEach(ev=>{
+    const cor=getCor(ev);
+    const dt=new Date(ev.data_inicio); dt.setMinutes(dt.getMinutes()+dt.getTimezoneOffset());
+    const hora=ev.dia_inteiro?'Dia inteiro':dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const item=document.createElement('div');
+    item.className='multi-item';
+    item.innerHTML=`<div class="multi-item-head" style="background:${cor}"><div class="multi-item-titulo">${ev.titulo}</div><div class="multi-item-hora">${hora}</div></div><div class="multi-item-body"><div class="multi-item-meta"><span>${getNome(ev.categoria)}</span>${ev.local?`<span>📍 ${ev.local}</span>`:''}${ev.link_externo?`<span><a href="${ev.link_externo}" target="_blank" style="color:var(--verde);font-weight:700">Ver link</a></span>`:''}</div>${ev.descricao?`<div style="font-size:12px;color:var(--text-mid);margin-top:4px;line-height:1.5">${ev.descricao}</div>`:''}</div>`;
+    item.onclick=()=>{fechar('bdMulti');abrirEvento(ev);};
+    lista.appendChild(item);
+  });
+  abrir('bdMulti');
+}
+
+function abrir(id){ document.getElementById(id).classList.add('open'); }
+function fechar(id){ document.getElementById(id).classList.remove('open'); }
+function abrirGuia(){ abrir('bdIcal'); }
+function navMes(d){ mes+=d; if(mes>11){mes=0;ano++;} if(mes<0){mes=11;ano--;} render(); }
+function irHoje(){ mes=hoje.getMonth(); ano=hoje.getFullYear(); render(); }
+function copiarLink(){ navigator.clipboard.writeText(ICAL).then(()=>{ fechar('bdIcal'); abrirGuia(); }).catch(()=>prompt('Copie:',ICAL)); }
+
+['bdEvento','bdMulti','bdIcal'].forEach(id=>{ document.getElementById(id).addEventListener('click',e=>{if(e.target===e.currentTarget)fechar(id);}); });
+
+function baixarEvento(){
+  if(!eventoAtual) return;
+  const ev = eventoAtual;
+  const fmt = (d, inteiro) => {
+    const dt = new Date(d);
+    if(inteiro) return dt.toISOString().replace(/-/g,'').slice(0,8);
+    return dt.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+  };
+  const esc = s => (s||'').replace(/\n/g,'\\n').replace(/,/g,'\\,').replace(/;/g,'\\;');
+  const uid = `ev-${ev.id}-${Date.now()}@liga-urologia`;
+  const dtstart = ev.dia_inteiro ? `DTSTART;VALUE=DATE:${fmt(ev.data_inicio,true)}` : `DTSTART:${fmt(ev.data_inicio,false)}`;
+  const dtend = ev.data_fim
+    ? (ev.dia_inteiro ? `DTEND;VALUE=DATE:${fmt(ev.data_fim,true)}` : `DTEND:${fmt(ev.data_fim,false)}`)
+    : (ev.dia_inteiro ? `DTEND;VALUE=DATE:${fmt(ev.data_inicio,true)}` : `DTEND:${fmt(new Date(new Date(ev.data_inicio).getTime()+60*60*1000),false)}`);
+  const ical = [
+    'BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Liga Urologia//PT','CALSCALE:GREGORIAN','METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:${uid}`,`DTSTAMP:${fmt(new Date(),false)}`,
+    dtstart,dtend,
+    `SUMMARY:${esc(ev.titulo)}`,
+    ev.descricao?`DESCRIPTION:${esc(ev.descricao)}`:'',
+    ev.local?`LOCATION:${esc(ev.local)}`:'',
+    ev.link_externo?`URL:${ev.link_externo}`:'',
+    'BEGIN:VALARM','TRIGGER:-PT30M','ACTION:DISPLAY',`DESCRIPTION:Lembrete: ${esc(ev.titulo)}`,'END:VALARM',
+    'END:VEVENT','END:VCALENDAR'
+  ].filter(Boolean).join('\r\n');
+  const blob=new Blob([ical],{type:'text/calendar;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=ev.titulo.replace(/[^a-zA-Z0-9]/g,'-')+'.ics';
+  document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1000);
+}
+
+render();
+</script>
+</body>
+</html>

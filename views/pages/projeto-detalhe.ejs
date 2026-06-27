@@ -1,0 +1,409 @@
+<%
+var cfg = (typeof config !== 'undefined' && config) ? config : {};
+var orgNome = cfg.org_nome || 'LAURO';
+var ehEnsino = p.tipo === 'ensino';
+var stMap = {
+  rascunho:  {t:'Rascunho',              bg:'#EEF0ED', cor:'#5F6E66'},
+  pendente:  {t:'Pendiente aprobación',  bg:'#FBF3E0', cor:'#C98A1E'},
+  liberado:  {t:'Liberado p/ Secretaría',bg:'#DCF3EE', cor:'#0E7A60'},
+  revisao:   {t:'Enviado a la UCP',      bg:'#E8F0FA', cor:'#2C6BB3'},
+  aprovado:  {t:'Aprobado UCP',          bg:'#E2F3EA', cor:'#23704F'},
+  andamento: {t:'En curso',              bg:'#EEE9F7', cor:'#6D4FB3'},
+  concluido: {t:'Concluido',             bg:'#D9EFE1', cor:'#15633B'},
+  cancelado: {t:'Cancelado',             bg:'#FBE9E7', cor:'#C0392B'}
+};
+var st = stMap[p.status] || {t:p.status,bg:'#EEF0ED',cor:'#5F6E66'};
+var fmtD = function(d){ try { return d ? new Date(d).toLocaleDateString('es-PY') : '—'; } catch(e){ return '—'; } };
+var objEsp = [];
+try { objEsp = Array.isArray(p.objetivos_especificos) ? p.objetivos_especificos : JSON.parse(p.objetivos_especificos||'[]'); } catch(e){}
+var pubAlvo = [];
+try { pubAlvo = Array.isArray(p.publico_alvo) ? p.publico_alvo : JSON.parse(p.publico_alvo||'[]'); } catch(e){}
+var temario = [];
+try { temario = Array.isArray(p.temario) ? p.temario : JSON.parse(p.temario||'[]'); } catch(e){}
+
+var perfil = usuario.perfil;
+var ehAdmin = perfil==='admin' || perfil==='presidencia';
+var ehSec = perfil==='secretaria' || ehAdmin;
+var fluxo = { rascunho:['pendente','cancelado'],
+  pendente:['liberado','rascunho','cancelado'],
+  liberado:['revisao','pendente','cancelado'],
+  revisao:['aprovado','rascunho','cancelado'],
+  aprovado:['andamento','cancelado'], andamento:['concluido','cancelado'], concluido:[], cancelado:['rascunho'] };
+var acao = {
+  'rascunho>pendente':'Enviar para aprobación (Presidencia)',
+  'pendente>liberado':'Liberar para Secretaría',
+  'pendente>rascunho':'Devolver para corrección',
+  'liberado>revisao':'Marcar como enviado a la UCP',
+  'liberado>pendente':'Devolver a Presidencia',
+  'revisao>aprovado':'Marcar como aprobado por la UCP',
+  'revisao>rascunho':'Devolver para corrección',
+  'aprovado>andamento':'Iniciar ejecución (En curso)',
+  'andamento>concluido':'Marcar como Concluido',
+  'cancelado>rascunho':'Reabrir como Rascunho'
+};
+var possiveis = fluxo[p.status] || [];
+var transicoes = possiveis.filter(function(s){
+  if (ehAdmin) return true;
+  if (perfil==='secretaria') return ['revisao','aprovado','concluido'].indexOf(s)>=0;
+  if (editavel) return ['rascunho','pendente','andamento'].indexOf(s)>=0;
+  return false;
+});
+var emailsUCP = 'sergio.marmori@central.edu.py,lilian.ramirez@central.edu.py,raquel.caceres@central.edu.py';
+%>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= p.nome %> — <%= orgNome %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --ink:#10201A; --ink-soft:#3A4A43; --ink-faint:#74837C;
+      --line:#E2E6E1; --line-strong:#CDD4CE; --paper:#F2F4F0; --card:#FFFFFF;
+      --green-700:#15402F; --green-600:#1C5A41; --accent:#2FA873;
+      --blue:#2C6BB3; --blue-bg:#E8F0FA; --red:#C0392B; --red-bg:#FBE9E7;
+      --shadow-md:0 12px 28px -14px rgba(16,32,26,.28);
+    }
+    body{font-family:'IBM Plex Sans',system-ui,sans-serif;color:var(--ink);background:var(--paper)}
+    #pj-page{margin-left:240px;min-height:100vh;padding:28px 32px}
+    @media(max-width:900px){#pj-page{margin-left:0;padding:18px 14px}}
+    .crumb{font-size:12.5px;color:var(--ink-faint);margin-bottom:14px}
+    .crumb a{color:var(--ink-faint);text-decoration:none}
+    .crumb a:hover{color:var(--accent)}
+    .head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+    .head h1{font-family:'Archivo',sans-serif;font-size:22px;font-weight:800;color:var(--green-700)}
+    .head .meta{font-size:12.5px;color:var(--ink-faint);margin-top:4px}
+    .badge{display:inline-block;padding:4px 12px;border-radius:3px;font-size:12px;font-weight:600}
+    .btn{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border:none;border-radius:3px;cursor:pointer;font-family:inherit;font-size:13.5px;font-weight:600;text-decoration:none;transition:all .15s}
+    .btn-pri{background:var(--green-600);color:#fff}
+    .btn-pri:hover{background:var(--green-700)}
+    .btn-sec{background:var(--card);color:var(--ink-soft);border:1px solid var(--line-strong)}
+    .btn-sec:hover{border-color:var(--accent);color:var(--accent)}
+    .btn-blue{background:var(--blue-bg);color:var(--blue);border:1px solid #B9D2EC}
+    .btn-danger{background:var(--red-bg);color:var(--red);border:1px solid #F0C5C0}
+    .btn:disabled{opacity:.5;cursor:wait}
+    .layout{display:grid;grid-template-columns:1fr 330px;gap:16px;align-items:start}
+    @media(max-width:1050px){.layout{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:3px;margin-bottom:16px;overflow:hidden}
+    .card-h{padding:13px 18px;border-bottom:1px solid var(--line);background:#F8FAF6;font-size:12.5px;font-weight:700;color:var(--green-700);text-transform:uppercase;letter-spacing:.04em;display:flex;justify-content:space-between;align-items:center}
+    .card-b{padding:18px}
+    .dl{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .dl .full{grid-column:1/-1}
+    .dl dt{font-size:11.5px;color:var(--ink-faint);font-weight:600;text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px}
+    .dl dd{font-size:13.5px;color:var(--ink)}
+    .texto{font-size:13.5px;line-height:1.65;white-space:pre-line;color:var(--ink-soft)}
+    ol.objs{padding-left:20px;font-size:13.5px;line-height:1.7}
+    table.cron{width:100%;border-collapse:collapse}
+    table.cron th{background:var(--green-700);color:#fff;padding:8px 12px;text-align:left;font-size:10.5px;font-weight:700;text-transform:uppercase}
+    table.cron td{padding:9px 12px;border-bottom:1px solid var(--line);font-size:13px}
+    table.cron tr:last-child td{border-bottom:none}
+    .side-btns{display:flex;flex-direction:column;gap:8px}
+    textarea{width:100%;padding:10px 12px;border:1px solid var(--line-strong);border-radius:3px;font-family:inherit;font-size:13px;resize:vertical}
+    textarea:focus{outline:none;border-color:var(--accent)}
+    .inf-label{font-size:12px;font-weight:600;color:var(--ink-soft);margin:12px 0 5px}
+    .hist{list-style:none}
+    .hist li{padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+    .hist li:last-child{border:none}
+    .hist .quando{font-size:11px;color:var(--ink-faint);margin-top:2px}
+    .tem-view{border:1px solid var(--line);border-radius:3px;padding:12px 14px;margin-bottom:8px;background:#FBFCFA}
+    .tem-view .tt{font-weight:600;font-size:13.5px}
+    .tem-view .pn{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
+    .tem-view .ds{font-size:12.5px;color:var(--ink-faint);margin-top:4px}
+  </style>
+</head>
+<body>
+<%- include('../partials/sidebar', { paginaAtual: p.tipo }) %>
+<div id="pj-page">
+
+  <div class="crumb">
+    <a href="/<%= p.tipo %>"><%= ehEnsino ? 'Proyectos de Enseñanza' : 'Proyectos de Extensión' %></a>
+    &nbsp;›&nbsp; <%= p.nome %>
+  </div>
+
+  <div class="head">
+    <div>
+      <span class="badge" style="background:<%= st.bg %>;color:<%= st.cor %>"><%= st.t %></span>
+      <h1 style="margin-top:8px"><%= p.nome %></h1>
+      <div class="meta">Creado el <%= fmtD(p.created_at) %><%= p.criador_nome ? ' por '+p.criador_nome : '' %> · Total de horas: <strong><%= totalHoras %>h</strong></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <% if (editavel && p.status==='rascunho') { %>
+      <a href="/projetos/<%= p.id %>/editar" class="btn btn-sec"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7.5 20.5 3 21l1-4.5Z"/></svg> Editar</a>
+      <% } %>
+      
+    </div>
+  </div>
+
+  <div class="layout">
+    <div>
+
+      <div class="card">
+        <div class="card-h">Identificación</div>
+        <div class="card-b"><div class="dl">
+          <div><dt>Fecha de ejecución</dt><dd><%= fmtD(p.data_execucao_inicio) %><%= p.data_execucao_fim ? ' al '+fmtD(p.data_execucao_fim) : '' %><%= p.horario_inicio ? ' | '+p.horario_inicio+(p.horario_fim?' – '+p.horario_fim:'') : '' %></dd></div>
+          <div><dt>Local</dt><dd><%= p.local || '—' %><%= p.plataforma ? ' ('+p.plataforma+')' : '' %></dd></div>
+          <% if (!ehEnsino && p.lugar_execucao) { %>
+          <div class="full"><dt>Lugar de ejecución</dt><dd><%= p.lugar_execucao %></dd></div>
+          <% } %>
+          <div><dt>Docente responsable</dt><dd><%= p.docente_responsavel || '—' %></dd></div>
+          <div><dt>Docente orientador</dt><dd><%= p.docente_orientador || '—' %></dd></div>
+          <% if (pubAlvo.length) { %>
+          <div class="full"><dt>Público objetivo</dt><dd><%= pubAlvo.join(' · ') %></dd></div>
+          <% } %>
+          <% if (ehEnsino) { %>
+          <div><dt>Inscripción</dt><dd><%= p.inscricao_gratuita ? 'Gratuita' : 'Gs. '+Number(p.inscricao_valor||0).toLocaleString('es-PY')+(p.inscricao_valor_brl ? ' / R$ '+Number(p.inscricao_valor_brl).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '') %></dd></div>
+          <% if (p.inscricao_inicio) { %>
+          <div><dt>Período de inscripciones</dt><dd><%= fmtD(p.inscricao_inicio) %> al <%= fmtD(p.inscricao_fim) %></dd></div>
+          <% } %>
+          <% } %>
+        </div></div>
+      </div>
+
+      <% if (p.objetivo_geral || objEsp.length) { %>
+      <div class="card">
+        <div class="card-h">Objetivos</div>
+        <div class="card-b">
+          <% if (p.objetivo_geral) { %>
+          <dt style="font-size:11.5px;color:var(--ink-faint);font-weight:600;text-transform:uppercase;margin-bottom:4px">Objetivo general</dt>
+          <p class="texto" style="margin-bottom:14px"><%= p.objetivo_geral %></p>
+          <% } %>
+          <% if (objEsp.length) { %>
+          <dt style="font-size:11.5px;color:var(--ink-faint);font-weight:600;text-transform:uppercase;margin-bottom:4px">Objetivos específicos</dt>
+          <ol class="objs"><% objEsp.forEach(function(o){ %><li><%= o %></li><% }) %></ol>
+          <% } %>
+        </div>
+      </div>
+      <% } %>
+
+      <% if (p.antecedentes) { %>
+      <div class="card">
+        <div class="card-h">Antecedentes y justificación</div>
+        <div class="card-b"><p class="texto"><%= p.antecedentes %></p></div>
+      </div>
+      <% } %>
+
+      <% if (ehEnsino && temario.length) { %>
+      <div class="card">
+        <div class="card-h">Temario y programa</div>
+        <div class="card-b">
+          <% temario.forEach(function(t){ %>
+          <div class="tem-view">
+            <div class="tt"><%= t.titulo %><%= t.duracao_min ? ' · '+t.duracao_min+' min' : '' %></div>
+            <% if (t.ponente) { %><div class="pn">Ponente: <%= t.ponente %><%= t.perfil_ponente ? ' — '+t.perfil_ponente : '' %></div><% } %>
+            <% if (t.descricao) { %><div class="ds"><%= t.descricao %></div><% } %>
+          </div>
+          <% }) %>
+        </div>
+      </div>
+      <% } %>
+
+      <% if (!ehEnsino && p.atividades_realizar) { %>
+      <div class="card">
+        <div class="card-h">Actividades por realizar</div>
+        <div class="card-b"><p class="texto"><%= p.atividades_realizar %></p></div>
+      </div>
+      <% } %>
+
+      <% if (p.metodologia) { %>
+      <div class="card">
+        <div class="card-h">Metodología</div>
+        <div class="card-b"><p class="texto"><%= p.metodologia %></p></div>
+      </div>
+      <% } %>
+
+      <% if (p.cronograma && p.cronograma.length) { %>
+      <div class="card">
+        <div class="card-h">Cronograma <span style="font-weight:600;color:var(--accent)"><%= totalHoras %>h totales</span></div>
+        <table class="cron">
+          <thead><tr><th>Actividad</th><th><%= ehEnsino?'Disertante':'Responsable' %></th><th>Fecha</th><th>Inicio</th><th>Fin</th><th>Hs.</th></tr></thead>
+          <tbody>
+          <% p.cronograma.forEach(function(c){ %>
+          <tr>
+            <td><%= c.atividade %></td>
+            <td style="color:var(--ink-soft)"><%= c.responsavel || '—' %></td>
+            <td style="color:var(--ink-soft)"><%= fmtD(c.data) %></td>
+            <td style="color:var(--ink-soft)"><%= c.hora_inicio || '—' %></td>
+            <td style="color:var(--ink-soft)"><%= c.hora_fim || '—' %></td>
+            <td><strong><%= c.horas_total || '—' %></strong></td>
+          </tr>
+          <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+
+      <% if (p.recursos_necessarios || p.resultados_esperados || p.referencias) { %>
+      <div class="card">
+        <div class="card-h">Recursos, resultados y referencias</div>
+        <div class="card-b">
+          <% if (p.recursos_necessarios) { %>
+          <div class="inf-label" style="margin-top:0">Recursos necesarios</div>
+          <p class="texto"><%= p.recursos_necessarios %></p>
+          <% } %>
+          <% if (p.resultados_esperados) { %>
+          <div class="inf-label">Resultados esperados</div>
+          <p class="texto"><%= p.resultados_esperados %></p>
+          <% } %>
+          <% if (p.referencias) { %>
+          <div class="inf-label">Referencias</div>
+          <p class="texto"><%= p.referencias %></p>
+          <% } %>
+        </div>
+      </div>
+      <% } %>
+
+      <% if ((p.status==='andamento' || p.status==='concluido') && editavel) { %>
+      <div class="card">
+        <div class="card-h">Informe final
+          <% if (p.gdoc_url_informe) { %>
+          <a href="<%= p.gdoc_url_informe %>" target="_blank" style="font-size:12px;color:var(--blue);text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg> Abrir informe</a>
+          <% } %>
+        </div>
+        <div class="card-b">
+          <div class="inf-label" style="margin-top:0">1. Concepto</div>
+          <p style="font-size:11.5px;color:var(--ink-faint);margin:0 0 5px;line-height:1.5">Modelo UCP: expliquen brevemente el objetivo principal del proyecto, cómo estuvo orientado a cumplir los objetivos propuestos, el impacto en los grupos beneficiarios y cómo se facilitó la participación y la comunicación entre los involucrados.</p>
+          <textarea class="inf" data-c="informe_conceito" rows="4"><%= p.informe_conceito || '' %></textarea>
+          <div class="inf-label">2.1 Actividades realizadas</div>
+          <p style="font-size:11.5px;color:var(--ink-faint);margin:0 0 5px;line-height:1.5">Modelo UCP: detallen las actividades llevadas a cabo con énfasis en los resultados obtenidos: cantidad de participantes, logros en términos de aprendizaje y beneficios que obtuvieron los involucrados.</p>
+          <textarea class="inf" data-c="informe_atividades" rows="5"><%= p.informe_atividades || '' %></textarea>
+          <div class="inf-label">2.2 Resultados</div>
+          <p style="font-size:11.5px;color:var(--ink-faint);margin:0 0 5px;line-height:1.5">Modelo UCP: describan de manera concreta los resultados alcanzados y los impactos tangibles. Incluyan datos cuantitativos si es posible: número de personas atendidas, encuestas, gráficos, etc.</p>
+          <textarea class="inf" data-c="informe_resultados" rows="5"><%= p.informe_resultados || '' %></textarea>
+          <div class="inf-label">2.3 Aprendizajes adquiridos</div>
+          <p style="font-size:11.5px;color:var(--ink-faint);margin:0 0 5px;line-height:1.5">Modelo UCP: expongan los conocimientos y habilidades adquiridos por los estudiantes o participantes: competencias técnicas, interpersonales, trabajo en equipo, gestión de proyectos, etc.</p>
+          <textarea class="inf" data-c="informe_aprendizados" rows="4"><%= p.informe_aprendizados || '' %></textarea>
+          <div class="inf-label">3. Análisis de problemas</div>
+          <p style="font-size:11.5px;color:var(--ink-faint);margin:0 0 5px;line-height:1.5">Modelo UCP: describan las fallas o problemas que surgieron durante el desarrollo. Analicen cómo pueden mejorar en futuros proyectos, proponiendo soluciones o recomendaciones específicas.</p>
+          <textarea class="inf" data-c="informe_problemas" rows="4"><%= p.informe_problemas || '' %></textarea>
+          <div class="inf-label">4. Conclusión</div>
+          <p style="font-size:11.5px;color:var(--ink-faint);margin:0 0 5px;line-height:1.5">Modelo UCP: resumen final que recapitule los puntos clave del proyecto, evaluando el éxito general. Incluyan recomendaciones finales o pasos a seguir, con enfoque en la mejora continua.</p>
+          <textarea class="inf" data-c="informe_conclusao" rows="4"><%= p.informe_conclusao || '' %></textarea>
+          <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+            <button class="btn btn-pri" id="btn-inf-save" onclick="salvarInforme()">Guardar informe</button>
+            <button class="btn btn-blue" id="btn-inf-doc" onclick="gerarInforme()">Generar Google Doc del informe</button>
+          </div>
+          <p style="font-size:11.5px;color:var(--ink-faint);margin-top:8px">Anexos en el Google Doc después de generarlo — Fotos (modelo UCP): la imagen debe mostrar el registro de la actividad con fecha y número de participantes. Asistencias: en línea, tabla con nombre y catraca; presencial, anexo digitalizado (scanner) de la lista firmada por los participantes.</p>
+        </div>
+      </div>
+      <% } %>
+
+    </div>
+
+    <div>
+
+      <%- include('_fluxo-projeto') %>
+      
+
+      <% if (historico && historico.length) { %>
+      <div class="card">
+        <div class="card-h">Historial</div>
+        <div class="card-b">
+          <ul class="hist">
+          <% historico.forEach(function(h){ %>
+            <li>
+              <% if (h.status_para && stMap[h.status_para]) { %>
+              <span class="badge" style="background:<%= stMap[h.status_para].bg %>;color:<%= stMap[h.status_para].cor %>;font-size:10.5px;padding:2px 8px"><%= stMap[h.status_para].t %></span>
+              <% } %>
+              <%= h.observacao || '' %>
+              <div class="quando"><%= h.unom || 'Sistema' %> · <%= fmtD(h.created_at) %></div>
+            </li>
+          <% }) %>
+          </ul>
+        </div>
+      </div>
+      <% } %>
+
+      <div class="card" style="border-color:#F0C5C0">
+        <div class="card-b" style="display:flex;flex-direction:column;gap:8px">
+          <% if (p.inativado) { %>
+            <div style="background:#FBE9E7;border:1px solid #F0C5C0;border-radius:3px;padding:9px 11px;font-size:12px;color:#A32D2D">
+              Proyecto inactivado<% if (p.inativado_nome) { %> por <strong><%= p.inativado_nome %></strong><% } %><% if (p.inativado_em) { %> el <%= fmtD(p.inativado_em) %><% } %>.
+            </div>
+            <% if (ehAdmin) { %>
+            <button class="btn btn-sec" style="width:100%;justify-content:center" onclick="reactivar()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg> Reactivar proyecto</button>
+            <button class="btn btn-danger" style="width:100%;justify-content:center" onclick="excluir()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Eliminar definitivamente</button>
+            <% } %>
+          <% } else { %>
+            <button class="btn btn-danger" style="width:100%;justify-content:center" onclick="inactivar()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M18.36 6.64A9 9 0 1 1 5.64 6.64"/><line x1="12" y1="2" x2="12" y2="12"/></svg> <%= ehAdmin ? 'Inactivar proyecto' : 'Inactivar / Quitar de mi lista' %></button>
+            <% if (ehAdmin) { %>
+            <button class="btn btn-sec" style="width:100%;justify-content:center;font-size:12px" onclick="excluir()">Eliminar definitivamente</button>
+            <% } %>
+          <% } %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+async function mudarStatus(s, label) {
+  var obs = prompt('Marcar como "'+label+'".\nObservación (opcional):');
+  if (obs === null) return;
+  var r = await fetch('/projetos/<%= p.id %>/status', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({novoStatus:s, observacao:obs})
+  });
+  var d = await r.json();
+  if (d.ok) location.reload(); else alert('Error: '+d.erro);
+}
+async function gerarDoc() {
+  var b = document.getElementById('btn-gdoc');
+  if (b) { b.disabled = true; b.textContent = 'Generando…'; }
+  var r = await fetch('/projetos/<%= p.id %>/gerar-doc', {method:'POST'});
+  var d = await r.json();
+  if (d.ok) { window.open(d.url,'_blank'); location.reload(); }
+  else { if (b) { b.disabled=false; b.textContent='Generar Google Doc'; } alert('Error: '+d.erro); }
+}
+async function salvarInforme() {
+  var campos = {};
+  document.querySelectorAll('textarea.inf').forEach(function(t){ campos[t.dataset.c] = t.value; });
+  var b = document.getElementById('btn-inf-save');
+  b.disabled = true;
+  var r = await fetch('/projetos/<%= p.id %>/informe', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(campos)
+  });
+  var d = await r.json();
+  b.disabled = false;
+  if (d.ok) { b.textContent = 'Guardado'; setTimeout(function(){ b.textContent='Guardar informe'; }, 2000); }
+  else alert('Error: '+d.erro);
+}
+async function gerarInforme() {
+  var campos = {};
+  document.querySelectorAll('textarea.inf').forEach(function(t){ campos[t.dataset.c] = t.value; });
+  await fetch('/projetos/<%= p.id %>/informe', {
+    method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(campos)
+  });
+  var b = document.getElementById('btn-inf-doc');
+  b.disabled = true; b.textContent = 'Generando…';
+  var r = await fetch('/projetos/<%= p.id %>/gerar-informe', {method:'POST'});
+  var d = await r.json();
+  b.disabled = false; b.textContent = 'Generar Google Doc del informe';
+  if (d.ok) { window.open(d.url,'_blank'); location.reload(); }
+  else alert('Error: '+d.erro);
+}
+async function excluir() {
+  if (!confirm('¿Eliminar este proyecto permanentemente? Esta acción no se puede deshacer.')) return;
+  var r = await fetch('/projetos/<%= p.id %>/excluir', {method:'POST'});
+  var d = await r.json();
+  if (d.ok) window.location = d.redir; else alert('Error: '+d.erro);
+}
+async function inactivar() {
+  if (!confirm('¿Inactivar este proyecto? Dejará de aparecer en la lista. La Presidencia/Admin seguirá viéndolo.')) return;
+  var r = await fetch('/projetos/<%= p.id %>/inativar', {method:'POST'});
+  var d = await r.json();
+  if (d.ok) window.location = d.redir; else alert('Error: '+d.erro);
+}
+async function reactivar() {
+  if (!confirm('¿Reactivar este proyecto?')) return;
+  var r = await fetch('/projetos/<%= p.id %>/reativar', {method:'POST'});
+  var d = await r.json();
+  if (d.ok) location.reload(); else alert('Error: '+d.erro);
+}
+</script>
+</body>
+</html>

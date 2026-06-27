@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cartas de Notificacao</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.snow.min.css">
+  <style>
+    .ql-toolbar { border-radius:0!important; border-color:var(--borda)!important; background:var(--fundo); }
+    .ql-container { border-radius:0!important; border-color:var(--borda)!important; font-family:inherit; font-size:13px; min-height:140px; }
+    .ql-editor { min-height:140px; }
+    .ql-editor.ql-blank::before { font-style:normal; color:var(--texto2); }
+  </style>
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+    .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; margin-bottom:20px; border:1px solid var(--borda); background:var(--borda); }
+    .stat-box { background:var(--card); padding:16px 18px; display:flex; align-items:center; gap:14px; position:relative; transition:transform .15s ease, box-shadow .15s ease, background .12s; cursor:default; }
+    .stat-box::before { content:''; position:absolute; top:0; left:0; bottom:0; width:3px; background:var(--cor-stat,var(--cor-primaria)); transition:width .15s ease; }
+    .stat-box:hover { transform:translateY(-3px); box-shadow:0 8px 20px rgba(0,0,0,.09); z-index:2; }
+    .stat-box:hover::before { width:6px; }
+    .stat-icon { width:40px; height:40px; border:1px solid var(--borda); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .stat-icon svg { width:18px; height:18px; }
+    .stat-num { font-family:'Outfit',sans-serif; font-size:22px; font-weight:700; line-height:1; margin-bottom:3px; letter-spacing:-.5px; }
+    .stat-lab { font-size:11px; color:var(--texto2); font-weight:600; text-transform:uppercase; letter-spacing:.6px; }
+    .table-card { background:var(--card); border:1px solid var(--borda); overflow:hidden; }
+    .table-header { padding:14px 18px; border-bottom:1px solid var(--borda); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .table-titulo { font-size:14px; font-weight:700; font-family:'Outfit',sans-serif; }
+    table.tabela { width:100%; border-collapse:collapse; }
+    table.tabela thead th { background:var(--fundo); padding:10px 14px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:var(--texto2); text-align:left; border-bottom:1px solid var(--borda); }
+    table.tabela tbody tr { border-bottom:1px solid var(--borda); transition:background .15s; }
+    table.tabela tbody tr:last-child { border-bottom:none; }
+    table.tabela tbody tr:hover { background:var(--fundo); }
+    table.tabela tbody td { padding:12px 14px; font-size:13px; color:var(--texto); vertical-align:middle; }
+    .pessoa-info { display:flex; align-items:center; gap:10px; }
+    .avatar-sm { width:34px; height:34px; background:linear-gradient(135deg,var(--cor-primaria),var(--cor-primaria)99); color:white; font-size:12px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .pessoa-nome { font-weight:600; font-size:13px; }
+    .pessoa-email { font-size:11px; color:var(--texto2); margin-top:1px; }
+    .badge-status { display:inline-flex; align-items:center; gap:5px; padding:3px 9px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; border-left:2px solid transparent; }
+    .badge-enviado { background:#dbeafe; color:#1e40af; border-color:#1d4ed8; }
+    .badge-pendente { background:#fef3c7; color:#92400e; border-color:#d97706; }
+    .badge-tipo { display:inline-flex; align-items:center; padding:2px 7px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; }
+    .badge-membro   { background:#e0f2fe; color:#0369a1; }
+    .badge-ligante  { background:#d1fae5; color:#065f46; }
+    .badge-diretivo { background:#ede9fe; color:#5b21b6; }
+    .btn-xs { display:inline-flex; align-items:center; gap:5px; padding:5px 9px; font-size:11px; font-weight:600; border:1px solid var(--borda); background:var(--fundo); color:var(--texto); cursor:pointer; text-decoration:none; transition:transform .12s ease, background .12s ease, border-color .12s ease, color .12s ease; font-family:inherit; white-space:nowrap; }
+    .btn-xs svg { width:13px; height:13px; }
+    .btn-xs:hover { border-color:var(--cor-primaria); color:var(--cor-primaria); transform:translateY(-1px); }
+    .btn-xs.roxo { background:#6366f1; color:white; border-color:transparent; }
+    .btn-xs.roxo:hover { background:#4f46e5; color:white; }
+    .btn-xs.verde { background:#059669; color:white; border-color:transparent; }
+    .btn-xs.verde:hover { background:#047857; color:white; }
+    .btn-xs.amarelo { background:#f59e0b; color:white; border-color:transparent; }
+    .btn-xs.amarelo:hover { background:#d97706; color:white; }
+    .btn-xs.verm { color:#dc2626; border-color:#fecaca; }
+    .btn-xs.azul { background:#0ea5e9; color:white; border-color:transparent; }
+    .btn-xs.azul:hover { background:#0284c7; color:white; }
+    .modal-overlay .modal.modal-edit { max-width:680px; width:95vw; }
+    .btn-xs.verm:hover { background:#fee2e2; color:#dc2626; }
+    .search-bar { display:flex; align-items:center; gap:8px; background:var(--fundo); border:1px solid var(--borda); padding:0 12px; height:34px; }
+    .search-bar input { border:none; background:transparent; font-size:13px; color:var(--texto); outline:none; width:160px; font-family:inherit; }
+    .topbar-acoes .btn { border-radius:0; display:inline-flex; align-items:center; gap:6px; transition:transform .12s ease, box-shadow .12s ease, background .12s ease; }
+    .topbar-acoes .btn svg { width:14px; height:14px; }
+    .modal-overlay .modal { border-radius:0; border:1px solid var(--borda); box-shadow:0 14px 44px rgba(0,0,0,.18); }
+    .modal-overlay .modal-header { border-bottom:1px solid var(--borda); padding-bottom:12px; margin-bottom:4px; }
+    .modal-overlay .modal-titulo { display:inline-flex; align-items:center; gap:9px; font-weight:700; }
+    .modal-overlay .modal-titulo svg { width:17px; height:17px; stroke:var(--cor-primaria); flex-shrink:0; }
+    .modal-overlay .icon-btn { width:30px; height:30px; border:1px solid var(--borda); border-radius:0; background:var(--card); display:inline-flex; align-items:center; justify-content:center; color:var(--texto2); transition:background .12s ease, border-color .12s ease, color .12s ease, transform .12s ease; }
+    .modal-overlay .icon-btn:hover { background:#fee2e2; border-color:#dc2626; color:#dc2626; transform:scale(1.06); }
+    .modal-overlay .icon-btn svg { width:14px; height:14px; }
+    .modal-overlay .input, .modal-overlay select.input { border-radius:0; }
+    .modal-overlay .btn { border-radius:0; display:inline-flex; align-items:center; justify-content:center; gap:7px; transition:transform .12s ease, box-shadow .12s ease, background .12s ease, border-color .12s ease, color .12s ease; }
+    .modal-overlay .btn svg { width:14px; height:14px; }
+    .alerta-notif { display:inline-flex; align-items:center; gap:5px; padding:3px 8px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; }
+    .alerta-notif-2 { background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; }
+    .alerta-notif-3 { background:#fef2f2; color:#991b1b; border:1px solid #fecaca; }
+    .alerta-notif-svg { width:11px; height:11px; }
+    .modal-overlay .modal.modal-lg { max-width:620px; width:95vw; }
+    textarea.input { resize:vertical; min-height:140px; font-family:inherit; font-size:13px; line-height:1.5; }
+    * { border-radius:0!important; }
+    .stat-box::before { background:linear-gradient(90deg,#1a3410,#253d18)!important; opacity:1!important; height:3px!important; }
+    .stat-num { color:#1a3410!important; }
+    table thead th { background:linear-gradient(135deg,#1a3410,#253d18)!important; color:#fff!important; border-bottom:none!important; }
+    table tbody tr:hover { background:#f0f7eb!important; }
+    .btn-primario { background:linear-gradient(135deg,#1a3410,#253d18)!important; border-radius:0!important; }
+    input:focus, select:focus, textarea:focus { border-color:#1a3410!important; box-shadow:0 0 0 3px rgba(37,61,24,.1)!important; }
+    .banner-alerta { position:fixed; top:24px; left:50%; transform:translateX(-50%); z-index:9999; min-width:340px; max-width:90vw; padding:14px 20px; display:flex; align-items:center; gap:12px; box-shadow:0 8px 28px rgba(0,0,0,.18); font-size:13px; font-weight:600; animation:slideDown .25s ease; }
+    @keyframes slideDown { from{opacity:0;transform:translateX(-50%) translateY(-16px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+    .banner-alerta.laranja { background:#fff7ed; color:#c2410c; border:1.5px solid #fed7aa; }
+    .banner-alerta.vermelho { background:#fef2f2; color:#991b1b; border:1.5px solid #fca5a5; }
+    .banner-alerta svg { width:18px; height:18px; flex-shrink:0; }
+    .banner-alerta-fechar { margin-left:auto; cursor:pointer; opacity:.6; background:none; border:none; color:inherit; font-size:16px; line-height:1; padding:0 2px; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'carta-notificacao' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Cartas de Notificacao</h1>
+      <div class="topbar-acoes">
+        <button class="btn btn-primario btn-sm" id="btn-nova-carta">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Nova Carta
+        </button>
+      </div>
+    </div>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
+      <% const total=cartas.length; const enviadas=cartas.filter(c=>c.status==='enviado').length; const pendentes=total-enviadas; %>
+      <div class="stats-row">
+        <div class="stat-box" style="--cor-stat:#1a3410">
+          <div class="stat-icon" style="background:#f3f4f6"><svg viewBox="0 0 24 24" fill="none" stroke="#374151" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg></div>
+          <div><div class="stat-num"><%= total %></div><div class="stat-lab">Total de cartas</div></div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#1d4ed8">
+          <div class="stat-icon" style="background:#dbeafe"><svg viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+          <div><div class="stat-num" style="color:#1d4ed8"><%= enviadas %></div><div class="stat-lab">Enviadas</div></div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#f59e0b">
+          <div class="stat-icon" style="background:#fffbeb"><svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+          <div><div class="stat-num" style="color:#f59e0b"><%= pendentes %></div><div class="stat-lab">Pendentes</div></div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-titulo">Todas as cartas (<%= total %>)</span>
+          <div class="search-bar">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--texto2)" stroke-width="2"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" placeholder="Buscar pessoa..." id="input-busca">
+          </div>
+        </div>
+        <table class="tabela">
+          <thead><tr><th>N°</th><th>Destinatario</th><th>Tipo</th><th>Emissao</th><th>Notificacoes</th><th>Status</th><th>Enviado em</th><th>Acoes</th></tr></thead>
+          <tbody>
+            <% if (!cartas.length) { %>
+            <tr><td colspan="7" style="text-align:center;padding:48px;color:var(--texto2)">
+              <div style="margin-bottom:12px;display:flex;justify-content:center"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--texto2)" stroke-width="1.5" style="opacity:.4"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+              <div style="font-weight:600;margin-bottom:4px">Nenhuma carta criada</div>
+              <div style="font-size:12px">Clique em Nova Carta para comecar</div>
+            </td></tr>
+            <% } %>
+            <% cartas.forEach(d => { const n = parseInt(d.total_notif_pessoa)||0; %>
+            <tr class="carta-row">
+              <td style="color:var(--texto2);font-size:12px;font-weight:700;white-space:nowrap"><%= d.numero_carta ? String(d.numero_carta).padStart(4,'0') : '—' %></td>
+              <td><div class="pessoa-info"><div class="avatar-sm"><%= (d.pessoa_nome||'?').substring(0,2).toUpperCase() %></div><div><div class="pessoa-nome"><%= d.pessoa_nome || '—' %></div><div class="pessoa-email"><%= d.pessoa_email || '—' %></div></div></div></td>
+              <td><% if (d.membro_id) { %><span class="badge-tipo badge-membro">Membro</span><% } else if (d.ligante_id) { %><span class="badge-tipo badge-ligante">Ligante</span><% } else if (d.diretivo_id) { %><span class="badge-tipo badge-diretivo">Diretivo</span><% } %></td>
+              <td style="color:var(--texto2);font-size:12px"><%= d.criado_em ? new Date(d.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—' %></td>
+              <td>
+                <% if (n >= 3) { %>
+                <span class="alerta-notif alerta-notif-3"><svg class="alerta-notif-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg><%= n %> notif. — MAXIMO</span>
+                <% } else if (n === 2) { %>
+                <span class="alerta-notif alerta-notif-2"><svg class="alerta-notif-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg><%= n %> notif. — ATENCAO</span>
+                <% } else { %>
+                <span style="color:var(--texto2);font-size:12px"><%= n %> carta<%= n!==1?'s':'' %></span>
+                <% } %>
+              </td>
+              <td><% if (d.status === 'enviado') { %><span class="badge-status badge-enviado">Enviada</span><% } else { %><span class="badge-status badge-pendente">Pendente</span><% } %></td>
+              <td style="color:var(--texto2);font-size:12px"><%= d.enviado_em ? new Date(d.enviado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—' %></td>
+              <td><div style="display:flex;gap:5px;flex-wrap:wrap">
+                <% if (d.status !== 'enviado') { %>
+                <button class="btn-xs azul" data-editar-id="<%= d.id %>" data-editar-texto="<%- encodeURIComponent(d.texto_livre||'') %>">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar
+                </button>
+                <% } %>
+                <a href="/carta-notificacao/<%= d.id %>/visualizar" target="_blank" class="btn-xs"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>Ver</a>
+                <a href="/carta-notificacao/<%= d.id %>/imprimir" target="_blank" class="btn-xs roxo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimir</a>
+                <% if (d.status !== 'enviado') { %>
+                <form method="POST" action="/carta-notificacao/<%= d.id %>/enviar" style="display:inline;margin:0"><button type="submit" class="btn-xs verde"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Enviar</button></form>
+                <% } else { %>
+                <form method="POST" action="/carta-notificacao/<%= d.id %>/reenviar" style="display:inline;margin:0"><button type="submit" class="btn-xs amarelo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Reenviar</button></form>
+                <% } %>
+                <% if (usuario.perfil === 'admin' || usuario.perfil === 'presidencia' || usuario.perfil === 'financeiro') { %>
+                <form method="POST" action="/carta-notificacao/<%= d.id %>/deletar" style="display:inline;margin:0" data-confirm="Excluir esta carta?"><button type="submit" class="btn-xs verm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Excluir</button></form>
+                <% } %>
+              </div></td>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+<div class="modal-overlay" id="modal-nova" style="display:none">
+  <div class="modal modal-lg">
+    <div class="modal-header">
+      <span class="modal-titulo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Nova Carta de Notificacao</span>
+      <button class="icon-btn" id="btn-fechar-modal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <form action="/carta-notificacao" method="POST">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo"><label class="label">Tipo de destinatario</label><select id="tipo-dest" name="tipo_dest" class="input"><option value="membro">Membro</option><option value="ligante">Ligante</option><option value="diretivo">Diretivo</option></select></div>
+        <div class="campo" id="campo-membro"><label class="label">Membro *</label><select name="membro_id" class="input"><option value="">Selecione...</option><% membros.forEach(m => { %><option value="<%= m.id %>"><%= m.nome %></option><% }) %></select></div>
+        <div class="campo" id="campo-ligante" style="display:none"><label class="label">Ligante *</label><select name="ligante_id" class="input"><option value="">Selecione...</option><% ligantes.forEach(l => { %><option value="<%= l.id %>"><%= l.nome %></option><% }) %></select></div>
+        <div class="campo" id="campo-diretivo" style="display:none"><label class="label">Diretivo *</label><select name="diretivo_id" class="input"><option value="">Selecione...</option><% diretivos.forEach(d => { %><option value="<%= d.id %>"><%= d.nome %></option><% }) %></select></div>
+        <div class="campo">
+          <label class="label">Texto da notificacao *</label>
+          <div id="quill-editor" style="background:var(--card)"></div>
+          <input type="hidden" name="texto_livre" id="texto_livre_hidden">
+          <div style="font-size:11px;color:var(--texto2);margin-top:4px">Este texto sera inserido no corpo da carta apos a saudacao ao destinatario.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="btn-cancelar-modal">Cancelar</button>
+        <button type="submit" class="btn btn-primario"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Criar carta</button>
+      </div>
+    </form>
+  </div>
+</div>
+<div id="banner-alerta-container"></div>
+
+<!-- Modal Editar Carta -->
+<div class="modal-overlay" id="modal-editar" style="display:none">
+  <div class="modal modal-edit">
+    <div class="modal-header">
+      <span class="modal-titulo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Editar Carta de Notificacao
+      </span>
+      <button class="icon-btn" id="btn-fechar-editar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <form id="form-editar" action="" method="POST">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo">
+          <label class="label">Texto da notificacao *</label>
+          <div id="quill-editor-edit" style="background:var(--card)"></div>
+          <input type="hidden" name="texto_livre" id="texto_livre_edit_hidden">
+          <div style="font-size:11px;color:var(--texto2);margin-top:4px">Editando o texto da carta. Somente cartas nao enviadas podem ser editadas.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" id="btn-cancelar-editar">Cancelar</button>
+        <button type="submit" class="btn btn-primario">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Salvar alteracoes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quill/1.3.7/quill.min.js"></script>
+<script src="/js/app.js"></script>
+<script>
+(function(){
+  // Editor Quill
+  var quill = new Quill('#quill-editor', {
+    theme: 'snow',
+    placeholder: 'Descreva o motivo e os termos desta notificacao...',
+    modules: {
+      toolbar: [
+        [{ 'font': [] }, { 'size': ['small', false, 'large', 'huge'] }],
+        ['bold', 'italic', 'underline', 'strike'],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'align': [] }],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        ['link'],
+        ['clean']
+      ]
+    }
+  });
+
+  // Ao submeter o form, copiar HTML do Quill para o input hidden
+  document.querySelector('form[action="/carta-notificacao"]').addEventListener('submit', function(e) {
+    var html = quill.root.innerHTML;
+    if (!html || html === '<p><br></p>') {
+      e.preventDefault();
+      quill.root.style.border = '1.5px solid #dc2626';
+      quill.root.focus();
+      return;
+    }
+    document.getElementById('texto_livre_hidden').value = html;
+  });
+  document.getElementById('btn-nova-carta').addEventListener('click',function(){ abrirModal('modal-nova'); });
+  document.getElementById('btn-fechar-modal').addEventListener('click',function(){ fecharModal('modal-nova'); });
+  document.getElementById('btn-cancelar-modal').addEventListener('click',function(){ fecharModal('modal-nova'); });
+  document.getElementById('tipo-dest').addEventListener('change',function(){
+    var t=this.value;
+    document.getElementById('campo-membro').style.display=t==='membro'?'':'none';
+    document.getElementById('campo-ligante').style.display=t==='ligante'?'':'none';
+    document.getElementById('campo-diretivo').style.display=t==='diretivo'?'':'none';
+  });
+  document.getElementById('input-busca').addEventListener('input',function(){
+    var q=this.value.toLowerCase();
+    document.querySelectorAll('.carta-row').forEach(function(r){ r.style.display=r.textContent.toLowerCase().includes(q)?'':'none'; });
+  });
+  // Botao Editar
+  var quillEdit = null;
+  document.querySelectorAll('[data-editar-id]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var id = this.dataset.editarId;
+      var textoEnc = this.dataset.editarTexto;
+      var texto = '';
+      try { texto = decodeURIComponent(textoEnc); } catch(e) { texto = textoEnc; }
+      // Configurar form action
+      document.getElementById('form-editar').action = '/carta-notificacao/' + id + '/editar';
+      // Inicializar Quill de edicao se ainda nao foi
+      if (!quillEdit) {
+        quillEdit = new Quill('#quill-editor-edit', {
+          theme: 'snow',
+          modules: {
+            toolbar: [
+              [{ 'font': [] }, { 'size': ['small', false, 'large', 'huge'] }],
+              ['bold', 'italic', 'underline', 'strike'],
+              [{ 'color': [] }, { 'background': [] }],
+              [{ 'align': [] }],
+              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+              ['link'],
+              ['clean']
+            ]
+          }
+        });
+      }
+      // Carregar texto atual no editor
+      quillEdit.root.innerHTML = texto;
+      abrirModal('modal-editar');
+    });
+  });
+  document.getElementById('btn-fechar-editar').addEventListener('click', function() { fecharModal('modal-editar'); });
+  document.getElementById('btn-cancelar-editar').addEventListener('click', function() { fecharModal('modal-editar'); });
+  document.getElementById('form-editar').addEventListener('submit', function(e) {
+    var html = quillEdit ? quillEdit.root.innerHTML : '';
+    if (!html || html === '<p><br></p>') {
+      e.preventDefault();
+      if (quillEdit) { quillEdit.root.style.border = '1.5px solid #dc2626'; quillEdit.root.focus(); }
+      return;
+    }
+    document.getElementById('texto_livre_edit_hidden').value = html;
+  });
+
+  document.querySelectorAll('form[data-confirm]').forEach(function(f){
+    f.addEventListener('submit',function(e){ if(!confirm(f.dataset.confirm)) e.preventDefault(); });
+  });
+  var alertas=[];
+  <% cartas.forEach(function(d){ var n=parseInt(d.total_notif_pessoa)||0; if(n>=2){ %>
+  alertas.push({nome:'<%- (d.pessoa_nome||"").replace(/\\/g,"\\\\").replace(/'/g,"\\'") %>',n:<%= n %>});
+  <% }}) %>
+  var mapa={};
+  alertas.forEach(function(a){ if(!mapa[a.nome]||mapa[a.nome].n<a.n) mapa[a.nome]=a; });
+  Object.values(mapa).forEach(function(a){
+    var tipo=a.n>=3?'vermelho':'laranja';
+    var icone=a.n>=3?'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:18px;height:18px;flex-shrink:0"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:18px;height:18px;flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+    var msg=a.n>=3?a.nome+' atingiu o numero maximo de notificacoes ('+a.n+'). Avalie o desligamento.':a.nome+' ja possui '+a.n+' cartas de notificacao. Fique atento.';
+    var b=document.createElement('div');
+    b.className='banner-alerta '+tipo;
+    b.innerHTML=icone+'<span>'+msg+'</span><button class="banner-alerta-fechar" type="button">&#10005;</button>';
+    b.querySelector('.banner-alerta-fechar').addEventListener('click',function(){ b.remove(); });
+    document.getElementById('banner-alerta-container').appendChild(b);
+  });
+})();
+</script>
+</body>
+</html>

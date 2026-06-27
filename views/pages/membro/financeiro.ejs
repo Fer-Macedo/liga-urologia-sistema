@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Financeiro — Portal do Membro</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--v:#0C231B;--vm:#0F6E56;--vl:#E8F5F0;--bg:#F4F6F5;--card:#fff;--brd:#E5EBE8;--t:#0C231B;--ts:#6B7A72;--ti:#A0ADA8;--ok:#047857;--okb:#ECFDF5;--wa:#B45309;--wab:#FFF7ED;--er:#B91C1C;--erb:#FEF2F2;--ff:'Plus Jakarta Sans',system-ui,sans-serif}
+html.dark{--bg:#091410;--card:#0D1C16;--brd:#183025;--t:#DEF0E7;--ts:#7A9988;--ti:#3D6050}
+body{font-family:var(--ff);background:var(--bg);color:var(--t);min-height:100vh;transition:background .2s,color .2s}
+.container{max-width:760px;margin:0 auto;padding:20px 16px 40px}
+.pg-t{font-size:18px;font-weight:800;margin-bottom:4px}
+.pg-s{font-size:13px;color:var(--ts);margin-bottom:20px}
+.card{background:var(--card);border:1px solid var(--brd);padding:20px;transition:background .2s,border-color .2s;margin-bottom:12px}
+.chip{display:inline-flex;font-size:10.5px;font-weight:700;padding:2px 8px;letter-spacing:.02em}
+.c-ok{background:var(--okb);color:var(--ok)}
+.c-wa{background:var(--wab);color:var(--wa)}
+.c-er{background:var(--erb);color:var(--er)}
+.c-gr{background:var(--bg);color:var(--ts)}
+.mes-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.mes-titulo{font-size:14px;font-weight:700}
+.mes-sub{font-size:12px;color:var(--ts);margin-top:2px}
+.mes-body{border-top:1px solid var(--brd);margin-top:16px;padding-top:16px;display:none}
+.mes-body.open{display:block}
+.pix-code{font-size:9px;font-family:monospace;color:var(--ts);word-break:break-all;background:var(--bg);padding:8px;margin:10px 0;line-height:1.5;border:1px solid var(--brd)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:1px solid var(--brd);background:var(--card);color:var(--t);font-family:var(--ff);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .16s;text-decoration:none}
+.btn:hover{background:var(--bg)}
+.btn-p{background:var(--vm);color:#fff;border-color:var(--vm)}
+.btn-p:hover{background:#0d5e49}
+.btn-v{background:var(--v);color:#fff;border-color:var(--v)}
+.valores{display:flex;gap:20px;flex-wrap:wrap;margin-bottom:14px}
+.valor-item .label{font-size:11px;color:var(--ts)}
+.valor-item .val{font-size:16px;font-weight:800;margin-top:2px}
+.empty{text-align:center;padding:40px;color:var(--ti);font-size:13px}
+footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:40px}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<%- include('../../partials/membro-nav', {membro, paginaAtiva:'financeiro', comunicadosNaoLidos: locals.comunicadosNaoLidos||0, grupos: locals.grupos||[]}) %>
+
+<div class="container">
+  <% if(membro.tipo === 'diretivo'){ %>
+  <div style="text-align:center;padding:48px 20px">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#047857" stroke-width="2" width="48" height="48" style="margin:0 auto 16px;display:block"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+    <div style="font-size:18px;font-weight:800;color:var(--ok);margin-bottom:8px">Sin pendencias financieras</div>
+    <div style="font-size:14px;color:var(--ts);max-width:400px;margin:0 auto;line-height:1.6">Como miembro de la Directiva, no tienes mensualidades asociadas. Tu participacion en LAURO es reconocida por tu dedicacion a la gestion y liderazgo de la Liga.</div>
+    <a href="/membro/dashboard" class="btn btn-v" style="margin-top:24px;display:inline-flex">Volver al inicio</a>
+  </div>
+  <% } else { %>
+
+  <div class="pg-t">Financeiro</div>
+  <div class="pg-s">Historico de cobrancas e pagamentos</div>
+
+  <% if(!cobrancas || cobrancas.length === 0){ %>
+  <div class="empty">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40" style="margin:0 auto 12px;display:block;opacity:.3"><rect x="2" y="5" width="20" height="14"/><path d="M2 10h20"/></svg>
+    <p style="font-weight:600;margin-bottom:4px">Nenhuma cobranca encontrada</p>
+    <p style="font-size:12px">Entre em contato com a secretaria para mais informacoes</p>
+  </div>
+  <% } else { %>
+  <% cobrancas.forEach(function(c, idx){ %>
+  <%
+    var statusCls = c.status==='pago'?'c-ok':c.status==='atrasado'?'c-er':'c-wa';
+    var borderCor = c.status==='pago'?'#047857':c.status==='atrasado'?'#B91C1C':'#B45309';
+    var hojeC = new Date();
+    var vencC = new Date(c.data_vencimento);
+    var diaDescontoC = 15;
+    var dentroDescontoC = hojeC.getDate() <= diaDescontoC && hojeC.getMonth() === vencC.getMonth() && hojeC.getFullYear() === vencC.getFullYear();
+    var valorPagarC = dentroDescontoC ? c.valor_desconto : c.valor_cheio;
+  %>
+  <div class="card" style="border-left:4px solid <%=borderCor%>">
+    <div class="mes-header">
+      <div>
+        <div class="mes-titulo"><%=c.referencia%></div>
+        <div class="mes-sub">Vencimento: <%=new Date(c.data_vencimento).toLocaleDateString('pt-BR')%></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span class="chip <%=statusCls%>"><%=c.status==='pago'?'Pago':c.status==='atrasado'?'Atrasado':'Pendente'%></span>
+        <% if(c.status !== 'pago'){ %>
+        <button class="btn" style="font-size:11px;padding:5px 10px" id="toggle-<%=idx%>">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="6 9 12 15 18 9"/></svg>
+          Pagar
+        </button>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="valores" style="margin-top:12px">
+      <div class="valor-item">
+        <div class="label"><%=dentroDescontoC?'Com desconto (ate dia 15)':'Valor a pagar'%></div>
+        <div class="val" style="color:var(--ok)">R$ <%=Number(valorPagarC).toFixed(2).replace('.',',')%></div>
+      </div>
+      <% if(dentroDescontoC){ %>
+      </div>
+      <div class="valor-item">
+      <div class="valor-item">
+        <div class="label">Sem desconto</div>
+        <div class="val" style="color:var(--ts);font-size:14px;text-decoration:line-through">R$ <%=Number(c.valor_cheio).toFixed(2).replace('.',',')%></div>
+      </div>
+      <% } %>
+      </div>
+      <% if(c.data_pagamento){ %>
+      <div class="valor-item">
+        <div class="label">Pago em</div>
+        <div class="val" style="font-size:13px;color:var(--ok)"><%=c.data_pagamento%></div>
+      </div>
+      <% } %>
+    </div>
+
+    <% if(c.status !== 'pago' && c.pix_copia_cola){ %>
+    <div class="mes-body" id="body-<%=idx%>">
+      <div style="font-size:12px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Pagamento via PIX</div>
+      <div class="pix-code" id="pixcode-<%=idx%>"><%=c.pix_copia_cola%></div>
+      <button class="btn btn-p" id="copybtn-<%=idx%>" style="font-size:12px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copiar codigo PIX
+      </button>
+    </div>
+    <% } %>
+  </div>
+  <% }) %>
+  <% } %>
+  <% } %>
+</div>
+
+<%- include('../../partials/membro-footer') %>
+
+<script>
+// Toggle detalhes de pagamento
+document.querySelectorAll('[id^="toggle-"]').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var idx = this.id.replace('toggle-','');
+    var body = document.getElementById('body-'+idx);
+    if(body) body.classList.toggle('open');
+  });
+});
+
+// Copiar PIX
+document.querySelectorAll('[id^="copybtn-"]').forEach(function(btn){
+  btn.addEventListener('click', function(){
+    var idx = this.id.replace('copybtn-','');
+    var code = document.getElementById('pixcode-'+idx);
+    if(!code) return;
+    navigator.clipboard.writeText(code.textContent.trim()).then(function(){
+      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="20 6 9 17 4 12"/></svg> Copiado!';
+      btn.style.background = '#047857';
+      setTimeout(function(){ 
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copiar codigo PIX';
+        btn.style.background = '';
+      }, 2500);
+    });
+  });
+});
+
+// Dark mode
+var dark = localStorage.getItem('lauro-membro-dark')==='1';
+if(dark) document.documentElement.classList.add('dark');
+</script>
+</body>
+</html>

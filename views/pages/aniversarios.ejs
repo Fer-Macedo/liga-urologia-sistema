@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Aniversários — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin-modern.css">
@@ -137,7 +138,24 @@
       margin-bottom: 20px;
       flex-wrap: wrap;
     }
-  </style>
+  
+    /* === REDESIGN ANIVERSÁRIOS === */
+    .aniv-card { border-radius:0!important; transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease!important; gap:16px!important; padding:14px 16px!important; }
+    .aniv-card:hover { transform:translateY(-2px)!important; box-shadow:0 6px 20px rgba(0,0,0,.13)!important; border-color:#253d18!important; }
+    .aniv-card.hoje { border-color:#f59e0b!important; background:linear-gradient(135deg,#fffbeb,#fff)!important; }
+    .aniv-avatar { width:72px!important; height:72px!important; border-radius:50%!important; border:2.5px solid rgba(37,61,24,.25)!important; flex-shrink:0!important; font-size:22px!important; background:linear-gradient(135deg,#1a3410,#253d18)!important; font-weight:700!important; }
+    .aniv-card.hoje .aniv-avatar { background:linear-gradient(135deg,#f59e0b,#d97706)!important; border-color:rgba(245,158,11,.4)!important; }
+    .aniv-avatar[style*="object-fit"] { border:2.5px solid rgba(37,61,24,.2); }
+    .aniv-nome { font-size:14px!important; font-weight:700!important; }
+    .aniv-tipo { border-radius:0!important; font-size:10px!important; padding:2px 8px!important; }
+    .aniv-tipo.ligante { background:#f0f7eb!important; color:#1a3410!important; border-color:#d1e8c8!important; }
+    .aniv-tipo.diretivo { background:#ede9fe!important; color:#4c1d95!important; border-color:#ddd6fe!important; }
+    .badge-hoje { border-radius:0!important; font-size:11px!important; padding:3px 10px!important; }
+    .mes-count { border-radius:0!important; padding:1px 7px!important; }
+    .mes-header { margin-top:20px!important; }
+    .input { border-radius:0!important; }
+    .aniv-grid { grid-template-columns:repeat(auto-fill,minmax(280px,1fr))!important; gap:10px!important; }
+</style>
 </head>
 <body>
 <div class="layout">
@@ -189,7 +207,11 @@
           <div class="aniv-grid" style="margin-bottom:8px" id="grupo-hoje">
             <% hoje_aniv.forEach(m => { %>
             <div class="aniv-card hoje" data-nome="<%= m.nome.toLowerCase() %>">
+              <% if(m.foto_chave){ %>
+              <img src="/<%= m.tipo==='diretivo'?'diretivos':'ligantes' %>/<%= m.id %>/foto" class="aniv-avatar" style="object-fit:cover;padding:0;border-radius:50%" alt="<%= m.nome %>">
+              <% } else { %>
               <div class="aniv-avatar"><%= m.nome.substring(0,2).toUpperCase() %></div>
+              <% } %>
               <div class="aniv-info">
                 <div class="aniv-nome"><%= m.nome %></div>
                 <div class="aniv-data">
@@ -214,7 +236,11 @@
             <div class="aniv-grid" style="margin-bottom:8px">
               <% pessoas.forEach(m => { %>
               <div class="aniv-card" data-nome="<%= m.nome.toLowerCase() %>">
+                <% if(m.foto_chave){ %>
+                <img src="/<%= m.tipo==='diretivo'?'diretivos':'ligantes' %>/<%= m.id %>/foto" class="aniv-avatar" style="object-fit:cover;padding:0;border-radius:50%" alt="<%= m.nome %>">
+                <% } else { %>
                 <div class="aniv-avatar"><%= m.nome.substring(0,2).toUpperCase() %></div>
+                <% } %>
                 <div class="aniv-info">
                   <div class="aniv-nome"><%= m.nome %></div>
                   <div class="aniv-data">

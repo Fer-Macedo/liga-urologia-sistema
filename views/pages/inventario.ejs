@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventário — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#2b6803' %>; }
+    .stats-row { display:grid; grid-template-columns:repeat(5,1fr); gap:1px; margin-bottom:20px; border:1px solid var(--borda); background:var(--borda); }
+    .stat-box { background:var(--card); padding:16px 18px; display:flex; align-items:center; gap:14px; position:relative; transition:transform .15s,box-shadow .15s; }
+    .stat-box:hover { transform:translateY(-2px); box-shadow:0 8px 20px rgba(0,0,0,.08); }
+    .stat-box::before { content:''; position:absolute; top:0; left:0; bottom:0; width:3px; background:var(--cor-stat,var(--cor-primaria)); }
+    .stat-icon { width:40px; height:40px; border:1px solid var(--borda); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .stat-num { font-family:'Outfit',sans-serif; font-size:22px; font-weight:700; line-height:1; margin-bottom:3px; letter-spacing:-.5px; }
+    .stat-lab { font-size:11px; color:var(--texto2); font-weight:600; text-transform:uppercase; letter-spacing:.6px; }
+    .filtros-bar { display:flex; gap:8px; align-items:center; margin-bottom:14px; flex-wrap:wrap; }
+    .search-bar { display:flex; align-items:center; gap:8px; background:var(--fundo); border:1px solid var(--borda); padding:0 12px; height:34px; flex:1; min-width:180px; }
+    .search-bar input { border:none; background:transparent; font-size:13px; color:var(--texto); outline:none; width:100%; font-family:inherit; }
+    .select-filtro { height:34px; border:1px solid var(--borda); background:var(--fundo); color:var(--texto); font-size:13px; padding:0 10px; font-family:inherit; outline:none; }
+    .table-card { background:var(--card); border:1px solid var(--borda); }
+    .table-header { padding:12px 16px; border-bottom:1px solid var(--borda); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    .table-titulo { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.8px; color:var(--texto2); }
+    table.tabela { width:100%; border-collapse:collapse; }
+    table.tabela thead th { background:var(--fundo); padding:9px 14px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--texto2); text-align:left; border-bottom:1px solid var(--borda); white-space:nowrap; }
+    table.tabela tbody tr { border-bottom:1px solid var(--borda); transition:background .1s; }
+    table.tabela tbody tr:last-child { border-bottom:none; }
+    table.tabela tbody tr:hover { background:var(--fundo); }
+    table.tabela tbody td { padding:10px 14px; font-size:13px; color:var(--texto); vertical-align:middle; }
+    .badge-estado { display:inline-flex; padding:3px 8px; font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; border-left:2px solid; }
+    .est-otimo    { background:#dcfce7; color:#166534; border-color:#16a34a; }
+    .est-bom      { background:#d1fae5; color:#065f46; border-color:#059669; }
+    .est-regular  { background:#fef3c7; color:#92400e; border-color:#d97706; }
+    .est-danificado { background:#fee2e2; color:#991b1b; border-color:#dc2626; }
+    .est-perdido  { background:#f1f5f9; color:#64748b; border-color:#94a3b8; }
+    .badge-cat { display:inline-flex; padding:2px 8px; font-size:10px; font-weight:600; border-left:3px solid; }
+    .codigo-badge { font-family:monospace; font-size:11px; font-weight:700; background:var(--fundo); border:1px solid var(--borda); padding:2px 8px; color:var(--texto); letter-spacing:.5px; }
+    .acoes { display:flex; gap:3px; }
+    .btn-acao { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid var(--borda); background:var(--card); color:var(--texto2); cursor:pointer; transition:all .12s; text-decoration:none; }
+    .btn-acao:hover { border-color:var(--cor-primaria); color:var(--cor-primaria); background:var(--fundo); }
+    .btn-acao.danger:hover { border-color:#dc2626; color:#dc2626; background:#fef2f2; }
+    .btn-acao.mov:hover { border-color:#7c3aed; color:#7c3aed; background:#f5f3ff; }
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:500; align-items:center; justify-content:center; padding:16px; }
+    .modal-overlay.aberto { display:flex; }
+    .modal-box { background:var(--card); border:1px solid var(--borda); width:100%; max-width:560px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+    .modal-box.larga { max-width:700px; }
+    .modal-head { padding:16px 20px; border-bottom:1px solid var(--borda); display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; background:var(--card); z-index:2; }
+    .modal-head h3 { font-size:15px; font-weight:700; margin:0; }
+    .modal-close { background:none; border:none; font-size:22px; cursor:pointer; color:var(--texto2); line-height:1; padding:0 4px; }
+    .modal-close:hover { color:#dc2626; }
+    .modal-body { padding:20px; }
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .form-grid .full { grid-column:1/-1; }
+    .form-group { display:flex; flex-direction:column; gap:5px; }
+    .form-group label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--texto2); }
+    .form-group input,.form-group select,.form-group textarea { border:1px solid var(--borda); background:var(--fundo); color:var(--texto); font-size:13px; padding:8px 10px; font-family:inherit; outline:none; transition:border-color .15s; }
+    .form-group input:focus,.form-group select:focus,.form-group textarea:focus { border-color:var(--cor-primaria); box-shadow:0 0 0 3px rgba(43,104,3,.1); }
+    .form-group textarea { resize:vertical; min-height:72px; }
+    .modal-foot { padding:14px 20px; border-top:1px solid var(--borda); display:flex; gap:8px; justify-content:flex-end; }
+    .hist-item { padding:10px 0; border-bottom:1px solid var(--borda); display:flex; gap:12px; }
+    .hist-item:last-child { border-bottom:none; }
+    .hist-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; margin-top:5px; }
+    .hist-tipo { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+    .hist-desc { font-size:12px; color:var(--texto2); margin-top:2px; }
+    .hist-data { font-size:10px; color:var(--texto2); font-family:monospace; margin-top:2px; }
+    .item-detalhe { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:14px; }
+    .det-field { background:var(--fundo); border:1px solid var(--borda); padding:10px 12px; }
+    .det-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; color:var(--texto2); margin-bottom:3px; }
+    .det-val { font-size:13px; font-weight:500; }
+    .empty-state { padding:60px 20px; text-align:center; color:var(--texto2); }
+    .empty-state .ico { font-size:40px; margin-bottom:12px; }
+    @media(max-width:768px){ .stats-row{grid-template-columns:repeat(2,1fr);} .form-grid{grid-template-columns:1fr;} .item-detalhe{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'inventario' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg> Inventário Patrimonial</h1>
+      <div class="topbar-acoes">
+        <button class="btn btn-sm" onclick="abrirModal('modal-novo')">+ Novo Item</button>
+      </div>
+    </div>
+    <div class="content">
+      <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
+      <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
+
+      <div class="stats-row">
+        <div class="stat-box" style="--cor-stat:#1a56db">
+          <div class="stat-icon" style="background:#eff6ff">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a56db" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3H8"/></svg>
+          </div>
+          <div><div class="stat-num" style="color:#1a56db"><%= stats.total %></div><div class="stat-lab">Total de Itens</div></div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#10b981">
+          <div class="stat-icon" style="background:#f0fdf4">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <div><div class="stat-num" style="color:#10b981;font-size:15px">G$ <%= Number(stats.valor_total||0).toLocaleString('es-PY') %></div><div class="stat-lab">Valor Total Guarani</div></div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#059669">
+          <div class="stat-icon" style="background:#ecfdf5">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <div><div class="stat-num" style="color:#059669;font-size:15px">R$ <%= Number(stats.valor_total_brl||0).toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div><div class="stat-lab">Valor Total Reais</div></div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#7c3aed">
+          <div class="stat-icon" style="background:#f5f3ff">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </div>
+          <div><div class="stat-num" style="color:#7c3aed"><%= stats.emprestados %></div><div class="stat-lab">Em Empréstimo</div></div>
+        </div>
+        <div class="stat-box" style="--cor-stat:#dc2626">
+          <div class="stat-icon" style="background:#fef2f2">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          </div>
+          <div><div class="stat-num" style="color:#dc2626"><%= Number(stats.danificados||0)+Number(stats.perdidos||0) %></div><div class="stat-lab">Danificados/Perdidos</div></div>
+        </div>
+      </div>
+
+      <form method="GET" action="/inventario">
+        <div class="filtros-bar">
+          <div class="search-bar">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" name="busca" value="<%= busca %>" placeholder="Buscar por nome, código ou responsável...">
+          </div>
+          <select name="categoria" class="select-filtro" onchange="this.form.submit()">
+            <option value="">Todas as categorias</option>
+            <% categorias.forEach(function(cat){ %>
+              <option value="<%= cat.id %>" <%= String(categoria)===String(cat.id)?'selected':'' %>><%= cat.nome %></option>
+            <% }) %>
+          </select>
+          <select name="situacao" class="select-filtro" onchange="this.form.submit()">
+            <option value="ativos" <%= situacao==='ativos'?'selected':'' %>>Ativos</option>
+            <option value="inativos" <%= situacao==='inativos'?'selected':'' %>>Inativos / Descartados</option>
+            <option value="todos" <%= situacao==='todos'?'selected':'' %>>Todos</option>
+          </select>
+          <select name="estado" class="select-filtro" onchange="this.form.submit()">
+            <option value="">Todos os estados</option>
+            <option value="otimo" <%= estado==='otimo'?'selected':'' %>>Ótimo</option>
+            <option value="bom" <%= estado==='bom'?'selected':'' %>>Bom</option>
+            <option value="regular" <%= estado==='regular'?'selected':'' %>>Regular</option>
+            <option value="danificado" <%= estado==='danificado'?'selected':'' %>>Danificado</option>
+            <option value="perdido" <%= estado==='perdido'?'selected':'' %>>Perdido</option>
+          </select>
+          <button type="submit" class="btn btn-sm">Filtrar</button>
+          <% if (busca || categoria || estado) { %>
+            <a href="/inventario" class="btn btn-sm" style="background:#dc2626;color:#fff;text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Limpar</a>
+          <% } %>
+        </div>
+      </form>
+
+      <div class="table-card">
+        <div class="table-header">
+          <span class="table-titulo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg> <%= itens.length %> item(s) encontrado(s)</span>
+          <span style="font-size:11px;color:var(--texto2)">Código gerado automaticamente · formato LIG-ANO-NNN</span>
+        </div>
+        <% if (!itens.length) { %>
+          <div class="empty-state">
+            <div class="ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg></div>
+            <div style="font-size:14px;font-weight:600;margin-bottom:6px">Nenhum item cadastrado</div>
+            <div style="font-size:12px;margin-bottom:14px">Comece adicionando os patrimônios da liga</div>
+            <button class="btn btn-sm btn-primario" onclick="abrirModal('modal-novo')">+ Cadastrar primeiro item</button>
+          </div>
+        <% } else { %>
+        <table class="tabela">
+          <thead><tr>
+            <th>Código</th><th>Nº Etiqueta</th><th>Nome / Descrição</th><th>Categoria</th><th>Estado</th>
+            <th>Localização</th><th>Responsável</th><th>Valor G$</th><th>Valor R$</th><th>Ações</th>
+          </tr></thead>
+          <tbody>
+          <% itens.forEach(function(item){ %>
+            <%
+              var eCls={otimo:'est-otimo',bom:'est-bom',regular:'est-regular',danificado:'est-danificado',perdido:'est-perdido'};
+              var eNm={otimo:'Ótimo',bom:'Bom',regular:'Regular',danificado:'Danificado',perdido:'Perdido'};
+            %>
+            <tr>
+              <td><span class="codigo-badge"><%= item.codigo %></span></td>
+              <td style="font-size:12px;font-family:monospace"><% if(item.codigo_etiqueta){ %><span style="background:#fef3c7;border:1px solid #d97706;padding:2px 7px;font-weight:700;color:#92400e;font-size:11px"><%= item.codigo_etiqueta %></span><% } else { %>—<% } %></td>
+              <td>
+                <strong><%= item.nome %></strong>
+                <% if(item.descricao){ %><br><span style="font-size:11px;color:var(--texto2)"><%= item.descricao.substring(0,55) %><%= item.descricao.length>55?'…':'' %></span><% } %>
+              </td>
+              <td>
+                <% if(item.categoria_nome){ %>
+                  <span class="badge-cat" style="border-color:<%= item.categoria_cor||'#999' %>;background:<%= item.categoria_cor||'#999' %>18;color:<%= item.categoria_cor||'#999' %>"><%= item.categoria_nome %></span>
+                <% } else { %><span style="color:var(--texto2)">—</span><% } %>
+              </td>
+              <td><span class="badge-estado <%= eCls[item.estado]||'' %>"><%= eNm[item.estado]||item.estado %></span></td>
+              <td style="font-size:12px"><%= item.localizacao||'—' %></td>
+              <td style="font-size:12px"><%= item.responsavel||'—' %></td>
+              <td style="font-family:monospace;font-size:12px"><%= item.valor_estimado?'G$ '+Number(item.valor_estimado).toLocaleString('es-PY'):'—' %></td>
+              <td style="font-family:monospace;font-size:12px"><%= item.valor_estimado_brl?'R$ '+Number(item.valor_estimado_brl).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—' %></td>
+              <td>
+                <div class="acoes">
+                  <button class="btn-acao" title="Ver detalhes" onclick="verItem(<%= item.id %>)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                  <button class="btn-acao mov" title="Registrar movimentação" onclick="abrirMov(<%= item.id %>,'<%= item.nome.replace(/\\/g,'\\\\').replace(/'/g,"\\'") %>')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                  </button>
+                  <button class="btn-acao" title="Editar" onclick="carregarEditar(<%= item.id %>)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <form method="POST" action="/inventario/<%= item.id %>/desativar" style="display:inline" onsubmit="return confirm('Remover este item do inventário?')">
+                    <button type="submit" class="btn-acao danger" title="Remover">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                    </button>
+                  </form>
+                </div>
+              </td>
+            </tr>
+          <% }) %>
+          </tbody>
+        </table>
+        <% } %>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL NOVO ITEM -->
+<div class="modal-overlay" id="modal-novo">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg> Novo Item do Inventário</h3>
+      <button class="modal-close" onclick="fecharModal('modal-novo')">×</button>
+    </div>
+    <form method="POST" action="/inventario">
+      <div class="modal-body">
+        <div class="form-grid">
+          <div class="form-group full"><label>Nome do Item *</label><input type="text" name="nome" required placeholder="Ex: Projetor Epson EB-X41, Mesa de escritório..."></div>
+          <div class="form-group"><label>Nº da Etiqueta Física</label><input type="text" name="codigo_etiqueta" placeholder="Ex: 001, PAT-042, LGA-2026-01..."></div>
+          <div class="form-group"><label>Categoria</label>
+            <select name="categoria_id">
+              <option value="">Sem categoria</option>
+              <% categorias.forEach(function(c){ %><option value="<%= c.id %>"><%= c.nome %></option><% }) %>
+            </select>
+          </div>
+          <div class="form-group"><label>Estado de Conservação</label>
+            <select name="estado">
+              <option value="otimo">Ótimo</option>
+              <option value="bom">Bom</option>
+              <option value="regular">Regular</option>
+              <option value="danificado">Danificado</option>
+              <option value="perdido">Perdido</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Localização Atual</label><input type="text" name="localizacao" placeholder="Ex: Sala de Reunião, Secretaria..."></div>
+          <div class="form-group"><label>Responsável</label><input type="text" name="responsavel" placeholder="Nome do responsável pelo item"></div>
+          <div class="form-group"><label>Valor em Guarani (G$)</label><input type="number" name="valor_estimado" step="1" min="0" placeholder="0"></div>
+          <div class="form-group"><label>Valor em Reais (R$)</label><input type="number" name="valor_estimado_brl" step="0.01" min="0" placeholder="0,00"></div>
+          <div class="form-group"><label>Data de Aquisição</label><input type="date" name="data_aquisicao"></div>
+          <div class="form-group full"><label>Descrição — Modelo, Nº de Série, Marca</label><textarea name="descricao" placeholder="Descreva o item em detalhes: marca, modelo, número de série, cor..."></textarea></div>
+          <div class="form-group full"><label>Observações</label><textarea name="observacoes" placeholder="Observações adicionais sobre o item..."></textarea></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" onclick="fecharModal('modal-novo')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Cadastrar Item</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL EDITAR -->
+<div class="modal-overlay" id="modal-editar">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3>️ Editar Item — <span id="edit-codigo" style="font-family:monospace;font-size:13px;color:var(--cor-primaria)"></span></h3>
+      <button class="modal-close" onclick="fecharModal('modal-editar')">×</button>
+    </div>
+    <form method="POST" id="form-editar">
+      <div class="modal-body" id="edit-corpo">
+        <div style="text-align:center;padding:30px;color:var(--texto2)">Carregando...</div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" onclick="fecharModal('modal-editar')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar Alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL VER DETALHES -->
+<div class="modal-overlay" id="modal-ver">
+  <div class="modal-box larga">
+    <div class="modal-head">
+      <h3 id="ver-titulo">Detalhes do Item</h3>
+      <button class="modal-close" onclick="fecharModal('modal-ver')">×</button>
+    </div>
+    <div class="modal-body" id="ver-corpo">
+      <div style="text-align:center;padding:30px;color:var(--texto2)">Carregando...</div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL MOVIMENTAÇÃO -->
+<div class="modal-overlay" id="modal-mov">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Registrar Movimentação</h3>
+      <button class="modal-close" onclick="fecharModal('modal-mov')">×</button>
+    </div>
+    <form method="POST" id="form-mov">
+      <div class="modal-body">
+        <div style="background:var(--fundo);border:1px solid var(--borda);padding:10px 14px;margin-bottom:14px;font-size:13px">
+          Item: <strong id="mov-nome"></strong>
+        </div>
+        <div class="form-grid">
+          <div class="form-group"><label>Tipo de Movimentação *</label>
+            <select name="tipo" required>
+              <option value="emprestimo"> Empréstimo</option>
+              <option value="devolucao"> Devolução</option>
+              <option value="manutencao"> Manutenção</option>
+              <option value="transferencia"> Transferência</option>
+              <option value="descarte">️ Descarte</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Data</label><input type="date" name="data_mov" id="mov-data"></div>
+          <div class="form-group full"><label>Responsável / Destinatário</label><input type="text" name="responsavel" placeholder="Quem realizou ou recebeu o item"></div>
+          <div class="form-group full"><label>Observação</label><textarea name="descricao" placeholder="Detalhes da movimentação, local de destino, motivo..."></textarea></div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn" onclick="fecharModal('modal-mov')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Registrar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+var _catOpts = '<option value="">Sem categoria</option><% categorias.forEach(function(c){ %><option value="<%= c.id %>"><%= c.nome %></option><% }) %>';
+
+function abrirModal(id){ document.getElementById(id).classList.add('aberto'); }
+function fecharModal(id){ document.getElementById(id).classList.remove('aberto'); }
+document.querySelectorAll('.modal-overlay').forEach(function(m){
+  m.addEventListener('click',function(e){ if(e.target===m) fecharModal(m.id); });
+});
+
+function carregarEditar(id){
+  document.getElementById('edit-corpo').innerHTML='<div style="text-align:center;padding:30px;color:var(--texto2)">Carregando...</div>';
+  abrirModal('modal-editar');
+  fetch('/inventario/'+id+'/dados').then(function(r){return r.json();}).then(function(data){
+    var item=data.item;
+    document.getElementById('edit-codigo').textContent=item.codigo||'';
+    document.getElementById('form-editar').action='/inventario/'+item.id+'/editar';
+    var cats='<option value="">Sem categoria</option>';
+    (data.categorias||[]).forEach(function(c){ cats+='<option value="'+c.id+'"'+(String(item.categoria_id)===String(c.id)?' selected':'')+'>'+c.nome+'</option>'; });
+    var estados=[['otimo','<svg width="14" height="14" viewBox="0 0 24 24" fill="#dcfce7" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><circle cx="12" cy="12" r="10" fill="#dcfce7" stroke="#16a34a"/><polyline points="8 12 11 15 16 9" stroke="#16a34a" fill="none"/></svg> Ótimo'],['bom','<svg width="10" height="10" viewBox="0 0 10 10" fill="none" style="display:inline;vertical-align:middle"><circle cx="5" cy="5" r="5" fill="#10b981"/></svg> Bom'],['regular','<svg width="10" height="10" viewBox="0 0 10 10" fill="none" style="display:inline;vertical-align:middle"><circle cx="5" cy="5" r="5" fill="#f59e0b"/></svg> Regular'],['danificado',' Danificado'],['perdido',' Perdido']];
+    var estOpts=estados.map(function(e){return '<option value="'+e[0]+'"'+(item.estado===e[0]?' selected':'')+'>'+e[1]+'</option>';}).join('');
+    document.getElementById('edit-corpo').innerHTML=
+      '<div class="form-grid">'+
+      '<div class="form-group full"><label>Nome *</label><input type="text" name="nome" required value="'+esc(item.nome||'')+'"></div>'+
+      '<div class="form-group"><label>Nº da Etiqueta Física</label><input type="text" name="codigo_etiqueta" value="'+esc(item.codigo_etiqueta||'')+'"></div>'+
+      '<div class="form-group"><label>Categoria</label><select name="categoria_id">'+cats+'</select></div>'+
+      '<div class="form-group"><label>Estado</label><select name="estado">'+estOpts+'</select></div>'+
+      '<div class="form-group"><label>Localização</label><input type="text" name="localizacao" value="'+esc(item.localizacao||'')+'"></div>'+
+      '<div class="form-group"><label>Responsável</label><input type="text" name="responsavel" value="'+esc(item.responsavel||'')+'"></div>'+
+      '<div class="form-group"><label>Valor em Guarani (G$)</label><input type="number" name="valor_estimado" step="1" value="'+(item.valor_estimado||'')+'"></div>'+
+      '<div class="form-group"><label>Valor em Reais (R$)</label><input type="number" name="valor_estimado_brl" step="0.01" value="'+(item.valor_estimado_brl||'')+'"></div>'+
+      '<div class="form-group"><label>Data Aquisição</label><input type="date" name="data_aquisicao" value="'+(item.data_aquisicao?item.data_aquisicao.substring(0,10):'')+'"></div>'+
+      '<div class="form-group full"><label>Descrição</label><textarea name="descricao">'+esc(item.descricao||'')+'</textarea></div>'+
+      '<div class="form-group full"><label>Observações</label><textarea name="observacoes">'+esc(item.observacoes||'')+'</textarea></div>'+
+      '</div>';
+  }).catch(function(){ document.getElementById('edit-corpo').innerHTML='<div style="color:#dc2626;padding:20px">Erro ao carregar dados.</div>'; });
+}
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function abrirMov(id, nome){
+  document.getElementById('mov-nome').textContent=nome;
+  document.getElementById('form-mov').action='/inventario/'+id+'/movimentacao';
+  document.getElementById('mov-data').value=new Date().toISOString().substring(0,10);
+  abrirModal('modal-mov');
+}
+
+function verItem(id){
+  document.getElementById('ver-corpo').innerHTML='<div style="text-align:center;padding:30px;color:var(--texto2)">Carregando...</div>';
+  abrirModal('modal-ver');
+  fetch('/inventario/'+id+'/dados').then(function(r){return r.json();}).then(function(data){
+    var item=data.item, hist=data.historico||[];
+    var eMap={otimo:'Ótimo',bom:'Bom',regular:'Regular',danificado:'Danificado',perdido:'Perdido'};
+    var eCls={otimo:'est-otimo',bom:'est-bom',regular:'est-regular',danificado:'est-danificado',perdido:'est-perdido'};
+    var mCor={emprestimo:'#7c3aed',devolucao:'#10b981',manutencao:'#f59e0b',descarte:'#dc2626',transferencia:'#3b82f6',entrada:'#10b981'};
+    var mNm={emprestimo:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="17 11 21 7 17 3"/><line x1="21" y1="7" x2="9" y2="7"/><path d="M3 14v1a3 3 0 0 0 3 3h12"/></svg> Empréstimo',devolucao:' Devolução',manutencao:' Manutenção',descarte:'️ Descarte',transferencia:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Transferência'};
+    document.getElementById('ver-titulo').textContent=item.nome+' — '+item.codigo;
+    var html='<div class="item-detalhe">';
+    html+='<div class="det-field"><div class="det-label">Código Sistema</div><div class="det-val" style="font-family:monospace;font-size:14px;font-weight:700;color:var(--cor-primaria)">'+item.codigo+'</div></div>';
+    html+='<div class="det-field"><div class="det-label">Nº Etiqueta Física</div><div class="det-val" style="font-weight:700;color:#92400e">'+(item.codigo_etiqueta||'—')+'</div></div>';
+    html+='<div class="det-field"><div class="det-label">Estado</div><div class="det-val"><span class="badge-estado '+(eCls[item.estado]||'')+'">'+(eMap[item.estado]||item.estado)+'</span></div></div>';
+    html+='<div class="det-field"><div class="det-label">Categoria</div><div class="det-val">'+(item.categoria_nome||'—')+'</div></div>';
+    html+='<div class="det-field"><div class="det-label">Localização</div><div class="det-val">'+(item.localizacao||'—')+'</div></div>';
+    html+='<div class="det-field"><div class="det-label">Responsável</div><div class="det-val">'+(item.responsavel||'—')+'</div></div>';
+    html+='<div class="det-field"><div class="det-label">Valor em Guarani</div><div class="det-val" style="font-weight:700">'+(item.valor_estimado?'G$ '+Number(item.valor_estimado).toLocaleString('es-PY'):'—')+'</div></div>';
+    html+='<div class="det-field"><div class="det-label">Valor em Reais</div><div class="det-val" style="font-weight:700">'+(item.valor_estimado_brl?'R$ '+Number(item.valor_estimado_brl).toLocaleString('pt-BR',{minimumFractionDigits:2}):'—')+'</div></div>';
+    html+='<div class="det-field"><div class="det-label">Data de Aquisição</div><div class="det-val">'+(item.data_aquisicao?new Date(item.data_aquisicao).toLocaleDateString('pt-BR'):'—')+'</div></div>';
+    html+='<div class="det-field"><div class="det-label">Cadastrado em</div><div class="det-val">'+new Date(item.criado_em).toLocaleDateString('pt-BR')+'</div></div>';
+    html+='</div>';
+    if(item.descricao) html+='<div class="det-field" style="margin-bottom:10px"><div class="det-label">Descrição</div><div class="det-val">'+item.descricao+'</div></div>';
+    if(item.observacoes) html+='<div class="det-field" style="margin-bottom:10px"><div class="det-label">Observações</div><div class="det-val">'+item.observacoes+'</div></div>';
+    html+='<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--texto2);margin:14px 0 8px">Histórico de Movimentações</div>';
+    if(!hist.length){
+      html+='<div style="color:var(--texto2);font-size:12px;padding:8px 0">Nenhuma movimentação registrada ainda.</div>';
+    } else {
+      hist.forEach(function(h){
+        var cor=mCor[h.tipo]||'#999', nm=mNm[h.tipo]||h.tipo;
+        var dt=new Date(h.criado_em).toLocaleDateString('pt-BR');
+        html+='<div class="hist-item"><div class="hist-dot" style="background:'+cor+'"></div><div style="flex:1">';
+        html+='<div class="hist-tipo" style="color:'+cor+'">'+nm+'</div>';
+        if(h.descricao) html+='<div class="hist-desc">'+h.descricao+'</div>';
+        if(h.responsavel) html+='<div class="hist-desc">Resp.: '+h.responsavel+'</div>';
+        html+='<div class="hist-data">'+dt+'</div></div></div>';
+      });
+    }
+    document.getElementById('ver-corpo').innerHTML=html;
+  }).catch(function(){ document.getElementById('ver-corpo').innerHTML='<div style="color:#dc2626;padding:20px">Erro ao carregar dados.</div>'; });
+}
+</script>
+</body>
+</html>

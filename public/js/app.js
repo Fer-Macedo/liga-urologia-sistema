@@ -74,3 +74,29 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+
+// ── Mobile sidebar hamburguer ────────────────────────────────
+(function(){
+  function initMobileSidebar(){
+    var sidebar=document.querySelector('aside.sidebar,.sidebar');
+    if(!sidebar)return;
+    var ham=document.createElement('button');
+    ham.className='btn-hamburger';
+    ham.innerHTML='&#9776;';
+    ham.setAttribute('aria-label','Menu');
+    document.body.appendChild(ham);
+    var overlay=document.createElement('div');
+    overlay.className='sidebar-overlay';
+    document.body.appendChild(overlay);
+    function openNav(){ sidebar.classList.add('mobile-aberta'); overlay.classList.add('ativo'); ham.innerHTML='&#10005;'; }
+    function closeNav(){ sidebar.classList.remove('mobile-aberta'); overlay.classList.remove('ativo'); ham.innerHTML='&#9776;'; }
+    ham.addEventListener('click',function(){ sidebar.classList.contains('mobile-aberta')?closeNav():openNav(); });
+    overlay.addEventListener('click',closeNav);
+    sidebar.querySelectorAll('a').forEach(function(a){
+      a.addEventListener('click',function(){ if(window.innerWidth<=768)closeNav(); });
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',initMobileSidebar);
+  else initMobileSidebar();
+})();

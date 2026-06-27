@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verificar Codigo — LAURO</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#0C231B;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.box{background:#fff;width:100%;max-width:420px;padding:40px}
+h1{font-size:18px;font-weight:700;color:#0C231B;margin-bottom:8px}
+p{font-size:13px;color:#6B7A72;margin-bottom:24px;line-height:1.5}
+label{display:block;font-size:12px;font-weight:600;color:#374151;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+input{width:100%;padding:10px 12px;border:1px solid #DDE3DF;font-size:14px;font-family:inherit;outline:none;margin-bottom:16px}
+input:focus{border-color:#0F6E56}
+.btn{width:100%;padding:12px;background:#0F6E56;color:#fff;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;margin-bottom:8px}
+.erro{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:10px 14px;font-size:13px;margin-bottom:16px}
+.info{background:#eff6ff;border:1px solid #bfdbfe;color:#1d4ed8;padding:10px 14px;font-size:13px;margin-bottom:16px}
+.codigo-input{font-size:24px;font-weight:700;letter-spacing:8px;text-align:center}
+.voltar{text-align:center;margin-top:12px;font-size:13px}
+.voltar a{color:#0F6E56;text-decoration:none}
+</style>
+</head>
+<body>
+<div class="box">
+  <h1>Verificar Codigo</h1>
+  <div class="info">Enviamos um codigo de 6 digitos para <strong><%=email%></strong>. Verifique sua caixa de entrada e spam.</div>
+  <%if(locals.erro){%><div class="erro"><%=erro%></div><%}%>
+  <form method="POST" action="/membro/verificar-codigo">
+    <input type="hidden" name="email" value="<%=email%>">
+    <label>Codigo de verificacao</label>
+    <input type="text" name="codigo" class="codigo-input" placeholder="000000" maxlength="6" required autofocus autocomplete="off">
+    <label>Nova senha (minimo 6 caracteres)</label>
+    <input type="password" name="nova_senha" placeholder="Nova senha" required minlength="6">
+    <label>Confirmar nova senha</label>
+    <input type="password" name="confirmar_senha" placeholder="Confirmar senha" required minlength="6">
+    <button type="submit" class="btn">Redefinir senha</button>
+  </form>
+  <div class="voltar"><a href="/membro/esqueci-senha">Reenviar codigo</a> &nbsp;|&nbsp; <a href="/membro/login">Voltar ao login</a></div>
+</div>
+</body>
+</html>

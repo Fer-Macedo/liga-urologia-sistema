@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Processo Seletivo — LAURO</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%= config.org_cor||'#2b6803' %>;--rad:2px;}
+    .ps-tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--card);border:1px solid var(--borda);border-radius:var(--rad);padding:5px;flex-wrap:wrap;}
+    .ps-tab{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:var(--rad);border:none;background:transparent;cursor:pointer;font-weight:600;font-size:12px;transition:all .15s;color:var(--texto2);font-family:inherit;white-space:nowrap;}
+    .ps-tab:hover{background:var(--fundo);}
+    .ps-tab.ativo{background:var(--cor-primaria);color:white;}
+    .ps-tab svg{width:13px;height:13px;}
+    .ps-sec{display:none;}.ps-sec.ativo{display:block;}
+    .q-card{background:var(--card);border:1px solid var(--borda);border-radius:var(--rad);padding:14px;margin-bottom:8px;transition:border-color .15s;}
+    .q-card:hover{border-color:var(--cor-primaria);}
+    .q-tema{display:inline-block;padding:2px 8px;border-radius:var(--rad);font-size:10px;font-weight:700;background:#dbefd3;color:#166534;margin-bottom:6px;}
+    .q-enunciado{font-size:13px;font-weight:600;margin-bottom:8px;line-height:1.4;}
+    .q-opcoes{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:12px;}
+    .q-op{padding:4px 8px;border-radius:var(--rad);background:var(--fundo);border:1px solid var(--borda);}
+    .q-op.correta{background:#dcfce7;border-color:#16a34a;font-weight:700;}
+    .badge-dif{padding:2px 7px;border-radius:var(--rad);font-size:10px;font-weight:700;}
+    .dif-facil{background:#dcfce7;color:#166534;}
+    .dif-medio{background:#fef3c7;color:#92400e;}
+    .dif-dificil{background:#fee2e2;color:#dc2626;}
+    .btn-xs{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:var(--rad);font-size:11px;font-weight:600;border:1px solid var(--borda);background:var(--fundo);color:var(--texto);cursor:pointer;text-decoration:none;transition:all .15s;font-family:inherit;}
+    .btn-xs:hover{border-color:var(--cor-primaria);color:var(--cor-primaria);}
+    .btn-xs.verde{background:#059669;color:white;border-color:transparent;}
+    .btn-xs.verm{color:#dc2626;border-color:#fecaca;}
+    .btn-xs.azul{background:#1d4ed8;color:white;border-color:transparent;}
+    .btn-xs.amarelo{background:#f59e0b;color:white;border-color:transparent;}
+    .btn-xs.roxo{background:#7c3aed;color:white;border-color:transparent;}
+    .processo-card{background:var(--card);border:1px solid var(--borda);border-radius:var(--rad);padding:18px;margin-bottom:12px;transition:border-color .15s;}
+    .processo-card:hover{border-color:var(--cor-primaria);}
+    .status-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:var(--rad);font-size:11px;font-weight:700;}
+    .st-aberto{background:#dcfce7;color:#166534;}
+    .st-correcao{background:#fef3c7;color:#92400e;}
+    .st-entrevista{background:#dbeafe;color:#1e40af;}
+    .st-encerrado{background:#f1f5f9;color:#6b7280;}
+    .stat-mini{background:var(--fundo);border:1px solid var(--borda);border-radius:var(--rad);padding:10px 14px;text-align:center;flex:1;min-width:80px;}
+    .stat-mini-num{font-size:20px;font-weight:800;color:var(--cor-primaria);}
+    .stat-mini-lab{font-size:10px;color:var(--texto2);font-weight:600;}
+    .gabarito-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;}
+    .gabarito-item{display:flex;align-items:center;gap:8px;background:var(--fundo);border:1px solid var(--borda);border-radius:var(--rad);padding:6px 10px;}
+    .gabarito-num{font-size:12px;font-weight:700;width:24px;flex-shrink:0;}
+    .gabarito-ops{display:flex;gap:4px;}
+    .gab-op{width:28px;height:28px;border-radius:50%;border:2px solid var(--borda);background:white;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;color:var(--texto2);}
+    .gab-op.sel{background:var(--cor-primaria);border-color:var(--cor-primaria);color:white;}
+    .cand-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--borda);}
+    .cand-row:last-child{border-bottom:none;}
+    .rank-num{width:28px;height:28px;border-radius:50%;background:var(--cor-primaria);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+    .rank-num.ouro{background:#f59e0b;}
+    .rank-num.prata{background:#6b7280;}
+    .rank-num.bronze{background:#92400e;}
+    .progress-bar{flex:1;height:8px;background:var(--fundo);border-radius:4px;overflow:hidden;border:1px solid var(--borda);}
+    .progress-fill{height:100%;border-radius:4px;transition:width .4s;}
+    .entrev-pergunta{background:var(--card);border:1px solid var(--borda);border-radius:var(--rad);padding:14px;margin-bottom:10px;}
+    .nota-slider{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;}
+    .nota-btn{width:32px;height:32px;border-radius:var(--rad);border:1.5px solid var(--borda);background:var(--fundo);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;}
+    .nota-btn.sel{background:var(--cor-primaria);border-color:var(--cor-primaria);color:white;}
+    .nota-btn:hover{border-color:var(--cor-primaria);}
+    .q-select-card{background:var(--card);border:2px solid var(--borda);border-radius:var(--rad);padding:12px;margin-bottom:6px;cursor:pointer;transition:all .15s;}
+    .q-select-card.selecionada{border-color:var(--cor-primaria);background:#f0f7eb;}
+    .q-select-card:hover{border-color:var(--cor-primaria);}
+    .tema-chip{display:inline-block;padding:2px 8px;border-radius:var(--rad);font-size:10px;font-weight:700;margin-right:4px;}
+    .filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center;}
+    .filter-bar select,.filter-bar input{font-size:12px;padding:5px 8px;height:auto;}
+    @media(max-width:768px){.q-opcoes{grid-template-columns:1fr;}.gabarito-grid{grid-template-columns:repeat(2,1fr);}}
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'processo-seletivo' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Processo Seletivo</h1>
+      <div class="topbar-acoes">
+        <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-novo-processo')">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Novo Processo</button>
+      </div>
+    </div>
+    <div class="content">
+      <%if(msg&&msg.length>0){%><div class="alerta alerta-ok"><%=msg[0]%></div><%}%>
+      <%if(erro&&erro.length>0){%><div class="alerta alerta-erro"><%=erro[0]%></div><%}%>
+
+      <div class="ps-tabs">
+        <button class="ps-tab ativo" onclick="psTab('processos',this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>Processos</button>
+        <button class="ps-tab" onclick="psTab('questoes',this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Banco de Questões</button>
+        <button class="ps-tab" onclick="psTab('provas',this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Provas & Gabaritos</button>
+        <button class="ps-tab" onclick="psTab('candidatos',this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Candidatos</button>
+        <button class="ps-tab" onclick="psTab('correcao',this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Correção</button>
+        <button class="ps-tab" onclick="psTab('entrevistas',this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Entrevistas</button>
+        <button class="ps-tab" onclick="psTab('resultados',this)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Resultados</button>
+      </div>
+
+      <!-- PROCESSOS -->
+      <div class="ps-sec ativo" id="sec-processos">
+        <%if(processos.length===0){%>
+        <div style="text-align:center;padding:48px;color:var(--texto2)">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="display:block;margin:0 auto 12px;opacity:.3"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <div style="font-weight:600;margin-bottom:4px">Nenhum processo seletivo criado</div>
+          <div style="font-size:12px">Clique em "+ Novo Processo" para começar</div>
+        </div>
+        <%}%>
+        <%processos.forEach(p=>{%>
+        <div class="processo-card">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+            <div style="flex:1">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+                <span style="font-size:16px;font-weight:700"><%=p.nome%></span>
+                <span class="status-badge st-<%=p.status%>"><%=p.status%></span>
+                <%if(p.semestre){%><span style="font-size:11px;color:var(--texto2);font-weight:600"><%=p.semestre%></span><%}%>
+              </div>
+              <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--texto2)">
+                <%if(p.data_prova){%><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> <%=new Date(p.data_prova).toLocaleDateString('pt-BR')%></span><%}%>
+                <%if(p.local_prova){%><span> <%=p.local_prova%></span><%}%>
+                <span> <%=p.vagas%> vagas</span>
+                <span><svg width="14" height="14" viewBox="0 0 24 24" fill="#dcfce7" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><circle cx="12" cy="12" r="10" fill="#dcfce7" stroke="#16a34a"/><polyline points="8 12 11 15 16 9" stroke="#16a34a" fill="none"/></svg> Mín. <%=p.nota_minima%>%</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn-xs" onclick="selecionarProcesso(<%=p.id%>,this.dataset.nome)" data-nome="<%=p.nome%>">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>Selecionar</button>
+              <a href="/processo-seletivo/<%=p.id%>/prova/gerar" class="btn-xs amarelo">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/></svg>Montar Prova</button>
+              <a href="/processo-seletivo/<%=p.id%>/pdf-prova" target="_blank" class="btn-xs roxo">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>PDF Prova</a>
+              <a href="/processo-seletivo/<%=p.id%>/pdf-gabarito" target="_blank" class="btn-xs azul">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>PDF Gabarito</a>
+              <form method="POST" action="/processo-seletivo/<%=p.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')">
+                <button type="submit" class="btn-xs verm">Excluir</button></form>
+            </div>
+          </div>
+        </div>
+        <%});%>
+      </div>
+
+      <!-- BANCO DE QUESTÕES -->
+      <div class="ps-sec" id="sec-questoes">
+        <div class="filter-bar">
+          <select id="filtro-tema" class="input" onchange="filtrarQuestoes()">
+            <option value="">Todos os temas</option>
+            <%temas.forEach(t=>{%><option><%=t%></option><%});%>
+          </select>
+          <select id="filtro-dif" class="input" onchange="filtrarQuestoes()">
+            <option value="">Qualquer dificuldade</option>
+            <option>facil</option><option>medio</option><option>dificil</option>
+          </select>
+          <input type="text" id="filtro-busca" class="input" placeholder="Buscar questão..." oninput="filtrarQuestoes()" style="flex:1;min-width:180px">
+          <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-nova-questao')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Nova Questão</button>
+        </div>
+        <div style="font-size:12px;color:var(--texto2);margin-bottom:10px" id="q-count"><%=questoes.length%> questão(ões) no banco</div>
+        <div id="lista-questoes">
+        <%questoes.forEach(q=>{%>
+        <div class="q-card q-item" data-tema="<%=q.tema%>" data-dif="<%=q.dificuldade%>" data-txt="<%=(q.enunciado||'').toLowerCase()%>">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px">
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+              <span class="q-tema"><%=q.tema%></span>
+              <span class="badge-dif dif-<%=q.dificuldade%>"><%=q.dificuldade%></span>
+              <span style="font-size:10px;color:var(--texto2)">#<%=q.id%></span>
+            </div>
+            <div style="display:flex;gap:4px;flex-shrink:0">
+              <button class="btn-xs" onclick="editarQuestao(<%=q.id%>)">Editar</button>
+              <form method="POST" action="/processo-seletivo/questao/<%=q.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir questão?')">
+                <button type="submit" class="btn-xs verm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></form>
+            </div>
+          </div>
+          <div class="q-enunciado"><%=q.enunciado%></div>
+          <div class="q-opcoes">
+            <div class="q-op <%=q.resposta_correta==='A'?'correta':''%>">A) <%=q.opcao_a%></div>
+            <div class="q-op <%=q.resposta_correta==='B'?'correta':''%>">B) <%=q.opcao_b%></div>
+            <div class="q-op <%=q.resposta_correta==='C'?'correta':''%>">C) <%=q.opcao_c%></div>
+            <div class="q-op <%=q.resposta_correta==='D'?'correta':''%>">D) <%=q.opcao_d%></div>
+          </div>
+        </div>
+        <%});%>
+        </div>
+      </div>
+
+      <!-- PROVAS & GABARITOS -->
+      <div class="ps-sec" id="sec-provas">
+        <div style="background:#eff6ff;border-radius:var(--rad);padding:12px 16px;margin-bottom:16px;font-size:13px;color:#1e40af">
+          <strong>Como usar:</strong> 1) Selecione um processo na aba <em>Processos</em> → 2) Clique em "Montar Prova" → 3) Selecione as questões por tema → 4) Gere o PDF da prova e do cartão de resposta.
+        </div>
+        <%if(provas.length===0){%>
+        <div style="text-align:center;padding:40px;color:var(--texto2);font-size:13px">Nenhuma prova gerada ainda. Use "Montar Prova" no processo seletivo.</div>
+        <%}%>
+        <%provas.forEach(pv=>{%>
+        <div class="q-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+            <div>
+              <span style="font-weight:700">Fila <%=pv.fila%></span>
+              <span style="font-size:12px;color:var(--texto2);margin-left:8px"><%=pv.processo_nome%></span>
+              <span style="font-size:11px;color:var(--texto2);margin-left:8px"><%=JSON.parse(pv.questoes_json||'[]').length%> questões</span>
+            </div>
+            <div style="display:flex;gap:6px">
+              <a href="/processo-seletivo/prova/<%=pv.id%>/pdf" target="_blank" class="btn-xs roxo">PDF Prova</a>
+              <a href="/processo-seletivo/prova/<%=pv.id%>/gabarito" target="_blank" class="btn-xs azul">PDF Gabarito</a>
+            </div>
+          </div>
+        </div>
+        <%});%>
+      </div>
+
+      <!-- CANDIDATOS -->
+      <div class="ps-sec" id="sec-candidatos">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+          <select id="filtro-proc-cand" class="input" style="font-size:12px;padding:5px 8px;height:auto" onchange="filtrarCandidatos(this.value)">
+            <option value="">Todos os processos</option>
+            <%processos.forEach(p=>{%><option value="<%=p.id%>"><%=p.nome%></option><%});%>
+          </select>
+          <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-novo-candidato')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Inscr. Candidato</button>
+        </div>
+        <%if(candidatos.length===0){%>
+        <div style="text-align:center;padding:40px;color:var(--texto2);font-size:13px">Nenhum candidato inscrito</div>
+        <%}%>
+        <div class="table-card">
+          <table class="tabela">
+            <thead><tr>
+              <th>Nº</th><th>Candidato</th><th>Fila</th><th>Contato</th><th>Status</th><th>Nota Prova</th><th>Ações</th>
+            </tr></thead>
+            <tbody>
+            <%candidatos.forEach(c=>{%>
+            <tr class="cand-item" data-proc="<%=c.processo_id%>">
+              <td style="font-weight:700;color:var(--cor-primaria)"><%=c.numero_lista||'—'%></td>
+              <td>
+                <div style="font-weight:600;font-size:13px"><%=c.nome%></div>
+                <div style="font-size:11px;color:var(--texto2)"><%=c.curso||''%><%=c.semestre_atual?' • '+c.semestre_atual+'º sem':'  '%></div>
+              </td>
+              <td><span style="font-weight:700;font-size:14px;color:var(--cor-primaria)"><%=c.fila_prova||'—'%></span></td>
+              <td style="font-size:12px">
+                <%if(c.email){%><div><%=c.email%></div><%}%>
+                <%if(c.telefone){%><div style="color:var(--texto2)"><%=c.telefone%></div><%}%>
+              </td>
+              <td><span class="status-badge st-<%=c.status==='aprovado'?'aberto':c.status==='entrevista'?'entrevista':c.status==='reprovado'?'encerrado':'correcao'%>"><%=c.status%></span></td>
+              <td>
+                <%if(c.percentual!=null){%>
+                <div style="font-weight:700;font-size:14px;color:<%=c.aprovado_prova?'#166534':'#dc2626'%>"><%=parseFloat(c.percentual).toFixed(1)%>%</div>
+                <div style="font-size:10px;color:var(--texto2)"><%=c.total_acertos%>/<%=c.total_questoes%> acertos</div>
+                <%}else{%><span style="color:var(--texto2);font-size:12px">Não corrigido</span><%}%>
+              </td>
+              <td>
+                <div style="display:flex;gap:4px;flex-wrap:wrap">
+                  <button class="btn-xs verde" onclick="abrirCorrecao(<%=c.id%>,this.dataset.nome,<%=c.processo_id%>,'<%=c.fila_prova||'A'%>')" data-nome="<%=c.nome%>">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Corrigir</button>
+                  <button class="btn-xs azul" onclick="abrirEntrevista(<%=c.id%>,this.dataset.nome,<%=c.processo_id%>)" data-nome="<%=c.nome%>">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Entrevista</button>
+                  <form method="POST" action="/processo-seletivo/candidato/<%=c.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Remover?')">
+                    <button type="submit" class="btn-xs verm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></form>
+                </div>
+              </td>
+            </tr>
+            <%});%>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CORREÇÃO -->
+      <div class="ps-sec" id="sec-correcao">
+        <div style="background:#f0f7eb;border-radius:var(--rad);padding:12px 16px;margin-bottom:16px;font-size:13px;color:#166534">
+          <strong>Correção Digital</strong> — Selecione o candidato e lance as respostas. O sistema calcula a nota automaticamente comparando com o gabarito da fila.
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+          <select id="sel-proc-corr" class="input" style="font-size:12px" onchange="carregarCandidatosCorrecao(this.value)">
+            <option value="">Selecione o processo...</option>
+            <%processos.forEach(p=>{%><option value="<%=p.id%>"><%=p.nome%></option><%});%>
+          </select>
+          <select id="sel-cand-corr" class="input" style="font-size:12px" onchange="carregarGabaritoCorrecao()">
+            <option value="">Selecione o candidato...</option>
+          </select>
+        </div>
+        <div id="painel-correcao" style="display:none">
+          <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+            <div style="font-size:14px;font-weight:700" id="corr-nome-label">—</div>
+            <div style="font-size:12px;color:var(--texto2)">Fila: <strong id="corr-fila-label">—</strong></div>
+            <div id="corr-score-live" style="font-size:18px;font-weight:800;color:var(--cor-primaria)">0%</div>
+            <div id="corr-acertos-live" style="font-size:12px;color:var(--texto2)">0/0 acertos</div>
+          </div>
+          <div id="gabarito-correcao" class="gabarito-grid"></div>
+          <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primario" onclick="salvarCorrecao()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Salvar Correção</button>
+            <div>
+              <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Foto do Cartão (opcional)</label>
+              <input type="file" id="cartao-foto" class="input" accept="image/*" style="font-size:12px">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ENTREVISTAS -->
+      <div class="ps-sec" id="sec-entrevistas">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+          <select id="sel-proc-entrev" class="input" style="font-size:12px" onchange="carregarCandidatosEntrevista(this.value)">
+            <option value="">Selecione o processo...</option>
+            <%processos.forEach(p=>{%><option value="<%=p.id%>"><%=p.nome%></option><%});%>
+          </select>
+          <select id="sel-cand-entrev" class="input" style="font-size:12px" onchange="carregarFichaEntrevista()">
+            <option value="">Selecione o candidato...</option>
+          </select>
+          <button class="btn btn-sm" onclick="abrirModal('modal-config-perguntas')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            Config. Perguntas</button>
+        </div>
+        <div id="painel-entrevista" style="display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+            <div>
+              <div style="font-size:15px;font-weight:700" id="entrev-nome-label">—</div>
+              <div style="font-size:12px;color:var(--texto2)">Nota: <strong id="entrev-score-live" style="color:var(--cor-primaria)">0/0 pts</strong></div>
+            </div>
+            <div class="campo" style="margin:0">
+              <label class="label">Entrevistadores</label>
+              <input type="text" id="entrev-entrevistadores" class="input" placeholder="Nomes separados por vírgula" style="font-size:12px">
+            </div>
+          </div>
+          <div id="lista-perguntas-entrevista"></div>
+          <div class="campo" style="margin-top:12px">
+            <label class="label">Observações gerais</label>
+            <textarea id="entrev-obs" class="input" rows="3" placeholder="Anotações da banca sobre o candidato..."></textarea>
+          </div>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primario" onclick="salvarEntrevista()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Salvar Ficha</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RESULTADOS -->
+      <div class="ps-sec" id="sec-resultados">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
+          <select id="sel-proc-result" class="input" style="font-size:12px" onchange="carregarResultados(this.value)">
+            <option value="">Selecione o processo...</option>
+            <%processos.forEach(p=>{%><option value="<%=p.id%>"><%=p.nome%></option><%});%>
+          </select>
+          <button class="btn btn-sm" id="btn-export-csv" onclick="exportarCSV()" style="display:none">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Exportar CSV</button>
+        </div>
+        <div id="painel-resultados">
+          <div style="text-align:center;padding:40px;color:var(--texto2);font-size:13px">Selecione um processo para ver os resultados</div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAIS -->
+<!-- Novo Processo -->
+<div class="modal-overlay" id="modal-novo-processo" style="display:none">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header"><span class="modal-titulo">Novo Processo Seletivo</span><button class="icon-btn" onclick="fecharModal('modal-novo-processo')">&#x2715;</button></div>
+    <form action="/processo-seletivo/criar" method="POST">
+      <div class="modal-body" style="padding:20px 24px;display:flex;flex-direction:column;gap:12px">
+        <div class="campo"><label class="label">Nome do Processo *</label><input name="nome" class="input" required placeholder="Ex: Processo Seletivo 2026.1"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="campo"><label class="label">Semestre</label><input name="semestre" class="input" placeholder="2026.1"></div>
+          <div class="campo"><label class="label">Data da Prova</label><input type="date" name="data_prova" class="input"></div>
+        </div>
+        <div class="campo"><label class="label">Local da Prova</label><input name="local_prova" class="input" placeholder="Sala 101, Bloco B"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="campo"><label class="label">Vagas</label><input type="number" name="vagas" class="input" value="10" min="1"></div>
+          <div class="campo"><label class="label">Nota Mínima (%)</label><input type="number" name="nota_minima" class="input" value="60" min="0" max="100" step="0.5"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-novo-processo')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Criar Processo</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Nova Questão -->
+<div class="modal-overlay" id="modal-nova-questao" style="display:none">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-header"><span class="modal-titulo" id="questao-modal-titulo">Nova Questão</span><button class="icon-btn" onclick="fecharModal('modal-nova-questao')">&#x2715;</button></div>
+    <form id="form-questao" action="/processo-seletivo/questao/criar" method="POST">
+      <input type="hidden" name="_id" id="questao-id">
+      <div class="modal-body" style="padding:20px 24px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="campo"><label class="label">Tema *</label>
+            <input list="temas-list" name="tema" id="questao-tema" class="input" required placeholder="Ex: Signos Vitales">
+            <datalist id="temas-list"><%temas.forEach(t=>{%><option value="<%=t%>"><%});%></datalist>
+          </div>
+          <div class="campo"><label class="label">Dificuldade</label>
+            <select name="dificuldade" id="questao-dif" class="input">
+              <option value="facil">Fácil</option><option value="medio" selected>Médio</option><option value="dificil">Difícil</option>
+            </select>
+          </div>
+        </div>
+        <div class="campo"><label class="label">Enunciado *</label><textarea name="enunciado" id="questao-enunciado" class="input" rows="3" required placeholder="Digite a questão..."></textarea></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="campo"><label class="label">A)</label><input name="opcao_a" id="questao-a" class="input" required placeholder="Opção A"></div>
+          <div class="campo"><label class="label">B)</label><input name="opcao_b" id="questao-b" class="input" required placeholder="Opção B"></div>
+          <div class="campo"><label class="label">C)</label><input name="opcao_c" id="questao-c" class="input" required placeholder="Opção C"></div>
+          <div class="campo"><label class="label">D)</label><input name="opcao_d" id="questao-d" class="input" required placeholder="Opção D"></div>
+        </div>
+        <div class="campo"><label class="label">Resposta Correta *</label>
+          <select name="resposta_correta" id="questao-resp" class="input" required>
+            <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-nova-questao')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar Questão</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Novo Candidato -->
+<div class="modal-overlay" id="modal-novo-candidato" style="display:none">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-header"><span class="modal-titulo">Inscrever Candidato</span><button class="icon-btn" onclick="fecharModal('modal-novo-candidato')">&#x2715;</button></div>
+    <form action="/processo-seletivo/candidato/criar" method="POST">
+      <div class="modal-body" style="padding:20px 24px;display:flex;flex-direction:column;gap:12px">
+        <div class="campo"><label class="label">Processo *</label>
+          <select name="processo_id" class="input" required>
+            <option value="">Selecione...</option>
+            <%processos.forEach(p=>{%><option value="<%=p.id%>"><%=p.nome%></option><%});%>
+          </select>
+        </div>
+        <div class="campo"><label class="label">Nome Completo *</label><input name="nome" class="input" required placeholder="Nome do candidato"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="campo"><label class="label">RG/CI</label><input name="rg" class="input" placeholder="Documento"></div>
+          <div class="campo"><label class="label">Nº na Lista</label><input type="number" name="numero_lista" class="input" placeholder="1, 2, 3..."></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="campo"><label class="label">Email</label><input type="email" name="email" class="input" placeholder="email@exemplo.com"></div>
+          <div class="campo"><label class="label">Telefone</label><input name="telefone" class="input" placeholder="+595..."></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="campo"><label class="label">Curso</label><input name="curso" class="input" placeholder="Medicina"></div>
+          <div class="campo"><label class="label">Semestre</label><input type="number" name="semestre_atual" class="input" placeholder="3" min="1" max="12"></div>
+        </div>
+        <div class="campo"><label class="label">Fila da Prova</label>
+          <select name="fila_prova" class="input">
+            <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-novo-candidato')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Inscrever</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Config Perguntas Entrevista -->
+<div class="modal-overlay" id="modal-config-perguntas" style="display:none">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header"><span class="modal-titulo">Configurar Perguntas da Entrevista</span><button class="icon-btn" onclick="fecharModal('modal-config-perguntas')">&#x2715;</button></div>
+    <div class="modal-body" style="padding:20px 24px">
+      <p style="font-size:12px;color:var(--texto2);margin-bottom:12px">Configure as perguntas que serão usadas nas entrevistas. Peso = importância na nota final.</p>
+      <div id="lista-config-perguntas"></div>
+      <button type="button" class="btn btn-sm" style="margin-top:8px" onclick="adicionarPerguntaConfig()">+ Adicionar Pergunta</button>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" onclick="fecharModal('modal-config-perguntas')">Fechar</button>
+      <button type="button" class="btn btn-primario" onclick="salvarConfigPerguntas()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<script src="/js/app.js"></script>
+<script>
+const QUESTOES_DATA = <%- JSON.stringify(questoes) %>;
+const CANDIDATOS_DATA = <%- JSON.stringify(candidatos) %>;
+const PROCESSOS_DATA = <%- JSON.stringify(processos) %>;
+let _gabaritoAtual={}, _correcaoRespostas={}, _entrevistaRespostas={}, _entrevistaCandId=null, _correcaoCandId=null, _correcaoProvaId=null, _perguntasEntrevista=[];
+
+function psTab(id,btn){
+  document.querySelectorAll('.ps-sec').forEach(s=>s.classList.remove('ativo'));
+  document.querySelectorAll('.ps-tab').forEach(t=>t.classList.remove('ativo'));
+  document.getElementById('sec-'+id).classList.add('ativo');
+  btn.classList.add('ativo');
+}
+function filtrarQuestoes(){
+  const tema=document.getElementById('filtro-tema').value.toLowerCase();
+  const dif=document.getElementById('filtro-dif').value;
+  const busca=document.getElementById('filtro-busca').value.toLowerCase();
+  let c=0;
+  document.querySelectorAll('.q-item').forEach(el=>{
+    const ok=(!tema||el.dataset.tema.toLowerCase()===tema)&&(!dif||el.dataset.dif===dif)&&(!busca||el.dataset.txt.includes(busca));
+    el.style.display=ok?'':'none'; if(ok)c++;
+  });
+  document.getElementById('q-count').textContent=c+' questão(ões)';
+}
+function filtrarCandidatos(procId){
+  document.querySelectorAll('.cand-item').forEach(r=>{r.style.display=!procId||r.dataset.proc==procId?'':'none';});
+}
+function selecionarProcesso(id,nome){
+  document.querySelectorAll('select[id^="sel-proc"]').forEach(s=>{s.value=id;s.dispatchEvent(new Event('change'));});
+  document.querySelectorAll('select[id="filtro-proc-cand"]').forEach(s=>{s.value=id;filtrarCandidatos(id);});
+  alert('Processo "'+nome+'" selecionado em todas as abas.');
+}
+function editarQuestao(id){
+  const q=QUESTOES_DATA.find(x=>x.id===id);
+  if(!q)return;
+  document.getElementById('questao-modal-titulo').textContent='Editar Questão';
+  document.getElementById('questao-id').value=id;
+  document.getElementById('questao-tema').value=q.tema;
+  document.getElementById('questao-dif').value=q.dificuldade;
+  document.getElementById('questao-enunciado').value=q.enunciado;
+  document.getElementById('questao-a').value=q.opcao_a;
+  document.getElementById('questao-b').value=q.opcao_b;
+  document.getElementById('questao-c').value=q.opcao_c;
+  document.getElementById('questao-d').value=q.opcao_d;
+  document.getElementById('questao-resp').value=q.resposta_correta;
+  document.getElementById('form-questao').action='/processo-seletivo/questao/'+id+'/editar';
+  abrirModal('modal-nova-questao');
+}
+
+// ── CORREÇÃO ──────────────────────────────────────────────────────────────────
+async function carregarCandidatosCorrecao(procId){
+  const sel=document.getElementById('sel-cand-corr');
+  sel.innerHTML='<option value="">Selecione o candidato...</option>';
+  CANDIDATOS_DATA.filter(c=>c.processo_id==procId).forEach(c=>{
+    const o=document.createElement('option'); o.value=c.id;
+    o.textContent=c.nome+(c.numero_lista?' (Nº'+c.numero_lista+')':'')+(c.fila_prova?' - Fila '+c.fila_prova:'');
+    sel.appendChild(o);
+  });
+}
+async function carregarGabaritoCorrecao(){
+  const candId=document.getElementById('sel-cand-corr').value;
+  if(!candId){document.getElementById('painel-correcao').style.display='none';return;}
+  const cand=CANDIDATOS_DATA.find(c=>c.id==candId);
+  if(!cand)return;
+  _correcaoCandId=candId;
+  document.getElementById('corr-nome-label').textContent=cand.nome;
+  document.getElementById('corr-fila-label').textContent=cand.fila_prova||'—';
+  // Buscar gabarito da fila
+  const procId=document.getElementById('sel-proc-corr').value;
+  const r=await fetch('/processo-seletivo/'+procId+'/gabarito/'+cand.fila_prova);
+  const data=await r.json();
+  _gabaritoAtual=data.gabarito||{};
+  _correcaoRespostas={};
+  _correcaoProvaId=data.prova_id;
+  renderGabaritoCorrecao(Object.keys(_gabaritoAtual).length);
+  document.getElementById('painel-correcao').style.display='block';
+  atualizarScoreLive();
+}
+function renderGabaritoCorrecao(total){
+  const grid=document.getElementById('gabarito-correcao');
+  grid.innerHTML='';
+  for(let i=1;i<=total;i++){
+    const div=document.createElement('div');
+    div.className='gabarito-item';
+    div.innerHTML='<span class="gabarito-num">'+i+'</span><div class="gabarito-ops">'+'ABCD'.split('').map(l=>'<button type="button" class="gab-op" id="gop-'+i+'-'+l+'" onclick="selecionarResposta('+i+',\''+l+'\')">'+l+'</button>').join('')+'</div>';
+    grid.appendChild(div);
+  }
+}
+function selecionarResposta(num,letra){
+  _correcaoRespostas[num]=letra;
+  'ABCD'.split('').forEach(l=>{
+    const b=document.getElementById('gop-'+num+'-'+l);
+    if(b) b.classList.toggle('sel',l===letra);
+  });
+  atualizarScoreLive();
+}
+function atualizarScoreLive(){
+  const total=Object.keys(_gabaritoAtual).length;
+  const resp=Object.keys(_correcaoRespostas).length;
+  let acertos=0;
+  Object.entries(_correcaoRespostas).forEach(([n,l])=>{if(_gabaritoAtual[n]===l)acertos++;});
+  const pct=resp>0?((acertos/total)*100).toFixed(1):0;
+  document.getElementById('corr-score-live').textContent=pct+'%';
+  document.getElementById('corr-score-live').style.color=parseFloat(pct)>=60?'#166534':'#dc2626';
+  document.getElementById('corr-acertos-live').textContent=acertos+'/'+total+' acertos';
+}
+async function salvarCorrecao(){
+  if(!_correcaoCandId)return;
+  const total=Object.keys(_gabaritoAtual).length;
+  let acertos=0;
+  Object.entries(_correcaoRespostas).forEach(([n,l])=>{if(_gabaritoAtual[n]===l)acertos++;});
+  const pct=((acertos/total)*100).toFixed(2);
+  const formData=new FormData();
+  formData.append('respostas_json',JSON.stringify(_correcaoRespostas));
+  formData.append('total_questoes',total);
+  formData.append('total_acertos',acertos);
+  formData.append('percentual',pct);
+  formData.append('prova_id',_correcaoProvaId||'');
+  const foto=document.getElementById('cartao-foto').files[0];
+  if(foto) formData.append('cartao_foto',foto);
+  const r=await fetch('/processo-seletivo/candidato/'+_correcaoCandId+'/correcao',{method:'POST',body:formData});
+  const data=await r.json();
+  if(data.ok){alert('Correção salva! Nota: '+pct+'%');location.reload();}
+  else alert('Erro: '+data.erro);
+}
+
+// ── ENTREVISTA ─────────────────────────────────────────────────────────────────
+async function carregarCandidatosEntrevista(procId){
+  const sel=document.getElementById('sel-cand-entrev');
+  sel.innerHTML='<option value="">Selecione o candidato...</option>';
+  CANDIDATOS_DATA.filter(c=>c.processo_id==procId).forEach(c=>{
+    const o=document.createElement('option'); o.value=c.id;
+    o.textContent=c.nome+(c.percentual!=null?' | Prova: '+parseFloat(c.percentual).toFixed(1)+'%':'');
+    o.disabled=c.aprovado_prova===false;
+    sel.appendChild(o);
+  });
+  // Carregar perguntas configuradas
+  const r=await fetch('/processo-seletivo/'+procId+'/perguntas-entrevista');
+  const data=await r.json();
+  _perguntasEntrevista=data.perguntas||[];
+}
+async function carregarFichaEntrevista(){
+  const candId=document.getElementById('sel-cand-entrev').value;
+  if(!candId){document.getElementById('painel-entrevista').style.display='none';return;}
+  const cand=CANDIDATOS_DATA.find(c=>c.id==candId);
+  _entrevistaCandId=candId;
+  _entrevistaRespostas={};
+  document.getElementById('entrev-nome-label').textContent=cand.nome;
+  const lista=document.getElementById('lista-perguntas-entrevista');
+  lista.innerHTML='';
+  _perguntasEntrevista.forEach(p=>{
+    const div=document.createElement('div');
+    div.className='entrev-pergunta';
+    div.innerHTML='<div style="font-size:13px;font-weight:600;margin-bottom:4px">'+p.pergunta+'</div>'+
+      '<div style="font-size:11px;color:var(--texto2);margin-bottom:8px">'+( p.descricao||'')+'<span style="background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:2px;font-weight:700;margin-left:6px">Peso '+p.peso+'</span></div>'+
+      '<div class="nota-slider">'+[0,1,2,3,4,5,6,7,8,9,10].map(n=>'<button type="button" class="nota-btn" id="nb-'+p.id+'-'+n+'" onclick="setNota('+p.id+','+n+')">'+n+'</button>').join('')+'</div>';
+    lista.appendChild(div);
+  });
+  document.getElementById('painel-entrevista').style.display='block';
+  atualizarScoreEntrevista();
+}
+function setNota(pergId,nota){
+  _entrevistaRespostas[pergId]=nota;
+  const p=_perguntasEntrevista.find(x=>x.id===pergId);
+  [0,1,2,3,4,5,6,7,8,9,10].forEach(n=>{
+    const b=document.getElementById('nb-'+pergId+'-'+n);
+    if(b) b.classList.toggle('sel',n===nota);
+  });
+  atualizarScoreEntrevista();
+}
+function atualizarScoreEntrevista(){
+  let totalPts=0,maxPts=0;
+  _perguntasEntrevista.forEach(p=>{
+    maxPts+=10*p.peso;
+    if(_entrevistaRespostas[p.id]!=null) totalPts+=_entrevistaRespostas[p.id]*p.peso;
+  });
+  document.getElementById('entrev-score-live').textContent=totalPts+'/'+maxPts+' pts ('+(maxPts>0?((totalPts/maxPts)*100).toFixed(1):0)+'%)';
+}
+async function salvarEntrevista(){
+  if(!_entrevistaCandId)return;
+  let totalPts=0,maxPts=0;
+  _perguntasEntrevista.forEach(p=>{maxPts+=10*p.peso;if(_entrevistaRespostas[p.id]!=null)totalPts+=_entrevistaRespostas[p.id]*p.peso;});
+  const pct=maxPts>0?((totalPts/maxPts)*100).toFixed(2):0;
+  const r=await fetch('/processo-seletivo/candidato/'+_entrevistaCandId+'/entrevista',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      respostas_json:_entrevistaRespostas,
+      pontuacao_total:totalPts,
+      pontuacao_maxima:maxPts,
+      percentual_entrevista:pct,
+      entrevistadores:document.getElementById('entrev-entrevistadores').value,
+      observacoes:document.getElementById('entrev-obs').value
+    })
+  });
+  const data=await r.json();
+  if(data.ok){alert('Ficha salva! Pontuação: '+pct+'%');location.reload();}
+  else alert('Erro: '+data.erro);
+}
+
+// ── RESULTADOS ─────────────────────────────────────────────────────────────────
+async function carregarResultados(procId){
+  if(!procId){document.getElementById('painel-resultados').innerHTML='<div style="text-align:center;padding:40px;color:var(--texto2)">Selecione um processo</div>';return;}
+  const r=await fetch('/processo-seletivo/'+procId+'/resultados');
+  const data=await r.json();
+  renderResultados(data,procId);
+  document.getElementById('btn-export-csv').style.display='';
+  window._resultadosData=data;window._resultadosProcId=procId;
+}
+function renderResultados(data,procId){
+  const proc=PROCESSOS_DATA.find(p=>p.id==procId)||{};
+  const notaMin=parseFloat(proc.nota_minima||60);
+  const cands=data.candidatos||[];
+  if(!cands.length){document.getElementById('painel-resultados').innerHTML='<div style="text-align:center;padding:40px;color:var(--texto2)">Nenhum candidato com nota lançada</div>';return;}
+  const aprovados=cands.filter(c=>parseFloat(c.percentual||0)>=notaMin).sort((a,b)=>b.percentual-a.percentual);
+  const reprovados=cands.filter(c=>parseFloat(c.percentual||0)<notaMin).sort((a,b)=>b.percentual-a.percentual);
+  let html='<div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">';
+  html+='<div class="stat-mini"><div class="stat-mini-num">'+cands.length+'</div><div class="stat-mini-lab">Candidatos</div></div>';
+  html+='<div class="stat-mini"><div class="stat-mini-num" style="color:#166534">'+aprovados.length+'</div><div class="stat-mini-lab">Aprovados Prova</div></div>';
+  html+='<div class="stat-mini"><div class="stat-mini-num" style="color:#dc2626">'+reprovados.length+'</div><div class="stat-mini-lab">Reprovados</div></div>';
+  html+='<div class="stat-mini"><div class="stat-mini-num">'+proc.vagas+'</div><div class="stat-mini-lab">Vagas</div></div>';
+  html+='</div>';
+  html+='<div style="font-size:12px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Aprovados na Prova (≥'+notaMin+'%)</div>';
+  html+='<div class="table-card"><table class="tabela"><thead><tr><th>Rank</th><th>Candidato</th><th>Fila</th><th>% Prova</th><th>% Entrevista</th><th>Situação</th></tr></thead><tbody>';
+  aprovados.forEach((c,i)=>{
+    const cls=i===0?'ouro':i===1?'prata':i===2?'bronze':'';
+    const pctProva=parseFloat(c.percentual||0).toFixed(1);
+    const pctEntrev=c.percentual_entrevista!=null?parseFloat(c.percentual_entrevista).toFixed(1)+'%':'—';
+    html+='<tr><td><div class="rank-num '+cls+'">'+(i+1)+'</div></td>';
+    html+='<td><div style="font-weight:600;font-size:13px">'+c.nome+'</div><div style="font-size:11px;color:var(--texto2)">'+( c.curso||'')+'</div></td>';
+    html+='<td style="font-weight:700">'+( c.fila_prova||'—')+'</td>';
+    html+='<td><div style="font-weight:700;color:#166534">'+pctProva+'%</div><div style="font-size:10px;color:var(--texto2)">'+( c.total_acertos||0)+'/'+( c.total_questoes||0)+'</div></td>';
+    html+='<td style="font-weight:600">'+pctEntrev+'</td>';
+    html+='<td><span class="status-badge st-'+( c.resultado_entrevista==='aprovado'?'aberto':c.resultado_entrevista==='reprovado'?'encerrado':'correcao')+'">'+( c.resultado_entrevista||'pendente')+'</span></td></tr>';
+  });
+  if(!aprovados.length) html+='<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--texto2)">Nenhum aprovado ainda</td></tr>';
+  html+='</tbody></table></div>';
+  if(reprovados.length){
+    html+='<div style="font-size:12px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">Reprovados na Prova (<'+notaMin+'%)</div>';
+    html+='<div class="table-card"><table class="tabela"><thead><tr><th>Candidato</th><th>Fila</th><th>% Prova</th><th>Acertos</th></tr></thead><tbody>';
+    reprovados.forEach(c=>{
+      html+='<tr><td style="font-weight:600">'+c.nome+'</td><td>'+( c.fila_prova||'—')+'</td>';
+      html+='<td style="color:#dc2626;font-weight:700">'+parseFloat(c.percentual||0).toFixed(1)+'%</td>';
+      html+='<td>'+( c.total_acertos||0)+'/'+( c.total_questoes||0)+'</td></tr>';
+    });
+    html+='</tbody></table></div>';
+  }
+  document.getElementById('painel-resultados').innerHTML=html;
+}
+function exportarCSV(){
+  const data=window._resultadosData;if(!data)return;
+  const linhas=[['Rank','Nome','Fila','% Prova','Acertos','% Entrevista','Situação']];
+  const proc=PROCESSOS_DATA.find(p=>p.id==window._resultadosProcId)||{};
+  const notaMin=parseFloat(proc.nota_minima||60);
+  const aprov=(data.candidatos||[]).filter(c=>parseFloat(c.percentual||0)>=notaMin).sort((a,b)=>b.percentual-a.percentual);
+  aprov.forEach((c,i)=>linhas.push([i+1,c.nome,c.fila_prova||'',parseFloat(c.percentual||0).toFixed(1)+'%',c.total_acertos+'/'+c.total_questoes,c.percentual_entrevista!=null?parseFloat(c.percentual_entrevista).toFixed(1)+'%':'',c.resultado_entrevista||'pendente']));
+  const csv=linhas.map(l=>l.map(v=>'"'+v+'"').join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download='resultado-ps.csv';a.click();
+}
+
+// Abrir correção/entrevista via botão na tab candidatos
+function abrirCorrecao(candId,nome,procId,fila){
+  document.getElementById('sel-proc-corr').value=procId;
+  carregarCandidatosCorrecao(procId).then(()=>{
+    document.getElementById('sel-cand-corr').value=candId;
+    carregarGabaritoCorrecao();
+  });
+  document.querySelectorAll('.ps-tab').forEach((t,i)=>{if(t.textContent.trim().includes('Correção')){t.click();}});
+}
+function abrirEntrevista(candId,nome,procId){
+  document.getElementById('sel-proc-entrev').value=procId;
+  carregarCandidatosEntrevista(procId).then(()=>{
+    document.getElementById('sel-cand-entrev').value=candId;
+    carregarFichaEntrevista();
+  });
+  document.querySelectorAll('.ps-tab').forEach(t=>{if(t.textContent.trim().includes('Entrevista'))t.click();});
+}
+
+// Config perguntas entrevista
+async function carregarConfigPerguntas(){
+  const r=await fetch('/processo-seletivo/perguntas-entrevista');
+  const data=await r.json();
+  const lista=document.getElementById('lista-config-perguntas');
+  lista.innerHTML='';
+  (data.perguntas||[]).forEach(p=>adicionarPerguntaConfigItem(p));
+}
+function adicionarPerguntaConfig(){adicionarPerguntaConfigItem({id:null,pergunta:'',descricao:'',peso:1});}
+function adicionarPerguntaConfigItem(p){
+  const lista=document.getElementById('lista-config-perguntas');
+  const div=document.createElement('div');
+  div.style.cssText='background:var(--fundo);border:1px solid var(--borda);border-radius:var(--rad);padding:10px;margin-bottom:8px';
+  div.innerHTML='<input type="hidden" class="perg-id" value="'+(p.id||'')+'"><div style="display:flex;gap:8px;margin-bottom:6px"><input class="input perg-texto" style="flex:1;font-size:12px" placeholder="Pergunta..." value="'+(p.pergunta||'').replace(/"/g,'&quot;')+'"><input class="input perg-peso" type="number" style="width:60px;font-size:12px" placeholder="Peso" value="'+(p.peso||1)+'" min="1" max="10"><button type="button" onclick="this.parentElement.parentElement.remove()" style="color:#dc2626;background:none;border:none;cursor:pointer;font-size:18px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><input class="input perg-desc" style="font-size:11px;width:100%" placeholder="Descrição/critério de avaliação (opcional)" value="'+(p.descricao||'').replace(/"/g,'&quot;')+'">';
+  lista.appendChild(div);
+}
+async function salvarConfigPerguntas(){
+  const items=document.querySelectorAll('#lista-config-perguntas > div');
+  const perguntas=Array.from(items).map(div=>({
+    id:div.querySelector('.perg-id').value||null,
+    pergunta:div.querySelector('.perg-texto').value,
+    descricao:div.querySelector('.perg-desc').value,
+    peso:parseInt(div.querySelector('.perg-peso').value)||1
+  })).filter(p=>p.pergunta.trim());
+  const r=await fetch('/processo-seletivo/perguntas-entrevista/salvar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({perguntas})});
+  const data=await r.json();
+  if(data.ok){alert('Perguntas salvas!');fecharModal('modal-config-perguntas');}
+  else alert('Erro: '+data.erro);
+}
+document.getElementById('modal-config-perguntas').addEventListener('ps-open',carregarConfigPerguntas);
+const _origAbrirModal=window.abrirModal;
+window.abrirModal=function(id){
+  _origAbrirModal(id);
+  if(id==='modal-config-perguntas') carregarConfigPerguntas();
+};
+</script>
+</body>
+</html>

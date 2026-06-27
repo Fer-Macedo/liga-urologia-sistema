@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Frequência Diretivos — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin-modern.css">
@@ -151,6 +152,30 @@
     .selecionar-row {
       display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap;
     }
+  
+    /* === PADRÃO VERDE ESCURO — Frequência Diretivos === */
+    .freq-card { border-radius:0!important; }
+    .freq-tab { border-radius:0!important; }
+    .freq-tab.ativo { color:#1a3410!important; border-bottom-color:#1a3410!important; }
+    .freq-tab:hover { color:#253d18!important; }
+    .stat-mini { border-radius:0!important; }
+    .barra-wrap { border-radius:0!important; }
+    .barra { border-radius:0!important; }
+    .presenca-row { border-radius:0!important; }
+    .atividade-card { border-radius:0!important; }
+    .presenca-item { border-radius:0!important; transition:border-color .12s ease; }
+    .presenca-item:hover { border-color:#253d18!important; }
+    .presenca-item.presente { border-color:#1a3410!important; background:#f0f7eb!important; }
+    .presenca-item.presente .presenca-nome { color:#1a3410!important; }
+    .presenca-item input[type=checkbox] { accent-color:#253d18!important; }
+    .badge-tipo { border-radius:0!important; }
+    .btn-excluir-membro { border-radius:0!important; }
+    .turma-btn { border-radius:0!important; font-size:13px!important; }
+    .turma-btn.ativo { background:linear-gradient(135deg,#1a3410,#253d18)!important; border-color:transparent!important; }
+    .turma-btn:hover:not(.ativo) { border-color:#253d18!important; color:#1a3410!important; }
+    input[type=checkbox] { accent-color:#253d18; }
+    .selecionar-row button, .selecionar-row a { border-radius:0!important; }
+.freq-pill{display:inline-flex;align-items:center;padding:5px 14px;border-radius:999px;font-size:12px;font-weight:600;border:1px solid var(--borda);background:var(--fundo);color:var(--texto2);cursor:pointer;transition:all .15s;font-family:inherit;}.freq-pill.active{background:#1a3a20;color:white!important;border-color:#1a3a20;}.freq-pill.apto.active{background:#10b981!important;border-color:#10b981!important;color:white!important;}.freq-pill.risco.active{background:#f59e0b!important;border-color:#f59e0b!important;color:white!important;}.freq-pill.inapto.active{background:#ef4444!important;border-color:#ef4444!important;color:white!important;}
   </style>
 </head>
 <body>
@@ -183,6 +208,9 @@
           <% } %>
         </div>
         <% if (turmaAtual) { %>
+          <form method="POST" action="/frequencia-diretivos/turma/<%= turmaAtual.id %>/sincronizar" style="display:inline">
+            <button type="submit" class="btn btn-sm" onclick="return confirm('Sincronizar diretivos desta gestão com a turma?')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Sincronizar Diretivos</button>
+          </form>
           <a href="/frequencia-diretivos/relatorio/<%= turmaAtual.id %>" class="btn btn-sm" target="_blank">Relatório</a>
         <% } %>
       </div>
@@ -191,8 +219,8 @@
 
       <!-- TABS -->
       <div class="freq-tabs">
-        <button class="freq-tab ativo" onclick="mostrarTab('tab-resumo',this)">Resumo</button>
-        <button class="freq-tab" onclick="mostrarTab('tab-atividades',this)">Atividades (<%= atividades.length %>)</button>
+        <button class="freq-tab ativo" data-tab="tab-resumo">Resumo</button>
+        <button class="freq-tab" data-tab="tab-atividades">Atividades (<%= atividades.length %>)</button>
         <button class="freq-tab" onclick="mostrarTab('tab-diretivos',this)">Diretivos (<%= membrosFrequencia.length %>)</button>
       </div>
 
@@ -218,6 +246,12 @@
             <div style="font-size:15px;font-weight:700;font-family:'Outfit',sans-serif">Frequência por Diretivo</div>
             <span style="font-size:12px;color:var(--texto2)">Mínimo 75% para certificado</span>
           </div>
+          <div data-filter-group style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+            <button class="freq-pill active" onclick="filtrarFreq('todos',this)">Todos</button>
+            <button class="freq-pill apto" onclick="filtrarFreq('apto',this)">Aptos</button>
+            <button class="freq-pill risco" onclick="filtrarFreq('risco',this)">Em Risco</button>
+            <button class="freq-pill inapto" onclick="filtrarFreq('inapto',this)">Nao Aptos</button>
+          </div>
           <% if (membrosFrequencia.length === 0) { %>
             <div style="text-align:center;padding:30px;color:var(--texto2)">Nenhum diretivo na turma ainda</div>
           <% } %>
@@ -229,10 +263,10 @@
             const badgeBg = pct >= 75 ? '#dcfce7' : pct >= 50 ? '#fef3c7' : '#fee2e2';
             const badgeCor = pct >= 75 ? '#166534' : pct >= 50 ? '#92400e' : '#991b1b';
           %>
-          <div class="presenca-row">
+          <div class="presenca-row" data-freq-status="<%= cor %>" style="cursor:pointer" onclick="abrirDetalheFreq(<%= m.membro_id %>)">
             <div class="avatar" style="width:34px;height:34px;font-size:11px;flex-shrink:0"><%= m.nome.substring(0,2).toUpperCase() %></div>
             <div style="flex:1;min-width:0">
-              <div style="font-size:13.5px;font-weight:600;margin-bottom:2px"><%= m.nome %></div>
+              <div style="font-size:13.5px;font-weight:600;margin-bottom:2px;display:flex;align-items:center;gap:6px"><%= m.nome %> <span style="font-size:10px;color:var(--texto2);background:var(--fundo);border:1px solid var(--borda);border-radius:4px;padding:1px 5px;font-weight:500;flex-shrink:0">ver detalhes</span></div>
               <div style="font-size:11.5px;color:var(--texto2);margin-bottom:5px"><%= m.cargo || '' %></div>
               <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
                 <div class="barra-wrap"><div class="barra <%= cor %>" style="width:<%= pct %>%"></div></div>
@@ -278,7 +312,7 @@
               <div>
                 <div style="font-size:14px;font-weight:700"><%= a.descricao %></div>
                 <div style="font-size:12px;color:var(--texto2);margin-top:2px">
-                  <%= new Date(a.data_atividade+'T12:00:00').toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}) %>
+                  <%= (() => { try { const d=new Date(a.data_atividade); return d.toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'UTC'}); } catch(e){return '';} })() %>
                 </div>
               </div>
             </div>
@@ -286,6 +320,9 @@
               <span style="font-size:13px;font-weight:600;color:var(--texto2)">
                 <span style="color:#10b981"><%= a.presentes %></span> / <%= a.total_membros %> presentes
               </span>
+              <button class="btn btn-sm btn-editar-atividade-dir" data-id="<%- a.id %>" data-desc="<%- (a.descricao||'').replace(/"/g,'&quot;') %>" data-tipo="<%- a.tipo||'' %>" data-data="<%= a.data_atividade ? new Date(a.data_atividade).toISOString().substring(0,10) : '' %>" style="padding:4px 10px;font-size:11px;border:1px solid #e2e8f0;background:#fff;cursor:pointer" title="Editar atividade">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
               <form action="/frequencia-diretivos/atividade/<%= a.id %>/deletar" method="POST"
                 onsubmit="return confirm('Excluir esta atividade?')" style="display:inline;margin:0"
                 onclick="event.stopPropagation()">
@@ -353,6 +390,12 @@
             </div>
           </div>
 
+          <div data-filter-group style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+            <button class="freq-pill active" onclick="filtrarFreq('todos',this)">Todos</button>
+            <button class="freq-pill apto" onclick="filtrarFreq('apto',this)">Aptos</button>
+            <button class="freq-pill risco" onclick="filtrarFreq('risco',this)">Em Risco</button>
+            <button class="freq-pill inapto" onclick="filtrarFreq('inapto',this)">Nao Aptos</button>
+          </div>
           <% if (membrosFrequencia.length === 0) { %>
             <div style="text-align:center;padding:30px;color:var(--texto2)">Nenhum diretivo na turma</div>
           <% } %>
@@ -360,14 +403,15 @@
           <% membrosFrequencia.forEach(m => {
             const pct = m.total_atividades > 0 ? Math.round((m.presencas / m.total_atividades) * 100) : 0;
             const faltas = m.total_atividades - m.presencas;
+            const cor = pct >= 75 ? 'apto' : pct >= 50 ? 'risco' : 'inapto';
             const badgeBg = pct >= 75 ? '#dcfce7' : pct >= 50 ? '#fef3c7' : '#fee2e2';
             const badgeCor = pct >= 75 ? '#166534' : pct >= 50 ? '#92400e' : '#991b1b';
           %>
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--borda);gap:10px;flex-wrap:wrap">
+          <div data-freq-status="<%= cor %>" style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--borda);gap:10px;flex-wrap:wrap;cursor:pointer" onclick="abrirDetalheFreq(<%= m.membro_id %>)">
             <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:0">
               <div class="avatar" style="width:34px;height:34px;font-size:11px;flex-shrink:0"><%= m.nome.substring(0,2).toUpperCase() %></div>
               <div>
-                <div style="font-size:13.5px;font-weight:600"><%= m.nome %></div>
+                <div style="font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:6px"><%= m.nome %> <span style="font-size:10px;color:var(--texto2);background:var(--fundo);border:1px solid var(--borda);border-radius:4px;padding:1px 5px;font-weight:500;flex-shrink:0">ver detalhes</span></div>
                 <div style="font-size:11.5px;color:var(--texto2);margin-top:2px"><%= m.cargo || '' %> · <%= m.presencas %> presenças · <%= faltas %> faltas</div>
               </div>
             </div>
@@ -400,7 +444,7 @@
   <div class="modal">
     <div class="modal-header">
       <span class="modal-titulo">Nova Turma</span>
-      <button class="icon-btn" onclick="fecharModal('modal-turma')">✕</button>
+      <button class="icon-btn" onclick="fecharModal('modal-turma')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <form action="/frequencia-diretivos/turma" method="POST">
       <div style="display:flex;flex-direction:column;gap:14px">
@@ -421,17 +465,22 @@
   <div class="modal">
     <div class="modal-header">
       <span class="modal-titulo">Nova Atividade</span>
-      <button class="icon-btn" onclick="fecharModal('modal-atividade')">✕</button>
+      <button class="icon-btn" onclick="fecharModal('modal-atividade')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <form action="/frequencia-diretivos/atividade" method="POST">
       <div style="display:flex;flex-direction:column;gap:14px">
         <div class="campo">
-          <label class="label">Turma *</label>
-          <select name="turma_id_sel" class="input" required>
+          <label class="label">Turmas * <span style="font-size:11px;color:var(--texto2)">(selecione uma ou mais)</span></label>
+          <div style="display:flex;flex-direction:column;gap:8px;background:var(--fundo);border:1.5px solid var(--borda);border-radius:10px;padding:12px">
             <% turmas.forEach(t => { %>
-              <option value="<%= t.id %>" <%= turmaAtual && turmaAtual.id == t.id ? 'selected' : '' %>><%= t.nome %></option>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500">
+              <input type="checkbox" name="turmas_ids" value="<%= t.id %>"
+                <%= turmaAtual && turmaAtual.id == t.id ? 'checked' : '' %>
+                style="width:16px;height:16px;accent-color:var(--cor-primaria);cursor:pointer">
+              <%= t.nome %>
+            </label>
             <% }) %>
-          </select>
+          </div>
         </div>
         <div class="campo">
           <label class="label">Tipo *</label>
@@ -461,7 +510,7 @@
   <div class="modal">
     <div class="modal-header">
       <span class="modal-titulo">Adicionar Diretivo</span>
-      <button class="icon-btn" onclick="fecharModal('modal-add-membro')">✕</button>
+      <button class="icon-btn" onclick="fecharModal('modal-add-membro')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <form action="/frequencia-diretivos/turma/<%= turmaAtual ? turmaAtual.id : 0 %>/adicionar-membro" method="POST">
       <div style="display:flex;flex-direction:column;gap:14px">
@@ -495,7 +544,7 @@
   <div class="modal" style="max-width:560px">
     <div class="modal-header">
       <span class="modal-titulo">Adicionar diretivos à turma</span>
-      <button class="icon-btn" onclick="fecharModal('modal-add-todos')">✕</button>
+      <button class="icon-btn" onclick="fecharModal('modal-add-todos')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <p style="font-size:13px;color:var(--texto2);margin-bottom:16px">
       Selecione os diretivos para a turma <strong><%= turmaAtual ? turmaAtual.nome : '' %></strong>.
@@ -543,6 +592,25 @@
 <script>
 const turmaAtualId = <%= turmaAtual ? turmaAtual.id : 'null' %>;
 
+// Abrir aba via URL ?tab=
+(function(){
+  var tab = new URLSearchParams(window.location.search).get('tab');
+  if(tab){
+    var tabId = tab.startsWith('tab-') ? tab : 'tab-' + tab;
+    var el = document.getElementById(tabId);
+    var btn = document.querySelector('.freq-tab[data-tab="'+tabId+'"]');
+    if(el){
+      document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('ativo'));
+      document.querySelectorAll('.freq-tab').forEach(b=>b.classList.remove('ativo'));
+      el.classList.add('ativo');
+      if(btn) btn.classList.add('ativo');
+    }
+  }
+})();
+// Listeners das abas
+document.querySelectorAll('.freq-tab[data-tab]').forEach(function(btn){
+  btn.addEventListener('click', function(){ mostrarTab(this.dataset.tab, this); });
+});
 function mostrarTab(tabId, btn) {
   document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('ativo'));
   document.querySelectorAll('.freq-tab').forEach(t => t.classList.remove('ativo'));
@@ -602,6 +670,121 @@ function adicionarTodosSelecionados() {
     alert(selecionados.length + ' diretivo(s) adicionado(s)!');
     location.reload();
   }).catch(() => alert('Erro ao adicionar.'));
+}
+</script>
+
+<!-- Modal Detalhe Frequencia -->
+<div id="modal-freq-detalhe" style="display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,0.5);align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto" onclick="if(event.target===this)fecharModalFreq()">
+  <div style="background:var(--card);border-radius:12px;max-width:520px;width:100%;margin:60px auto 20px;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.3)">
+    <div style="padding:18px 20px;border-bottom:1px solid var(--borda);display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:15px;font-weight:700;font-family:'Outfit',sans-serif" id="modal-freq-nome"></div>
+        <div style="font-size:12px;color:var(--texto2);margin-top:2px">Frequencia por atividade</div>
+      </div>
+      <button onclick="fecharModalFreq()" style="background:none;border:none;cursor:pointer;font-size:24px;color:var(--texto2);line-height:1;padding:0 4px">x</button>
+    </div>
+    <div style="padding:14px 20px;border-bottom:1px solid var(--borda)" id="modal-freq-stats"></div>
+    <div style="padding:12px 20px;max-height:50vh;overflow-y:auto" id="modal-freq-lista"></div>
+  </div>
+</div><script>
+(function(){
+  var _atv=<%- JSON.stringify((atividades||[]).map(function(a){return{nome:a.descricao,data:a.data_atividade,membros:(a.membros||[]).map(function(mb){return{id:mb.diretivo_id||mb.membro_id||mb.id,presente:mb.presente}})}})) %>;
+  var _mfr=<%- JSON.stringify((membrosFrequencia||[]).map(function(m){return{id:m.membro_id,nome:m.nome,presencas:parseInt(m.presencas)||0,total:parseInt(m.total_atividades)||0}})) %>;
+  var porMembro={},infoMembro={};
+  var svgOk='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>';
+  var svgFalta='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
+  var svgChk='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  var svgX='<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+  _atv.forEach(function(a){(a.membros||[]).forEach(function(mb){if(!porMembro[mb.id])porMembro[mb.id]=[];porMembro[mb.id].push({nome:a.nome,data:a.data,presente:mb.presente});});});
+  _mfr.forEach(function(m){infoMembro[m.id]=m;});
+  function _fmt(d){try{return new Date(d).toLocaleDateString('pt-BR',{timeZone:'America/Asuncion',day:'2-digit',month:'2-digit',year:'numeric'});}catch(e){return d||'';}}
+  window.abrirDetalheFreq=function(id){
+    var info=infoMembro[id]||{};
+    var lista=(porMembro[id]||[]).slice().sort(function(a,b){return new Date(b.data)-new Date(a.data);});
+    var pct=info.total>0?Math.round((info.presencas/info.total)*100):0;
+    var faltas=(info.total||0)-(info.presencas||0);
+    var corPct=pct>=75?'#10b981':pct>=50?'#f59e0b':'#ef4444';
+    var bgPct=pct>=75?'#dcfce7':pct>=50?'#fef3c7':'#fee2e2';
+    document.getElementById('modal-freq-nome').textContent=info.nome||'';
+    document.getElementById('modal-freq-stats').innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap"><span style="background:#dcfce7;color:#166534;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700">&#10003; '+(info.presencas||0)+' presen&#231;as</span><span style="background:#fee2e2;color:#991b1b;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700">&#10007; '+faltas+' faltas</span><span style="background:#f1f5f9;color:#475569;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700">'+(info.total||0)+' atividades</span><span style="background:'+bgPct+';color:'+corPct+';border-radius:999px;padding:3px 10px;font-size:13px;font-weight:800">'+pct+'%</span></div>';
+    if(!lista.length){document.getElementById('modal-freq-lista').innerHTML='<p style="text-align:center;padding:24px;color:var(--texto2)">Nenhuma atividade registrada</p>';}
+    else{document.getElementById('modal-freq-lista').innerHTML=lista.map(function(a){return'<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--borda)"><span style="font-size:20px">'+(a.presente?svgOk:svgFalta)+'</span><div style="flex:1"><div style="font-size:13px;font-weight:600;color:var(--texto)">'+a.nome+'</div><div style="font-size:11px;color:var(--texto2);margin-top:2px">'+_fmt(a.data)+'</div></div><span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;'+(a.presente?'background:#dcfce7;color:#166534':'background:#fee2e2;color:#991b1b')+'">'+(a.presente?'PRESENTE':'FALTA')+'</span></div>';}).join('');}
+    document.getElementById('modal-freq-detalhe').style.display='flex';
+  };
+  window.filtrarFreq=function(status,btn){
+    var grp=btn.closest('[data-filter-group]');
+    grp.querySelectorAll('.freq-pill').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    var tab=btn.closest('.tab-content');
+    tab.querySelectorAll('[data-freq-status]').forEach(function(r){
+      r.style.display=(status==='todos'||r.dataset.freqStatus===status)?''  :'none';
+    });
+  };
+  window.fecharModalFreq=function(){document.getElementById('modal-freq-detalhe').style.display='none';};
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')fecharModalFreq();});
+})();
+</script>
+
+<!-- MODAL EDITAR ATIVIDADE -->
+<div class="modal-overlay" id="modal-editar-atividade" style="display:none">
+  <div class="modal" style="max-width:480px">
+    <div style="background:linear-gradient(135deg,#1a3410,#253d18);padding:16px 20px;display:flex;align-items:center;justify-content:space-between">
+      <h3 style="color:#fff;font-size:15px;font-weight:700;margin:0">Editar Atividade</h3>
+      <button class="btn-fechar-modal-editar-dir" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:28px;height:28px;cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center">&times;</button>
+    </div>
+    <form id="form-editar-atividade" action="#" method="POST">
+      <div style="padding:20px;display:flex;flex-direction:column;gap:14px">
+        <div class="campo">
+          <label class="label">Tipo</label>
+          <select name="tipo" id="edit-atv-tipo" class="input">
+            <option>Aula Presencial</option>
+            <option>Aula On-line</option>
+            <option>Reunião</option>
+            <option>Evento</option>
+            <option>Taller</option>
+            <option>Bienvenidas</option>
+            <option>Extensão</option>
+            <option>Expoligas</option>
+            <option>Outro</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label class="label">Nome / Descrição</label>
+          <input name="descricao" id="edit-atv-desc" class="input" required>
+        </div>
+        <div class="campo">
+          <label class="label">Data</label>
+          <input name="data_atividade" id="edit-atv-data" type="date" class="input" required>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-cancelar-editar-dir">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+// Editar atividade — data-attributes para evitar CSP
+document.addEventListener('click', function(e) {
+  var btn = e.target.closest('.btn-editar-atividade-dir');
+  if (btn) {
+    e.stopPropagation();
+    abrirEditarAtividade(btn.dataset.id, btn.dataset.desc, btn.dataset.tipo, btn.dataset.data);
+  }
+  if (e.target.closest('.btn-fechar-modal-editar-dir') || e.target.closest('.btn-cancelar-editar-dir')) {
+    fecharModal('modal-editar-atividade');
+  }
+});
+function abrirEditarAtividade(id, desc, tipo, data) {
+  document.getElementById('form-editar-atividade').action = '/frequencia-diretivos/atividade/' + id + '/editar';
+  document.getElementById('edit-atv-desc').value = desc;
+  document.getElementById('edit-atv-data').value = data;
+  var sel = document.getElementById('edit-atv-tipo');
+  for (var i=0; i<sel.options.length; i++) {
+    if (sel.options[i].value === tipo) { sel.selectedIndex = i; break; }
+  }
+  abrirModal('modal-editar-atividade');
 }
 </script>
 </body>

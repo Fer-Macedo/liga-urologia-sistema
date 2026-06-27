@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Arquivos Financeiros — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin-modern.css">
@@ -301,7 +302,7 @@
             ondrop="dropNaPasta(event,<%= p.id %>)"
             onclick="irPasta(<%= p.id %>)">
             <%= p.nome %>
-            <button class="pasta-del" onclick="event.stopPropagation();deletarPasta(<%= p.id %>,'<%= p.nome %>')">✕</button>
+            <button class="pasta-del" onclick="event.stopPropagation();deletarPasta(<%= p.id %>,'<%= p.nome %>')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
           </div>
           <% renderPastas(ps, p.id, nivel+1); }); }
           renderPastas(pastas, null, 0); %>
@@ -341,8 +342,8 @@
           <!-- Barra seleção múltipla -->
           <div class="barra-selecao" id="barra-selecao">
             <span id="count-selecionados" style="font-weight:600;color:#dc2626">0 selecionados</span>
-            <button class="btn" style="background:#dc2626;color:white;font-size:12px;padding:4px 12px" onclick="deletarSelecionados()">🗑 Excluir selecionados</button>
-            <button class="btn" style="font-size:12px;padding:4px 12px" onclick="limparSelecao()">✕ Cancelar</button>
+            <button class="btn" style="background:#dc2626;color:white;font-size:12px;padding:4px 12px" onclick="deletarSelecionados()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Excluir selecionados</button>
+            <button class="btn" style="font-size:12px;padding:4px 12px" onclick="limparSelecao()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Cancelar</button>
           </div>
 
           <!-- Grid -->
@@ -359,10 +360,10 @@
               ondrop="drop(event,'pasta',<%= p.id %>)"
               onclick="irPasta(<%= p.id %>)">
               <div class="arquivo-acoes">
-                <button class="acao-btn edit" onclick="event.stopPropagation();renomear('pasta',<%= p.id %>,'<%= p.nome %>')">✏️</button>
-                <button class="acao-btn del"  onclick="event.stopPropagation();deletarPasta(<%= p.id %>,'<%= p.nome %>')">🗑</button>
+                <button class="acao-btn edit" onclick="event.stopPropagation();renomear('pasta',<%= p.id %>,'<%= p.nome %>')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                <button class="acao-btn del"  onclick="event.stopPropagation();deletarPasta(<%= p.id %>,'<%= p.nome %>')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
               </div>
-              <div class="arquivo-icon-wrap icon-pasta">📁</div>
+              <div class="arquivo-icon-wrap icon-pasta"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div>
               <div class="arquivo-nome"><%= p.nome %></div>
             </div>
             <% }) %>
@@ -370,7 +371,7 @@
             <!-- Vazio -->
             <% if (arquivos.length === 0 && pastas.filter(p => String(p.pai_id) === String(pastaAtual) || (!p.pai_id && !pastaAtual)).length === 0) { %>
             <div class="af-vazio">
-              <div class="af-vazio-icon">📂</div>
+              <div class="af-vazio-icon"></div>
               <div class="af-vazio-titulo">Pasta vazia</div>
               <div class="af-vazio-sub">Faça upload ou adicione um link do Google Drive</div>
             </div>
@@ -378,12 +379,12 @@
 
             <!-- Arquivos -->
             <% arquivos.forEach(a => {
-              let icon = '📄', iconClass = 'icon-gen', badgeClass = 'badge-upload', badgeText = 'Upload';
-              if (a.tipo === 'google') { icon = '🔗'; iconClass = 'icon-google'; badgeClass = 'badge-google'; badgeText = 'Google'; }
-              else if (a.mimetype && a.mimetype.includes('pdf'))    { icon = '📑'; iconClass = 'icon-pdf'; badgeClass = 'badge-pdf'; badgeText = 'PDF'; }
-              else if (a.mimetype && a.mimetype.includes('image'))  { icon = '🖼️'; iconClass = 'icon-img'; badgeClass = 'badge-img'; badgeText = 'Imagem'; }
-              else if (a.mimetype && (a.mimetype.includes('sheet') || a.mimetype.includes('excel'))) { icon = '📊'; iconClass = 'icon-sheet'; badgeClass = 'badge-sheet'; badgeText = 'Planilha'; }
-              else if (a.mimetype && (a.mimetype.includes('word')  || a.mimetype.includes('document'))) { icon = '📝'; iconClass = 'icon-word'; badgeClass = 'badge-word'; badgeText = 'Word'; }
+              let icon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>', iconClass = 'icon-gen', badgeClass = 'badge-upload', badgeText = 'Upload';
+              if (a.tipo === 'google') { icon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>'; iconClass = 'icon-google'; badgeClass = 'badge-google'; badgeText = 'Google'; }
+              else if (a.mimetype && a.mimetype.includes('pdf'))    { icon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="8" y1="16" x2="12" y2="16"/></svg>'; iconClass = 'icon-pdf'; badgeClass = 'badge-pdf'; badgeText = 'PDF'; }
+              else if (a.mimetype && a.mimetype.includes('image'))  { icon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>️'; iconClass = 'icon-img'; badgeClass = 'badge-img'; badgeText = 'Imagem'; }
+              else if (a.mimetype && (a.mimetype.includes('sheet') || a.mimetype.includes('excel'))) { icon = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>'; iconClass = 'icon-sheet'; badgeClass = 'badge-sheet'; badgeText = 'Planilha'; }
+              else if (a.mimetype && (a.mimetype.includes('word')  || a.mimetype.includes('document'))) { icon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>'; iconClass = 'icon-word'; badgeClass = 'badge-word'; badgeText = 'Word'; }
             %>
             <div class="arquivo-card" id="card-<%= a.id %>"
               draggable="true"
@@ -392,10 +393,10 @@
               ondragend="dragEnd(event)"
               onclick="abrirArquivo(<%= a.id %>)">
               <div class="arquivo-acoes">
-                <button class="acao-btn edit" onclick="event.stopPropagation();renomear('arquivo',<%= a.id %>,'<%= a.nome %>')">✏️</button>
-                <button class="acao-btn del"  onclick="event.stopPropagation();deletarArquivo(<%= a.id %>,'<%= a.nome %>')">🗑</button>
+                <button class="acao-btn edit" onclick="event.stopPropagation();renomear('arquivo',<%= a.id %>,'<%= a.nome %>')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+                <button class="acao-btn del"  onclick="event.stopPropagation();deletarArquivo(<%= a.id %>,'<%= a.nome %>')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                 <% if (a.tipo !== 'google') { %>
-                <a class="acao-btn dl" href="/financeiro-arquivos/<%= a.id %>/download" onclick="event.stopPropagation()">⬇️</a>
+                <a class="acao-btn dl" href="/financeiro-arquivos/<%= a.id %>/download" onclick="event.stopPropagation()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>
                 <% } %>
               </div>
               <div class="arquivo-icon-wrap <%= iconClass %>"><%= icon %></div>
@@ -417,9 +418,9 @@
   <div class="viewer-header">
     <span id="viewer-titulo" style="font-weight:600"></span>
     <div style="display:flex;gap:10px;align-items:center">
-      <a id="viewer-baixar" href="#" target="_blank" style="color:#90cdf4;font-size:13px">⬇️ Baixar</a>
+      <a id="viewer-baixar" href="#" target="_blank" style="color:#90cdf4;font-size:13px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar</a>
       <a id="viewer-link-externo" href="#" target="_blank" style="color:#90cdf4;font-size:13px">↗ Abrir no Google</a>
-      <button onclick="fecharViewer()" style="background:#ef4444;border:none;color:white;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:14px">✕ Fechar</button>
+      <button onclick="fecharViewer()" style="background:#ef4444;border:none;color:white;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:14px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Fechar</button>
     </div>
   </div>
   <div class="viewer-body">
@@ -431,8 +432,8 @@
 <div class="modal-overlay" id="modal-renomear" style="display:none">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-titulo">✏️ Renomear</span>
-      <button class="icon-btn" onclick="fecharModal('modal-renomear')">✕</button>
+      <span class="modal-titulo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Renomear</span>
+      <button class="icon-btn" onclick="fecharModal('modal-renomear')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="campo" style="margin-bottom:16px">
       <label class="label">Novo nome</label>
@@ -440,7 +441,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="fecharModal('modal-renomear')">Cancelar</button>
-      <button class="btn btn-primario" onclick="confirmarRenomear()">✏️ Renomear</button>
+      <button class="btn btn-primario" onclick="confirmarRenomear()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Renomear</button>
     </div>
   </div>
 </div>
@@ -449,8 +450,8 @@
 <div class="modal-overlay" id="modal-pasta" style="display:none">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-titulo">📁 Nova Pasta</span>
-      <button class="icon-btn" onclick="fecharModal('modal-pasta')">✕</button>
+      <span class="modal-titulo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Nova Pasta</span>
+      <button class="icon-btn" onclick="fecharModal('modal-pasta')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <form action="/financeiro-arquivos/pasta" method="POST">
       <input type="hidden" name="pai_id" value="<%= pastaAtual || '' %>">
@@ -460,7 +461,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-pasta')">Cancelar</button>
-        <button type="submit" class="btn btn-primario">📁 Criar pasta</button>
+        <button type="submit" class="btn btn-primario"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg> Criar pasta</button>
       </div>
     </form>
   </div>
@@ -471,7 +472,7 @@
   <div class="modal">
     <div class="modal-header">
       <span class="modal-titulo">⬆️ Upload de Arquivo</span>
-      <button class="icon-btn" onclick="fecharModal('modal-upload')">✕</button>
+      <button class="icon-btn" onclick="fecharModal('modal-upload')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <form action="/financeiro-arquivos/upload" method="POST" enctype="multipart/form-data">
       <input type="hidden" name="pasta_id" value="<%= pastaAtual || '' %>">
@@ -499,8 +500,8 @@
 <div class="modal-overlay" id="modal-google" style="display:none">
   <div class="modal">
     <div class="modal-header">
-      <span class="modal-titulo">🔗 Adicionar Link Google</span>
-      <button class="icon-btn" onclick="fecharModal('modal-google')">✕</button>
+      <span class="modal-titulo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Adicionar Link Google</span>
+      <button class="icon-btn" onclick="fecharModal('modal-google')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <form action="/financeiro-arquivos/google" method="POST">
       <input type="hidden" name="pasta_id" value="<%= pastaAtual || '' %>">
@@ -518,19 +519,19 @@
         <div class="campo">
           <label class="label">Tipo</label>
           <select name="google_tipo" class="input">
-            <option value="docs">📝 Google Docs</option>
-            <option value="sheets">📊 Google Sheets</option>
-            <option value="slides">📑 Google Slides</option>
-            <option value="drive">📁 Google Drive (arquivo)</option>
+            <option value="docs">Google Docs</option>
+            <option value="sheets">Google Sheets</option>
+            <option value="slides"> Google Slides</option>
+            <option value="drive"> Google Drive (arquivo)</option>
           </select>
         </div>
         <div id="preview-embed" style="display:none;background:var(--fundo);border-radius:8px;padding:10px;font-size:12px;color:var(--texto2)">
-          ✅ Link válido do Google detectado
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Link válido do Google detectado
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-google')">Cancelar</button>
-        <button type="submit" class="btn btn-primario" style="background:#4285f4">🔗 Adicionar</button>
+        <button type="submit" class="btn btn-primario" style="background:#4285f4"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Adicionar</button>
       </div>
     </form>
   </div>

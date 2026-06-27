@@ -399,25 +399,175 @@ aside.sidebar {
   font-weight: 700 !important;
 }
 
-/* RESPONSIVO - sidebar collapsed em mobile */
+/* RESPONSIVO - sidebar off-canvas em mobile */
+.btn-hamburger { display: none; }
+.sidebar-overlay  { display: none; }
+
 @media (max-width: 768px) {
-  .layout,
-  body > .layout,
-  div.layout {
-    padding-left: 64px !important;
+  .layout, body > .layout, div.layout {
+    padding-left: 0 !important;
   }
-  .sidebar,
-  aside.sidebar {
-    width: 64px !important;
-    min-width: 64px !important;
-    max-width: 64px !important;
+  .sidebar, aside.sidebar {
+    transform: translateX(-250px) !important;
+    transition: transform 0.25s ease !important;
+    z-index: 1050 !important;
+    width: 240px !important;
+    min-width: 240px !important;
+    max-width: 240px !important;
   }
-  .sidebar-brand-text,
-  .sidebar-user-info,
-  .nav-group-title { display: none !important; }
-  .sidebar-brand-logo { margin: 0 auto; }
-  .sidebar .nav-item span:not(.nav-icon) { display: none !important; }
-  .sidebar .nav-item { justify-content: center !important; }
-  .content { padding: 16px !important; }
-  .topbar { padding: 14px 16px !important; }
+  .sidebar.mobile-aberta, aside.sidebar.mobile-aberta {
+    transform: translateX(0) !important;
+    box-shadow: 6px 0 32px rgba(0,0,0,0.35) !important;
+  }
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 1040;
+  }
+  .sidebar-overlay.ativo { display: block; }
+  .btn-hamburger {
+    display: flex !important;
+    position: fixed;
+    top: 14px;
+    left: 14px;
+    z-index: 1060;
+    background: #1a3d2b;
+    color: #fff;
+    border: none;
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 22px;
+    line-height: 1;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+  }
+  .topbar { display: none !important; }
+  .content, .page-content, main {
+    padding: 60px 12px 20px !important;
+  }
 }
+
+/* ── Fonte global dos modais ── */
+.modal-titulo {
+  font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 18px !important;
+  letter-spacing: -0.3px !important;
+}
+.modal-header {
+  font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif !important;
+}
+.modal {
+  font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif !important;
+}
+.label {
+  font-family: 'Plus Jakarta Sans', 'Outfit', sans-serif !important;
+  font-weight: 600 !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LAURO SISTEMA — PADRÃO GLOBAL: CANTOS RETOS + HOVER
+   Carregado por último — sobrescreve tudo anterior
+═══════════════════════════════════════════════════════════════ */
+.btn, a.btn, button.btn,
+button[type="submit"], button[type="button"],
+.btn-primario, .btn-outline, .btn-cancelar, .btn-salvar,
+input:not([type="radio"]):not([type="checkbox"]),
+select, textarea, .input,
+.card, .modal-grande, .modal-box, .modal-ver, .modal,
+.filtros-card, .table-wrap,
+.badge-ativo, .badge-inativo, .resultado-badge, .tag-semestre,
+.stat-mini, .notif-card, .ligante-card,
+.cal-grid-wrap, .cal-lista,
+.preview-table th:first-child, .preview-table th:last-child,
+.ical-banner, .ical-btn, .cal-nav-btn, .hoje-btn,
+.cal-tab, .cal-tabs, .fil-btn,
+.kbb, .kb-btn, .btn-xs, .btn-send, .btn-env,
+.pag-btn, .rpb { border-radius: 0 !important; }
+
+.btn, a.btn, button.btn,
+.btn-primario, .btn-cancelar, .btn-salvar,
+.fil-btn, .ical-btn, .btn-xs, .btn-send {
+  transition: transform .12s ease, box-shadow .12s ease,
+    background .12s ease, color .12s ease,
+    border-color .12s ease, opacity .12s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+.btn:hover, a.btn:hover, button.btn:hover,
+.btn-primario:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,.18) !important;
+}
+.btn-outline:hover, .btn-cancelar:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,.1) !important;
+}
+
+/* === LOGO SIDEBAR SEMPRE CIRCULAR === */
+.sidebar-brand-logo,
+.sidebar-brand-logo img,
+aside.sidebar .sidebar-brand-logo,
+aside.sidebar .sidebar-brand-logo img { border-radius: 50% !important; overflow: hidden; }
+
+/* === DASHBOARD — TRAÇOS RETOS GLOBAL === */
+.main .card,
+.main [class*="card"],
+.main [class*="stat"],
+.main [class*="chart"],
+.main [class*="notif"],
+.main [class*="evento"],
+.main [class*="atividade"],
+.main [class*="badge"],
+.main [class*="btn"],
+.main [class*="modal"],
+.main input,
+.main select,
+.main textarea,
+.main table,
+.main thead,
+.main th,
+.main td { border-radius: 0 !important; }
+
+
+/* Tabelas scrollaveis em mobile — cobre todas as paginas */
+@media (max-width: 768px) {
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+}
+/* Tabelas com scroll horizontal em todas as telas */
+.table-wrap, .tabela-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+/* Containers de tabela rolam se necessario */
+.content .table-card, main .table-card, .content .card-body {
+  overflow-x: auto;
+}
+/* Tabelas preenchem o container — nunca display:block */
+.content table, main table, table.tabela {
+  display: table !important;
+  width: 100% !important;
+  min-width: 0;
+}
+
+/* ─── MARKETING TABS FIX ─── */
+.mkt-section { display: none !important; }
+.mkt-section.ativo { display: block !important; }
+
+/* MARKETING TABS FIX v2 */
+.mkt-section { display: none !important; }
+.mkt-section.ativo { display: block !important; }
+
+/* MARKETING TABS FIX v2 */
+.mkt-section { display: none !important; }
+.mkt-section.ativo { display: block !important; }

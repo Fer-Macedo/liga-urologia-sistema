@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <title>Cientifico — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%=config.org_cor||'#1a56db'%>}
+    .pg-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:28px;gap:16px;flex-wrap:wrap}
+    .pg-header h1{font-size:22px;font-weight:700;color:var(--texto);margin:0}
+    .pg-header p{font-size:13px;color:var(--texto2);margin:4px 0 0}
+    .stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+    .stat-card{background:var(--card);border:1px solid var(--borda);padding:18px 20px;position:relative;overflow:hidden}
+    .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
+    .stat-card.verde::before{background:#10b981}.stat-card.azul::before{background:#1a56db}
+    .stat-card.laranja::before{background:#f59e0b}.stat-card.roxo::before{background:#7c3aed}
+    .stat-label{font-size:11px;color:var(--texto2);text-transform:uppercase;letter-spacing:.8px;font-weight:600}
+    .stat-val{font-size:28px;font-weight:800;color:var(--texto);margin-top:6px;font-family:'IBM Plex Mono',monospace}
+    .proj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px}
+    .proj-card{background:var(--card);border:1px solid var(--borda);padding:22px}
+    .proj-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px}
+    .proj-titulo{font-size:15px;font-weight:700;color:var(--texto);line-height:1.3}
+    .proj-desc{font-size:12.5px;color:var(--texto2);margin-top:4px}
+    .badge{display:inline-flex;align-items:center;padding:3px 10px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;border:1px solid;white-space:nowrap}
+    .badge-aberto{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
+    .badge-encerrado{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
+    .badge-revisao{background:#fff7ed;color:#c2410c;border-color:#fed7aa}
+    .proj-meta{display:flex;gap:16px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px solid var(--borda)}
+    .proj-meta span{font-size:12px;color:var(--texto2);display:flex;align-items:center;gap:5px}
+    .proj-acoes{display:flex;gap:8px;margin-top:16px}
+    .btn{padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--borda);background:var(--card);color:var(--texto);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:7px;border-radius:0}
+    .btn:hover{background:var(--hover)}
+    .btn.pri{background:var(--cor-primaria);color:#fff;border-color:var(--cor-primaria)}
+    .btn.pri:hover{opacity:.9}
+    .btn-sm{padding:6px 12px;font-size:12px}
+    .empty{text-align:center;padding:60px 20px;color:var(--texto2)}
+    .empty h3{font-size:16px;font-weight:600;color:var(--texto);margin:12px 0 8px}
+    .alert-ok{padding:12px 16px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-size:13px;margin-bottom:20px}
+    .alert-err{padding:12px 16px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:13px;margin-bottom:20px}
+    @media(max-width:640px){.stat-row{grid-template-columns:repeat(2,1fr)}.proj-grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<%- include('../../partials/sidebar',{paginaAtual:'cientifico',config,usuario,permissoesAtivas:permissoesAtivas||[]}) %>
+<div style="margin-left:240px;padding:32px 36px;min-height:100vh;background:var(--fundo)">
+<%- include('../../partials/_notificacoes') %>
+<%if(msg&&msg.length){%><div class="alert-ok"><%=msg[0]%></div><%}%>
+<%if(erro&&erro.length){%><div class="alert-err"><%=erro[0]%></div><%}%>
+<div style="background:#0C231B;border:1px solid #1a3d2e;padding:14px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+  <div>
+    <div style="font-size:11px;font-weight:700;color:#5E9E80;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">Portal Externo dos Membros</div>
+    <div style="font-size:13px;color:#CFE0D7">Compartilhe este link com os membros dos grupos para que eles acessem o portal cientifico</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+    <code style="background:#0a1f15;border:1px solid #1a3d2e;padding:7px 14px;font-size:13px;color:#4ade80;font-family:'IBM Plex Mono',monospace" id="portal-url"><%=appUrl%>/portal/login</code>
+    <button onclick="navigator.clipboard.writeText('<%=appUrl%>/portal/login');this.textContent='Copiado!';setTimeout(()=>this.textContent='Copiar link',2000)" style="padding:7px 14px;background:#0F6E56;color:#fff;border:none;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit">Copiar link</button>
+    <a href="/portal/login" target="_blank" style="padding:7px 14px;background:transparent;color:#4ade80;border:1px solid #1a3d2e;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 0 1 2h3"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Abrir portal</a>
+  </div>
+</div>
+<div class="pg-header">
+  <div><h1>Cientifico</h1><p>Projetos, grupos e trabalhos cientificos da liga</p></div>
+  <a href="/cientifico/novo" class="btn pri">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+    Novo Projeto
+  </a>
+</div>
+<div class="stat-row">
+  <div class="stat-card verde"><div class="stat-label">Projetos Abertos</div><div class="stat-val"><%=stats.abertos%></div></div>
+  <div class="stat-card azul"><div class="stat-label">Total de Grupos</div><div class="stat-val"><%=stats.grupos%></div></div>
+  <div class="stat-card laranja"><div class="stat-label">Em Revisao</div><div class="stat-val"><%=stats.em_revisao%></div></div>
+  <div class="stat-card roxo"><div class="stat-label">Aprovados</div><div class="stat-val"><%=stats.aprovados%></div></div>
+</div>
+<%if(!projetos||projetos.length===0){%>
+<div class="empty">
+  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3H5a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-5-5H9z"/><polyline points="14 2 14 7 20 7"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+  <h3>Nenhum projeto criado</h3>
+  <p>Crie o primeiro projeto cientifico para comecar a organizar grupos e trabalhos.</p>
+  <a href="/cientifico/novo" class="btn pri" style="margin-top:16px;display:inline-flex">Criar primeiro projeto</a>
+</div>
+<%}else{%>
+<div class="proj-grid">
+<%projetos.forEach(function(p){%>
+<div class="proj-card">
+  <div class="proj-top">
+    <div>
+      <div class="proj-titulo"><%=p.titulo%></div>
+      <%if(p.descricao){%><div class="proj-desc"><%=p.descricao.substring(0,90)%><%=p.descricao.length>90?'...':''%></div><%}%>
+    </div>
+    <span class="badge <%=p.status==='aberto'?'badge-aberto':p.status==='encerrado'?'badge-encerrado':'badge-revisao'%>"><%=p.status%></span>
+  </div>
+  <div class="proj-meta">
+    <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><%=p.total_grupos||0%> grupo<%=p.total_grupos!=1?'s':''%></span>
+    <%if(p.prazo){%><span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Prazo: <%=new Date(p.prazo).toLocaleDateString('pt-BR')%></span><%}%>
+  </div>
+  <div class="proj-acoes">
+    <a href="/cientifico/projeto/<%=p.id%>" class="btn btn-sm pri">Ver projeto</a>
+    <a href="/cientifico/projeto/<%=p.id%>/editar" class="btn btn-sm">Editar</a>
+  </div>
+</div>
+<%})%>
+</div>
+<%}%>
+</div>
+</body></html>

@@ -1,0 +1,395 @@
+<%
+var cfg = (typeof config !== 'undefined' && config) ? config : {};
+var orgNome = cfg.org_nome || 'LAURO';
+var pp = (typeof p !== 'undefined' && p) ? p : {};
+var isNovo = !pp.id;
+var ehEnsino = tipo === 'ensino';
+var fmtIn = function(d){ try { return d ? new Date(d).toISOString().slice(0,10) : ''; } catch(e){ return ''; } };
+var objEsp = [];
+try { objEsp = Array.isArray(pp.objetivos_especificos) ? pp.objetivos_especificos : JSON.parse(pp.objetivos_especificos||'[]'); } catch(e){}
+if (!objEsp.length) objEsp = [''];
+var pubAlvo = [];
+try { pubAlvo = Array.isArray(pp.publico_alvo) ? pp.publico_alvo : JSON.parse(pp.publico_alvo||'[]'); } catch(e){}
+var temario = [];
+try { temario = Array.isArray(pp.temario) ? pp.temario : JSON.parse(pp.temario||'[]'); } catch(e){}
+if (!temario.length) temario = [{}];
+var integrantes = [];
+try { integrantes = Array.isArray(pp.integrantes) ? pp.integrantes : JSON.parse(pp.integrantes||'[]'); } catch(e){}
+var cron = pp.cronograma || [];
+if (!cron.length) cron = [{}];
+%>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= isNovo ? 'Nuevo proyecto' : 'Editar proyecto' %> — <%= orgNome %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --ink:#10201A; --ink-soft:#3A4A43; --ink-faint:#74837C;
+      --line:#E2E6E1; --line-strong:#CDD4CE; --paper:#F2F4F0; --card:#FFFFFF;
+      --green-700:#15402F; --green-600:#1C5A41; --accent:#2FA873;
+      --red:#C0392B; --red-bg:#FBE9E7;
+      --shadow-md:0 12px 28px -14px rgba(16,32,26,.28);
+    }
+    body{font-family:'IBM Plex Sans',system-ui,sans-serif;color:var(--ink);background:var(--paper)}
+    #pj-page{margin-left:240px;min-height:100vh;padding:28px 32px;max-width:1160px}
+    @media(max-width:900px){#pj-page{margin-left:0;padding:18px 14px}}
+    h1{font-family:'Archivo',sans-serif;font-size:22px;font-weight:800;color:var(--green-700);margin-bottom:4px}
+    .sub{font-size:13px;color:var(--ink-faint);margin-bottom:22px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:14px;margin-bottom:16px;overflow:hidden}
+    .card-h{padding:14px 20px;border-bottom:1px solid var(--line);background:#F8FAF6;font-size:13px;font-weight:700;color:var(--green-700);text-transform:uppercase;letter-spacing:.04em}
+    .card-b{padding:20px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .grid .full{grid-column:1/-1}
+    @media(max-width:760px){.grid{grid-template-columns:1fr}}
+    label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);margin-bottom:5px}
+    label .req{color:var(--red)}
+    input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--line-strong);border-radius:8px;font-family:inherit;font-size:13.5px;background:#fff;color:var(--ink)}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+    textarea{resize:vertical}
+    .hint{font-size:11.5px;color:var(--ink-faint);margin-top:4px}
+    .guia{background:#F4F9F6;border:1px solid #CDE5D8;border-radius:9px;padding:11px 14px;font-size:12.5px;line-height:1.6;color:var(--ink-soft);margin-bottom:16px}
+    .guia strong{color:var(--green-700)}
+    .check-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+    .check-row input{width:auto}
+    .check-row label{margin:0;font-weight:400;font-size:13px}
+    .btn{display:inline-flex;align-items:center;gap:7px;padding:10px 18px;border:none;border-radius:8px;cursor:pointer;font-family:inherit;font-size:14px;font-weight:600;text-decoration:none;transition:all .15s}
+    .btn-pri{background:var(--green-600);color:#fff}
+    .btn-pri:hover{background:var(--green-700)}
+    .btn-sec{background:var(--card);color:var(--ink-soft);border:1px solid var(--line-strong)}
+    .btn-sm{padding:7px 13px;font-size:12.5px}
+    .btn-del{background:var(--red-bg);color:var(--red);border:none;padding:8px 11px;border-radius:7px;cursor:pointer;font-size:13px}
+    .item-row{display:flex;gap:8px;margin-bottom:8px;align-items:flex-start}
+    .item-row .num{flex-shrink:0;width:28px;height:38px;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--ink-faint);font-weight:600}
+    .tem-item{border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:10px;background:#FBFCFA}
+    .tem-grid{display:grid;grid-template-columns:2fr 1fr auto;gap:8px;margin-bottom:8px}
+    table.cron{width:100%;border-collapse:collapse;margin-bottom:10px}
+    table.cron th{font-size:11px;text-transform:uppercase;color:var(--ink-faint);text-align:left;padding:4px 6px}
+    table.cron td{padding:3px 4px}
+    table.cron input{padding:8px 9px;font-size:12.5px}
+    .acoes-fim{display:flex;gap:10px;flex-wrap:wrap;padding:18px 0 40px}
+  </style>
+</head>
+<body>
+<%- include('../partials/sidebar', { paginaAtual: tipo }) %>
+<div id="pj-page">
+
+  <h1><%= isNovo ? 'Nuevo proyecto' : 'Editar proyecto' %> de <%= ehEnsino ? 'Enseñanza' : 'Extensión' %></h1>
+  <p class="sub">Complete los campos según el modelo oficial de la UCP. Los campos con <span style="color:var(--red)">*</span> son obligatorios.</p>
+
+  <form method="POST" action="/projetos/salvar" id="form-pj">
+    <input type="hidden" name="tipo" value="<%= tipo %>">
+    <% if (!isNovo) { %><input type="hidden" name="id" value="<%= pp.id %>"><% } %>
+
+    <div class="card">
+      <div class="card-h">1. Identificación</div>
+      <div class="card-b">
+        <div class="guia"><strong>Modelo UCP:</strong> El nombre del proyecto debe comenzar con una palabra que refleje el formato del evento, como <strong>Clase, Congreso, Taller o Seminario</strong>. En el local, indique si será presencial (nombre del espacio) o virtual (plataforma como Zoom, Google Meet, etc.).</div>
+        <div class="grid">
+        <div class="full">
+          <label>Nombre del proyecto <span class="req">*</span></label>
+          <input type="text" name="nome" required value="<%= pp.nome || '' %>"
+            placeholder="Ej.: Clase – Hiperplasia Prostática Benigna">
+          <div class="hint">Comenzar con el formato: Clase, Taller, Seminario, Congreso…</div>
+        </div>
+        <div>
+          <label>Fecha de inicio <span class="req">*</span></label>
+          <input type="date" name="data_execucao_inicio" required value="<%= fmtIn(pp.data_execucao_inicio) %>">
+        </div>
+        <div>
+          <label>Fecha de finalización</label>
+          <input type="date" name="data_execucao_fim" value="<%= fmtIn(pp.data_execucao_fim) %>">
+        </div>
+        <div>
+          <label>Hora inicio</label>
+          <input type="time" name="horario_inicio" value="<%= pp.horario_inicio || '' %>">
+        </div>
+        <div>
+          <label>Hora fin</label>
+          <input type="time" name="horario_fim" value="<%= pp.horario_fim || '' %>">
+        </div>
+        <div>
+          <label>Modalidad</label>
+          <select name="modalidade" onchange="document.getElementById('plat-box').style.display = this.value==='presencial' ? 'none' : 'block'">
+            <option value="presencial" <%= (pp.modalidade==='presencial'||!pp.modalidade)?'selected':'' %>>Presencial</option>
+            <option value="virtual" <%= pp.modalidade==='virtual'?'selected':'' %>>Virtual</option>
+            <option value="hibrido" <%= pp.modalidade==='hibrido'?'selected':'' %>>Híbrido</option>
+          </select>
+        </div>
+        <div>
+          <label>Local <span class="req">*</span></label>
+          <input type="text" name="local" required value="<%= pp.local || '' %>"
+            placeholder="Ej.: Aula 201 UCP / Google Meet">
+        </div>
+        <div id="plat-box" style="<%= (pp.modalidade==='presencial'||!pp.modalidade)?'display:none':'' %>">
+          <label>Enlace de la plataforma</label>
+          <input type="text" name="plataforma" value="<%= pp.plataforma || '' %>" placeholder="https://meet.google.com/…">
+        </div>
+        <% if (!ehEnsino) { %>
+        <div class="full">
+          <label>Lugar de ejecución (comunidad) <span class="req">*</span></label>
+          <input type="text" name="lugar_execucao" value="<%= pp.lugar_execucao || '' %>"
+            placeholder="Ej.: Barrio San Miguel – Ciudad del Este">
+        </div>
+        <% } %>
+        <div>
+          <label>Docente responsable <span class="req">*</span></label>
+          <input type="text" name="docente_responsavel" required value="<%= pp.docente_responsavel || '' %>">
+        </div>
+        <div>
+          <label>Docente orientador</label>
+          <input type="text" name="docente_orientador" value="<%= pp.docente_orientador || '' %>">
+        </div>
+      </div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">2. Antecedentes y justificación</div>
+      <div class="card-b">
+        <% if (ehEnsino) { %>
+        <div class="guia"><strong>Modelo UCP:</strong> Esta sección sirve para contextualizar el tema, exponer su relevancia y explicar por qué se realiza el proyecto. Los <strong>antecedentes</strong> ofrecen un resumen de investigaciones previas y del conocimiento existente. La <strong>justificación</strong> detalla la importancia del proyecto, destacando la necesidad de contribuir a nuevas soluciones, profundizar el conocimiento o mejorar prácticas actuales. <strong>Mínimo 3 párrafos con las debidas referencias en Vancouver.</strong></div>
+        <% } else { %>
+        <div class="guia"><strong>Modelo UCP:</strong> Explique la importancia del proyecto para la comunidad, detallando: <strong>Descripción del proyecto</strong> (en qué consiste, objetivo principal y actividades); <strong>Ubicación</strong> (características geográficas, sociales y económicas de la comunidad); <strong>Necesidades de la comunidad</strong> (acceso limitado a servicios médicos, falta de educación en salud, etc.); <strong>Impacto esperado</strong> (cómo beneficiará a la comunidad); <strong>Público objetivo</strong> (número estimado de beneficiarios y sus características); y <strong>Relevancia</strong> (por qué es necesario y cómo se alinea con la responsabilidad social).</div>
+        <% } %>
+        <textarea name="antecedentes" rows="8" placeholder="Mínimo 3 párrafos con referencias en formato Vancouver…"><%= pp.antecedentes || '' %></textarea>
+        <div class="hint">Contextualice el tema, exponga su relevancia y justifique el proyecto. Referencias Vancouver al final del documento.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">3. Objetivos</div>
+      <div class="card-b">
+        <div class="guia"><strong>Modelo UCP — Objetivo general:</strong> declaración clara y precisa del propósito principal. Sea claro y conciso, utilice <strong>verbos en infinitivo</strong> ("analizar", "evaluar", "investigar", "describir", "determinar") y enfóquese en el alcance del proyecto.<br><strong>Objetivos específicos:</strong> pasos concretos para alcanzar el objetivo general. Utilice verbos en infinitivo ("identificar", "determinar", "analizar", "comparar"), sea concreto y detallado, y asegúrese de que sean <strong>alcanzables y medibles</strong>.</div>
+        <div style="margin-bottom:16px">
+          <label>Objetivo general <span class="req">*</span></label>
+          <textarea name="objetivo_geral" rows="3" required placeholder="Comenzar con verbo en infinitivo: analizar, evaluar, describir…"><%= pp.objetivo_geral || '' %></textarea>
+        </div>
+        <label>Objetivos específicos</label>
+        <div id="obj-list">
+          <% objEsp.forEach(function(o, i){ %>
+          <div class="item-row">
+            <div class="num"><%= i+1 %></div>
+            <input type="text" name="objetivos_especificos" value="<%= o %>" placeholder="Identificar / Determinar / Analizar…">
+            <button type="button" class="btn-del" onclick="this.parentElement.remove();renum()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+          </div>
+          <% }) %>
+        </div>
+        <button type="button" class="btn btn-sec btn-sm" onclick="addObj()">+ Agregar objetivo</button>
+      </div>
+    </div>
+
+    <% if (ehEnsino) { %>
+    <div class="card">
+      <div class="card-h">4. Temario y programa</div>
+      <div class="card-b">
+        <div class="guia"><strong>Modelo UCP:</strong> Detalle claramente los temas que se abordarán, estructurados de forma coherente y progresiva. Para cada segmento incluya: <strong>Título</strong> de la charla/taller/workshop; <strong>Descripción del contenido</strong> (puntos principales); <strong>Duración estimada</strong>; <strong>Nombre del ponente</strong> (cargo, especialización); y <strong>Perfil del ponente</strong> (trayectoria y credenciales en relación con el tema).</div>
+        <div id="tem-list">
+          <% temario.forEach(function(t){ %>
+          <div class="tem-item">
+            <div class="tem-grid">
+              <input type="text" name="temario_titulo" value="<%= t.titulo || '' %>" placeholder="Título de la charla / taller">
+              <input type="number" name="temario_duracao" value="<%= t.duracao_min || '' %>" placeholder="Duración (min)">
+              <button type="button" class="btn-del" onclick="this.closest('.tem-item').remove()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:8px;margin-bottom:8px">
+              <input type="text" name="temario_ponente" value="<%= t.ponente || '' %>" placeholder="Nombre del ponente">
+              <input type="text" name="temario_perfil" value="<%= t.perfil_ponente || '' %>" placeholder="Cargo / Especialización del ponente">
+            </div>
+            <textarea name="temario_descricao" rows="2" placeholder="Descripción breve del contenido"><%= t.descricao || '' %></textarea>
+          </div>
+          <% }) %>
+        </div>
+        <button type="button" class="btn btn-sec btn-sm" onclick="addTem()">+ Agregar disertante / tema</button>
+      </div>
+    </div>
+    <% } else { %>
+    <div class="card">
+      <div class="card-h">4. Actividades por realizar</div>
+      <div class="card-b">
+        <div class="guia"><strong>Modelo UCP:</strong> Detalle todas las acciones específicas, desde la organización hasta la ejecución final: <strong>1) Planificación y organización previa</strong> (coordinación con organizadores y profesionales, recursos materiales, logística, definición de roles); <strong>2) Desarrollo de las actividades</strong> — ejemplos: atención médica (tipo de servicios), distribución de canastas básicas (cantidad, productos, criterios de selección), charlas educativas (temas y responsables), talleres y capacitaciones, acciones de sensibilización (folletos, actividades interactivas); <strong>3) Evaluación de resultados</strong> (encuestas de satisfacción, observación directa, entrevistas a beneficiarios).</div>
+        <textarea name="atividades_realizar" rows="8" placeholder="1. Planificación y organización previa…&#10;2. Desarrollo de las actividades (atención médica, charlas educativas, distribución de canastas, talleres)…&#10;3. Evaluación de resultados…"><%= pp.atividades_realizar || '' %></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h">5. Integrantes del proyecto</div>
+      <div class="card-b">
+        <div class="guia"><strong>Modelo UCP:</strong> Indique el <strong>responsable principal</strong> del proyecto y el <strong>equipo de trabajo</strong> con sus funciones (médicos y alumnos). Escriba un integrante por línea, con su función.</div>
+        <textarea name="integrantes" rows="5" placeholder="Dr. Nombre Apellido - Responsable principal&#10;Nombre Apellido - Coordinación de logística&#10;Nombre Apellido - Atención al público"><%= integrantes.join('\n') %></textarea>
+      </div>
+    </div>
+    <% } %>
+
+    <div class="card">
+      <div class="card-h"><%= ehEnsino ? "5" : "6" %>. Público objetivo y metodología</div>
+      <div class="card-b">
+        <div class="guia"><strong>Modelo UCP — Público objetivo:</strong> especifique quiénes están invitados a participar (estudiantes de la liga, otros estudiantes de la UCP, estudiantes de otras universidades, profesionales del área, etc.).<br><strong>Metodología:</strong> defina cómo se presentarán los contenidos: <strong>formato de presentación</strong> (presentaciones multimedia, videos, conferencias, debates interactivos, sesiones de preguntas y respuestas); <strong>recursos didácticos</strong> (videos, artículos, cuestionarios, maquetas, maniquíes); y <strong>evaluación</strong> (pruebas, participación o retroalimentación práctica).<% if (ehEnsino) { %><br><strong>Inscripción:</strong> detalle el proceso, las fechas de inicio y cierre del período, y si existirá costo asociado (especificar el monto).<% } %></div>
+        <div class="grid">
+        <div>
+          <label>Público objetivo</label>
+          <% var pubs = [['ligantes','Ligantes LAURO'],['ucp','Estudiantes UCP'],['otras_universidades','Estudiantes de otras universidades'],['profesionales','Profesionales del área'],['comunidad','Comunidad general']]; %>
+          <% pubs.forEach(function(pu){ %>
+          <div class="check-row">
+            <input type="checkbox" name="publico_alvo" value="<%= pu[0] %>" id="pub-<%= pu[0] %>"
+              <%= pubAlvo.indexOf(pu[0])>=0 ? 'checked' : '' %>>
+            <label for="pub-<%= pu[0] %>"><%= pu[1] %></label>
+          </div>
+          <% }) %>
+        </div>
+        <% if (ehEnsino) { %>
+        <div>
+          <label>Inscripción</label>
+          <div class="check-row">
+            <input type="radio" name="inscricao_gratuita" value="true" id="ig1"
+              <%= pp.inscricao_gratuita !== false ? 'checked' : '' %>
+              onchange="document.getElementById('val-box').style.display='none'">
+            <label for="ig1">Gratuita</label>
+          </div>
+          <div class="check-row">
+            <input type="radio" name="inscricao_gratuita" value="false" id="ig2"
+              <%= pp.inscricao_gratuita === false ? 'checked' : '' %>
+              onchange="document.getElementById('val-box').style.display='block'">
+            <label for="ig2">Paga</label>
+          </div>
+          <div id="val-box" style="<%= pp.inscricao_gratuita === false ? '' : 'display:none' %>;margin-top:8px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div>
+                <label style="font-size:11.5px">Valor en Guaraníes (Gs.)</label>
+                <input type="number" step="0.01" name="inscricao_valor" value="<%= pp.inscricao_valor || '' %>" placeholder="Gs.">
+              </div>
+              <div>
+                <label style="font-size:11.5px">Valor en Reales (R$)</label>
+                <input type="number" step="0.01" name="inscricao_valor_brl" value="<%= pp.inscricao_valor_brl || '' %>" placeholder="R$">
+              </div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">
+            <div>
+              <label style="font-size:11.5px">Inicio inscripciones</label>
+              <input type="date" name="inscricao_inicio" value="<%= fmtIn(pp.inscricao_inicio) %>">
+            </div>
+            <div>
+              <label style="font-size:11.5px">Cierre inscripciones</label>
+              <input type="date" name="inscricao_fim" value="<%= fmtIn(pp.inscricao_fim) %>">
+            </div>
+          </div>
+        </div>
+        <% } %>
+        <div class="full">
+          <label>Metodología</label>
+          <textarea name="metodologia" rows="4" placeholder="Formato de presentación, recursos didácticos, dinámicas de participación, forma de evaluación…"><%= pp.metodologia || '' %></textarea>
+        </div>
+      </div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><%= ehEnsino ? "6" : "7" %>. Cronograma</div>
+      <div class="card-b">
+        <div class="guia"><strong>Modelo UCP:</strong> Siga el modelo oficial: actividad, <%= ehEnsino ? "disertante" : "responsable" %>, fecha, hora de inicio, hora de término y hora total (hora reloj). El total de <strong>horas complementares del proyecto</strong> se calcula automáticamente al sumar las filas.</div>
+        <table class="cron">
+          <thead><tr>
+            <th style="width:28%">Actividad</th>
+            <th style="width:20%"><%= ehEnsino ? 'Disertante' : 'Responsable' %></th>
+            <th style="width:15%">Fecha</th>
+            <th style="width:12%">Hora inicio</th>
+            <th style="width:12%">Hora fin</th>
+            <th style="width:8%">Hs.</th>
+            <th></th>
+          </tr></thead>
+          <tbody id="cron-body">
+          <% cron.forEach(function(c){ %>
+          <tr>
+            <td><input type="text" name="cronograma_atividade" value="<%= c.atividade || '' %>"></td>
+            <td><input type="text" name="cronograma_responsavel" value="<%= c.responsavel || '' %>"></td>
+            <td><input type="date" name="cronograma_data" value="<%= fmtIn(c.data) %>"></td>
+            <td><input type="time" name="cronograma_hora_inicio" value="<%= c.hora_inicio || '' %>"></td>
+            <td><input type="time" name="cronograma_hora_fim" value="<%= c.hora_fim || '' %>"></td>
+            <td><input type="number" step="0.5" name="cronograma_horas" value="<%= c.horas_total || '' %>"></td>
+            <td><button type="button" class="btn-del" onclick="this.closest('tr').remove()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></td>
+          </tr>
+          <% }) %>
+          </tbody>
+        </table>
+        <button type="button" class="btn btn-sec btn-sm" onclick="addCron()">+ Agregar fila</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-h"><%= ehEnsino ? "7" : "8" %>. Recursos y referencias</div>
+      <div class="card-b">
+        <% if (ehEnsino) { %>
+        <div class="guia"><strong>Modelo UCP — Recursos:</strong> indique lo solicitado al <strong>Núcleo de Extensión</strong> (certificado para los participantes de asistencia y X horas; certificado para el disertante con nombre y apellido) y a <strong>Mantenimiento y Planificación Académica</strong> si necesario (clase con sillas, mesa, cuadro; horario de uso de la clase).<br><strong>Referencias:</strong> al menos una referencia en formato Vancouver.</div>
+        <% } else { %>
+        <div class="guia"><strong>Modelo UCP — Recursos necesarios:</strong> detalle materiales (medicamentos, cestas de alimentos, folletos informativos), infraestructura (lugares de servicio, mesas, sillas) y recursos humanos. Ej.: certificado de 20h complementares, transporte hasta la comunidad, 50 canastas básicas, 300 folletos informativos.<br><strong>Resultados esperados:</strong> describa de forma clara y <strong>mensurable</strong> el impacto del proyecto: qué mejoras o beneficios concretos espera conseguir.</div>
+        <% } %>
+        <div class="grid">
+        <div>
+          <label>Recursos necesarios</label>
+          <textarea name="recursos_necessarios" rows="4" placeholder="Certificados para participantes y disertante, sala con sillas, transporte, folletos…"><%= pp.recursos_necessarios || '' %></textarea>
+        </div>
+        <div>
+          <label>Referencias (Vancouver) <span class="req">*</span></label>
+          <textarea name="referencias" rows="4" required placeholder="1. Autor A, Autor B. Título. Revista. Año;vol:pág."><%= pp.referencias || '' %></textarea>
+        </div>
+        <% if (!ehEnsino) { %>
+        <div class="full">
+          <label>Resultados esperados <span class="req">*</span></label>
+          <textarea name="resultados_esperados" rows="3" placeholder="Describa el impacto mensurable esperado en la comunidad…"><%= pp.resultados_esperados || '' %></textarea>
+        </div>
+        <% } %>
+      </div></div>
+    </div>
+
+    <div class="acoes-fim">
+      <button type="submit" class="btn btn-pri"><%= isNovo ? 'Crear proyecto' : 'Guardar cambios' %></button>
+      <a href="<%= isNovo ? '/'+tipo : '/projetos/'+pp.id %>" class="btn btn-sec">Cancelar</a>
+    </div>
+
+  </form>
+</div>
+
+<script>
+function renum() {
+  document.querySelectorAll('#obj-list .num').forEach(function(n,i){ n.textContent = i+1; });
+}
+function addObj() {
+  var d = document.createElement('div');
+  d.className = 'item-row';
+  d.innerHTML = '<div class="num"></div>' +
+    '<input type="text" name="objetivos_especificos" placeholder="Identificar / Determinar / Analizar…">' +
+    '<button type="button" class="btn-del" onclick="this.parentElement.remove();renum()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>';
+  document.getElementById('obj-list').appendChild(d);
+  renum();
+}
+function addTem() {
+  var d = document.createElement('div');
+  d.className = 'tem-item';
+  d.innerHTML = '<div class="tem-grid">' +
+    '<input type="text" name="temario_titulo" placeholder="Título de la charla / taller">' +
+    '<input type="number" name="temario_duracao" placeholder="Duración (min)">' +
+    '<button type="button" class="btn-del" onclick="this.closest(\'.tem-item\').remove()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1.5fr;gap:8px;margin-bottom:8px">' +
+    '<input type="text" name="temario_ponente" placeholder="Nombre del ponente">' +
+    '<input type="text" name="temario_perfil" placeholder="Cargo / Especialización del ponente"></div>' +
+    '<textarea name="temario_descricao" rows="2" placeholder="Descripción breve del contenido"></textarea>';
+  document.getElementById('tem-list').appendChild(d);
+}
+function addCron() {
+  var tr = document.createElement('tr');
+  tr.innerHTML = '<td><input type="text" name="cronograma_atividade"></td>' +
+    '<td><input type="text" name="cronograma_responsavel"></td>' +
+    '<td><input type="date" name="cronograma_data"></td>' +
+    '<td><input type="time" name="cronograma_hora_inicio"></td>' +
+    '<td><input type="time" name="cronograma_hora_fim"></td>' +
+    '<td><input type="number" step="0.5" name="cronograma_horas"></td>' +
+    '<td><button type="button" class="btn-del" onclick="this.closest(\'tr\').remove()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></td>';
+  document.getElementById('cron-body').appendChild(tr);
+}
+</script>
+</body>
+</html>

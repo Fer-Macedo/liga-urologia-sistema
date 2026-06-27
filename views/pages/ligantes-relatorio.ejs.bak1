@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório de Ligantes — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#2b6803' %>; }
+    .filtros-card { background:var(--card);border:1.5px solid var(--borda);border-radius:14px;padding:22px 24px;margin-bottom:24px; }
+    .filtros-titulo { font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--cor-primaria);margin-bottom:18px;display:flex;align-items:center;gap:8px; }
+    .filtros-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px; }
+    .filtro-destaque { border-left:3px solid var(--cor-primaria);padding-left:10px;border-radius:0 8px 8px 0;background:color-mix(in srgb,var(--cor-primaria) 6%,transparent); }
+    .filtros-acoes { margin-top:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap; }
+    #sel-colunas { height:130px;border-radius:8px; }
+    .resultado-bar { display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:14px; }
+    .resultado-badge { display:inline-flex;align-items:center;gap:7px;background:color-mix(in srgb,var(--cor-primaria) 10%,transparent);color:var(--cor-primaria);border:1px solid color-mix(in srgb,var(--cor-primaria) 25%,transparent);border-radius:20px;padding:5px 14px;font-size:13px;font-weight:600; }
+    .btn-acoes-rel { display:flex;gap:8px;flex-wrap:wrap; }
+    .table-wrap { overflow-x:auto;border-radius:12px;border:1.5px solid var(--borda); }
+    .preview-table { width:100%;border-collapse:collapse;font-size:12.5px; }
+    .preview-table thead tr { background:var(--cor-primaria); }
+    .preview-table th { color:white;padding:10px 12px;text-align:left;font-size:11.5px;font-weight:600;letter-spacing:.03em;white-space:nowrap; }
+    .preview-table th:first-child { border-radius:10px 0 0 0;width:40px;text-align:center; }
+    .preview-table th:last-child { border-radius:0 10px 0 0; }
+    .preview-table td { padding:8px 12px;border-bottom:1px solid var(--borda);vertical-align:middle; }
+    .preview-table td:first-child { text-align:center;color:var(--texto2);font-size:11px; }
+    .preview-table tr:nth-child(even) { background:var(--fundo); }
+    .preview-table tr:hover { background:color-mix(in srgb,var(--cor-primaria) 6%,transparent); }
+    .preview-table tbody tr:last-child td { border-bottom:none; }
+    .badge-ativo { display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:color-mix(in srgb,#22c55e 12%,transparent);color:#16a34a; }
+    .badge-inativo { display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600;background:color-mix(in srgb,#ef4444 10%,transparent);color:#dc2626; }
+    .tag-semestre { display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:700;background:color-mix(in srgb,var(--cor-primaria) 12%,transparent);color:var(--cor-primaria);border:1px solid color-mix(in srgb,var(--cor-primaria) 22%,transparent); }
+    @media print {
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      html, body { margin:0 !important; padding:0 !important; background:white !important; }
+      #sidebar-print-hide,
+      #sidebar-print-hide * { display:none !important; width:0 !important; height:0 !important; overflow:hidden !important; position:absolute !important; }
+      .topbar, .filtros-card, .btn-acoes-rel, .topbar-acoes, .resultado-bar { display:none !important; }
+      .layout { display:block !important; margin:0 !important; padding:0 !important; }
+      .main { margin:0 !important; padding:0 !important; width:100% !important; max-width:100% !important; float:none !important; display:block !important; }
+      .content { padding:0 8px !important; }
+      .print-header { display:block !important; }
+      .table-wrap { border:none !important; border-radius:0 !important; box-shadow:none !important; overflow:visible !important; }
+      .preview-table th { background:var(--cor-primaria) !important; }
+      .preview-table tr:nth-child(even) td { background:#f7fbf4 !important; }
+      @page { margin:8mm 10mm; size:A4 landscape; }
+    }
+    }
+    }
+    }
+    #sidebar-print-hide { display:none !important; }
+    .print-header { display:none;margin-bottom:20px;padding-bottom:14px;border-bottom:3px solid var(--cor-primaria); }
+    .print-header-org { font-size:18px;font-weight:800;color:var(--cor-primaria); }
+    .print-header-sub { font-size:12px;color:#666;margin-top:3px; }
+    .print-header-data { font-size:10px;color:#999;margin-top:2px; }
+  </style>
+</head>
+<body>
+<div class="layout">
+  <div id='sidebar-print-hide'><%- include('../partials/sidebar', { paginaAtual: 'ligantes' }) %></div>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">📊 Relatório de Ligantes</h1>
+      <div class="topbar-acoes"><a href="/ligantes" class="btn">← Voltar</a></div>
+    </div>
+    <div class="content">
+      <div class="print-header">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:3px solid var(--cor-primaria);margin-bottom:14px">
+          <div style="display:flex;align-items:center;gap:14px">
+            <img src="https://i.imgur.com/LPrFxrF.png" style="height:52px;width:52px;object-fit:contain" alt="Logo">
+            <div>
+              <div class="print-header-org"><%= config.org_nome || 'Liga Acadêmica de Urologia — LAURO' %></div>
+              <div class="print-header-sub">Relatório de Ligantes</div>
+              <div class="print-header-data">Gerado em <%= new Date(new Date().toLocaleString('en-US', {timeZone: 'America/Asuncion'})).toLocaleString('pt-BR') %></div>
+            </div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:22px;font-weight:800;color:var(--cor-primaria)"><%= ligantes.length %></div>
+            <div style="font-size:10px;color:#666">ligante<%= ligantes.length!==1?'s':'' %> encontrado<%= ligantes.length!==1?'s':'' %></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="filtros-card">
+        <div class="filtros-titulo">🔍 Filtros do Relatório</div>
+        <form method="GET" action="/ligantes/relatorio" id="form-filtros">
+          <div class="filtros-grid">
+            <div class="campo">
+              <label class="label">Status</label>
+              <select name="status" class="input" onchange="this.form.submit()">
+                <option value="todos" <%= filtros.status==='todos'?'selected':'' %>>Todos</option>
+                <option value="ativo" <%= filtros.status==='ativo'?'selected':'' %>>Somente ativos</option>
+                <option value="inativo" <%= filtros.status==='inativo'?'selected':'' %>>Somente inativos</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label class="label">Sexo</label>
+              <select name="sexo" class="input" onchange="this.form.submit()">
+                <option value="todos" <%= filtros.sexo==='todos'?'selected':'' %>>Todos</option>
+                <option value="Masculino" <%= filtros.sexo==='Masculino'?'selected':'' %>>Masculino</option>
+                <option value="Feminino" <%= filtros.sexo==='Feminino'?'selected':'' %>>Feminino</option>
+              </select>
+            </div>
+            <div class="campo filtro-destaque">
+              <label class="label">✦ Semestre de Ingresso</label>
+              <select name="semestre_ingresso" class="input" onchange="this.form.submit()">
+                <option value="todos" <%= (filtros.semestre_ingresso||'todos')==='todos'?'selected':'' %>>Todos</option>
+                <% if (typeof semestresIngresso !== 'undefined') { semestresIngresso.forEach(s => { %>
+                <option value="<%= s %>" <%= filtros.semestre_ingresso===s?'selected':'' %>><%= s %></option>
+                <% }) } %>
+              </select>
+            </div>
+            <div class="campo">
+              <label class="label">Semestre</label>
+              <select name="semestre" class="input" onchange="this.form.submit()">
+                <option value="todos" <%= filtros.semestre==='todos'?'selected':'' %>>Todos</option>
+                <% semestres.forEach(s => { %>
+                <option value="<%= s %>" <%= filtros.semestre===s?'selected':'' %>><%= s %>º semestre</option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="campo">
+              <label class="label">Turma</label>
+              <select name="turma" class="input" onchange="this.form.submit()">
+                <option value="todos" <%= filtros.turma==='todos'?'selected':'' %>>Todas</option>
+                <% turmas.forEach(t => { %>
+                <option value="<%= t %>" <%= filtros.turma===t?'selected':'' %>><%= t %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div class="campo">
+              <label class="label">Aceita cargo</label>
+              <select name="aceita_cargo" class="input" onchange="this.form.submit()">
+                <option value="todos" <%= filtros.aceita_cargo==='todos'?'selected':'' %>>Todos</option>
+                <option value="Sim" <%= filtros.aceita_cargo==='Sim'?'selected':'' %>>Sim</option>
+                <option value="Não" <%= filtros.aceita_cargo==='Não'?'selected':'' %>>Não</option>
+                <option value="Talvez" <%= filtros.aceita_cargo==='Talvez'?'selected':'' %>>Talvez</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label class="label">Tem formação</label>
+              <select name="tem_formacao" class="input" onchange="this.form.submit()">
+                <option value="todos" <%= filtros.tem_formacao==='todos'?'selected':'' %>>Todos</option>
+                <option value="Sim" <%= filtros.tem_formacao==='Sim'?'selected':'' %>>Sim</option>
+                <option value="Não" <%= filtros.tem_formacao==='Não'?'selected':'' %>>Não</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label class="label">Ordenar por</label>
+              <select name="ordem" class="input" onchange="this.form.submit()">
+                <option value="nome" <%= filtros.ordem==='nome'?'selected':'' %>>Nome (A-Z)</option>
+                <option value="nome_desc" <%= filtros.ordem==='nome_desc'?'selected':'' %>>Nome (Z-A)</option>
+                <option value="idade" <%= filtros.ordem==='idade'?'selected':'' %>>Idade (mais novo)</option>
+                <option value="idade_desc" <%= filtros.ordem==='idade_desc'?'selected':'' %>>Idade (mais velho)</option>
+                <option value="semestre" <%= filtros.ordem==='semestre'?'selected':'' %>>Semestre</option>
+                <option value="turma" <%= filtros.ordem==='turma'?'selected':'' %>>Turma</option>
+                <option value="criado_em" <%= filtros.ordem==='criado_em'?'selected':'' %>>Data de cadastro</option>
+              </select>
+            </div>
+            <div class="campo" style="display:none">
+              <label class="label">Colunas a exibir</label>
+              <select name="colunas" class="input" multiple id="sel-colunas" onchange="this.form.submit()">
+                <option value="nome" <%= (filtros.colunas||[]).includes('nome')?'selected':'' %>>Nome</option>
+                <option value="email" <%= (filtros.colunas||[]).includes('email')?'selected':'' %>>E-mail</option>
+                <option value="whatsapp" <%= (filtros.colunas||[]).includes('whatsapp')?'selected':'' %>>WhatsApp</option>
+                <option value="sexo" <%= (filtros.colunas||[]).includes('sexo')?'selected':'' %>>Sexo</option>
+                <option value="data_nascimento" <%= (filtros.colunas||[]).includes('data_nascimento')?'selected':'' %>>Nascimento</option>
+                <option value="semestre_ingresso" <%= (filtros.colunas||[]).includes('semestre_ingresso')?'selected':'' %>>Semestre Ingresso</option>
+                <option value="semestre" <%= (filtros.colunas||[]).includes('semestre')?'selected':'' %>>Semestre</option>
+                <option value="turma" <%= (filtros.colunas||[]).includes('turma')?'selected':'' %>>Turma</option>
+                <option value="catraca" <%= (filtros.colunas||[]).includes('catraca')?'selected':'' %>>Catraca</option>
+                <option value="rg" <%= (filtros.colunas||[]).includes('rg')?'selected':'' %>>RG/CI</option>
+                <option value="cpf" <%= (filtros.colunas||[]).includes('cpf')?'selected':'' %>>CPF</option>
+                <option value="orcid" <%= (filtros.colunas||[]).includes('orcid')?'selected':'' %>>ORCID</option>
+                <option value="tem_formacao" <%= (filtros.colunas||[]).includes('tem_formacao')?'selected':'' %>>Formação</option>
+                <option value="aceita_cargo" <%= (filtros.colunas||[]).includes('aceita_cargo')?'selected':'' %>>Aceita cargo</option>
+                <option value="habilidades" <%= (filtros.colunas||[]).includes('habilidades')?'selected':'' %>>Habilidades</option>
+                <option value="status" <%= (filtros.colunas||[]).includes('status')?'selected':'' %>>Status</option>
+                <option value="criado_em" <%= (filtros.colunas||[]).includes('criado_em')?'selected':'' %>>Data cadastro</option>
+              </select>
+            </div>
+          </div>
+          <div class="filtros-acoes">
+            <a href="/ligantes/relatorio" class="btn">🗑 Limpar filtros</a>
+          </div>
+        </form>
+      </div>
+
+      <div class="resultado-bar">
+        <span class="resultado-badge">👥 <strong><%= ligantes.length %></strong> ligante<%= ligantes.length!==1?'s':'' %> encontrado<%= ligantes.length!==1?'s':'' %></span>
+        <div class="btn-acoes-rel">
+          <button class="btn btn-primario" onclick="window.print()">🖨️ Imprimir</button>
+          <button class="btn btn-primario" onclick="gerarPDF()">📄 Gerar PDF</button>
+          <button class="btn" onclick="exportarCSV()">📊 Exportar CSV</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="preview-table" id="tabela-relatorio">
+          <thead>
+            <tr>
+              <th>#</th>
+              <% colunasVisiveis.forEach(col => { %><th><%= labelColuna(col) %></th><% }) %>
+            </tr>
+          </thead>
+          <tbody>
+            <% ligantes.forEach((l, i) => { %>
+            <tr>
+              <td><%= i+1 %></td>
+              <% colunasVisiveis.forEach(col => { %>
+              <td>
+                <% if (col==='data_nascimento') { %>
+                  <%= l.data_nascimento ? new Date(l.data_nascimento).toLocaleDateString('pt-BR') : '—' %>
+                <% } else if (col==='status') { %>
+                  <% if (l.ativo==0) { %><span class="badge-inativo">Inativo</span><% } else { %><span class="badge-ativo">Ativo</span><% } %>
+                <% } else if (col==='criado_em') { %>
+                  <%= new Date(l.criado_em).toLocaleDateString('pt-BR') %>
+                <% } else if (col==='semestre_ingresso') { %>
+                  <% if (l.semestre_ingresso) { %><span class="tag-semestre"><%= l.semestre_ingresso %></span><% } else { %>—<% } %>
+                <% } else { %>
+                  <%= l[col] || '—' %>
+                <% } %>
+              </td>
+              <% }) %>
+            </tr>
+            <% }) %>
+            <% if (ligantes.length===0) { %>
+            <tr><td colspan="<%= colunasVisiveis.length+1 %>" style="text-align:center;padding:32px;color:var(--texto2)">Nenhum ligante encontrado com os filtros selecionados.</td></tr>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </main>
+</div>
+<script src="/js/app.js"></script>
+<script>
+function gerarPDF() {
+  const win = window.open('','_blank');
+  const tabela = document.getElementById('tabela-relatorio').outerHTML;
+  const org = '<%= config.org_nome || "Liga Acadêmica de Urologia — LAURO" %>';
+  const total = <%= ligantes.length %>;
+  const cor = '<%= config.org_cor || "#2b6803" %>';
+  const agora = new Date(new Date().toLocaleString('en-US', {timeZone: 'America/Asuncion'})).toLocaleString('pt-BR');
+  const estiloTabela = tabela
+    .replace(/class="badge-ativo"/g, 'style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700;background:#dcfce7;color:#16a34a"')
+    .replace(/class="badge-inativo"/g, 'style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700;background:#fee2e2;color:#dc2626"')
+    .replace(/class="tag-semestre"/g, 'style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:9px;font-weight:700;background:#e8f5e0;color:#2b6803;border:1px solid #c8e6b0"')
+    .replace(/class="preview-table"/g, 'style="width:100%;border-collapse:collapse;font-size:10px"')
+    .replace(/<thead>/g, '<thead id="thead-pdf">')
+    .replace(/class="resultado-bar"/g, '');
+  win.document.write(`<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Relatório de Ligantes</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:11px;background:#fff;color:#1a1a1a;padding:24px 28px}
+.rh{display:flex;align-items:center;justify-content:space-between;padding-bottom:12px;border-bottom:3px solid ${cor};margin-bottom:16px}
+.rh-org{font-size:16px;font-weight:800;color:${cor};letter-spacing:-.3px}
+.rh-sub{font-size:10px;color:#666;margin-top:2px}
+.rh-badge{background:${cor};color:#fff;font-size:10px;font-weight:700;padding:4px 14px;border-radius:20px;display:inline-block;margin-bottom:3px}
+.rh-data{font-size:9px;color:#999;text-align:right}
+table{width:100%;border-collapse:collapse}
+thead tr{background:${cor}}
+th{color:#fff;padding:7px 9px;text-align:left;font-size:10px;font-weight:600;white-space:nowrap}
+th:first-child{width:32px;text-align:center;border-radius:5px 0 0 0}
+th:last-child{border-radius:0 5px 0 0}
+td{padding:5px 9px;border-bottom:1px solid #f0f0f0;vertical-align:middle}
+td:first-child{text-align:center;color:#aaa;font-size:9px}
+tr:nth-child(even) td{background:#f7fbf4}
+.rf{margin-top:16px;padding-top:8px;border-top:1px solid #e8e8e8;display:flex;justify-content:space-between}
+.rf span{font-size:9px;color:#aaa}
+@media print{
+  body{padding:12px 16px}
+  @page{margin:10mm 12mm}
+}
+</style></head><body>
+<div class="rh">
+  <div>
+    <div class="rh-org">${org}</div>
+    <div class="rh-sub">Relatório de Ligantes</div>
+  </div>
+  <div style="text-align:right">
+    <div class="rh-badge">${total} ligante${total!==1?'s':''}</div>
+    <div class="rh-data">Gerado em ${agora}</div>
+  </div>
+</div>
+${estiloTabela}
+<div class="rf">
+  <span>Liga Acadêmica de Urologia — LAURO</span>
+  <span>sistema.lauroucpcde.com</span>
+</div>
+</body></html>`);
+  win.document.close();
+  setTimeout(()=>win.print(),600);
+}
+function exportarCSV() {
+  const tabela = document.getElementById('tabela-relatorio');
+  const linhas = [];
+  tabela.querySelectorAll('tr').forEach(tr => {
+    const cols = [];
+    tr.querySelectorAll('th,td').forEach(td => cols.push('"'+td.innerText.replace(/"/g,'""')+'"'));
+    linhas.push(cols.join(','));
+  });
+  const csv = '\uFEFF'+linhas.join('\n');
+  const blob = new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download='ligantes-relatorio.csv'; a.click();
+}
+</script>
+</body>
+</html>

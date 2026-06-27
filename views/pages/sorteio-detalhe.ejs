@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title><%= sorteio.nome %> — Sorteio</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin-modern.css">
@@ -106,7 +107,7 @@
           <div>
             <div class="sorteio-arena">
               <div class="arena-head">
-                <div class="arena-titulo">🎰 <%= sorteio.nome %></div>
+                <div class="arena-titulo"> <%= sorteio.nome %></div>
                 <span class="arena-status badge-status status-<%= sorteio.status %>"><%= sorteio.status %></span>
               </div>
 
@@ -114,10 +115,10 @@
                 <!-- RESULTADO FINAL -->
                 <div style="padding:32px 24px;text-align:center;">
                   <div class="resultado-registrado">
-                    <div class="trophy">🏆</div>
+                    <div class="trophy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></div>
                     <h3><%= sorteio.ganhador_nome %></h3>
                     <% if(sorteio.ganhador_contato){ %><p style="font-size:13px;color:#4a7c2a"><%= sorteio.ganhador_contato %></p><% } %>
-                    <% if(sorteio.brinde){ %><span class="brinde-tag">🎁 <%= sorteio.brinde %></span><% } %>
+                    <% if(sorteio.brinde){ %><span class="brinde-tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> <%= sorteio.brinde %></span><% } %>
                   </div>
                 </div>
               <% } else { %>
@@ -127,7 +128,7 @@
                     <div class="drum-label">Participante</div>
                     <div class="drum-nome" id="drumNome">
                       <% if(sorteio.ganhador_nome){ %>
-                        🏆 <%= sorteio.ganhador_nome %>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> <%= sorteio.ganhador_nome %>
                       <% } else { %>
                         Pronto para sortear...
                       <% } %>
@@ -142,7 +143,7 @@
                   <% } else { %>
                     <div style="text-align:center;margin-bottom:16px">
                       <div style="font-size:14px;color:#6b7280;margin-bottom:12px">Ganhador sorteado! Valide abaixo →</div>
-                      <button class="btn-novo-sorteio" onclick="if(confirm('Refazer o sorteio?')) window.location='/sorteios/<%= sorteio.id %>/resetar'">🔄 Refazer Sorteio</button>
+                      <button class="btn-novo-sorteio" onclick="if(confirm('Refazer o sorteio?')) window.location='/sorteios/<%= sorteio.id %>/resetar'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refazer Sorteio</button>
                     </div>
                   <% } %>
                 </div>
@@ -181,7 +182,7 @@
                   <div class="participante-item <%= sorteio.ganhador_nome===p?'participante-ganhador':'' %>">
                     <div class="participante-avatar"><%= p.charAt(0).toUpperCase() %></div>
                     <span class="participante-nome"><%= p %></span>
-                    <% if(sorteio.ganhador_nome===p){ %><span>🏆</span><% } %>
+                    <% if(sorteio.ganhador_nome===p){ %><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></span><% } %>
                   </div>
                   <% }) %>
                 </div>
@@ -226,8 +227,8 @@
                       <div style="font-size:12px;font-weight:700;color:#6b7280;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px">Observações</div>
                       <textarea name="observacoes_validacao" class="brinde-input" style="min-height:60px;resize:vertical;" placeholder="Anotações sobre a entrega..."></textarea>
                     </div>
-                    <button type="submit" name="validado" value="true" class="btn-validar">✅ Confirmar Ganhador</button>
-                    <button type="submit" name="validado" value="false" class="btn-invalidar">❌ Ganhador não atendeu as regras</button>
+                    <button type="submit" name="validado" value="true" class="btn-validar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmar Ganhador</button>
+                    <button type="submit" name="validado" value="false" class="btn-invalidar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Ganhador não atendeu as regras</button>
                   </div>
                 </form>
               </div>
@@ -278,7 +279,7 @@ function iniciarSorteio(){
 
   // Animação de rolagem
   let count = 0;
-  const total = 40 + Math.floor(Math.random()*20);
+  const total = 100 + Math.floor(Math.random()*40);
   const interval = setInterval(() => {
     const p = participantes[Math.floor(Math.random()*participantes.length)];
     drum.textContent = p;
@@ -287,7 +288,7 @@ function iniciarSorteio(){
       clearInterval(interval);
       finalizarSorteio();
     }
-  }, 80);
+  }, 60);
 }
 
 function finalizarSorteio(){
@@ -298,7 +299,7 @@ function finalizarSorteio(){
   const drum = document.getElementById('drumNome');
   drum.classList.remove('rolando');
   drum.classList.add('ganhador');
-  drum.textContent = '🏆 ' + ganhadores[0];
+  drum.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:8px"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>' + ganhadores[0];
 
   // Confetes!
   lancarConfetes();

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comunicados — Portal do Membro</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#F4F6F5;color:#0C231B;min-height:100vh}
+.header{background:#0C231B;padding:0 16px;height:56px;display:flex;align-items:center;justify-content:space-between}
+.header-logo{color:#fff;font-size:14px;font-weight:700}
+.header-user{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.7);font-size:13px}
+.header-user a{color:#4ade80;text-decoration:none;font-size:12px;border:1px solid #1a3d2e;padding:4px 10px}
+.nav{background:#fff;border-bottom:1px solid #E5EBE8;overflow-x:auto;white-space:nowrap}
+.nav a{display:inline-block;padding:14px 16px;font-size:13px;font-weight:500;color:#6B7A72;text-decoration:none;border-bottom:2px solid transparent}
+.nav a.ativo,.nav a:hover{color:#0F6E56;border-bottom-color:#0F6E56}
+.container{max-width:960px;margin:0 auto;padding:16px}
+.pg-header{margin-bottom:16px}
+.pg-header h2{font-size:18px;font-weight:700}
+.com-card{background:#fff;border:1px solid #E5EBE8;padding:18px;margin-bottom:12px;border-left:4px solid #0F6E56}
+.com-data{font-size:11px;color:#6B7A72;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.com-titulo{font-size:15px;font-weight:700;color:#0C231B;margin-bottom:8px}
+.com-texto{font-size:13px;color:#374151;line-height:1.6;white-space:pre-wrap}
+.com-dest{font-size:10px;font-weight:700;padding:2px 8px;background:#eef2ff;color:#4338ca;text-transform:uppercase;letter-spacing:.5px;display:inline-block;margin-top:10px}
+.empty{text-align:center;padding:32px;color:#6B7A72;font-size:13px}
+</style>
+</head>
+<body>
+<%- include('../../partials/membro-nav', {membro, paginaAtiva:'comunicados', comunicadosNaoLidos: locals.comunicadosNaoLidos||0, grupos: locals.grupos||[]}) %>
+<div class="container">
+  <div class="pg-header"><h2>Comunicados</h2></div>
+  <%if(comunicados.length===0){%><div class="empty">Nenhum comunicado no momento.</div><%}%>
+  <%comunicados.forEach(function(c){%>
+  <div class="com-card">
+    <div class="com-data"><%=new Date(c.criado_em).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})%></div>
+    <div class="com-titulo"><%=c.titulo%></div>
+    <div class="com-texto" style="white-space:pre-wrap"><%=c.texto%></div>
+    <span class="com-dest"><%=c.destinatarios==='todos'?'Todos':c.destinatarios==='ligantes'?'Ligantes':'Diretivos'%></span>
+  </div>
+  <%})%>
+</div>
+
+<%- include('../../partials/membro-footer') %>
+</body>
+</html>

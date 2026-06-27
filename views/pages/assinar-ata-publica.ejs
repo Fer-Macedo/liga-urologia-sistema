@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Assinar Ata <%=numAta%> — LAURO</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:Arial,sans-serif;background:#f1f5f9;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.card{background:white;max-width:480px;width:100%;border-radius:8px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.1)}
+.header{background:linear-gradient(160deg,#1a3d2b 0%,#0a1f1a 100%);padding:28px 32px;text-align:center;color:white}
+.header img{width:64px;height:64px;border-radius:50%;border:3px solid rgba(255,255,255,.3);margin-bottom:12px;display:block;margin-left:auto;margin-right:auto}
+.header h1{font-size:18px;font-weight:700;margin:0 0 4px}
+.header p{font-size:12px;opacity:.7;margin:0}
+.body{padding:28px 32px}
+.info-row{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:14px}
+.info-row span:first-child{color:#64748b}
+.info-row span:last-child{font-weight:600;color:#0f172a}
+.canvas-wrap{margin:20px 0;border:2px dashed #cbd5e1;border-radius:6px;background:#fafafa;position:relative;cursor:crosshair}
+.canvas-wrap canvas{display:block;touch-action:none;width:100%;height:180px}
+.canvas-label{position:absolute;top:8px;left:12px;font-size:11px;color:#94a3b8;pointer-events:none}
+.btn{width:100%;padding:14px;background:#1a3d2b;color:white;border:none;border-radius:6px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;display:block}
+.btn-sec{background:transparent;color:#64748b;font-size:13px;border:1px solid #e2e8f0;border-radius:6px;margin-top:8px;width:100%;padding:10px;cursor:pointer}
+.footer{padding:16px 32px;background:#f8fafc;text-align:center;font-size:11px;color:#94a3b8}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="header">
+    <%if(orgLogo){%><img src="<%=orgLogo%>" alt="<%=orgNome%>"><%}%>
+    <h1>Assinatura de Ata</h1>
+    <p><%=orgNome%></p>
+  </div>
+  <div class="body">
+    <div class="info-row"><span>Ata</span><span>N <%=numAta%></span></div>
+    <div class="info-row"><span>Tipo</span><span>Reuniao <%=tipoAta%></span></div>
+    <div class="info-row"><span>Data</span><span><%=dataFormatada%></span></div>
+    <div class="info-row"><span>Assinante</span><span><%=membroNome%></span></div>
+    <div class="info-row" style="border:none"><span>Cargo</span><span><%=membroCargo%></span></div>
+    <div class="canvas-wrap">
+      <span class="canvas-label">Assine com o dedo ou mouse</span>
+      <canvas id="canvas" width="800" height="300"></canvas>
+    </div>
+    <button class="btn" id="btn-salvar">Confirmar Assinatura</button>
+    <button class="btn btn-sec" id="btn-limpar">Limpar</button>
+  </div>
+  <div class="footer">Liga Academica de Urologia — LAURO | UCP | Ciudad del Este</div>
+</div>
+<script src="/js/assinar-ata.js"></script>
+<script>
+window.TOKEN = '<%=token%>';
+window.ORG_LOGO = '<%=orgLogo||""%>';
+window.MEMBRO_NOME = '<%=membroNome.split(" ")[0]%>';
+</script>
+</body>
+</html>

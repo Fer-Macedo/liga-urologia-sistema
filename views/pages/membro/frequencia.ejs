@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frequência — Portal do Membro</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#F4F6F5;color:#0C231B;min-height:100vh}
+.header{background:#0C231B;padding:0 16px;height:56px;display:flex;align-items:center;justify-content:space-between}
+.header-logo{color:#fff;font-size:14px;font-weight:700}
+.header-user{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.7);font-size:13px}
+.header-user a{color:#4ade80;text-decoration:none;font-size:12px;border:1px solid #1a3d2e;padding:4px 10px}
+.nav{background:#fff;border-bottom:1px solid #E5EBE8;overflow-x:auto;white-space:nowrap}
+.nav a{display:inline-block;padding:14px 16px;font-size:13px;font-weight:500;color:#6B7A72;text-decoration:none;border-bottom:2px solid transparent}
+.nav a.ativo,.nav a:hover{color:#0F6E56;border-bottom-color:#0F6E56}
+.container{max-width:960px;margin:0 auto;padding:16px}
+.resumo{background:#0C231B;color:#fff;padding:20px;margin-bottom:16px;display:flex;gap:24px;flex-wrap:wrap}
+.resumo-item{text-align:center}
+.resumo-valor{font-size:32px;font-weight:700}
+.resumo-label{font-size:11px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
+.barra-wrap{background:#fff;border:1px solid #E5EBE8;padding:16px;margin-bottom:16px}
+.barra-label{font-size:12px;color:#6B7A72;margin-bottom:8px;display:flex;justify-content:space-between}
+.barra{background:#E5EBE8;height:12px}
+.barra-fill{height:12px;transition:width .3s}
+.card{background:#fff;border:1px solid #E5EBE8}
+.freq-item{padding:12px 16px;border-bottom:1px solid #F4F6F5;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.freq-item:last-child{border-bottom:none}
+.freq-data{font-size:13px;font-weight:600}
+.freq-desc{font-size:12px;color:#6B7A72;margin-top:2px}
+.presente{background:#ecfdf5;color:#047857;font-size:11px;font-weight:700;padding:3px 10px}
+.ausente{background:#fef2f2;color:#b91c1c;font-size:11px;font-weight:700;padding:3px 10px}
+.empty{text-align:center;padding:32px;color:#6B7A72;font-size:13px}
+.aviso{background:#fff7ed;border:1px solid #fed7aa;color:#c2410c;padding:14px 16px;font-size:13px;margin-bottom:16px}
+</style>
+</head>
+<body>
+<%- include('../../partials/membro-nav', {membro, paginaAtiva:'frequencia', comunicadosNaoLidos: locals.comunicadosNaoLidos||0, grupos: locals.grupos||[]}) %>
+<div class="container">
+  <%if(false){%>
+  <div class="aviso">Frequência disponível apenas para ligantes.</div>
+  <%}else{%>
+  <div class="resumo">
+    <div class="resumo-item"><div class="resumo-valor"><%=frequencia.percentual%>%</div><div class="resumo-label">Frequência</div></div>
+    <div class="resumo-item"><div class="resumo-valor"><%=frequencia.presencas%></div><div class="resumo-label">Presenças</div></div>
+    <div class="resumo-item"><div class="resumo-valor"><%=frequencia.total - frequencia.presencas%></div><div class="resumo-label">Faltas</div></div>
+    <div class="resumo-item"><div class="resumo-valor"><%=frequencia.total%></div><div class="resumo-label">Total</div></div>
+  </div>
+  <div class="barra-wrap">
+    <div class="barra-label"><span>Frequência acumulada</span><span>Mínimo: 75%</span></div>
+    <div class="barra"><div class="barra-fill" style="width:<%=Math.min(frequencia.percentual,100)%>%;background:<%=frequencia.percentual>=75?'#0F6E56':frequencia.percentual>=50?'#f59e0b':'#ef4444'%>"></div></div>
+    <%if(frequencia.percentual<75){%><div style="font-size:12px;color:#c2410c;margin-top:6px">Atenção: você está abaixo do mínimo exigido de 75%</div><%}%>
+  </div>
+  <div class="card">
+    <%if(registros.length===0){%><div class="empty">Nenhum registro de frequência encontrado.</div><%}%>
+    <%registros.forEach(function(r){%>
+    <div class="freq-item">
+      <div>
+        <div class="freq-data"><%=new Date(r.data).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})%></div>
+        <%if(r.descricao){%><div class="freq-desc"><%=r.descricao%></div><%}%>
+      </div>
+      <span class="<%=parseInt(r.presente)===1?'presente':'ausente'%>"><%=parseInt(r.presente)===1?'Presente':'Ausente'%></span>
+    </div>
+    <%})%>
+  </div>
+  <%}%>
+</div>
+
+<%- include('../../partials/membro-footer') %>
+</body>
+</html>

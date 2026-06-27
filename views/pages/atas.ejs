@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atas de Reunião</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%=config.org_cor||'#1a3d2b'%>;--rad:2px;}
+    .ata-card{background:#fff;border:1px solid #e2e8f0;border-radius:2px;padding:16px 20px;margin-bottom:10px;display:flex;align-items:center;gap:16px;transition:box-shadow .15s,transform .15s;cursor:pointer;width:100%;box-sizing:border-box;}
+    .ata-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.08);transform:translateY(-1px);}
+    .ata-num{background:var(--cor-primaria);color:#fff;border-radius:2px;padding:8px 12px;font-weight:800;font-size:13px;min-width:70px;text-align:center;flex-shrink:0;}
+    .ata-info{flex:1;min-width:0;}
+    .ata-titulo{font-weight:700;font-size:14px;color:#0f172a;}
+    .ata-meta{font-size:12px;color:#64748b;margin-top:3px;}
+    .status-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:2px;font-size:11px;font-weight:700;text-transform:uppercase;}
+    .status-rascunho{background:#fef3c7;color:#92400e;}
+    .status-em_assinatura{background:#dbeafe;color:#1e40af;}
+    .status-finalizada{background:#dcfce7;color:#166534;}
+    .btn-nova{background:var(--cor-primaria);color:#fff;border:none;border-radius:2px;padding:10px 22px;font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:all .15s;}
+    .btn-nova:hover{background:#15302a;transform:translateY(-1px);box-shadow:0 4px 12px rgba(26,61,43,.3);}
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+    .modal-overlay.ativo{display:flex;}
+    .modal-box{background:#fff;border-radius:2px;width:100%;max-width:760px;box-shadow:0 20px 60px rgba(0,0,0,.25);margin:auto;}
+    .modal-header{background:var(--cor-primaria);padding:18px 24px;display:flex;align-items:center;justify-content:space-between;border-radius:2px 2px 0 0;}
+    .modal-header h2{color:#fff;font-size:16px;font-weight:800;margin:0;}
+    .modal-close{background:rgba(255,255,255,.2);border:none;color:#fff;width:32px;height:32px;border-radius:2px;cursor:pointer;font-size:20px;display:flex;align-items:center;justify-content:center;transition:background .15s;line-height:1;}
+    .modal-close:hover{background:rgba(255,255,255,.35);}
+    .modal-body{padding:24px;}
+    .campo{margin-bottom:16px;}
+    .label{font-size:11px;font-weight:800;color:#374151;display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+    .input{width:100%;padding:9px 12px;border:1px solid #e2e8f0;border-radius:2px;font-size:13px;box-sizing:border-box;font-family:inherit;transition:border-color .15s;}
+    .input:focus{outline:none;border-color:var(--cor-primaria);box-shadow:0 0 0 3px rgba(26,61,43,.08);}
+    textarea.input{resize:vertical;}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+    .num-auto{background:#f0fdf4;border:1px solid #86efac;border-radius:2px;padding:9px 12px;font-size:13px;font-weight:800;color:#166534;width:100%;box-sizing:border-box;}
+    .empty-state{text-align:center;padding:80px 20px;color:#94a3b8;}
+    .pagination{display:flex;gap:6px;justify-content:center;margin-top:24px;}
+    .page-btn{border:1px solid #e2e8f0;background:#fff;border-radius:2px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;font-weight:600;transition:all .15s;text-decoration:none;color:#374151;}
+    .page-btn:hover,.page-btn.ativo{background:var(--cor-primaria);color:#fff;border-color:var(--cor-primaria);}
+    /* Pauta itens */
+    .pauta-item{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+    .pauta-item input{flex:1;padding:8px 10px;border:1px solid #e2e8f0;border-radius:2px;font-size:13px;font-family:inherit;}
+    .pauta-item input:focus{outline:none;border-color:var(--cor-primaria);}
+    .pauta-num{background:var(--cor-primaria);color:#fff;border-radius:2px;padding:4px 8px;font-size:11px;font-weight:800;flex-shrink:0;min-width:24px;text-align:center;}
+    .btn-rem{background:#fee2e2;border:none;color:#dc2626;border-radius:2px;width:28px;height:28px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s;}
+    .btn-rem:hover{background:#fca5a5;}
+    .btn-add-item{background:#f0fdf4;border:1px dashed #86efac;color:#166534;border-radius:2px;padding:7px 14px;cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px;transition:background .15s;width:100%;justify-content:center;margin-top:4px;}
+    .btn-add-item:hover{background:#dcfce7;}
+    /* Corpo blocos */
+    .corpo-bloco{background:#f8fafc;border:1px solid #e2e8f0;border-radius:2px;padding:12px;margin-bottom:10px;}
+    .corpo-bloco-titulo{font-size:11px;font-weight:800;color:var(--cor-primaria);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+    .corpo-bloco textarea{width:100%;border:1px solid #e2e8f0;border-radius:2px;padding:8px 10px;font-size:12px;font-family:inherit;resize:vertical;box-sizing:border-box;min-height:70px;line-height:1.6;}
+    .corpo-bloco textarea:focus{outline:none;border-color:var(--cor-primaria);}
+    /* Membros checkbox */
+    .membros-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:2px;padding:10px;background:#fafafa;}
+    .membro-check{display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:2px;cursor:pointer;transition:background .1s;}
+    .membro-check:hover{background:#f1f5f9;}
+    .membro-check input[type=checkbox]{width:15px;height:15px;cursor:pointer;accent-color:var(--cor-primaria);}
+    .membro-check-nome{font-size:12px;font-weight:600;color:#374151;}
+    .membro-check-cargo{font-size:10px;color:#64748b;}
+    .tipo-tabs{display:flex;gap:0;margin-bottom:10px;border:1px solid #e2e8f0;border-radius:2px;overflow:hidden;}
+    .tipo-tab{flex:1;padding:8px;text-align:center;font-size:12px;font-weight:700;cursor:pointer;background:#f8fafc;border:none;transition:background .15s;color:#64748b;}
+    .tipo-tab.ativo{background:var(--cor-primaria);color:#fff;}
+    .sel-info{font-size:11px;color:#64748b;margin-top:6px;text-align:right;}
+  </style>
+</head>
+<body>
+<div class="layout">
+<%- include('../partials/sidebar', { paginaAtual: 'atas' }) %>
+<main class="main">
+<div class="content">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;padding-right:0">
+    <div>
+      <h1 style="font-size:22px;font-weight:800;color:#0f172a;margin:0">Actas de Reunión</h1>
+      <p style="color:#64748b;font-size:13px;margin:4px 0 0">Registro oficial de las reuniones de la LAURO</p>
+    </div>
+    <button class="btn-nova" onclick="abrirModal()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nova Ata
+    </button>
+  </div>
+  <% if(msg&&msg.length){msg.forEach(m=>{ %><div style="background:#dcfce7;border:1px solid #86efac;color:#166534;padding:10px 14px;border-radius:2px;margin-bottom:12px;font-size:13px;font-weight:600"><%=m%></div><% })} %>
+  <% if(!atas||!atas.length) { %>
+    <div class="empty-state">
+      <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" stroke-width="1.2" style="margin-bottom:14px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      <p style="font-size:15px;font-weight:700;color:#64748b;margin:0">Ningún acta registrada</p>
+      <p style="font-size:13px;margin:6px 0 0">Haga clic en "Nueva Acta" para registrar la primera reunión</p>
+    </div>
+  <% } else { %>
+    <% atas.forEach(ata => { %>
+    <div class="ata-card" onclick="window.location='/atas/<%=ata.id%>'">
+      <div class="ata-num"><%=ata.numero||'#'+String(ata.id).padStart(3,'0')%></div>
+      <div class="ata-info">
+        <div class="ata-titulo">Reunión <%=ata.tipo==='ordinaria'?'Ordinaria':ata.tipo==='extraordinaria'?'Extraordinaria':'Especial'%> — <%=new Date(ata.data_reuniao).toLocaleDateString('es-PY',{timeZone:'UTC'})%></div>
+        <div class="ata-meta"><%=ata.local||'Local no informado'%><% if(ata.criado_por_nome){%> · por <%=ata.criado_por_nome.split(' ')[0]%><%}%></div>
+      </div>
+      <div style="flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:8px">
+        <span class="status-badge status-<%=ata.status%>"><%=ata.status==='rascunho'?'Borrador':ata.status==='em_assinatura'?'En Firma':'Finalizada'%></span>
+        <span style="font-size:11px;color:#94a3b8"><%=new Date(ata.criado_em).toLocaleDateString('pt-BR')%></span>
+      </div>
+    </div>
+    <% }) %>
+    <% if(totalPages>1) { %>
+    <div class="pagination">
+      <% for(let i=1;i<=totalPages;i++) { %><a href="/atas?page=<%=i%>" class="page-btn <%=page===i?'ativo':''%>"><%=i%></a><% } %>
+    </div>
+    <% } %>
+  <% } %>
+</div>
+</main>
+</div>
+
+<!-- MODAL NOVA ATA -->
+<div class="modal-overlay" id="modal-nova">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h2>Nueva Acta de Reunión</h2>
+      <button class="modal-close" onclick="fecharModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <form method="POST" action="/atas" id="form-ata">
+        <input type="hidden" name="membros_json" id="membros-json-input" value="[]">
+        <input type="hidden" name="numero" id="input-numero" value="<%=typeof proximoNum!=='undefined'?proximoNum:'001/2026'%>">
+        <input type="hidden" name="pauta" id="input-pauta">
+        <input type="hidden" name="corpo" id="input-corpo">
+
+        <div class="grid3" style="margin-bottom:16px">
+          <div class="campo">
+            <label class="label">Número del Acta</label>
+            <div style="display:flex;gap:6px;align-items:center">
+              <div class="num-auto" id="num-preview" style="flex:1"><%=typeof proximoSeq!=='undefined'?proximoSeq:'001'%>/<span id="num-ano-display"><%=new Date().getFullYear()%></span> <span style="font-size:10px;opacity:.7">(automático)</span></div>
+              <select id="sel-ano" onchange="atualizarNum()" style="border:1px solid #e2e8f0;border-radius:2px;padding:6px 8px;font-size:12px;font-weight:700;background:#f0fdf4;color:#166534;cursor:pointer">
+                <% for(let y=2024;y<=2035;y++){%><option value="<%=y%>" <%=y===new Date().getFullYear()?'selected':''%>><%=y%></option><%}%>
+              </select>
+            </div>
+            <input type="hidden" name="numero" id="input-numero" value="<%=typeof proximoSeq!=='undefined'?proximoSeq:'001'%>/<%=new Date().getFullYear()%>">
+          </div>
+          <div class="campo">
+            <label class="label">Tipo *</label>
+            <select name="tipo" class="input">
+              <option value="ordinaria">Ordinaria</option>
+              <option value="extraordinaria">Extraordinaria</option>
+              <option value="especial">Especial</option>
+            </select>
+          </div>
+          <div class="campo">
+            <label class="label">Fecha *</label>
+            <input name="data_reuniao" type="date" class="input" required value="<%=new Date().toISOString().split('T')[0]%>">
+          </div>
+        </div>
+
+        <div class="grid2" style="margin-bottom:16px">
+          <div class="campo"><label class="label">Hora de Inicio</label><input name="hora_inicio" type="time" class="input"></div>
+          <div class="campo"><label class="label">Hora de Cierre</label><input name="hora_fim" type="time" class="input"></div>
+        </div>
+
+        <div class="campo">
+          <label class="label">Lugar</label>
+          <input name="local" class="input" value="Sede de la Liga Académica de Urología — LAURO, Universidad Central del Paraguay, Ciudad del Este">
+        </div>
+
+        <!-- PAUTA DINÂMICA -->
+        <div class="campo">
+          <label class="label">Orden del Día (Pauta)</label>
+          <div id="pauta-lista">
+            <div class="pauta-item"><span class="pauta-num">1</span><input type="text" placeholder="Apertura de la reunión y verificación de quórum" value="Apertura de la reunión y verificación de quórum"><button type="button" class="btn-rem" onclick="remPauta(this)">×</button></div>
+            <div class="pauta-item"><span class="pauta-num">2</span><input type="text" placeholder="Lectura y aprobación del acta anterior" value="Lectura y aprobación del acta anterior"><button type="button" class="btn-rem" onclick="remPauta(this)">×</button></div>
+            <div class="pauta-item"><span class="pauta-num">3</span><input type="text" placeholder="Informe de la Presidencia" value="Informe de la Presidencia"><button type="button" class="btn-rem" onclick="remPauta(this)">×</button></div>
+            <div class="pauta-item"><span class="pauta-num">4</span><input type="text" placeholder="Informe de la Secretaría" value="Informe de la Secretaría"><button type="button" class="btn-rem" onclick="remPauta(this)">×</button></div>
+            <div class="pauta-item"><span class="pauta-num">5</span><input type="text" placeholder="Informe de la Tesorería" value="Informe de la Tesorería"><button type="button" class="btn-rem" onclick="remPauta(this)">×</button></div>
+            <div class="pauta-item"><span class="pauta-num">6</span><input type="text" placeholder="Informe de actividades académicas" value="Informe de actividades académicas (Enseñanza, Extensión y Científico)"><button type="button" class="btn-rem" onclick="remPauta(this)">×</button></div>
+            <div class="pauta-item"><span class="pauta-num">7</span><input type="text" placeholder="Asuntos generales" value="Asuntos generales"><button type="button" class="btn-rem" onclick="remPauta(this)">×</button></div>
+            <div class="pauta-item"><span class="pauta-num">8</span><input type="text" placeholder="Cierre" value="Cierre de la reunión"><button type="button" class="btn-rem" onclick="remPauta(this)">×</button></div>
+          </div>
+          <button type="button" class="btn-add-item" onclick="addPauta()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Agregar ítem a la pauta
+          </button>
+        </div>
+
+        <!-- CORPO EM BLOCOS -->
+        <div class="campo">
+          <label class="label">Desarrollo del Acta</label>
+          <div id="corpo-blocos">
+            <div class="corpo-bloco">
+              <div class="corpo-bloco-titulo">Apertura</div>
+              <textarea class="corpo-ta" rows="3">Siendo las [HORA] horas, se declaró abierta la sesión bajo la presidencia de [NOMBRE DEL PRESIDENTE/A], con la presencia de los miembros abajo firmantes, constituyéndose el quórum reglamentario. El/La Secretario/a [NOMBRE] procedió a secretariar los trabajos.</textarea>
+            </div>
+            <div class="corpo-bloco">
+              <div class="corpo-bloco-titulo">Lectura del Acta Anterior</div>
+              <textarea class="corpo-ta" rows="2">Se procedió a la lectura del acta de la reunión anterior, la cual fue aprobada sin observaciones por los presentes.</textarea>
+            </div>
+            <div class="corpo-bloco">
+              <div class="corpo-bloco-titulo">Informe de la Presidencia</div>
+              <textarea class="corpo-ta" rows="3">El/La Presidente/a informó sobre las actividades desarrolladas desde la última reunión, destacando: [Describir los puntos informados].</textarea>
+            </div>
+            <div class="corpo-bloco">
+              <div class="corpo-bloco-titulo">Informe de la Secretaría</div>
+              <textarea class="corpo-ta" rows="3">El/La Secretario/a presentó los informes de correspondencia recibida y enviada, así como el estado de las comunicaciones internas de la Liga: [Describir].</textarea>
+            </div>
+            <div class="corpo-bloco">
+              <div class="corpo-bloco-titulo">Informe de la Tesorería</div>
+              <textarea class="corpo-ta" rows="3">El/La Tesorero/a presentó el informe financiero del período, detallando ingresos, egresos y saldo disponible: [Describir el estado financiero].</textarea>
+            </div>
+            <div class="corpo-bloco">
+              <div class="corpo-bloco-titulo">Actividades Académicas</div>
+              <textarea class="corpo-ta" rows="3">Se presentaron los informes de las áreas académicas: Enseñanza: [Describir]. Extensión: [Describir]. Área Científica: [Describir].</textarea>
+            </div>
+            <div class="corpo-bloco">
+              <div class="corpo-bloco-titulo">Asuntos Generales</div>
+              <textarea class="corpo-ta" rows="3">Se trataron los siguientes asuntos generales: [Describir los temas tratados, decisiones tomadas y responsables].</textarea>
+            </div>
+            <div class="corpo-bloco">
+              <div class="corpo-bloco-titulo">Cierre</div>
+              <textarea class="corpo-ta" rows="2">No habiendo más asuntos que tratar, el/la Presidente/a declaró cerrada la sesión, labrándose la presente acta que, previa lectura y aprobación, es firmada por los presentes.</textarea>
+            </div>
+          </div>
+          <button type="button" class="btn-add-item" onclick="addBloco()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Agregar nuevo ítem al acta
+          </button>
+        </div>
+
+        <!-- MEMBROS COM CHECKBOX -->
+        <div class="campo">
+          <label class="label">Miembros Presentes</label>
+          <div class="tipo-tabs">
+            <button type="button" class="tipo-tab ativo" onclick="mostrarTipo('diretivo',this)">Directivos</button>
+            <button type="button" class="tipo-tab" onclick="mostrarTipo('ligante',this)">Ligantes</button>
+          </div>
+          <div id="lista-diretivo" class="membros-grid">
+            <% if(typeof diretivos!=='undefined'&&diretivos.length) { %>
+              <% diretivos.forEach(d=>{ %>
+              <label class="membro-check">
+                <input type="checkbox" class="check-membro" data-id="<%=d.id%>" data-nome="<%=d.nome%>" data-cargo="<%=d.cargo||''%>" data-tipo="diretivo">
+                <div><div class="membro-check-nome"><%=d.nome.split(' ').slice(0,2).join(' ')%></div><div class="membro-check-cargo"><%=d.cargo||'Directivo'%></div></div>
+              </label>
+              <% }) %>
+            <% } else { %><div style="color:#94a3b8;font-size:12px;padding:10px">Ningún directivo activo</div><% } %>
+          </div>
+          <div id="lista-ligante" class="membros-grid" style="display:none">
+            <% if(typeof ligantes!=='undefined'&&ligantes.length) { %>
+              <% ligantes.forEach(l=>{ %>
+              <label class="membro-check">
+                <input type="checkbox" class="check-membro" data-id="<%=l.id%>" data-nome="<%=l.nome%>" data-cargo="" data-tipo="ligante">
+                <div><div class="membro-check-nome"><%=l.nome.split(' ').slice(0,2).join(' ')%></div><div class="membro-check-cargo">Ligante</div></div>
+              </label>
+              <% }) %>
+            <% } else { %><div style="color:#94a3b8;font-size:12px;padding:10px">Ningún ligante activo</div><% } %>
+          </div>
+          <div class="sel-info" id="sel-info">0 miembro(s) seleccionado(s)</div>
+        </div>
+
+        <div style="display:flex;gap:10px;justify-content:flex-end;padding-top:16px;border-top:1px solid #f1f5f9">
+          <button type="button" onclick="fecharModal()" style="background:#f1f5f9;border:none;border-radius:2px;padding:10px 22px;cursor:pointer;font-weight:600;font-size:13px">Cancelar</button>
+          <button type="submit" onclick="prepararSubmit()" style="background:var(--cor-primaria);color:#fff;border:none;border-radius:2px;padding:10px 26px;cursor:pointer;font-weight:700;font-size:13px">Crear Acta</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+function atualizarNum(){
+  const ano=document.getElementById('sel-ano').value;
+  const seq=document.getElementById('num-ano-display').parentElement.textContent.split('/')[0].trim();
+  document.getElementById('num-ano-display').textContent=ano;
+  document.getElementById('input-numero').value=seq+'/'+ano;
+}
+function abrirModal(){document.getElementById('modal-nova').classList.add('ativo');document.body.style.overflow='hidden';}
+function fecharModal(){document.getElementById('modal-nova').classList.remove('ativo');document.body.style.overflow='';}
+document.getElementById('modal-nova').addEventListener('click',function(e){if(e.target===this)fecharModal();});
+
+// Pauta
+function addPauta(){
+  const lista=document.getElementById('pauta-lista');
+  const n=lista.children.length+1;
+  const div=document.createElement('div');div.className='pauta-item';
+  div.innerHTML=`<span class="pauta-num">${n}</span><input type="text" placeholder="Ítem ${n}..."><button type="button" class="btn-rem" onclick="remPauta(this)">×</button>`;
+  lista.appendChild(div);
+}
+function remPauta(btn){
+  const item=btn.parentElement;
+  if(document.getElementById('pauta-lista').children.length<=1)return;
+  item.remove();
+  // Renumerar
+  document.querySelectorAll('#pauta-lista .pauta-num').forEach((s,i)=>s.textContent=i+1);
+}
+
+// Corpo blocos
+function addBloco(){
+  const cont=document.getElementById('corpo-blocos');
+  const n=cont.children.length+1;
+  const div=document.createElement('div');div.className='corpo-bloco';
+  div.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+    <input type="text" value="Ítem ${n}" style="font-size:11px;font-weight:800;color:var(--cor-primaria);text-transform:uppercase;border:none;background:transparent;padding:0;cursor:text;width:auto">
+    <button type="button" class="btn-rem" onclick="this.closest('.corpo-bloco').remove()" style="width:22px;height:22px;font-size:12px">×</button>
+  </div>
+  <textarea class="corpo-ta" rows="3" placeholder="Describa lo tratado en este ítem..."></textarea>`;
+  cont.appendChild(div);
+}
+
+// Tipo tabs membros
+function mostrarTipo(tipo,btn){
+  document.querySelectorAll('.tipo-tab').forEach(t=>t.classList.remove('ativo'));
+  btn.classList.add('ativo');
+  document.getElementById('lista-diretivo').style.display=tipo==='diretivo'?'grid':'none';
+  document.getElementById('lista-ligante').style.display=tipo==='ligante'?'grid':'none';
+}
+
+// Atualizar contador de selecionados
+document.addEventListener('change',function(e){
+  if(e.target.classList.contains('check-membro')){
+    const total=document.querySelectorAll('.check-membro:checked').length;
+    document.getElementById('sel-info').textContent=total+' miembro(s) seleccionado(s)';
+  }
+});
+
+// Preparar submit
+function prepararSubmit(){
+  // Pauta
+  const pautas=[];
+  document.querySelectorAll('#pauta-lista .pauta-item input').forEach((inp,i)=>{if(inp.value.trim())pautas.push((i+1)+'. '+inp.value.trim());});
+  document.getElementById('input-pauta').value=pautas.join('\n');
+
+  // Corpo
+  const blocos=[];
+  document.querySelectorAll('#corpo-blocos .corpo-bloco').forEach(bloco=>{
+    const titulo=bloco.querySelector('.corpo-bloco-titulo')||bloco.querySelector('input');
+    const ta=bloco.querySelector('textarea');
+    const t=titulo?(titulo.textContent||titulo.value||'').trim():'';
+    const c=ta?ta.value.trim():'';
+    if(c)blocos.push((t?t.toUpperCase()+':\n':'')+c);
+  });
+  document.getElementById('input-corpo').value=blocos.join('\n\n');
+
+  // Membros
+  const membros=[];
+  document.querySelectorAll('.check-membro:checked').forEach(cb=>{
+    membros.push({id:cb.dataset.id,tipo:cb.dataset.tipo,nome:cb.dataset.nome,cargo:cb.dataset.cargo||''});
+  });
+  document.getElementById('membros-json-input').value=JSON.stringify(membros);
+}
+</script>
+</body></html>

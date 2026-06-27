@@ -24,7 +24,8 @@ function fmtExp(d) {
 }
 
 function toExpDate(dataStr) {
-  if (!dataStr) return fmtExp(new Date(Date.now() + 7 * 24 * 60 * 60 * 1000));
+  // PIX deve ter validade longa — padrão 365 dias se não informado
+  if (!dataStr) return fmtExp(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000));
   if (typeof dataStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dataStr)) {
     return dataStr + 'T23:59:59-03:00';
   }
@@ -256,11 +257,10 @@ async function criarPixEvento({ inscricao, lote, eventoNome }) {
 async function consultarPagamento(orderId) {
   if (!orderId || !TOKEN) return { ok: false };
   try {
-    const { data } = await axios.get(
-      BASE_URL + '/orders/' + orderId,
-      { headers: headers(), timeout: 10000 }
-    );
-    const pago = data.charges && data.charges.some(c => c.status === 'PAID');
+    const _isCharge = String(orderId).startsWith('CHAR_');
+    const _endpoint = _isCharge ? (BASE_URL + '/charges/' + orderId) : (BASE_URL + '/orders/' + orderId);
+    const { data } = await axios.get(_endpoint, { headers: headers(), timeout: 10000 });
+    const pago = _isCharge ? data.status === 'PAID' : !!(data.charges && data.charges.some(c => c.status === 'PAID'));
     return { ok: true, status: pago ? 'PAID' : (data.status || 'PENDING'), data };
   } catch (err) {
     console.error('PagBank consultarPagamento ERRO:', err.message);
@@ -273,9 +273,23 @@ const consultarCobranca = consultarPagamento;
 
 // ─── PROCESSAR WEBHOOK ────────────────────────────────────────────────────────
 
+// Detecta o método de pagamento (pix | cartao) a partir das charges do PagBank
+function detectarMetodo(charges) {
+  try {
+    for (const c of (charges || [])) {
+      const pm = c.payment_method || {};
+      const tipo = (pm.type || '').toUpperCase();
+      if (tipo === 'PIX') return 'pix';
+      if (tipo === 'CREDIT_CARD' || tipo === 'DEBIT_CARD' || tipo === 'CREDIT') return 'cartao';
+      if (tipo === 'BOLETO') return 'boleto';
+    }
+  } catch (e) {}
+  return null;
+}
+
 function processarWebhook(body) {
   try {
-    let orderId = null, referencia = null, status = null, pago = false;
+    let orderId = null, referencia = null, status = null, pago = false, metodo = null;
 
     if (body.order) {
       orderId = body.order.id || null;
@@ -283,11 +297,13 @@ function processarWebhook(body) {
       const charges = body.order.charges || [];
       pago = charges.some(c => c.status === 'PAID') || body.event === 'order.paid';
       status = body.event || body.order.status;
+      metodo = detectarMetodo(charges);
     } else if (body.charge) {
       orderId = body.charge.id || null;
       referencia = body.charge.reference_id || null;
       pago = body.charge.status === 'PAID' || body.event === 'charge.paid';
       status = body.charge.status || body.event;
+      metodo = detectarMetodo([body.charge]);
     } else {
       orderId = body.id || null;
       referencia = body.reference_id || null;
@@ -296,11 +312,11 @@ function processarWebhook(body) {
     }
 
     console.log('PagBank webhook — orderId:', orderId, 'ref:', referencia, 'pago:', pago);
-    return { orderId, referencia, status, pago };
+    return { orderId, referencia, status, pago, metodo };
 
   } catch (e) {
     console.error('PagBank processarWebhook ERRO:', e.message);
-    return { orderId: null, referencia: null, status: null, pago: false };
+    return { orderId: null, referencia: null, status: null, pago: false, metodo: null };
   }
 }
 

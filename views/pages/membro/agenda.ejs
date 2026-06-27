@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agenda — Portal do Membro</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Segoe UI',sans-serif;background:#F4F6F5;color:#0C231B;min-height:100vh}
+.header{background:#0C231B;padding:0 16px;height:56px;display:flex;align-items:center;justify-content:space-between}
+.header-logo{color:#fff;font-size:14px;font-weight:700}
+.header-user{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.7);font-size:13px}
+.header-user a{color:#4ade80;text-decoration:none;font-size:12px;border:1px solid #1a3d2e;padding:4px 10px}
+.nav{background:#fff;border-bottom:1px solid #E5EBE8;overflow-x:auto;white-space:nowrap}
+.nav a{display:inline-block;padding:14px 16px;font-size:13px;font-weight:500;color:#6B7A72;text-decoration:none;border-bottom:2px solid transparent}
+.nav a.ativo,.nav a:hover{color:#0F6E56;border-bottom-color:#0F6E56}
+.container{max-width:960px;margin:0 auto;padding:16px}
+.pg-header{margin-bottom:16px}
+.pg-header h2{font-size:18px;font-weight:700}
+.evento-card{background:#fff;border:1px solid #E5EBE8;padding:16px;margin-bottom:12px;display:flex;gap:16px;align-items:flex-start}
+.evento-data-box{background:#0C231B;color:#fff;padding:10px 14px;text-align:center;flex-shrink:0;min-width:56px}
+.evento-dia{font-size:24px;font-weight:700;line-height:1}
+.evento-mes{font-size:11px;text-transform:uppercase;letter-spacing:.5px;margin-top:2px}
+.evento-nome{font-size:14px;font-weight:700;margin-bottom:4px}
+.evento-info{font-size:12px;color:#6B7A72;margin-top:3px;display:flex;align-items:center;gap:5px}
+.badge-ev{font-size:10px;font-weight:700;padding:2px 8px;text-transform:uppercase;letter-spacing:.5px}
+.badge-aberto{background:#ecfdf5;color:#047857}
+.badge-encerrado{background:#F4F6F5;color:#6B7A72}
+.empty{text-align:center;padding:32px;color:#6B7A72;font-size:13px}
+@media(max-width:480px){.evento-card{flex-direction:column}.evento-data-box{align-self:flex-start}}
+</style>
+</head>
+<body>
+<%- include('../../partials/membro-nav', {membro, paginaAtiva:'eventos', comunicadosNaoLidos: locals.comunicadosNaoLidos||0, grupos: locals.grupos||[]}) %>
+<div class="container">
+  <div class="pg-header"><h2>Eventos</h2></div>
+  <%if(eventos.length===0){%><div class="empty">Nenhum evento agendado no momento.</div><%}%>
+  <%eventos.forEach(function(e){
+    var d=new Date(e.data_inicio);
+    var mes=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][d.getMonth()];
+  %>
+  <div class="evento-card">
+    <div class="evento-data-box">
+      <div class="evento-dia"><%=d.getDate()%></div>
+      <div class="evento-mes"><%=mes%></div>
+    </div>
+    <div style="flex:1">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+        <div class="evento-nome"><%=e.nome%></div>
+        <span class="badge-ev <%=e.status==='publicado'?'badge-aberto':'badge-encerrado'%>"><%=e.status||'agendado'%></span>
+      </div>
+      <%if(e.local){%><div class="evento-info"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><%=e.local%></div><%}%>
+      <div class="evento-info"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><%=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})%></div>
+      <%if(e.descricao){%><div style="font-size:12px;color:#374151;margin-top:8px;line-height:1.5;white-space:pre-wrap"><%=e.descricao.replace(/<[^>]*>/g,'')%></div><%}%>
+    </div>
+  </div>
+  <%})%>
+</div>
+
+<%- include('../../partials/membro-footer') %>
+</body>
+</html>

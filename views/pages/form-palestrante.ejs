@@ -1,24 +1,25 @@
 <!DOCTYPE html>
 <html lang="pt-BR" id="htmlRoot">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Datos del Ponente / Dados do Palestrante — <%= config.org_nome %></title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root { --verde: <%= config.org_cor || '#2b6803' %>; --verde-dark: #1a4002; --verde-light: #f0f7eb; }
-    body { font-family: 'DM Sans', system-ui, sans-serif; background: #f7f9f5; min-height: 100vh; }
+    :root { --verde: #253d18; --verde-dark: #1a3410; --verde-light: #f0f7eb; }
+    body { font-family: 'Inter', sans-serif; background: #f0f4f0; min-height: 100vh; }
 
     /* HEADER */
-    .header { background: linear-gradient(135deg, var(--verde-dark), var(--verde)); padding: 20px 24px; display: flex; align-items: center; gap: 14px; }
-    .header img { width: 48px; height: 48px; border-radius: 50%; border: 2px solid rgba(255,255,255,.3); object-fit: cover; }
+    .header { background: linear-gradient(160deg,#0a1a08 0%,#1a3410 50%,#253d18 100%); padding: 28px 24px; display: flex; align-items: center; gap: 16px; border-bottom: 3px solid #4a8a20; }
+    .header img { width: 64px; height: 64px; border-radius: 50%!important; border: 3px solid rgba(255,255,255,.35); object-fit: cover; box-shadow: 0 4px 16px rgba(0,0,0,.3); }
     .header-info h1 { font-size: 16px; font-weight: 700; color: #fff; }
     .header-info p { font-size: 12px; color: rgba(255,255,255,.6); margin-top: 2px; }
 
     /* TELA DE SELEÇÃO DE PAÍS */
     .pais-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: calc(100vh - 88px); padding: 40px 24px; text-align: center; }
-    .pais-screen-titulo { font-family: 'DM Serif Display', Georgia, serif; font-size: clamp(24px,4vw,36px); color: #1a2e0e; margin-bottom: 6px; }
+    .pais-screen-titulo { font-family: 'Inter', sans-serif; font-size: clamp(24px,4vw,36px); color: #1a2e0e; margin-bottom: 6px; }
     .pais-screen-sub { font-size: 15px; color: #6b7280; margin-bottom: 10px; }
     .pais-screen-sub2 { font-size: 13px; color: #9ca3af; margin-bottom: 40px; }
 
@@ -80,7 +81,26 @@
       .form-row, .form-row.tri { grid-template-columns: 1fr; }
       .form-wrap { padding: 20px 14px 50px; }
     }
-  </style>
+  
+    /* === PADRÃO SISTEMA === */
+    *, *::before, *::after { border-radius:0!important; }
+    .header img { border-radius:50%!important; }
+    .pais-card { border-radius:0!important; transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease; }
+    .pais-card:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(37,61,24,.2); border-color:#253d18; }
+    .lang-bar { border-radius:0!important; }
+    .form-intro { border-radius:0!important; border-left:4px solid #1a3410; }
+    .form-card { border-radius:0!important; }
+    .form-card-titulo { color:#1a3410!important; border-bottom-color:#d1e8c8!important; }
+    input, select, textarea { border-radius:0!important; }
+    input:focus, select:focus, textarea:focus { border-color:#1a3410!important; box-shadow:0 0 0 3px rgba(37,61,24,.1)!important; }
+    .btn-submit { border-radius:0!important; background:linear-gradient(135deg,#1a3410,#253d18)!important; transition:transform .12s ease, box-shadow .12s ease!important; }
+    .btn-submit:hover { transform:translateY(-2px)!important; box-shadow:0 6px 20px rgba(37,61,24,.35)!important; }
+    .success-screen { border-radius:0!important; }
+    .pais-screen-titulo { font-family:'Inter',sans-serif!important; font-size:28px!important; font-weight:800!important; }
+
+    /* LOGO CIRCULAR — prioridade máxima */
+    .header > img, .header img { border-radius:50%!important; width:72px!important; height:72px!important; border:3px solid rgba(255,255,255,.4)!important; box-shadow:0 4px 16px rgba(0,0,0,.3)!important; }
+</style>
 </head>
 <body>
 
@@ -97,7 +117,7 @@
   <!-- SUCESSO -->
   <div class="sucesso-wrap">
     <div class="sucesso-card">
-      <span class="sucesso-icon">✅</span>
+      <span class="sucesso-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
       <div class="sucesso-titulo" id="sucessoTitulo">Datos enviados!</div>
       <p class="sucesso-txt" id="sucessoTxt">
         Gracias, <strong><%= palestrante.nome_completo %></strong>.<br>
@@ -117,17 +137,17 @@
 
     <div class="paises-grid">
       <div class="pais-card" onclick="selecionarPais('Brasil')">
-        <span class="pais-flag">🇧🇷</span>
+        <span class="pais-flag"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">BR</span></span>
         <div class="pais-label">Brasil</div>
         <div class="pais-idioma">Português</div>
       </div>
       <div class="pais-card" onclick="selecionarPais('Paraguay')">
-        <span class="pais-flag">🇵🇾</span>
+        <span class="pais-flag"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">PY</span></span>
         <div class="pais-label">Paraguay</div>
         <div class="pais-idioma">Español</div>
       </div>
       <div class="pais-card" onclick="selecionarPais('Outro')">
-        <span class="pais-flag">🌎</span>
+        <span class="pais-flag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></span>
         <div class="pais-label">Otro país</div>
         <div class="pais-idioma">ES / PT</div>
       </div>
@@ -146,12 +166,12 @@
 
       <% if(palestrante.preenchido_em){ %>
       <div class="preench-banner" id="preenchBanner">
-        ✅ <span id="preenchTxt">Você já preencheu em <%= new Date(palestrante.preenchido_em).toLocaleDateString('pt-BR') %>. Pode atualizar abaixo.</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <span id="preenchTxt">Você já preencheu em <%= new Date(palestrante.preenchido_em).toLocaleDateString('pt-BR') %>. Pode atualizar abaixo.</span>
       </div>
       <% } %>
 
       <div class="form-intro">
-        <h2 id="introTitulo">Olá, Dr(a)! 👋</h2>
+        <h2 id="introTitulo">Olá, Dr(a)! </h2>
         <p id="introTxt">Por favor, preencha os dados abaixo para que possamos processar os documentos para sua participação como palestrante. Campos com <strong style="color:#dc2626">*</strong> são obrigatórios.</p>
       </div>
 
@@ -177,10 +197,32 @@
             </div>
             <div class="form-group">
               <label id="lWhatsapp">WhatsApp</label>
-              <input type="text" name="whatsapp" value="<%= palestrante.whatsapp||'' %>" placeholder="+55 11 99999-9999">
+              <div style="display:flex;gap:8px">
+                <select name="ddi_whatsapp" id="ddiSelect" style="width:110px;border:1.5px solid #e2e8f0;border-radius:10px;padding:11px 8px;font-size:14px;background:#fafafa;font-family:DM Sans,sans-serif">
+                  <option value="+55">🇧🇷 +55</option>
+                  <option value="+595">🇵🇾 +595</option>
+                  <option value="+54">🇦🇷 +54</option>
+                  <option value="+56">🇨🇱 +56</option>
+                  <option value="+57">🇨🇴 +57</option>
+                  <option value="+51">🇵🇪 +51</option>
+                  <option value="+598">🇺🇾 +598</option>
+                  <option value="+591">🇧🇴 +591</option>
+                  <option value="+58">🇻🇪 +58</option>
+                  <option value="+1">🇺🇸 +1</option>
+                  <option value="+34">🇪🇸 +34</option>
+                  <option value="+351">🇵🇹 +351</option>
+                  <option value="+other">Outro</option>
+                </select>
+                <input type="text" name="whatsapp" id="whatsappNum" value="<%= palestrante.whatsapp||'' %>" placeholder="99999-9999" style="flex:1">
+              </div>
             </div>
           </div>
           <div class="form-row">
+            <div class="form-group">
+              <label id="lCpf">CPF <span class="req">*</span></label>
+              <input type="text" name="cpf" value="<%= palestrante.cpf||'' %>" id="iCpf" placeholder="000.000.000-00" maxlength="18" required>
+              <span class="hint" id="hCpf">CPF (para brasileiros)</span>
+            </div>
             <div class="form-group">
               <label id="lRgCi">RG / C.I. <span class="req">*</span></label>
               <input type="text" name="rg_ci" value="<%= palestrante.rg_ci||'' %>" required id="iRgCi">
@@ -260,7 +302,7 @@
 const T = {
   pt: {
     headerSub: 'Formulário de Dados do Palestrante',
-    introTitulo: 'Olá, Dr(a)! 👋',
+    introTitulo: 'Olá, Dr(a)! ',
     introTxt: 'Por favor, preencha os dados abaixo para que possamos processar os documentos para sua participação como palestrante. Campos com <strong style="color:#dc2626">*</strong> são obrigatórios.',
     trocarTexto: 'Trocar país / idioma',
     tDadosPessoais: 'Dados Pessoais',
@@ -289,7 +331,7 @@ const T = {
   },
   es: {
     headerSub: 'Formulario de Datos del Ponente',
-    introTitulo: '¡Hola, Dr(a)! 👋',
+    introTitulo: '¡Hola, Dr(a)! ',
     introTxt: 'Por favor, complete los datos a continuación para que podamos procesar los documentos para su participación como ponente. Los campos con <strong style="color:#dc2626">*</strong> son obligatorios.',
     trocarTexto: 'Cambiar país / idioma',
     tDadosPessoais: 'Datos Personales',
@@ -341,7 +383,7 @@ function selecionarPais(pais){
   } else {
     // Outro — perguntar idioma
     idiomaAtual = prompt('Seleccione idioma / Selecione idioma:\n1 - Español\n2 - Português') === '2' ? 'pt' : 'es';
-    document.getElementById('bandeira').textContent = '🌎';
+    document.getElementById('bandeira').textContent = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
     document.getElementById('cardEndereco').style.display = 'none';
     document.getElementById('rua') && (document.getElementById('rua').required = false);
     document.getElementById('cidade') && (document.getElementById('cidade').required = false);

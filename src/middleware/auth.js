@@ -1,5 +1,8 @@
 function requireAuth(req, res, next) {
   if (req.session && req.session.usuario) return next();
+  if (req.xhr || req.headers.accept?.includes('application/json') || req.headers['content-type']?.includes('application/json')) {
+    return res.status(401).json({ok:false, erro:'Sessão expirada. Faça login novamente.'});
+  }
   req.flash('erro', 'Faça login para continuar.');
   res.redirect('/login');
 }
@@ -55,4 +58,11 @@ function requirePresidencia(req, res, next) {
   res.redirect('/dashboard');
 }
 
-module.exports = { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria, requirePresidencia, requirePermissao };
+// Middleware global — injeta permissoesAtivas em res.locals para todas as views
+function injetarPermissoes(req, res, next) {
+  res.locals.permissoesAtivas = (req.session && req.session.permissoesAtivas) ? req.session.permissoesAtivas : [];
+  res.locals.usuario = (req.session && req.session.usuario) ? req.session.usuario : null;
+  next();
+}
+
+module.exports = { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria, requirePresidencia, requirePermissao, injetarPermissoes };
