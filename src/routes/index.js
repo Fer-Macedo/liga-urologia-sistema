@@ -2236,9 +2236,9 @@ router.post('/webhook/whatsapp', async (req, res) => {
     let numero = '';
     if (isEvolution) {
       const remoteJid = evData.key && evData.key.remoteJid || '';
-      if (remoteJid.includes('@lid')) {
-        // Formato LID do WhatsApp — passar JID completo para a Evolution API conseguir enviar
-        numero = remoteJid;
+      if (remoteJid.includes('@lid') && body.sender) {
+        // Formato LID: usar o campo sender que tem o numero real (@s.whatsapp.net)
+        numero = body.sender.replace('@s.whatsapp.net','').replace(/[^0-9]/g,'');
       } else {
         numero = remoteJid.replace('@s.whatsapp.net','').replace(/[^0-9]/g,'');
       }
