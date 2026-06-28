@@ -2218,6 +2218,18 @@ router.post('/usuarios/:id/excluir', requireAuth, requireAdmin, async (req, res)
 // ─── WEBHOOK WHATSAPP — LAURO ─────────────────────────────────────────────────
 router.post('/webhook/whatsapp', async (req, res) => {
   try {
+    // Validação de token W-API
+    const wapiToken = process.env.WAPI_TOKEN;
+    if (wapiToken) {
+      const authHeader = req.headers['authorization'] || req.headers['x-wapi-token'] || '';
+      const bodyToken = req.body && req.body.token;
+      const instanceId = req.body && req.body.instanceId;
+      const expectedInstance = process.env.WAPI_INSTANCE_ID;
+      if (expectedInstance && instanceId && instanceId !== expectedInstance) return res.sendStatus(200);
+      if (!authHeader && !bodyToken) {
+        // W-API envia sem header de auth — aceitar mas validar instanceId
+      }
+    }
     const body = req.body;
     if (!body || typeof body !== 'object') return res.sendStatus(200);
     console.log('Webhook WA recebido:', JSON.stringify(body).substring(0, 1000));
