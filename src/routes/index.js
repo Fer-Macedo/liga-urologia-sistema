@@ -2919,7 +2919,7 @@ router.post('/inscricao/:id/lista-espera', async (req, res) => {
         const {enviarWhatsApp} = require('../services/notificacoes');
         const config = await getConfig();
         const msg = (config.org_nome||'LAURO')+'\n\nOla, *'+nome.split(' ')[0]+'*!\n\nVoce foi adicionado(a) a lista de espera do evento *'+ev.nome+'*.\n\nAssim que uma vaga abrir, voce sera notificado(a) automaticamente!';
-        await enviarWhatsApp(whatsapp, msg);
+        if (process.env.WAPP_SOMENTE_RESPOSTA !== 'true') await enviarWhatsApp(whatsapp, msg);
       } catch(e) {}
     }
     res.json({ok:true, msg:'Você foi adicionado(a) à lista de espera! Avisaremos quando uma vaga abrir.'});
@@ -4874,7 +4874,7 @@ router.post('/eventos/:id/inscricoes/:iid/deletar', requireAuth, async (req, res
         const config = await getConfig();
         const appUrl = process.env.APP_URL||'https://sistema.lauroucpcde.com';
         const msg = (config.org_nome||'LAURO')+'\n\n*Vaga disponível!*\n\nOlá, *'+esp.nome.split(' ')[0]+'*! Uma vaga abriu no evento *'+ev.nome+'*.\n\nAcesse agora para garantir sua vaga:\n'+appUrl+'/inscricao/'+ev.id;
-        if (esp.whatsapp) await enviarWhatsApp(esp.whatsapp, msg);
+        if (esp.whatsapp && process.env.WAPP_SOMENTE_RESPOSTA !== 'true') await enviarWhatsApp(esp.whatsapp, msg);
         await query('UPDATE evento_lista_espera SET notificado=true, notificado_em=NOW() WHERE id=$1',[esp.id]);
       }
     } catch(e) {}
@@ -5207,7 +5207,7 @@ router.get('/eventos/:id/inscricoes/:iid/certificado', requireAuth, async (req, 
         const {enviarWhatsApp} = require('../services/notificacoes');
         const config2 = await getConfig();
         const msg = (config2.org_nome||'LAURO')+'\n\nOla, *'+insc.nome.split(' ')[0]+'*!\n\nSeu certificado de participacao no evento *'+ev.nome+'* esta disponivel!\n\nAcesse e valide seu certificado:\n'+urlValidacao;
-        await enviarWhatsApp(insc.whatsapp, msg);
+        if (process.env.WAPP_SOMENTE_RESPOSTA !== 'true') await enviarWhatsApp(insc.whatsapp, msg);
         await query('UPDATE evento_certificados SET enviado_wpp=true WHERE inscricao_id=$1',[insc.id]);
       } catch(e) {}
     }
@@ -5463,7 +5463,7 @@ router.post('/eventos/:id/cupons/:cid/reenviar', requireAuth, async (req, res) =
     const codigoFinal = cupom.codigo;
     const msg = `💚💙 *${orgNome}* 💚💙\n\nOlá, *${pessoa.nome.split(' ')[0]}*! 🎉\n\nVocê tem um *cupom de isenção 100%* 🎫 para o evento:\n*${evento.nome}*\n\n🎟️ Seu cupom: *${codigoFinal}*\n\n👉 Inscreva-se pelo link abaixo (o cupom já vem aplicado, é só finalizar):\n${appUrl}/inscricao/${req.params.id}?cupom=${encodeURIComponent(codigoFinal)}\n\n_Cupom válido para uma inscrição._ ✨`;
     let okWpp=false, okEmail=false;
-    if (pessoa.whatsapp) { try { await enviarWhatsApp(pessoa.whatsapp, msg, { urgente: true }); okWpp=true; } catch(e) {} }
+    if (pessoa.whatsapp && process.env.WAPP_SOMENTE_RESPOSTA !== 'true') { try { await enviarWhatsApp(pessoa.whatsapp, msg, { urgente: true }); okWpp=true; } catch(e) {} }
     if (pessoa.email) {
       const html = (function(){var cor='#1a3d2b',corEsc='#0a2018';var oN=(typeof config!=='undefined'&&config&&config.org_nome)?config.org_nome:'Liga Academica de Urologia';var oL=(typeof config!=='undefined'&&config&&config.org_logo)?config.org_logo:null;var lg=oL?('<div style="width:72px;height:72px;background:#fff;border-radius:50%;display:inline-block;text-align:center;overflow:hidden"><img src="'+oL+'" alt="'+oN+'" style="width:72px;height:72px;object-fit:cover;border-radius:50%;vertical-align:middle"></div>'):('<span style="color:white;font-size:20px;font-weight:800">'+oN+'</span>');var pn=pessoa.nome.split(' ')[0];var linkCupom=appUrl+'/inscricao/'+req.params.id+'?cupom='+encodeURIComponent(codigoFinal);return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f1f5f9"><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">'+'<tr><td style="background:linear-gradient(160deg,'+cor+' 0%,'+corEsc+' 100%);border-radius:12px 12px 0 0;padding:36px 40px;text-align:center">'+lg+'<div style="margin-top:14px;display:block"><span style="color:rgba(255,255,255,0.9);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:rgba(255,255,255,0.15);border-radius:4px;padding:4px 16px;display:inline-block">Cup&oacute;n de Exenci&oacute;n 100%</span></div></td></tr>'+'<tr><td style="background:white;padding:36px 40px"><div style="border-left:3px solid '+cor+';padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:'+cor+';letter-spacing:1.5px;text-transform:uppercase">Tu invitaci&oacute;n gratuita</p><h2 style="margin:4px 0 0;font-size:20px;font-weight:700;color:#0f172a">'+evento.nome+'</h2></div>'+'<p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">&iexcl;Hola, <strong>'+pn+'</strong>! Tienes un <strong>cup&oacute;n de exenci&oacute;n 100%</strong> para participar gratuitamente en este evento.</p>'+'<div style="text-align:center;margin:24px 0;padding:24px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0"><p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">Tu c&oacute;digo de cup&oacute;n</p><div style="font-size:30px;font-weight:900;font-family:monospace;color:'+cor+';letter-spacing:4px">'+codigoFinal+'</div><p style="margin:12px 0 0;font-size:12px;color:'+cor+';font-weight:700">&#128203; Copiar cup&oacute;n</p><p style="margin:4px 0 0;font-size:11px;color:#94a3b8">V&aacute;lido para 1 inscripci&oacute;n</p></div>'+'<div style="text-align:center;padding-top:8px"><a href="'+linkCupom+'" style="display:inline-block;background:'+cor+';color:white;padding:13px 36px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.5px;text-transform:uppercase">Inscribirme con el cup&oacute;n aplicado</a></div>'+'</td></tr><tr><td style="background:#0f172a;border-radius:0 0 12px 12px;padding:24px 40px"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">'+oN+'</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">&iquest;Dudas? Responde a este correo.</p></td><td align="right"><p style="margin:0;color:rgba(255,255,255,0.3);font-size:9px;letter-spacing:1.5px;text-transform:uppercase">UCP - Ciudad del Este</p></td></tr></table></td></tr>'+'</table></td></tr></table></body></html>';})();
       try { await enviarEmail({ para: pessoa.email, assunto: `🎟️ Seu cupom gratuito — ${evento.nome}`, html, texto: msg }); okEmail=true; } catch(e) {}
