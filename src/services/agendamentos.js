@@ -228,10 +228,7 @@ async function notificarAtrasadosDiario() {
   const hoje = dayjs().format('YYYY-MM-DD');
 
   for (const cob of r.rows) {
-    if (count >= 5) { console.log('[ATRASADOS] Limite de 5 mensagens/dia atingido.'); break; }
-    if (!podeMensagem()) break;
-
-    // Verificar se já foi notificado hoje (qualquer tipo de cobrança)
+    // Verificar se já foi notificado hoje (qualquer canal)
     const j = await query(
       "SELECT id FROM notificacoes_log WHERE cobranca_id=$1 AND DATE(enviado_em)=$2",
       [cob.id, hoje]
@@ -241,11 +238,9 @@ async function notificarAtrasadosDiario() {
       continue;
     }
 
-
     await notificarCobranca({ membro: {...cob, id: cob.membro_id}, cobranca: cob, tipo: 'pos', config });
-    incrementarContador();
     count++;
-    await esperarIntervalo(count);
+    if (count < r.rows.length) await new Promise(res => setTimeout(res, 5000));
     console.log('[ATRASADOS] Notificação enviada:', cob.nome, cob.referencia);
   }
 

@@ -116,7 +116,8 @@ async function initSchema() {
     ['notif_dia_ativo','1'],
     ['notif_pos1_ativo','1'],
     ['notif_pos7_ativo','1'],
-    ['notif_aniversario_ativo','1']
+    ['notif_aniversario_ativo','1'],
+    ['notif_atrasados_diario','1']
   ];
 
   for (const [chave, valor] of cfgs) {
