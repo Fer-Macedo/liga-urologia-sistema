@@ -134,7 +134,7 @@ async function initSchema() {
       'INSERT INTO usuarios (nome, email, senha, perfil) VALUES ($1, $2, $3, $4)',
       ['Administrador', 'admin@liga.org.br', senha, 'admin']
     );
-    console.log('✅ Usuário admin criado: admin@liga.org.br / senha: admin123');
+    console.log('✅ Usuário admin criado: admin@liga.org.br');
     console.log('⚠️  TROQUE A SENHA APÓS O PRIMEIRO LOGIN!');
   }
 

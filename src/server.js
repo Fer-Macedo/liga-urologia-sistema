@@ -42,7 +42,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.json({ limit: '50mb' }));
 app.use(methodOverride('_method'));
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'liga-urologia-secret-2024',
+  secret: process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex'),
   resave: false,
   saveUninitialized: false,
   cookie: { maxAge: 8 * 60 * 60 * 1000 }
@@ -73,7 +73,6 @@ async function start() {
     httpServer.listen(PORT, () => {
       console.log('\n🏥 Liga Urologia — Sistema de Cobranças');
       console.log('🌐 Porta: ' + PORT);
-      console.log('📧 Login: admin@liga.org.br | Senha: admin123\n');
 
       // Keep-alive: evita que o Render durma o app no plano gratuito
       const APP_URL = process.env.APP_URL;
