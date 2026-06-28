@@ -7294,7 +7294,7 @@ router.get('/fluxo-caixa/doc/baixar', requireAuth, async (req, res) => {
 });
 
 // GET /api/evolution-qr — gera QR code para conectar WhatsApp
-router.get('/api/evolution-qr', requireAuth, async (req, res) => {
+router.get('/api/evolution-qr', async (req, res) => {
   try {
     const axios = require('axios');
     const r = await axios.get('http://localhost:8080/instance/connect/lauro-liga', {
