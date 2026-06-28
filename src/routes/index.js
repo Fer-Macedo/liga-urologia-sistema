@@ -2235,7 +2235,13 @@ router.post('/webhook/whatsapp', async (req, res) => {
     // Extrair numero
     let numero = '';
     if (isEvolution) {
-      numero = (evData.key && evData.key.remoteJid || '').replace('@s.whatsapp.net','').replace(/[^0-9]/g,'');
+      const remoteJid = evData.key && evData.key.remoteJid || '';
+      if (remoteJid.includes('@lid')) {
+        // Formato LID do WhatsApp — passar JID completo para a Evolution API conseguir enviar
+        numero = remoteJid;
+      } else {
+        numero = remoteJid.replace('@s.whatsapp.net','').replace(/[^0-9]/g,'');
+      }
     } else {
       numero = ((body.sender && body.sender.id ? body.sender.id : '') || (body.phone||'') || (body.senderPhone||'')).replace(/[^0-9]/g, '');
     }
