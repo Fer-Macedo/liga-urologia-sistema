@@ -2221,23 +2221,26 @@ router.post('/webhook/whatsapp', async (req, res) => {
     const body = req.body;
     if (!body || typeof body !== 'object') return res.sendStatus(200);
     console.log('Webhook WA recebido:', JSON.stringify(body).substring(0, 1000));
-    // Suporte Evolution API e Z-API
-    const isEvolution = body.event && body.data;
+    // Detectar provider: W-API, Evolution API ou Z-API
+    const isWAPI = !!(body.instanceId && body.data && body.data.from !== undefined);
+    const isEvolution = !isWAPI && !!(body.event && body.data);
     const evData = isEvolution ? body.data : null;
+    const wapiData = isWAPI ? body.data : null;
 
     // Ignorar mensagens proprias e grupos
-    const fromMe = isEvolution ? (evData.key && evData.key.fromMe) : body.fromMe;
-    const isGroup = isEvolution ? (evData.key && evData.key.remoteJid && evData.key.remoteJid.includes('@g.us')) : body.isGroup;
+    const fromMe = isWAPI ? wapiData.fromMe : (isEvolution ? (evData.key && evData.key.fromMe) : body.fromMe);
+    const isGroup = isWAPI ? (!!(wapiData.isGroup || (wapiData.from && wapiData.from.includes('@g.us')))) : (isEvolution ? (evData.key && evData.key.remoteJid && evData.key.remoteJid.includes('@g.us')) : body.isGroup);
     if (fromMe === true) return res.sendStatus(200);
     if (isGroup === true) return res.sendStatus(200);
     if (isEvolution && body.event !== 'messages.upsert') return res.sendStatus(200);
 
     // Extrair numero
     let numero = '';
-    if (isEvolution) {
+    if (isWAPI) {
+      numero = (wapiData.from || '').replace('@c.us','').replace('@s.whatsapp.net','').replace(/[^0-9]/g,'');
+    } else if (isEvolution) {
       const remoteJid = evData.key && evData.key.remoteJid || '';
       if (remoteJid.includes('@lid') && body.sender) {
-        // Formato LID: usar o campo sender que tem o numero real (@s.whatsapp.net)
         numero = body.sender.replace('@s.whatsapp.net','').replace(/[^0-9]/g,'');
       } else {
         numero = remoteJid.replace('@s.whatsapp.net','').replace(/[^0-9]/g,'');
@@ -2248,7 +2251,9 @@ router.post('/webhook/whatsapp', async (req, res) => {
 
     // Extrair texto
     let texto = '';
-    if (isEvolution) {
+    if (isWAPI) {
+      texto = (wapiData.body || wapiData.caption || '').toString().trim();
+    } else if (isEvolution) {
       const msg = evData.message || {};
       texto = (msg.conversation || (msg.extendedTextMessage && msg.extendedTextMessage.text) || '').toString().trim();
     } else {
@@ -2258,7 +2263,13 @@ router.post('/webhook/whatsapp', async (req, res) => {
     // Extrair midia
     let midia = null;
     try {
-      if (isEvolution) {
+      if (isWAPI) {
+        const tipo = wapiData.type || '';
+        if (tipo === 'image') midia = { tipo:'image', url: wapiData.image || '', caption: wapiData.caption || '' };
+        else if (tipo === 'document') midia = { tipo:'document', url: wapiData.document || '', fileName: wapiData.fileName || 'arquivo', caption: '' };
+        else if (tipo === 'video') midia = { tipo:'video', url: wapiData.video || '', caption: wapiData.caption || '' };
+        else if (tipo === 'audio' || tipo === 'ptt') midia = { tipo:'audio', url: wapiData.audio || '', caption: '' };
+      } else if (isEvolution) {
         const msg = evData.message || {};
         if (msg.imageMessage) midia = { tipo:'image', url: msg.imageMessage.url || '', caption: msg.imageMessage.caption || '' };
         else if (msg.documentMessage) midia = { tipo:'document', url: msg.documentMessage.url || '', fileName: msg.documentMessage.fileName || 'arquivo', caption: '' };
