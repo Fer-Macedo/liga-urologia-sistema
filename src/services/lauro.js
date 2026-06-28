@@ -362,7 +362,7 @@ async function enviarMensagem(numero, mensagem) {
     await new Promise(r => setTimeout(r, delay));
     await axios.post(
       baseUrl + '/message/sendText/' + instance,
-      { number: numero, text: mensagem },
+      { number: numero, textMessage: { text: mensagem } },
       { headers: { 'Content-Type': 'application/json', 'apikey': apiKey }, timeout: 20000 }
     );
     console.log('WhatsApp Evolution OK', numero, '— 200');
