@@ -2220,7 +2220,7 @@ router.post('/webhook/whatsapp', async (req, res) => {
   try {
     const body = req.body;
     if (!body || typeof body !== 'object') return res.sendStatus(200);
-    console.log('Webhook WA recebido:', JSON.stringify(body).substring(0, 200));
+    console.log('Webhook WA recebido:', JSON.stringify(body).substring(0, 1000));
     // Suporte Evolution API e Z-API
     const isEvolution = body.event && body.data;
     const evData = isEvolution ? body.data : null;
