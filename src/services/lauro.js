@@ -457,13 +457,67 @@ async function redirecionarArea(numero, area, idioma) {
     + 'AT1: SAIR - encerrar um atendimento especifico\n'
     + 'QUEM - identificar quem voce esta atendendo\n'
     + 'SAIR - encerrar (quando ha apenas um atendimento)';
-  await enviarMensagem(numeroArea, msgArea);
+
+  // Tenta WhatsApp para a área; se falhar, envia email como fallback
+  let wppAreaOk = false;
+  try {
+    await enviarMensagem(numeroArea, msgArea);
+    wppAreaOk = true;
+    console.log('[LAURO] Notificacao WhatsApp enviada para area:', area, numeroArea);
+  } catch(eWpp) {
+    console.error('[LAURO] Falha WhatsApp para area', area, ':', eWpp.message);
+  }
+
+  // Fallback: email para o responsável da área (busca em diretivos pelo número ou cargo)
+  try {
+    const { enviarEmail } = require('./notificacoes');
+    let emailArea = null;
+    // Tenta achar pelo número de WhatsApp
+    const dNumR = await query(
+      "SELECT email, nome FROM diretivos WHERE regexp_replace(whatsapp,'[^0-9]','','g')=$1 AND ativo=true LIMIT 1",
+      [numeroArea]
+    );
+    if (dNumR.rows.length) {
+      emailArea = dNumR.rows[0].email;
+    } else {
+      // Fallback: busca pelo cargo correspondente à área
+      const cargoMap = {
+        secretaria: '%secretar%', financeiro: '%financ%', cientifico: '%cientif%',
+        extensao: '%extens%', ensino: '%ensino%', marketing: '%market%', presidencia: '%presid%'
+      };
+      const cargo = cargoMap[area] || ('%' + area + '%');
+      const dCargR = await query(
+        "SELECT email, nome FROM diretivos WHERE cargo ILIKE $1 AND ativo=true LIMIT 1",
+        [cargo]
+      );
+      if (dCargR.rows.length) emailArea = dCargR.rows[0].email;
+    }
+
+    if (emailArea) {
+      const assunto = '🔔 Lauro — Novo atendimento: ' + nomesPT[idx];
+      const html = '<p><strong>Lauro — Atendimento pendente</strong></p>'
+        + '<p>👤 Membro: <strong>' + nomeMembro + '</strong><br>'
+        + 'Área: <strong>' + nomesPT[idx] + '</strong><br>'
+        + 'Idioma: ' + (idioma === 'es' ? 'Espanhol' : 'Português') + '<br>'
+        + 'Hora: ' + hora + '</p>'
+        + '<p>Última mensagem do membro:<br><em>"' + ultimaMsg + '"</em></p>'
+        + '<p>Acesse o sistema para responder: <a href="' + (process.env.APP_URL || '') + '/admin/lauro-diagnostico">Ver atendimentos</a></p>';
+      await enviarEmail({ para: emailArea, assunto, html, texto: msgArea });
+      console.log('[LAURO] Email de fallback enviado para area:', area, emailArea);
+    } else {
+      console.warn('[LAURO] Nenhum email encontrado para area:', area);
+    }
+  } catch(eEmail) {
+    console.error('[LAURO] Erro email fallback area', area, ':', eEmail.message);
+  }
 
   // Notifica presidencia
   if (area !== 'presidencia') {
-    await enviarMensagem(CONTATOS.presidencia,
-      '📊 💚💙 *Lauro — Atendimento registrado*\n\nArea: *' + nomesPT[idx] + '*\nHora: ' + hora
-    );
+    try {
+      await enviarMensagem(CONTATOS.presidencia,
+        '📊 💚💙 *Lauro — Atendimento registrado*\n\nArea: *' + nomesPT[idx] + '*\nHora: ' + hora
+      );
+    } catch(e) { console.error('[LAURO] Erro notif presidencia:', e.message); }
   }
 }
 
