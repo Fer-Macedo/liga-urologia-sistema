@@ -9,7 +9,7 @@ let CONTATOS = {
   extensao:    '5545988069822',
   ensino:      '595972867030',
   marketing:   '595993285645',
-  presidencia: '557999444808'
+  presidencia: '5579999444808'
 };
 
 // Sessoes em memoria { numero: { idioma, historico[], ts } }
