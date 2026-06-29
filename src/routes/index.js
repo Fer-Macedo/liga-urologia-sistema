@@ -7383,6 +7383,59 @@ router.post('/lauro-encerrar/:id', requireAuth, async (req, res) => {
   } catch(e) { req.flash('erro', e.message); res.redirect('/lauro-atendimentos'); }
 });
 
+// GET /admin/lauro-check?numero=557999444808 — diagnóstico DEFINITIVO de entrega
+// Consulta o JID real no WhatsApp e tenta entregar exatamente nele.
+router.get('/admin/lauro-check', requireAdmin, async (req, res) => {
+  try {
+    const axios = require('axios');
+    const instanceId = process.env.WAPI_INSTANCE_ID;
+    const token = process.env.WAPI_TOKEN;
+    const numero = String(req.query.numero || '').replace(/[^0-9]/g, '');
+    if (!numero) return res.json({ erro: 'Informe ?numero=' });
+    const H = { headers: { 'Authorization': `Bearer ${token}` }, timeout: 15000 };
+    const out = { numero, instanceId };
+
+    // 1) Status da instância
+    try {
+      const s = await axios.get(`https://api.w-api.app/v1/instance/status-instance?instanceId=${instanceId}`, H);
+      out.status = s.data;
+    } catch(e) { out.status = { erro: e.response?.status, detalhe: e.response?.data || e.message }; }
+
+    // 2) Verifica se o número EXISTE no WhatsApp e qual o JID canônico (tenta vários endpoints)
+    const checkEndpoints = [
+      `https://api.w-api.app/v1/contacts/phone-exists?instanceId=${instanceId}&phone=${numero}`,
+      `https://api.w-api.app/v1/contacts/check-phone?instanceId=${instanceId}&phone=${numero}`,
+      `https://api.w-api.app/v1/contacts/phone-exists?instanceId=${instanceId}&phoneNumber=${numero}`
+    ];
+    out.checks = [];
+    let jidCanonico = null;
+    for (const url of checkEndpoints) {
+      try {
+        const c = await axios.get(url, H);
+        out.checks.push({ url: url.split('?')[0], data: c.data });
+        const d = c.data || {};
+        jidCanonico = jidCanonico || d.outputPhone || d.chatId || d.jid || (d.phoneExists ? numero : null) || (d.exists ? numero : null);
+      } catch(e) {
+        out.checks.push({ url: url.split('?')[0], erro: e.response?.status, detalhe: e.response?.data || e.message });
+      }
+    }
+    out.jidCanonico = jidCanonico;
+
+    // 3) Envia para o JID canônico (se encontrado) ou para o número informado
+    const alvo = jidCanonico || numero;
+    try {
+      const r = await axios.post(
+        `https://api.w-api.app/v1/message/send-text?instanceId=${instanceId}`,
+        { phone: alvo, message: `[LAURO CHECK] Entrega para ${alvo}. Hora: ${new Date().toLocaleString('pt-BR',{timeZone:'America/Asuncion'})}` },
+        { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, timeout: 20000 }
+      );
+      out.envio = { alvo, status: r.status, body: r.data };
+    } catch(e) { out.envio = { alvo, erro: e.response?.status, detalhe: e.response?.data || e.message }; }
+
+    res.json(out);
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
 // GET /admin/lauro-teste-wapi — dispara mensagem de teste e mostra resultado W-API
 // ?area=presidencia  -> testa o número cadastrado da área
 // ?numero=557999444808 -> testa um número específico (qualquer formato)
