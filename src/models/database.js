@@ -154,6 +154,14 @@ async function initSchema() {
     );
   }
 
+  // Correção automática: número da presidência estava com 9º dígito incorreto.
+  // O WhatsApp real é +55 79 9944-4808 (12 dígitos, sem o 9 extra).
+  try {
+    await query(
+      "UPDATE lauro_contatos SET numero='557999444808', atualizado_em=NOW() WHERE area='presidencia' AND numero='5579999444808'"
+    );
+  } catch(e) { console.error('Migração número presidência:', e.message); }
+
   // Admin padrão
   const admin = await query("SELECT id FROM usuarios WHERE perfil = 'admin'");
   if (admin.rows.length === 0) {
