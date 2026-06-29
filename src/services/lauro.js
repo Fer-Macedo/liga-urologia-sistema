@@ -353,18 +353,48 @@ REGLAS IMPORTANTES:
   }
 }
 
+// Cache de @lid por número (o @lid é o identificador universal e mais confiável do WhatsApp,
+// conforme documentação oficial do W-API). Resolver o @lid corrige entrega para números
+// brasileiros de formato antigo que o W-API não roteia corretamente pelo número puro.
+const _lidCache = {};
+
+async function resolverDestino(numero) {
+  // Já é um identificador especial (@lid / @g.us): usa como está
+  if (typeof numero === 'string' && numero.includes('@')) return numero;
+  const digitos = String(numero || '').replace(/[^0-9]/g, '');
+  if (!digitos) return numero;
+  if (_lidCache[digitos] !== undefined) return _lidCache[digitos] || digitos;
+  const instanceId = process.env.WAPI_INSTANCE_ID;
+  const token = process.env.WAPI_TOKEN;
+  try {
+    const r = await axios.get(
+      `https://api.w-api.app/v1/contacts/phone-exists?instanceId=${instanceId}&phoneNumber=${digitos}`,
+      { headers: { 'Authorization': `Bearer ${token}` }, timeout: 12000 }
+    );
+    const lid = r.data && r.data.lid ? r.data.lid : null;
+    _lidCache[digitos] = lid; // pode ser null (cacheia "sem lid" também)
+    if (lid) console.log('[LAURO] @lid resolvido para', digitos, '->', lid);
+    return lid || digitos;
+  } catch(e) {
+    console.error('[LAURO] erro resolver @lid de', digitos, '-', e.response?.status || e.message);
+    return digitos;
+  }
+}
+
 async function enviarMensagem(numero, mensagem) {
   const instanceId = process.env.WAPI_INSTANCE_ID;
   const token = process.env.WAPI_TOKEN;
   try {
     const delay = Math.min(Math.max(mensagem.length * 25, 1500), 4000);
     await new Promise(r => setTimeout(r, delay));
+    // Resolve o destino para @lid (identificador universal recomendado pela W-API)
+    const destino = await resolverDestino(numero);
     const resp = await axios.post(
       `https://api.w-api.app/v1/message/send-text?instanceId=${instanceId}`,
-      { phone: numero, message: mensagem },
+      { phone: destino, message: mensagem },
       { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, timeout: 20000 }
     );
-    console.log('[LAURO] W-API OK para', numero, '— status:', resp.status, '— body:', JSON.stringify(resp.data));
+    console.log('[LAURO] W-API OK para', numero, '(destino:', destino + ')', '— status:', resp.status, '— body:', JSON.stringify(resp.data));
     return true;
   } catch(e) {
     const errDetail = e.response ? JSON.stringify(e.response.data) : e.message;
