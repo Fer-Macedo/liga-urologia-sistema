@@ -7316,6 +7316,39 @@ router.get('/fluxo-caixa/doc/baixar', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
+// ─── LAURO — DIAGNÓSTICO E CONTATOS ──────────────────────────────────────────
+router.get('/admin/lauro-diagnostico', requireAuth, async (req, res) => {
+  try {
+    const config = await getConfig();
+    const contatos = await query('SELECT * FROM lauro_contatos ORDER BY area');
+    const atendimentos = await query("SELECT * FROM lauro_atendimentos ORDER BY criado_em DESC LIMIT 20");
+    res.render('pages/lauro-diagnostico', { config, contatos: contatos.rows, atendimentos: atendimentos.rows, msg: req.flash('msg'), erro: req.flash('erro') });
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
+router.post('/admin/lauro-contato', requireAuth, async (req, res) => {
+  try {
+    const { area, numero, nome } = req.body;
+    const num = (numero || '').replace(/[^0-9]/g, '');
+    await query(
+      'INSERT INTO lauro_contatos (area, numero, nome, atualizado_em) VALUES ($1,$2,$3,NOW()) ON CONFLICT (area) DO UPDATE SET numero=$2, nome=$3, atualizado_em=NOW()',
+      [area, num, nome || area]
+    );
+    const { recarregarContatos } = require('../services/lauro');
+    await recarregarContatos();
+    req.flash('msg', 'Contato de ' + area + ' atualizado: ' + num);
+    res.redirect('/admin/lauro-diagnostico');
+  } catch(e) { req.flash('erro', e.message); res.redirect('/admin/lauro-diagnostico'); }
+});
+
+router.post('/admin/lauro-encerrar/:id', requireAuth, async (req, res) => {
+  try {
+    await query("UPDATE lauro_atendimentos SET status='encerrado', encerrado_em=NOW() WHERE id=$1", [req.params.id]);
+    req.flash('msg', 'Atendimento encerrado.');
+    res.redirect('/admin/lauro-diagnostico');
+  } catch(e) { req.flash('erro', e.message); res.redirect('/admin/lauro-diagnostico'); }
+});
+
 // GET /api/evolution-qr — gera QR code para conectar WhatsApp
 router.get('/api/evolution-qr', async (req, res) => {
   try {
