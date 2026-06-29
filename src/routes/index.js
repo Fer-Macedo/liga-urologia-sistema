@@ -7446,12 +7446,17 @@ router.get('/admin/lauro-check', requireAdmin, async (req, res) => {
       } catch(e) { return { label, campo, valor, erro: e.response?.status, detalhe: e.response?.data || e.message }; }
     };
 
+    // numero com 9º dígito (13 dígitos) — caso o W-API espere o formato com 9
+    let com9 = numero;
+    if (numero.startsWith('55') && numero.length === 12) com9 = numero.slice(0,4) + '9' + numero.slice(4);
+
     out.envios = [];
-    out.envios.push(await sendOne('phone', numero, 'NUM'));
-    if (lid) {
-      out.envios.push(await sendOne('phone', lid, 'LID-PHONE'));
-      out.envios.push(await sendOne('chatId', lid, 'LID-CHATID'));
-    }
+    // Formatos de Chat ID com sufixo @c.us forçam a API a NÃO re-normalizar o número
+    out.envios.push(await sendOne('phone', numero + '@c.us', 'CUS-12'));
+    out.envios.push(await sendOne('phone', com9 + '@c.us', 'CUS-13'));
+    out.envios.push(await sendOne('phone', numero + '@s.whatsapp.net', 'SWA-12'));
+    out.envios.push(await sendOne('phone', com9, 'NUM-13'));
+    if (lid) out.envios.push(await sendOne('phone', lid, 'LID'));
 
     res.json(out);
   } catch(e) { res.status(500).json({ erro: e.message }); }
