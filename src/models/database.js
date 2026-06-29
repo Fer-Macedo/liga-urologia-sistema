@@ -97,6 +97,33 @@ async function initSchema() {
       chave TEXT PRIMARY KEY,
       valor TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS lauro_contatos (
+      area TEXT PRIMARY KEY,
+      numero TEXT NOT NULL DEFAULT '',
+      nome TEXT,
+      atualizado_em TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS lauro_atendimentos (
+      id SERIAL PRIMARY KEY,
+      numero_membro TEXT NOT NULL,
+      area TEXT NOT NULL,
+      numero_area TEXT NOT NULL,
+      idioma TEXT DEFAULT 'pt',
+      status TEXT DEFAULT 'aguardando',
+      nome_contato TEXT,
+      criado_em TIMESTAMP DEFAULT NOW(),
+      encerrado_em TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS lauro_conversas (
+      id SERIAL PRIMARY KEY,
+      numero TEXT NOT NULL,
+      papel TEXT NOT NULL,
+      mensagem TEXT NOT NULL,
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
   `);
 
   // Insere configs padrão
