@@ -7383,30 +7383,57 @@ router.post('/lauro-encerrar/:id', requireAuth, async (req, res) => {
   } catch(e) { req.flash('erro', e.message); res.redirect('/lauro-atendimentos'); }
 });
 
-// GET /admin/lauro-teste-wapi — dispara mensagem de teste para cada área e mostra resultado W-API
+// GET /admin/lauro-teste-wapi — dispara mensagem de teste e mostra resultado W-API
+// ?area=presidencia  -> testa o número cadastrado da área
+// ?numero=557999444808 -> testa um número específico (qualquer formato)
 router.get('/admin/lauro-teste-wapi', requireAdmin, async (req, res) => {
   try {
     const axios = require('axios');
+    const instanceId = process.env.WAPI_INSTANCE_ID;
+    const token = process.env.WAPI_TOKEN;
+    const enviarTeste = async (phone, label) => {
+      try {
+        const resp = await axios.post(
+          `https://api.w-api.app/v1/message/send-text?instanceId=${instanceId}`,
+          { phone, message: `[LAURO TESTE ${label}] Se você recebeu esta mensagem, o número ${phone} ESTÁ correto. Hora: ${new Date().toLocaleString('pt-BR',{timeZone:'America/Asuncion'})}` },
+          { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, timeout: 20000 }
+        );
+        return { numero: phone, label, status: resp.status, body: resp.data, ok: true };
+      } catch(e) {
+        return { numero: phone, label, status: e.response?.status, body: e.response?.data || e.message, ok: false };
+      }
+    };
+
+    const resultados = [];
+
+    // Modo 1: número específico via ?numero=
+    if (req.query.numero) {
+      const n = String(req.query.numero).replace(/[^0-9]/g, '');
+      resultados.push(await enviarTeste(n, 'CUSTOM'));
+      // Se for número BR (55) com 13 dígitos, testa também SEM o 9º dígito
+      if (n.startsWith('55') && n.length === 13) {
+        const sem9 = n.slice(0, 4) + n.slice(5); // remove o dígito após o DDD
+        resultados.push(await enviarTeste(sem9, 'BR-SEM-9'));
+      }
+      // Se for número BR (55) com 12 dígitos, testa também COM o 9º dígito
+      if (n.startsWith('55') && n.length === 12) {
+        const com9 = n.slice(0, 4) + '9' + n.slice(4);
+        resultados.push(await enviarTeste(com9, 'BR-COM-9'));
+      }
+      return res.json({ instanceId, instrucao: 'Veja qual LABEL chegou no seu WhatsApp — esse é o formato correto.', resultados });
+    }
+
+    // Modo 2: número cadastrado da área via ?area=
     const { recarregarContatos } = require('../services/lauro');
     await recarregarContatos();
     const { query: q2 } = require('../models/database');
     const contatos = await q2("SELECT area, numero FROM lauro_contatos WHERE numero != '' ORDER BY area");
-    const instanceId = process.env.WAPI_INSTANCE_ID;
-    const token = process.env.WAPI_TOKEN;
-    const resultados = [];
     const areaAlvo = req.query.area || null;
     for (const c of contatos.rows) {
       if (areaAlvo && c.area !== areaAlvo) continue;
-      try {
-        const resp = await axios.post(
-          `https://api.w-api.app/v1/message/send-text?instanceId=${instanceId}`,
-          { phone: c.numero, message: `[LAURO TESTE] Mensagem de diagnóstico para ${c.area}. Hora: ${new Date().toLocaleString('pt-BR',{timeZone:'America/Asuncion'})}` },
-          { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, timeout: 20000 }
-        );
-        resultados.push({ area: c.area, numero: c.numero, status: resp.status, body: resp.data, ok: true });
-      } catch(e) {
-        resultados.push({ area: c.area, numero: c.numero, status: e.response?.status, body: e.response?.data || e.message, ok: false });
-      }
+      const r = await enviarTeste(c.numero, c.area);
+      r.area = c.area;
+      resultados.push(r);
     }
     res.json({ instanceId, resultados });
   } catch(e) { res.status(500).json({ erro: e.message }); }
