@@ -7395,11 +7395,21 @@ router.get('/admin/lauro-check', requireAdmin, async (req, res) => {
     const H = { headers: { 'Authorization': `Bearer ${token}` }, timeout: 15000 };
     const out = { numero, instanceId };
 
-    // 1) Status da instância
+    // 1) Status da instância + estado real do aparelho
     try {
       const s = await axios.get(`https://api.w-api.app/v1/instance/status-instance?instanceId=${instanceId}`, H);
       out.status = s.data;
     } catch(e) { out.status = { erro: e.response?.status, detalhe: e.response?.data || e.message }; }
+    out.device = [];
+    for (const url of [
+      `https://api.w-api.app/v1/instance/device?instanceId=${instanceId}`,
+      `https://api.w-api.app/v1/instance/me?instanceId=${instanceId}`,
+      `https://api.w-api.app/v1/instance/info?instanceId=${instanceId}`,
+      `https://api.w-api.app/v1/instance/battery?instanceId=${instanceId}`
+    ]) {
+      try { const d = await axios.get(url, H); out.device.push({ url: url.split('?')[0], data: d.data }); }
+      catch(e) { out.device.push({ url: url.split('?')[0], erro: e.response?.status }); }
+    }
 
     // 2) Verifica se o número EXISTE no WhatsApp e qual o JID canônico (tenta vários endpoints)
     const checkEndpoints = [
