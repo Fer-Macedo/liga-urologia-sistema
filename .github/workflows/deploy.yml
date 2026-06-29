@@ -1,24 +1,22 @@
-name: Deploy para Servidor
+name: Deploy Automático
 
 on:
   push:
     branches:
-      - main
+      - claude/whatsapp-connection-setup-ixtjr2
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Deploy via SSH
+      - name: Deploy no servidor via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: 46.225.150.104
           username: root
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          key: ${{ secrets.SSH_DEPLOY_KEY }}
           script: |
             cd /var/www/liga-urologia
-            git pull origin main
-            npm install --production
-            pm2 restart liga-urologia
-            echo "Deploy concluído!"
+            git pull origin claude/whatsapp-connection-setup-ixtjr2
+            pm2 restart liga-urologia --update-env
+            echo "Deploy concluído: $(date)"
