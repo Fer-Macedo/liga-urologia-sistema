@@ -364,7 +364,7 @@ async function enviarMensagem(numero, mensagem) {
       { phone: numero, message: mensagem },
       { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, timeout: 20000 }
     );
-    console.log('[LAURO] W-API OK para', numero, '— status:', resp.status);
+    console.log('[LAURO] W-API OK para', numero, '— status:', resp.status, '— body:', JSON.stringify(resp.data));
     return true;
   } catch(e) {
     const errDetail = e.response ? JSON.stringify(e.response.data) : e.message;
@@ -398,6 +398,8 @@ async function enviarDocumento(numero, documento, fileName) {
 }
 
 async function redirecionarArea(numero, area, idioma) {
+  // Recarrega contatos do banco antes de usar para garantir número atual
+  await recarregarContatos();
   const areas = ['secretaria','financeiro','cientifico','extensao','ensino','marketing','presidencia'];
   const nomesPT = ['Secretaria','Financeiro','Cientifico','Extensao','Ensino','Marketing','Presidencia'];
   const nomesES = ['Secretaria','Finanzas','Cientifico','Extension','Ensenanza','Marketing','Presidencia'];
@@ -405,6 +407,7 @@ async function redirecionarArea(numero, area, idioma) {
   if (idx === -1) return;
   const nomeArea = idioma === 'es' ? nomesES[idx] : nomesPT[idx];
   const numeroArea = CONTATOS[area];
+  console.log('[LAURO] redirecionarArea: area=', area, '| numeroArea=', numeroArea, '| CONTATOS completo:', JSON.stringify(CONTATOS));
 
   // Verifica se ja existe atendimento aberto para este membro com esta area
   const jaAberto = await query(
