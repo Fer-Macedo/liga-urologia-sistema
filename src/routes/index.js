@@ -7317,7 +7317,7 @@ router.get('/fluxo-caixa/doc/baixar', requireAuth, async (req, res) => {
 });
 
 // ─── LAURO — DIAGNÓSTICO E CONTATOS ──────────────────────────────────────────
-router.get('/admin/lauro-diagnostico', requireAuth, async (req, res) => {
+router.get('/admin/lauro-diagnostico', requireAdmin, async (req, res) => {
   try {
     const config = await getConfig();
     const contatos = await query('SELECT * FROM lauro_contatos ORDER BY area');
@@ -7326,7 +7326,7 @@ router.get('/admin/lauro-diagnostico', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
-router.post('/admin/lauro-contato', requireAuth, async (req, res) => {
+router.post('/admin/lauro-contato', requireAdmin, async (req, res) => {
   try {
     const { area, numero, nome } = req.body;
     const num = (numero || '').replace(/[^0-9]/g, '');
@@ -7341,7 +7341,7 @@ router.post('/admin/lauro-contato', requireAuth, async (req, res) => {
   } catch(e) { req.flash('erro', e.message); res.redirect('/admin/lauro-diagnostico'); }
 });
 
-router.post('/admin/lauro-encerrar/:id', requireAuth, async (req, res) => {
+router.post('/admin/lauro-encerrar/:id', requireAdmin, async (req, res) => {
   try {
     await query("UPDATE lauro_atendimentos SET status='encerrado', encerrado_em=NOW() WHERE id=$1", [req.params.id]);
     req.flash('msg', 'Atendimento encerrado.');
@@ -7350,7 +7350,7 @@ router.post('/admin/lauro-encerrar/:id', requireAuth, async (req, res) => {
 });
 
 // GET /admin/lauro-teste-wapi — dispara mensagem de teste para cada área e mostra resultado W-API
-router.get('/admin/lauro-teste-wapi', requireAuth, async (req, res) => {
+router.get('/admin/lauro-teste-wapi', requireAdmin, async (req, res) => {
   try {
     const axios = require('axios');
     const { recarregarContatos } = require('../services/lauro');
