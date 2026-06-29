@@ -7391,6 +7391,24 @@ router.get('/admin/lauro-teste-wapi', requireAdmin, async (req, res) => {
     const axios = require('axios');
     const instanceId = process.env.WAPI_INSTANCE_ID;
     const token = process.env.WAPI_TOKEN;
+
+    // Verifica status da conexão da instância (se desconectada, nada é entregue)
+    let statusInstancia = null;
+    const statusEndpoints = [
+      `https://api.w-api.app/v1/instance/status-instance?instanceId=${instanceId}`,
+      `https://api.w-api.app/v1/instance/device?instanceId=${instanceId}`,
+      `https://api.w-api.app/v1/instance/me?instanceId=${instanceId}`
+    ];
+    for (const url of statusEndpoints) {
+      try {
+        const s = await axios.get(url, { headers: { 'Authorization': `Bearer ${token}` }, timeout: 10000 });
+        statusInstancia = { url, data: s.data };
+        break;
+      } catch(e) {
+        statusInstancia = { url, erro: e.response?.status, detalhe: e.response?.data || e.message };
+      }
+    }
+
     const enviarTeste = async (phone, label) => {
       try {
         const resp = await axios.post(
@@ -7420,7 +7438,7 @@ router.get('/admin/lauro-teste-wapi', requireAdmin, async (req, res) => {
         const com9 = n.slice(0, 4) + '9' + n.slice(4);
         resultados.push(await enviarTeste(com9, 'BR-COM-9'));
       }
-      return res.json({ instanceId, instrucao: 'Veja qual LABEL chegou no seu WhatsApp — esse é o formato correto.', resultados });
+      return res.json({ instanceId, statusInstancia, instrucao: 'Veja qual LABEL chegou no seu WhatsApp — esse é o formato correto.', resultados });
     }
 
     // Modo 2: número cadastrado da área via ?area=
