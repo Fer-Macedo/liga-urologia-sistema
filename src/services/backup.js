@@ -147,7 +147,7 @@ function agendarBackup() {
 
   const msAte3h = proxima3h - agora;
 
-  console.log(`[BACKUP] Próximo backup agendado para: ${proxima3h.toLocaleString('pt-BR')}`);
+  console.log(`[BACKUP] Próximo backup agendado para: ${proxima3h.toLocaleString('pt-BR', {timeZone:'America/Asuncion'})}`);
 
   setTimeout(() => {
     executarBackup();

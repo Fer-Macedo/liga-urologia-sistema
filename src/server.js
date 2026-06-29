@@ -1,3 +1,5 @@
+process.env.TZ = 'America/Asuncion';
+
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
@@ -73,6 +75,7 @@ async function start() {
     httpServer.listen(PORT, () => {
       console.log('\n🏥 Liga Urologia — Sistema de Cobranças');
       console.log('🌐 Porta: ' + PORT);
+      console.log('🕐 Timezone: ' + process.env.TZ + ' — ' + new Date().toLocaleString('pt-BR'));
 
       // Keep-alive: evita que o Render durma o app no plano gratuito
       const APP_URL = process.env.APP_URL;
