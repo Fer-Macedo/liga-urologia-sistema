@@ -19,4 +19,24 @@ jobs:
             cd /var/www/liga-urologia
             git pull origin claude/whatsapp-connection-setup-ixtjr2
             pm2 restart liga-urologia --update-env
+
+            # Ajustar rate limit do nginx
+            NGINX_CONF=""
+            for f in /etc/nginx/nginx.conf /etc/nginx/sites-available/default /etc/nginx/sites-available/liga-urologia /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/*.conf; do
+              if [ -f "$f" ] && grep -q "limit_req" "$f" 2>/dev/null; then
+                NGINX_CONF="$f"
+                break
+              fi
+            done
+
+            if [ -n "$NGINX_CONF" ]; then
+              echo "Ajustando rate limit em $NGINX_CONF"
+              sed -i 's/rate=[0-9]*r\/s/rate=100r\/s/g' "$NGINX_CONF"
+              sed -i 's/burst=[0-9]*/burst=300 nodelay/g' "$NGINX_CONF"
+              nginx -t && nginx -s reload && echo "Nginx recarregado com sucesso"
+            else
+              echo "Nenhum config nginx com rate limit encontrado — verificando nginx.conf principal"
+              grep -r "limit_req" /etc/nginx/ 2>/dev/null | head -20
+            fi
+
             echo "Deploy concluído: $(date)"
