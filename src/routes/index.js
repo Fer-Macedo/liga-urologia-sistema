@@ -7419,18 +7419,29 @@ router.get('/admin/lauro-check', requireAdmin, async (req, res) => {
         out.checks.push({ url: url.split('?')[0], erro: e.response?.status, detalhe: e.response?.data || e.message });
       }
     }
-    out.jidCanonico = jidCanonico;
+    // Extrai o LID retornado pelo check (WhatsApp pode exigir entrega via LID)
+    let lid = null;
+    for (const c of out.checks) { if (c.data && c.data.lid) { lid = c.data.lid; break; } }
+    out.lid = lid;
 
-    // 3) Envia para o JID canônico (se encontrado) ou para o número informado
-    const alvo = jidCanonico || numero;
-    try {
-      const r = await axios.post(
-        `https://api.w-api.app/v1/message/send-text?instanceId=${instanceId}`,
-        { phone: alvo, message: `[LAURO CHECK] Entrega para ${alvo}. Hora: ${new Date().toLocaleString('pt-BR',{timeZone:'America/Asuncion'})}` },
-        { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, timeout: 20000 }
-      );
-      out.envio = { alvo, status: r.status, body: r.data };
-    } catch(e) { out.envio = { alvo, erro: e.response?.status, detalhe: e.response?.data || e.message }; }
+    // 3) Envia em VÁRIOS formatos para descobrir qual entrega de fato
+    const sendOne = async (campo, valor, label) => {
+      try {
+        const r = await axios.post(
+          `https://api.w-api.app/v1/message/send-text?instanceId=${instanceId}`,
+          { [campo]: valor, message: `[LAURO ${label}] alvo=${valor}. Hora: ${new Date().toLocaleString('pt-BR',{timeZone:'America/Asuncion'})}` },
+          { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, timeout: 20000 }
+        );
+        return { label, campo, valor, status: r.status, body: r.data };
+      } catch(e) { return { label, campo, valor, erro: e.response?.status, detalhe: e.response?.data || e.message }; }
+    };
+
+    out.envios = [];
+    out.envios.push(await sendOne('phone', numero, 'NUM'));
+    if (lid) {
+      out.envios.push(await sendOne('phone', lid, 'LID-PHONE'));
+      out.envios.push(await sendOne('chatId', lid, 'LID-CHATID'));
+    }
 
     res.json(out);
   } catch(e) { res.status(500).json({ erro: e.message }); }
