@@ -669,7 +669,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const dayjs = require('dayjs');
 const { query } = require('../models/database');
-const { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria, requirePermissao } = require('../middleware/auth');
+const { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria, requirePermissao, requirePresidencia } = require('../middleware/auth');
 const { criarCobranca, consultarPagamento, criarPixEvento, processarWebhook } = require('../services/pagbank');
 const { notificarCobranca } = require('../services/notificacoes');
 
@@ -7316,23 +7316,28 @@ router.get('/fluxo-caixa/doc/baixar', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
-// ─── LAURO — DIAGNÓSTICO E CONTATOS ──────────────────────────────────────────
-router.get('/admin/lauro-diagnostico', requireAdmin, async (req, res) => {
+// ─── LAURO — DIAGNÓSTICO E CONTATOS (admin + presidência) ────────────────────
+router.get('/admin/lauro-diagnostico', requirePresidencia, async (req, res) => {
   try {
     const config = await getConfig();
+    const perfil = req.session.usuario.perfil;
     const contatos = await query('SELECT * FROM lauro_contatos ORDER BY area');
-    const atendimentos = await query("SELECT * FROM lauro_atendimentos ORDER BY criado_em DESC LIMIT 20");
-    res.render('pages/lauro-diagnostico', { config, contatos: contatos.rows, atendimentos: atendimentos.rows, msg: req.flash('msg'), erro: req.flash('erro') });
+    // Admin vê todos; presidência vê só os dela
+    const atendimentos = perfil === 'admin'
+      ? await query("SELECT * FROM lauro_atendimentos ORDER BY criado_em DESC LIMIT 50")
+      : await query("SELECT * FROM lauro_atendimentos WHERE area='presidencia' ORDER BY criado_em DESC LIMIT 50");
+    res.render('pages/lauro-diagnostico', { config, contatos: contatos.rows, atendimentos: atendimentos.rows, msg: req.flash('msg'), erro: req.flash('erro'), perfil });
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
-router.post('/admin/lauro-contato', requireAdmin, async (req, res) => {
+router.post('/admin/lauro-contato', requirePresidencia, async (req, res) => {
   try {
-    const { area, numero, nome } = req.body;
-    const num = (numero || '').replace(/[^0-9]/g, '');
+    const area = Array.isArray(req.body.area) ? req.body.area[0] : req.body.area;
+    const numero = Array.isArray(req.body.numero) ? req.body.numero[0] : req.body.numero;
+    const num = String(numero || '').replace(/[^0-9]/g, '');
     await query(
       'INSERT INTO lauro_contatos (area, numero, nome, atualizado_em) VALUES ($1,$2,$3,NOW()) ON CONFLICT (area) DO UPDATE SET numero=$2, nome=$3, atualizado_em=NOW()',
-      [area, num, nome || area]
+      [area, num, area]
     );
     const { recarregarContatos } = require('../services/lauro');
     await recarregarContatos();
@@ -7341,12 +7346,41 @@ router.post('/admin/lauro-contato', requireAdmin, async (req, res) => {
   } catch(e) { req.flash('erro', e.message); res.redirect('/admin/lauro-diagnostico'); }
 });
 
-router.post('/admin/lauro-encerrar/:id', requireAdmin, async (req, res) => {
+router.post('/admin/lauro-encerrar/:id', requirePresidencia, async (req, res) => {
   try {
     await query("UPDATE lauro_atendimentos SET status='encerrado', encerrado_em=NOW() WHERE id=$1", [req.params.id]);
     req.flash('msg', 'Atendimento encerrado.');
     res.redirect('/admin/lauro-diagnostico');
   } catch(e) { req.flash('erro', e.message); res.redirect('/admin/lauro-diagnostico'); }
+});
+
+// ─── LAURO — ATENDIMENTOS POR ÁREA (cada área vê só os seus) ────────────────
+router.get('/lauro-atendimentos', requireAuth, async (req, res) => {
+  try {
+    const config = await getConfig();
+    const perfil = req.session.usuario.perfil;
+    const areasValidas = ['secretaria','financeiro','cientifico','extensao','ensino','marketing'];
+    if (!areasValidas.includes(perfil)) return res.redirect('/dashboard');
+    const atendimentos = await query(
+      "SELECT * FROM lauro_atendimentos WHERE area=$1 ORDER BY criado_em DESC LIMIT 50",
+      [perfil]
+    );
+    res.render('pages/lauro-atendimentos', { config, atendimentos: atendimentos.rows, area: perfil, msg: req.flash('msg'), erro: req.flash('erro') });
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
+router.post('/lauro-encerrar/:id', requireAuth, async (req, res) => {
+  try {
+    const perfil = req.session.usuario.perfil;
+    const areasValidas = ['secretaria','financeiro','cientifico','extensao','ensino','marketing'];
+    if (!areasValidas.includes(perfil)) return res.status(403).send('Sem permissão.');
+    // Verifica que o atendimento pertence à área do usuário
+    const at = await query("SELECT id FROM lauro_atendimentos WHERE id=$1 AND area=$2", [req.params.id, perfil]);
+    if (!at.rows.length) { req.flash('erro', 'Atendimento não encontrado.'); return res.redirect('/lauro-atendimentos'); }
+    await query("UPDATE lauro_atendimentos SET status='encerrado', encerrado_em=NOW() WHERE id=$1", [req.params.id]);
+    req.flash('msg', 'Atendimento encerrado.');
+    res.redirect('/lauro-atendimentos');
+  } catch(e) { req.flash('erro', e.message); res.redirect('/lauro-atendimentos'); }
 });
 
 // GET /admin/lauro-teste-wapi — dispara mensagem de teste para cada área e mostra resultado W-API

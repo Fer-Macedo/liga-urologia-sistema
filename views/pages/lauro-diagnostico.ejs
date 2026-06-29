@@ -19,12 +19,14 @@
     .badge-vazio { background:#fef9c3; color:#854d0e; }
     .badge-ag { background:#dbeafe; color:#1e40af; }
     .badge-enc { background:#f1f5f9; color:#64748b; }
-    input[type=text] { border:1px solid #cbd5e1; border-radius:6px; padding:6px 10px; font-size:13px; width:100%; }
+    input[type=text] { border:1px solid #cbd5e1; border-radius:6px; padding:6px 10px; font-size:13px; }
     .btn-sm { padding:5px 12px; border-radius:6px; border:none; cursor:pointer; font-size:12px; font-weight:600; }
     .btn-save { background:#1a56db; color:#fff; }
     .btn-enc { background:#ef4444; color:#fff; }
     .flash-ok { background:#dcfce7; color:#166534; padding:10px 16px; border-radius:8px; margin-bottom:16px; }
     .flash-err { background:#fee2e2; color:#991b1b; padding:10px 16px; border-radius:8px; margin-bottom:16px; }
+    .row-form { display:flex; gap:8px; align-items:center; }
+    .row-form input { flex:1; }
   </style>
 </head>
 <body>
@@ -40,54 +42,51 @@
     <div class="card">
       <h2>📞 Números das Áreas (usado pelo Lauro para enviar notificações)</h2>
       <p style="font-size:12px;color:#64748b;margin:-10px 0 16px">Esses números recebem a notificação do WhatsApp quando o Lauro direciona um atendimento para a área.</p>
-      <form method="POST" action="/admin/lauro-contato">
-        <table>
-          <thead><tr><th>Área</th><th>Número atual no banco</th><th>Novo número (só dígitos)</th><th></th></tr></thead>
-          <tbody>
-            <% const areas = ['secretaria','financeiro','cientifico','extensao','ensino','marketing','presidencia'];
-               const nomes = ['Secretaria','Financeiro','Científico','Extensão','Ensino','Marketing','Presidência'];
-               areas.forEach((a, i) => {
-                 const c = contatos.find(x => x.area === a);
-            %>
-            <tr>
-              <td><strong><%= nomes[i] %></strong></td>
-              <td>
-                <% if (c && c.numero) { %>
-                  <span class="badge badge-ok"><%= c.numero %></span>
-                <% } else { %>
-                  <span class="badge badge-vazio">Não cadastrado (usando padrão do código)</span>
-                <% } %>
-              </td>
-              <td>
+      <table>
+        <thead><tr><th>Área</th><th>Número atual no banco</th><th>Atualizar número (só dígitos)</th></tr></thead>
+        <tbody>
+          <% const areas = ['secretaria','financeiro','cientifico','extensao','ensino','marketing','presidencia'];
+             const nomes = ['Secretaria','Financeiro','Científico','Extensão','Ensino','Marketing','Presidência'];
+             areas.forEach((a, i) => {
+               const c = contatos.find(x => x.area === a);
+          %>
+          <tr>
+            <td><strong><%= nomes[i] %></strong></td>
+            <td>
+              <% if (c && c.numero) { %>
+                <span class="badge badge-ok"><%= c.numero %></span>
+              <% } else { %>
+                <span class="badge badge-vazio">Não cadastrado</span>
+              <% } %>
+            </td>
+            <td>
+              <form method="POST" action="/admin/lauro-contato" class="row-form">
                 <input type="hidden" name="area" value="<%= a %>">
                 <input type="text" name="numero" placeholder="Ex: 595973738431" value="<%= c ? c.numero : '' %>">
-              </td>
-              <td>
                 <button class="btn-sm btn-save" type="submit">Salvar</button>
-              </td>
-            </tr>
-            <% }); %>
-          </tbody>
-        </table>
-        <p style="font-size:11px;color:#94a3b8;margin-top:8px">* Salve um número por vez. Inclua o código do país sem o + (ex: 595 para Paraguai, 55 para Brasil).</p>
-      </form>
+              </form>
+            </td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+      <p style="font-size:11px;color:#94a3b8;margin-top:8px">* Inclua o código do país sem + (595 para Paraguai, 55 para Brasil). Celulares BR têm 13 dígitos (ex: 5579999444808).</p>
     </div>
 
-    <!-- Atendimentos Recentes -->
+    <!-- Atendimentos -->
     <div class="card">
-      <h2>📋 Últimos Atendimentos Direcionados</h2>
+      <h2>📋 Atendimentos Direcionados<% if (perfil !== 'admin') { %> — Presidência<% } %></h2>
       <% if (!atendimentos.length) { %>
         <p style="color:#64748b;font-size:13px">Nenhum atendimento registrado ainda.</p>
       <% } else { %>
       <table>
-        <thead><tr><th>ID</th><th>Membro</th><th>Área</th><th>Número da Área</th><th>Status</th><th>Data</th><th></th></tr></thead>
+        <thead><tr><th>ID</th><th>Membro</th><% if (perfil === 'admin') { %><th>Área</th><% } %><th>Status</th><th>Data</th><th></th></tr></thead>
         <tbody>
           <% atendimentos.forEach(a => { %>
           <tr>
             <td>#<%= a.id %></td>
             <td><%= a.nome_contato || a.numero_membro %></td>
-            <td><%= a.area %></td>
-            <td><%= a.numero_area %></td>
+            <% if (perfil === 'admin') { %><td><%= a.area %></td><% } %>
             <td>
               <% if (a.status === 'aguardando') { %>
                 <span class="badge badge-ag">Aguardando</span>
