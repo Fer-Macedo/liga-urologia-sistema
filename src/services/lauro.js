@@ -515,14 +515,22 @@ async function redirecionarArea(numero, area, idioma) {
 async function processarMensagem(numero, texto, midia) {
   let msg = (texto || '').trim();
 
+  // Garante que CONTATOS reflete o banco (evita proxy detection falhar por dados stale)
+  await recarregarContatos();
+
   // ── PROXY: se quem envia é número de área, encaminhar ao membro ──────────
+  // Usa últimos 8 dígitos para tolerar variações de formato (12 vs 13 dígitos, @lid, etc.)
+  const _ult8 = (n) => String(n || '').replace(/\D/g, '').slice(-8);
+  const _num8 = _ult8(numero);
   const numerosArea = Object.entries(CONTATOS);
-  const areaRemetente = numerosArea.find(([, n]) => n === numero);
+  const areaRemetente = _num8.length >= 7 ? numerosArea.find(([, n]) => _ult8(n) === _num8) : null;
+  console.log('[LAURO] proxy check: numero=', numero, '| ult8=', _num8, '| match=', areaRemetente ? areaRemetente[0] : 'nenhum');
   if (areaRemetente) {
-    const [areaNome] = areaRemetente;
+    const [areaNome, numeroAreaCanon] = areaRemetente;
+    // Consulta atendimentos pelo número canônico armazenado no banco (não pelo formato do webhook)
     const atendTodos = await query(
-      "SELECT id, numero_membro, idioma, nome_contato FROM lauro_atendimentos WHERE numero_area=$1 AND status='aguardando' ORDER BY criado_em ASC",
-      [numero]
+      "SELECT id, numero_membro, idioma, nome_contato FROM lauro_atendimentos WHERE RIGHT(regexp_replace(numero_area,'[^0-9]','','g'),8)=$1 AND status='aguardando' ORDER BY criado_em ASC",
+      [_ult8(numeroAreaCanon)]
     );
     if (atendTodos.rows.length > 0) {
       const _todos = atendTodos.rows;
@@ -651,12 +659,15 @@ async function processarMensagem(numero, texto, midia) {
     }
     // Sem atendimento ativo: número de área pode usar o bot normalmente
     // (ex: consultar a própria frequência). Cai para o fluxo padrão abaixo.
+    // Marca que é número de área para pular o relay de membro abaixo.
     console.log('Lauro: número de área', areaNome, 'sem atendimento ativo — usando bot normal');
   }
   // ─────────────────────────────────────────────────────────────────────────
+  // Se for número de área (mesmo sem atendimentos ativos), nunca relayar como membro
+  const _ehNumeroArea = !!areaRemetente;
 
   if (midia) {
-    const _at = await query("SELECT numero_area, area FROM lauro_atendimentos WHERE numero_membro=$1 AND status='aguardando' ORDER BY criado_em DESC LIMIT 1", [numero]);
+    const _at = _ehNumeroArea ? { rows: [] } : await query("SELECT numero_area, area FROM lauro_atendimentos WHERE numero_membro=$1 AND status='aguardando' ORDER BY criado_em DESC LIMIT 1", [numero]);
     if (_at.rows.length > 0) {
       const _na = _at.rows[0].numero_area;
       if (midia.tipo === 'image') await enviarImagem(_na, midia.url, midia.caption || '');
@@ -672,7 +683,8 @@ async function processarMensagem(numero, texto, midia) {
   }
 
   // Relay texto membro -> area (quando ha atendimento aberto)
-  if (msg) {
+  // Números de área nunca são tratados como membros em relay
+  if (msg && !_ehNumeroArea) {
     try {
       const _atT = await query("SELECT numero_area FROM lauro_atendimentos WHERE numero_membro=$1 AND status='aguardando' ORDER BY criado_em DESC LIMIT 1", [numero]);
       if (_atT.rows.length > 0) {
