@@ -7349,6 +7349,35 @@ router.post('/admin/lauro-encerrar/:id', requireAuth, async (req, res) => {
   } catch(e) { req.flash('erro', e.message); res.redirect('/admin/lauro-diagnostico'); }
 });
 
+// GET /admin/lauro-teste-wapi — dispara mensagem de teste para cada área e mostra resultado W-API
+router.get('/admin/lauro-teste-wapi', requireAuth, async (req, res) => {
+  try {
+    const axios = require('axios');
+    const { recarregarContatos } = require('../services/lauro');
+    await recarregarContatos();
+    const { query: q2 } = require('../models/database');
+    const contatos = await q2("SELECT area, numero FROM lauro_contatos WHERE numero != '' ORDER BY area");
+    const instanceId = process.env.WAPI_INSTANCE_ID;
+    const token = process.env.WAPI_TOKEN;
+    const resultados = [];
+    const areaAlvo = req.query.area || null;
+    for (const c of contatos.rows) {
+      if (areaAlvo && c.area !== areaAlvo) continue;
+      try {
+        const resp = await axios.post(
+          `https://api.w-api.app/v1/message/send-text?instanceId=${instanceId}`,
+          { phone: c.numero, message: `[LAURO TESTE] Mensagem de diagnóstico para ${c.area}. Hora: ${new Date().toLocaleString('pt-BR',{timeZone:'America/Asuncion'})}` },
+          { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, timeout: 20000 }
+        );
+        resultados.push({ area: c.area, numero: c.numero, status: resp.status, body: resp.data, ok: true });
+      } catch(e) {
+        resultados.push({ area: c.area, numero: c.numero, status: e.response?.status, body: e.response?.data || e.message, ok: false });
+      }
+    }
+    res.json({ instanceId, resultados });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
 // GET /api/evolution-qr — gera QR code para conectar WhatsApp
 router.get('/api/evolution-qr', async (req, res) => {
   try {
