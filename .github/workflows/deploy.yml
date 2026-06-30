@@ -1,24 +1,42 @@
-name: Deploy para Servidor
+name: Deploy Automático
 
 on:
   push:
     branches:
-      - main
+      - claude/whatsapp-connection-setup-ixtjr2
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Deploy via SSH
+      - name: Deploy no servidor via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: 46.225.150.104
           username: root
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          key: ${{ secrets.SSH_DEPLOY_KEY }}
           script: |
             cd /var/www/liga-urologia
-            git pull origin main
-            npm install --production
-            pm2 restart liga-urologia
-            echo "Deploy concluído!"
+            git pull origin claude/whatsapp-connection-setup-ixtjr2
+            pm2 restart liga-urologia --update-env
+
+            # Ajustar rate limit do nginx
+            NGINX_CONF=""
+            for f in /etc/nginx/nginx.conf /etc/nginx/sites-available/default /etc/nginx/sites-available/liga-urologia /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/*.conf; do
+              if [ -f "$f" ] && grep -q "limit_req" "$f" 2>/dev/null; then
+                NGINX_CONF="$f"
+                break
+              fi
+            done
+
+            if [ -n "$NGINX_CONF" ]; then
+              echo "Ajustando rate limit em $NGINX_CONF"
+              sed -i 's/rate=[0-9]*r\/s/rate=100r\/s/g' "$NGINX_CONF"
+              sed -i 's/burst=[0-9]*/burst=300 nodelay/g' "$NGINX_CONF"
+              nginx -t && nginx -s reload && echo "Nginx recarregado com sucesso"
+            else
+              echo "Nenhum config nginx com rate limit encontrado — verificando nginx.conf principal"
+              grep -r "limit_req" /etc/nginx/ 2>/dev/null | head -20
+            fi
+
+            echo "Deploy concluído: $(date)"

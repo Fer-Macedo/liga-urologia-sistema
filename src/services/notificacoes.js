@@ -87,23 +87,22 @@ function formatarNumero(numero) {
   return n;
 }
 
-// Envia direto para a Z-API (sem fila)
+// Envia direto para a W-API (sem fila)
 async function _enviarWhatsAppDireto(numero, mensagem) {
-  const instanceId = process.env.ZAPI_INSTANCE;
-  const token = process.env.ZAPI_TOKEN;
-  if (!token || !instanceId) { console.warn('Z-API nao configurada'); return { ok: false }; }
+  const instanceId = process.env.WAPI_INSTANCE_ID;
+  const token = process.env.WAPI_TOKEN;
+  if (!token || !instanceId) { console.warn('W-API nao configurada'); return { ok: false }; }
   const fone = formatarNumero(numero);
   try {
-    const url = 'https://api.z-api.io/instances/' + instanceId + '/token/' + token + '/send-text';
     const { data, status } = await axios.post(
-      url,
+      `https://api.w-api.app/v1/message/send-text?instanceId=${instanceId}`,
       { phone: fone, message: mensagem },
-      { headers: { 'Content-Type': 'application/json', 'client-token': process.env.ZAPI_CLIENT_TOKEN }, timeout: 20000 }
+      { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, timeout: 20000 }
     );
-    console.log('WhatsApp Z-API OK ' + fone + ' — ' + status);
+    console.log('WhatsApp W-API OK ' + fone + ' — ' + status);
     return { ok: true, data };
   } catch (err) {
-    console.error('Z-API ERRO ' + fone + ': ' + (err.response ? err.response.status : err.message));
+    console.error('W-API ERRO ' + fone + ': ' + (err.response ? err.response.status : err.message));
     return { ok: false };
   }
 }
@@ -310,9 +309,8 @@ async function notificarCobranca(opts) {
       + 'Por favor, regularize sua situação. 🙏'
   };
 
-  // ── WhatsApp (suspenso no modo aquecimento)
-  const isAtrasado = tipo === 'pos'; // cobrancas de atrasados sempre disparam (max 5/dia, anti-ban ativo)
-  if (membro.whatsapp && opts.canal !== 'email' && (!WAPP_SOMENTE_RESPOSTA || isAtrasado)) {
+  // ── WhatsApp (suspenso no modo aquecimento — WAPP_SOMENTE_RESPOSTA bloqueia todos os disparos)
+  if (membro.whatsapp && opts.canal !== 'email' && !WAPP_SOMENTE_RESPOSTA) {
     let wppOk = false;
 
     // Mensagem 1 — principal com instruções

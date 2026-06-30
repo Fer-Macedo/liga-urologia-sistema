@@ -97,6 +97,33 @@ async function initSchema() {
       chave TEXT PRIMARY KEY,
       valor TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS lauro_contatos (
+      area TEXT PRIMARY KEY,
+      numero TEXT NOT NULL DEFAULT '',
+      nome TEXT,
+      atualizado_em TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS lauro_atendimentos (
+      id SERIAL PRIMARY KEY,
+      numero_membro TEXT NOT NULL,
+      area TEXT NOT NULL,
+      numero_area TEXT NOT NULL,
+      idioma TEXT DEFAULT 'pt',
+      status TEXT DEFAULT 'aguardando',
+      nome_contato TEXT,
+      criado_em TIMESTAMP DEFAULT NOW(),
+      encerrado_em TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS lauro_conversas (
+      id SERIAL PRIMARY KEY,
+      numero TEXT NOT NULL,
+      papel TEXT NOT NULL,
+      mensagem TEXT NOT NULL,
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
   `);
 
   // Insere configs padrão
@@ -116,7 +143,8 @@ async function initSchema() {
     ['notif_dia_ativo','1'],
     ['notif_pos1_ativo','1'],
     ['notif_pos7_ativo','1'],
-    ['notif_aniversario_ativo','1']
+    ['notif_aniversario_ativo','1'],
+    ['notif_atrasados_diario','1']
   ];
 
   for (const [chave, valor] of cfgs) {
@@ -126,6 +154,14 @@ async function initSchema() {
     );
   }
 
+  // Correção automática: número da presidência estava com 9º dígito incorreto.
+  // O WhatsApp real é +55 79 9944-4808 (12 dígitos, sem o 9 extra).
+  try {
+    await query(
+      "UPDATE lauro_contatos SET numero='557999444808', atualizado_em=NOW() WHERE area='presidencia' AND numero='5579999444808'"
+    );
+  } catch(e) { console.error('Migração número presidência:', e.message); }
+
   // Admin padrão
   const admin = await query("SELECT id FROM usuarios WHERE perfil = 'admin'");
   if (admin.rows.length === 0) {
@@ -134,7 +170,7 @@ async function initSchema() {
       'INSERT INTO usuarios (nome, email, senha, perfil) VALUES ($1, $2, $3, $4)',
       ['Administrador', 'admin@liga.org.br', senha, 'admin']
     );
-    console.log('✅ Usuário admin criado: admin@liga.org.br / senha: admin123');
+    console.log('✅ Usuário admin criado: admin@liga.org.br');
     console.log('⚠️  TROQUE A SENHA APÓS O PRIMEIRO LOGIN!');
   }
 

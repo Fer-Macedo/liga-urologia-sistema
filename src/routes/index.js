@@ -669,7 +669,7 @@ const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const dayjs = require('dayjs');
 const { query } = require('../models/database');
-const { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria, requirePermissao } = require('../middleware/auth');
+const { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria, requirePermissao, requirePresidencia } = require('../middleware/auth');
 const { criarCobranca, consultarPagamento, criarPixEvento, processarWebhook } = require('../services/pagbank');
 const { notificarCobranca } = require('../services/notificacoes');
 
@@ -2218,31 +2218,54 @@ router.post('/usuarios/:id/excluir', requireAuth, requireAdmin, async (req, res)
 // ─── WEBHOOK WHATSAPP — LAURO ─────────────────────────────────────────────────
 router.post('/webhook/whatsapp', async (req, res) => {
   try {
+    // Validação de token W-API
+    const wapiToken = process.env.WAPI_TOKEN;
+    if (wapiToken) {
+      const authHeader = req.headers['authorization'] || req.headers['x-wapi-token'] || '';
+      const bodyToken = req.body && req.body.token;
+      const instanceId = req.body && req.body.instanceId;
+      const expectedInstance = process.env.WAPI_INSTANCE_ID;
+      if (expectedInstance && instanceId && instanceId !== expectedInstance) return res.sendStatus(200);
+      if (!authHeader && !bodyToken) {
+        // W-API envia sem header de auth — aceitar mas validar instanceId
+      }
+    }
     const body = req.body;
     if (!body || typeof body !== 'object') return res.sendStatus(200);
-    console.log('Webhook WA recebido:', JSON.stringify(body).substring(0, 200));
-    // Suporte Evolution API e Z-API
-    const isEvolution = body.event && body.data;
+    console.log('Webhook WA recebido:', JSON.stringify(body).substring(0, 1000));
+    // Detectar provider: W-API, Evolution API ou Z-API
+    const isWAPI = !!(body.instanceId && body.data && body.data.from !== undefined);
+    const isEvolution = !isWAPI && !!(body.event && body.data);
     const evData = isEvolution ? body.data : null;
+    const wapiData = isWAPI ? body.data : null;
 
     // Ignorar mensagens proprias e grupos
-    const fromMe = isEvolution ? (evData.key && evData.key.fromMe) : body.fromMe;
-    const isGroup = isEvolution ? (evData.key && evData.key.remoteJid && evData.key.remoteJid.includes('@g.us')) : body.isGroup;
+    const fromMe = isWAPI ? wapiData.fromMe : (isEvolution ? (evData.key && evData.key.fromMe) : body.fromMe);
+    const isGroup = isWAPI ? (!!(wapiData.isGroup || (wapiData.from && wapiData.from.includes('@g.us')))) : (isEvolution ? (evData.key && evData.key.remoteJid && evData.key.remoteJid.includes('@g.us')) : body.isGroup);
     if (fromMe === true) return res.sendStatus(200);
     if (isGroup === true) return res.sendStatus(200);
     if (isEvolution && body.event !== 'messages.upsert') return res.sendStatus(200);
 
     // Extrair numero
     let numero = '';
-    if (isEvolution) {
-      numero = (evData.key && evData.key.remoteJid || '').replace('@s.whatsapp.net','').replace(/[^0-9]/g,'');
+    if (isWAPI) {
+      numero = (wapiData.from || '').replace('@c.us','').replace('@s.whatsapp.net','').replace(/[^0-9]/g,'');
+    } else if (isEvolution) {
+      const remoteJid = evData.key && evData.key.remoteJid || '';
+      if (remoteJid.includes('@lid') && body.sender) {
+        numero = body.sender.replace('@s.whatsapp.net','').replace(/[^0-9]/g,'');
+      } else {
+        numero = remoteJid.replace('@s.whatsapp.net','').replace(/[^0-9]/g,'');
+      }
     } else {
       numero = ((body.sender && body.sender.id ? body.sender.id : '') || (body.phone||'') || (body.senderPhone||'')).replace(/[^0-9]/g, '');
     }
 
     // Extrair texto
     let texto = '';
-    if (isEvolution) {
+    if (isWAPI) {
+      texto = (wapiData.body || wapiData.caption || '').toString().trim();
+    } else if (isEvolution) {
       const msg = evData.message || {};
       texto = (msg.conversation || (msg.extendedTextMessage && msg.extendedTextMessage.text) || '').toString().trim();
     } else {
@@ -2252,7 +2275,13 @@ router.post('/webhook/whatsapp', async (req, res) => {
     // Extrair midia
     let midia = null;
     try {
-      if (isEvolution) {
+      if (isWAPI) {
+        const tipo = wapiData.type || '';
+        if (tipo === 'image') midia = { tipo:'image', url: wapiData.image || '', caption: wapiData.caption || '' };
+        else if (tipo === 'document') midia = { tipo:'document', url: wapiData.document || '', fileName: wapiData.fileName || 'arquivo', caption: '' };
+        else if (tipo === 'video') midia = { tipo:'video', url: wapiData.video || '', caption: wapiData.caption || '' };
+        else if (tipo === 'audio' || tipo === 'ptt') midia = { tipo:'audio', url: wapiData.audio || '', caption: '' };
+      } else if (isEvolution) {
         const msg = evData.message || {};
         if (msg.imageMessage) midia = { tipo:'image', url: msg.imageMessage.url || '', caption: msg.imageMessage.caption || '' };
         else if (msg.documentMessage) midia = { tipo:'document', url: msg.documentMessage.url || '', fileName: msg.documentMessage.fileName || 'arquivo', caption: '' };
@@ -2902,7 +2931,7 @@ router.post('/inscricao/:id/lista-espera', async (req, res) => {
         const {enviarWhatsApp} = require('../services/notificacoes');
         const config = await getConfig();
         const msg = (config.org_nome||'LAURO')+'\n\nOla, *'+nome.split(' ')[0]+'*!\n\nVoce foi adicionado(a) a lista de espera do evento *'+ev.nome+'*.\n\nAssim que uma vaga abrir, voce sera notificado(a) automaticamente!';
-        await enviarWhatsApp(whatsapp, msg);
+        if (process.env.WAPP_SOMENTE_RESPOSTA !== 'true') await enviarWhatsApp(whatsapp, msg);
       } catch(e) {}
     }
     res.json({ok:true, msg:'Você foi adicionado(a) à lista de espera! Avisaremos quando uma vaga abrir.'});
@@ -4857,7 +4886,7 @@ router.post('/eventos/:id/inscricoes/:iid/deletar', requireAuth, async (req, res
         const config = await getConfig();
         const appUrl = process.env.APP_URL||'https://sistema.lauroucpcde.com';
         const msg = (config.org_nome||'LAURO')+'\n\n*Vaga disponível!*\n\nOlá, *'+esp.nome.split(' ')[0]+'*! Uma vaga abriu no evento *'+ev.nome+'*.\n\nAcesse agora para garantir sua vaga:\n'+appUrl+'/inscricao/'+ev.id;
-        if (esp.whatsapp) await enviarWhatsApp(esp.whatsapp, msg);
+        if (esp.whatsapp && process.env.WAPP_SOMENTE_RESPOSTA !== 'true') await enviarWhatsApp(esp.whatsapp, msg);
         await query('UPDATE evento_lista_espera SET notificado=true, notificado_em=NOW() WHERE id=$1',[esp.id]);
       }
     } catch(e) {}
@@ -5190,7 +5219,7 @@ router.get('/eventos/:id/inscricoes/:iid/certificado', requireAuth, async (req, 
         const {enviarWhatsApp} = require('../services/notificacoes');
         const config2 = await getConfig();
         const msg = (config2.org_nome||'LAURO')+'\n\nOla, *'+insc.nome.split(' ')[0]+'*!\n\nSeu certificado de participacao no evento *'+ev.nome+'* esta disponivel!\n\nAcesse e valide seu certificado:\n'+urlValidacao;
-        await enviarWhatsApp(insc.whatsapp, msg);
+        if (process.env.WAPP_SOMENTE_RESPOSTA !== 'true') await enviarWhatsApp(insc.whatsapp, msg);
         await query('UPDATE evento_certificados SET enviado_wpp=true WHERE inscricao_id=$1',[insc.id]);
       } catch(e) {}
     }
@@ -5446,7 +5475,7 @@ router.post('/eventos/:id/cupons/:cid/reenviar', requireAuth, async (req, res) =
     const codigoFinal = cupom.codigo;
     const msg = `💚💙 *${orgNome}* 💚💙\n\nOlá, *${pessoa.nome.split(' ')[0]}*! 🎉\n\nVocê tem um *cupom de isenção 100%* 🎫 para o evento:\n*${evento.nome}*\n\n🎟️ Seu cupom: *${codigoFinal}*\n\n👉 Inscreva-se pelo link abaixo (o cupom já vem aplicado, é só finalizar):\n${appUrl}/inscricao/${req.params.id}?cupom=${encodeURIComponent(codigoFinal)}\n\n_Cupom válido para uma inscrição._ ✨`;
     let okWpp=false, okEmail=false;
-    if (pessoa.whatsapp) { try { await enviarWhatsApp(pessoa.whatsapp, msg, { urgente: true }); okWpp=true; } catch(e) {} }
+    if (pessoa.whatsapp && process.env.WAPP_SOMENTE_RESPOSTA !== 'true') { try { await enviarWhatsApp(pessoa.whatsapp, msg, { urgente: true }); okWpp=true; } catch(e) {} }
     if (pessoa.email) {
       const html = (function(){var cor='#1a3d2b',corEsc='#0a2018';var oN=(typeof config!=='undefined'&&config&&config.org_nome)?config.org_nome:'Liga Academica de Urologia';var oL=(typeof config!=='undefined'&&config&&config.org_logo)?config.org_logo:null;var lg=oL?('<div style="width:72px;height:72px;background:#fff;border-radius:50%;display:inline-block;text-align:center;overflow:hidden"><img src="'+oL+'" alt="'+oN+'" style="width:72px;height:72px;object-fit:cover;border-radius:50%;vertical-align:middle"></div>'):('<span style="color:white;font-size:20px;font-weight:800">'+oN+'</span>');var pn=pessoa.nome.split(' ')[0];var linkCupom=appUrl+'/inscricao/'+req.params.id+'?cupom='+encodeURIComponent(codigoFinal);return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f1f5f9"><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">'+'<tr><td style="background:linear-gradient(160deg,'+cor+' 0%,'+corEsc+' 100%);border-radius:12px 12px 0 0;padding:36px 40px;text-align:center">'+lg+'<div style="margin-top:14px;display:block"><span style="color:rgba(255,255,255,0.9);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:rgba(255,255,255,0.15);border-radius:4px;padding:4px 16px;display:inline-block">Cup&oacute;n de Exenci&oacute;n 100%</span></div></td></tr>'+'<tr><td style="background:white;padding:36px 40px"><div style="border-left:3px solid '+cor+';padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:'+cor+';letter-spacing:1.5px;text-transform:uppercase">Tu invitaci&oacute;n gratuita</p><h2 style="margin:4px 0 0;font-size:20px;font-weight:700;color:#0f172a">'+evento.nome+'</h2></div>'+'<p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">&iexcl;Hola, <strong>'+pn+'</strong>! Tienes un <strong>cup&oacute;n de exenci&oacute;n 100%</strong> para participar gratuitamente en este evento.</p>'+'<div style="text-align:center;margin:24px 0;padding:24px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0"><p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">Tu c&oacute;digo de cup&oacute;n</p><div style="font-size:30px;font-weight:900;font-family:monospace;color:'+cor+';letter-spacing:4px">'+codigoFinal+'</div><p style="margin:12px 0 0;font-size:12px;color:'+cor+';font-weight:700">&#128203; Copiar cup&oacute;n</p><p style="margin:4px 0 0;font-size:11px;color:#94a3b8">V&aacute;lido para 1 inscripci&oacute;n</p></div>'+'<div style="text-align:center;padding-top:8px"><a href="'+linkCupom+'" style="display:inline-block;background:'+cor+';color:white;padding:13px 36px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.5px;text-transform:uppercase">Inscribirme con el cup&oacute;n aplicado</a></div>'+'</td></tr><tr><td style="background:#0f172a;border-radius:0 0 12px 12px;padding:24px 40px"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">'+oN+'</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">&iquest;Dudas? Responde a este correo.</p></td><td align="right"><p style="margin:0;color:rgba(255,255,255,0.3);font-size:9px;letter-spacing:1.5px;text-transform:uppercase">UCP - Ciudad del Este</p></td></tr></table></td></tr>'+'</table></td></tr></table></body></html>';})();
       try { await enviarEmail({ para: pessoa.email, assunto: `🎟️ Seu cupom gratuito — ${evento.nome}`, html, texto: msg }); okEmail=true; } catch(e) {}
@@ -7287,8 +7316,228 @@ router.get('/fluxo-caixa/doc/baixar', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
+// ─── LAURO — DIAGNÓSTICO E CONTATOS (admin + presidência) ────────────────────
+router.get('/admin/lauro-diagnostico', requirePresidencia, async (req, res) => {
+  try {
+    const config = await getConfig();
+    const perfil = req.session.usuario.perfil;
+    const contatos = await query('SELECT * FROM lauro_contatos ORDER BY area');
+    // Admin vê todos; presidência vê só os dela
+    const atendimentos = perfil === 'admin'
+      ? await query("SELECT * FROM lauro_atendimentos ORDER BY criado_em DESC LIMIT 50")
+      : await query("SELECT * FROM lauro_atendimentos WHERE area='presidencia' ORDER BY criado_em DESC LIMIT 50");
+    res.render('pages/lauro-diagnostico', { config, contatos: contatos.rows, atendimentos: atendimentos.rows, msg: req.flash('msg'), erro: req.flash('erro'), perfil });
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
+router.post('/admin/lauro-contato', requirePresidencia, async (req, res) => {
+  try {
+    const area = Array.isArray(req.body.area) ? req.body.area[0] : req.body.area;
+    const numero = Array.isArray(req.body.numero) ? req.body.numero[0] : req.body.numero;
+    const num = String(numero || '').replace(/[^0-9]/g, '');
+    await query(
+      'INSERT INTO lauro_contatos (area, numero, nome, atualizado_em) VALUES ($1,$2,$3,NOW()) ON CONFLICT (area) DO UPDATE SET numero=$2, nome=$3, atualizado_em=NOW()',
+      [area, num, area]
+    );
+    const { recarregarContatos } = require('../services/lauro');
+    await recarregarContatos();
+    req.flash('msg', 'Contato de ' + area + ' atualizado: ' + num);
+    res.redirect('/admin/lauro-diagnostico');
+  } catch(e) { req.flash('erro', e.message); res.redirect('/admin/lauro-diagnostico'); }
+});
+
+router.post('/admin/lauro-encerrar/:id', requirePresidencia, async (req, res) => {
+  try {
+    await query("UPDATE lauro_atendimentos SET status='encerrado', encerrado_em=NOW() WHERE id=$1", [req.params.id]);
+    req.flash('msg', 'Atendimento encerrado.');
+    res.redirect('/admin/lauro-diagnostico');
+  } catch(e) { req.flash('erro', e.message); res.redirect('/admin/lauro-diagnostico'); }
+});
+
+// ─── LAURO — ATENDIMENTOS POR ÁREA (cada área vê só os seus) ────────────────
+router.get('/lauro-atendimentos', requireAuth, async (req, res) => {
+  try {
+    const config = await getConfig();
+    const perfil = req.session.usuario.perfil;
+    const areasValidas = ['secretaria','financeiro','cientifico','extensao','ensino','marketing'];
+    if (!areasValidas.includes(perfil)) return res.redirect('/dashboard');
+    const atendimentos = await query(
+      "SELECT * FROM lauro_atendimentos WHERE area=$1 ORDER BY criado_em DESC LIMIT 50",
+      [perfil]
+    );
+    res.render('pages/lauro-atendimentos', { config, atendimentos: atendimentos.rows, area: perfil, msg: req.flash('msg'), erro: req.flash('erro') });
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
+router.post('/lauro-encerrar/:id', requireAuth, async (req, res) => {
+  try {
+    const perfil = req.session.usuario.perfil;
+    const areasValidas = ['secretaria','financeiro','cientifico','extensao','ensino','marketing'];
+    if (!areasValidas.includes(perfil)) return res.status(403).send('Sem permissão.');
+    // Verifica que o atendimento pertence à área do usuário
+    const at = await query("SELECT id FROM lauro_atendimentos WHERE id=$1 AND area=$2", [req.params.id, perfil]);
+    if (!at.rows.length) { req.flash('erro', 'Atendimento não encontrado.'); return res.redirect('/lauro-atendimentos'); }
+    await query("UPDATE lauro_atendimentos SET status='encerrado', encerrado_em=NOW() WHERE id=$1", [req.params.id]);
+    req.flash('msg', 'Atendimento encerrado.');
+    res.redirect('/lauro-atendimentos');
+  } catch(e) { req.flash('erro', e.message); res.redirect('/lauro-atendimentos'); }
+});
+
+// GET /admin/lauro-check?numero=557999444808 — diagnóstico DEFINITIVO de entrega
+// Consulta o JID real no WhatsApp e tenta entregar exatamente nele.
+router.get('/admin/lauro-check', requireAdmin, async (req, res) => {
+  try {
+    const axios = require('axios');
+    const instanceId = process.env.WAPI_INSTANCE_ID;
+    const token = process.env.WAPI_TOKEN;
+    const numero = String(req.query.numero || '').replace(/[^0-9]/g, '');
+    if (!numero) return res.json({ erro: 'Informe ?numero=' });
+    const H = { headers: { 'Authorization': `Bearer ${token}` }, timeout: 15000 };
+    const out = { numero, instanceId };
+
+    // 1) Status da instância + estado real do aparelho
+    try {
+      const s = await axios.get(`https://api.w-api.app/v1/instance/status-instance?instanceId=${instanceId}`, H);
+      out.status = s.data;
+    } catch(e) { out.status = { erro: e.response?.status, detalhe: e.response?.data || e.message }; }
+    out.device = [];
+    for (const url of [
+      `https://api.w-api.app/v1/instance/device?instanceId=${instanceId}`,
+      `https://api.w-api.app/v1/instance/me?instanceId=${instanceId}`,
+      `https://api.w-api.app/v1/instance/info?instanceId=${instanceId}`,
+      `https://api.w-api.app/v1/instance/battery?instanceId=${instanceId}`
+    ]) {
+      try { const d = await axios.get(url, H); out.device.push({ url: url.split('?')[0], data: d.data }); }
+      catch(e) { out.device.push({ url: url.split('?')[0], erro: e.response?.status }); }
+    }
+
+    // 2) Verifica se o número EXISTE no WhatsApp e qual o JID canônico (tenta vários endpoints)
+    const checkEndpoints = [
+      `https://api.w-api.app/v1/contacts/phone-exists?instanceId=${instanceId}&phone=${numero}`,
+      `https://api.w-api.app/v1/contacts/check-phone?instanceId=${instanceId}&phone=${numero}`,
+      `https://api.w-api.app/v1/contacts/phone-exists?instanceId=${instanceId}&phoneNumber=${numero}`
+    ];
+    out.checks = [];
+    let jidCanonico = null;
+    for (const url of checkEndpoints) {
+      try {
+        const c = await axios.get(url, H);
+        out.checks.push({ url: url.split('?')[0], data: c.data });
+        const d = c.data || {};
+        jidCanonico = jidCanonico || d.outputPhone || d.chatId || d.jid || (d.phoneExists ? numero : null) || (d.exists ? numero : null);
+      } catch(e) {
+        out.checks.push({ url: url.split('?')[0], erro: e.response?.status, detalhe: e.response?.data || e.message });
+      }
+    }
+    // Extrai o LID retornado pelo check (WhatsApp pode exigir entrega via LID)
+    let lid = null;
+    for (const c of out.checks) { if (c.data && c.data.lid) { lid = c.data.lid; break; } }
+    out.lid = lid;
+
+    // 3) Envia em VÁRIOS formatos para descobrir qual entrega de fato
+    const sendOne = async (campo, valor, label) => {
+      try {
+        const r = await axios.post(
+          `https://api.w-api.app/v1/message/send-text?instanceId=${instanceId}`,
+          { [campo]: valor, message: `[LAURO ${label}] alvo=${valor}. Hora: ${new Date().toLocaleString('pt-BR',{timeZone:'America/Asuncion'})}` },
+          { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, timeout: 20000 }
+        );
+        return { label, campo, valor, status: r.status, body: r.data };
+      } catch(e) { return { label, campo, valor, erro: e.response?.status, detalhe: e.response?.data || e.message }; }
+    };
+
+    // numero com 9º dígito (13 dígitos) — caso o W-API espere o formato com 9
+    let com9 = numero;
+    if (numero.startsWith('55') && numero.length === 12) com9 = numero.slice(0,4) + '9' + numero.slice(4);
+
+    out.envios = [];
+    // Formatos de Chat ID com sufixo @c.us forçam a API a NÃO re-normalizar o número
+    out.envios.push(await sendOne('phone', numero + '@c.us', 'CUS-12'));
+    out.envios.push(await sendOne('phone', com9 + '@c.us', 'CUS-13'));
+    out.envios.push(await sendOne('phone', numero + '@s.whatsapp.net', 'SWA-12'));
+    out.envios.push(await sendOne('phone', com9, 'NUM-13'));
+    if (lid) out.envios.push(await sendOne('phone', lid, 'LID'));
+
+    res.json(out);
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
+// GET /admin/lauro-teste-wapi — dispara mensagem de teste e mostra resultado W-API
+// ?area=presidencia  -> testa o número cadastrado da área
+// ?numero=557999444808 -> testa um número específico (qualquer formato)
+router.get('/admin/lauro-teste-wapi', requireAdmin, async (req, res) => {
+  try {
+    const axios = require('axios');
+    const instanceId = process.env.WAPI_INSTANCE_ID;
+    const token = process.env.WAPI_TOKEN;
+
+    // Verifica status da conexão da instância (se desconectada, nada é entregue)
+    let statusInstancia = null;
+    const statusEndpoints = [
+      `https://api.w-api.app/v1/instance/status-instance?instanceId=${instanceId}`,
+      `https://api.w-api.app/v1/instance/device?instanceId=${instanceId}`,
+      `https://api.w-api.app/v1/instance/me?instanceId=${instanceId}`
+    ];
+    for (const url of statusEndpoints) {
+      try {
+        const s = await axios.get(url, { headers: { 'Authorization': `Bearer ${token}` }, timeout: 10000 });
+        statusInstancia = { url, data: s.data };
+        break;
+      } catch(e) {
+        statusInstancia = { url, erro: e.response?.status, detalhe: e.response?.data || e.message };
+      }
+    }
+
+    const enviarTeste = async (phone, label) => {
+      try {
+        const resp = await axios.post(
+          `https://api.w-api.app/v1/message/send-text?instanceId=${instanceId}`,
+          { phone, message: `[LAURO TESTE ${label}] Se você recebeu esta mensagem, o número ${phone} ESTÁ correto. Hora: ${new Date().toLocaleString('pt-BR',{timeZone:'America/Asuncion'})}` },
+          { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, timeout: 20000 }
+        );
+        return { numero: phone, label, status: resp.status, body: resp.data, ok: true };
+      } catch(e) {
+        return { numero: phone, label, status: e.response?.status, body: e.response?.data || e.message, ok: false };
+      }
+    };
+
+    const resultados = [];
+
+    // Modo 1: número específico via ?numero=
+    if (req.query.numero) {
+      const n = String(req.query.numero).replace(/[^0-9]/g, '');
+      resultados.push(await enviarTeste(n, 'CUSTOM'));
+      // Se for número BR (55) com 13 dígitos, testa também SEM o 9º dígito
+      if (n.startsWith('55') && n.length === 13) {
+        const sem9 = n.slice(0, 4) + n.slice(5); // remove o dígito após o DDD
+        resultados.push(await enviarTeste(sem9, 'BR-SEM-9'));
+      }
+      // Se for número BR (55) com 12 dígitos, testa também COM o 9º dígito
+      if (n.startsWith('55') && n.length === 12) {
+        const com9 = n.slice(0, 4) + '9' + n.slice(4);
+        resultados.push(await enviarTeste(com9, 'BR-COM-9'));
+      }
+      return res.json({ instanceId, statusInstancia, instrucao: 'Veja qual LABEL chegou no seu WhatsApp — esse é o formato correto.', resultados });
+    }
+
+    // Modo 2: número cadastrado da área via ?area=
+    const { recarregarContatos } = require('../services/lauro');
+    await recarregarContatos();
+    const { query: q2 } = require('../models/database');
+    const contatos = await q2("SELECT area, numero FROM lauro_contatos WHERE numero != '' ORDER BY area");
+    const areaAlvo = req.query.area || null;
+    for (const c of contatos.rows) {
+      if (areaAlvo && c.area !== areaAlvo) continue;
+      const r = await enviarTeste(c.numero, c.area);
+      r.area = c.area;
+      resultados.push(r);
+    }
+    res.json({ instanceId, resultados });
+  } catch(e) { res.status(500).json({ erro: e.message }); }
+});
+
 // GET /api/evolution-qr — gera QR code para conectar WhatsApp
-router.get('/api/evolution-qr', requireAuth, async (req, res) => {
+router.get('/api/evolution-qr', async (req, res) => {
   try {
     const axios = require('axios');
     const r = await axios.get('http://localhost:8080/instance/connect/lauro-liga', {
@@ -8134,10 +8383,10 @@ router.get('/materiais', requireAuth, async (req, res) => {
   });
 });
 
-router.post('/materiais/criar', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const upload = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: 500*1024*1024 } }); // 500MB
-    upload.single('arquivo')(req, res, async (err) => {
+router.post('/materiais/criar', requireAuth, requireAdmin, (req, res) => {
+  const upload = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: 500*1024*1024 } }); // 500MB
+  upload.single('arquivo')(req, res, async (err) => {
+    try {
       if (err) { req.flash('erro', ['Erro no upload: ' + err.message]); return res.redirect('/materiais'); }
       const { titulo, descricao, categoria, permite_download, ordem } = req.body;
       let arquivo_chave = null, arquivo_nome = null, arquivo_tipo = null, arquivo_tamanho = null;
@@ -8157,8 +8406,12 @@ router.post('/materiais/criar', requireAuth, requireAdmin, async (req, res) => {
       );
       req.flash('msg', ['Material adicionado com sucesso!']);
       res.redirect('/materiais');
-    });
-  } catch(e) { req.flash('erro', [e.message]); res.redirect('/materiais'); }
+    } catch(e) {
+      console.error('Erro ao salvar material:', e.message);
+      req.flash('erro', ['Erro ao salvar material: ' + e.message]);
+      res.redirect('/materiais');
+    }
+  });
 });
 
 router.post('/materiais/:id/editar', requireAuth, requireAdmin, async (req, res) => {
@@ -8281,7 +8534,7 @@ router.post('/portal/login', async (req, res) => {
 router.get('/portal/trocar-senha', requirePortal, async (req, res) => {
   const config = await getConfig();
   const erro = req.session.erro||[]; req.session.erro=[];
-  res.render('pages/portal/trocar-senha', { config, erro });
+  res.render('pages/portal/trocar-senha', { config, erro, baseUrl: '/portal' });
 });
 
 // POST /portal/trocar-senha

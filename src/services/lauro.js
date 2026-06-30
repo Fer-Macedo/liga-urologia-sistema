@@ -353,49 +353,83 @@ REGLAS IMPORTANTES:
   }
 }
 
+// Cache de @lid por número (o @lid é o identificador universal e mais confiável do WhatsApp,
+// conforme documentação oficial do W-API). Resolver o @lid corrige entrega para números
+// brasileiros de formato antigo que o W-API não roteia corretamente pelo número puro.
+const _lidCache = {};
+
+async function resolverDestino(numero) {
+  // Já é um identificador especial (@lid / @g.us): usa como está
+  if (typeof numero === 'string' && numero.includes('@')) return numero;
+  const digitos = String(numero || '').replace(/[^0-9]/g, '');
+  if (!digitos) return numero;
+  if (_lidCache[digitos] !== undefined) return _lidCache[digitos] || digitos;
+  const instanceId = process.env.WAPI_INSTANCE_ID;
+  const token = process.env.WAPI_TOKEN;
+  try {
+    const r = await axios.get(
+      `https://api.w-api.app/v1/contacts/phone-exists?instanceId=${instanceId}&phoneNumber=${digitos}`,
+      { headers: { 'Authorization': `Bearer ${token}` }, timeout: 12000 }
+    );
+    const lid = r.data && r.data.lid ? r.data.lid : null;
+    _lidCache[digitos] = lid; // pode ser null (cacheia "sem lid" também)
+    if (lid) console.log('[LAURO] @lid resolvido para', digitos, '->', lid);
+    return lid || digitos;
+  } catch(e) {
+    console.error('[LAURO] erro resolver @lid de', digitos, '-', e.response?.status || e.message);
+    return digitos;
+  }
+}
+
 async function enviarMensagem(numero, mensagem) {
-  const baseUrl = process.env.EVOLUTION_URL || 'http://localhost:8080';
-  const apiKey = process.env.EVOLUTION_API_KEY;
-  const instance = process.env.EVOLUTION_INSTANCE || 'lauro-liga';
+  const instanceId = process.env.WAPI_INSTANCE_ID;
+  const token = process.env.WAPI_TOKEN;
   try {
     const delay = Math.min(Math.max(mensagem.length * 25, 1500), 4000);
     await new Promise(r => setTimeout(r, delay));
-    await axios.post(
-      baseUrl + '/message/sendText/' + instance,
-      { number: numero, text: mensagem },
-      { headers: { 'Content-Type': 'application/json', 'apikey': apiKey }, timeout: 20000 }
+    // Resolve o destino para @lid (identificador universal recomendado pela W-API)
+    const destino = await resolverDestino(numero);
+    const resp = await axios.post(
+      `https://api.w-api.app/v1/message/send-text?instanceId=${instanceId}`,
+      { phone: destino, message: mensagem },
+      { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, timeout: 20000 }
     );
-    console.log('WhatsApp Evolution OK', numero, '— 200');
-  } catch(e) { console.error('Lauro erro envio:', e.message); }
+    console.log('[LAURO] W-API OK para', numero, '(destino:', destino + ')', '— status:', resp.status, '— body:', JSON.stringify(resp.data));
+    return true;
+  } catch(e) {
+    const errDetail = e.response ? JSON.stringify(e.response.data) : e.message;
+    console.error('[LAURO] ERRO envio para', numero, '— status:', e.response?.status, '— detalhe:', errDetail);
+    return false;
+  }
 }
 async function enviarImagem(numero, imagem, legenda) {
-  const baseUrl = process.env.EVOLUTION_URL || 'http://localhost:8080';
-  const apiKey = process.env.EVOLUTION_API_KEY;
-  const instance = process.env.EVOLUTION_INSTANCE || 'lauro-liga';
+  const instanceId = process.env.WAPI_INSTANCE_ID;
+  const token = process.env.WAPI_TOKEN;
   try {
     await axios.post(
-      baseUrl + '/message/sendMedia/' + instance,
-      { number: numero, mediatype: 'image', media: imagem, caption: legenda || '' },
-      { headers: { 'Content-Type': 'application/json', 'apikey': apiKey }, timeout: 30000 }
+      `https://api.w-api.app/v1/message/send-image?instanceId=${instanceId}`,
+      { phone: numero, image: imagem, caption: legenda || '' },
+      { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, timeout: 30000 }
     );
     console.log('Lauro enviou imagem para', numero);
   } catch(e) { console.error('Lauro erro envio imagem:', e.message); }
 }
 async function enviarDocumento(numero, documento, fileName) {
-  const baseUrl = process.env.EVOLUTION_URL || 'http://localhost:8080';
-  const apiKey = process.env.EVOLUTION_API_KEY;
-  const instance = process.env.EVOLUTION_INSTANCE || 'lauro-liga';
+  const instanceId = process.env.WAPI_INSTANCE_ID;
+  const token = process.env.WAPI_TOKEN;
   try {
     await axios.post(
-      baseUrl + '/message/sendMedia/' + instance,
-      { number: numero, mediatype: 'document', media: documento, fileName: fileName || 'arquivo.pdf' },
-      { headers: { 'Content-Type': 'application/json', 'apikey': apiKey }, timeout: 30000 }
+      `https://api.w-api.app/v1/message/send-document?instanceId=${instanceId}`,
+      { phone: numero, document: documento, fileName: fileName || 'arquivo.pdf' },
+      { headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }, timeout: 30000 }
     );
     console.log('Lauro enviou documento para', numero);
   } catch(e) { console.error('Lauro erro envio documento:', e.message); }
 }
 
 async function redirecionarArea(numero, area, idioma) {
+  // Recarrega contatos do banco antes de usar para garantir número atual
+  await recarregarContatos();
   const areas = ['secretaria','financeiro','cientifico','extensao','ensino','marketing','presidencia'];
   const nomesPT = ['Secretaria','Financeiro','Cientifico','Extensao','Ensino','Marketing','Presidencia'];
   const nomesES = ['Secretaria','Finanzas','Cientifico','Extension','Ensenanza','Marketing','Presidencia'];
@@ -403,6 +437,7 @@ async function redirecionarArea(numero, area, idioma) {
   if (idx === -1) return;
   const nomeArea = idioma === 'es' ? nomesES[idx] : nomesPT[idx];
   const numeroArea = CONTATOS[area];
+  console.log('[LAURO] redirecionarArea: area=', area, '| numeroArea=', numeroArea, '| CONTATOS completo:', JSON.stringify(CONTATOS));
 
   // Verifica se ja existe atendimento aberto para este membro com esta area
   const jaAberto = await query(
@@ -460,7 +495,13 @@ async function redirecionarArea(numero, area, idioma) {
     + 'AT1: SAIR - encerrar um atendimento especifico\n'
     + 'QUEM - identificar quem voce esta atendendo\n'
     + 'SAIR - encerrar (quando ha apenas um atendimento)';
-  await enviarMensagem(numeroArea, msgArea);
+
+  // Notifica a área via WhatsApp
+  console.log('[LAURO] Enviando notificacao para area:', area, '| numero:', numeroArea);
+  const wppOk = await enviarMensagem(numeroArea, msgArea);
+  if (!wppOk) {
+    console.error('[LAURO] FALHA ao notificar area', area, '— numero usado:', numeroArea, '— verifique o numero em /admin/lauro-diagnostico');
+  }
 
   // Notifica presidencia
   if (area !== 'presidencia') {
@@ -474,14 +515,22 @@ async function redirecionarArea(numero, area, idioma) {
 async function processarMensagem(numero, texto, midia) {
   let msg = (texto || '').trim();
 
+  // Garante que CONTATOS reflete o banco (evita proxy detection falhar por dados stale)
+  await recarregarContatos();
+
   // ── PROXY: se quem envia é número de área, encaminhar ao membro ──────────
+  // Usa últimos 8 dígitos para tolerar variações de formato (12 vs 13 dígitos, @lid, etc.)
+  const _ult8 = (n) => String(n || '').replace(/\D/g, '').slice(-8);
+  const _num8 = _ult8(numero);
   const numerosArea = Object.entries(CONTATOS);
-  const areaRemetente = numerosArea.find(([, n]) => n === numero);
+  const areaRemetente = _num8.length >= 7 ? numerosArea.find(([, n]) => _ult8(n) === _num8) : null;
+  console.log('[LAURO] proxy check: numero=', numero, '| ult8=', _num8, '| match=', areaRemetente ? areaRemetente[0] : 'nenhum');
   if (areaRemetente) {
-    const [areaNome] = areaRemetente;
+    const [areaNome, numeroAreaCanon] = areaRemetente;
+    // Consulta atendimentos pelo número canônico armazenado no banco (não pelo formato do webhook)
     const atendTodos = await query(
-      "SELECT id, numero_membro, idioma, nome_contato FROM lauro_atendimentos WHERE numero_area=$1 AND status='aguardando' ORDER BY criado_em ASC",
-      [numero]
+      "SELECT id, numero_membro, idioma, nome_contato FROM lauro_atendimentos WHERE RIGHT(regexp_replace(numero_area,'[^0-9]','','g'),8)=$1 AND status='aguardando' ORDER BY criado_em ASC",
+      [_ult8(numeroAreaCanon)]
     );
     if (atendTodos.rows.length > 0) {
       const _todos = atendTodos.rows;
@@ -610,12 +659,15 @@ async function processarMensagem(numero, texto, midia) {
     }
     // Sem atendimento ativo: número de área pode usar o bot normalmente
     // (ex: consultar a própria frequência). Cai para o fluxo padrão abaixo.
+    // Marca que é número de área para pular o relay de membro abaixo.
     console.log('Lauro: número de área', areaNome, 'sem atendimento ativo — usando bot normal');
   }
   // ─────────────────────────────────────────────────────────────────────────
+  // Se for número de área (mesmo sem atendimentos ativos), nunca relayar como membro
+  const _ehNumeroArea = !!areaRemetente;
 
   if (midia) {
-    const _at = await query("SELECT numero_area, area FROM lauro_atendimentos WHERE numero_membro=$1 AND status='aguardando' ORDER BY criado_em DESC LIMIT 1", [numero]);
+    const _at = _ehNumeroArea ? { rows: [] } : await query("SELECT numero_area, area FROM lauro_atendimentos WHERE numero_membro=$1 AND status='aguardando' ORDER BY criado_em DESC LIMIT 1", [numero]);
     if (_at.rows.length > 0) {
       const _na = _at.rows[0].numero_area;
       if (midia.tipo === 'image') await enviarImagem(_na, midia.url, midia.caption || '');
@@ -631,7 +683,8 @@ async function processarMensagem(numero, texto, midia) {
   }
 
   // Relay texto membro -> area (quando ha atendimento aberto)
-  if (msg) {
+  // Números de área nunca são tratados como membros em relay
+  if (msg && !_ehNumeroArea) {
     try {
       const _atT = await query("SELECT numero_area FROM lauro_atendimentos WHERE numero_membro=$1 AND status='aguardando' ORDER BY criado_em DESC LIMIT 1", [numero]);
       if (_atT.rows.length > 0) {

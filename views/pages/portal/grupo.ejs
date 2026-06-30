@@ -4,224 +4,462 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="shortcut icon" href="/favicon.ico">
   <title><%=grupo.nome%> — Portal Cientifico</title>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Archivo:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Archivo:wght@700;800;900&display=swap" rel="stylesheet">
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:#F0F4F2;min-height:100vh}
-    .topbar{background:#0C231B;padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
-    .topbar-brand{display:flex;align-items:center;gap:10px}
-    .topbar-logo{width:32px;height:32px;background:#fff;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center}
-    .topbar-logo img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-    .topbar-nome{font-family:'Archivo',sans-serif;font-weight:800;font-size:14px;color:#fff}
-    .topbar-sub{font-size:10px;color:#5E7A6D;text-transform:uppercase;letter-spacing:2px;margin-top:1px}
-    .topbar-right{display:flex;align-items:center;gap:10px}
-    .topbar-right span{font-size:12.5px;color:#CFE0D7}
-    .topbar-logout{font-size:12px;color:#8FA89C;text-decoration:none;padding:5px 10px;border:1px solid rgba(255,255,255,.15)}
-    .topbar-logout:hover{color:#fff;border-color:rgba(255,255,255,.4)}
-    .main{max-width:1000px;margin:0 auto;padding:28px 20px}
-    .pg-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
-    .pg-back{font-size:13px;color:#5E7A6D;text-decoration:none;display:flex;align-items:center;gap:4px}
-    .pg-back:hover{color:#0F6E56}
-    .pg-title{font-size:19px;font-weight:700;color:#0C231B;flex:1}
-    .pg-proj{font-size:12px;color:#6B7A72}
-    .tabs{display:flex;border-bottom:2px solid #DDE3DF;margin-bottom:24px}
-    .tab{padding:10px 20px;font-size:13px;font-weight:600;color:#6B7A72;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
-    .tab:hover{color:#0C231B}
-    .tab.ativo{color:#0F6E56;border-bottom-color:#0F6E56}
-    .tab-content{display:none}.tab-content.ativo{display:block}
-    .card{background:#fff;border:1px solid #DDE3DF;padding:20px;margin-bottom:16px}
-    .card h3{font-size:13px;font-weight:700;color:#0C231B;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #EEF0ED}
-    .btn{padding:9px 18px;font-size:13px;font-weight:600;border:1px solid #DDE3DF;background:#fff;color:#0C231B;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:7px;border-radius:0;font-family:inherit}
-    .btn:hover{background:#F0F4F2}
-    .btn.pri{background:#0F6E56;color:#fff;border-color:#0F6E56}
-    .btn.pri:hover{background:#0a5240}
-    .btn-sm{padding:6px 12px;font-size:12px}
-    .upload-area{border:1.5px dashed #DDE3DF;padding:28px;text-align:center;cursor:pointer;background:#F8FAF9}
-    .upload-area:hover{border-color:#0F6E56}
-    .upload-area p{font-size:12.5px;color:#6B7A72;margin:6px 0 0}
-    .versao-item{border:1px solid #DDE3DF;padding:14px 16px;margin-bottom:8px;background:#fff}
-    .versao-nome{font-size:13px;font-weight:600;color:#0C231B}
-    .versao-meta{font-size:11px;color:#6B7A72;margin-top:3px}
-    .vstatus{display:inline-flex;padding:2px 8px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border:1px solid;margin-top:6px}
-    .vstatus-aguardando{background:#f8fafc;color:#64748b;border-color:#cbd5e1}
-    .vstatus-em_revisao{background:#fff7ed;color:#c2410c;border-color:#fed7aa}
-    .vstatus-devolvido{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
-    .vstatus-aprovado{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
-    .comentario-box{background:#fffbeb;border:1px solid #fde68a;padding:10px 14px;font-size:12.5px;color:#92400e;margin-top:8px}
-    .chat-msgs{border:1px solid #DDE3DF;background:#F8FAF9;padding:16px;min-height:260px;max-height:380px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:10px}
-    .chat-msg{padding:10px 13px;max-width:80%}
-    .chat-msg.sistema{background:#fff;border:1px solid #DDE3DF;align-self:flex-start}
-    .chat-msg.portal{background:#0F6E56;color:#fff;align-self:flex-end}
-    .chat-msg.portal .chat-autor,.chat-msg.portal .chat-hora{color:rgba(255,255,255,.7)}
-    .chat-autor{font-size:11px;font-weight:600;margin-bottom:4px;color:#6B7A72}
-    .chat-texto{font-size:13px;line-height:1.4}
-    .chat-hora{font-size:10.5px;color:#6B7A72;margin-top:4px}
-    .chat-input-wrap{display:flex;gap:8px}
-    .chat-input-wrap textarea{flex:1;padding:9px 12px;border:1px solid #DDE3DF;background:#fff;color:#0C231B;font-size:13px;resize:none;height:48px;font-family:inherit;border-radius:0;outline:none}
-    .chat-input-wrap textarea:focus{border-color:#0F6E56}
-    .aviso-item{border:1px solid #DDE3DF;padding:14px 16px;margin-bottom:8px;background:#fff}
-    .aviso-meta{font-size:11px;color:#6B7A72;margin-bottom:6px}
-    .aviso-texto{font-size:13px;color:#0C231B}
-    .tl-item{display:flex;gap:14px;padding-bottom:18px;position:relative}
-    .tl-item:not(:last-child)::before{content:'';position:absolute;left:13px;top:28px;bottom:0;width:2px;background:#DDE3DF}
-    .tl-dot{width:28px;height:28px;border:2px solid #DDE3DF;background:#fff;display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative;z-index:1}
-    .tl-evento{font-size:13px;font-weight:600;color:#0C231B}
-    .tl-desc{font-size:12px;color:#6B7A72;margin-top:3px}
-    .tl-hora{font-size:11px;color:#9AB0A6;margin-top:3px}
+    *{box-sizing:border-box;margin:0;padding:0;border-radius:0!important}
+    body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:#F0F4F2;color:#0C231B;height:100vh;overflow:hidden;display:flex}
+    input,button,textarea,select{font-family:inherit;border-radius:0!important}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#C5D0C9}
+    a{text-decoration:none;color:inherit}
+
+    /* Sidebar */
+    .sidebar{width:220px;min-width:220px;background:#0C231B;display:flex;flex-direction:column;flex-shrink:0}
+    .sidebar-header{padding:16px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.06)}
+    .sidebar-logo{width:38px;height:38px;background:white;padding:2px;flex-shrink:0;object-fit:cover;border-radius:50%!important}
+    .sidebar-logo-placeholder{width:38px;height:38px;background:white;display:flex;align-items:center;justify-content:center;flex-shrink:0;border-radius:50%!important}
+    .sidebar-brand{font-family:'Archivo',sans-serif;font-weight:800;font-size:15px;color:white;letter-spacing:.04em;line-height:1.1}
+    .sidebar-sub{font-size:9px;color:#5E7A6D;letter-spacing:.1em;font-weight:600;text-transform:uppercase;margin-top:2px}
+    .sidebar-nav{flex:1;padding:10px 8px}
+    .nav-item{padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:9px;font-size:13px;font-weight:400;color:#A8B5AF;margin-bottom:1px;text-decoration:none;transition:background .1s,color .1s}
+    .nav-item:hover{color:white}
+    .nav-item.active{font-weight:500;color:white;background:#0F6E56}
+    .nav-item svg{flex-shrink:0}
+    .sidebar-user{padding:10px 12px;border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:8px}
+    .sidebar-avatar{width:34px;height:34px;background:#0F6E56;display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;flex-shrink:0}
+    .sidebar-user-name{font-size:13px;font-weight:600;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .sidebar-user-role{font-size:11px;color:#5E7A6D;margin-top:1px}
+    .sidebar-user-role a{color:#5E7A6D;text-decoration:none}
+
+    /* Main */
+    .main-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+    .sub-header{height:48px;background:white;border-bottom:1px solid #DDE3DF;padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .sub-header-title{font-size:13px;font-weight:700;color:#0C231B;text-transform:uppercase;letter-spacing:.04em}
+    .sub-header-sep{color:#DDE3DF;font-size:14px;margin:0 8px}
+    .sub-header-crumb{font-size:12px;color:#6B7A72;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
+    .sub-header-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+    .sub-header-date{font-size:11px;color:#6B7A72}
+    .logout-btn{width:28px;height:28px;border:1px solid #DDE3DF;display:flex;align-items:center;justify-content:center;cursor:pointer;background:transparent;text-decoration:none;transition:background .1s}
+    .logout-btn:hover{background:#F0F4F2}
+
+    .main-scroll{flex:1;overflow-y:auto;background:#F0F4F2;display:flex;flex-direction:column}
+
+    /* Hero */
+    .grupo-hero{background:#0C231B;padding:16px 24px;flex-shrink:0}
+    .grupo-breadcrumb{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+    .grupo-breadcrumb-link{font-size:12px;color:#5E7A6D;display:flex;align-items:center;gap:2px;font-weight:500;text-decoration:none}
+    .grupo-breadcrumb-link:hover{color:#9FD4BF}
+    .grupo-breadcrumb-sep{color:#2a5040;font-size:12px}
+    .grupo-breadcrumb-current{font-size:12px;color:#A8C5B8;font-weight:500}
+    .grupo-title{font-size:17px;font-weight:700;color:white;margin-bottom:2px}
+    .grupo-sub{font-size:12px;color:#5E7A6D}
+    .badge-andamento{background:rgba(21,101,192,0.2);color:#90CAF9;padding:3px 10px;font-size:11px;font-weight:600;white-space:nowrap;border:1px solid rgba(21,101,192,0.3);flex-shrink:0}
+    .badge-aprovado{background:rgba(21,128,61,0.2);color:#86efac;padding:3px 10px;font-size:11px;font-weight:600;white-space:nowrap;border:1px solid rgba(21,128,61,0.3);flex-shrink:0}
+    .badge-devolvido{background:rgba(185,28,28,0.2);color:#fca5a5;padding:3px 10px;font-size:11px;font-weight:600;white-space:nowrap;border:1px solid rgba(185,28,28,0.3);flex-shrink:0}
+    .badge-revisao{background:rgba(194,65,12,0.2);color:#fdba74;padding:3px 10px;font-size:11px;font-weight:600;white-space:nowrap;border:1px solid rgba(194,65,12,0.3);flex-shrink:0}
+    .badge-aguardando{background:rgba(100,116,139,0.2);color:#cbd5e1;padding:3px 10px;font-size:11px;font-weight:600;white-space:nowrap;border:1px solid rgba(100,116,139,0.3);flex-shrink:0}
+
+    /* Tabs */
+    .tabs{background:white;border-bottom:1px solid #DDE3DF;padding:0 24px;display:flex;position:sticky;top:0;z-index:10;flex-shrink:0}
+    .tab{padding:12px 18px;cursor:pointer;font-size:13px;font-weight:400;color:#6B7A72;border-bottom:2px solid transparent;white-space:nowrap;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit;transition:color .1s,border-color .1s;margin-bottom:-2px}
+    .tab:hover{color:#0F6E56}
+    .tab.ativo{font-weight:600;color:#0F6E56;border-bottom-color:#0F6E56}
+    .tab-content{display:none}
+    .tab-content.ativo{display:block}
+
+    /* Tab content */
+    .tab-inner{padding:20px 24px}
+
+    /* Trabalho grid */
+    .trabalho-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{background:white;border:1px solid #DDE3DF;padding:18px}
+    .card-label{font-size:10px;font-weight:700;color:#6B7A72;text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px}
+
+    /* Dropzone */
+    .dropzone{border:2px dashed #DDE3DF;padding:26px 14px;text-align:center;background:#F8FAF9;cursor:pointer;transition:border-color .15s,background .15s}
+    .dropzone:hover{border-color:#0F6E56;background:#EBF5F0}
+    .dropzone-title{font-size:13px;font-weight:600;color:#0C231B;margin-bottom:2px}
+    .dropzone-sub{font-size:12px;color:#6B7A72;margin-bottom:8px}
+    .dropzone-hint{font-size:11px;color:#A8B5AF}
+    .btn-green{width:100%;margin-top:12px;padding:10px;background:#0F6E56;color:white;border:none;font-size:13px;font-weight:700;cursor:pointer;transition:background .15s}
+    .btn-green:hover{background:#0d5e49}
+    #nome-arq{font-size:12px;color:#0F6E56;margin-top:8px;min-height:18px}
+
+    /* Prazo card */
+    .prazo-card{background:white;border:1px solid #DDE3DF;padding:14px 16px;display:flex;align-items:center;gap:12px}
+    .prazo-icon{width:40px;height:40px;background:#EBF5F0;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .prazo-label{font-size:10px;font-weight:700;color:#6B7A72;text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+    .prazo-value{font-size:18px;font-weight:700;color:#0C231B;line-height:1;margin-bottom:3px}
+    .prazo-remaining{font-size:12px;color:#1565C0;font-weight:600}
+
+    /* Versões */
+    .versoes-list{display:flex;flex-direction:column;gap:1px;background:#DDE3DF}
+    .versao-item{display:flex;align-items:center;gap:10px;padding:8px 10px;background:white}
+    .versao-item.current-ver{background:#EBF5F0}
+    .versao-badge{width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0}
+    .versao-badge.vb-atual{background:#0F6E56;color:white}
+    .versao-badge.vb-old{background:#DDE3DF;color:#6B7A72}
+    .versao-name{font-size:12px;font-weight:600;color:#0C231B;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .versao-meta{font-size:11px;color:#6B7A72;margin-top:1px}
+    .versao-tag{font-size:10px;background:#0F6E56;color:white;padding:2px 6px;font-weight:600;flex-shrink:0}
+
+    /* Doc buttons */
     .doc-btns{display:flex;flex-direction:column;gap:8px}
-    .alert-ok{padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-size:13px;margin-bottom:16px}
-    .alert-err{padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:13px;margin-bottom:16px}
-    .empty-small{padding:20px;text-align:center;color:#6B7A72;font-size:13px}
+    .btn-secondary{display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border:1.5px solid #DDE3DF;background:white;color:#0C231B;font-size:13px;font-weight:500;cursor:pointer;text-decoration:none;transition:background .1s}
+    .btn-secondary:hover{background:#F8FAF9}
+
+    /* Avisos */
+    .avisos-list{display:flex;flex-direction:column;gap:1px;background:#DDE3DF;border:1px solid #DDE3DF;max-width:600px}
+    .aviso-item{background:white;padding:14px 16px}
+    .aviso-dot{width:6px;height:6px;flex-shrink:0;display:block;margin-top:3px}
+    .aviso-dot.blue{background:#1565C0}
+    .aviso-dot.orange{background:#E65100}
+    .aviso-title{font-size:13px;font-weight:600;color:#0C231B}
+    .aviso-date{font-size:11px;color:#6B7A72;white-space:nowrap;flex-shrink:0}
+    .aviso-text{font-size:12px;color:#6B7A72;line-height:1.55;padding-left:14px}
+    .empty-small{padding:24px;text-align:center;color:#6B7A72;font-size:13px}
+
+    /* Chat */
+    .chat-container{background:white;border:1px solid #DDE3DF;max-width:600px;display:flex;flex-direction:column;height:420px;overflow:hidden}
+    .chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+    .chat-msg{display:flex;align-items:flex-start;gap:10px}
+    .chat-msg.mine{flex-direction:row-reverse}
+    .chat-avatar{width:30px;height:30px;color:white;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;background:#0F6E56}
+    .chat-bubble{padding:9px 12px;font-size:13px;line-height:1.5;max-width:72%}
+    .chat-bubble.other{background:#F0F4F2;color:#0C231B}
+    .chat-bubble.mine{background:#0F6E56;color:white}
+    .chat-meta{display:flex;align-items:center;gap:5px;margin-bottom:4px;flex-wrap:wrap}
+    .chat-meta.mine{flex-direction:row-reverse}
+    .chat-author{font-size:12px;font-weight:600;color:#0C231B}
+    .chat-role{font-size:11px;color:#A8B5AF}
+    .chat-hora{font-size:11px;color:#A8B5AF}
+    .chat-input-bar{border-top:1px solid #DDE3DF;padding:10px 12px;display:flex;gap:8px;align-items:center}
+    .chat-input{flex:1;padding:8px 12px;border:1.5px solid #DDE3DF;font-size:13px;color:#0C231B;background:#F8FAF9;outline:none;resize:none;height:36px}
+    .chat-input:focus{border-color:#0F6E56}
+    .chat-send-btn{width:34px;height:34px;background:#0F6E56;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .chat-attach-label{cursor:pointer;font-size:12px;color:#6B7A72;display:inline-flex;align-items:center;gap:5px;border:1px solid #DDE3DF;padding:5px 10px;background:#F8FAF9}
+    #nc-portal{font-size:11px;color:#0F6E56}
+
+    /* Comentario revisor */
+    .comentario-box{background:#fffbeb;border:1px solid #fde68a;padding:10px 14px;font-size:12.5px;color:#92400e;margin-top:8px}
+
+    /* Alerts */
+    .alert-ok{padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-size:13px;margin:0 0 12px}
+    .alert-err{padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:13px;margin:0 0 12px}
+
+    /* Timeline */
+    .timeline{max-width:520px;padding-top:4px}
+    .timeline-item{display:flex;gap:16px}
+    .timeline-date-col{display:flex;flex-direction:column;align-items:center;width:56px;flex-shrink:0}
+    .timeline-date{font-size:11px;font-weight:600;color:#6B7A72;text-align:center;margin-bottom:6px}
+    .timeline-dot{width:10px;height:10px;flex-shrink:0}
+    .timeline-dot.done{background:#0F6E56}
+    .timeline-dot.current{background:#1565C0}
+    .timeline-dot.future{background:#DDE3DF}
+    .timeline-line{width:1px;flex:1;min-height:28px;background:#DDE3DF}
+    .timeline-body{padding-bottom:20px;flex:1}
+    .timeline-event{font-size:13px;font-weight:600;color:#0C231B;margin-bottom:3px}
+    .timeline-desc{font-size:12px;color:#6B7A72;line-height:1.45}
+
+    /* Footer */
+    .page-footer{margin-top:auto;padding:12px 24px;border-top:1px solid #DDE3DF;background:white;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .footer-text{font-size:11px;color:#A8B5AF}
+
+    @media(max-width:860px){.trabalho-grid{grid-template-columns:1fr}}
+    @media(max-width:680px){
+      body{flex-direction:column;height:auto;overflow:auto}
+      .sidebar{width:100%;min-width:unset;flex-direction:row;height:auto}
+      .sidebar-nav{display:flex;padding:6px;flex:unset}
+      .sidebar-user{display:none}
+      .main-area{overflow:visible}
+      .main-scroll{overflow:visible}
+    }
   </style>
 </head>
 <body>
-<div class="topbar">
-  <div class="topbar-brand">
-    <div class="topbar-logo"><%if(config.org_logo){%><img src="<%=config.org_logo%>" alt=""><%}else{%><span style="font-family:'Archivo';font-weight:800;color:#0F6E56;font-size:13px">LU</span><%}%></div>
-    <div><div class="topbar-nome"><%=config.org_nome||'LAURO'%></div><div class="topbar-sub">Portal Cientifico</div></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <%if(config.org_logo){%><img src="<%=config.org_logo%>" class="sidebar-logo" alt="Logo"><%}else{%><div class="sidebar-logo-placeholder"><span style="font-family:'Archivo';font-weight:800;color:#0F6E56;font-size:13px">LU</span></div><%}%>
+    <div>
+      <div class="sidebar-brand"><%=config.org_nome||'LAURO'%></div>
+      <div class="sidebar-sub">Portal Cientifico</div>
+    </div>
   </div>
-  <div class="topbar-right">
-    <span><%=membro.nome%></span>
-    <a href="/portal/logout" class="topbar-logout">Sair</a>
+  <nav class="sidebar-nav">
+    <a href="/portal" class="nav-item active">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Meus Grupos</span>
+    </a>
+    <a href="/portal/trocar-senha" class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><rect x="3" y="11" width="18" height="11"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span>Trocar Senha</span>
+    </a>
+  </nav>
+  <div class="sidebar-user">
+    <div class="sidebar-avatar"><%=membro.nome.split(' ').map(function(n){return n[0]}).slice(0,2).join('').toUpperCase()%></div>
+    <div style="flex:1;min-width:0">
+      <div class="sidebar-user-name"><%=membro.nome.split(' ')[0]%></div>
+      <div class="sidebar-user-role"><a href="/portal/logout">Sair →</a></div>
+    </div>
   </div>
-</div>
-<div class="main">
-  <%if(msg&&msg.length){%><div class="alert-ok"><%=msg[0]%></div><%}%>
-  <%if(erro&&erro.length){%><div class="alert-err"><%=erro[0]%></div><%}%>
-  <div class="pg-header">
-    <a href="/portal" class="pg-back"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Meus grupos</a>
-    <div style="flex:1"><div class="pg-title"><%=grupo.nome%></div><div class="pg-proj"><%=projeto.titulo%></div></div>
-  </div>
-  <div class="tabs">
-    <button class="tab ativo" onclick="tab(this,'trabalho')">Trabalho</button>
-    <button class="tab" onclick="tab(this,'avisos')">Avisos</button>
-    <button class="tab" onclick="tab(this,'chat')">Chat</button>
-    <button class="tab" onclick="tab(this,'timeline')">Linha do Tempo</button>
+</aside>
+
+<!-- MAIN -->
+<div class="main-area">
+  <div class="sub-header">
+    <div style="display:flex;align-items:center;min-width:0">
+      <span class="sub-header-title" style="flex-shrink:0"><%=grupo.nome%></span>
+      <span class="sub-header-sep">·</span>
+      <span class="sub-header-crumb"><%=projeto.titulo%></span>
+    </div>
+    <div class="sub-header-right">
+      <span class="sub-header-date"><%=new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})%></span>
+      <a href="/portal/logout" class="logout-btn" title="Sair">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B7A72" stroke-width="2" stroke-linecap="square"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </a>
+    </div>
   </div>
 
-  <!-- TRABALHO -->
-  <div id="tab-trabalho" class="tab-content ativo">
-    <div style="display:grid;grid-template-columns:1fr 300px;gap:20px">
-      <div>
-        <div class="card">
-          <h3>Enviar nova versao do trabalho</h3>
-          <form method="POST" action="/portal/grupo/<%=grupo.id%>/upload" enctype="multipart/form-data">
-            <div class="upload-area" onclick="document.getElementById('arq-upload').click()">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9AB0A6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              <p>Clique para selecionar o arquivo (PDF, Word)</p>
-            </div>
-            <input type="file" id="arq-upload" name="arquivo" accept=".pdf,.doc,.docx" style="display:none" onchange="document.getElementById('nome-arq').textContent=this.files[0]?this.files[0].name:''">
-            <div id="nome-arq" style="font-size:12px;color:#0F6E56;margin:6px 0 12px"></div>
-            <button type="submit" class="btn pri btn-sm">Enviar versao</button>
-          </form>
+  <div class="main-scroll">
+    <!-- Hero do grupo -->
+    <div class="grupo-hero">
+      <div class="grupo-breadcrumb">
+        <a href="/portal" class="grupo-breadcrumb-link">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="square"><polyline points="15 18 9 12 15 6"/></svg>
+          Meus Grupos
+        </a>
+        <span class="grupo-breadcrumb-sep">›</span>
+        <span class="grupo-breadcrumb-current"><%=grupo.nome%></span>
+      </div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div class="grupo-title"><%=grupo.nome%></div>
+          <div class="grupo-sub"><%=projeto.titulo%></div>
         </div>
-        <div class="card">
-          <h3>Historico de versoes</h3>
-          <%if(versoes.length===0){%><div class="empty-small">Nenhuma versao enviada ainda.</div><%}%>
-          <%versoes.forEach(function(v,i){%>
-          <div class="versao-item">
-            <div class="versao-nome">v<%=versoes.length-i%> — <%=v.arquivo_nome%></div>
-            <div class="versao-meta">Enviado em <%=new Date(v.enviado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%></div>
-            <div><span class="vstatus vstatus-<%=v.status%>"><%=v.status.replace('_',' ')%></span></div>
-            <%if(v.comentario_revisor){%><div class="comentario-box"><strong>Comentario do revisor:</strong> <%=v.comentario_revisor%></div><%}%>
+        <%
+          var ultimoStatus = versoes.length>0 ? versoes[0].status : null;
+          var statusBadgeCls = ultimoStatus==='aprovado'?'badge-aprovado':ultimoStatus==='devolvido'?'badge-devolvido':ultimoStatus==='em_revisao'?'badge-revisao':ultimoStatus==='aguardando'?'badge-aguardando':'badge-andamento';
+          var statusBadgeLabel = ultimoStatus==='aprovado'?'Aprovado':ultimoStatus==='devolvido'?'Devolvido':ultimoStatus==='em_revisao'?'Em revisao':ultimoStatus==='aguardando'?'Aguardando':'Em andamento';
+        %>
+        <span class="<%=statusBadgeCls%>"><%=statusBadgeLabel%></span>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab ativo" onclick="tab(this,'trabalho')">Trabalho</button>
+      <button class="tab" onclick="tab(this,'avisos')">Avisos</button>
+      <button class="tab" onclick="tab(this,'chat')">Chat</button>
+      <button class="tab" onclick="tab(this,'timeline')">Linha do Tempo</button>
+    </div>
+
+    <!-- TAB TRABALHO -->
+    <div id="tab-trabalho" class="tab-content ativo">
+      <div class="tab-inner">
+        <%if(msg&&msg.length){%><div class="alert-ok"><%=msg[0]%></div><%}%>
+        <%if(erro&&erro.length){%><div class="alert-err"><%=erro[0]%></div><%}%>
+        <div class="trabalho-grid">
+          <!-- Upload -->
+          <div class="card">
+            <div class="card-label">Enviar nova versao</div>
+            <form method="POST" action="/portal/grupo/<%=grupo.id%>/upload" enctype="multipart/form-data">
+              <div class="dropzone" onclick="document.getElementById('arq-upload').click()">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="1.5" stroke-linecap="square" style="display:block;margin:0 auto 10px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <div class="dropzone-title">Arraste o arquivo aqui</div>
+                <div class="dropzone-sub">ou clique para selecionar</div>
+                <div class="dropzone-hint">PDF, DOCX · max. 500 MB</div>
+              </div>
+              <input type="file" id="arq-upload" name="arquivo" accept=".pdf,.doc,.docx" style="display:none" onchange="document.getElementById('nome-arq').textContent=this.files[0]?this.files[0].name:''">
+              <div id="nome-arq"></div>
+              <button type="submit" class="btn-green">Enviar versao</button>
+            </form>
           </div>
-          <%})%>
+
+          <!-- Coluna direita: prazo + versoes + docs -->
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <%if(projeto.prazo){%>
+            <div class="prazo-card">
+              <div class="prazo-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2" stroke-linecap="square"><rect x="3" y="4" width="18" height="18" rx="0"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              </div>
+              <div>
+                <div class="prazo-label">Prazo de entrega</div>
+                <div class="prazo-value"><%=new Date(projeto.prazo).toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'})%></div>
+                <%
+                  var diasRestantes = Math.ceil((new Date(projeto.prazo) - new Date()) / (1000*60*60*24));
+                %>
+                <%if(diasRestantes>0){%><div class="prazo-remaining"><%=diasRestantes%> dias restantes</div><%}else if(diasRestantes===0){%><div class="prazo-remaining" style="color:#E65100">Vence hoje</div><%}else{%><div class="prazo-remaining" style="color:#b91c1c">Prazo encerrado</div><%}%>
+              </div>
+            </div>
+            <%}%>
+
+            <div class="card" style="flex:1">
+              <div class="card-label">Historico de versoes</div>
+              <%if(versoes.length===0){%><div class="empty-small">Nenhuma versao enviada ainda.</div><%}else{%>
+              <div class="versoes-list">
+                <%versoes.forEach(function(v,i){%>
+                <div class="versao-item <%=i===0?'current-ver':''%>">
+                  <div class="versao-badge <%=i===0?'vb-atual':'vb-old'%>">v<%=versoes.length-i%></div>
+                  <div style="flex:1;min-width:0">
+                    <div class="versao-name"><%=v.arquivo_nome%></div>
+                    <div class="versao-meta"><%=new Date(v.enviado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})%></div>
+                  </div>
+                  <%if(i===0){%><span class="versao-tag">atual</span><%}%>
+                </div>
+                <%if(v.comentario_revisor){%>
+                <div style="background:white;padding:6px 10px">
+                  <div class="comentario-box"><strong>Revisor:</strong> <%=v.comentario_revisor%></div>
+                </div>
+                <%}%>
+                <%})%>
+              </div>
+              <%}%>
+            </div>
+
+            <%if(projeto.edital_chave||projeto.modelo_chave){%>
+            <div class="card">
+              <div class="card-label">Documentos</div>
+              <div class="doc-btns">
+                <%if(projeto.edital_chave){%>
+                <a href="/portal/arquivo/<%=projeto.id%>/edital" class="btn-secondary" target="_blank">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Baixar Edital
+                </a>
+                <%}%>
+                <%if(projeto.modelo_chave){%>
+                <a href="/portal/arquivo/<%=projeto.id%>/modelo" class="btn-secondary" target="_blank">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Baixar Modelo
+                </a>
+                <%}%>
+              </div>
+            </div>
+            <%}%>
+          </div>
         </div>
       </div>
-      <div>
-        <div class="card">
-          <h3>Documentos</h3>
-          <div class="doc-btns">
-            <%if(projeto.edital_chave){%><a href="/portal/arquivo/<%=projeto.id%>/edital" class="btn" target="_blank"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Baixar Edital</a><%}%>
-            <%if(projeto.modelo_chave){%><a href="/portal/arquivo/<%=projeto.id%>/modelo" class="btn" target="_blank"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Baixar Modelo</a><%}%>
-            <%if(!projeto.edital_chave&&!projeto.modelo_chave){%><p style="font-size:12.5px;color:#6B7A72">Nenhum documento disponivel ainda.</p><%}%>
+    </div>
+
+    <!-- TAB AVISOS -->
+    <div id="tab-avisos" class="tab-content">
+      <div class="tab-inner">
+        <%if(avisos.length===0){%><div class="empty-small">Nenhum aviso publicado ainda.</div><%}else{%>
+        <div class="avisos-list">
+          <%avisos.forEach(function(a,i){%>
+          <div class="aviso-item">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:5px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span class="aviso-dot <%=i%2===0?'blue':'orange'%>"></span>
+                <span class="aviso-title">Aviso</span>
+              </div>
+              <span class="aviso-date"><%=new Date(a.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})%></span>
+            </div>
+            <div class="aviso-text"><%=a.texto%></div>
           </div>
-        </div>
-        <%if(projeto.prazo){%>
-        <div class="card">
-          <h3>Prazo</h3>
-          <p style="font-size:14px;font-weight:700;color:#0C231B"><%=new Date(projeto.prazo).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})%></p>
+          <%})%>
         </div>
         <%}%>
       </div>
     </div>
-  </div>
 
-  <!-- AVISOS -->
-  <div id="tab-avisos" class="tab-content">
-    <%if(avisos.length===0){%><div class="empty-small">Nenhum aviso publicado ainda.</div><%}%>
-    <%avisos.forEach(function(a){%>
-    <div class="aviso-item">
-      <div class="aviso-meta"><%=new Date(a.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%></div>
-      <div class="aviso-texto"><%=a.texto%></div>
-    </div>
-    <%})%>
-  </div>
-
-  <!-- CHAT -->
-  <div id="tab-chat" class="tab-content">
-    <div style="max-width:680px">
-      <div class="chat-msgs" id="chat-msgs">
-        <%if(chat.length===0){%><div style="text-align:center;color:#6B7A72;font-size:13px;margin:auto">Nenhuma mensagem ainda.</div><%}%>
-        <%chat.forEach(function(c){%>
-        <div class="chat-msg <%=c.autor_tipo%>">
-          <div class="chat-autor"><%=c.autor_nome%></div>
-          <%if(c.texto){%><div class="chat-texto"><%=c.texto%></div><%}%>
-        <%if(c.arquivo_nome){%><div style="margin-top:5px"><a href="/portal/chat-arquivo/<%=c.id%>" target="_blank" style="font-size:12px;display:inline-flex;align-items:center;gap:5px;padding:4px 8px;background:rgba(0,0,0,.07);text-decoration:none;color:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg><%=c.arquivo_nome%></a></div><%}%>
-          <div class="chat-hora"><%=new Date(c.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})%></div>
-        </div>
-        <%})%>
-      </div>
-      <form method="POST" action="/portal/grupo/<%=grupo.id%>/chat" enctype="multipart/form-data" class="chat-input-wrap" style="flex-direction:column;gap:8px">
-        <div style="display:flex;gap:8px">
-          <textarea name="texto" placeholder="Mensagem para o grupo..." onkeydown="if(event.ctrlKey&&event.key==='Enter'){this.form.submit()}" style="flex:1;padding:9px 12px;border:1px solid #DDE3DF;background:#fff;color:#0C231B;font-size:13px;resize:none;height:48px;font-family:inherit;border-radius:0;outline:none"></textarea>
-          <button type="submit" class="btn pri" style="height:48px;padding:0 16px">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-          </button>
-        </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          <label style="cursor:pointer;font-size:12px;color:#6B7A72;display:inline-flex;align-items:center;gap:5px;border:1px solid #DDE3DF;padding:5px 10px;background:#F8FAF9">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-            Anexar arquivo
-            <input type="file" name="arquivo_chat" style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif" onchange="document.getElementById('nc-portal').textContent=this.files[0]?this.files[0].name:''">
-          </label>
-          <span id="nc-portal" style="font-size:11px;color:#0F6E56"></span>
-        </div>
-      </form>
-      <p style="font-size:11px;color:#9AB0A6;margin-top:4px">Ctrl+Enter para enviar</p>
-    </div>
-  </div>
-
-  <!-- TIMELINE -->
-  <div id="tab-timeline" class="tab-content">
-    <div style="max-width:520px">
-      <%if(timeline.length===0){%><div class="empty-small">Nenhum evento registrado ainda.</div><%}%>
-      <%timeline.forEach(function(t){%>
-      <div class="tl-item">
-        <div class="tl-dot"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9AB0A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/></svg></div>
-        <div style="flex:1;padding-top:3px">
-          <div class="tl-evento"><%=t.evento%></div>
-          <%if(t.descricao){%><div class="tl-desc"><%=t.descricao%></div><%}%>
-          <div class="tl-hora"><%=new Date(t.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%></div>
+    <!-- TAB CHAT -->
+    <div id="tab-chat" class="tab-content">
+      <div class="tab-inner">
+        <div class="chat-container">
+          <div class="chat-messages" id="chat-msgs">
+            <%if(chat.length===0){%><div style="text-align:center;color:#6B7A72;font-size:13px;margin:auto">Nenhuma mensagem ainda.</div><%}%>
+            <%chat.forEach(function(c){
+              var isMine = c.autor_tipo === 'portal';
+            %>
+            <div class="chat-msg <%=isMine?'mine':''%>">
+              <div class="chat-avatar" style="<%=isMine?'background:#1565C0':'background:#0F6E56'%>"><%=c.autor_nome.split(' ').map(function(n){return n[0]}).slice(0,2).join('').toUpperCase()%></div>
+              <div style="max-width:72%">
+                <div class="chat-meta <%=isMine?'mine':''%>">
+                  <span class="chat-author"><%=c.autor_nome%></span>
+                  <span class="chat-hora"><%=new Date(c.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})%></span>
+                </div>
+                <%if(c.texto){%><div class="chat-bubble <%=isMine?'mine':'other'%>"><%=c.texto%></div><%}%>
+                <%if(c.arquivo_nome){%>
+                <div class="chat-bubble <%=isMine?'mine':'other'%>" style="margin-top:4px">
+                  <a href="/portal/chat-arquivo/<%=c.id%>" target="_blank" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;color:inherit;opacity:.85">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                    <%=c.arquivo_nome%>
+                  </a>
+                </div>
+                <%}%>
+              </div>
+            </div>
+            <%})%>
+          </div>
+          <form method="POST" action="/portal/grupo/<%=grupo.id%>/chat" enctype="multipart/form-data">
+            <div class="chat-input-bar">
+              <input type="text" name="texto" class="chat-input" placeholder="Escreva uma mensagem..." onkeydown="if(event.ctrlKey&&event.key==='Enter'){this.form.submit()}">
+              <button type="submit" class="chat-send-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="square"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              </button>
+            </div>
+            <div style="padding:8px 12px;display:flex;align-items:center;gap:8px;border-top:1px solid #F0F4F2">
+              <label class="chat-attach-label">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                Anexar
+                <input type="file" name="arquivo_chat" style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif" onchange="document.getElementById('nc-portal').textContent=this.files[0]?this.files[0].name:''">
+              </label>
+              <span id="nc-portal"></span>
+              <span style="font-size:11px;color:#A8B5AF;margin-left:auto">Ctrl+Enter para enviar</span>
+            </div>
+          </form>
         </div>
       </div>
-      <%})%>
+    </div>
+
+    <!-- TAB TIMELINE -->
+    <div id="tab-timeline" class="tab-content">
+      <div class="tab-inner">
+        <%if(timeline.length===0){%><div class="empty-small">Nenhum evento registrado ainda.</div><%}else{%>
+        <div class="timeline">
+          <%timeline.forEach(function(t,i){%>
+          <div class="timeline-item">
+            <div class="timeline-date-col">
+              <div class="timeline-date"><%=new Date(t.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})%></div>
+              <div class="timeline-dot <%=i===0?'current':i<timeline.length-1?'done':'future'%>"></div>
+              <%if(i<timeline.length-1){%><div class="timeline-line"></div><%}%>
+            </div>
+            <div class="timeline-body">
+              <div class="timeline-event" style="<%=i===0?'color:#1565C0':''%>"><%=t.evento%></div>
+              <%if(t.descricao){%><div class="timeline-desc"><%=t.descricao%></div><%}%>
+              <%if(i===0){%><span style="display:inline-block;margin-top:5px;font-size:10px;font-weight:700;background:#E3F2FD;color:#1565C0;padding:2px 8px;letter-spacing:.04em;text-transform:uppercase">Status atual</span><%}%>
+            </div>
+          </div>
+          <%})%>
+        </div>
+        <%}%>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="page-footer">
+      <span class="footer-text"><%=config.org_nome||'LAURO'%> · Liga Academica de Urologia</span>
+      <span class="footer-text">©<%=new Date().getFullYear()%></span>
     </div>
   </div>
 </div>
+
 <script>
-function tab(btn,id){
+function tab(btn, id) {
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('ativo')});
   document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('ativo')});
   btn.classList.add('ativo');
   document.getElementById('tab-'+id).classList.add('ativo');
-  if(id==='chat'){var m=document.getElementById('chat-msgs');if(m)m.scrollTop=m.scrollHeight;}
+  if (id === 'chat') { var m = document.getElementById('chat-msgs'); if(m) m.scrollTop = m.scrollHeight; }
 }
-document.addEventListener('DOMContentLoaded',function(){
-  var m=document.getElementById('chat-msgs');
-  if(m)m.scrollTop=m.scrollHeight;
-  var t=new URLSearchParams(window.location.search).get('tab');
-  if(t){var b=document.querySelector('.tab[onclick*="\''+t+'\'"]');if(b)tab(b,t);}
+document.addEventListener('DOMContentLoaded', function() {
+  var m = document.getElementById('chat-msgs');
+  if (m) m.scrollTop = m.scrollHeight;
+  var t = new URLSearchParams(window.location.search).get('tab');
+  if (t) { var b = document.querySelector('.tab[onclick*="\''+t+'\'"]'); if(b) tab(b,t); }
 });
 </script>
-</body></html>
+</body>
+</html>

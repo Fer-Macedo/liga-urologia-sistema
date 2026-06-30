@@ -280,6 +280,18 @@ aside.sidebar .sidebar-logout:hover{color:#fff;border-color:#C0392B;background:r
         <span>Atendimentos WA</span>
       </a>
       <% } %>
+      <% if (['secretaria','financeiro','cientifico','extensao','ensino','marketing'].includes(usuarioPerfil)) { %>
+      <a href="/lauro-atendimentos" class="nav-item <%= pa==='lauro-atendimentos'?'ativo':'' %>">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><polyline points="9 10 9 10"/><polyline points="12 10 12 10"/><polyline points="15 10 15 10"/></svg></span>
+        <span>Meus Atendimentos</span>
+      </a>
+      <% } %>
+      <% if (usuarioPerfil === 'presidencia') { %>
+      <a href="/admin/lauro-diagnostico" class="nav-item <%= pa==='lauro'?'ativo':'' %>">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><polyline points="9 10 9 10"/><polyline points="12 10 12 10"/><polyline points="15 10 15 10"/></svg></span>
+        <span>Meus Atendimentos</span>
+      </a>
+      <% } %>
       <% if (temPerm('processo-seletivo')) { %>
       <a href="/processo-seletivo" class="nav-item <%= pa==='processo-seletivo'?'ativo':'' %>">
         <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></span>

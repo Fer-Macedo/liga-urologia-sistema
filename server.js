@@ -1,3 +1,6 @@
+// Timezone padrão: Assunção (UTC-4/-3) — deve ser a primeira linha antes de qualquer new Date()
+process.env.TZ = 'America/Asuncion';
+
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
