@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="shortcut icon" href="/favicon.ico">
-  <title>Portal Cientifico — Acesso</title>
+  <title>Portal Científico — Acceso</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Archivo:wght@700;800;900&display=swap" rel="stylesheet">
   <style>
@@ -66,54 +66,54 @@
         <%if(config.org_logo){%><img src="<%=config.org_logo%>" class="login-logo" alt="Logo"><%}else{%><div class="login-logo" style="display:flex;align-items:center;justify-content:center;border-radius:50%!important"><span style="font-family:'Archivo';font-weight:800;color:#0F6E56;font-size:18px">LU</span></div><%}%>
         <div>
           <div class="login-brand-name"><%=config.org_nome||'LAURO'%></div>
-          <div class="login-brand-sub">Liga Academica de Urologia</div>
+          <div class="login-brand-sub">Liga Académica de Urología</div>
         </div>
       </div>
       <div>
         <div class="login-title-white">Portal</div>
-        <div class="login-title-green">Cientifico</div>
-        <p class="login-desc">Acesse seus grupos de pesquisa, envie versoes, receba correcoes e acompanhe seus prazos — tudo em um so lugar.</p>
+        <div class="login-title-green">Científico</div>
+        <p class="login-desc">Accede a tus grupos de investigación, envía versiones, recibe correcciones y realiza seguimiento de tus plazos — todo en un solo lugar.</p>
       </div>
       <div class="login-features">
         <div class="login-feature">
           <div class="login-feature-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2.5" stroke-linecap="square"><polyline points="20 6 9 17 4 12"/></svg></div>
-          <div><div class="login-feature-title">Envio de versoes</div><div class="login-feature-desc">Suba seu trabalho e mantenha um historico completo</div></div>
+          <div><div class="login-feature-title">Envío de versiones</div><div class="login-feature-desc">Sube tu trabajo y mantén un historial completo de versiones</div></div>
         </div>
         <div class="login-feature">
           <div class="login-feature-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2.5" stroke-linecap="square"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
-          <div><div class="login-feature-title">Chat com orientadores</div><div class="login-feature-desc">Comunique-se diretamente com seu orientador</div></div>
+          <div><div class="login-feature-title">Chat con orientadores</div><div class="login-feature-desc">Comunícate directamente con tu equipo y orientador</div></div>
         </div>
         <div class="login-feature">
           <div class="login-feature-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2.5" stroke-linecap="square"><rect x="3" y="4" width="18" height="18" rx="0"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
-          <div><div class="login-feature-title">Controle de prazos</div><div class="login-feature-desc">Acompanhe datas e linha do tempo do projeto</div></div>
+          <div><div class="login-feature-title">Control de plazos</div><div class="login-feature-desc">Seguimiento de fechas y línea de tiempo del proyecto</div></div>
         </div>
       </div>
     </div>
-    <div class="login-left-footer">Liga Academica de Urologia · Universidad Central del Paraguay · © 2026</div>
+    <div class="login-left-footer">Liga Académica de Urología · Universidad Central del Paraguay · © 2026</div>
   </div>
 
   <div class="login-right">
     <div class="login-form-wrap">
-      <div class="login-form-title">Entrar</div>
-      <div class="login-form-sub">Use o email cadastrado no sistema para acessar</div>
+      <div class="login-form-title">Iniciar sesión</div>
+      <div class="login-form-sub">Usá tus credenciales registradas en LAURO</div>
       <%if(erro&&erro.length){%><div class="alert-err"><%=erro[0]%></div><%}%>
       <form method="POST" action="/portal/login">
         <div class="form-group">
-          <label class="form-label">Email</label>
-          <input type="email" name="email" class="form-input" placeholder="seu@email.com" required autocomplete="email">
+          <label class="form-label">Correo electrónico</label>
+          <input type="email" name="email" class="form-input" placeholder="tu@correo.com" required autocomplete="email">
         </div>
         <div class="form-group">
-          <label class="form-label">Senha</label>
-          <input type="password" name="senha" class="form-input" placeholder="Sua senha" required autocomplete="current-password">
+          <label class="form-label">Contraseña</label>
+          <input type="password" name="senha" class="form-input" placeholder="Tu contraseña" required autocomplete="current-password">
         </div>
-        <div class="login-forgot"><a href="/portal/esqueci-senha">Esqueci minha senha</a></div>
+        <div class="login-forgot"><a href="/portal/esqueci-senha">Olvidé mi contraseña</a></div>
         <button type="submit" class="btn-dark">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-          Entrar no portal
+          Ingresar al portal
         </button>
       </form>
     </div>
-    <div class="login-right-footer">Acesso exclusivo para membros da liga</div>
+    <div class="login-right-footer">Acceso exclusivo para miembros de la liga</div>
   </div>
 </body>
 </html>
