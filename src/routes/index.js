@@ -8383,10 +8383,10 @@ router.get('/materiais', requireAuth, async (req, res) => {
   });
 });
 
-router.post('/materiais/criar', requireAuth, requireAdmin, async (req, res) => {
-  try {
-    const upload = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: 500*1024*1024 } }); // 500MB
-    upload.single('arquivo')(req, res, async (err) => {
+router.post('/materiais/criar', requireAuth, requireAdmin, (req, res) => {
+  const upload = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: 500*1024*1024 } }); // 500MB
+  upload.single('arquivo')(req, res, async (err) => {
+    try {
       if (err) { req.flash('erro', ['Erro no upload: ' + err.message]); return res.redirect('/materiais'); }
       const { titulo, descricao, categoria, permite_download, ordem } = req.body;
       let arquivo_chave = null, arquivo_nome = null, arquivo_tipo = null, arquivo_tamanho = null;
@@ -8406,8 +8406,12 @@ router.post('/materiais/criar', requireAuth, requireAdmin, async (req, res) => {
       );
       req.flash('msg', ['Material adicionado com sucesso!']);
       res.redirect('/materiais');
-    });
-  } catch(e) { req.flash('erro', [e.message]); res.redirect('/materiais'); }
+    } catch(e) {
+      console.error('Erro ao salvar material:', e.message);
+      req.flash('erro', ['Erro ao salvar material: ' + e.message]);
+      res.redirect('/materiais');
+    }
+  });
 });
 
 router.post('/materiais/:id/editar', requireAuth, requireAdmin, async (req, res) => {
