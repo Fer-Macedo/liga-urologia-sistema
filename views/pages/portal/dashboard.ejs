@@ -4,77 +4,228 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="shortcut icon" href="/favicon.ico">
   <title>Meus Grupos — Portal Cientifico</title>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Archivo:wght@700;800;900&display=swap" rel="stylesheet">
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:#F0F4F2;min-height:100vh}
-    .topbar{background:#0C231B;padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
-    .topbar-brand{display:flex;align-items:center;gap:10px}
-    .topbar-logo{width:32px;height:32px;background:#fff;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center}
-    .topbar-logo img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-    .topbar-nome{font-family:'Archivo',sans-serif;font-weight:800;font-size:14px;color:#fff}
-    .topbar-sub{font-size:10px;color:#5E7A6D;text-transform:uppercase;letter-spacing:2px;margin-top:1px}
-    .topbar-user{display:flex;align-items:center;gap:10px}
-    .topbar-user span{font-size:12.5px;color:#CFE0D7}
-    .topbar-logout{font-size:12px;color:#8FA89C;text-decoration:none;padding:5px 10px;border:1px solid rgba(255,255,255,.15)}
-    .topbar-logout:hover{color:#fff;border-color:rgba(255,255,255,.4)}
-    .main{max-width:900px;margin:0 auto;padding:32px 20px}
-    .pg-title{font-size:20px;font-weight:700;color:#0C231B;margin-bottom:6px}
-    .pg-sub{font-size:13px;color:#6B7A72;margin-bottom:28px}
-    .grupos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-    .grupo-card{background:#fff;border:1px solid #DDE3DF;padding:22px;text-decoration:none;display:block;transition:.15s}
-    .grupo-card:hover{border-color:#0F6E56;box-shadow:0 2px 12px rgba(15,110,86,.1)}
-    .grupo-proj{font-size:11px;font-weight:600;color:#5E7A6D;text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
-    .grupo-nome{font-size:15px;font-weight:700;color:#0C231B;margin-bottom:10px;line-height:1.3}
-    .grupo-meta{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px}
-    .grupo-meta span{font-size:12px;color:#6B7A72;display:flex;align-items:center;gap:5px}
-    .vstatus{display:inline-flex;padding:3px 9px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border:1px solid}
-    .vstatus-aguardando{background:#f8fafc;color:#64748b;border-color:#cbd5e1}
-    .vstatus-em_revisao{background:#fff7ed;color:#c2410c;border-color:#fed7aa}
-    .vstatus-devolvido{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
-    .vstatus-aprovado{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
-    .grupo-cta{font-size:12.5px;font-weight:600;color:#0F6E56;display:flex;align-items:center;gap:5px}
-    .empty{text-align:center;padding:60px 20px;color:#6B7A72}
-    .empty h3{font-size:16px;font-weight:600;color:#0C231B;margin:12px 0 8px}
-    .alert-ok{padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-size:13px;margin-bottom:20px}
-    @media(max-width:600px){.grupos-grid{grid-template-columns:1fr}}
+    *{box-sizing:border-box;margin:0;padding:0;border-radius:0!important}
+    body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:#F0F4F2;color:#0C231B;height:100vh;overflow:hidden;display:flex}
+    input,button,textarea,select{font-family:inherit;border-radius:0!important}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#C5D0C9}
+    a{text-decoration:none}
+
+    /* Sidebar */
+    .sidebar{width:220px;min-width:220px;background:#0C231B;display:flex;flex-direction:column;flex-shrink:0}
+    .sidebar-header{padding:16px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.06)}
+    .sidebar-logo{width:38px;height:38px;background:white;padding:2px;flex-shrink:0;object-fit:cover}
+    .sidebar-logo-placeholder{width:38px;height:38px;background:white;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .sidebar-brand{font-family:'Archivo',sans-serif;font-weight:800;font-size:15px;color:white;letter-spacing:.04em;line-height:1.1}
+    .sidebar-sub{font-size:9px;color:#5E7A6D;letter-spacing:.1em;font-weight:600;text-transform:uppercase;margin-top:2px}
+    .sidebar-nav{flex:1;padding:10px 8px}
+    .nav-item{padding:8px 10px;cursor:pointer;display:flex;align-items:center;gap:9px;font-size:13px;font-weight:400;color:#A8B5AF;margin-bottom:1px;text-decoration:none;transition:background .1s,color .1s}
+    .nav-item:hover{color:white}
+    .nav-item.active{font-weight:500;color:white;background:#0F6E56}
+    .nav-item svg{flex-shrink:0}
+    .sidebar-user{padding:10px 12px;border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;gap:8px}
+    .sidebar-avatar{width:34px;height:34px;background:#0F6E56;display:flex;align-items:center;justify-content:center;color:white;font-size:12px;font-weight:700;flex-shrink:0}
+    .sidebar-user-name{font-size:13px;font-weight:600;color:white;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .sidebar-user-role{font-size:11px;color:#5E7A6D;margin-top:1px}
+    .sidebar-user-role a{color:#5E7A6D;text-decoration:none}
+
+    /* Main */
+    .main-area{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+    .sub-header{height:48px;background:white;border-bottom:1px solid #DDE3DF;padding:0 24px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .sub-header-title{font-size:13px;font-weight:700;color:#0C231B;text-transform:uppercase;letter-spacing:.04em}
+    .sub-header-sep{color:#DDE3DF;font-size:14px;margin:0 8px}
+    .sub-header-crumb{font-size:12px;color:#6B7A72}
+    .sub-header-right{display:flex;align-items:center;gap:12px}
+    .sub-header-date{font-size:11px;color:#6B7A72}
+    .logout-btn{width:28px;height:28px;border:1px solid #DDE3DF;display:flex;align-items:center;justify-content:center;cursor:pointer;background:transparent;text-decoration:none;transition:background .1s}
+    .logout-btn:hover{background:#F0F4F2}
+
+    .main-scroll{flex:1;overflow-y:auto;background:#F0F4F2;display:flex;flex-direction:column}
+
+    /* Hero */
+    .dash-hero{background:#0C231B;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-shrink:0}
+    .dash-hero-title{font-size:20px;font-weight:700;color:white;margin-bottom:3px}
+    .dash-hero-sub{font-size:12px;color:#5E7A6D}
+    .badge-role{background:rgba(15,110,86,0.4);color:#9FD4BF;padding:3px 10px;font-size:11px;font-weight:600;white-space:nowrap;border:1px solid rgba(15,110,86,0.5)}
+
+    /* Stats */
+    .stats-bar{display:grid;grid-template-columns:repeat(3,1fr);background:#DDE3DF;gap:1px;border-bottom:1px solid #DDE3DF;flex-shrink:0}
+    .stat-card{background:white;padding:16px 22px}
+    .stat-label{font-size:10px;font-weight:700;color:#6B7A72;text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
+    .stat-value{font-size:28px;font-weight:700;color:#0C231B;line-height:1;margin-bottom:4px}
+    .stat-value-md{font-size:20px;font-weight:700;color:#0C231B;line-height:1;margin-bottom:4px}
+    .stat-sub-green{font-size:12px;color:#0F6E56;font-weight:600}
+    .stat-sub-muted{font-size:12px;color:#6B7A72}
+
+    /* Groups list */
+    .groups-section{padding:20px 24px;flex:1}
+    .section-label{font-size:10px;font-weight:700;color:#6B7A72;letter-spacing:.12em;text-transform:uppercase;margin-bottom:12px}
+    .groups-list{display:flex;flex-direction:column;gap:1px;background:#DDE3DF;border:1px solid #DDE3DF}
+    .group-item{background:white;padding:14px 18px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:16px;text-decoration:none;transition:background .1s}
+    .group-item:hover{background:#F8FAF9}
+    .group-icon{width:36px;height:36px;background:#EBF5F0;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .group-name{font-size:13px;font-weight:700;color:#0C231B}
+    .group-type{font-size:11px;color:#6B7A72}
+    .group-project{font-size:12px;color:#6B7A72;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .group-meta{font-size:11px;color:#A8B5AF;margin-top:3px}
+    .badge-status{padding:3px 8px;font-size:11px;font-weight:600;white-space:nowrap;flex-shrink:0}
+    .badge-andamento{background:#E3F2FD;color:#1565C0}
+    .badge-revisao{background:#FFF3E0;color:#E65100}
+    .badge-devolvido{background:#fef2f2;color:#b91c1c}
+    .badge-aprovado{background:#f0fdf4;color:#15803d}
+    .badge-aguardando{background:#f8fafc;color:#64748b}
+
+    /* Alerts */
+    .alert-ok{padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-size:13px;margin:16px 24px 0}
+
+    /* Empty */
+    .empty{text-align:center;padding:60px 24px;color:#6B7A72}
+    .empty h3{font-size:15px;font-weight:600;color:#0C231B;margin:12px 0 8px}
+    .empty p{font-size:13px}
+
+    /* Footer */
+    .page-footer{margin-top:auto;padding:12px 24px;border-top:1px solid #DDE3DF;background:white;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+    .footer-text{font-size:11px;color:#A8B5AF}
+
+    @media(max-width:680px){
+      body{flex-direction:column;height:auto;overflow:auto}
+      .sidebar{width:100%;min-width:unset;flex-direction:row;height:auto}
+      .sidebar-nav{display:flex;padding:6px;flex:unset}
+      .sidebar-user{display:none}
+      .main-area{overflow:visible}
+      .main-scroll{overflow:visible}
+    }
   </style>
 </head>
 <body>
-<div class="topbar">
-  <div class="topbar-brand">
-    <div class="topbar-logo"><%if(config.org_logo){%><img src="<%=config.org_logo%>" alt=""><%}else{%><span style="font-family:'Archivo';font-weight:800;color:#0F6E56;font-size:13px">LU</span><%}%></div>
-    <div><div class="topbar-nome"><%=config.org_nome||'LAURO'%></div><div class="topbar-sub">Portal Cientifico</div></div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <%if(config.org_logo){%><img src="<%=config.org_logo%>" class="sidebar-logo" alt="Logo"><%}else{%><div class="sidebar-logo-placeholder"><span style="font-family:'Archivo';font-weight:800;color:#0F6E56;font-size:13px">LU</span></div><%}%>
+    <div>
+      <div class="sidebar-brand"><%=config.org_nome||'LAURO'%></div>
+      <div class="sidebar-sub">Portal Cientifico</div>
+    </div>
   </div>
-  <div class="topbar-user">
-    <span><%=membro.nome%></span>
-    <a href="/portal/logout" class="topbar-logout">Sair</a>
-  </div>
-</div>
-<div class="main">
-  <%if(msg&&msg.length){%><div class="alert-ok"><%=msg[0]%></div><%}%>
-  <div class="pg-title">Meus Grupos</div>
-  <div class="pg-sub">Projetos cientificos nos quais voce esta participando</div>
-  <%if(grupos.length===0){%>
-  <div class="empty">
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#DDE3DF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-    <h3>Nenhum grupo ainda</h3>
-    <p>Voce sera adicionado a grupos pela coordenacao da liga. Aguarde o contato.</p>
-  </div>
-  <%}else{%>
-  <div class="grupos-grid">
-    <%grupos.forEach(function(g){%>
-    <a href="/portal/grupo/<%=g.grupo_id%>" class="grupo-card">
-      <div class="grupo-proj"><%=g.projeto_titulo%></div>
-      <div class="grupo-nome"><%=g.grupo_nome%></div>
-      <div class="grupo-meta">
-        <%if(g.prazo){%><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><%=new Date(g.prazo).toLocaleDateString('pt-BR')%></span><%}%>
-        <%if(g.ultimo_status){%><span class="vstatus vstatus-<%=g.ultimo_status%>"><%=g.ultimo_status.replace('_',' ')%></span><%}%>
-      </div>
-      <div class="grupo-cta">Acessar grupo <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+  <nav class="sidebar-nav">
+    <a href="/portal" class="nav-item active">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+      <span>Meus Grupos</span>
     </a>
-    <%})%>
+    <a href="/portal/trocar-senha" class="nav-item">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><rect x="3" y="11" width="18" height="11"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <span>Trocar Senha</span>
+    </a>
+  </nav>
+  <div class="sidebar-user">
+    <div class="sidebar-avatar"><%=membro.nome.split(' ').map(function(n){return n[0]}).slice(0,2).join('').toUpperCase()%></div>
+    <div style="flex:1;min-width:0">
+      <div class="sidebar-user-name"><%=membro.nome.split(' ')[0]%></div>
+      <div class="sidebar-user-role"><a href="/portal/logout">Sair →</a></div>
+    </div>
   </div>
-  <%}%>
+</aside>
+
+<!-- MAIN -->
+<div class="main-area">
+  <div class="sub-header">
+    <div style="display:flex;align-items:center">
+      <span class="sub-header-title">Meus Grupos</span>
+      <span class="sub-header-sep">·</span>
+      <span class="sub-header-crumb">Bem-vindo, <%=membro.nome.split(' ')[0]%></span>
+    </div>
+    <div class="sub-header-right">
+      <span class="sub-header-date"><%=new Date().toLocaleDateString('pt-BR',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})%></span>
+      <a href="/portal/logout" class="logout-btn" title="Sair">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#6B7A72" stroke-width="2" stroke-linecap="square"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </a>
+    </div>
+  </div>
+
+  <div class="main-scroll">
+    <!-- Hero -->
+    <div class="dash-hero">
+      <div>
+        <div class="dash-hero-title">Ola, <%=membro.nome.split(' ')[0]%>!</div>
+        <div class="dash-hero-sub"><%=config.org_nome||'LAURO'%> · Portal Cientifico</div>
+      </div>
+      <div class="badge-role">Membro</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="stat-label">Grupos ativos</div>
+        <div class="stat-value"><%=grupos.length%></div>
+        <div class="stat-sub-green">Em andamento</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Proximo prazo</div>
+        <%
+          var proxPrazo = grupos.filter(function(g){return g.prazo}).sort(function(a,b){return new Date(a.prazo)-new Date(b.prazo)})[0];
+        %>
+        <%if(proxPrazo){%>
+        <div class="stat-value-md"><%=new Date(proxPrazo.prazo).toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})%></div>
+        <div class="stat-sub-muted"><%=proxPrazo.grupo_nome%></div>
+        <%}else{%>
+        <div class="stat-value-md">—</div>
+        <div class="stat-sub-muted">Sem prazo definido</div>
+        <%}%>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Status</div>
+        <div class="stat-value-md"><%=grupos.filter(function(g){return g.ultimo_status&&g.ultimo_status!=='aguardando'}).length%></div>
+        <div class="stat-sub-muted">Com versao enviada</div>
+      </div>
+    </div>
+
+    <%if(msg&&msg.length){%><div class="alert-ok"><%=msg[0]%></div><%}%>
+
+    <!-- Groups -->
+    <div class="groups-section">
+      <div class="section-label">Meus Grupos</div>
+      <%if(grupos.length===0){%>
+      <div class="empty">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#DDE3DF" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <h3>Nenhum grupo ainda</h3>
+        <p>Voce sera adicionado a grupos pela coordenacao da liga. Aguarde o contato.</p>
+      </div>
+      <%}else{%>
+      <div class="groups-list">
+        <%grupos.forEach(function(g){
+          var statusCls = g.ultimo_status==='aprovado'?'badge-aprovado':g.ultimo_status==='devolvido'?'badge-devolvido':g.ultimo_status==='em_revisao'?'badge-revisao':g.ultimo_status==='aguardando'?'badge-aguardando':'badge-andamento';
+          var statusLabel = g.ultimo_status==='aprovado'?'Aprovado':g.ultimo_status==='devolvido'?'Devolvido':g.ultimo_status==='em_revisao'?'Em revisao':g.ultimo_status==='aguardando'?'Aguardando':'Em andamento';
+        %>
+        <a href="/portal/grupo/<%=g.grupo_id%>" class="group-item">
+          <div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0">
+            <div class="group-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2" stroke-linecap="square"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+            </div>
+            <div style="min-width:0;flex:1">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;flex-wrap:wrap">
+                <span class="group-name"><%=g.grupo_nome%></span>
+              </div>
+              <div class="group-project"><%=g.projeto_titulo%></div>
+              <%if(g.prazo){%><div class="group-meta">Prazo: <%=new Date(g.prazo).toLocaleDateString('pt-BR')%></div><%}%>
+            </div>
+          </div>
+          <%if(g.ultimo_status){%><span class="badge-status <%=statusCls%>"><%=statusLabel%></span><%}%>
+        </a>
+        <%})%>
+      </div>
+      <%}%>
+    </div>
+
+    <!-- Footer -->
+    <div class="page-footer">
+      <span class="footer-text"><%=config.org_nome||'LAURO'%> · Liga Academica de Urologia</span>
+      <span class="footer-text">©<%=new Date().getFullYear()%></span>
+    </div>
+  </div>
 </div>
-</body></html>
+
+</body>
+</html>

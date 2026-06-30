@@ -4,58 +4,116 @@
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="shortcut icon" href="/favicon.ico">
   <title>Portal Cientifico — Acesso</title>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Archivo:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=Archivo:wght@700;800;900&display=swap" rel="stylesheet">
   <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:#0C231B;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-    .login-wrap{width:100%;max-width:400px}
-    .login-brand{text-align:center;margin-bottom:32px}
-    .login-brand-logo{width:64px;height:64px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;overflow:hidden}
-    .login-brand-logo img{width:100%;height:100%;object-fit:cover;border-radius:50%}
-    .login-brand h1{font-family:'Archivo',sans-serif;font-size:20px;font-weight:800;color:#fff;letter-spacing:.3px}
-    .login-brand p{font-size:12px;color:#5E7A6D;margin-top:4px;text-transform:uppercase;letter-spacing:2px}
-    .login-card{background:#fff;padding:32px}
-    .login-card h2{font-size:16px;font-weight:700;color:#0C231B;margin-bottom:6px}
-    .login-card p{font-size:13px;color:#6B7A72;margin-bottom:24px}
+    *{box-sizing:border-box;margin:0;padding:0;border-radius:0!important}
+    .login-logo{border-radius:50%!important}
+    body{font-family:'IBM Plex Sans',system-ui,sans-serif;min-height:100vh;display:flex}
+    input,button,textarea{font-family:inherit;border-radius:0!important}
+    ::-webkit-scrollbar{width:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:#C5D0C9}
+
+    /* Painel esquerdo */
+    .login-left{width:480px;min-width:480px;background:#0a1f16;display:flex;flex-direction:column;justify-content:space-between;padding:44px 48px;position:relative;overflow:hidden}
+    .login-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(15,110,86,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(15,110,86,0.07) 1px,transparent 1px);background-size:36px 36px;pointer-events:none}
+    .login-glow{position:absolute;top:35%;left:20%;width:480px;height:480px;background:radial-gradient(ellipse,rgba(15,110,86,0.28) 0%,rgba(15,110,86,0.1) 35%,transparent 68%);pointer-events:none;transform:translate(-50%,-50%)}
+    .login-left-inner{position:relative;z-index:1;width:100%}
+    .login-brand{display:flex;align-items:center;gap:13px;margin-bottom:64px}
+    .login-logo{width:46px;height:46px;border-radius:50%!important;background:white;padding:3px;flex-shrink:0}
+    .login-brand-name{font-family:'Archivo',sans-serif;font-weight:800;font-size:18px;color:white;letter-spacing:.06em;line-height:1}
+    .login-brand-sub{font-size:9px;color:#5E7A6D;letter-spacing:.14em;text-transform:uppercase;margin-top:3px}
+    .login-title-white{font-size:36px;font-weight:700;color:white;line-height:1.15}
+    .login-title-green{font-size:36px;font-weight:700;color:#0F6E56;line-height:1.15;margin-bottom:20px}
+    .login-desc{font-size:13px;color:#7a9a88;line-height:1.65;max-width:300px}
+    .login-features{display:flex;flex-direction:column;gap:16px;margin-top:32px}
+    .login-feature{display:flex;align-items:flex-start;gap:12px}
+    .login-feature-icon{width:28px;height:28px;background:rgba(15,110,86,0.18);border:1px solid rgba(15,110,86,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+    .login-feature-title{font-size:13px;font-weight:600;color:white;margin-bottom:2px}
+    .login-feature-desc{font-size:12px;color:#7a9a88}
+    .login-left-footer{position:relative;z-index:1;font-size:11px;color:#3a5a4a}
+
+    /* Painel direito */
+    .login-right{flex:1;background:white;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px;position:relative}
+    .login-form-wrap{width:100%;max-width:360px}
+    .login-form-title{font-size:26px;font-weight:700;color:#0C231B;margin-bottom:4px}
+    .login-form-sub{font-size:13px;color:#6B7A72;margin-bottom:32px}
+    .login-right-footer{position:absolute;bottom:24px;font-size:11px;color:#C5D0C9;text-align:center}
+
+    /* Form */
     .form-group{margin-bottom:16px}
-    .form-group label{display:block;font-size:11.5px;font-weight:600;color:#4A5568;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
-    .form-group input{width:100%;padding:10px 13px;border:1.5px solid #DDE3DF;background:#F8FAF9;color:#0C231B;font-size:14px;font-family:inherit;border-radius:0;outline:none;transition:.15s}
-    .form-group input:focus{border-color:#0F6E56;background:#fff}
-    .btn-login{width:100%;padding:11px;background:#0F6E56;color:#fff;font-size:14px;font-weight:700;border:none;cursor:pointer;font-family:inherit;letter-spacing:.3px;margin-top:8px}
-    .btn-login:hover{background:#0a5240}
-    .forgot{text-align:center;margin-top:16px}
-    .forgot a{font-size:12.5px;color:#0F6E56;text-decoration:none}
-    .forgot a:hover{text-decoration:underline}
+    .form-label{display:block;font-size:10px;font-weight:700;color:#0C231B;margin-bottom:6px;letter-spacing:.1em;text-transform:uppercase}
+    .form-input{width:100%;padding:11px 12px;border:1.5px solid #DDE3DF;font-size:14px;color:#0C231B;background:white;outline:none;transition:border-color .15s}
+    .form-input:focus{border-color:#0F6E56}
+    .login-forgot{text-align:right;margin-bottom:26px}
+    .login-forgot a{font-size:12px;color:#0F6E56;font-weight:500;text-decoration:none}
+
+    /* Botão */
+    .btn-dark{width:100%;padding:13px;background:#0C231B;color:white;border:none;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:.01em;transition:background .15s}
+    .btn-dark:hover{background:#0F6E56}
+
+    /* Alerta */
     .alert-err{padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:13px;margin-bottom:16px}
-    .portal-info{text-align:center;margin-top:20px;font-size:12px;color:#5E7A6D}
+
+    @media(max-width:768px){.login-left{display:none}.login-right{padding:32px 24px}}
   </style>
 </head>
 <body>
-<div class="login-wrap">
-  <div class="login-brand">
-    <div class="login-brand-logo">
-      <%if(config.org_logo){%><img src="<%=config.org_logo%>" alt="Logo"><%}else{%><span style="font-family:'Archivo';font-weight:800;color:#0F6E56;font-size:20px">LU</span><%}%>
+  <div class="login-left">
+    <div class="login-grid"></div>
+    <div class="login-glow"></div>
+    <div class="login-left-inner">
+      <div class="login-brand">
+        <%if(config.org_logo){%><img src="<%=config.org_logo%>" class="login-logo" alt="Logo"><%}else{%><div class="login-logo" style="display:flex;align-items:center;justify-content:center;border-radius:50%!important"><span style="font-family:'Archivo';font-weight:800;color:#0F6E56;font-size:18px">LU</span></div><%}%>
+        <div>
+          <div class="login-brand-name"><%=config.org_nome||'LAURO'%></div>
+          <div class="login-brand-sub">Liga Academica de Urologia</div>
+        </div>
+      </div>
+      <div>
+        <div class="login-title-white">Portal</div>
+        <div class="login-title-green">Cientifico</div>
+        <p class="login-desc">Acesse seus grupos de pesquisa, envie versoes, receba correcoes e acompanhe seus prazos — tudo em um so lugar.</p>
+      </div>
+      <div class="login-features">
+        <div class="login-feature">
+          <div class="login-feature-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2.5" stroke-linecap="square"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div><div class="login-feature-title">Envio de versoes</div><div class="login-feature-desc">Suba seu trabalho e mantenha um historico completo</div></div>
+        </div>
+        <div class="login-feature">
+          <div class="login-feature-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2.5" stroke-linecap="square"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+          <div><div class="login-feature-title">Chat com orientadores</div><div class="login-feature-desc">Comunique-se diretamente com seu orientador</div></div>
+        </div>
+        <div class="login-feature">
+          <div class="login-feature-icon"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2.5" stroke-linecap="square"><rect x="3" y="4" width="18" height="18" rx="0"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+          <div><div class="login-feature-title">Controle de prazos</div><div class="login-feature-desc">Acompanhe datas e linha do tempo do projeto</div></div>
+        </div>
+      </div>
     </div>
-    <h1><%=config.org_nome||'LAURO'%></h1>
-    <p>Portal Cientifico</p>
+    <div class="login-left-footer">Liga Academica de Urologia · Universidad Central del Paraguay · © 2026</div>
   </div>
-  <div class="login-card">
-    <h2>Acesso ao Portal</h2>
-    <p>Use o email cadastrado no sistema para entrar</p>
-    <%if(erro&&erro.length){%><div class="alert-err"><%=erro[0]%></div><%}%>
-    <form method="POST" action="/portal/login">
-      <div class="form-group">
-        <label>Email</label>
-        <input type="email" name="email" required placeholder="seu@email.com" autocomplete="email">
-      </div>
-      <div class="form-group">
-        <label>Senha</label>
-        <input type="password" name="senha" required placeholder="Sua senha" autocomplete="current-password">
-      </div>
-      <button type="submit" class="btn-login">Entrar</button>
-    </form>
-    <div class="forgot"><a href="/portal/esqueci-senha">Esqueci minha senha</a></div>
+
+  <div class="login-right">
+    <div class="login-form-wrap">
+      <div class="login-form-title">Entrar</div>
+      <div class="login-form-sub">Use o email cadastrado no sistema para acessar</div>
+      <%if(erro&&erro.length){%><div class="alert-err"><%=erro[0]%></div><%}%>
+      <form method="POST" action="/portal/login">
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" name="email" class="form-input" placeholder="seu@email.com" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <input type="password" name="senha" class="form-input" placeholder="Sua senha" required autocomplete="current-password">
+        </div>
+        <div class="login-forgot"><a href="/portal/esqueci-senha">Esqueci minha senha</a></div>
+        <button type="submit" class="btn-dark">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          Entrar no portal
+        </button>
+      </form>
+    </div>
+    <div class="login-right-footer">Acesso exclusivo para membros da liga</div>
   </div>
-  <div class="portal-info">Acesso exclusivo para membros da liga</div>
-</div>
-</body></html>
+</body>
+</html>
