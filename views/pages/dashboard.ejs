@@ -273,7 +273,15 @@ var pode = function(mod){ return !perms || perms.indexOf(mod) !== -1; };
                  var st = (c.status||'').toLowerCase();
                  var pillCls = st.indexOf('atras')>-1 ? 'late' : (st.indexOf('pend')>-1 ? 'soon' : 'ok');
                  var pillTxt = st.indexOf('atras')>-1 ? 'Em atraso' : (st.indexOf('pend')>-1 ? 'Pendente' : 'Pago');
-                 var valor = (c.valor_desconto != null && Number(c.valor_desconto) > 0) ? c.valor_desconto : c.valor_cheio;
+                 var valor;
+                 if (st.indexOf('atras') > -1) {
+                   valor = c.valor_cheio;
+                 } else if (st === 'pago' && c.data_pagamento) {
+                   var _dp = new Date(c.data_pagamento);
+                   valor = (_dp.getDate() <= 15) ? c.valor_desconto : c.valor_cheio;
+                 } else {
+                   valor = (c.valor_desconto != null && Number(c.valor_desconto) > 0) ? c.valor_desconto : c.valor_cheio;
+                 }
                  var quando = '';
                  try { if (L.dayjs && c.criado_em) quando = L.dayjs(c.criado_em).format('DD/MM/YYYY'); } catch(e){}
             %>

@@ -70,7 +70,16 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
     var vencC = new Date(c.data_vencimento);
     var diaDescontoC = 15;
     var dentroDescontoC = hojeC.getDate() <= diaDescontoC && hojeC.getMonth() === vencC.getMonth() && hojeC.getFullYear() === vencC.getFullYear();
-    var valorPagarC = dentroDescontoC ? c.valor_desconto : c.valor_cheio;
+    // Para cobranças pagas: inferir se o desconto foi aplicado pela data de pagamento
+    var valorPagarC;
+    if (c.status === 'pago' && c.data_pagamento) {
+      var dpC = new Date(c.data_pagamento);
+      valorPagarC = (dpC.getDate() <= diaDescontoC) ? c.valor_desconto : c.valor_cheio;
+    } else if (c.status === 'atrasado') {
+      valorPagarC = c.valor_cheio;
+    } else {
+      valorPagarC = dentroDescontoC ? c.valor_desconto : c.valor_cheio;
+    }
   %>
   <div class="card" style="border-left:4px solid <%=borderCor%>">
     <div class="mes-header">
@@ -91,34 +100,40 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
 
     <div class="valores" style="margin-top:12px">
       <div class="valor-item">
-        <div class="label"><%=dentroDescontoC?'Com desconto (ate dia 15)':'Valor a pagar'%></div>
-        <div class="val" style="color:var(--ok)">R$ <%=Number(valorPagarC).toFixed(2).replace('.',',')%></div>
+        <% if(c.status === 'pago'){ %>
+          <div class="label">Valor pago</div>
+          <div class="val" style="color:var(--ok)">R$ <%=Number(valorPagarC).toFixed(2).replace('.',',')%></div>
+        <% } else { %>
+          <div class="label"><%=dentroDescontoC?'Com desconto (ate dia 15)':'Valor a pagar'%></div>
+          <div class="val" style="color:var(--ok)">R$ <%=Number(valorPagarC).toFixed(2).replace('.',',')%></div>
+        <% } %>
       </div>
-      <% if(dentroDescontoC){ %>
-      </div>
-      <div class="valor-item">
+      <% if(c.status !== 'pago' && dentroDescontoC){ %>
       <div class="valor-item">
         <div class="label">Sem desconto</div>
         <div class="val" style="color:var(--ts);font-size:14px;text-decoration:line-through">R$ <%=Number(c.valor_cheio).toFixed(2).replace('.',',')%></div>
       </div>
       <% } %>
-      </div>
       <% if(c.data_pagamento){ %>
       <div class="valor-item">
         <div class="label">Pago em</div>
-        <div class="val" style="font-size:13px;color:var(--ok)"><%=c.data_pagamento%></div>
+        <div class="val" style="font-size:13px;color:var(--ok)"><%=new Date(c.data_pagamento).toLocaleDateString('pt-BR')%></div>
       </div>
       <% } %>
     </div>
 
-    <% if(c.status !== 'pago' && c.pix_copia_cola){ %>
+    <% if(c.status !== 'pago' && c.pagbank_link){ %>
     <div class="mes-body" id="body-<%=idx%>">
-      <div style="font-size:12px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Pagamento via PIX</div>
-      <div class="pix-code" id="pixcode-<%=idx%>"><%=c.pix_copia_cola%></div>
-      <button class="btn btn-p" id="copybtn-<%=idx%>" style="font-size:12px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-        Copiar codigo PIX
-      </button>
+      <div style="font-size:12px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Pagar via PagBank</div>
+      <a href="<%=c.pagbank_link%>" target="_blank" rel="noopener" class="btn btn-p" style="font-size:13px;display:inline-flex;text-decoration:none;margin-bottom:8px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="5" width="20" height="14"/><path d="M2 10h20"/></svg>
+        Pagar R$ <%=Number(valorPagarC).toFixed(2).replace('.',',')%>
+      </a>
+      <div style="font-size:11px;color:var(--ti);margin-top:6px">PIX ou cartao de credito · Pagamento seguro via PagBank</div>
+    </div>
+    <% } else if(c.status !== 'pago'){ %>
+    <div class="mes-body" id="body-<%=idx%>">
+      <div style="font-size:13px;color:var(--ts)">Entre em contato com a secretaria para obter o link de pagamento.</div>
     </div>
     <% } %>
   </div>
@@ -139,22 +154,6 @@ document.querySelectorAll('[id^="toggle-"]').forEach(function(btn){
   });
 });
 
-// Copiar PIX
-document.querySelectorAll('[id^="copybtn-"]').forEach(function(btn){
-  btn.addEventListener('click', function(){
-    var idx = this.id.replace('copybtn-','');
-    var code = document.getElementById('pixcode-'+idx);
-    if(!code) return;
-    navigator.clipboard.writeText(code.textContent.trim()).then(function(){
-      btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="20 6 9 17 4 12"/></svg> Copiado!';
-      btn.style.background = '#047857';
-      setTimeout(function(){ 
-        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copiar codigo PIX';
-        btn.style.background = '';
-      }, 2500);
-    });
-  });
-});
 
 // Dark mode
 var dark = localStorage.getItem('lauro-membro-dark')==='1';
