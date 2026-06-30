@@ -8534,7 +8534,7 @@ router.post('/portal/login', async (req, res) => {
 router.get('/portal/trocar-senha', requirePortal, async (req, res) => {
   const config = await getConfig();
   const erro = req.session.erro||[]; req.session.erro=[];
-  res.render('pages/portal/trocar-senha', { config, erro });
+  res.render('pages/portal/trocar-senha', { config, erro, baseUrl: '/portal' });
 });
 
 // POST /portal/trocar-senha
