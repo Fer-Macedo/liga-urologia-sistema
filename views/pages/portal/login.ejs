@@ -46,6 +46,10 @@
     .form-input:focus{border-color:#0F6E56}
     .login-forgot{text-align:right;margin-bottom:26px}
     .login-forgot a{font-size:12px;color:#0F6E56;font-weight:500;text-decoration:none}
+    .input-wrap{position:relative}
+    .input-wrap .form-input{padding-right:38px}
+    .input-action{position:absolute;right:0;top:0;height:100%;width:38px;display:flex;align-items:center;justify-content:center;cursor:pointer;background:none;border:none;color:#A8B5AF;transition:color .15s;flex-shrink:0}
+    .input-action:hover{color:#0C231B}
 
     /* Botão */
     .btn-dark{width:100%;padding:13px;background:#0C231B;color:white;border:none;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;letter-spacing:.01em;transition:background .15s}
@@ -100,11 +104,22 @@
       <form method="POST" action="/portal/login">
         <div class="form-group">
           <label class="form-label">Correo electrónico</label>
-          <input type="email" name="email" class="form-input" placeholder="tu@correo.com" required autocomplete="email">
+          <div class="input-wrap">
+            <input type="email" id="inp-email" name="email" class="form-input" placeholder="tu@correo.com" required autocomplete="email" oninput="document.getElementById('btn-clear-email').style.display=this.value?'flex':'none'">
+            <button type="button" id="btn-clear-email" class="input-action" style="display:none" onclick="var i=document.getElementById('inp-email');i.value='';i.focus();this.style.display='none'" title="Limpiar">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
         </div>
         <div class="form-group">
           <label class="form-label">Contraseña</label>
-          <input type="password" name="senha" class="form-input" placeholder="Tu contraseña" required autocomplete="current-password">
+          <div class="input-wrap">
+            <input type="password" id="inp-senha" name="senha" class="form-input" placeholder="Tu contraseña" required autocomplete="current-password">
+            <button type="button" class="input-action" onclick="var i=document.getElementById('inp-senha');i.type=i.type==='password'?'text':'password';this.querySelector('.eye-off').style.display=i.type==='password'?'block':'none';this.querySelector('.eye-on').style.display=i.type==='password'?'none':'block'" title="Mostrar/ocultar contraseña">
+              <svg class="eye-off" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="eye-on" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+          </div>
         </div>
         <div class="login-forgot"><a href="/portal/esqueci-senha">Olvidé mi contraseña</a></div>
         <button type="submit" class="btn-dark">
