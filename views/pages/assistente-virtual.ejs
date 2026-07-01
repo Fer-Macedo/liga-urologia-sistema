@@ -146,12 +146,26 @@
             <span style="font-size:10px;font-weight:800;color:#1a3d2b;text-transform:uppercase;letter-spacing:.5px">⏱ Uso da API — IA</span>
             <a href="https://console.anthropic.com/settings/billing" target="_blank" style="background:#1a3d2b;color:#fff;border-radius:2px;padding:3px 8px;font-size:9px;font-weight:700;text-decoration:none">$ Recarregar</a>
           </div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center">
-            <div style="background:#f0fdf4;border:1px solid #dcfce7;padding:5px 2px"><div style="font-size:11px;font-weight:800;color:#166534" id="uso-hoje-custo">—</div><div style="font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase">Hoje</div></div>
-            <div style="background:#f0fdf4;border:1px solid #dcfce7;padding:5px 2px"><div style="font-size:11px;font-weight:800;color:#166534" id="uso-mes-custo">—</div><div style="font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase">Mês</div></div>
-            <div style="background:#f0fdf4;border:1px solid #dcfce7;padding:5px 2px"><div style="font-size:11px;font-weight:800;color:#166534" id="uso-total-custo">—</div><div style="font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase">Total</div></div>
+          <!-- Saldo inicial -->
+          <div style="background:#fefce8;border:1px solid #fde68a;border-radius:4px;padding:6px 8px;margin-bottom:6px">
+            <div style="font-size:9px;color:#92400e;font-weight:700;margin-bottom:4px">SALDO INFORMADO</div>
+            <div style="display:flex;gap:4px;align-items:center">
+              <span style="font-size:9px;color:#64748b">$</span>
+              <input type="number" id="saldo-input" step="0.01" min="0" placeholder="0.00" style="flex:1;border:1px solid #fde68a;border-radius:3px;padding:3px 5px;font-size:11px;font-weight:700;width:60px;background:#fff">
+              <button onclick="salvarSaldo()" style="background:#1a3d2b;color:#fff;border:none;border-radius:3px;padding:3px 8px;font-size:9px;font-weight:700;cursor:pointer">Salvar</button>
+            </div>
+            <div style="margin-top:4px;font-size:9px;color:#92400e" id="saldo-data-label"></div>
           </div>
-          <div style="margin-top:4px;font-size:9px;color:#94a3b8;text-align:center">Saldo em <a href="https://console.anthropic.com/settings/billing" target="_blank" style="color:#1a3d2b;font-weight:700">console.anthropic.com</a></div>
+          <!-- Cards consumo -->
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;text-align:center;margin-bottom:4px">
+            <div style="background:#fef2f2;border:1px solid #fecaca;padding:5px 2px"><div style="font-size:11px;font-weight:800;color:#991b1b" id="uso-consumido">—</div><div style="font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase">Consumido</div></div>
+            <div style="background:#f0fdf4;border:1px solid #dcfce7;padding:5px 2px"><div style="font-size:11px;font-weight:800;color:#166534" id="uso-restante">—</div><div style="font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase">Estimativa Restante</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;text-align:center">
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:4px 2px"><div style="font-size:10px;font-weight:800;color:#475569" id="uso-hoje-custo">—</div><div style="font-size:8px;color:#94a3b8;font-weight:700;text-transform:uppercase">Hoje</div></div>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:4px 2px"><div style="font-size:10px;font-weight:800;color:#475569" id="uso-mes-custo">—</div><div style="font-size:8px;color:#94a3b8;font-weight:700;text-transform:uppercase">Mês</div></div>
+            <div style="background:#f8fafc;border:1px solid #e2e8f0;padding:4px 2px"><div style="font-size:10px;font-weight:800;color:#475569" id="uso-total-custo">—</div><div style="font-size:8px;color:#94a3b8;font-weight:700;text-transform:uppercase">Total</div></div>
+          </div>
         </div>
         <div class="kb-hdr">
           <h4>
@@ -311,15 +325,26 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')fecharEdit();});
 
 inp.addEventListener('input',()=>{inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,120)+'px';});
 sc();
-fetch('/assistente-virtual/uso').then(function(r){return r.json();}).then(function(d){
-  document.getElementById('uso-hoje-custo').textContent='$'+(parseFloat(d.hoje.custo)||0).toFixed(2);
-  document.getElementById('uso-mes-custo').textContent='$'+(parseFloat(d.mes.custo)||0).toFixed(2);
-  document.getElementById('uso-total-custo').textContent='$'+(parseFloat(d.total.custo)||0).toFixed(2);
-}).catch(function(e){
-  document.getElementById('uso-hoje-custo').textContent='$0.00';
-  document.getElementById('uso-mes-custo').textContent='$0.00';
-  document.getElementById('uso-total-custo').textContent='$0.00';
-});
+function carregarUso(){
+  fetch('/assistente-virtual/uso').then(function(r){return r.json();}).then(function(d){
+    var fmt=function(v){return '$'+(parseFloat(v)||0).toFixed(2);};
+    document.getElementById('uso-hoje-custo').textContent=fmt(d.hoje.custo);
+    document.getElementById('uso-mes-custo').textContent=fmt(d.mes.custo);
+    document.getElementById('uso-total-custo').textContent=fmt(d.total.custo);
+    var saldo=parseFloat(d.saldo_inicial)||0;
+    var consumido=parseFloat(d.consumido_desde_saldo)||0;
+    document.getElementById('uso-consumido').textContent=fmt(consumido);
+    document.getElementById('uso-restante').textContent=saldo>0?fmt(Math.max(0,saldo-consumido)):'—';
+    if(d.saldo_inicial>0) document.getElementById('saldo-input').value=parseFloat(d.saldo_inicial).toFixed(2);
+    if(d.saldo_data) document.getElementById('saldo-data-label').textContent='Desde '+new Date(d.saldo_data).toLocaleDateString('pt-BR');
+  }).catch(function(){});
+}
+function salvarSaldo(){
+  var v=parseFloat(document.getElementById('saldo-input').value)||0;
+  fetch('/assistente-virtual/saldo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({saldo:v})})
+    .then(function(){carregarUso();});
+}
+carregarUso();
 </script>
 
 <div class="edit-modal" id="editModal">

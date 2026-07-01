@@ -6516,15 +6516,37 @@ router.get('/assistente-virtual/uso', requireAuth, async (req, res) => {
   try {
     const hoje = new Date().toISOString().split('T')[0];
     const mes = hoje.substring(0, 7);
-    const total = await query('SELECT SUM(tokens_entrada+tokens_saida) as tokens, SUM(custo_estimado) as custo, COUNT(*) as chamadas FROM anthropic_uso');
-    const mes_r = await query("SELECT SUM(tokens_entrada+tokens_saida) as tokens, SUM(custo_estimado) as custo, COUNT(*) as chamadas FROM anthropic_uso WHERE TO_CHAR(criado_em,'YYYY-MM')=$1", [mes]);
-    const hoje_r = await query("SELECT SUM(tokens_entrada+tokens_saida) as tokens, SUM(custo_estimado) as custo, COUNT(*) as chamadas FROM anthropic_uso WHERE criado_em::date=$1", [hoje]);
+    const [total, mes_r, hoje_r, cfg_saldo, cfg_data] = await Promise.all([
+      query('SELECT SUM(tokens_entrada+tokens_saida) as tokens, SUM(custo_estimado) as custo, COUNT(*) as chamadas FROM anthropic_uso'),
+      query("SELECT SUM(tokens_entrada+tokens_saida) as tokens, SUM(custo_estimado) as custo, COUNT(*) as chamadas FROM anthropic_uso WHERE TO_CHAR(criado_em,'YYYY-MM')=$1", [mes]),
+      query("SELECT SUM(tokens_entrada+tokens_saida) as tokens, SUM(custo_estimado) as custo, COUNT(*) as chamadas FROM anthropic_uso WHERE criado_em::date=$1", [hoje]),
+      query("SELECT valor FROM configuracoes WHERE chave='anthropic_saldo_inicial'"),
+      query("SELECT valor FROM configuracoes WHERE chave='anthropic_saldo_data'"),
+    ]);
+    const saldo_inicial = parseFloat(cfg_saldo.rows[0]?.valor)||0;
+    const saldo_data = cfg_data.rows[0]?.valor||null;
+    let consumido_desde_saldo = 0;
+    if (saldo_data) {
+      const desde = await query("SELECT SUM(custo_estimado) as custo FROM anthropic_uso WHERE criado_em>=$1", [saldo_data]);
+      consumido_desde_saldo = parseFloat(desde.rows[0]?.custo)||0;
+    }
     res.json({
       total: { tokens: parseInt(total.rows[0].tokens)||0, custo: parseFloat(total.rows[0].custo)||0, chamadas: parseInt(total.rows[0].chamadas)||0 },
       mes: { tokens: parseInt(mes_r.rows[0].tokens)||0, custo: parseFloat(mes_r.rows[0].custo)||0, chamadas: parseInt(mes_r.rows[0].chamadas)||0 },
-      hoje: { tokens: parseInt(hoje_r.rows[0].tokens)||0, custo: parseFloat(hoje_r.rows[0].custo)||0, chamadas: parseInt(hoje_r.rows[0].chamadas)||0 }
+      hoje: { tokens: parseInt(hoje_r.rows[0].tokens)||0, custo: parseFloat(hoje_r.rows[0].custo)||0, chamadas: parseInt(hoje_r.rows[0].chamadas)||0 },
+      saldo_inicial, saldo_data, consumido_desde_saldo
     });
-  } catch(e) { res.json({ total:{tokens:0,custo:0,chamadas:0}, mes:{tokens:0,custo:0,chamadas:0}, hoje:{tokens:0,custo:0,chamadas:0} }); }
+  } catch(e) { res.json({ total:{tokens:0,custo:0,chamadas:0}, mes:{tokens:0,custo:0,chamadas:0}, hoje:{tokens:0,custo:0,chamadas:0}, saldo_inicial:0, saldo_data:null, consumido_desde_saldo:0 }); }
+});
+
+router.post('/assistente-virtual/saldo', requireAuth, async (req, res) => {
+  try {
+    const saldo = parseFloat(req.body.saldo)||0;
+    const agora = new Date().toISOString();
+    await query("INSERT INTO configuracoes(chave,valor) VALUES('anthropic_saldo_inicial',$1) ON CONFLICT(chave) DO UPDATE SET valor=$1", [saldo.toString()]);
+    await query("INSERT INTO configuracoes(chave,valor) VALUES('anthropic_saldo_data',$1) ON CONFLICT(chave) DO UPDATE SET valor=$1", [agora]);
+    res.json({ok:true});
+  } catch(e) { res.json({ok:false}); }
 });
 router.get('/assistente-virtual', requireAuth, async (req, res) => {
   try {
