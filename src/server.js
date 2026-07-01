@@ -56,7 +56,7 @@ app.use((req, res, next) => {
 });
 
 // Health check para o Render
-app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now(), __dirname, views: app.get('views'), cwd: process.cwd(), pid: process.pid }));
 
 app.use('/', routes);
 
