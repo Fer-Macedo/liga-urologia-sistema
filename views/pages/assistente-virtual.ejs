@@ -311,6 +311,12 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')fecharEdit();});
 
 inp.addEventListener('input',()=>{inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,120)+'px';});
 sc();
+fetch('/assistente-virtual/uso').then(r=>r.json()).then(d=>{
+  const fmt=v=>v>=0.01?'$'+v.toFixed(2):v>0?'<$0.01':'$0.00';
+  document.getElementById('uso-hoje-custo').textContent=fmt(d.hoje.custo);
+  document.getElementById('uso-mes-custo').textContent=fmt(d.mes.custo);
+  document.getElementById('uso-total-custo').textContent=fmt(d.total.custo);
+}).catch(()=>{});
 </script>
 
 <div class="edit-modal" id="editModal">
