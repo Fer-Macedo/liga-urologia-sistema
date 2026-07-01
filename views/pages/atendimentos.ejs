@@ -133,7 +133,7 @@
           <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--texto2)">Nenhum atendimento registrado</td></tr>
           <%}%>
           <%atendimentos.forEach(a=>{
-            const dur=a.encerrado_em?Math.round((new Date(a.encerrado_em)-new Date(a.criado_em))/60000):Math.round((Date.now()-new Date(a.criado_em))/60000);
+            const dur=a.duracao_min||0;
             const durStr=dur>=60?(Math.floor(dur/60)+'h '+(dur%60)+'min'):dur+'min';
           %>
           <tr class="at-row" data-status="<%=a.status%>" data-area="<%=a.area%>">
@@ -144,7 +144,7 @@
             <td><span class="area-badge area-<%=a.area%>"><%=a.area%></span></td>
             <td><span class="badge badge-<%=a.status%>"><%-a.status==='aguardando'?'<svg width="10" height="10" viewBox="0 0 10 10" fill="none" style="display:inline;vertical-align:middle"><circle cx="5" cy="5" r="5" fill="#f59e0b"/></svg> Aguardando':a.status==='transferido'?' Transferido':'<svg width="10" height="10" viewBox="0 0 10 10" fill="none" style="display:inline;vertical-align:middle"><circle cx="5" cy="5" r="5" fill="#10b981"/></svg> Encerrado'%></span></td>
             <td style="font-size:12px;color:var(--texto2)"><%=a.idioma==='es'?'Español':'Português'%></td>
-            <td style="font-size:12px;color:var(--texto2)"><%=new Date(a.criado_em).toLocaleString('pt-BR',{timeZone:'America/Asuncion',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})%></td>
+            <td style="font-size:12px;color:var(--texto2)"><%=a.inicio_fmt||''%></td>
             <td style="font-size:12px;font-weight:600;color:<%=a.status==='aguardando'?'#f59e0b':'var(--texto2)'%>"><%=durStr%></td>
             <td>
               <div style="display:flex;gap:4px;flex-wrap:wrap">
@@ -339,7 +339,7 @@ function editarContato(area,numero,nome){
 }
 function montarBolha(m,data){
   var div=document.createElement('div');
-  var hora=new Date(m.criado_em).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+  var hora=new Date(m.criado_em).toLocaleString('pt-BR',{timeZone:'America/Asuncion',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   var cls=m.papel==='user'?'wpp-user':m.papel==='assistant'?'wpp-assistant':'wpp-area';
   var nome=data.nomeMembro||'Membro';
   var label=m.papel==='user'?nome:m.papel==='assistant'?'Lauro (IA)':data.area;
