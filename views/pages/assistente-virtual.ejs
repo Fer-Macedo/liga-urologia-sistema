@@ -311,12 +311,15 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')fecharEdit();});
 
 inp.addEventListener('input',()=>{inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,120)+'px';});
 sc();
-fetch('/assistente-virtual/uso').then(r=>r.json()).then(d=>{
-  const fmt=v=>v>=0.01?'$'+v.toFixed(2):v>0?'<$0.01':'$0.00';
-  document.getElementById('uso-hoje-custo').textContent=fmt(d.hoje.custo);
-  document.getElementById('uso-mes-custo').textContent=fmt(d.mes.custo);
-  document.getElementById('uso-total-custo').textContent=fmt(d.total.custo);
-}).catch(()=>{});
+fetch('/assistente-virtual/uso').then(function(r){return r.json();}).then(function(d){
+  document.getElementById('uso-hoje-custo').textContent='$'+(parseFloat(d.hoje.custo)||0).toFixed(2);
+  document.getElementById('uso-mes-custo').textContent='$'+(parseFloat(d.mes.custo)||0).toFixed(2);
+  document.getElementById('uso-total-custo').textContent='$'+(parseFloat(d.total.custo)||0).toFixed(2);
+}).catch(function(e){
+  document.getElementById('uso-hoje-custo').textContent='$0.00';
+  document.getElementById('uso-mes-custo').textContent='$0.00';
+  document.getElementById('uso-total-custo').textContent='$0.00';
+});
 </script>
 
 <div class="edit-modal" id="editModal">
