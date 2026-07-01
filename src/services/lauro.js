@@ -19,7 +19,10 @@ const TIMEOUT = 30 * 60 * 1000;
 function getSessao(numero) {
   const agora = Date.now();
   if (!sessoes[numero] || (agora - sessoes[numero].ts) > TIMEOUT) {
+    // ponytail: preserva o flag de atendimento humano mesmo ao resetar sessão expirada
+    const emAtendimento = sessoes[numero] && sessoes[numero].emAtendimentoHumano;
     sessoes[numero] = { idioma: null, historico: [], ts: agora, etapa: 'idioma', nome: null };
+    if (emAtendimento) sessoes[numero].emAtendimentoHumano = emAtendimento;
   }
   sessoes[numero].ts = agora;
   return sessoes[numero];
@@ -422,6 +425,9 @@ async function redirecionarArea(numero, area, idioma) {
     "INSERT INTO lauro_atendimentos (numero_membro, area, numero_area, idioma, status, nome_contato) VALUES ($1,$2,$3,$4,'aguardando',$5)",
     [numero, area, numeroArea, idioma, (sessoes[numero] && sessoes[numero].nome) || null]
   );
+  // Marca sessão: IA não responde mais enquanto humano estiver atendendo
+  if (!sessoes[numero]) sessoes[numero] = { idioma: idioma || 'pt', historico: [], ts: Date.now(), etapa: 'ativo', nome: null };
+  sessoes[numero].emAtendimentoHumano = numeroArea;
 
   // Avisa o membro
   const msgCliente = '✅ Encaminhei sua solicitacao para a equipe de *' + nomeArea + '*.\n\nEles vao te responder *aqui neste chat* assim que estiverem disponiveis. Pode deixar o WhatsApp aberto! 😊';
@@ -547,6 +553,8 @@ async function processarMensagem(numero, texto, midia) {
           ? 'Tu atención fue finalizada por ' + _areaCap + '. ¡Cualquier duda o información, puedes volver a contactarnos aquí que atenderemos tu solicitud!'
           : 'Seu atendimento foi encerrado pela ' + _areaCap + '. Qualquer dúvida ou informação, você pode voltar a nos contatar aqui que atenderemos a sua solicitação!';
         await enviarMensagem(numero_membro, msgEnc);
+        // Libera sessão do membro para a IA voltar a atender
+        if (sessoes[numero_membro]) sessoes[numero_membro].emAtendimentoHumano = false;
         await enviarMensagem(numero, 'Atendimento encerrado. Membro notificado.');
         console.log('Lauro proxy: encerrado', areaNome, '->', numero_membro);
         return;
@@ -636,6 +644,9 @@ async function processarMensagem(numero, texto, midia) {
       const _atT = await query("SELECT numero_area FROM lauro_atendimentos WHERE numero_membro=$1 AND status='aguardando' ORDER BY criado_em DESC LIMIT 1", [numero]);
       if (_atT.rows.length > 0) {
         const _naT = _atT.rows[0].numero_area;
+        // Garante que o flag de sess\u00e3o est\u00e1 em sincronia com o banco
+        if (!sessoes[numero]) sessoes[numero] = { idioma: 'pt', historico: [], ts: Date.now(), etapa: 'ativo', nome: null };
+        sessoes[numero].emAtendimentoHumano = _naT;
         let _nomeM = numero;
         try {
           const _nm = await query("SELECT nome FROM membros WHERE regexp_replace(whatsapp,'[^0-9]','','g')=$1 LIMIT 1", [numero]);
@@ -652,8 +663,26 @@ async function processarMensagem(numero, texto, midia) {
         await enviarMensagem(_naT, '\ud83d\udce9 *' + _nomeM + ':* ' + msg).catch(()=>{});
         await salvarConversa(numero, 'user', msg).catch(()=>{});
         return;
+      } else {
+        // Banco diz que n\u00e3o h\u00e1 atendimento ativo \u2014 limpa o flag de sess\u00e3o se estava marcado
+        if (sessoes[numero] && sessoes[numero].emAtendimentoHumano) sessoes[numero].emAtendimentoHumano = false;
       }
-    } catch(e) { console.error('relay texto membro->area:', e.message); }
+    } catch(e) {
+      console.error('relay texto membro->area:', e.message);
+      // Se o banco falhou MAS a sess\u00e3o diz que h\u00e1 atendimento humano, n\u00e3o chama a IA
+      if (sessoes[numero] && sessoes[numero].emAtendimentoHumano) {
+        const _naFallback = sessoes[numero].emAtendimentoHumano;
+        await enviarMensagem(_naFallback, '\ud83d\udce9 *' + numero + ':* ' + msg).catch(()=>{});
+        await salvarConversa(numero, 'user', msg).catch(()=>{});
+        return;
+      }
+    }
+  }
+
+  // Guard final: sess\u00e3o marcada como em atendimento humano \u2014 IA n\u00e3o responde em hip\u00f3tese alguma
+  if (sessoes[numero] && sessoes[numero].emAtendimentoHumano) {
+    await salvarConversa(numero, 'user', msg).catch(()=>{});
+    return;
   }
 
   const sessao = getSessao(numero);
