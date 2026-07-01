@@ -98,6 +98,16 @@
           <div class="stat-lab">Total Histórico</div>
         </div>
       </div>
+      <div class="stats-row" style="grid-template-columns:repeat(2,1fr)">
+        <div class="stat-card" style="--cor-stat:#8b5cf6">
+          <div class="stat-num"><%=(()=>{const m=parseInt(stats.tempo_medio_semanal)||0;return m>=60?(Math.floor(m/60)+'h '+(m%60)+'min'):m?m+'min':'—'})()%></div>
+          <div class="stat-lab">Tempo Médio — Últimos 7 dias</div>
+        </div>
+        <div class="stat-card" style="--cor-stat:#ec4899">
+          <div class="stat-num"><%=(()=>{const m=parseInt(stats.tempo_medio_mensal)||0;return m>=60?(Math.floor(m/60)+'h '+(m%60)+'min'):m?m+'min':'—'})()%></div>
+          <div class="stat-lab">Tempo Médio — Últimos 30 dias</div>
+        </div>
+      </div>
 
       <div class="at-tabs">
         <button class="at-tab ativo" onclick="showAtTab('atend',this)">
