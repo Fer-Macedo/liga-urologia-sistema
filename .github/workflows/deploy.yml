@@ -17,10 +17,19 @@ jobs:
           username: root
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
+            echo "=== PROCESSOS NODE ==="
+            ps aux | grep node | grep -v grep
+            echo "=== PORTAS EM USO ==="
+            ss -tlnp | grep LISTEN
+            echo "=== PM2 LIST ==="
+            pm2 list || echo "pm2 nao encontrado"
+            echo "=== SYSTEMD LIGA ==="
+            systemctl list-units --type=service | grep -i liga || echo "nenhum"
+            echo "=== DEPLOY ==="
             cd /var/www/liga-urologia
             git pull origin main
             npm install --production
             pm2 delete liga-urologia || true
             pm2 start /var/www/liga-urologia/src/server.js --name liga-urologia
             pm2 save
-            echo "Deploy concluído!"
+            echo "Concluido"
