@@ -97,6 +97,16 @@ async function initSchema() {
       chave TEXT PRIMARY KEY,
       valor TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS anthropic_uso (
+      id SERIAL PRIMARY KEY,
+      contexto TEXT,
+      modelo TEXT,
+      tokens_entrada INT DEFAULT 0,
+      tokens_saida INT DEFAULT 0,
+      custo_estimado NUMERIC(10,6) DEFAULT 0,
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
   `);
 
   // Insere configs padrão

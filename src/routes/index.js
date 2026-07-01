@@ -6513,16 +6513,18 @@ router.get('/calendario', requireAuth, async (req, res) => {
 
 // ─── ASSISTENTE VIRTUAL ───────────────────────────────────────────────────────
 router.get('/assistente-virtual/uso', requireAuth, async (req, res) => {
-  const hoje = new Date().toISOString().split('T')[0];
-  const mes = hoje.substring(0, 7);
-  const total = await query('SELECT SUM(tokens_entrada+tokens_saida) as tokens, SUM(custo_estimado) as custo, COUNT(*) as chamadas FROM anthropic_uso');
-  const mes_r = await query("SELECT SUM(tokens_entrada+tokens_saida) as tokens, SUM(custo_estimado) as custo, COUNT(*) as chamadas FROM anthropic_uso WHERE TO_CHAR(criado_em,'YYYY-MM')=$1", [mes]);
-  const hoje_r = await query("SELECT SUM(tokens_entrada+tokens_saida) as tokens, SUM(custo_estimado) as custo, COUNT(*) as chamadas FROM anthropic_uso WHERE criado_em::date=$1", [hoje]);
-  res.json({
-    total: { tokens: parseInt(total.rows[0].tokens)||0, custo: parseFloat(total.rows[0].custo)||0, chamadas: parseInt(total.rows[0].chamadas)||0 },
-    mes: { tokens: parseInt(mes_r.rows[0].tokens)||0, custo: parseFloat(mes_r.rows[0].custo)||0, chamadas: parseInt(mes_r.rows[0].chamadas)||0 },
-    hoje: { tokens: parseInt(hoje_r.rows[0].tokens)||0, custo: parseFloat(hoje_r.rows[0].custo)||0, chamadas: parseInt(hoje_r.rows[0].chamadas)||0 }
-  });
+  try {
+    const hoje = new Date().toISOString().split('T')[0];
+    const mes = hoje.substring(0, 7);
+    const total = await query('SELECT SUM(tokens_entrada+tokens_saida) as tokens, SUM(custo_estimado) as custo, COUNT(*) as chamadas FROM anthropic_uso');
+    const mes_r = await query("SELECT SUM(tokens_entrada+tokens_saida) as tokens, SUM(custo_estimado) as custo, COUNT(*) as chamadas FROM anthropic_uso WHERE TO_CHAR(criado_em,'YYYY-MM')=$1", [mes]);
+    const hoje_r = await query("SELECT SUM(tokens_entrada+tokens_saida) as tokens, SUM(custo_estimado) as custo, COUNT(*) as chamadas FROM anthropic_uso WHERE criado_em::date=$1", [hoje]);
+    res.json({
+      total: { tokens: parseInt(total.rows[0].tokens)||0, custo: parseFloat(total.rows[0].custo)||0, chamadas: parseInt(total.rows[0].chamadas)||0 },
+      mes: { tokens: parseInt(mes_r.rows[0].tokens)||0, custo: parseFloat(mes_r.rows[0].custo)||0, chamadas: parseInt(mes_r.rows[0].chamadas)||0 },
+      hoje: { tokens: parseInt(hoje_r.rows[0].tokens)||0, custo: parseFloat(hoje_r.rows[0].custo)||0, chamadas: parseInt(hoje_r.rows[0].chamadas)||0 }
+    });
+  } catch(e) { res.json({ total:{tokens:0,custo:0,chamadas:0}, mes:{tokens:0,custo:0,chamadas:0}, hoje:{tokens:0,custo:0,chamadas:0} }); }
 });
 router.get('/assistente-virtual', requireAuth, async (req, res) => {
   try {
