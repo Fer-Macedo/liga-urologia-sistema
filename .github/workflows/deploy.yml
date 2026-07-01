@@ -20,5 +20,7 @@ jobs:
             cd /var/www/liga-urologia
             git pull origin main
             npm install --production
-            pm2 restart liga-urologia
+            pm2 delete liga-urologia || true
+            pm2 start /var/www/liga-urologia/src/server.js --name liga-urologia
+            pm2 save
             echo "Deploy concluído!"
