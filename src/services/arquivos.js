@@ -95,8 +95,12 @@ async function listarArquivos(prefixo) {
   return r.Contents || [];
 }
 
-async function gerarUrlInline(chave) {
-  const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: chave });
+async function gerarUrlInline(chave, mimetype) {
+  const cmd = new GetObjectCommand({
+    Bucket: BUCKET, Key: chave,
+    ResponseContentDisposition: 'inline',
+    ...(mimetype ? { ResponseContentType: mimetype } : {})
+  });
   return getSignedUrl(R2, cmd, { expiresIn: 86400 });
 }
 

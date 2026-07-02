@@ -3487,8 +3487,8 @@ router.get("/arquivos/:id/visualizar", requireAuth, async (req, res) => {
     const a = r.rows[0];
     if (!a) return res.status(404).send("Nao encontrado");
     if (a.tipo === "google" && a.google_embed) return res.redirect(a.google_embed);
-    const { getUrlAssinada } = require("../services/desligamento");
-    res.redirect(await getUrlAssinada(a.chave_r2));
+    const { gerarUrlInline } = require("../services/arquivos");
+    res.redirect(await gerarUrlInline(a.chave_r2, a.mimetype));
   } catch(e) { res.status(500).send("Erro: " + e.message); }
 });
 
@@ -3497,8 +3497,8 @@ router.get("/arquivos/:id/download", requireAuth, async (req, res) => {
     const r = await query("SELECT * FROM arquivos WHERE id=$1", [req.params.id]);
     const a = r.rows[0];
     if (!a || !a.chave_r2) return res.status(404).send("Nao encontrado");
-    const { getUrlAssinada } = require("../services/desligamento");
-    res.redirect(await getUrlAssinada(a.chave_r2));
+    const { gerarUrlDownload } = require("../services/arquivos");
+    res.redirect(await gerarUrlDownload(a.chave_r2, a.nome_original || "arquivo"));
   } catch(e) { res.status(500).send("Erro"); }
 });
 

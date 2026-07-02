@@ -565,10 +565,11 @@ function abrirArquivo(id) {
   }
   const ext = (a.nome_original || "").split(".").pop().toLowerCase();
   const imgExts = ["jpg","jpeg","png","gif","webp","bmp"];
+  const videoExts = ["mp4","mov","avi","mpeg","mpg","webm","m4v"];
   document.getElementById("viewer-titulo").textContent = a.nome_original;
   document.getElementById("viewer-baixar").href = "/arquivos/" + id + "/download";
   document.getElementById("viewer-externo").href = "/arquivos/" + id + "/visualizar";
-  if (ext === "pdf" || imgExts.includes(ext)) {
+  if (ext === "pdf" || imgExts.includes(ext) || videoExts.includes(ext)) {
     document.getElementById("viewer-iframe").src = "/arquivos/" + id + "/visualizar";
   } else {
     const src = "https://docs.google.com/viewer?url=" + encodeURIComponent(window.location.origin + "/arquivos/" + id + "/visualizar") + "&embedded=true";
