@@ -1159,7 +1159,7 @@ router.get('/notificacoes', requireAuth, requirePermissao('notificacoes'), async
 });
 
 router.post('/notificacoes', requireAuth, requireAdmin, async (req, res) => {
-  const campos = ['notif_pre_ativo','notif_dia_ativo','notif_pos1_ativo','notif_pos7_ativo','notif_aniversario_ativo',
+  const campos = ['notif_pre_ativo','notif_dia_ativo','notif_pos1_ativo','notif_pos7_ativo','notif_aniversario_ativo','notif_atrasados_diario',
     'msg_cobranca_pre','msg_cobranca_dia','msg_cobranca_pos','msg_aniversario'];
   for (const c of campos) {
     const val = req.body[c] !== undefined ? (req.body[c] === 'on' ? '1' : req.body[c]) : '0';
