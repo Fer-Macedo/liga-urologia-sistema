@@ -675,12 +675,19 @@ const limiterPagamentoCartao = rateLimit({
   message: { ok: false, erro: 'Muitas tentativas de pagamento. Aguarde 15 minutos.' }
 });
 
-// Sanitiza inputs contra XSS
+// Sanitiza inputs contra XSS — libera style/class (usado pelos editores de texto rico Quill)
+// mantendo a sanitizacao de CSS do proprio pacote xss (bloqueia expression()/javascript: etc)
+const xssRico = new xss.FilterXSS({
+  css: { whiteList: { color: true, 'background-color': true, 'font-size': true, 'text-align': true, 'font-weight': true, 'font-style': true, 'text-decoration': true } },
+  onIgnoreTagAttr: function(tag, name, value) {
+    if (name === 'style' || name === 'class') return name + '="' + xss.escapeAttrValue(value) + '"';
+  }
+});
 router.use((req, res, next) => {
   if (req.body) {
     for (const key in req.body) {
       if (typeof req.body[key] === 'string') {
-        req.body[key] = xss(req.body[key]);
+        req.body[key] = xssRico.process(req.body[key]);
       }
     }
   }

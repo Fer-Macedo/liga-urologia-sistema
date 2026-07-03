@@ -86,7 +86,10 @@
   <div class="proj-top">
     <div>
       <div class="proj-titulo"><%=p.titulo%></div>
-      <%if(p.descricao){%><div class="proj-desc"><%=p.descricao.substring(0,90)%><%=p.descricao.length>90?'...':''%></div><%}%>
+      <%
+        var _descPlana = p.descricao ? p.descricao.replace(/<[^>]*>/g,' ').replace(/\s+/g,' ').trim() : '';
+      %>
+      <%if(_descPlana){%><div class="proj-desc"><%=_descPlana.substring(0,90)%><%=_descPlana.length>90?'...':''%></div><%}%>
     </div>
     <span class="badge <%=p.status==='aberto'?'badge-aberto':p.status==='encerrado'?'badge-encerrado':'badge-revisao'%>"><%=p.status%></span>
   </div>

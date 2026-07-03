@@ -5,7 +5,11 @@
   <link rel="shortcut icon" href="/favicon.ico">
   <title><%=projeto?'Editar':'Novo'%> Projeto — <%= config.org_nome %></title>
   <link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin-modern.css">
+  <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
   <style>
+    #quill-descricao{background:var(--fundo);min-height:140px}
+    .ql-toolbar.ql-snow{border-color:var(--borda);background:var(--card)}
+    .ql-container.ql-snow{border-color:var(--borda)}
     :root{--cor-primaria:<%=config.org_cor||'#1a56db'%>}
     .form-wrap{max-width:720px}
     .form-card{background:var(--card);border:1px solid var(--borda);padding:28px;margin-bottom:20px}
@@ -40,7 +44,7 @@
   <h1><%=projeto?'Editar Projeto':'Novo Projeto Cientifico'%></h1>
 </div>
 <div class="form-wrap">
-<form method="POST" action="<%=projeto?'/cientifico/projeto/'+projeto.id+'/editar':'/cientifico/novo'%>" enctype="multipart/form-data">
+<form method="POST" id="form-projeto" action="<%=projeto?'/cientifico/projeto/'+projeto.id+'/editar':'/cientifico/novo'%>" enctype="multipart/form-data">
   <div class="form-card">
     <h2>Informacoes do Projeto</h2>
     <div class="form-group">
@@ -49,7 +53,8 @@
     </div>
     <div class="form-group">
       <label>Descricao</label>
-      <textarea name="descricao" placeholder="Descricao opcional do projeto"><%=projeto?projeto.descricao||'':''%></textarea>
+      <div id="quill-descricao"></div>
+      <textarea name="descricao" id="txt-descricao" style="display:none"><%=projeto?projeto.descricao||'':''%></textarea>
     </div>
     <div class="form-row">
       <div class="form-group">
@@ -110,7 +115,18 @@
 </form>
 </div>
 </div>
+<script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
 <script>
+var quillDescricao = new Quill('#quill-descricao', {
+  theme: 'snow',
+  placeholder: 'Descricao opcional do projeto',
+  modules: { toolbar: [[{'font':[]},{'size':['small',false,'large','huge']}],['bold','italic','underline','strike'],[{'color':[]},{'background':[]}],[{'align':[]}],[{'list':'ordered'},{'list':'bullet'}],['link','image'],['clean']] }
+});
+quillDescricao.root.innerHTML = document.getElementById('txt-descricao').value;
+document.getElementById('form-projeto').addEventListener('submit', function() {
+  document.getElementById('txt-descricao').value = quillDescricao.getText().trim() ? quillDescricao.root.innerHTML : '';
+});
+
 function mostrarArquivo(input,id){
   var d=document.getElementById('nome-'+id);
   d.textContent=input.files[0]?input.files[0].name:'';
