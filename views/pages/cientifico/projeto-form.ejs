@@ -11,26 +11,31 @@
     .ql-toolbar.ql-snow{border-color:var(--borda);background:var(--card)}
     .ql-container.ql-snow{border-color:var(--borda)}
     :root{--cor-primaria:<%=config.org_cor||'#1a56db'%>}
-    .form-wrap{max-width:720px;margin:0 auto}
-    .form-card{background:var(--card);border:1px solid var(--borda);padding:28px;margin-bottom:20px}
-    .form-card h2{font-size:15px;font-weight:700;color:var(--texto);margin:0 0 20px;padding-bottom:12px;border-bottom:1px solid var(--borda)}
-    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-    .form-group{margin-bottom:16px}
-    .form-group label{display:block;font-size:12px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
-    .form-group input,.form-group select,.form-group textarea{width:100%;padding:9px 12px;border:1px solid var(--borda);background:var(--fundo);color:var(--texto);font-size:13px;border-radius:0;font-family:inherit;box-sizing:border-box}
+    .form-wrap{max-width:820px;margin:0 auto}
+    .form-card{background:var(--card);border:1px solid var(--borda);margin-bottom:20px;overflow:hidden}
+    .form-card-h{padding:16px 28px;border-bottom:1px solid var(--borda);background:var(--fundo)}
+    .form-card-h h2{font-size:13px;font-weight:700;color:var(--cor-primaria);margin:0;text-transform:uppercase;letter-spacing:.06em}
+    .form-card-b{padding:28px}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+    .form-group{margin-bottom:18px}
+    .form-group:last-child{margin-bottom:0}
+    .form-group label{display:block;font-size:12px;font-weight:700;color:var(--texto);text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px}
+    .form-group input,.form-group select,.form-group textarea{width:100%;padding:11px 13px;border:1.5px solid var(--borda);background:var(--card);color:var(--texto);font-size:14px;border-radius:0;font-family:inherit;box-sizing:border-box;transition:border-color .15s}
     .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--cor-primaria)}
     .form-group textarea{resize:vertical;min-height:80px}
-    .file-area{border:1.5px dashed var(--borda);padding:20px;text-align:center;cursor:pointer;background:var(--fundo)}
-    .file-area:hover{border-color:var(--cor-primaria)}
-    .file-area p{font-size:12.5px;color:var(--texto2);margin:6px 0 0}
-    .file-atual{font-size:12px;color:var(--texto2);margin-top:8px;padding:8px 12px;background:var(--hover);border:1px solid var(--borda);display:flex;align-items:center;gap:8px}
-    .btn{padding:9px 18px;font-size:13px;font-weight:600;border:1px solid var(--borda);background:var(--card);color:var(--texto);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:7px;border-radius:0}
+    .file-area{border:1.5px dashed var(--borda);padding:24px;text-align:center;cursor:pointer;background:var(--fundo);transition:all .15s}
+    .file-area:hover{border-color:var(--cor-primaria);background:var(--card)}
+    .file-area svg{color:var(--texto2)}
+    .file-area p{font-size:12.5px;color:var(--texto2);margin:8px 0 0;font-weight:500}
+    .file-atual{font-size:12px;color:var(--texto);font-weight:600;margin-top:10px;padding:10px 14px;background:var(--fundo);border:1px solid var(--borda);display:flex;align-items:center;gap:8px}
+    .btn{padding:11px 22px;font-size:13px;font-weight:700;border:1.5px solid var(--borda);background:var(--card);color:var(--texto);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:7px;border-radius:0;transition:all .15s}
+    .btn:hover{border-color:var(--texto2)}
     .btn.pri{background:var(--cor-primaria);color:#fff;border-color:var(--cor-primaria)}
-    .btn.pri:hover{opacity:.9}
-    .pg-header{display:flex;align-items:center;gap:14px;margin-bottom:28px}
-    .pg-header a{color:var(--texto2);text-decoration:none;font-size:13px;display:flex;align-items:center;gap:5px}
-    .pg-header a:hover{color:var(--texto)}
-    .pg-header h1{font-size:20px;font-weight:700;color:var(--texto);margin:0}
+    .btn.pri:hover{opacity:.88;border-color:var(--cor-primaria)}
+    .pg-header{display:flex;align-items:center;gap:16px;margin-bottom:28px}
+    .pg-header a{color:var(--texto2);text-decoration:none;font-size:13px;font-weight:600;display:flex;align-items:center;gap:5px;transition:color .15s}
+    .pg-header a:hover{color:var(--cor-primaria)}
+    .pg-header h1{font-size:22px;font-weight:800;color:var(--texto);margin:0}
     .alert-err{padding:12px 16px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:13px;margin-bottom:20px}
   </style>
 </head>
@@ -46,7 +51,8 @@
 <div class="form-wrap">
 <form method="POST" id="form-projeto" action="<%=projeto?'/cientifico/projeto/'+projeto.id+'/editar':'/cientifico/novo'%>" enctype="multipart/form-data">
   <div class="form-card">
-    <h2>Informacoes do Projeto</h2>
+    <div class="form-card-h"><h2>Informacoes do Projeto</h2></div>
+    <div class="form-card-b">
     <div class="form-group">
       <label>Titulo do Projeto / Evento / Revista *</label>
       <input type="text" name="titulo" required value="<%=projeto?projeto.titulo:''%>" placeholder="Ex: Congresso Brasileiro de Urologia 2025">
@@ -70,9 +76,11 @@
         </select>
       </div>
     </div>
+    </div>
   </div>
   <div class="form-card">
-    <h2>Documentos do Projeto</h2>
+    <div class="form-card-h"><h2>Documentos do Projeto</h2></div>
+    <div class="form-card-b">
     <div class="form-row">
       <div class="form-group">
         <label>Edital (PDF)</label>
@@ -107,10 +115,11 @@
         <div id="nome-modelo" style="font-size:11px;color:var(--cor-primaria);margin-top:4px"></div>
       </div>
     </div>
+    </div>
   </div>
-  <div style="display:flex;gap:10px">
-    <button type="submit" class="btn pri"><%=projeto?'Salvar alteracoes':'Criar projeto'%></button>
+  <div style="display:flex;gap:10px;justify-content:flex-end">
     <a href="/cientifico" class="btn">Cancelar</a>
+    <button type="submit" class="btn pri"><%=projeto?'Salvar alteracoes':'Criar projeto'%></button>
   </div>
 </form>
 </div>
