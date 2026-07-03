@@ -594,7 +594,7 @@ router.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-hashes'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-hashes'", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://assets.pagseguro.com.br"],
       scriptSrcAttr: ["'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
@@ -666,6 +666,13 @@ const limiterEsqueciSenha = rateLimit({
   windowMs: 60 * 60 * 1000,
   max: 5,
   message: 'Muitas solicitacoes. Aguarde 1 hora.'
+});
+
+// Rate limit para pagamento com cartao embutido (evita card testing/carding)
+const limiterPagamentoCartao = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  message: { ok: false, erro: 'Muitas tentativas de pagamento. Aguarde 15 minutos.' }
 });
 
 // Sanitiza inputs contra XSS
@@ -8719,6 +8726,60 @@ router.get('/membro/dashboard', requireMembro, async (req, res) => {
   // Grupos cientificos
   const grR = await query(`SELECT gc.nome as gnome, pc.titulo as ptitulo FROM membros_grupo_cientifico m JOIN grupos_cientificos gc ON gc.id=m.grupo_id JOIN projetos_cientificos pc ON pc.id=gc.projeto_id WHERE m.origem_tipo=$1 AND m.origem_id=$2`, [tipo, id]);
   res.render('pages/membro/dashboard', { membro, cobrancaAtual, frequencia, comunicados: comR.rows, comunicadosNaoLidos, proximoEvento: evR.rows[0]||null, grupos: grR.rows });
+});
+
+// GET /membro/pagbank/chave-publica — chave p/ criptografar cartao no navegador
+router.get('/membro/pagbank/chave-publica', requireMembro, async (req, res) => {
+  const { obterChavePublica } = require('../services/pagbank');
+  const r = await obterChavePublica();
+  if (!r.ok) return res.status(502).json({ ok: false, erro: 'Nao foi possivel iniciar o pagamento. Tente novamente.' });
+  res.json({ ok: true, publicKey: r.publicKey });
+});
+
+// POST /membro/pagar-cartao — pagamento com cartao embutido no portal (sem redirecionar)
+router.post('/membro/pagar-cartao', requireMembro, limiterPagamentoCartao, async (req, res) => {
+  try {
+    const { tipo, id } = req.session.membroPortal;
+    const { cobranca_id, encryptedCard, holder_name, holder_cpf } = req.body;
+    if (!cobranca_id || !encryptedCard || !holder_name) return res.json({ ok: false, erro: 'Dados do cartao incompletos.' });
+
+    const membro = await getMembroPortal(tipo, id);
+    if (!membro) return res.json({ ok: false, erro: 'Sessao invalida.' });
+
+    // Garante que a cobranca pertence ao proprio membro logado (evita pagar cobranca de outro)
+    const cobR = await query(
+      `SELECT c.* FROM cobrancas c JOIN membros m ON m.id=c.membro_id
+       WHERE c.id=$1 AND LOWER(m.email)=LOWER($2) AND c.status IN ('pendente','atrasado')`,
+      [cobranca_id, membro.email]
+    );
+    if (!cobR.rows.length) return res.json({ ok: false, erro: 'Cobranca nao encontrada ou ja paga.' });
+    const cob = cobR.rows[0];
+
+    const { pagarComCartao } = require('../services/pagbank');
+    const valorPagar = cob.valor_desconto && new Date().getDate() <= (parseInt(process.env.DIA_DESCONTO || '15')) ? cob.valor_desconto : cob.valor_cheio;
+    const r = await pagarComCartao({
+      referencia: cob.referencia,
+      valor: valorPagar,
+      membro: { nome: membro.nome, email: membro.email, cpf: membro.cpf },
+      encryptedCard,
+      holderName: holder_name,
+      holderCpf: holder_cpf
+    });
+
+    if (!r.ok) return res.json({ ok: false, erro: r.erro });
+    if (!r.aprovado) return res.json({ ok: false, erro: 'Pagamento nao aprovado (status: ' + r.status + '). Verifique os dados do cartao ou tente outro cartao.' });
+
+    await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW(), pagbank_charge_id=$1, metodo_pagamento='cartao' WHERE id=$2", [r.charge_id, cob.id]);
+    try {
+      const { lancarMensalidadeNoFluxo } = require('../services/fluxo-mensalidade');
+      await lancarMensalidadeNoFluxo(query, cob.id);
+    } catch(e) { console.error('lancar fluxo (cartao portal):', e.message); }
+
+    res.json({ ok: true });
+  } catch(e) {
+    console.error('/membro/pagar-cartao erro:', e.message);
+    res.json({ ok: false, erro: 'Erro ao processar pagamento. Tente novamente.' });
+  }
 });
 
 // GET /membro/financeiro/dados — API JSON para historico inline

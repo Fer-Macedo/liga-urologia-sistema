@@ -320,6 +320,78 @@ function processarWebhook(body) {
   }
 }
 
+// ─── CHAVE PÚBLICA (criptografia de cartão no navegador) ──────────────────────
+// Usada pelo PagSeguro.encryptCard() no front-end — dados de cartão nunca
+// trafegam em texto puro pelo nosso servidor (reduz escopo PCI).
+async function obterChavePublica() {
+  if (!TOKEN) return { ok: false, publicKey: null };
+  try {
+    const { data } = await axios.post(
+      BASE_URL + '/public-keys',
+      { type: 'card' },
+      { headers: headers(), timeout: 15000 }
+    );
+    return { ok: true, publicKey: data.public_key || data.publicKey };
+  } catch (err) {
+    const detail = JSON.stringify(err.response ? err.response.data : err.message).substring(0, 300);
+    console.error('PagBank obterChavePublica ERRO:', detail);
+    return { ok: false, publicKey: null };
+  }
+}
+
+// ─── PAGAMENTO COM CARTÃO EMBUTIDO (checkout inline, sem redirecionar) ────────
+// Recebe o cartão já criptografado pelo SDK no navegador (encryptedCard).
+// Retorna: { ok, aprovado, charge_id, status, erro }
+async function pagarComCartao({ referencia, valor, membro, encryptedCard, holderName, holderCpf }) {
+  if (!TOKEN) return { ok: false, erro: 'Gateway de pagamento não configurado.' };
+  const valorCents = centavos(valor);
+  try {
+    const { data } = await axios.post(
+      BASE_URL + '/orders',
+      {
+        reference_id: referencia,
+        customer: {
+          name: membro.nome,
+          email: membro.email || 'membro@ligaurologia.com.br',
+          tax_id: cpfValido(membro.cpf)
+        },
+        items: [{
+          name: 'Mensalidade Liga Academica de Urologia',
+          quantity: 1,
+          unit_amount: valorCents
+        }],
+        notification_urls: [APP_URL + '/webhook/pagbank'],
+        charges: [{
+          reference_id: referencia,
+          description: 'Mensalidade Liga Academica de Urologia',
+          amount: { value: valorCents, currency: 'BRL' },
+          payment_method: {
+            type: 'CREDIT_CARD',
+            installments: 1,
+            capture: true,
+            card: { encrypted: encryptedCard },
+            holder: { name: holderName || membro.nome, tax_id: cpfValido(holderCpf || membro.cpf) }
+          }
+        }]
+      },
+      { headers: headers(), timeout: 20000 }
+    );
+
+    const charge = data.charges && data.charges[0];
+    const status = charge ? charge.status : null;
+    const aprovado = status === 'PAID' || status === 'AUTHORIZED';
+
+    return { ok: true, aprovado, charge_id: charge ? charge.id : data.id, status };
+
+  } catch (err) {
+    const respData = err.response ? err.response.data : null;
+    const msgs = respData && respData.error_messages;
+    const erroLegivel = (msgs && msgs.length) ? msgs.map(m => m.description).join('; ') : 'Não foi possível processar o pagamento. Verifique os dados do cartão.';
+    console.error('PagBank pagarComCartao ERRO:', JSON.stringify(respData || err.message).substring(0, 500));
+    return { ok: false, erro: erroLegivel };
+  }
+}
+
 // ─── EXPORTS ──────────────────────────────────────────────────────────────────
 
 module.exports = {
@@ -328,5 +400,7 @@ module.exports = {
   criarCheckoutLink,  // checkout cartão avulso
   consultarPagamento, // consulta order
   consultarCobranca,  // alias
-  processarWebhook    // interpreta body do webhook
+  processarWebhook,   // interpreta body do webhook
+  obterChavePublica,  // chave pública p/ criptografar cartão no navegador
+  pagarComCartao      // pagamento com cartão embutido no portal (sem redirecionar)
 };

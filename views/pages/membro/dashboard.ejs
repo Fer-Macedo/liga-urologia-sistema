@@ -474,12 +474,27 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
                   Copiar codigo PIX
                 </button>
                 <% if(cobrancaAtual.pagbank_link){ %>
-                <a class="btn" style="font-size:11px;padding:6px 12px" href="<%=cobrancaAtual.pagbank_link%>" target="_blank">
+                <button class="btn" style="font-size:11px;padding:6px 12px" onclick="toggleCardForm('inicio')">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
                   Pagar com cartao
-                </a>
+                </button>
                 <% } %>
               </div>
+              <% if(cobrancaAtual.pagbank_link){ %>
+              <div id="cardform-inicio" style="display:none;margin-top:10px;padding:12px;background:var(--bg);border:1px solid var(--brd)">
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <input type="text" id="cc-name-inicio" placeholder="Nome impresso no cartao" class="prof-input" style="font-size:12px;padding:8px 10px">
+                  <input type="text" id="cc-number-inicio" placeholder="Numero do cartao" class="prof-input" style="font-size:12px;padding:8px 10px" maxlength="19" inputmode="numeric">
+                  <div style="display:flex;gap:8px">
+                    <input type="text" id="cc-exp-mm-inicio" placeholder="MM" class="prof-input" style="font-size:12px;padding:8px 10px;width:60px" maxlength="2" inputmode="numeric">
+                    <input type="text" id="cc-exp-yy-inicio" placeholder="AAAA" class="prof-input" style="font-size:12px;padding:8px 10px;width:80px" maxlength="4" inputmode="numeric">
+                    <input type="text" id="cc-cvv-inicio" placeholder="CVV" class="prof-input" style="font-size:12px;padding:8px 10px;width:70px" maxlength="4" inputmode="numeric">
+                  </div>
+                  <button class="btn btn-p" id="cc-btn-inicio" style="font-size:12px" onclick="pagarComCartaoInline(<%=cobrancaAtual.id%>,'inicio')">Confirmar pagamento</button>
+                  <div id="cc-msg-inicio" style="font-size:11px"></div>
+                </div>
+              </div>
+              <% } %>
               <% } %>
             </div>
           </div>
@@ -1092,6 +1107,46 @@ function copiarPixFin(btn, codigo) {
 }
 
 })();
+
+function toggleCardForm(containerId) {
+  var el = document.getElementById('cardform-' + containerId);
+  if (el) el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
+}
+
+async function pagarComCartaoInline(cobrancaId, containerId) {
+  var msgEl = document.getElementById('cc-msg-' + containerId);
+  var btnEl = document.getElementById('cc-btn-' + containerId);
+  var nome = document.getElementById('cc-name-' + containerId).value.trim();
+  var numero = document.getElementById('cc-number-' + containerId).value.replace(/\s/g, '');
+  var mm = document.getElementById('cc-exp-mm-' + containerId).value.trim();
+  var yyyy = document.getElementById('cc-exp-yy-' + containerId).value.trim();
+  var cvv = document.getElementById('cc-cvv-' + containerId).value.trim();
+  if (!nome || !numero || !mm || !yyyy || !cvv) {
+    msgEl.style.color = '#B91C1C'; msgEl.textContent = 'Preencha todos os campos.'; return;
+  }
+  btnEl.disabled = true; btnEl.textContent = 'Processando...';
+  msgEl.style.color = 'var(--ts)'; msgEl.textContent = '';
+  try {
+    var kr = await fetch('/membro/pagbank/chave-publica').then(function(r){ return r.json(); });
+    if (!kr.ok) throw new Error('Nao foi possivel iniciar o pagamento. Tente novamente.');
+    var card = PagSeguro.encryptCard({
+      publicKey: kr.publicKey, holder: nome, number: numero,
+      expMonth: mm, expYear: yyyy, securityCode: cvv
+    });
+    if (card.hasErrors) throw new Error('Dados do cartao invalidos. Confira numero, validade e CVV.');
+    var pr = await fetch('/membro/pagar-cartao', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ cobranca_id: cobrancaId, encryptedCard: card.encryptedCard, holder_name: nome })
+    }).then(function(r){ return r.json(); });
+    if (!pr.ok) throw new Error(pr.erro || 'Pagamento nao aprovado.');
+    msgEl.style.color = '#047857'; msgEl.textContent = 'Pagamento aprovado!';
+    setTimeout(function(){ location.reload(); }, 1200);
+  } catch(e) {
+    msgEl.style.color = '#B91C1C'; msgEl.textContent = e.message;
+    btnEl.disabled = false; btnEl.textContent = 'Confirmar pagamento';
+  }
+}
+
 function loadFinanceiro() {
   var wrap = document.getElementById('fin-historico');
   if(!wrap) return;
@@ -1148,10 +1203,24 @@ function loadFinanceiro() {
           html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">';
           html += '<button class="btn btn-p" style="font-size:12px" onclick="copiarPixFin(this,this.dataset.pix)" data-pix="' + pixEsc + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copiar codigo PIX</button>';
           if (c.pagbank_link) {
-            html += '<a class="btn" style="font-size:12px" href="' + c.pagbank_link + '" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Pagar com cartao</a>';
+            html += '<button class="btn" style="font-size:12px" onclick="toggleCardForm(\'' + c.id + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Pagar com cartao</button>';
           }
           html += '</div>';
           html += '<div style="font-size:9px;color:var(--ti);word-break:break-all;background:var(--bg);padding:6px;margin-top:4px">' + c.pix_copia_cola + '</div>';
+          if (c.pagbank_link) {
+            html += '<div id="cardform-' + c.id + '" style="display:none;margin-top:10px;padding:12px;background:var(--bg);border:1px solid var(--brd)">';
+            html += '<div style="display:flex;flex-direction:column;gap:8px">';
+            html += '<input type="text" id="cc-name-' + c.id + '" placeholder="Nome impresso no cartao" class="prof-input" style="font-size:12px;padding:8px 10px">';
+            html += '<input type="text" id="cc-number-' + c.id + '" placeholder="Numero do cartao" class="prof-input" style="font-size:12px;padding:8px 10px" maxlength="19" inputmode="numeric">';
+            html += '<div style="display:flex;gap:8px">';
+            html += '<input type="text" id="cc-exp-mm-' + c.id + '" placeholder="MM" class="prof-input" style="font-size:12px;padding:8px 10px;width:60px" maxlength="2" inputmode="numeric">';
+            html += '<input type="text" id="cc-exp-yy-' + c.id + '" placeholder="AAAA" class="prof-input" style="font-size:12px;padding:8px 10px;width:80px" maxlength="4" inputmode="numeric">';
+            html += '<input type="text" id="cc-cvv-' + c.id + '" placeholder="CVV" class="prof-input" style="font-size:12px;padding:8px 10px;width:70px" maxlength="4" inputmode="numeric">';
+            html += '</div>';
+            html += '<button class="btn btn-p" id="cc-btn-' + c.id + '" style="font-size:12px" onclick="pagarComCartaoInline(' + c.id + ',\'' + c.id + '\')">Confirmar pagamento</button>';
+            html += '<div id="cc-msg-' + c.id + '" style="font-size:11px"></div>';
+            html += '</div></div>';
+          }
         }
         html += '</div>';
       });
@@ -1576,6 +1645,7 @@ document.addEventListener('click', function(e) {
   }
 });
 </script>
+<script src="https://assets.pagseguro.com.br/checkout-sdk-js/rc/dist/browser/pagseguro.min.js"></script>
 
 </body>
 </html>
