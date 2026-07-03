@@ -225,19 +225,18 @@ async function notificarAtrasadosDiario() {
   );
 
   let count = 0;
-  const hoje = dayjs().format('YYYY-MM-DD');
 
   for (const cob of r.rows) {
     if (count >= 5) { console.log('[ATRASADOS] Limite de 5 mensagens/dia atingido.'); break; }
     if (!podeMensagem()) break;
 
-    // Verificar se já foi notificado hoje (qualquer tipo de cobrança)
+    // Verificar se já foi notificado nos últimos 3 dias (evita martelar sempre os mesmos)
     const j = await query(
-      "SELECT id FROM notificacoes_log WHERE cobranca_id=$1 AND DATE(enviado_em)=$2",
-      [cob.id, hoje]
+      "SELECT id FROM notificacoes_log WHERE cobranca_id=$1 AND enviado_em > NOW() - INTERVAL '3 days'",
+      [cob.id]
     );
     if (j.rows.length > 0) {
-      console.log('[ATRASADOS] Já notificado hoje:', cob.nome);
+      console.log('[ATRASADOS] Notificado nos últimos 3 dias, pulando:', cob.nome);
       continue;
     }
 
