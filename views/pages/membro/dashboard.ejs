@@ -455,8 +455,10 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
                 var _meses = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
                 var _refMatch = cobrancaAtual.referencia.match(/^\d+-((\d{4})-(\d{2}))$/);
                 if(_refMatch){ _refDisp = _meses[parseInt(_refMatch[3])-1]+'/'+_refMatch[2]; }
+                var _vParts = String(cobrancaAtual.data_vencimento).substring(0,10).split('-');
+                var _vencDisp = _vParts.length===3 ? (_vParts[2]+'/'+_vParts[1]+'/'+_vParts[0]) : cobrancaAtual.data_vencimento;
               %>
-              <div class="pix-ref">Referencia: <%=_refDisp%> · Vence <%=new Date(cobrancaAtual.data_vencimento).toLocaleDateString('pt-BR')%></div>
+              <div class="pix-ref">Referencia: <%=_refDisp%> · Vence <%=_vencDisp%></div>
               <%
                 var hoje = new Date();
                 var diaDesconto = parseInt(process.env.DIA_DESCONTO || '15');
@@ -1163,6 +1165,7 @@ function loadFinanceiro() {
       if(!cobs.length) { wrap.innerHTML = '<div style="padding:20px;text-align:center;color:var(--ti)">Nenhuma cobranca encontrada.</div>'; return; }
       var hoje = new Date();
       var html = '';
+      var qrPendentes = [];
       cobs.forEach(function(c) {
         var isPago = c.status === 'pago';
         var isAtrasado = c.status === 'atrasado';
@@ -1170,6 +1173,7 @@ function loadFinanceiro() {
         var borderCor = isPago ? '#047857' : isAtrasado ? '#B91C1C' : '#B45309';
         var vencStr = (c.data_vencimento||'').substring(0,10);
         var vencParts = vencStr.split('-');
+        var vencDisp = vencParts.length === 3 ? (vencParts[2]+'/'+vencParts[1]+'/'+vencParts[0]) : vencStr;
         // Desconto valido SOMENTE se hoje <= dia 15 do mes atual
         var dentroDesc = hoje.getDate() <= 15;
         var valorPagar = (!isPago && dentroDesc) ? c.valor_desconto : c.valor_cheio;
@@ -1182,7 +1186,7 @@ function loadFinanceiro() {
         html += '<span class="chip ' + statusCls + '">' + (isPago ? 'Pago' : isAtrasado ? 'Atrasado' : 'Pendente') + '</span>';
         html += '</div>';
         html += '<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:12px">';
-        html += '<div><div style="font-size:11px;color:var(--ts)">Vencimento</div><div style="font-weight:600">' + c.data_vencimento + '</div></div>';
+        html += '<div><div style="font-size:11px;color:var(--ts)">Vencimento</div><div style="font-weight:600">' + vencDisp + '</div></div>';
         if(!isPago) {
           html += '<div><div style="font-size:11px;color:var(--ts)">' + (dentroDesc ? 'Com desconto (ate dia 15)' : 'Valor a pagar') + '</div>';
           html += '<div style="font-size:18px;font-weight:800;color:var(--ok)">R$ ' + Number(valorPagar).toFixed(2).replace('.', ',') + '</div></div>';
@@ -1206,7 +1210,11 @@ function loadFinanceiro() {
             html += '<button class="btn" style="font-size:12px" onclick="toggleCardForm(\'' + c.id + '\')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Pagar com cartao</button>';
           }
           html += '</div>';
-          html += '<div style="font-size:9px;color:var(--ti);word-break:break-all;background:var(--bg);padding:6px;margin-top:4px">' + c.pix_copia_cola + '</div>';
+          html += '<div style="display:flex;gap:12px;align-items:flex-start;margin-top:4px">';
+          html += '<div id="qrwrap-' + c.id + '" style="flex-shrink:0;width:84px;height:84px;background:#fff;padding:4px"></div>';
+          html += '<div style="font-size:9px;color:var(--ti);word-break:break-all;background:var(--bg);padding:6px;flex:1;min-width:0">' + c.pix_copia_cola + '</div>';
+          html += '</div>';
+          qrPendentes.push({ id: c.id, pix: c.pix_copia_cola });
           if (c.pagbank_link) {
             html += '<div id="cardform-' + c.id + '" style="display:none;margin-top:10px;padding:12px;background:var(--bg);border:1px solid var(--brd)">';
             html += '<div style="display:flex;flex-direction:column;gap:8px">';
@@ -1225,6 +1233,13 @@ function loadFinanceiro() {
         html += '</div>';
       });
       wrap.innerHTML = html;
+      qrPendentes.forEach(function(q) {
+        var el = document.getElementById('qrwrap-' + q.id);
+        if (!el || !q.pix || typeof QRCode === 'undefined') return;
+        try {
+          new QRCode(el, { text: q.pix, width: 76, height: 76, colorDark: '#0C231B', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+        } catch(e) { console.error('QR error:', e); }
+      });
     })
     .catch(function(e) {
       wrap.dataset.loaded = '';

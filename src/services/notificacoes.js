@@ -186,6 +186,7 @@ function htmlCobranca(opts) {
   const linkCartao=opts.linkCartao||null;
   const pixCode=opts.pixCode||null;
   const qrBase64=opts.qrBase64||null;
+  const qrUrl=opts.qrUrl||null;
   const orgNome=opts.orgNome||'Liga Academica de Urologia';
   const orgCor=opts.orgCor||'#1a56db';
   const orgLogo=opts.orgLogo||null;
@@ -212,7 +213,7 @@ function htmlCobranca(opts) {
      +'<span style="background:rgba(255,255,255,0.15);color:white;font-size:10px;padding:2px 10px;border-radius:3px;font-weight:600">RECOMENDADO</span>'
      +'</div>'
      +'<div style="background:#f0fdf4;padding:20px">'
-     +(qrBase64?'<div style="text-align:center;margin-bottom:16px"><img src="data:image/png;base64,'+qrBase64+'" alt="QR Code PIX" style="width:180px;height:180px;display:block;margin:0 auto"><p style="margin:8px 0 0;font-size:11px;color:#065f46">Escaneie o QR Code acima</p></div>':'')
+     +((qrUrl||qrBase64)?'<div style="text-align:center;margin-bottom:16px"><img src="'+(qrUrl||('data:image/png;base64,'+qrBase64))+'" alt="QR Code PIX" style="width:180px;height:180px;display:block;margin:0 auto"><p style="margin:8px 0 0;font-size:11px;color:#065f46">Escaneie o QR Code acima</p></div>':'')
      +'<p style="margin:0 0 10px;font-size:12px;color:#374151;line-height:1.6">Abra o aplicativo do seu banco, acesse a opcao <strong>PIX</strong>, selecione <strong>Pix Copia e Cola</strong> e insira o codigo abaixo:</p>'
      +'<div style="background:white;border:1px solid #a7f3d0;border-radius:8px;padding:12px;font-family:monospace;font-size:10px;color:#065f46;word-break:break-all;line-height:1.6;margin-bottom:10px">'+pixCode+'</div>'
      +'<p style="margin:0 0 8px;font-size:11px;color:#6b7280">Voce tambem pode acessar o portal do membro para visualizar e pagar:</p>'
@@ -338,6 +339,7 @@ async function notificarCobranca(opts) {
       mensagem:   'Prezado(a) ' + dados.nome + ', segue abaixo as opcoes para pagamento da sua mensalidade de ' + dados.valor_desc + ' (com desconto de pontualidade).',
       linkCartao,
       pixCode,
+      qrUrl: cobranca.pix_qr_image || null,
       orgNome,
       orgCor,
       orgLogo,

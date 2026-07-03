@@ -67,16 +67,17 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
     var statusCls = c.status==='pago'?'c-ok':c.status==='atrasado'?'c-er':'c-wa';
     var borderCor = c.status==='pago'?'#047857':c.status==='atrasado'?'#B91C1C':'#B45309';
     var hojeC = new Date();
-    var vencC = new Date(c.data_vencimento);
+    var vencParts = String(c.data_vencimento).substring(0,10).split('-');
+    var vencDispC = vencParts.length===3 ? (vencParts[2]+'/'+vencParts[1]+'/'+vencParts[0]) : c.data_vencimento;
     var diaDescontoC = 15;
-    var dentroDescontoC = hojeC.getDate() <= diaDescontoC && hojeC.getMonth() === vencC.getMonth() && hojeC.getFullYear() === vencC.getFullYear();
+    var dentroDescontoC = hojeC.getDate() <= diaDescontoC && (hojeC.getMonth()+1) === parseInt(vencParts[1]) && hojeC.getFullYear() === parseInt(vencParts[0]);
     var valorPagarC = dentroDescontoC ? c.valor_desconto : c.valor_cheio;
   %>
   <div class="card" style="border-left:4px solid <%=borderCor%>">
     <div class="mes-header">
       <div>
         <div class="mes-titulo"><%=c.referencia%></div>
-        <div class="mes-sub">Vencimento: <%=new Date(c.data_vencimento).toLocaleDateString('pt-BR')%></div>
+        <div class="mes-sub">Vencimento: <%=vencDispC%></div>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
         <span class="chip <%=statusCls%>"><%=c.status==='pago'?'Pago':c.status==='atrasado'?'Atrasado':'Pendente'%></span>
@@ -114,8 +115,11 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
     <% if(c.status !== 'pago' && c.pix_copia_cola){ %>
     <div class="mes-body" id="body-<%=idx%>">
       <div style="font-size:12px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Pagamento via PIX</div>
-      <div class="pix-code" id="pixcode-<%=idx%>"><%=c.pix_copia_cola%></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div class="qr-pix" id="qrwrap-<%=idx%>" data-pix="<%=c.pix_copia_cola%>" style="flex-shrink:0;width:84px;height:84px;background:#fff;padding:4px"></div>
+        <div class="pix-code" id="pixcode-<%=idx%>" style="flex:1;min-width:0;margin:0"><%=c.pix_copia_cola%></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
         <button class="btn btn-p" id="copybtn-<%=idx%>" style="font-size:12px">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
           Copiar codigo PIX
@@ -221,6 +225,16 @@ async function pagarComCartaoInline(cobrancaId, containerId) {
     btnEl.disabled = false; btnEl.textContent = 'Confirmar pagamento';
   }
 }
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+document.querySelectorAll('.qr-pix').forEach(function(el){
+  var pix = el.dataset.pix;
+  if (!pix || typeof QRCode === 'undefined') return;
+  try {
+    new QRCode(el, { text: pix, width: 76, height: 76, colorDark: '#0C231B', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+  } catch(e) { console.error('QR error:', e); }
+});
 </script>
 <script src="https://assets.pagseguro.com.br/checkout-sdk-js/rc/dist/browser/pagseguro.min.js"></script>
 </body>
