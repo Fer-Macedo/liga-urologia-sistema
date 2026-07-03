@@ -43,8 +43,19 @@
   </style>
 </head>
 <body>
-<%- include('../../partials/sidebar',{paginaAtual:'cientifico',config,usuario,permissoesAtivas:permissoesAtivas||[]}) %>
-<div style="margin-left:240px;padding:32px 36px;min-height:100vh;background:var(--fundo)">
+<div class="layout">
+  <%- include('../../partials/sidebar',{paginaAtual:'cientifico',config,usuario,permissoesAtivas:permissoesAtivas||[]}) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Cientifico</h1>
+      <div class="topbar-acoes">
+        <a href="/cientifico/novo" class="btn btn-primario btn-sm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Novo Projeto
+        </a>
+      </div>
+    </div>
+    <div class="content">
 <%- include('../../partials/_notificacoes') %>
 <%if(msg&&msg.length){%><div class="alert-ok"><%=msg[0]%></div><%}%>
 <%if(erro&&erro.length){%><div class="alert-err"><%=erro[0]%></div><%}%>
@@ -59,13 +70,7 @@
     <a href="/portal/login" target="_blank" style="padding:7px 14px;background:transparent;color:#4ade80;border:1px solid #1a3d2e;font-size:12px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:5px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 0 1 2h3"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Abrir portal</a>
   </div>
 </div>
-<div class="pg-header">
-  <div><h1>Cientifico</h1><p>Projetos, grupos e trabalhos cientificos da liga</p></div>
-  <a href="/cientifico/novo" class="btn pri">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-    Novo Projeto
-  </a>
-</div>
+<p style="font-size:13px;color:var(--texto2);margin:-12px 0 20px">Projetos, grupos e trabalhos cientificos da liga</p>
 <div class="stat-row">
   <div class="stat-card verde"><div class="stat-label">Projetos Abertos</div><div class="stat-val"><%=stats.abertos%></div></div>
   <div class="stat-card azul"><div class="stat-label">Total de Grupos</div><div class="stat-val"><%=stats.grupos%></div></div>
@@ -106,6 +111,8 @@
 <%})%>
 </div>
 <%}%>
+    </div>
+  </main>
 </div>
 
 <!-- MODAL CONFIRMAR EXCLUSAO -->
