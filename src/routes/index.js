@@ -7994,6 +7994,15 @@ router.post('/cientifico/projeto/:id/editar', requireAuth, requireCientifico, up
   res.redirect('/cientifico/projeto/'+req.params.id);
 });
 
+// POST /cientifico/projeto/:id/excluir
+router.post('/cientifico/projeto/:id/excluir', requireAuth, requireCientifico, async (req, res) => {
+  const pR = await query('SELECT titulo FROM projetos_cientificos WHERE id=$1',[req.params.id]);
+  if (!pR.rows.length) { req.session.erro=['Projeto nao encontrado.']; return res.redirect('/cientifico'); }
+  await query('DELETE FROM projetos_cientificos WHERE id=$1',[req.params.id]);
+  req.session.msg=['Projeto "'+pR.rows[0].titulo+'" excluido com sucesso.'];
+  res.redirect('/cientifico');
+});
+
 // GET /cientifico/arquivo/:projetoId/:tipo (download edital/modelo)
 router.get('/cientifico/arquivo/:projetoId/:tipo', requireAuth, async (req, res) => {
   const pR = await query('SELECT * FROM projetos_cientificos WHERE id=$1',[req.params.projetoId]);

@@ -97,6 +97,9 @@
   <div class="proj-acoes">
     <a href="/cientifico/projeto/<%=p.id%>" class="btn btn-sm pri">Ver projeto</a>
     <a href="/cientifico/projeto/<%=p.id%>/editar" class="btn btn-sm">Editar</a>
+    <form method="POST" action="/cientifico/projeto/<%=p.id%>/excluir" onsubmit="return confirm('Excluir o projeto \"<%=p.titulo.replace(/\"/g,'')%>\"? Isso apaga tambem todos os grupos, membros, chat e versoes enviadas. Essa acao nao pode ser desfeita.');" style="margin:0">
+      <button type="submit" class="btn btn-sm" style="color:#b91c1c;border-color:#fecaca">Excluir</button>
+    </form>
   </div>
 </div>
 <%})%>
