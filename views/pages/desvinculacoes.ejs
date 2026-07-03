@@ -128,7 +128,7 @@
               <a href="/desvinculacoes/<%=d.id%>/assinado" target="_blank" class="btn-xs azul">Ver Assinado</a>
               <%}%>
      <%if(usuario.perfil==='admin'||usuario.perfil==='presidencia'){%>
-              <form method="POST" action="/desvinculacoes/<%=d.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')">
+              <form method="POST" action="/desvinculacoes/<%=d.id%>/deletar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;">
                 <button type="submit" class="btn-xs verm">Excluir</button></form>
               <%}%>
             </div></td>

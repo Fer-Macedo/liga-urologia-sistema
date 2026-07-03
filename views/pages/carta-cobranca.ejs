@@ -179,7 +179,7 @@
                   <form method="POST" action="/carta-cobranca/<%= d.id %>/reenviar" style="display:inline;margin:0"><button type="submit" class="btn-xs amarelo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Reenviar</button></form>
                   <% } %>
                   <% if (usuario.perfil === 'admin' || usuario.perfil === 'presidencia' || usuario.perfil === 'financeiro') { %>
-                  <form method="POST" action="/carta-cobranca/<%= d.id %>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')"><button type="submit" class="btn-xs verm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Excluir</button></form>
+                  <form method="POST" action="/carta-cobranca/<%= d.id %>/deletar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;"><button type="submit" class="btn-xs verm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Excluir</button></form>
                   <% } %>
                 </div>
               </td>

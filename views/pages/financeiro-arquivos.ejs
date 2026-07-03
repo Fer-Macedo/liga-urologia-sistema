@@ -238,7 +238,7 @@ function voltarPasta(){if(!pastaAtualId)return;const p=pastasData.find(p=>String
 const sel=new Set();
 function atualizarBarra(){const b=document.getElementById('barra-selecao');document.getElementById('count-sel').textContent=sel.size+' selecionado(s)';b.classList.toggle('visivel',sel.size>0);}
 function limparSelecao(){sel.forEach(id=>document.getElementById('card-'+id)?.classList.remove('selecionado'));sel.clear();atualizarBarra();}
-async function deletarSelecionados(){if(!sel.size||!confirm('Excluir '+sel.size+' arquivo(s)?'))return;for(const id of sel)await fetch('/financeiro-arquivos/'+id+'/deletar',{method:'POST'});window.location.reload();}
+function deletarSelecionados(){if(!sel.size)return;confirmarAcao('Excluir '+sel.size+' arquivo(s)?', async function(){for(const id of sel)await fetch('/financeiro-arquivos/'+id+'/deletar',{method:'POST'});window.location.reload();});}
 function abrirArquivo(id){
   const a=arquivosData.find(x=>x.id===id);if(!a)return;
   document.getElementById('viewer-titulo').textContent=a.nome;
@@ -257,12 +257,12 @@ function abrirArquivo(id){
   document.getElementById('viewer').classList.add('aberto');}
 function fecharViewer(){document.getElementById('viewer').classList.remove('aberto');document.getElementById('viewer-iframe').src='';}
 function gerarEmbed(url){document.getElementById('preview-embed').style.display=url.includes('google.com')?'block':'none';}
-function deletarArquivo(id,nome){if(!confirm('Excluir "'+nome+'"?'))return;
+function deletarArquivo(id,nome){confirmarAcao('Excluir "'+nome+'"?', function(){
   const f=document.createElement('form');f.method='POST';
-  f.action='/financeiro-arquivos/'+id+'/deletar';document.body.appendChild(f);f.submit();}
-function deletarPasta(id,nome){if(!confirm('Excluir pasta "'+nome+'"?'))return;
+  f.action='/financeiro-arquivos/'+id+'/deletar';document.body.appendChild(f);f.submit();});}
+function deletarPasta(id,nome){confirmarAcao('Excluir pasta "'+nome+'"?', function(){
   const f=document.createElement('form');f.method='POST';
-  f.action='/financeiro-pastas/'+id+'/deletar';document.body.appendChild(f);f.submit();}
+  f.action='/financeiro-pastas/'+id+'/deletar';document.body.appendChild(f);f.submit();});}
 let dT=null,dI=null;
 function dragStart(e,t,id){dT=t;dI=id;e.dataTransfer.effectAllowed='move';
   e.target.classList.add('dragging');document.getElementById('drop-zona-principal').classList.add('ativa');}

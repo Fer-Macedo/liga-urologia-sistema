@@ -407,7 +407,7 @@
               </div>
               <div style="display:flex;gap:6px">
         <button onclick="editarLote(<%= l.id %>,'<%= l.nome %>',<%= l.preco %>,<%= l.vagas %>,'<%= l.data_inicio? new Date(new Date(l.data_inicio).getTime() - new Date(l.data_inicio).getTimezoneOffset()*60000).toISOString().slice(0,16):'' %>','<%= l.data_fim? new Date(new Date(l.data_fim).getTime() - new Date(l.data_fim).getTimezoneOffset()*60000).toISOString().slice(0,16):'' %>')" class="btn-xs azul">Editar</button>
-                <form method="POST" action="/eventos/<%= evento.id %>/lotes/<%= l.id %>/deletar" onsubmit="return confirm('Excluir lote?')" style="display:inline">
+                <form method="POST" action="/eventos/<%= evento.id %>/lotes/<%= l.id %>/deletar" onsubmit="var f=this; confirmarAcao('Excluir lote?', function(){ f.submit(); }); return false;" style="display:inline">
                   <button type="submit" class="btn-xs verm">Excluir</button>
                 </form>
               </div>
@@ -453,7 +453,7 @@
                   <% }else{ %><span style="font-size:10px;background:var(--borda);color:var(--texto2);padding:2px 7px;border-radius:4px"><%= c.tipo %></span><% if(c.obrigatorio){%><span style="font-size:10px;color:#dc2626;margin-left:4px">obrig.</span><%}%><% } %>
                 </div>
                 <% if(!c.padrao){ %>
-                <form method="POST" action="/eventos/<%= evento.id %>/campos/<%= c.id %>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')"><button type="submit" class="btn-xs verm">Excluir</button></form>
+                <form method="POST" action="/eventos/<%= evento.id %>/campos/<%= c.id %>/deletar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;"><button type="submit" class="btn-xs verm">Excluir</button></form>
                 <% }else{ %><span style="font-size:11px;color:#10b981;font-weight:600">fixo</span><% } %>
               </div>
               <% }) %>
@@ -523,7 +523,7 @@
               </div>
               <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
                 <div style="font-size:13px;color:var(--texto2)">Enviando para: <strong id="txt-contador-dest"><%= inscricoes.length %> inscritos</strong></div>
-                <button type="submit" class="btn btn-primario" onclick="document.getElementById('mala-html').value=quilMala.root.innerHTML;return confirm('Confirmar envio?')">Enviar emails</button>
+                <button type="submit" class="btn btn-primario" onclick="document.getElementById('mala-html').value=quilMala.root.innerHTML;var f=this.form; confirmarAcao('Confirmar envio?', function(){ f.submit(); }); return false;">Enviar emails</button>
               </div>
             </form>
           </div>
@@ -551,7 +551,7 @@
                 <textarea name="mensagem" id="massa-mensagem-hidden" hidden></textarea>
               </div>
             </div>
-            <button type="submit" class="btn btn-primario" onclick="return confirm('Enviar email para todos os inscritos selecionados?')">Enviar email em massa</button>
+            <button type="submit" class="btn btn-primario" onclick="var f=this.form; confirmarAcao('Enviar email para todos os inscritos selecionados?', function(){ f.submit(); }); return false;">Enviar email em massa</button>
           </form>
         </div>
 
@@ -625,7 +625,7 @@
                     <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/confirmar" style="display:inline"><button class="btn-xs verde"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirmar</button></form>
                     <a href="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/certificado" class="btn-xs roxo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>Cert.</a>
                     <a href="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/cracha" target="_blank" class="btn-xs cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 8h2M15 12h2M7 16h10"/></svg>Cracha</a>
-                    <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')"><button class="btn-xs verm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Excluir</button></form><form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/reenviar-email" style="display:inline" onsubmit="return confirm('Reenviar e-mail de confirmação para <%= i.email %>?')"><button class="btn-xs amarelo" title="Reenviar e-mail de confirmação"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Email</button></form>
+                    <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/deletar" style="display:inline" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;"><button class="btn-xs verm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Excluir</button></form><form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/reenviar-email" style="display:inline" onsubmit="var f=this; confirmarAcao('Reenviar e-mail de confirmação para <%= i.email %>?', function(){ f.submit(); }); return false;"><button class="btn-xs amarelo" title="Reenviar e-mail de confirmação"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Email</button></form>
                   </div>
                 </td>
               </tr>
@@ -840,7 +840,7 @@
                   <div style="font-size:12px;color:var(--cor-primaria);font-weight:600;margin-top:2px"><%= p.horario %><% if(p.local){%> · <%= p.local %><%}%></div>
                   <% if(p.descricao){%><div style="font-size:12px;color:var(--texto2);margin-top:3px"><%= p.descricao %></div><%}%>
                 </div>
-                <form method="POST" action="/eventos/<%= evento.id %>/programacao/<%= p.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')">
+                <form method="POST" action="/eventos/<%= evento.id %>/programacao/<%= p.id %>/deletar" style="display:inline" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;">
                   <button type="submit" class="btn-xs verm">Excluir</button>
                 </form>
               </div>
@@ -879,7 +879,7 @@
                 <% if(p.bio){ const _bioTxt = p.bio.replace(/<[^>]*>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim(); %><div style="font-size:12px;color:var(--texto2);margin-top:2px"><%= _bioTxt.substring(0,120) %><%= _bioTxt.length>120?'...':'' %></div><%}%>
               </div>
               <button type="button" onclick="editarPalestrante(<%= p.id %>)" class="btn-xs azul">Editar</button>
-              <form method="POST" action="/eventos/<%= evento.id %>/palestrantes/<%= p.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')">
+              <form method="POST" action="/eventos/<%= evento.id %>/palestrantes/<%= p.id %>/deletar" style="display:inline" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;">
                 <button type="submit" class="btn-xs verm">Excluir</button>
               </form>
             </div>
@@ -916,7 +916,7 @@
             <div class="patroc-item">
               <% if(p.logo_chave){%><img src="/eventos/patrocinadores/<%= p.id %>/logo" style="height:50px;max-width:140px;object-fit:contain;border-radius:4px"><% }else{ %><div style="width:50px;height:50px;background:var(--borda);border-radius:4px"></div><%}%>
               <div style="flex:1"><div style="font-weight:600"><%= p.nome %></div><div style="font-size:11px;color:var(--texto2)"><%= p.url||'' %></div></div>
-              <form method="POST" action="/eventos/<%= evento.id %>/patrocinadores/<%= p.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir?')">
+              <form method="POST" action="/eventos/<%= evento.id %>/patrocinadores/<%= p.id %>/deletar" style="display:inline" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;">
                 <button type="submit" class="btn-xs verm">Excluir</button>
               </form>
             </div>
@@ -966,7 +966,7 @@
                   <input type="checkbox" name="enviar_email" style="width:16px;height:16px;accent-color:var(--cor-primaria)"> Email
                 </label>
               </div>
-              <button type="submit" class="btn btn-primario" onclick="return confirm('Gerar e enviar cupons?')">Gerar e enviar cupons</button>
+              <button type="submit" class="btn btn-primario" onclick="var f=this.form; confirmarAcao('Gerar e enviar cupons?', function(){ f.submit(); }); return false;">Gerar e enviar cupons</button>
             </form>
           </div>
         </div>
@@ -1004,11 +1004,11 @@
               <div style="display:flex;gap:6px;align-items:center">
                 <button onclick="copiarLinkCupom('<%= c.codigo %>')" class="btn-xs azul" title="Copiar link com cupom aplicado">Link</button>
                   <% if(c.ligante_id || c.diretivo_id){ %>
-                  <form method="POST" action="/eventos/<%= evento.id %>/cupons/<%= c.id %>/reenviar" style="display:inline" onsubmit="return confirm('Reenviar este cupom por WhatsApp e email?')">
+                  <form method="POST" action="/eventos/<%= evento.id %>/cupons/<%= c.id %>/reenviar" style="display:inline" onsubmit="var f=this; confirmarAcao('Reenviar este cupom por WhatsApp e email?', function(){ f.submit(); }); return false;">
                     <button type="submit" class="btn-xs verde" title="Reenviar cupom por WhatsApp e email">Reenviar</button>
                   </form>
                   <% } %>
-                <form method="POST" action="/eventos/<%= evento.id %>/cupons/<%= c.id %>/deletar" style="display:inline" onsubmit="return confirm('Excluir cupom?')">
+                <form method="POST" action="/eventos/<%= evento.id %>/cupons/<%= c.id %>/deletar" style="display:inline" onsubmit="var f=this; confirmarAcao('Excluir cupom?', function(){ f.submit(); }); return false;">
                   <button type="submit" class="btn-xs verm">Excluir</button>
                 </form>
               </div>
@@ -1034,7 +1034,7 @@
             </form>
             <% if(evento.cert_bg_chave){ %>
             <form method="POST" action="/eventos/<%= evento.id %>/cert-bg/remover" style="margin-top:8px">
-              <button type="submit" class="btn-xs verm" onclick="return confirm('Remover?')">Remover fundo personalizado</button>
+              <button type="submit" class="btn-xs verm" onclick="var f=this.form; confirmarAcao('Remover?', function(){ f.submit(); }); return false;">Remover fundo personalizado</button>
             </form>
             <% } %>
           </div>
@@ -1045,7 +1045,7 @@
             <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Emite para inscritos com check-in e envia por email e WhatsApp automaticamente.</p>
             <form method="POST" action="/eventos/<%= evento.id %>/certificados/emitir-todos" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
               <div class="campo"><label class="label">Carga horaria (h)</label><input type="number" name="carga_horaria" class="input" style="width:100px" value="<%= evento.carga_horaria||4 %>" min="1"></div>
-              <button type="submit" class="btn btn-primario" onclick="return confirm('Emitir para todos com check-in?')">Emitir todos</button>
+              <button type="submit" class="btn btn-primario" onclick="var f=this.form; confirmarAcao('Emitir para todos com check-in?', function(){ f.submit(); }); return false;">Emitir todos</button>
             </form>
           </div>
         </div>
@@ -1387,15 +1387,16 @@ function cupPag(d){cupNum(_cupPag+d);}
 function limparCup(){['cup-busca','cup-situacao','cup-cr-de','cup-cr-ate','cup-us-de','cup-us-ate'].forEach(function(id){var e=document.getElementById(id); if(e)e.value='';});filtrarCupons();}
 function toTitleCase(s){ return s?s.toLowerCase().replace(/(^|[\s\-])(\S)/g,function(m,a,b){return a+b.toUpperCase();}):''; }
 function desfazerCheckout(inscricaoId, btn){
-  if(!confirm('Remover este participante dos aptos? O check-out será desfeito.'))return;
-  btn.disabled=true;
-  fetch('/eventos/<%= evento.id %>/inscricao/'+inscricaoId+'/desfazer-checkout',{method:'POST'})
-    .then(function(r){return r.json();})
-    .then(function(d){
-      if(d.ok){ carregarRelatorioCheckout(); }
-      else { alert('Erro: '+(d.erro||'falha')); btn.disabled=false; }
-    })
-    .catch(function(e){ alert('Erro: '+e.message); btn.disabled=false; });
+  confirmarAcao('Remover este participante dos aptos? O check-out será desfeito.', function(){
+    btn.disabled=true;
+    fetch('/eventos/<%= evento.id %>/inscricao/'+inscricaoId+'/desfazer-checkout',{method:'POST'})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(d.ok){ carregarRelatorioCheckout(); }
+        else { alert('Erro: '+(d.erro||'falha')); btn.disabled=false; }
+      })
+      .catch(function(e){ alert('Erro: '+e.message); btn.disabled=false; });
+  });
 }
 document.addEventListener('DOMContentLoaded',function(){ var ck=document.getElementById('tab-checkout'); if(ck&&ck.classList.contains('ativo')) carregarRelatorioCheckout(); });
 function carregarRelatorioCheckout(){

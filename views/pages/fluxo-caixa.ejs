@@ -220,7 +220,7 @@ table.fc-table td { padding:12px 16px; font-size:13px; color:#374151; vertical-a
     <% } else { %>
     <div id="barra-selecao" style="display:none;align-items:center;gap:10px;margin-bottom:10px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:4px">
       <span id="sel-count" style="font-size:13px;font-weight:600;color:#b91c1c">0 selecionados</span>
-      <form method="POST" action="/fluxo-caixa/excluir-lote" id="form-excluir-lote" onsubmit="return confirm('Excluir todos os itens selecionados?')">
+      <form method="POST" action="/fluxo-caixa/excluir-lote" id="form-excluir-lote" onsubmit="var f=this; confirmarAcao('Excluir todos os itens selecionados?', function(){ f.submit(); }); return false;">
         <input type="hidden" name="mes" value="<%=mesAtual%>">
         <div id="inputs-ids"></div>
         <button type="submit" style="padding:6px 14px;background:#dc2626;color:white;border:none;font-size:12px;font-weight:700;cursor:pointer;border-radius:4px;font-family:inherit">Excluir selecionados</button>
@@ -398,6 +398,7 @@ table.fc-table td { padding:12px 16px; font-size:13px; color:#374151; vertical-a
   </div>
 </div>
 
+<script src="/js/app.js"></script>
 <script>
 const mesAtual='<%= mesAtual %>';
 function filtrarMes(){ window.location.href='/fluxo-caixa?mes='+document.getElementById('filtroMes').value; }
@@ -473,7 +474,7 @@ function baixarNF(chave, nome) {
   window.location.href='/fluxo-caixa/doc/baixar?chave='+encodeURIComponent(chave)+'&nome='+encodeURIComponent(nome||'documento');
 }
 function removerNF(){ document.getElementById('fNF').value=''; document.getElementById('uploadPreview').style.display='none'; }
-function excluir(id,desc){ if(!confirm('Excluir: "'+desc+'"?\nEsta ação não pode ser desfeita.'))return; const f=document.createElement('form');f.method='POST';f.action='/fluxo-caixa/'+id+'/excluir';document.body.appendChild(f);f.submit(); }
+function excluir(id,desc){ confirmarAcao('Excluir: "'+desc+'"?\nEsta ação não pode ser desfeita.', function(){ const f=document.createElement('form');f.method='POST';f.action='/fluxo-caixa/'+id+'/excluir';document.body.appendChild(f);f.submit(); }); }
 async function verNF(id,nome){
   document.getElementById('nfTitulo').textContent=nome;
   document.getElementById('nfConteudo').innerHTML='<p style="color:#9ca3af;padding:24px">Carregando...</p>';

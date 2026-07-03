@@ -144,15 +144,16 @@ async function generarTimbrado() {
   } catch(e) { if (b){ b.disabled=false; b.textContent='Generar documento timbrado'; } alert('Error de conexión'); }
 }
 async function accionFlujo(accion, confirmacion) {
-  if (!confirm(confirmacion)) return;
-  var btnId = {'enviar-presidencia':'btn-env-pres','enviar-secretaria':'btn-env-sec','enviar-coordinacion':'btn-env-coord'}[accion];
-  var b = btnId ? document.getElementById(btnId) : null;
-  if (b) { b.disabled = true; b.textContent = 'Procesando…'; }
-  try {
-    var r = await fetch('/projetos/<%= p.id %>/' + accion, { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
-    var d = await r.json();
-    if (d.ok) { location.reload(); }
-    else { if (b) { b.disabled = false; } alert('Error: ' + (d.erro||'desconocido')); }
-  } catch(e) { if (b) { b.disabled = false; } alert('Error de conexión'); }
+  confirmarAcao(confirmacion, async function() {
+    var btnId = {'enviar-presidencia':'btn-env-pres','enviar-secretaria':'btn-env-sec','enviar-coordinacion':'btn-env-coord'}[accion];
+    var b = btnId ? document.getElementById(btnId) : null;
+    if (b) { b.disabled = true; b.textContent = 'Procesando…'; }
+    try {
+      var r = await fetch('/projetos/<%= p.id %>/' + accion, { method:'POST', headers:{'Content-Type':'application/json'}, body:'{}' });
+      var d = await r.json();
+      if (d.ok) { location.reload(); }
+      else { if (b) { b.disabled = false; } alert('Error: ' + (d.erro||'desconocido')); }
+    } catch(e) { if (b) { b.disabled = false; } alert('Error de conexión'); }
+  });
 }
 </script>

@@ -87,7 +87,7 @@
       <div class="table-card" style="border:1.5px solid #f59e0b">
         <div class="table-header" style="background:#fff7ed">
           <span style="font-size:14px;font-weight:700;color:#92400e"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> <%=semContrato.length%> diretivo(s) SEM contrato<%=turmaFiltro?' na turma '+turmaFiltro:''%></span>
-          <form method="POST" action="/contratos-diretivos" onsubmit="return confirm('Gerar contratos para todos os pendentes?')">
+          <form method="POST" action="/contratos-diretivos" onsubmit="var f=this; confirmarAcao('Gerar contratos para todos os pendentes?', function(){ f.submit(); }); return false;">
             <input type="hidden" name="turma_gerar" value="<%=turmaFiltro||'todos'%>">
             <input type="hidden" name="data_inicio" value="<%=new Date().toISOString().split('T')[0]%>">
             <button type="submit" class="btn-xs amarelo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Gerar para Pendentes</button>
@@ -145,7 +145,7 @@
             <%if(ct.pdf_assinado_chave){%>
             <a href="/contratos-diretivos/<%=ct.id%>/assinado" target="_blank" class="btn-xs azul">Ver Assinado</a>
             <%}%>
-            <form method="POST" action="/contratos-diretivos/<%=ct.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')"><input type="hidden" name="turma" value="<%=turmaFiltro||''%>">
+            <form method="POST" action="/contratos-diretivos/<%=ct.id%>/deletar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;"><input type="hidden" name="turma" value="<%=turmaFiltro||''%>">
               <button type="submit" class="btn-xs verm">Excluir</button></form>
           </div></td>
         </tr>

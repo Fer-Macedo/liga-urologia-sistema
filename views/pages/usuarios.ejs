@@ -83,11 +83,11 @@
           <td><%if(u.perfil!=='admin'){%>
             <div style="display:flex;gap:5px">
               <button class="btn-xs roxo" onclick="abrirPermissoes(<%=u.id%>,'<%=u.nome%>','<%=u.perfil%>')">Permissoes</button>
-              <form action="/usuarios/<%=u.id%>/toggle" method="POST" style="display:inline;margin:0" onsubmit="return confirm('<%=u.ativo?'Desativar':'Ativar'%>?')">
+              <form action="/usuarios/<%=u.id%>/toggle" method="POST" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('<%=u.ativo?'Desativar':'Ativar'%>?', function(){ f.submit(); }); return false;">
                 <button type="submit" class="btn-xs"><%=u.ativo?'Desativar':'Ativar'%></button>
               </form>
               <button class="btn-xs amarelo" onclick="abrirSenha(<%=u.id%>,'<%=u.nome%>')">Senha</button>
-              <form action="/usuarios/<%=u.id%>/excluir" method="POST" style="display:inline;margin:0" onsubmit="return confirm('Excluir o usuário <%=u.nome%> permanentemente? Esta ação não pode ser desfeita.')">
+              <form action="/usuarios/<%=u.id%>/excluir" method="POST" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Excluir o usuário <%=u.nome%> permanentemente? Esta ação não pode ser desfeita.', function(){ f.submit(); }); return false;">
                 <button type="submit" class="btn-xs" style="background:#dc2626;color:white;border-color:transparent">Excluir</button>
               </form>
             </div>

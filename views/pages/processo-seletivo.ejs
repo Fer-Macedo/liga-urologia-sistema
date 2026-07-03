@@ -136,7 +136,7 @@
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>PDF Prova</a>
               <a href="/processo-seletivo/<%=p.id%>/pdf-gabarito" target="_blank" class="btn-xs azul">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>PDF Gabarito</a>
-              <form method="POST" action="/processo-seletivo/<%=p.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')">
+              <form method="POST" action="/processo-seletivo/<%=p.id%>/deletar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;">
                 <button type="submit" class="btn-xs verm">Excluir</button></form>
             </div>
           </div>
@@ -172,7 +172,7 @@
             </div>
             <div style="display:flex;gap:4px;flex-shrink:0">
               <button class="btn-xs" onclick="editarQuestao(<%=q.id%>)">Editar</button>
-              <form method="POST" action="/processo-seletivo/questao/<%=q.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir questão?')">
+              <form method="POST" action="/processo-seletivo/questao/<%=q.id%>/deletar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Excluir questão?', function(){ f.submit(); }); return false;">
                 <button type="submit" class="btn-xs verm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></form>
             </div>
           </div>
@@ -258,7 +258,7 @@
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Corrigir</button>
                   <button class="btn-xs azul" onclick="abrirEntrevista(<%=c.id%>,this.dataset.nome,<%=c.processo_id%>)" data-nome="<%=c.nome%>">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Entrevista</button>
-                  <form method="POST" action="/processo-seletivo/candidato/<%=c.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Remover?')">
+                  <form method="POST" action="/processo-seletivo/candidato/<%=c.id%>/deletar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Remover?', function(){ f.submit(); }); return false;">
                     <button type="submit" class="btn-xs verm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></form>
                 </div>
               </td>

@@ -248,10 +248,10 @@
                     </button>
                     <% if(p.pendente && p.preenchido_em){ %>
                     <form method="POST" action="/palestrantes/<%= p.id %>/aprovar" style="display:inline">
-                      <button class="btn-sm-icon" title="Aprovar" style="color:#16a34a" onclick="return confirm('Aprovar este palestrante?')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
+                      <button class="btn-sm-icon" title="Aprovar" style="color:#16a34a" onclick="var f=this.form; confirmarAcao('Aprovar este palestrante?', function(){ f.submit(); }); return false;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></button>
                     </form>
                     <form method="POST" action="/palestrantes/<%= p.id %>/recusar" style="display:inline">
-                      <button class="btn-sm-icon del" title="Recusar" onclick="return confirm('Recusar e remover?')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                      <button class="btn-sm-icon del" title="Recusar" onclick="var f=this.form; confirmarAcao('Recusar e remover?', function(){ f.submit(); }); return false;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                     </form>
                     <% } else { %>
                     <button class="btn-sm-icon del" title="Excluir" onclick="excluir(<%= p.id %>, this.dataset.nome)" data-nome="<%= p.nome_completo||'Palestrante' %>">
@@ -471,6 +471,7 @@
   </div>
 </div>
 
+<script src="/js/app.js"></script>
 <script>
 const BASE_URL = window.location.origin;
 
@@ -556,9 +557,10 @@ function copiarLinkModal(){
 function fecharModal(id){ document.getElementById(id).classList.remove('open'); }
 
 function excluir(id, nome){
-  if(!confirm('Excluir palestrante "'+nome+'"?\nEsta ação não pode ser desfeita.')) return;
-  const f=document.createElement('form'); f.method='POST'; f.action='/palestrantes/'+id+'/excluir';
-  document.body.appendChild(f); f.submit();
+  confirmarAcao('Excluir palestrante "'+nome+'"?\nEsta ação não pode ser desfeita.', function() {
+    const f=document.createElement('form'); f.method='POST'; f.action='/palestrantes/'+id+'/excluir';
+    document.body.appendChild(f); f.submit();
+  });
 }
 
 document.getElementById('modalEditar').addEventListener('click', e=>{ if(e.target===e.currentTarget) fecharModal('modalEditar'); });

@@ -340,6 +340,7 @@ var emailsUCP = 'sergio.marmori@central.edu.py,lilian.ramirez@central.edu.py,raq
 
 </div>
 
+<script src="/js/app.js"></script>
 <script>
 async function mudarStatus(s, label) {
   var obs = prompt('Marcar como "'+label+'".\nObservación (opcional):');
@@ -387,22 +388,25 @@ async function gerarInforme() {
   else alert('Error: '+d.erro);
 }
 async function excluir() {
-  if (!confirm('¿Eliminar este proyecto permanentemente? Esta acción no se puede deshacer.')) return;
-  var r = await fetch('/projetos/<%= p.id %>/excluir', {method:'POST'});
-  var d = await r.json();
-  if (d.ok) window.location = d.redir; else alert('Error: '+d.erro);
+  confirmarAcao('¿Eliminar este proyecto permanentemente? Esta acción no se puede deshacer.', async function(){
+    var r = await fetch('/projetos/<%= p.id %>/excluir', {method:'POST'});
+    var d = await r.json();
+    if (d.ok) window.location = d.redir; else alert('Error: '+d.erro);
+  });
 }
 async function inactivar() {
-  if (!confirm('¿Inactivar este proyecto? Dejará de aparecer en la lista. La Presidencia/Admin seguirá viéndolo.')) return;
-  var r = await fetch('/projetos/<%= p.id %>/inativar', {method:'POST'});
-  var d = await r.json();
-  if (d.ok) window.location = d.redir; else alert('Error: '+d.erro);
+  confirmarAcao('¿Inactivar este proyecto? Dejará de aparecer en la lista. La Presidencia/Admin seguirá viéndolo.', async function(){
+    var r = await fetch('/projetos/<%= p.id %>/inativar', {method:'POST'});
+    var d = await r.json();
+    if (d.ok) window.location = d.redir; else alert('Error: '+d.erro);
+  });
 }
 async function reactivar() {
-  if (!confirm('¿Reactivar este proyecto?')) return;
-  var r = await fetch('/projetos/<%= p.id %>/reativar', {method:'POST'});
-  var d = await r.json();
-  if (d.ok) location.reload(); else alert('Error: '+d.erro);
+  confirmarAcao('¿Reactivar este proyecto?', async function(){
+    var r = await fetch('/projetos/<%= p.id %>/reativar', {method:'POST'});
+    var d = await r.json();
+    if (d.ok) location.reload(); else alert('Error: '+d.erro);
+  });
 }
 </script>
 </body>

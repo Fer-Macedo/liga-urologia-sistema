@@ -334,6 +334,7 @@
   </div>
 </div>
 
+<script src="/js/app.js"></script>
 <script>
 function abrirModalNovo(tipo){
   document.getElementById('modalNovo').classList.add('open');
@@ -424,9 +425,10 @@ function addTarefa(){
 function remTarefa(btn){ btn.parentElement.remove(); }
 
 function excluir(id, nome){
-  if(!confirm('Excluir sorteio "'+nome+'"?\nEsta ação não pode ser desfeita.')) return;
-  const f=document.createElement('form'); f.method='POST'; f.action='/sorteios/'+id+'/excluir';
-  document.body.appendChild(f); f.submit();
+  confirmarAcao('Excluir sorteio "'+nome+'"?\nEsta ação não pode ser desfeita.', function(){
+    const f=document.createElement('form'); f.method='POST'; f.action='/sorteios/'+id+'/excluir';
+    document.body.appendChild(f); f.submit();
+  });
 }
 
 document.getElementById('modalNovo').addEventListener('click', e=>{ if(e.target===e.currentTarget) fecharModal(); });

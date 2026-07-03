@@ -109,7 +109,7 @@
           <button class="btn-reenviar-presente" data-presente-id="<%=p.id%>" data-ata-id="<%=ata.id%>" title="Reenviar link de assinatura" style="background:#dbeafe;border:none;color:#1d4ed8;border-radius:2px;width:26px;height:26px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           </button>
-          <form method="POST" action="/atas/<%=ata.id%>/presentes/<%=p.id%>?_method=DELETE" style="margin:0;padding:0" onsubmit="return confirm('Remover este membro da ata?')">
+          <form method="POST" action="/atas/<%=ata.id%>/presentes/<%=p.id%>?_method=DELETE" style="margin:0;padding:0" onsubmit="var f=this; confirmarAcao('Remover este membro da ata?', function(){ f.submit(); }); return false;">
             <button type="submit" title="Remover membro" style="background:#fee2e2;border:none;color:#dc2626;border-radius:2px;width:26px;height:26px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:background .15s">×</button>
           </form>
         </div>
@@ -200,6 +200,7 @@
 </div>
 </main>
 </div>
+<script src="/js/app.js"></script>
 <script>
 const _diretivos=<%- JSON.stringify(diretivos||[]) %>;
 const _ligantes=<%- JSON.stringify(ligantes||[]) %>;
@@ -232,10 +233,11 @@ document.addEventListener('click', function(e){
   removerPresente(presenteId);
 });
 function removerPresente(presenteId){
-  if(!confirm('Remover este membro da ata?'))return;
-  fetch('/atas/'+_ataId+'/presentes/'+presenteId,{method:'DELETE',credentials:'same-origin',headers:{'Accept':'application/json'}})
-  .then(r=>{if(r.status===401){alert('Sessão expirada. Faça login novamente.');location.href='/login';return null;}return r.json();})
-  .then(d=>{if(!d)return;if(d.ok)location.reload();else alert('Erro ao remover: '+(d.erro||''));});
+  confirmarAcao('Remover este membro da ata?', function(){
+    fetch('/atas/'+_ataId+'/presentes/'+presenteId,{method:'DELETE',credentials:'same-origin',headers:{'Accept':'application/json'}})
+    .then(r=>{if(r.status===401){alert('Sessão expirada. Faça login novamente.');location.href='/login';return null;}return r.json();})
+    .then(d=>{if(!d)return;if(d.ok)location.reload();else alert('Erro ao remover: '+(d.erro||''));});
+  });
 }
 
 // Abrir aba via URL ?tab=
@@ -267,17 +269,18 @@ document.querySelectorAll('[data-mudar-status]').forEach(function(btn){
 // Botão reenviar link de assinatura
 document.querySelectorAll('.btn-reenviar-presente').forEach(function(btn){
   btn.addEventListener('click', function(){
-    if(!confirm('Reenviar link de assinatura para este membro?')) return;
     const pid = this.dataset.presenteId;
     const aid = this.dataset.ataId;
     const b = this;
-    b.disabled = true;
-    fetch('/atas/'+aid+'/presentes/'+pid+'/reenviar',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}})
-    .then(r=>r.json()).then(d=>{
-      if(d.ok){ alert('Link reenviado com sucesso!'); }
-      else{ alert('Erro ao reenviar: '+(d.erro||'')); }
-      b.disabled = false;
-    }).catch(()=>{ alert('Erro de conexao.'); b.disabled=false; });
+    confirmarAcao('Reenviar link de assinatura para este membro?', function(){
+      b.disabled = true;
+      fetch('/atas/'+aid+'/presentes/'+pid+'/reenviar',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'}})
+      .then(r=>r.json()).then(d=>{
+        if(d.ok){ alert('Link reenviado com sucesso!'); }
+        else{ alert('Erro ao reenviar: '+(d.erro||'')); }
+        b.disabled = false;
+      }).catch(()=>{ alert('Erro de conexao.'); b.disabled=false; });
+    });
   });
 });
 function showTab(id,btn){
@@ -316,9 +319,10 @@ function salvarAssinatura(presenteId,ataId){
 }
 function mudarStatus(status){
   const labels={em_assinatura:'Enviar para Assinatura?',finalizada:'Finalizar esta ata?'};
-  if(!confirm(labels[status]))return;
-  fetch('/atas/<%=ata.id%>/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})})
-  .then(r=>r.json()).then(()=>location.reload());
+  confirmarAcao(labels[status], function(){
+    fetch('/atas/<%=ata.id%>/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})})
+    .then(r=>r.json()).then(()=>location.reload());
+  });
 }
 function gerarPDF(){
   // Coletar apenas os dados necessários, sem o header duplicado

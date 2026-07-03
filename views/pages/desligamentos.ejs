@@ -214,7 +214,7 @@
               <a href="/desligamentos/<%=d.id%>/visualizar" target="_blank" class="btn-xs">Ver</a>
               <a href="/desligamentos/<%=d.id%>/imprimir" target="_blank" class="btn-xs roxo">Imprimir</a>
               <%if(d.status==='pendente'){%>
-              <form method="POST" action="/desligamentos/<%=d.id%>/enviar" style="display:inline;margin:0" onsubmit="return confirm('Enviar?')"><button type="submit" class="btn-xs azul">Enviar</button></form>
+              <form method="POST" action="/desligamentos/<%=d.id%>/enviar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Enviar?', function(){ f.submit(); }); return false;"><button type="submit" class="btn-xs azul">Enviar</button></form>
               <%}%>
               <%if(d.status==='enviado'){%>
               <form method="POST" action="/desligamentos/<%=d.id%>/reenviar" style="display:inline;margin:0"><button type="submit" class="btn-xs amarelo">Reenviar</button></form>
@@ -224,7 +224,7 @@
               <a href="/desligamentos/<%=d.id%>/assinado" target="_blank" class="btn-xs azul">Assinado</a>
               <%}%>
               <button class="btn-xs" onclick="abrirSubstituirDeslig(<%=d.id%>,'<%=d.membro_nome%>')">Substituir</button>
-              <form action="/desligamentos/<%=d.id%>/deletar" method="POST" style="display:inline;margin:0" onsubmit="return confirm('Apagar?')"><button type="submit" class="btn-xs verm">Excluir</button></form>
+              <form action="/desligamentos/<%=d.id%>/deletar" method="POST" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Apagar?', function(){ f.submit(); }); return false;"><button type="submit" class="btn-xs verm">Excluir</button></form>
             </div></td>
           </tr>
           <%});%>

@@ -209,7 +209,7 @@
         </div>
         <% if (turmaAtual) { %>
           <form method="POST" action="/frequencia-diretivos/turma/<%= turmaAtual.id %>/sincronizar" style="display:inline">
-            <button type="submit" class="btn btn-sm" onclick="return confirm('Sincronizar diretivos desta gestão com a turma?')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Sincronizar Diretivos</button>
+            <button type="submit" class="btn btn-sm" onclick="var f=this.form; confirmarAcao('Sincronizar diretivos desta gestão com a turma?', function(){ f.submit(); }); return false;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Sincronizar Diretivos</button>
           </form>
           <a href="/frequencia-diretivos/relatorio/<%= turmaAtual.id %>" class="btn btn-sm" target="_blank">Relatório</a>
         <% } %>
@@ -279,7 +279,7 @@
                 <%= pct >= 75 ? 'Apto' : pct >= 50 ? 'Em risco' : 'Não apto' %>
               </span>
               <form action="/frequencia-diretivos/turma/<%= turmaAtual.id %>/remover-membro" method="POST"
-                onsubmit="return confirm('Excluir <%= m.nome.replace(/'/g,"\\'") %> desta turma?')"
+                onsubmit="var f=this; confirmarAcao('Excluir <%= m.nome.replace(/'/g,"\\'") %> desta turma?', function(){ f.submit(); }); return false;"
                 style="display:inline;margin:0">
                 <input type="hidden" name="diretivo_id" value="<%= m.membro_id %>">
                 <button type="submit" class="btn-excluir-membro">
@@ -324,7 +324,7 @@
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               </button>
               <form action="/frequencia-diretivos/atividade/<%= a.id %>/deletar" method="POST"
-                onsubmit="return confirm('Excluir esta atividade?')" style="display:inline;margin:0"
+                onsubmit="var f=this; confirmarAcao('Excluir esta atividade?', function(){ f.submit(); }); return false;" style="display:inline;margin:0"
                 onclick="event.stopPropagation()">
                 <button class="btn-excluir-membro" type="submit">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/></svg>
@@ -418,7 +418,7 @@
             <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
               <span style="background:<%= badgeBg %>;color:<%= badgeCor %>;border-radius:999px;font-size:11px;font-weight:700;padding:3px 10px"><%= pct %>%</span>
               <form action="/frequencia-diretivos/turma/<%= turmaAtual.id %>/remover-membro" method="POST"
-                onsubmit="return confirm('Remover <%= m.nome.replace(/'/g,"\\'") %> desta turma?')"
+                onsubmit="var f=this; confirmarAcao('Remover <%= m.nome.replace(/'/g,"\\'") %> desta turma?', function(){ f.submit(); }); return false;"
                 style="display:inline;margin:0">
                 <input type="hidden" name="diretivo_id" value="<%= m.membro_id %>">
                 <button type="submit" class="btn-excluir-membro">

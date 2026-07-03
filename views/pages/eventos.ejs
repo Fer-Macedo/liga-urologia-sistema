@@ -253,7 +253,7 @@ var statusTxt = function(s){ return s==='ativo'?'Ativo':s==='encerrado'?'Encerra
                 Página
               </a>
               <% if (usuario.perfil==='admin'||usuario.perfil==='presidencia') { %>
-              <form method="POST" action="/eventos/<%= ev.id %>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir o evento <%= ev.nome.replace(/'/g,"\\'") %>?')">
+              <form method="POST" action="/eventos/<%= ev.id %>/deletar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Excluir o evento <%= ev.nome.replace(/'/g,"\\'") %>?', function(){ f.submit(); }); return false;">
                 <button type="submit" class="ev-btn danger">
                   <svg viewBox="0 0 24 24" class="ic"><path d="M3 6h18M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6M10 11v6M14 11v6M9 6V4h6v2"/></svg>
                 </button>
@@ -418,6 +418,7 @@ var statusTxt = function(s){ return s==='ativo'?'Ativo':s==='encerrado'?'Encerra
 </div>
 </div>
 
+<script src="/js/app.js"></script>
 <script>
   function showTab(id, btn) {
     document.querySelectorAll('.ev-section').forEach(s => s.classList.remove('ativo'));

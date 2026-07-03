@@ -204,6 +204,7 @@
     </div>
   </main>
 </div>
+<script src="/js/app.js"></script>
 <script>
 const msgs=document.getElementById('msgs'),inp=document.getElementById('inp'),sendBtn=document.getElementById('sendBtn');
 function sc(){msgs.scrollTop=msgs.scrollHeight;}
@@ -278,9 +279,11 @@ async function togKb(id,btn){
   const d=await r.json();if(d.ok){const el=document.getElementById('kb-'+id);if(el){el.classList.toggle('off');const on=!el.classList.contains('off');btn.textContent=on?'Ativo':'Inativo';btn.className='kbb '+(on?'on':'');}updStats();}
 }
 async function delKb(id){
-  if(!id||!confirm('Excluir este conhecimento?'))return;
-  const r=await fetch(`/assistente-virtual/conhecimento/${id}/deletar`,{method:'POST'});
-  const d=await r.json();if(d.ok){const el=document.getElementById('kb-'+id);if(el)el.remove();updStats();}
+  if(!id)return;
+  confirmarAcao('Excluir este conhecimento?', async function(){
+    const r=await fetch(`/assistente-virtual/conhecimento/${id}/deletar`,{method:'POST'});
+    const d=await r.json();if(d.ok){const el=document.getElementById('kb-'+id);if(el)el.remove();updStats();}
+  });
 }
 inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();enviar();}});
 

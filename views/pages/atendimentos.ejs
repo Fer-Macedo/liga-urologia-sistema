@@ -163,7 +163,7 @@
                 <%if(a.status==='aguardando'){%>
                 <button class="btn-xs azul" onclick="abrirTransferir(<%=a.id%>,'<%=a.area%>')">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/></svg> Transferir</button>
-                <form method="POST" action="/atendimentos/<%=a.id%>/encerrar" style="display:inline;margin:0" onsubmit="return confirm('Encerrar?')">
+                <form method="POST" action="/atendimentos/<%=a.id%>/encerrar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Encerrar?', function(){ f.submit(); }); return false;">
                   <button type="submit" class="btn-xs verm">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Encerrar</button></form>
                 <%}%>
@@ -415,10 +415,11 @@ function verChat(id,area,status){
         ac.style.display='flex';
         document.getElementById('btn-chat-redir').onclick=function(){fecharModal('modal-chat');abrirTransferir(id,area);};
         document.getElementById('btn-chat-enc').onclick=function(){
-          if(!confirm('Encerrar este atendimento?'))return;
-          fecharModal('modal-chat');
-          var f=document.createElement('form');f.method='POST';f.action='/atendimentos/'+id+'/encerrar';
-          document.body.appendChild(f);f.submit();
+          confirmarAcao('Encerrar este atendimento?', function(){
+            fecharModal('modal-chat');
+            var f=document.createElement('form');f.method='POST';f.action='/atendimentos/'+id+'/encerrar';
+            document.body.appendChild(f);f.submit();
+          });
         };
       }
     })

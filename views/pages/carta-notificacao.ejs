@@ -398,7 +398,7 @@
   });
 
   document.querySelectorAll('form[data-confirm]').forEach(function(f){
-    f.addEventListener('submit',function(e){ if(!confirm(f.dataset.confirm)) e.preventDefault(); });
+    f.addEventListener('submit',function(e){ e.preventDefault(); confirmarAcao(f.dataset.confirm, function(){ f.submit(); }); });
   });
   var alertas=[];
   <% cartas.forEach(function(d){ var n=parseInt(d.total_notif_pessoa)||0; if(n>=2){ %>

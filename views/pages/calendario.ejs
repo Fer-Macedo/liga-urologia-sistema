@@ -529,6 +529,7 @@
   </div>
 </div>
 
+<script src="/js/app.js"></script>
 <script>
 // DADOS DO SERVIDOR
 const todosEventos = <%- JSON.stringify(atividades) %>;
@@ -808,8 +809,9 @@ function excluirEvento(){
 }
 
 function excluirEv(id, titulo){
-  if(!confirm('Excluir "'+titulo+'"?\nEsta ação não pode ser desfeita.')) return;
-  const f=document.createElement('form'); f.method='POST'; f.action='/calendario/'+id+'/excluir'; document.body.appendChild(f); f.submit();
+  confirmarAcao('Excluir "'+titulo+'"?\nEsta ação não pode ser desfeita.', function(){
+    const f=document.createElement('form'); f.method='POST'; f.action='/calendario/'+id+'/excluir'; document.body.appendChild(f); f.submit();
+  });
 }
 
 function copiarIcal(){
@@ -972,13 +974,14 @@ async function salvarCategoria(){
 }
 
 async function excluirCat(id, nome){
-  if(!confirm('Excluir categoria "'+nome+'"?')) return;
-  try {
-    const r = await fetch('/calendario/categorias/'+id, {method:'DELETE'});
-    const data = await r.json();
-    if(data.ok){ await carregarCats(); renderCatLista(); }
-    else alert('Erro: ' + (data.erro||''));
-  } catch(e){ alert('Erro ao excluir.'); }
+  confirmarAcao('Excluir categoria "'+nome+'"?', async function(){
+    try {
+      const r = await fetch('/calendario/categorias/'+id, {method:'DELETE'});
+      const data = await r.json();
+      if(data.ok){ await carregarCats(); renderCatLista(); }
+      else alert('Erro: ' + (data.erro||''));
+    } catch(e){ alert('Erro ao excluir.'); }
+  });
 }
 
 init();

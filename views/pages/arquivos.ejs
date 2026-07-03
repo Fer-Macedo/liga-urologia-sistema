@@ -630,30 +630,34 @@ async function confirmarMover() {
 
 // Lixeira
 async function moverLixeira(id) {
-  if (!confirm('Mover para lixeira?')) return;
-  const r = await fetch('/arquivos/' + id + '/lixeira', {method:'POST'});
-  if (r.ok) window.location.reload();
+  confirmarAcao('Mover para lixeira?', async function(){
+    const r = await fetch('/arquivos/' + id + '/lixeira', {method:'POST'});
+    if (r.ok) window.location.reload();
+  });
 }
 async function restaurarArquivo(id) {
   const r = await fetch('/arquivos/' + id + '/restaurar', {method:'POST'});
   if (r.ok) window.location.reload();
 }
 async function excluirDefinitivo(id) {
-  if (!confirm('Excluir PERMANENTEMENTE? Não poderá ser recuperado!')) return;
-  const f = document.createElement('form');
-  f.method = 'POST'; f.action = '/arquivos/' + id + '/deletar';
-  document.body.appendChild(f); f.submit();
+  confirmarAcao('Excluir PERMANENTEMENTE? Não poderá ser recuperado!', function(){
+    const f = document.createElement('form');
+    f.method = 'POST'; f.action = '/arquivos/' + id + '/deletar';
+    document.body.appendChild(f); f.submit();
+  });
 }
 async function esvaziarLixeira() {
-  if (!confirm('Esvaziar lixeira permanentemente?')) return;
-  const r = await fetch('/arquivos/lixeira/esvaziar', {method:'POST'});
-  if (r.ok) window.location.reload();
+  confirmarAcao('Esvaziar lixeira permanentemente?', async function(){
+    const r = await fetch('/arquivos/lixeira/esvaziar', {method:'POST'});
+    if (r.ok) window.location.reload();
+  });
 }
 
 // Excluir pasta
 function excluirPasta(id) {
-  if (!confirm('Mover pasta para lixeira?')) return;
-  fetch('/arquivos/pasta/' + id + '/lixeira', {method:'POST'}).then(r => { if(r.ok) window.location.reload(); });
+  confirmarAcao('Mover pasta para lixeira?', function(){
+    fetch('/arquivos/pasta/' + id + '/lixeira', {method:'POST'}).then(r => { if(r.ok) window.location.reload(); });
+  });
 }
 
 // Editar pasta

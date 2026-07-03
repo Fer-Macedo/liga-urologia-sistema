@@ -301,7 +301,7 @@
               <form method="POST" action="/marketing/<%=p.id%>/publicar" style="display:inline;margin:0">
                 <button type="submit" class="btn-xs verde">Publicar</button></form>
               <%}%>
-              <form method="POST" action="/marketing/<%=p.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')">
+              <form method="POST" action="/marketing/<%=p.id%>/deletar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;">
                 <button type="submit" class="btn-xs verm">Excluir</button></form>
             </div>
           </div>
@@ -354,7 +354,7 @@
               <%if(p.status==='rascunho'||p.status==='agendado'){%>
               <form method="POST" action="/marketing/<%=p.id%>/publicar" style="display:inline;margin:0"><button type="submit" class="btn-xs verde">Publicar</button></form>
               <%}%>
-              <form method="POST" action="/marketing/<%=p.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')">
+              <form method="POST" action="/marketing/<%=p.id%>/deletar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;">
                 <button type="submit" class="btn-xs verm">Excluir</button></form>
             </div>
           </div>
@@ -388,7 +388,7 @@
             <img src="/marketing/midias/<%=m.id%>/img" alt="<%=m.nome%>" onerror="this.src='/img/placeholder.png'">
             <div class="midia-overlay">
               <button onclick="usarMidia('<%=m.id%>','<%=m.nome%>')" class="btn-xs" style="background:white;color:#111">Usar</button>
-              <form method="POST" action="/marketing/midias/<%=m.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Excluir?')">
+              <form method="POST" action="/marketing/midias/<%=m.id%>/deletar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;">
                 <button type="submit" class="btn-xs verm" style="background:#dc2626;color:white;border-color:transparent">Excluir</button></form>
             </div>
             <div class="midia-card-info"><%=m.nome%></div>
@@ -412,7 +412,7 @@
                 <div class="campo"><label class="label">Mensagem</label>
                   <textarea name="mensagem" class="input" rows="5" placeholder="Digite a mensagem..." oninput="previewWpp(this.value)"></textarea>
                 </div>
-                <button type="submit" class="btn btn-primario" onclick="return confirm('Enviar para todos?')">Enviar Agora</button>
+                <button type="submit" class="btn btn-primario" onclick="var f=this.form; confirmarAcao('Enviar para todos?', function(){ f.submit(); }); return false;">Enviar Agora</button>
               </div>
             </form>
           </div>
@@ -566,7 +566,7 @@
               <div style="display:flex;gap:6px">
                 <form method="POST" action="/marketing/<%=p.id%>/publicar" style="display:inline;margin:0">
                   <button type="submit" class="btn-xs verde">Aprovar</button></form>
-                <form method="POST" action="/marketing/<%=p.id%>/deletar" style="display:inline;margin:0" onsubmit="return confirm('Reprovar?')">
+                <form method="POST" action="/marketing/<%=p.id%>/deletar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Reprovar?', function(){ f.submit(); }); return false;">
                   <button type="submit" class="btn-xs verm">Reprovar</button></form>
               </div>
             </div>
@@ -678,7 +678,7 @@
                   </div>
                 </div>
                 <button type="submit" name="acao" value="agendar" class="btn btn-primario"
-                  onclick="return confirm('Disparar campanha para todas as redes?')">Disparar Campanha</button>
+                  onclick="var f=this.form; confirmarAcao('Disparar campanha para todas as redes?', function(){ f.submit(); }); return false;">Disparar Campanha</button>
               </div>
             </form>
           </div>
@@ -842,7 +842,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-wpp-massa')">Cancelar</button>
-        <button type="submit" class="btn btn-primario" onclick="return confirm('Enviar para todos?')">Enviar</button>
+        <button type="submit" class="btn btn-primario" onclick="var f=this.form; confirmarAcao('Enviar para todos?', function(){ f.submit(); }); return false;">Enviar</button>
       </div>
     </form>
   </div>

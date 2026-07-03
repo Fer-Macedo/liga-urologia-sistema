@@ -231,6 +231,7 @@
   </div>
 </div>
 
+<script src="/js/app.js"></script>
 <script>
 const ligantesDoSistema = <%- JSON.stringify(ligantes) %>;
 const diretivosDoSistema = <%- JSON.stringify(diretivos) %>;
@@ -371,17 +372,18 @@ function proximoGanhador(){
 }
 
 function reiniciar(){
-  if(!confirm('Reiniciar do zero?')) return;
-  document.getElementById('ganhadorOverlay').classList.remove('show');
-  document.getElementById('roletaScreen').style.display = 'none';
-  document.getElementById('listaWrap').style.display = 'none';
-  document.getElementById('configScreen').style.display = 'block';
-  rodando = false;
-  ganhadores = [];
-  disponiveis = [];
-  document.getElementById('roletaNome').className = 'roleta-nome';
-  document.getElementById('roletaNome').textContent = 'Clique em Girar!';
-  document.getElementById('btnGirar').disabled = false;
+  confirmarAcao('Reiniciar do zero?', function(){
+    document.getElementById('ganhadorOverlay').classList.remove('show');
+    document.getElementById('roletaScreen').style.display = 'none';
+    document.getElementById('listaWrap').style.display = 'none';
+    document.getElementById('configScreen').style.display = 'block';
+    rodando = false;
+    ganhadores = [];
+    disponiveis = [];
+    document.getElementById('roletaNome').className = 'roleta-nome';
+    document.getElementById('roletaNome').textContent = 'Clique em Girar!';
+    document.getElementById('btnGirar').disabled = false;
+  });
 }
 
 function lancarConfetes(){
@@ -484,17 +486,18 @@ function proximoGanhador(){
 }
 
 function reiniciar(){
-  if(!confirm('Reiniciar do zero?')) return;
-  document.getElementById('ganhadorOverlay').classList.remove('show');
-  document.getElementById('roletaScreen').style.display = 'none';
-  document.getElementById('listaWrap').style.display = 'none';
-  document.getElementById('configScreen').style.display = 'block';
-  rodando = false;
-  ganhadores = [];
-  disponiveis = [];
-  document.getElementById('roletaNome').className = 'roleta-nome';
-  document.getElementById('roletaNome').textContent = 'Clique em Girar!';
-  document.getElementById('btnGirar').disabled = false;
+  confirmarAcao('Reiniciar do zero?', function(){
+    document.getElementById('ganhadorOverlay').classList.remove('show');
+    document.getElementById('roletaScreen').style.display = 'none';
+    document.getElementById('listaWrap').style.display = 'none';
+    document.getElementById('configScreen').style.display = 'block';
+    rodando = false;
+    ganhadores = [];
+    disponiveis = [];
+    document.getElementById('roletaNome').className = 'roleta-nome';
+    document.getElementById('roletaNome').textContent = 'Clique em Girar!';
+    document.getElementById('btnGirar').disabled = false;
+  });
 }
 
 function lancarConfetes(){
