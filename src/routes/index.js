@@ -654,6 +654,20 @@ const limiterLogin = rateLimit({
   message: 'Muitas tentativas de login. Aguarde 15 minutos.'
 });
 
+// Rate limit para codigo de recuperacao de senha (brute-force do codigo de 6 digitos)
+const limiterCodigoRecuperacao = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'Muitas tentativas. Aguarde 15 minutos.'
+});
+
+// Rate limit para solicitar recuperacao de senha (evita spam de emails)
+const limiterEsqueciSenha = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: 'Muitas solicitacoes. Aguarde 1 hora.'
+});
+
 // Sanitiza inputs contra XSS
 router.use((req, res, next) => {
   if (req.body) {
@@ -8322,7 +8336,7 @@ router.get('/portal/login', async (req, res) => {
 });
 
 // POST /portal/login
-router.post('/portal/login', async (req, res) => {
+router.post('/portal/login', limiterLogin, async (req, res) => {
   const { email, senha } = req.body;
   const config = await getConfig();
   // Busca em ligantes e diretivos
@@ -8351,11 +8365,14 @@ router.get('/portal/trocar-senha', requirePortal, async (req, res) => {
 });
 
 // POST /portal/trocar-senha
-router.post('/portal/trocar-senha', requirePortal, async (req, res) => {
-  const { nova_senha, confirmar_senha } = req.body;
+router.post('/portal/trocar-senha', requirePortal, limiterLogin, async (req, res) => {
+  const { senha_atual, nova_senha, confirmar_senha } = req.body;
   if (!nova_senha || nova_senha.length < 6) { req.session.erro=['Senha deve ter no minimo 6 caracteres.']; return res.redirect('/portal/trocar-senha'); }
   if (nova_senha !== confirmar_senha) { req.session.erro=['As senhas nao conferem.']; return res.redirect('/portal/trocar-senha'); }
   const { tipo, id } = req.session.portalMembro;
+  const senhaAtualR = await query('SELECT senha_hash FROM portal_cientifico_senhas WHERE origem_tipo=$1 AND origem_id=$2', [tipo, id]);
+  const senhaAtualOk = senhaAtualR.rows.length && await bcryptPortal.compare(senha_atual || '', senhaAtualR.rows[0].senha_hash);
+  if (!senhaAtualOk) { req.session.erro=['Senha atual incorreta.']; return res.redirect('/portal/trocar-senha'); }
   const hash = await bcryptPortal.hash(nova_senha, 10);
   await query('UPDATE portal_cientifico_senhas SET senha_hash=$1, primeiro_acesso=false WHERE origem_tipo=$2 AND origem_id=$3', [hash, tipo, id]);
   req.session.msg=['Senha definida com sucesso! Bem-vindo(a).'];
@@ -8371,7 +8388,7 @@ router.get('/portal/esqueci-senha', async (req, res) => {
 });
 
 // POST /portal/esqueci-senha
-router.post('/portal/esqueci-senha', async (req, res) => {
+router.post('/portal/esqueci-senha', limiterEsqueciSenha, async (req, res) => {
   const { email } = req.body;
   let membro = null, tipo = null;
   const rL = await query('SELECT id, nome, email FROM ligantes WHERE LOWER(email)=LOWER($1) AND ativo=1', [email]);
@@ -8381,7 +8398,7 @@ router.post('/portal/esqueci-senha', async (req, res) => {
     if (rD.rows.length) { membro = rD.rows[0]; tipo = 'diretivo'; }
   }
   if (membro) {
-    const novaSenha = Math.random().toString(36).slice(-8);
+    const novaSenha = require('crypto').randomBytes(6).toString('base64url');
     const hash = await bcryptPortal.hash(novaSenha, 10);
     await query('UPDATE portal_cientifico_senhas SET senha_hash=$1, primeiro_acesso=true WHERE origem_tipo=$2 AND origem_id=$3', [hash, tipo, membro.id]);
     await enviarEmail({ para: membro.email, assunto: 'Portal Cientifico — Senha temporaria', texto: 'Ola ' + membro.nome + ',\n\nSua senha temporaria para o Portal Cientifico e: ' + novaSenha + '\n\nAo entrar, sera solicitado que voce defina uma nova senha.\n\nAcesse: ' + (process.env.APP_URL||'') + '/portal/login' });
@@ -8598,7 +8615,7 @@ router.get('/membro/login', (req, res) => {
 });
 
 // POST /membro/login
-router.post('/membro/login', async (req, res) => {
+router.post('/membro/login', limiterLogin, async (req, res) => {
   const { email, senha } = req.body;
   if (!email || !senha) return res.render('pages/membro/login', { erro: 'Preencha email e senha.' });
   let membro = null, tipo = null, id = null;
@@ -8632,12 +8649,15 @@ router.get('/membro/trocar-senha', requireMembro, (req, res) => {
 });
 
 // POST /membro/trocar-senha
-router.post('/membro/trocar-senha', requireMembro, async (req, res) => {
-  const { nova_senha, confirmar_senha } = req.body;
-  if (!nova_senha || nova_senha.length < 6) return res.render('pages/portal/trocar-senha', { erro: 'Senha deve ter pelo menos 6 caracteres.', baseUrl: '/membro' });
-  if (nova_senha !== confirmar_senha) return res.render('pages/portal/trocar-senha', { erro: 'Senhas não conferem.', baseUrl: '/membro' });
+router.post('/membro/trocar-senha', requireMembro, limiterLogin, async (req, res) => {
+  const { senha_atual, nova_senha, confirmar_senha } = req.body;
+  if (!nova_senha || nova_senha.length < 6) return res.render('pages/portal/trocar-senha', { erro: ['Senha deve ter pelo menos 6 caracteres.'], baseUrl: '/membro' });
+  if (nova_senha !== confirmar_senha) return res.render('pages/portal/trocar-senha', { erro: ['Senhas não conferem.'], baseUrl: '/membro' });
   const { tipo, id } = req.session.membroPortal;
   const bcryptMembro = require('bcryptjs');
+  const senhaAtualR = await query('SELECT senha_hash FROM portal_cientifico_senhas WHERE origem_tipo=$1 AND origem_id=$2', [tipo, id]);
+  const senhaAtualOk = senhaAtualR.rows.length && await bcryptMembro.compare(senha_atual || '', senhaAtualR.rows[0].senha_hash);
+  if (!senhaAtualOk) return res.render('pages/portal/trocar-senha', { erro: ['Senha atual incorreta.'], baseUrl: '/membro' });
   const hash = await bcryptMembro.hash(nova_senha, 10);
   await query('UPDATE portal_cientifico_senhas SET senha_hash=$1, primeiro_acesso=false WHERE origem_tipo=$2 AND origem_id=$3', [hash, tipo, id]);
   res.redirect('/membro/dashboard');
@@ -8970,7 +8990,7 @@ router.get('/membro/esqueci-senha', (req, res) => {
 });
 
 // POST /membro/esqueci-senha
-router.post('/membro/esqueci-senha', async (req, res) => {
+router.post('/membro/esqueci-senha', limiterEsqueciSenha, async (req, res) => {
   const { email } = req.body;
   if (!email) return res.render('pages/membro/esqueci-senha', { erro: 'Informe o email.', ok: null });
   // Buscar ligante ou diretivo
@@ -8983,8 +9003,8 @@ router.post('/membro/esqueci-senha', async (req, res) => {
   }
   // Nao revelar se email existe ou nao (seguranca)
   if (!tipo) return res.render('pages/membro/esqueci-senha', { erro: null, ok: 'Se o email estiver cadastrado, voce recebera o codigo em instantes.' });
-  // Gerar codigo de 6 digitos
-  const codigo = Math.floor(100000 + Math.random() * 900000).toString();
+  // Gerar codigo de 6 digitos (crypto.randomInt — nao previsivel como Math.random)
+  const codigo = require('crypto').randomInt(100000, 1000000).toString();
   const expira = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
   // Invalidar codigos anteriores
   await query('UPDATE recuperacao_senha_portal SET usado=true WHERE email=LOWER($1) AND usado=false', [email]);
@@ -9020,7 +9040,7 @@ router.get('/membro/verificar-codigo', (req, res) => {
 });
 
 // POST /membro/verificar-codigo
-router.post('/membro/verificar-codigo', async (req, res) => {
+router.post('/membro/verificar-codigo', limiterCodigoRecuperacao, async (req, res) => {
   const { email, codigo, nova_senha, confirmar_senha } = req.body;
   if (!codigo || !nova_senha || !confirmar_senha) return res.render('pages/membro/verificar-codigo', { email, erro: 'Preencha todos os campos.' });
   if (nova_senha !== confirmar_senha) return res.render('pages/membro/verificar-codigo', { email, erro: 'As senhas nao conferem.' });

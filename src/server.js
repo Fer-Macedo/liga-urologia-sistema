@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 const flash = require('connect-flash');
 const methodOverride = require('method-override');
 const path = require('path');
@@ -41,11 +42,20 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(express.json({ limit: '50mb' }));
 app.use(methodOverride('_method'));
+if (!process.env.SESSION_SECRET) {
+  console.warn('AVISO: SESSION_SECRET nao definido no .env — usando segredo temporario gerado neste boot (sessoes serao invalidadas a cada restart). Configure SESSION_SECRET em producao.');
+}
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'liga-urologia-secret-2024',
+  store: new pgSession({ conString: process.env.DATABASE_URL, tableName: 'session', createTableIfMissing: true }),
+  secret: process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex'),
   resave: false,
   saveUninitialized: false,
-  cookie: { maxAge: 8 * 60 * 60 * 1000 }
+  cookie: {
+    maxAge: 8 * 60 * 60 * 1000,
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax'
+  }
 }));
 app.use(flash());
 
