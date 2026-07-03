@@ -219,32 +219,28 @@ async function notificarAtrasadosDiario() {
   const config = await getConfig();
   if (config.notif_atrasados_diario !== '1') return;
 
-  // Máx 5 atrasados por dia para não gerar padrão de spam
+  // Cobrança por e-mail é diária e sem limite: todo atrasado recebe todo dia até pagar.
+  // (o limite de mensagens/intervalo do WhatsApp não se aplica aqui — email não tem risco de banimento)
   const r = await query(
     "SELECT c.*, m.nome, m.email, m.whatsapp FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='atrasado' AND m.ativo=1 ORDER BY c.data_vencimento ASC"
   );
 
   let count = 0;
+  const hoje = dayjs().format('YYYY-MM-DD');
 
   for (const cob of r.rows) {
-    if (count >= 5) { console.log('[ATRASADOS] Limite de 5 mensagens/dia atingido.'); break; }
-    if (!podeMensagem()) break;
-
-    // Verificar se já foi notificado nos últimos 3 dias (evita martelar sempre os mesmos)
+    // Verificar se já foi notificado hoje (evita duplicar se o cron rodar 2x no mesmo dia)
     const j = await query(
-      "SELECT id FROM notificacoes_log WHERE cobranca_id=$1 AND enviado_em > NOW() - INTERVAL '3 days'",
-      [cob.id]
+      "SELECT id FROM notificacoes_log WHERE cobranca_id=$1 AND DATE(enviado_em)=$2",
+      [cob.id, hoje]
     );
     if (j.rows.length > 0) {
-      console.log('[ATRASADOS] Notificado nos últimos 3 dias, pulando:', cob.nome);
+      console.log('[ATRASADOS] Já notificado hoje:', cob.nome);
       continue;
     }
 
-
     await notificarCobranca({ membro: {...cob, id: cob.membro_id}, cobranca: cob, tipo: 'pos', config });
-    incrementarContador();
     count++;
-    await esperarIntervalo(count);
     console.log('[ATRASADOS] Notificação enviada:', cob.nome, cob.referencia);
   }
 
