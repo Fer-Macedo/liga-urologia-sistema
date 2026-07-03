@@ -107,6 +107,19 @@ async function initSchema() {
       custo_estimado NUMERIC(10,6) DEFAULT 0,
       criado_em TIMESTAMP DEFAULT NOW()
     );
+
+    CREATE TABLE IF NOT EXISTS leads_patrocinio (
+      id SERIAL PRIMARY KEY,
+      nome TEXT NOT NULL,
+      empresa TEXT NOT NULL,
+      cargo TEXT,
+      telefone TEXT,
+      whatsapp TEXT,
+      email TEXT NOT NULL,
+      plano TEXT,
+      mensagem TEXT,
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
   `);
 
   // Insere configs padrão
