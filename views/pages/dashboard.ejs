@@ -143,6 +143,9 @@ var pode = function(mod){ return !perms || perms.indexOf(mod) !== -1; };
   #lauro-dash .pill.ok{color:var(--green-500);border-color:rgba(35,112,79,.35);background:#EDF6F1}
   #lauro-dash .pill.late{color:var(--red);border-color:rgba(192,57,43,.3);background:var(--red-bg)}
   #lauro-dash .pill.soon{color:var(--blue);border-color:rgba(44,107,179,.3);background:var(--blue-bg)}
+  #lauro-dash .pill.today{color:#fff;border-color:#B45309;background:#B45309;animation:lauro-pulse 1.6s ease-in-out infinite}
+  #lauro-dash .row.aniv-today{background:#FFF7ED;border-left:3px solid #B45309}
+  @keyframes lauro-pulse{0%,100%{opacity:1}50%{opacity:.65}}
   #lauro-dash .empty{padding:26px 18px;text-align:center;color:var(--ink-faint);font-size:12.5px;font-family:'IBM Plex Mono'}
 
   @media(max-width:1100px){#lauro-dash .grid-stats{grid-template-columns:repeat(2,1fr)}#lauro-dash .grid-actions{grid-template-columns:repeat(3,1fr)}#lauro-dash .grid-panels{grid-template-columns:1fr}}
@@ -294,18 +297,24 @@ var pode = function(mod){ return !perms || perms.indexOf(mod) !== -1; };
             <% if (_tp('aniversarios')) { %><a href="/aniversarios">Ver todos <svg viewBox="0 0 24 24" class="ic"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><% } %>
           </div>
           <% if (proxAniversarios.length) { %>
+            <%
+              var _hojeD = new Date();
+              var _hojeMD = String(_hojeD.getMonth()+1).padStart(2,'0') + '-' + String(_hojeD.getDate()).padStart(2,'0');
+            %>
             <% proxAniversarios.slice(0,4).forEach(function(a){
                  var tipoTxt = (a.tipo === 'diretivo') ? 'Diretivo' : 'Ligante';
                  var diaTxt = '';
+                 var anivMD = a.aniv ? String(a.aniv) : '';
                  try {
                    if (a.aniv) { var p = String(a.aniv).split('-'); diaTxt = p[1] + '/' + p[0]; }
-                   else if (L.dayjs && a.data_nascimento) { diaTxt = L.dayjs(a.data_nascimento).format('DD/MM'); }
+                   else if (L.dayjs && a.data_nascimento) { diaTxt = L.dayjs(a.data_nascimento).format('DD/MM'); anivMD = L.dayjs(a.data_nascimento).format('MM-DD'); }
                  } catch(e){}
+                 var isHoje = anivMD === _hojeMD;
             %>
-            <div class="row">
+            <div class="row<%= isHoje ? ' aniv-today' : '' %>">
               <div class="row-ic"><svg viewBox="0 0 24 24" class="ic"><rect x="4" y="9" width="16" height="11"/><path d="M4 13h16M12 9V6"/></svg></div>
-              <div class="row-main"><b><%= a.nome || 'Membro' %></b><span><%= tipoTxt %></span></div>
-              <div style="text-align:right"><span class="pill soon"><%= diaTxt %></span></div>
+              <div class="row-main"><b><%= a.nome || 'Membro' %><%= isHoje ? ' 🎉' : '' %></b><span><%= tipoTxt %></span></div>
+              <div style="text-align:right"><span class="pill <%= isHoje ? 'today' : 'soon' %>"><%= isHoje ? 'HOJE' : diaTxt %></span></div>
             </div>
             <% }); %>
           <% } else { %>
