@@ -721,7 +721,7 @@ const tokensSenha = {}; // { token: { userId, expira } }
 
 // ─── LANDING DESAFÍO RUN AZUL 2026 ────────────────────────────────────────────
 router.use((req, res, next) => {
-  if (req.hostname && req.hostname.startsWith('desafio-azul') && req.path === '/') {
+  if (req.hostname && req.hostname.startsWith('desafiorunazul') && req.path === '/') {
     return res.render('pages/desafio-azul');
   }
   next();
