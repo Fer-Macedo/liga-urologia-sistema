@@ -68,7 +68,7 @@ async function gerarCobrancasMes() {
     const descPct = parseFloat(membro.desconto_pontualidade) || parseFloat(config.desconto_padrao) || 20;
     const valorDesc = +(valorCheio * (1 - descPct / 100)).toFixed(2);
 
-    const dataVencPix = hoje.add(180, 'day').format('YYYY-MM-DD'); // PIX valido por 1 ano
+    const dataVencPix = hoje.add(179, 'day').format('YYYY-MM-DD'); // PIX valido ~6 meses (180 exato e rejeitado pelo PagBank)
     const pag = await criarCobranca({ membro, valor: valorCheio, vencimento: dataVencPix, referencia: ref });
 
     await query(
@@ -101,7 +101,7 @@ async function atualizarPixAtrasados() {
   if (!rows.length) return;
   console.log('[PIX-UPDATE] Atualizando', rows.length, 'cobranças sem PIX...');
   const { criarCobranca } = require('./pagbank');
-  const dataVencPix = hoje.add(180, 'day').format('YYYY-MM-DD');
+  const dataVencPix = hoje.add(179, 'day').format('YYYY-MM-DD'); // 180 exato e rejeitado pelo PagBank
   for (const c of rows) {
     try {
       const pag = await criarCobranca({

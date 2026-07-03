@@ -468,10 +468,18 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
               <div class="pix-val">R$ <%=Number(valorExibir).toFixed(2).replace('.',',')%> <% if(valorRiscado){ %><span style="font-size:12px;font-weight:400;color:var(--ts);text-decoration:line-through">R$ <%=Number(valorRiscado).toFixed(2).replace('.',',')%></span><% } %></div>
               <% if(cobrancaAtual.pix_copia_cola){ %>
               <div class="pix-code" id="pixCode"><%=cobrancaAtual.pix_copia_cola%></div>
-              <button class="btn btn-p" id="btnCopyPix" style="font-size:11px;padding:6px 12px">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-                Copiar codigo PIX
-              </button>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <button class="btn btn-p" id="btnCopyPix" style="font-size:11px;padding:6px 12px">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                  Copiar codigo PIX
+                </button>
+                <% if(cobrancaAtual.pagbank_link){ %>
+                <a class="btn" style="font-size:11px;padding:6px 12px" href="<%=cobrancaAtual.pagbank_link%>" target="_blank">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+                  Pagar com cartao
+                </a>
+                <% } %>
+              </div>
               <% } %>
             </div>
           </div>
@@ -1139,7 +1147,9 @@ function loadFinanceiro() {
           var pixEsc = c.pix_copia_cola.split("'").join("&apos;");
           html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">';
           html += '<button class="btn btn-p" style="font-size:12px" onclick="copiarPixFin(this,this.dataset.pix)" data-pix="' + pixEsc + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copiar codigo PIX</button>';
-          html += '<button class="btn" style="font-size:12px;opacity:.5;cursor:not-allowed" disabled title="Em breve"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Cartao <span style="font-size:9px;background:var(--vm);color:#fff;padding:1px 5px;margin-left:4px">Em breve</span></button>';
+          if (c.pagbank_link) {
+            html += '<a class="btn" style="font-size:12px" href="' + c.pagbank_link + '" target="_blank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg> Pagar com cartao</a>';
+          }
           html += '</div>';
           html += '<div style="font-size:9px;color:var(--ti);word-break:break-all;background:var(--bg);padding:6px;margin-top:4px">' + c.pix_copia_cola + '</div>';
         }

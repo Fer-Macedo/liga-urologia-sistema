@@ -25,7 +25,7 @@ function fmtExp(d) {
 
 function toExpDate(dataStr) {
   // PIX deve ter validade longa — padrão 365 dias se não informado
-  if (!dataStr) return fmtExp(new Date(Date.now() + 180 * 24 * 60 * 60 * 1000));
+  if (!dataStr) return fmtExp(new Date(Date.now() + 179 * 24 * 60 * 60 * 1000)); // 180 exato e rejeitado pelo PagBank
   if (typeof dataStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dataStr)) {
     return dataStr + 'T23:59:59-03:00';
   }

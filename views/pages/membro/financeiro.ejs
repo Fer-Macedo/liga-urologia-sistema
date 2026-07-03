@@ -115,10 +115,18 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
     <div class="mes-body" id="body-<%=idx%>">
       <div style="font-size:12px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Pagamento via PIX</div>
       <div class="pix-code" id="pixcode-<%=idx%>"><%=c.pix_copia_cola%></div>
-      <button class="btn btn-p" id="copybtn-<%=idx%>" style="font-size:12px">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-        Copiar codigo PIX
-      </button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-p" id="copybtn-<%=idx%>" style="font-size:12px">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copiar codigo PIX
+        </button>
+        <% if(c.pagbank_link){ %>
+        <a class="btn" style="font-size:12px" href="<%=c.pagbank_link%>" target="_blank">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          Pagar com cartao
+        </a>
+        <% } %>
+      </div>
     </div>
     <% } %>
   </div>
