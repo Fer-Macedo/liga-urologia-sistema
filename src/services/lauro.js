@@ -356,43 +356,37 @@ REGLAS IMPORTANTES:
   }
 }
 
+// Integração única de WhatsApp: W-API (api.w-api.app)
+const WAPI_BASE = 'https://api.w-api.app/v1/message';
+
 async function enviarMensagem(numero, mensagem) {
-  const baseUrl = process.env.EVOLUTION_URL || 'http://localhost:8080';
-  const apiKey = process.env.EVOLUTION_API_KEY;
-  const instance = process.env.EVOLUTION_INSTANCE || 'lauro-liga';
   try {
     const delay = Math.min(Math.max(mensagem.length * 25, 1500), 4000);
     await new Promise(r => setTimeout(r, delay));
     await axios.post(
-      baseUrl + '/message/sendText/' + instance,
-      { number: numero, textMessage: { text: mensagem } },
-      { headers: { 'Content-Type': 'application/json', 'apikey': apiKey }, timeout: 20000 }
+      WAPI_BASE + '/send-text?instanceId=' + process.env.WAPI_INSTANCE_ID,
+      { phone: numero, message: mensagem },
+      { headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env.WAPI_TOKEN }, timeout: 20000 }
     );
-    console.log('WhatsApp Evolution OK', numero, '— 200');
+    console.log('W-API OK', numero);
   } catch(e) { console.error('Lauro erro envio:', e.response ? JSON.stringify(e.response.data) : e.message); }
 }
 async function enviarImagem(numero, imagem, legenda) {
-  const baseUrl = process.env.EVOLUTION_URL || 'http://localhost:8080';
-  const apiKey = process.env.EVOLUTION_API_KEY;
-  const instance = process.env.EVOLUTION_INSTANCE || 'lauro-liga';
   try {
     await axios.post(
-      baseUrl + '/message/sendMedia/' + instance,
-      { number: numero, mediaMessage: { mediatype: 'image', media: imagem, caption: legenda || '' } },
-      { headers: { 'Content-Type': 'application/json', 'apikey': apiKey }, timeout: 30000 }
+      WAPI_BASE + '/send-image?instanceId=' + process.env.WAPI_INSTANCE_ID,
+      { phone: numero, image: imagem, caption: legenda || '' },
+      { headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env.WAPI_TOKEN }, timeout: 30000 }
     );
     console.log('Lauro enviou imagem para', numero);
   } catch(e) { console.error('Lauro erro envio imagem:', e.response ? JSON.stringify(e.response.data) : e.message); }
 }
 async function enviarDocumento(numero, documento, fileName) {
-  const baseUrl = process.env.EVOLUTION_URL || 'http://localhost:8080';
-  const apiKey = process.env.EVOLUTION_API_KEY;
-  const instance = process.env.EVOLUTION_INSTANCE || 'lauro-liga';
   try {
     await axios.post(
-      baseUrl + '/message/sendMedia/' + instance,
-      { number: numero, mediaMessage: { mediatype: 'document', media: documento, fileName: fileName || 'arquivo.pdf' } },
-      { headers: { 'Content-Type': 'application/json', 'apikey': apiKey }, timeout: 30000 }
+      WAPI_BASE + '/send-document?instanceId=' + process.env.WAPI_INSTANCE_ID,
+      { phone: numero, document: documento, fileName: fileName || 'arquivo.pdf' },
+      { headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env.WAPI_TOKEN }, timeout: 30000 }
     );
     console.log('Lauro enviou documento para', numero);
   } catch(e) { console.error('Lauro erro envio documento:', e.response ? JSON.stringify(e.response.data) : e.message); }

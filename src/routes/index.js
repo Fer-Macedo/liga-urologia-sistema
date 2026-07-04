@@ -599,7 +599,7 @@ router.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdnjs.cloudflare.com", "https://cdn.quilljs.com", "https://cdn.jsdelivr.net"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
-      connectSrc: ["'self'", "https://api.z-api.io", "https://api.pagseguro.com", "https://graph.instagram.com"],
+      connectSrc: ["'self'", "https://api.pagseguro.com", "https://graph.instagram.com"],
       frameSrc: ["'self'", "https://view.officeapps.live.com"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],
@@ -2276,49 +2276,26 @@ router.post('/webhook/whatsapp', async (req, res) => {
     const body = req.body;
     if (!body || typeof body !== 'object') return res.sendStatus(200);
     console.log('Webhook WA recebido:', JSON.stringify(body).substring(0, 200));
-    // Suporte Evolution API e Z-API
-    const isEvolution = body.event && body.data;
-    const evData = isEvolution ? body.data : null;
 
     // Ignorar mensagens proprias e grupos
-    const fromMe = isEvolution ? (evData.key && evData.key.fromMe) : body.fromMe;
-    const isGroup = isEvolution ? (evData.key && evData.key.remoteJid && evData.key.remoteJid.includes('@g.us')) : body.isGroup;
+    const fromMe = body.fromMe;
+    const isGroup = body.isGroup;
     if (fromMe === true) return res.sendStatus(200);
     if (isGroup === true) return res.sendStatus(200);
-    if (isEvolution && body.event !== 'messages.upsert') return res.sendStatus(200);
 
     // Extrair numero
-    let numero = '';
-    if (isEvolution) {
-      numero = (evData.key && evData.key.remoteJid || '').replace('@s.whatsapp.net','').replace(/[^0-9]/g,'');
-    } else {
-      numero = ((body.sender && body.sender.id ? body.sender.id : '') || (body.phone||'') || (body.senderPhone||'')).replace(/[^0-9]/g, '');
-    }
+    let numero = ((body.sender && body.sender.id ? body.sender.id : '') || (body.phone||'') || (body.senderPhone||'')).replace(/[^0-9]/g, '');
 
     // Extrair texto
-    let texto = '';
-    if (isEvolution) {
-      const msg = evData.message || {};
-      texto = (msg.conversation || (msg.extendedTextMessage && msg.extendedTextMessage.text) || '').toString().trim();
-    } else {
-      texto = ((body.msgContent && body.msgContent.conversation) || (body.msgContent && body.msgContent.extendedTextMessage && body.msgContent.extendedTextMessage.text) || (body.text && body.text.message) || (body.body||'')).toString().trim();
-    }
+    let texto = ((body.msgContent && body.msgContent.conversation) || (body.msgContent && body.msgContent.extendedTextMessage && body.msgContent.extendedTextMessage.text) || (body.text && body.text.message) || (body.body||'')).toString().trim();
 
     // Extrair midia
     let midia = null;
     try {
-      if (isEvolution) {
-        const msg = evData.message || {};
-        if (msg.imageMessage) midia = { tipo:'image', url: msg.imageMessage.url || '', caption: msg.imageMessage.caption || '' };
-        else if (msg.documentMessage) midia = { tipo:'document', url: msg.documentMessage.url || '', fileName: msg.documentMessage.fileName || 'arquivo', caption: '' };
-        else if (msg.videoMessage) midia = { tipo:'video', url: msg.videoMessage.url || '', caption: msg.videoMessage.caption || '' };
-        else if (msg.audioMessage) midia = { tipo:'audio', url: msg.audioMessage.url || '', caption: '' };
-      } else {
-        if (body.image && (body.image.imageUrl || body.image.url)) midia = { tipo:'image', url: body.image.imageUrl || body.image.url, caption: body.image.caption || '' };
-        else if (body.document && (body.document.documentUrl || body.document.url)) midia = { tipo:'document', url: body.document.documentUrl || body.document.url, fileName: body.document.fileName || body.document.title || 'arquivo', caption: body.document.caption || '' };
-        else if (body.video && (body.video.videoUrl || body.video.url)) midia = { tipo:'video', url: body.video.videoUrl || body.video.url, caption: body.video.caption || '' };
-        else if (body.audio && (body.audio.audioUrl || body.audio.url)) midia = { tipo:'audio', url: body.audio.audioUrl || body.audio.url, caption: '' };
-      }
+      if (body.image && (body.image.imageUrl || body.image.url)) midia = { tipo:'image', url: body.image.imageUrl || body.image.url, caption: body.image.caption || '' };
+      else if (body.document && (body.document.documentUrl || body.document.url)) midia = { tipo:'document', url: body.document.documentUrl || body.document.url, fileName: body.document.fileName || body.document.title || 'arquivo', caption: body.document.caption || '' };
+      else if (body.video && (body.video.videoUrl || body.video.url)) midia = { tipo:'video', url: body.video.videoUrl || body.video.url, caption: body.video.caption || '' };
+      else if (body.audio && (body.audio.audioUrl || body.audio.url)) midia = { tipo:'audio', url: body.audio.audioUrl || body.audio.url, caption: '' };
     } catch(e) {}
     if (numero.length < 5 || (texto.length < 1 && !midia)) return res.sendStatus(200);
     console.log('Lauro processando:', numero, '-', texto || ('['+(midia && midia.tipo)+']'));
@@ -4342,7 +4319,7 @@ router.post('/marketing/:id/publicar', requireAuth, async (req, res) => {
       try {
         const wapi=require('axios');
         const pessoas=await query('SELECT whatsapp FROM ligantes WHERE ativo=1 AND whatsapp IS NOT NULL UNION SELECT whatsapp FROM diretivos WHERE ativo=1 AND whatsapp IS NOT NULL');
-        for (const p of pessoas.rows) { if(p.whatsapp){await wapi.post(`${process.env.WAPI_URL}/send-text`,{phone:p.whatsapp.replace(/\D/g,''),message:post.conteudo},{headers:{Authorization:process.env.WAPI_TOKEN}}).catch(()=>{});} }
+        for (const p of pessoas.rows) { if(p.whatsapp){await wapi.post(`https://api.w-api.app/v1/message/send-text?instanceId=${process.env.WAPI_INSTANCE_ID}`,{phone:p.whatsapp.replace(/\D/g,''),message:post.conteudo},{headers:{Authorization:'Bearer '+process.env.WAPI_TOKEN}}).catch(()=>{});} }
       } catch(e){erros.push('WhatsApp: '+e.message);}
     }
     await query('UPDATE marketing_posts SET status=$1, publicado_em=NOW() WHERE id=$2', [erros.length===0?'publicado':'erro', req.params.id]);
@@ -4407,7 +4384,7 @@ router.post('/marketing/whatsapp-massa', requireAuth, async (req, res) => {
     let enviados=0, erros=0;
     for (const p of pessoas) {
       if (!p.whatsapp) continue;
-      try { await axios.post(process.env.WAPI_URL+'/send-text',{phone:p.whatsapp.replace(/\D/g,'')+'@c.us',message:mensagem.replace('{nome}',p.nome)},{headers:{Authorization:'Bearer '+process.env.WAPI_TOKEN}}); enviados++; await new Promise(r=>setTimeout(r,500)); } catch(e){erros++;}
+      try { await axios.post(`https://api.w-api.app/v1/message/send-text?instanceId=${process.env.WAPI_INSTANCE_ID}`,{phone:p.whatsapp.replace(/\D/g,''),message:mensagem.replace('{nome}',p.nome)},{headers:{Authorization:'Bearer '+process.env.WAPI_TOKEN}}); enviados++; await new Promise(r=>setTimeout(r,500)); } catch(e){erros++;}
     }
     req.session.msg=[`WhatsApp enviado! ${enviados} enviados, ${erros} erros.`]; res.redirect('/marketing');
   } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing'); }
@@ -7372,17 +7349,6 @@ router.get('/fluxo-caixa/doc/baixar', requireAuth, async (req, res) => {
     const url = await gerarUrlDownload(chave, nome || 'documento');
     res.redirect(url);
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
-});
-
-// GET /api/evolution-qr — gera QR code para conectar WhatsApp
-router.get('/api/evolution-qr', requireAuth, async (req, res) => {
-  try {
-    const axios = require('axios');
-    const r = await axios.get('http://localhost:8080/instance/connect/lauro-liga', {
-      headers: { 'apikey': 'lauro-evolution-2026-key' }
-    });
-    res.json(r.data);
-  } catch(e) { res.json({ erro: e.message }); }
 });
 
 // ─── BUSCA GLOBAL ─────────────────────────────────────────────────────────
