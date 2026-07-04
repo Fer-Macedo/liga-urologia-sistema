@@ -119,6 +119,13 @@ async function enviarWhatsAppFila(numero, mensagem) {
 
 // Envio imediato SEM fila (para mensagens urgentes/individuais)
 async function enviarWhatsApp(numero, mensagem, opts = {}) {
+  // PROTECAO ANTI-BAN: enquanto aquecemos o numero, so o assistente virtual (lauro.js, fora
+  // desta funcao) e o aniversario (notificarAniversario, com opts.aniversario=true) ficam liberados.
+  // Todo o resto (cobranca, eventos, certificados, avisos em massa etc) fica suspenso aqui, na raiz,
+  // para nao depender de cada chamador lembrar de checar a flag.
+  if (WAPP_SOMENTE_RESPOSTA && !opts.aniversario) {
+    return { ok: false, blocked: true, motivo: 'whatsapp em modo aquecimento — somente assistente e aniversario liberados' };
+  }
   // PROTECAO: verificar se envio externo esta permitido
   try {
     const cfg = await query('SELECT valor FROM configuracoes WHERE chave=$1',['wapp_somente_cron']);
@@ -375,7 +382,7 @@ async function notificarAniversario(opts) {
   const msgWpp = '🎂 *' + orgNome + '*\n\nOlá, *' + membro.nome.split(' ')[0] + '*!\n\n' + msg + '\n\nCom carinho de toda a equipe! 💙';
 
   if (membro.whatsapp) {
-    const r = await enviarWhatsApp(membro.whatsapp, msgWpp);
+    const r = await enviarWhatsApp(membro.whatsapp, msgWpp, { aniversario: true });
     await query(
       'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
       [membro.id, null, 'aniversario', 'whatsapp', r.ok ? 'ok' : 'erro']
