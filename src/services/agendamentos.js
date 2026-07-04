@@ -616,33 +616,6 @@ function iniciarAgendamentos() {
   }, { timezone: 'America/Asuncion' });
 }
 
-async function sincronizarPagamentosMP() {
-  try {
-    const r = await query(
-      "SELECT id, referencia, mp_payment_id FROM cobrancas WHERE status IN ('pendente','atrasado') AND mp_payment_id IS NOT NULL AND mp_payment_id != '' AND mp_payment_id != 'undefined'"
-    );
-    if (r.rows.length === 0) return;
-    for (const cob of r.rows) {
-      try {
-        const token = process.env.MP_ACCESS_TOKEN;
-        if (!token) break;
-        const resp = await fetch('https://api.mercadopago.com/v1/payments/' + cob.mp_payment_id, {
-          headers: { 'Authorization': 'Bearer ' + token }
-        });
-        const data = await resp.json();
-        if (data.status === 'approved') {
-          await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW(), valor_pago=COALESCE(valor_pago, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE id=$1 AND status IN ('pendente','atrasado')", [cob.id]);
-          try {
-            const { lancarMensalidadeNoFluxo } = require('./fluxo-mensalidade');
-            await lancarMensalidadeNoFluxo(query, cob.id);
-          } catch(e) { console.error('lancar fluxo (MP sync):', e.message); }
-        }
-        await new Promise(r => setTimeout(r, 300));
-      } catch(e) { console.error('MP Sync erro:', cob.mp_payment_id, e.message); }
-    }
-  } catch(e) { console.error('MP Sync geral erro:', e.message); }
-}
-
 module.exports = {
   notificarAtrasadosDiario,
   iniciarAgendamentos,
@@ -651,6 +624,5 @@ module.exports = {
   atualizarPixAtrasados,
   logNotificacao,
   enviarFrequenciaMensal,
-  enviarNotificacoes,
-  sincronizarPagamentosMP
+  enviarNotificacoes
 };

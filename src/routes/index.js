@@ -1367,9 +1367,6 @@ router.post('/meu-email', requireAuth, async (req, res) => {
   res.redirect('/dashboard');
 });
 
-// ─── WEBHOOK MERCADO PAGO (mantido para pagamentos existentes) ────────────────
-
-
 // ─── ATENDIMENTOS WHATSAPP ────────────────────────────────────────────────────
 router.get('/atendimentos', requireAuth, async (req, res) => {
   try {
