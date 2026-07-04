@@ -85,8 +85,10 @@
     .btn-xs {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 4px;
-      padding: 5px 10px;
+      width: 76px;
+      padding: 5px 8px;
       border-radius: 7px;
       font-size: 11px;
       font-weight: 600;
@@ -98,7 +100,9 @@
       transition: all .15s;
       font-family: inherit;
       white-space: nowrap;
+      box-sizing: border-box;
     }
+    .btn-xs.verm { width: 32px; }
     .btn-xs:hover { border-color: var(--cor-primaria); color: var(--cor-primaria); }
     .btn-xs.roxo  { background: #6366f1; color: white; border-color: transparent; }
     .btn-xs.verde { background: #059669; color: white; border-color: transparent; }
