@@ -30,7 +30,7 @@ async function lancarMensalidadeNoFluxo(query, cobrancaId) {
   try {
     // Busca a cobrança + dados do ligante; só lança se estiver paga e ainda não lançada
     const r = await query(`
-      SELECT c.id, c.referencia, c.valor_cheio, c.valor_desconto, c.data_pagamento,
+      SELECT c.id, c.referencia, c.valor_cheio, c.valor_desconto, c.valor_pago, c.data_pagamento,
              c.data_vencimento, c.metodo_pagamento, c.lancado_fluxo, c.status,
              m.nome AS ligante_nome
       FROM cobrancas c
@@ -41,22 +41,24 @@ async function lancarMensalidadeNoFluxo(query, cobrancaId) {
     if (c.status !== 'pago') return { ok: false, motivo: 'nao_paga' };
     if (c.lancado_fluxo) return { ok: false, motivo: 'ja_lancada' };
 
-    // valor bruto conforme a data de pagamento:
-    // - pago ATÉ o vencimento (dia 15 do mês) => valor COM desconto (valor_desconto)
-    // - pago DEPOIS do vencimento => valor CHEIO (valor_cheio)
-    const vCheio = parseFloat(c.valor_cheio) || 0;
-    const vDesc = parseFloat(c.valor_desconto != null ? c.valor_desconto : c.valor_cheio) || 0;
-    let bruto = vDesc; // padrão: com desconto
-    try {
-      if (c.data_pagamento) {
-        const pag = new Date(c.data_pagamento);
-        const pagDia = new Date(pag.getFullYear(), pag.getMonth(), pag.getDate());
-        // Vencimento fixo = dia 15 do mesmo mes do pagamento
-        const diaVenc = new Date(pag.getFullYear(), pag.getMonth(), 15);
-        // Se pagou DEPOIS do dia 15 => valor cheio
-        if (pagDia > diaVenc) bruto = vCheio;
-      }
-    } catch (e) {}
+    // valor bruto = o que foi REALMENTE cobrado (valor_pago, vindo do PagBank).
+    // Só recorre a estimativa por data se, por algum motivo, valor_pago nao foi gravado.
+    let bruto;
+    if (c.valor_pago != null) {
+      bruto = parseFloat(c.valor_pago) || 0;
+    } else {
+      const vCheio = parseFloat(c.valor_cheio) || 0;
+      const vDesc = parseFloat(c.valor_desconto != null ? c.valor_desconto : c.valor_cheio) || 0;
+      bruto = vDesc; // padrão: com desconto
+      try {
+        if (c.data_pagamento) {
+          const pag = new Date(c.data_pagamento);
+          const pagDia = new Date(pag.getFullYear(), pag.getMonth(), pag.getDate());
+          const diaVenc = new Date(pag.getFullYear(), pag.getMonth(), 15);
+          if (pagDia > diaVenc) bruto = vCheio;
+        }
+      } catch (e) {}
+    }
     const metodo = c.metodo_pagamento || 'pix';
     const liquido = calcularLiquido(bruto, metodo);
 
