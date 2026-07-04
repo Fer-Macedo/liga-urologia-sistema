@@ -1863,21 +1863,9 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
         if (upd.rowCount > 0) {
           await enviarEmailConfirmacaoEvento(inscricaoId);
           console.log('PagBank ingresso confirmado via webhook — insc:', inscricaoId, orderId);
-          // Lançar no fluxo de caixa
           try {
-            const epR = await query(`SELECT ep.*, ei.nome as inscrito, e.nome as evento_nome FROM evento_pagamentos ep JOIN evento_inscricoes ei ON ei.id=ep.inscricao_id JOIN eventos e ON e.id=ei.evento_id WHERE ep.inscricao_id=$1 AND ep.status='pago' LIMIT 1`,[inscricaoId]);
-            if(epR.rows.length){
-              const ep=epR.rows[0];
-              const jaExiste=await query('SELECT id FROM fluxo_caixa WHERE observacoes ILIKE $1',['%inscricao_id:'+ep.id+'%']);
-              if(!jaExiste.rows.length){
-                const v=parseFloat(ep.valor)||0;
-                const liquido=ep.metodo==='cartao'?Math.round(v*0.96*100)/100:Math.round(v*0.981*100)/100;
-                const dataPag=new Date().toISOString().slice(0,10);
-                await query(`INSERT INTO fluxo_caixa (tipo,descricao,categoria,valor,data_lancamento,observacoes,criado_em) VALUES ('E',$1,'Eventos',$2,$3,$4,NOW())`,
-                  [('Ingresso '+ep.evento_nome+' — '+ep.inscrito).substring(0,200), liquido, dataPag,
-                   'Pago via '+(ep.metodo||'pix')+'. Bruto R$ '+v.toFixed(2)+'. inscricao_id:'+ep.id]);
-              }
-            }
+            const { lancarEventoNoFluxo } = require('../services/fluxo-eventos');
+            await lancarEventoNoFluxo(query, inscricaoId);
           } catch(ef){ console.error('lancar fluxo evento webhook:', ef.message); }
         }
       }
@@ -4726,6 +4714,10 @@ router.get('/pagamento/:inscricaoId/status', async (req, res) => {
         await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1", [req.params.inscricaoId]);
         await query("UPDATE evento_pagamentos SET status='pago', pago_em=NOW() WHERE inscricao_id=$1", [req.params.inscricaoId]);
         await enviarEmailConfirmacaoEvento(req.params.inscricaoId);
+        try {
+          const { lancarEventoNoFluxo } = require('../services/fluxo-eventos');
+          await lancarEventoNoFluxo(query, req.params.inscricaoId);
+        } catch(ef){ console.error('lancar fluxo evento polling:', ef.message); }
         return res.json({ pago: true });
       }
     }
@@ -5001,7 +4993,11 @@ router.post('/eventos/:id/inscricoes/:iid/checkin', requireAuth, async (req, res
 
 router.post('/eventos/:id/pagamentos/:pid/confirmar', requireAuth, async (req, res) => {
   await query("UPDATE evento_pagamentos SET status='pago', pago_em=NOW() WHERE id=$1",[req.params.pid]);
-  await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=(SELECT inscricao_id FROM evento_pagamentos WHERE id=$1)",[req.params.pid]);
+  const iR = await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=(SELECT inscricao_id FROM evento_pagamentos WHERE id=$1) RETURNING id",[req.params.pid]);
+  try {
+    const { lancarEventoNoFluxo } = require('../services/fluxo-eventos');
+    if (iR.rows.length) await lancarEventoNoFluxo(query, iR.rows[0].id);
+  } catch(ef){ console.error('lancar fluxo evento (confirmar manual):', ef.message); }
   req.session.msg=['Pagamento confirmado!']; res.redirect('/eventos/'+req.params.id);
 });
 

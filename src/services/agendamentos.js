@@ -140,6 +140,10 @@ async function verificarPagamentos() {
           [cob.id, valorPago]
         );
         console.log('PagBank pagamento confirmado via cron:', cob.referencia);
+        try {
+          const { lancarMensalidadeNoFluxo } = require('./fluxo-mensalidade');
+          await lancarMensalidadeNoFluxo(query, cob.id);
+        } catch(e) { console.error('lancar fluxo (cron verificarPagamentos):', e.message); }
       }
     } catch(e) { console.error('PagBank verificar erro:', cob.id, e.message); }
   }
@@ -274,6 +278,23 @@ async function auditarFluxoCaixa() {
     console.log('[AUDITORIA] Fluxo caixa auditado — ' + pendentes.rows.length + ' lancamentos corrigidos.');
   } catch(e) {
     console.error('[AUDITORIA] Erro auditarFluxoCaixa:', e.message);
+  }
+}
+
+// Roda diariamente e lança no fluxo qualquer inscricao de evento paga que ainda nao foi lancada
+async function auditarFluxoCaixaEventos() {
+  try {
+    const pendentes = await query(`SELECT inscricao_id FROM evento_pagamentos WHERE status='pago'`);
+    if (!pendentes.rows.length) return;
+    const { lancarEventoNoFluxo } = require('./fluxo-eventos');
+    let lancados = 0;
+    for (const row of pendentes.rows) {
+      const result = await lancarEventoNoFluxo(query, row.inscricao_id);
+      if (result.ok && result.motivo === 'lancado') lancados++;
+    }
+    if (lancados > 0) console.log('[AUDITORIA] Fluxo caixa eventos auditado — ' + lancados + ' lancamentos corrigidos.');
+  } catch(e) {
+    console.error('[AUDITORIA] Erro auditarFluxoCaixaEventos:', e.message);
   }
 }
 
@@ -538,6 +559,7 @@ function iniciarAgendamentos() {
   cron.schedule('0 8 * * *', async () => {
     try { await atualizarPixAtrasados(); } catch(e) { console.error('[PIX-UPDATE] erro cron:', e.message); }
     try { await auditarFluxoCaixa(); } catch(e) { console.error('[AUDITORIA] erro cron:', e.message); }
+    try { await auditarFluxoCaixaEventos(); } catch(e) { console.error('[AUDITORIA] erro cron eventos:', e.message); }
     console.log('Rotina diária iniciando...');
     try {
       await gerarCobrancasMes();
@@ -610,6 +632,10 @@ async function sincronizarPagamentosMP() {
         const data = await resp.json();
         if (data.status === 'approved') {
           await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW(), valor_pago=COALESCE(valor_pago, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE id=$1 AND status IN ('pendente','atrasado')", [cob.id]);
+          try {
+            const { lancarMensalidadeNoFluxo } = require('./fluxo-mensalidade');
+            await lancarMensalidadeNoFluxo(query, cob.id);
+          } catch(e) { console.error('lancar fluxo (MP sync):', e.message); }
         }
         await new Promise(r => setTimeout(r, 300));
       } catch(e) { console.error('MP Sync erro:', cob.mp_payment_id, e.message); }
