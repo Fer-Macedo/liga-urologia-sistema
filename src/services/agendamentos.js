@@ -69,7 +69,7 @@ async function gerarCobrancasMes() {
     const valorDesc = +(valorCheio * (1 - descPct / 100)).toFixed(2);
 
     const dataVencPix = hoje.add(179, 'day').format('YYYY-MM-DD'); // PIX valido ~6 meses (180 exato e rejeitado pelo PagBank)
-    const pag = await criarCobranca({ membro, valor: valorCheio, vencimento: dataVencPix, referencia: ref });
+    const pag = await criarCobranca({ membro, valor: valorDesc, vencimento: dataVencPix, referencia: ref });
 
     await query(
       `INSERT INTO cobrancas
@@ -89,7 +89,7 @@ async function atualizarPixAtrasados() {
   const hoje = require('dayjs')();
   // Busca cobranças atrasadas sem PIX ou com vencimento_pix passado
   const { rows } = await query(`
-    SELECT c.id, c.referencia, c.valor_cheio, c.membro_id,
+    SELECT c.id, c.referencia, c.valor_cheio, c.valor_desconto, c.data_vencimento, c.membro_id,
            m.nome, m.email, m.cpf
     FROM cobrancas c
     JOIN membros m ON m.id = c.membro_id
@@ -104,9 +104,12 @@ async function atualizarPixAtrasados() {
   const dataVencPix = hoje.add(179, 'day').format('YYYY-MM-DD'); // 180 exato e rejeitado pelo PagBank
   for (const c of rows) {
     try {
+      // Ate o vencimento cobra o valor com desconto de pontualidade; depois, valor cheio
+      const jaVenceu = require('dayjs')(c.data_vencimento).endOf('day').isBefore(hoje);
+      const valorPix = (!jaVenceu && c.valor_desconto != null) ? c.valor_desconto : c.valor_cheio;
       const pag = await criarCobranca({
         membro: { nome: c.nome, email: c.email, cpf: c.cpf },
-        valor: c.valor_cheio,
+        valor: valorPix,
         vencimento: dataVencPix,
         referencia: c.referencia
       });
