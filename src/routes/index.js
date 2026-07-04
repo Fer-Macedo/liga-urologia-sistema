@@ -8772,7 +8772,8 @@ router.post('/membro/pagar-cartao', requireMembro, limiterPagamentoCartao, async
     const cob = cobR.rows[0];
 
     const { pagarComCartao } = require('../services/pagbank');
-    const valorPagar = cob.valor_desconto && new Date().getDate() <= (parseInt(process.env.DIA_DESCONTO || '15')) ? cob.valor_desconto : cob.valor_cheio;
+    const dentroDoPrazo = !require('dayjs')().isAfter(require('dayjs')(cob.data_vencimento).endOf('day'));
+    const valorPagar = (cob.valor_desconto != null && dentroDoPrazo) ? cob.valor_desconto : cob.valor_cheio;
     const r = await pagarComCartao({
       referencia: cob.referencia,
       valor: valorPagar,
