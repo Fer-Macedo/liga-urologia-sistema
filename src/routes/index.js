@@ -8912,10 +8912,11 @@ router.get('/membro/contrato/dados', requireMembro, async (req, res) => {
     const r = tipo === 'ligante'
       ? await query('SELECT pdf_assinado_chave, status, criado_em FROM contratos_ligantes WHERE ligante_id=$1 ORDER BY criado_em DESC LIMIT 1', [id])
       : await query('SELECT pdf_assinado_chave, status, criado_em FROM contratos_diretivos WHERE diretivo_id=$1 ORDER BY criado_em DESC LIMIT 1', [id]);
-    if (!r.rows[0]) return res.json({ url: null, msg: 'Nenhum contrato encontrado.' });
+    const msgSemContrato = 'Você ainda não possui contrato assinado. Por favor, procure a secretaria para regularizar sua situação.';
+    if (!r.rows[0]) return res.json({ url: null, msg: msgSemContrato });
     // Mostra somente o PDF assinado (documento final, escaneado) — nunca o rascunho gerado antes da assinatura
     const chave = r.rows[0].pdf_assinado_chave;
-    if (!chave) return res.json({ url: null, msg: 'Seu contrato ainda nao foi assinado.', status: r.rows[0].status });
+    if (!chave) return res.json({ url: null, msg: msgSemContrato, status: r.rows[0].status });
     const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
     const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
     const R2 = new S3Client({ region:'auto', endpoint:process.env.R2_ENDPOINT, credentials:{ accessKeyId:process.env.R2_ACCESS_KEY_ID, secretAccessKey:process.env.R2_SECRET_ACCESS_KEY }});
