@@ -311,9 +311,10 @@ async function notificarCobranca(opts) {
       + 'Por favor, regularize sua situação. 🙏'
   };
 
-  // ── WhatsApp (suspenso no modo aquecimento)
-  const isAtrasado = tipo === 'pos'; // cobrancas de atrasados sempre disparam (max 5/dia, anti-ban ativo)
-  if (membro.whatsapp && opts.canal !== 'email' && (!WAPP_SOMENTE_RESPOSTA || isAtrasado)) {
+  // ── WhatsApp (suspenso no modo aquecimento — WAPP_SOMENTE_RESPOSTA=true)
+  // Disparo de cobranca por WhatsApp fica 100% suspenso enquanto aquecemos o numero.
+  // Excecao unica liberada: aniversario (notificarAniversario, abaixo) e o assistente virtual (lauro.js).
+  if (membro.whatsapp && opts.canal !== 'email' && !WAPP_SOMENTE_RESPOSTA) {
     let wppOk = false;
 
     // Mensagem 1 — principal com instruções
