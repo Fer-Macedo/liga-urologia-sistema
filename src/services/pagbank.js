@@ -287,9 +287,18 @@ function detectarMetodo(charges) {
   return null;
 }
 
+// Extrai o valor efetivamente pago (em reais) das charges PAID de um pedido/cobranca
+function extrairValorPago(charges) {
+  try {
+    const paga = (charges || []).find(c => c.status === 'PAID');
+    if (paga && paga.amount && typeof paga.amount.value === 'number') return paga.amount.value / 100;
+  } catch (e) {}
+  return null;
+}
+
 function processarWebhook(body) {
   try {
-    let orderId = null, referencia = null, status = null, pago = false, metodo = null;
+    let orderId = null, referencia = null, status = null, pago = false, metodo = null, valorPago = null;
 
     if (body.order) {
       orderId = body.order.id || null;
@@ -298,12 +307,14 @@ function processarWebhook(body) {
       pago = charges.some(c => c.status === 'PAID') || body.event === 'order.paid';
       status = body.event || body.order.status;
       metodo = detectarMetodo(charges);
+      valorPago = extrairValorPago(charges);
     } else if (body.charge) {
       orderId = body.charge.id || null;
       referencia = body.charge.reference_id || null;
       pago = body.charge.status === 'PAID' || body.event === 'charge.paid';
       status = body.charge.status || body.event;
       metodo = detectarMetodo([body.charge]);
+      valorPago = extrairValorPago([body.charge]);
     } else {
       orderId = body.id || null;
       referencia = body.reference_id || null;
@@ -311,12 +322,12 @@ function processarWebhook(body) {
       status = body.status || body.event;
     }
 
-    console.log('PagBank webhook — orderId:', orderId, 'ref:', referencia, 'pago:', pago);
-    return { orderId, referencia, status, pago, metodo };
+    console.log('PagBank webhook — orderId:', orderId, 'ref:', referencia, 'pago:', pago, 'valorPago:', valorPago);
+    return { orderId, referencia, status, pago, metodo, valorPago };
 
   } catch (e) {
     console.error('PagBank processarWebhook ERRO:', e.message);
-    return { orderId: null, referencia: null, status: null, pago: false, metodo: null };
+    return { orderId: null, referencia: null, status: null, pago: false, metodo: null, valorPago: null };
   }
 }
 

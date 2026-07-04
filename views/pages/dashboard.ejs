@@ -282,7 +282,7 @@ var pode = function(mod){ return !perms || perms.indexOf(mod) !== -1; };
                  var st = (c.status||'').toLowerCase();
                  var pillCls = st.indexOf('atras')>-1 ? 'late' : (st.indexOf('pend')>-1 ? 'soon' : 'ok');
                  var pillTxt = st.indexOf('atras')>-1 ? 'Em atraso' : (st.indexOf('pend')>-1 ? 'Pendente' : 'Pago');
-                 var valor = (c.valor_desconto != null && Number(c.valor_desconto) > 0) ? c.valor_desconto : c.valor_cheio;
+                 var valor = (c.valor_pago != null) ? c.valor_pago : ((c.valor_desconto != null && Number(c.valor_desconto) > 0) ? c.valor_desconto : c.valor_cheio);
                  var quando = '';
                  try { if (L.dayjs && c.data_pagamento) quando = L.dayjs(c.data_pagamento).format('DD/MM/YYYY'); } catch(e){}
             %>

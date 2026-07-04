@@ -82,6 +82,7 @@ async function initSchema() {
       pagbank_link TEXT,
       criado_em TIMESTAMP DEFAULT NOW()
     );
+    ALTER TABLE cobrancas ADD COLUMN IF NOT EXISTS valor_pago REAL;
 
     CREATE TABLE IF NOT EXISTS notificacoes_log (
       id SERIAL PRIMARY KEY,

@@ -132,7 +132,13 @@ async function verificarPagamentos() {
     try {
       const result = await consultarPagamento(cob.pagbank_charge_id);
       if (result.ok && result.status === 'PAID') {
-        await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW() WHERE id=$1", [cob.id]);
+        const charges = result.data.charges || (result.data.status ? [result.data] : []);
+        const paga = charges.find(c => c.status === 'PAID');
+        const valorPago = (paga && paga.amount && typeof paga.amount.value === 'number') ? paga.amount.value / 100 : null;
+        await query(
+          "UPDATE cobrancas SET status='pago', data_pagamento=NOW(), valor_pago=COALESCE($2, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE id=$1",
+          [cob.id, valorPago]
+        );
         console.log('PagBank pagamento confirmado via cron:', cob.referencia);
       }
     } catch(e) { console.error('PagBank verificar erro:', cob.id, e.message); }
@@ -603,7 +609,7 @@ async function sincronizarPagamentosMP() {
         });
         const data = await resp.json();
         if (data.status === 'approved') {
-          await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW() WHERE id=$1 AND status IN ('pendente','atrasado')", [cob.id]);
+          await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW(), valor_pago=COALESCE(valor_pago, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE id=$1 AND status IN ('pendente','atrasado')", [cob.id]);
         }
         await new Promise(r => setTimeout(r, 300));
       } catch(e) { console.error('MP Sync erro:', cob.mp_payment_id, e.message); }

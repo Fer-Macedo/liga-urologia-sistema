@@ -1008,7 +1008,7 @@ router.get('/dashboard', requireAuth, async (req, res) => {
     query("SELECT COUNT(*) n FROM cobrancas WHERE status='pago' AND referencia LIKE $1", [mesStr]),
     query("SELECT COUNT(*) n FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='pendente' AND c.referencia LIKE $1 AND m.ativo=1", [mesStr]),
     query("SELECT COUNT(*) n FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE (c.status='atrasado' OR (c.status='pendente' AND c.data_vencimento::date < CURRENT_DATE)) AND m.ativo=1"),
-    query("SELECT COALESCE(SUM(valor_desconto),0) v FROM cobrancas WHERE status='pago' AND referencia LIKE $1", [mesStr]),
+    query("SELECT COALESCE(SUM(COALESCE(valor_pago,valor_desconto)),0) v FROM cobrancas WHERE status='pago' AND referencia LIKE $1", [mesStr]),
     query("SELECT COALESCE(SUM(valor_cheio),0) v FROM cobrancas WHERE status='pendente' AND referencia LIKE $1", [mesStr]),
     query("SELECT COALESCE(SUM(valor_cheio),0) v FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE (c.status='atrasado' OR (c.status='pendente' AND c.data_vencimento::date < CURRENT_DATE)) AND m.ativo=1"),
     query("SELECT c.*, m.nome FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='pago' ORDER BY c.data_pagamento DESC LIMIT 8"),
@@ -1161,7 +1161,7 @@ router.get('/cobrancas', requireAuth, requirePermissao('cobrancas'), async (req,
 
 router.post('/cobrancas/:id/confirmar', requireAuth, requireFinanceiro, async (req, res) => {
   try {
-    await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW(), metodo_pagamento=COALESCE(metodo_pagamento,'pix') WHERE id=$1 AND status!='pago'", [req.params.id]);
+    await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW(), metodo_pagamento=COALESCE(metodo_pagamento,'pix'), valor_pago=COALESCE(valor_pago, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE id=$1 AND status!='pago'", [req.params.id]);
     try { const { lancarMensalidadeNoFluxo } = require('../services/fluxo-mensalidade'); await lancarMensalidadeNoFluxo(query, req.params.id); } catch(e) { console.error('lancar fluxo (baixa manual):', e.message); }
     req.session.msg = ['Pagamento confirmado manualmente!'];
   } catch(e) { req.session.erro = ['Erro ao confirmar: '+e.message]; }
@@ -1170,7 +1170,7 @@ router.post('/cobrancas/:id/confirmar', requireAuth, requireFinanceiro, async (r
 });
 
 router.post('/cobrancas/:id/pago', requireAuth, requireFinanceiro, async (req, res) => {
-  await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW(), metodo_pagamento=COALESCE(metodo_pagamento,'pix') WHERE id=$1", [req.params.id]);
+  await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW(), metodo_pagamento=COALESCE(metodo_pagamento,'pix'), valor_pago=COALESCE(valor_pago, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE id=$1", [req.params.id]);
   try { const { lancarMensalidadeNoFluxo } = require('../services/fluxo-mensalidade'); await lancarMensalidadeNoFluxo(query, req.params.id); } catch(e) { console.error('lancar fluxo (baixa manual 2):', e.message); }
   req.flash('msg', 'Pagamento registrado!');
   res.redirect('/cobrancas');
@@ -1812,15 +1812,15 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
 
     console.log('PagBank Webhook recebido:', JSON.stringify(body).substring(0, 300));
 
-    const { orderId, referencia, status, pago, metodo } = processarWebhook(body);
+    const { orderId, referencia, status, pago, metodo, valorPago } = processarWebhook(body);
 
     if (!referencia) return res.sendStatus(200);
 
     // Pagamento de MENSALIDADE
     if (pago && referencia.startsWith('mensalidade-')) {
       const r = await query(
-        "UPDATE cobrancas SET status='pago', data_pagamento=NOW(), pagbank_charge_id=$1, metodo_pagamento=COALESCE($3,metodo_pagamento) WHERE referencia=$2 AND status!='pago' RETURNING id",
-        [orderId, referencia, metodo]
+        "UPDATE cobrancas SET status='pago', data_pagamento=NOW(), pagbank_charge_id=$1, metodo_pagamento=COALESCE($3,metodo_pagamento), valor_pago=COALESCE($4, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE referencia=$2 AND status!='pago' RETURNING id",
+        [orderId, referencia, metodo, valorPago]
       );
       if (r.rowCount > 0) {
         console.log('PagBank mensalidade confirmada:', referencia, orderId, 'metodo:', metodo);
@@ -1834,8 +1834,8 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
     // Pagamento de MENSALIDADE (formato {membro_id}-{ano}-{mes}, ex: 56-2026-05)
     if (pago && /^\d+-\d{4}-\d{2}$/.test(referencia)) {
       const r = await query(
-        "UPDATE cobrancas SET status='pago', data_pagamento=NOW(), metodo_pagamento=COALESCE($2,metodo_pagamento) WHERE referencia=$1 AND status!='pago' RETURNING id",
-        [referencia, metodo]
+        "UPDATE cobrancas SET status='pago', data_pagamento=NOW(), metodo_pagamento=COALESCE($2,metodo_pagamento), valor_pago=COALESCE($3, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE referencia=$1 AND status!='pago' RETURNING id",
+        [referencia, metodo, valorPago]
       );
       if (r.rowCount > 0) {
         console.log('PagBank mensalidade confirmada via webhook:', referencia, orderId, 'metodo:', metodo);
@@ -8786,7 +8786,7 @@ router.post('/membro/pagar-cartao', requireMembro, limiterPagamentoCartao, async
     if (!r.ok) return res.json({ ok: false, erro: r.erro });
     if (!r.aprovado) return res.json({ ok: false, erro: 'Pagamento nao aprovado (status: ' + r.status + '). Verifique os dados do cartao ou tente outro cartao.' });
 
-    await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW(), pagbank_charge_id=$1, metodo_pagamento='cartao' WHERE id=$2", [r.charge_id, cob.id]);
+    await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW(), pagbank_charge_id=$1, metodo_pagamento='cartao', valor_pago=$3 WHERE id=$2", [r.charge_id, cob.id, valorPagar]);
     try {
       const { lancarMensalidadeNoFluxo } = require('../services/fluxo-mensalidade');
       await lancarMensalidadeNoFluxo(query, cob.id);
