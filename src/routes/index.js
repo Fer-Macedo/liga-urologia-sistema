@@ -8745,7 +8745,16 @@ router.get('/membro/dashboard', requireMembro, async (req, res) => {
   const evR = await query(`SELECT id, nome, data_inicio, local FROM eventos WHERE data_inicio >= NOW() ORDER BY data_inicio ASC LIMIT 1`);
   // Grupos cientificos
   const grR = await query(`SELECT gc.nome as gnome, pc.titulo as ptitulo FROM membros_grupo_cientifico m JOIN grupos_cientificos gc ON gc.id=m.grupo_id JOIN projetos_cientificos pc ON pc.id=gc.projeto_id WHERE m.origem_tipo=$1 AND m.origem_id=$2`, [tipo, id]);
-  res.render('pages/membro/dashboard', { membro, cobrancaAtual, frequencia, comunicados: comR.rows, comunicadosNaoLidos, proximoEvento: evR.rows[0]||null, grupos: grR.rows });
+  const cientAvisosR = await query(`
+    SELECT COUNT(*) as total FROM avisos_cientificos a
+    WHERE a.criado_em >= NOW() - INTERVAL '7 days'
+    AND (
+      a.grupo_id IN (SELECT grupo_id FROM membros_grupo_cientifico WHERE origem_tipo=$1 AND origem_id=$2)
+      OR a.projeto_id IN (SELECT gc.projeto_id FROM membros_grupo_cientifico m JOIN grupos_cientificos gc ON gc.id=m.grupo_id WHERE m.origem_tipo=$1 AND m.origem_id=$2)
+    )
+  `, [tipo, id]).catch(()=>({rows:[{total:0}]}));
+  const cientificoAvisos = parseInt(cientAvisosR.rows[0]?.total)||0;
+  res.render('pages/membro/dashboard', { membro, cobrancaAtual, frequencia, comunicados: comR.rows, comunicadosNaoLidos, proximoEvento: evR.rows[0]||null, grupos: grR.rows, cientificoAvisos });
 });
 
 // GET /membro/pagbank/chave-publica — chave p/ criptografar cartao no navegador
@@ -9029,6 +9038,37 @@ router.get('/membro/materiais/dados', requireMembro, async (req, res) => {
   const materiais = await query("SELECT * FROM materiais_estudo WHERE ativo=true ORDER BY ordem ASC, criado_em DESC");
   res.json({ materiais: materiais.rows });
 });
+// GET /membro/cientifico/dados
+router.get('/membro/cientifico/dados', requireMembro, async (req, res) => {
+  const { tipo, id } = req.session.membroPortal;
+  try {
+    const grR = await query(`
+      SELECT gc.id as grupo_id, gc.nome as grupo_nome, gc.tipo_trabalho,
+             pc.id as projeto_id, pc.titulo as projeto_titulo, pc.prazo, pc.status as projeto_status,
+             (SELECT status FROM versoes_trabalho v WHERE v.grupo_id=gc.id ORDER BY v.enviado_em DESC LIMIT 1) as ultimo_status
+      FROM membros_grupo_cientifico m
+      JOIN grupos_cientificos gc ON gc.id=m.grupo_id
+      JOIN projetos_cientificos pc ON pc.id=gc.projeto_id
+      WHERE m.origem_tipo=$1 AND m.origem_id=$2
+      ORDER BY pc.prazo ASC NULLS LAST
+    `, [tipo, id]);
+    const grupoIds = grR.rows.map(g => g.grupo_id);
+    const projetoIds = [...new Set(grR.rows.map(g => g.projeto_id))];
+    let avisos = [];
+    if (grupoIds.length || projetoIds.length) {
+      const avR = await query(`
+        SELECT a.texto, a.criado_em, g.nome as grupo_nome
+        FROM avisos_cientificos a
+        LEFT JOIN grupos_cientificos g ON g.id=a.grupo_id
+        WHERE a.grupo_id = ANY($1::int[]) OR a.projeto_id = ANY($2::int[])
+        ORDER BY a.criado_em DESC LIMIT 10
+      `, [grupoIds, projetoIds]);
+      avisos = avR.rows;
+    }
+    res.json({ grupos: grR.rows, avisos, portalUrl: 'https://cientifico.lauroucpcde.com' });
+  } catch(e) { res.json({ grupos: [], avisos: [], erro: e.message }); }
+});
+
 router.get('/membro/materiais-lista', requireMembro, async (req, res) => {
   const materiais = await query("SELECT * FROM materiais_estudo WHERE ativo=true ORDER BY ordem ASC, criado_em DESC");
   const membro = await getMembroPortal(req.session.membroPortal.tipo, req.session.membroPortal.id);

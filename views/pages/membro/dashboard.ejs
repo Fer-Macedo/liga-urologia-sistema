@@ -354,10 +354,11 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
       <span class="ni-lbl">Contrato</span>
     </button>
     <div style="height:1px;background:rgba(255,255,255,.08);margin:6px 0"></div>
-    <a class="ni" href="https://cientifico.lauroucpcde.com" target="_blank">
+    <button class="ni" id="ni-cientifico" data-sc="cientifico">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
       <span class="ni-lbl">Portal Cientifico</span>
-    </a>
+      <% if(cientificoAvisos > 0){ %><span class="ni-bdg" id="ni-bdg-cientifico"><%=cientificoAvisos%></span><% } %>
+    </button>
   </nav>
 
   <div class="sb-bot">
@@ -716,6 +717,15 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
       </div>
     </section>
 
+    <!-- CIENTIFICO -->
+    <section class="sc" id="sc-cientifico">
+      <div class="pg-t">Portal Cientifico</div>
+      <div class="pg-s">Seus grupos, prazos e avisos do Cientifico</div>
+      <div id="cientifico-conteudo">
+        <div style="text-align:center;padding:32px;color:var(--ti);font-size:13px">Carregando...</div>
+      </div>
+    </section>
+
   </div><!-- ct -->
 
   <footer>
@@ -748,8 +758,8 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
 <div class="mob-ov" id="mobOv"></div>
 
 <script>
-const TITLES = {dashboard:'Inicio',financeiro:'Financeiro',frequencia:'Frequencia',materiais:'Materiais',agenda:'Agenda',eventos:'Eventos',comunicados:'Comunicados',perfil:'Meu Perfil',estatuto:'Estatuto',regulamento:'Regulamento',contrato:'Contrato'};
-const SUBS = {dashboard:'Bem-vindo, <%=membro.nome.split(" ")[0]%>',financeiro:'Historico de cobrancas',frequencia:'Sua presenca nas atividades',materiais:'Documentos e videos da Liga',agenda:'Calendario de atividades',eventos:'Proximos eventos',comunicados:'Avisos da Liga',perfil:'Seus dados cadastrais',estatuto:'Documento oficial da Liga',regulamento:'Normas e regras da Liga',contrato:'Seu contrato com a Liga'};
+const TITLES = {dashboard:'Inicio',financeiro:'Financeiro',frequencia:'Frequencia',materiais:'Materiais',agenda:'Agenda',eventos:'Eventos',comunicados:'Comunicados',perfil:'Meu Perfil',estatuto:'Estatuto',regulamento:'Regulamento',contrato:'Contrato',cientifico:'Portal Cientifico'};
+const SUBS = {dashboard:'Bem-vindo, <%=membro.nome.split(" ")[0]%>',financeiro:'Historico de cobrancas',frequencia:'Sua presenca nas atividades',materiais:'Documentos e videos da Liga',agenda:'Calendario de atividades',eventos:'Proximos eventos',comunicados:'Avisos da Liga',perfil:'Seus dados cadastrais',estatuto:'Documento oficial da Liga',regulamento:'Normas e regras da Liga',contrato:'Seu contrato com a Liga',cientifico:'Seus grupos e avisos do Cientifico'};
 
 var matLoaded = false;
 var evLoaded = false;
@@ -859,6 +869,7 @@ function go(id) {
   if(id === 'estatuto') loadEstatuto();
   if(id === 'regulamento') loadRegulamento();
   if(id === 'contrato') loadContrato();
+  if(id === 'cientifico') loadCientifico();
   if(id === 'eventos' && !evLoaded) {
     evLoaded = true;
     var wrap = document.getElementById('ev-conteudo');
@@ -1093,7 +1104,7 @@ document.getElementById('calNext') && document.getElementById('calNext').addEven
 // NAVEGACAO POR HASH (para redirecionamentos de paginas antigas)
 (function(){
   var hash = window.location.hash.replace('#','');
-  var validos = ['dashboard','financeiro','frequencia','materiais','agenda','eventos','comunicados','perfil','estatuto','regulamento','contrato'];
+  var validos = ['dashboard','financeiro','frequencia','materiais','agenda','eventos','comunicados','perfil','estatuto','regulamento','contrato','cientifico'];
   if(hash && validos.indexOf(hash) !== -1) {
     go(hash);
     history.replaceState(null, '', window.location.pathname);
@@ -1392,6 +1403,7 @@ function copiarPix(btn, codigo) {
 var estatutoLoaded = false;
 var regulamentoLoaded = false;
 var contratoLoaded = false;
+var cientificoLoaded = false;
 
 function renderPdfSection(wrapId, url, msg) {
   var wrap = document.getElementById(wrapId);
@@ -1533,6 +1545,62 @@ function loadContrato() {
   fetch('/membro/contrato/dados', { credentials: 'same-origin' }).then(function(r){ return r.json(); })
     .then(function(data){ renderPdfSection('contrato-conteudo', data.url, data.msg); })
     .catch(function(){ contratoLoaded=false; });
+}
+
+function loadCientifico() {
+  if(cientificoLoaded) return;
+  cientificoLoaded = true;
+  fetch('/membro/cientifico/dados', { credentials: 'same-origin' }).then(function(r){ return r.json(); })
+    .then(function(data){
+      var wrap = document.getElementById('cientifico-conteudo');
+      if(!wrap) return;
+      var statusMap = {
+        aguardando: {lbl:'Aguardando revisao', bg:'#f8fafc', cor:'#64748b'},
+        em_revisao: {lbl:'Em revisao', bg:'#fff7ed', cor:'#c2410c'},
+        devolvido:  {lbl:'Devolvido', bg:'#fef2f2', cor:'#b91c1c'},
+        aprovado:   {lbl:'Aprovado', bg:'#f0fdf4', cor:'#15803d'}
+      };
+      var html = '<div style="margin-bottom:20px"><a href="'+data.portalUrl+'" target="_blank" class="card" style="display:flex;align-items:center;justify-content:space-between;text-decoration:none;padding:16px 18px">'
+        + '<div style="display:flex;align-items:center;gap:10px"><div style="width:34px;height:34px;background:var(--vll);display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg></div><div><div style="font-size:13px;font-weight:700;color:var(--t)">Abrir Portal Cientifico completo</div><div style="font-size:11px;color:var(--ts)">Projetos, editais e chat do grupo</div></div></div>'
+        + '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ts)" stroke-width="2"><path d="M7 17L17 7"/><path d="M7 7h10v10"/></svg>'
+        + '</a></div>';
+
+      if(!data.grupos || !data.grupos.length){
+        html += '<div class="card" style="padding:32px;text-align:center;color:var(--ts);font-size:13px">Voce ainda nao faz parte de nenhum grupo cientifico.</div>';
+        wrap.innerHTML = html;
+        return;
+      }
+
+      html += '<div class="st">Seus grupos</div><div class="g2 gap" style="margin-bottom:20px">';
+      data.grupos.forEach(function(g){
+        var st = statusMap[g.ultimo_status] || null;
+        var prazoTxt = g.prazo ? new Date(g.prazo+'T12:00:00').toLocaleDateString('pt-BR') : '-';
+        html += '<div class="card">'
+          + '<div style="font-size:13px;font-weight:700;margin-bottom:4px">'+g.grupo_nome+'</div>'
+          + '<div style="font-size:12px;color:var(--ts);margin-bottom:10px">'+g.projeto_titulo+'</div>'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;font-size:11px;color:var(--ts)">'
+          + '<span>Prazo: <b style="color:var(--t)">'+prazoTxt+'</b></span>'
+          + (st ? '<span style="background:'+st.bg+';color:'+st.cor+';font-weight:700;padding:2px 8px;border-radius:2px;font-size:10.5px">'+st.lbl+'</span>' : '')
+          + '</div></div>';
+      });
+      html += '</div>';
+
+      html += '<div class="st">Avisos recentes</div>';
+      if(!data.avisos || !data.avisos.length){
+        html += '<div class="card" style="padding:24px;text-align:center;color:var(--ts);font-size:13px">Nenhum aviso publicado ainda.</div>';
+      } else {
+        html += '<div style="display:flex;flex-direction:column;gap:10px">';
+        data.avisos.forEach(function(a){
+          var dt = new Date(a.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+          html += '<div class="card" style="padding:14px 16px">'
+            + '<div style="font-size:11px;color:var(--ts);margin-bottom:6px">'+dt+' &middot; '+(a.grupo_nome||'Todos os grupos')+'</div>'
+            + '<div style="font-size:13px;color:var(--t)">'+a.texto+'</div></div>';
+        });
+        html += '</div>';
+      }
+      wrap.innerHTML = html;
+    })
+    .catch(function(){ cientificoLoaded=false; });
 }
 </script>
 
