@@ -1336,6 +1336,12 @@ function loadChat() {
       }
       body.innerHTML = '';
       chatMsgs.forEach(function(m){ addMsgToBody(m); });
+      if (data.encerrado) {
+        var aviso = document.createElement('div');
+        aviso.style.cssText = 'text-align:center;font-size:11px;color:var(--ts);background:var(--vl);padding:6px 10px;border-radius:6px;margin-top:6px';
+        aviso.textContent = 'Atendimento encerrado. Envie uma nova mensagem se precisar de algo mais.';
+        body.appendChild(aviso);
+      }
     })
     .catch(function(){ });
 }

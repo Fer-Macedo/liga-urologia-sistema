@@ -1393,14 +1393,21 @@ router.get('/atendimentos', requireAuth, async (req, res) => {
 
 router.get('/atendimentos/:id/conversa', requireAuth, async (req, res) => {
   try {
-    const atR = await query('SELECT numero_membro, area, idioma, criado_em, encerrado_em, nome_contato FROM lauro_atendimentos WHERE id=$1', [req.params.id]);
+    const atR = await query('SELECT numero_membro, area, idioma, criado_em, encerrado_em, nome_contato, origem FROM lauro_atendimentos WHERE id=$1', [req.params.id]);
     if (!atR.rows.length) return res.json({msgs:[], area:'', numero:'', idioma:'pt'});
-    const {numero_membro, area, idioma, criado_em, encerrado_em} = atR.rows[0];
+    const {numero_membro, area, idioma, criado_em, encerrado_em, origem} = atR.rows[0];
     // Controle de acesso: só admin/presidência ou usuário da mesma área podem ver o chat
     const _perfil = req.session.usuario && req.session.usuario.perfil;
     const _isAdmin = _perfil === 'admin' || _perfil === 'presidencia';
     if (!_isAdmin && area !== _perfil) {
       return res.status(403).json({msgs:[], erro:'Sem permissão para ver este atendimento'});
+    }
+    if (origem === 'portal') {
+      const [_p, _tipo, _idMembro] = numero_membro.split('-');
+      const msgsR = await query('SELECT autor, texto, criado_em, remetente_nome FROM portal_mensagens WHERE origem_tipo=$1 AND origem_id=$2 ORDER BY criado_em ASC LIMIT 300', [_tipo, _idMembro]);
+      await query("UPDATE portal_mensagens SET lido_admin=true WHERE origem_tipo=$1 AND origem_id=$2 AND autor='membro'", [_tipo, _idMembro]);
+      const msgs = msgsR.rows.map(m => ({ papel: m.autor === 'membro' ? 'user' : 'area', mensagem: m.texto, criado_em: m.criado_em, remetente_nome: m.remetente_nome }));
+      return res.json({ msgs, area, numero: 'Portal', idioma: 'pt', nomeMembro: atR.rows[0].nome_contato, atendId: parseInt(req.params.id), encerrado: !!encerrado_em, origem });
     }
     const [msgsR, membroR] = await Promise.all([
       query('SELECT papel, mensagem, criado_em FROM lauro_conversas WHERE numero=$1 ORDER BY criado_em ASC LIMIT 300', [numero_membro]),
@@ -1422,7 +1429,7 @@ router.get('/atendimentos/:id/conversa', requireAuth, async (req, res) => {
       }
     }
     if (!nomeMembro && atR.rows[0].nome_contato) nomeMembro = atR.rows[0].nome_contato;
-    res.json({ msgs: msgsR.rows, area, numero: '****'+numero_membro.slice(-4), idioma, nomeMembro, atendId: parseInt(req.params.id) });
+    res.json({ msgs: msgsR.rows, area, numero: '****'+numero_membro.slice(-4), idioma, nomeMembro, atendId: parseInt(req.params.id), encerrado: !!encerrado_em, origem });
   } catch(e) { res.json({msgs:[], erro: e.message}); }
 });
 
@@ -1430,17 +1437,27 @@ router.post('/atendimentos/:id/responder', requireAuth, async (req, res) => {
   try {
     const { mensagem } = req.body;
     if (!mensagem || !mensagem.trim()) return res.json({ok:false, erro:'Mensagem vazia'});
-    const atR = await query("SELECT numero_membro, area, idioma, numero_area FROM lauro_atendimentos WHERE id=$1 AND status='aguardando'", [req.params.id]);
+    const atR = await query("SELECT numero_membro, area, idioma, numero_area, origem FROM lauro_atendimentos WHERE id=$1 AND status='aguardando'", [req.params.id]);
     if (!atR.rows.length) return res.json({ok:false, erro:'Atendimento nao encontrado ou encerrado'});
-    const { numero_membro, area, numero_area } = atR.rows[0];
+    const { numero_membro, area, numero_area, origem } = atR.rows[0];
     const _perfilR = req.session.usuario && req.session.usuario.perfil;
     if (_perfilR !== 'admin' && _perfilR !== 'presidencia' && area !== _perfilR) return res.json({ok:false, erro:'Sem permissão para este atendimento'});
+    const nomeArea = area.charAt(0).toUpperCase() + area.slice(1);
+    if (origem === 'portal') {
+      const [_p, _tipo, _idMembro] = numero_membro.split('-');
+      const nomeAdmin = (req.session.usuario && req.session.usuario.nome) || nomeArea;
+      const r = await query(
+        'INSERT INTO portal_mensagens (origem_tipo, origem_id, autor, texto, remetente_nome, atendimento_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, criado_em',
+        [_tipo, _idMembro, 'admin', mensagem.trim(), nomeAdmin, req.params.id]
+      );
+      const io = req.app._io;
+      if (io) io.to('membro_' + _tipo + '_' + _idMembro).emit('chat_msg_ok', { id: r.rows[0].id, texto: mensagem.trim(), criado_em: r.rows[0].criado_em, autor: 'admin' });
+      return res.json({ok:true, enviado: mensagem.trim(), area: nomeArea});
+    }
     const lauro = require('../services/lauro');
     await lauro.enviarMensagemDireta(numero_membro, mensagem.trim());
     if (numero_area) await lauro.enviarMensagemDireta(numero_area, mensagem.trim()).catch(()=>{});
     await query('INSERT INTO lauro_conversas (numero,papel,mensagem) VALUES ($1,$2,$3)', [numero_membro, 'area', mensagem.trim()]).catch(()=>{});
-    const config = await getConfig();
-    const nomeArea = area.charAt(0).toUpperCase() + area.slice(1);
     res.json({ok:true, enviado: mensagem.trim(), area: nomeArea});
   } catch(e) { res.json({ok:false, erro: e.message}); }
 });
@@ -1495,18 +1512,28 @@ router.post('/atendimentos/contatos', requireAuth, async (req, res) => {
 });
 router.post('/atendimentos/:id/encerrar', requireAuth, async (req, res) => {
   try {
-    const atR = await query('SELECT numero_membro, area, idioma FROM lauro_atendimentos WHERE id=$1', [req.params.id]);
+    const atR = await query('SELECT numero_membro, area, idioma, origem FROM lauro_atendimentos WHERE id=$1', [req.params.id]);
     if (atR.rows.length > 0) {
-      const { numero_membro, area, idioma } = atR.rows[0];
+      const { numero_membro, area, idioma, origem } = atR.rows[0];
       const _perfilE = req.session.usuario && req.session.usuario.perfil;
       if (_perfilE !== 'admin' && _perfilE !== 'presidencia' && area !== _perfilE) { req.session.erro=['Sem permissão para este atendimento']; return res.redirect('/atendimentos'); }
       await query("UPDATE lauro_atendimentos SET status='encerrado', encerrado_em=NOW() WHERE id=$1", [req.params.id]);
-      const lauro = require('../services/lauro');
       const _areaCap = area ? (area.charAt(0).toUpperCase() + area.slice(1)) : 'Secretaria';
       const m = idioma==='es'
         ? 'Tu atención fue finalizada por ' + _areaCap + '. ¡Cualquier duda o información, puedes volver a contactarnos aquí que atenderemos tu solicitud!'
         : 'Seu atendimento foi encerrado pela ' + _areaCap + '. Qualquer dúvida ou informação, você pode voltar a nos contatar aqui que atenderemos a sua solicitação!';
-      await lauro.enviarMensagemDireta(numero_membro, m).catch(()=>{});
+      if (origem === 'portal') {
+        const [_p, _tipo, _idMembro] = numero_membro.split('-');
+        const r = await query(
+          'INSERT INTO portal_mensagens (origem_tipo, origem_id, autor, texto, remetente_nome, atendimento_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, criado_em',
+          [_tipo, _idMembro, 'admin', m, _areaCap, req.params.id]
+        );
+        const io = req.app._io;
+        if (io) io.to('membro_' + _tipo + '_' + _idMembro).emit('chat_msg_ok', { id: r.rows[0].id, texto: m, criado_em: r.rows[0].criado_em, autor: 'admin' });
+      } else {
+        const lauro = require('../services/lauro');
+        await lauro.enviarMensagemDireta(numero_membro, m).catch(()=>{});
+      }
     }
     req.session.msg = ['Atendimento encerrado!'];
   } catch(e) { req.session.erro=[e.message]; }
@@ -1515,14 +1542,27 @@ router.post('/atendimentos/:id/encerrar', requireAuth, async (req, res) => {
 router.post('/atendimentos/:id/transferir', requireAuth, async (req, res) => {
   try {
     const { area_destino } = req.body;
-    const atR = await query("SELECT numero_membro, area, idioma FROM lauro_atendimentos WHERE id=$1 AND status='aguardando'", [req.params.id]);
+    const atR = await query("SELECT numero_membro, area, idioma, origem FROM lauro_atendimentos WHERE id=$1 AND status='aguardando'", [req.params.id]);
     if (atR.rows.length > 0) {
-      const { numero_membro, area, idioma } = atR.rows[0];
+      const { numero_membro, area, idioma, origem } = atR.rows[0];
       const _perfilT = req.session.usuario && req.session.usuario.perfil;
       if (_perfilT !== 'admin' && _perfilT !== 'presidencia' && area !== _perfilT) { req.session.erro=['Sem permissão para este atendimento']; return res.redirect('/atendimentos'); }
-      await query("UPDATE lauro_atendimentos SET status='transferido', encerrado_em=NOW() WHERE id=$1", [req.params.id]);
-      const lauro = require('../services/lauro');
-      await lauro.redirecionarArea(numero_membro, area_destino, idioma||'pt');
+      if (origem === 'portal') {
+        const [_p, _tipo, _idMembro] = numero_membro.split('-');
+        await query('UPDATE lauro_atendimentos SET area=$1 WHERE id=$2', [area_destino, req.params.id]);
+        const nomeAreaDestino = area_destino.charAt(0).toUpperCase() + area_destino.slice(1);
+        const m = 'Sua solicitação foi encaminhada para a equipe de ' + nomeAreaDestino + '. Em breve alguém vai te responder aqui mesmo!';
+        const r = await query(
+          'INSERT INTO portal_mensagens (origem_tipo, origem_id, autor, texto, remetente_nome, atendimento_id) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, criado_em',
+          [_tipo, _idMembro, 'admin', m, nomeAreaDestino, req.params.id]
+        );
+        const io = req.app._io;
+        if (io) io.to('membro_' + _tipo + '_' + _idMembro).emit('chat_msg_ok', { id: r.rows[0].id, texto: m, criado_em: r.rows[0].criado_em, autor: 'admin' });
+      } else {
+        await query("UPDATE lauro_atendimentos SET status='transferido', encerrado_em=NOW() WHERE id=$1", [req.params.id]);
+        const lauro = require('../services/lauro');
+        await lauro.redirecionarArea(numero_membro, area_destino, idioma||'pt');
+      }
     }
     req.session.msg = ['Transferido para ' + area_destino + '!'];
   } catch(e) { req.session.erro=[e.message]; }
@@ -8948,9 +8988,13 @@ router.post('/admin/portal/edicao-perfil', requireAuth, async (req, res) => {
 router.get('/membro/chat/mensagens', requireMembro, async (req, res) => {
   const { tipo, id } = req.session.membroPortal;
   try {
-    const r = await query('SELECT id, autor, texto, criado_em, lido_admin FROM portal_mensagens WHERE origem_tipo=$1 AND origem_id=$2 ORDER BY criado_em ASC LIMIT 100', [tipo, id]);
+    const [r, atR] = await Promise.all([
+      query('SELECT id, autor, texto, criado_em, lido_admin, remetente_nome FROM portal_mensagens WHERE origem_tipo=$1 AND origem_id=$2 ORDER BY criado_em ASC LIMIT 100', [tipo, id]),
+      query("SELECT status FROM lauro_atendimentos WHERE numero_membro=$1 AND origem='portal' ORDER BY criado_em DESC LIMIT 1", ['portal-' + tipo + '-' + id])
+    ]);
     await query("UPDATE portal_mensagens SET lido_membro=true WHERE origem_tipo=$1 AND origem_id=$2 AND autor='admin'", [tipo, id]);
-    res.json({ mensagens: r.rows });
+    const encerrado = atR.rows.length > 0 && atR.rows[0].status === 'encerrado';
+    res.json({ mensagens: r.rows, encerrado });
   } catch(e) { res.json({ mensagens: [], error: e.message }); }
 });
 
@@ -8960,52 +9004,13 @@ router.post('/membro/chat/enviar', requireMembro, async (req, res) => {
   const { texto } = req.body;
   if (!texto || !texto.trim()) return res.json({ ok: false });
   try {
-    const r = await query('INSERT INTO portal_mensagens (origem_tipo, origem_id, autor, texto) VALUES ($1,$2,$3,$4) RETURNING id, criado_em', [tipo, id, 'membro', texto.trim()]);
+    const { registrarMensagemMembro } = require('../services/portal-chat');
+    const r = await registrarMensagemMembro(query, tipo, id, texto.trim());
     const io = req.app._io;
-    if (io) io.to('admins').emit('chat_novo', { tipo, id, texto: texto.trim() });
-    res.json({ ok: true, msg: r.rows[0] });
+    if (io) io.to('admins').emit('chat_novo', { tipo, id, texto: texto.trim(), nome: r.nome, atendimentoId: r.atendimentoId });
+    res.json({ ok: true, msg: { id: r.id, criado_em: r.criado_em } });
   } catch(e) { res.json({ ok: false, error: e.message }); }
 });
-
-// Admin: GET /admin/chat/mensagens/:tipo/:id
-router.get('/admin/chat/mensagens/:tipo/:id', requireAuth, async (req, res) => {
-  const { tipo, id } = req.params;
-  try {
-    const r = await query('SELECT id, autor, texto, criado_em FROM portal_mensagens WHERE origem_tipo=$1 AND origem_id=$2 ORDER BY criado_em ASC', [tipo, id]);
-    await query("UPDATE portal_mensagens SET lido_admin=true WHERE origem_tipo=$1 AND origem_id=$2 AND autor='membro'", [tipo, id]);
-    res.json({ mensagens: r.rows });
-  } catch(e) { res.json({ mensagens: [], error: e.message }); }
-});
-
-// Admin: POST /admin/chat/responder
-router.post('/admin/chat/responder', requireAuth, async (req, res) => {
-  const { tipo, id, texto } = req.body;
-  if (!texto || !tipo || !id) return res.json({ ok: false });
-  try {
-    const r = await query('INSERT INTO portal_mensagens (origem_tipo, origem_id, autor, texto) VALUES ($1,$2,$3,$4) RETURNING id, criado_em', [tipo, id, 'admin', texto.trim()]);
-    const io = req.app._io;
-    if (io) io.to('membro_' + tipo + '_' + id).emit('chat_msg_ok', { id: r.rows[0].id, texto: texto.trim(), criado_em: r.rows[0].criado_em, autor: 'admin' });
-    res.json({ ok: true });
-  } catch(e) { res.json({ ok: false, error: e.message }); }
-});
-
-// Admin: GET /admin/chat/lista — membros com mensagens nao lidas
-router.get('/admin/chat/lista', requireAuth, async (req, res) => {
-  try {
-    const r = await query(`SELECT pm.origem_tipo, pm.origem_id, 
-      COALESCE(l.nome, d.nome) as nome,
-      COUNT(*) FILTER (WHERE pm.autor='membro' AND pm.lido_admin=false) as nao_lidas,
-      MAX(pm.criado_em) as ultima_msg,
-      (SELECT texto FROM portal_mensagens WHERE origem_tipo=pm.origem_tipo AND origem_id=pm.origem_id ORDER BY criado_em DESC LIMIT 1) as ultimo_texto
-      FROM portal_mensagens pm
-      LEFT JOIN ligantes l ON pm.origem_tipo='ligante' AND pm.origem_id=l.id
-      LEFT JOIN diretivos d ON pm.origem_tipo='diretivo' AND pm.origem_id=d.id
-      GROUP BY pm.origem_tipo, pm.origem_id, l.nome, d.nome
-      ORDER BY MAX(pm.criado_em) DESC`);
-    res.json({ conversas: r.rows });
-  } catch(e) { res.json({ conversas: [], error: e.message }); }
-});
-
 
 // ─── FIM PORTAL DO MEMBRO ─────────────────────────────────────────────────────
 

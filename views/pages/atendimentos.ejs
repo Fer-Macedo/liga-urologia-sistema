@@ -151,6 +151,7 @@
           <tr class="at-row" data-status="<%=a.status%>" data-area="<%=a.area%>">
             <td style="font-family:monospace;font-weight:600">
               <%= a.nome_membro || ("****" + a.numero_membro.slice(-4)) %>
+              <%if(a.origem==='portal'){%><span style="font-size:9px;font-weight:700;background:#e0f2fe;color:#0369a1;border-radius:2px;padding:0 4px;margin-left:4px;font-family:inherit">PORTAL</span><%}%>
               <div style="font-size:10px;color:var(--texto2)"><%-a.idioma==='es'?'<span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">PY</span> ES':'<span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">BR</span> PT'%></div>
             </td>
             <td><span class="area-badge area-<%=a.area%>"><%=a.area%></span></td>
@@ -354,7 +355,7 @@ function montarBolha(m,data){
   var hora=new Date(m.criado_em).toLocaleString('pt-BR',{timeZone:'America/Asuncion',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   var cls=m.papel==='user'?'wpp-user':m.papel==='assistant'?'wpp-assistant':'wpp-area';
   var nome=data.nomeMembro||'Membro';
-  var label=m.papel==='user'?nome:m.papel==='assistant'?'Lauro (IA)':data.area;
+  var label=m.papel==='user'?nome:m.papel==='assistant'?'Lauro (IA)':(m.remetente_nome||data.area);
   var _raw=(m.mensagem||'');
   var _corpo;
   if(_raw.indexOf('[[MIDIA]]')===0){
@@ -411,6 +412,7 @@ function verChat(id,area,status){
       ft.textContent=data.msgs.length+' mensagens - Area: '+data.area;
       if(status==='aguardando'){
         document.getElementById('chat-reply-box').style.display='block';
+        document.getElementById('chat-attach-btn').style.display=(data.origem==='portal')?'none':'';
         var ac=document.getElementById('chat-acoes-box');
         ac.style.display='flex';
         document.getElementById('btn-chat-redir').onclick=function(){fecharModal('modal-chat');abrirTransferir(id,area);};

@@ -27,9 +27,10 @@ io.on('connection', (socket) => {
     try {
       if (!data.texto || !tipo || !id) return;
       const { query } = require('./models/database');
-      const r = await query('INSERT INTO portal_mensagens (origem_tipo, origem_id, autor, texto) VALUES ($1,$2,$3,$4) RETURNING id, criado_em', [tipo, id, 'membro', data.texto]);
-      socket.emit('chat_msg_ok', { id: r.rows[0].id, texto: data.texto, criado_em: r.rows[0].criado_em, autor: 'membro' });
-      io.to('admins').emit('chat_novo', { tipo, id, texto: data.texto });
+      const { registrarMensagemMembro } = require('./services/portal-chat');
+      const r = await registrarMensagemMembro(query, tipo, id, data.texto);
+      socket.emit('chat_msg_ok', { id: r.id, texto: data.texto, criado_em: r.criado_em, autor: 'membro' });
+      io.to('admins').emit('chat_novo', { tipo, id, texto: data.texto, nome: r.nome, atendimentoId: r.atendimentoId });
     } catch(e) { console.error('chat_msg error:', e.message); }
   });
   socket.on('join_admin', () => { socket.join('admins'); });

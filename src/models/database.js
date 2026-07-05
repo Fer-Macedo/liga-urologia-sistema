@@ -84,6 +84,16 @@ async function initSchema() {
     );
     ALTER TABLE cobrancas ADD COLUMN IF NOT EXISTS valor_pago REAL;
 
+    DO $$ BEGIN
+      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='lauro_atendimentos') THEN
+        ALTER TABLE lauro_atendimentos ADD COLUMN IF NOT EXISTS origem TEXT DEFAULT 'whatsapp';
+      END IF;
+      IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name='portal_mensagens') THEN
+        ALTER TABLE portal_mensagens ADD COLUMN IF NOT EXISTS remetente_nome TEXT;
+        ALTER TABLE portal_mensagens ADD COLUMN IF NOT EXISTS atendimento_id INTEGER;
+      END IF;
+    END $$;
+
     CREATE TABLE IF NOT EXISTS notificacoes_log (
       id SERIAL PRIMARY KEY,
       membro_id INTEGER,
