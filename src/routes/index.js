@@ -8211,6 +8211,19 @@ async function getPortalMembro(tipo, id) {
   }
 }
 
+// GET /portal/materiais/:id/arquivo — abre material de apoio (ex: PRODUÇÃO CIENTÍFICA) no Portal Cientifico
+router.get('/portal/materiais/:id/arquivo', requirePortal, async (req, res) => {
+  try {
+    const r = await query('SELECT * FROM materiais_estudo WHERE id=$1 AND ativo=true', [req.params.id]);
+    if (!r.rows.length) return res.status(404).send('Material nao encontrado');
+    const mat = r.rows[0];
+    if (!mat.arquivo_chave) return res.status(404).send('Arquivo nao disponivel');
+    const { gerarUrlTemporaria } = require('../services/arquivos');
+    const url = await gerarUrlTemporaria(mat.arquivo_chave, 600);
+    res.redirect(url);
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
 // GET /portal
 router.get('/portal', requirePortal, async (req, res) => {
   const config = await getConfig();
@@ -8230,7 +8243,10 @@ router.get('/portal', requirePortal, async (req, res) => {
   const hora = parseInt(dayjs().tz ? dayjs().tz('America/Asuncion').format('H') : dayjs().format('H'), 10);
   const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
   const dataHoje = dayjs().format('DD/MM/YYYY');
-  res.render('pages/portal/dashboard', { config, membro, grupos, msg, saudacao, dataHoje, tipoLabel: tipo === 'ligante' ? 'Ligante' : 'Diretivo' });
+  const materiais = (await query(
+    "SELECT id, titulo, descricao, arquivo_nome FROM materiais_estudo WHERE ativo=true AND categoria='PRODUÇÃO CIENTÍFICA' ORDER BY ordem ASC, criado_em DESC"
+  )).rows;
+  res.render('pages/portal/dashboard', { config, membro, grupos, msg, saudacao, dataHoje, tipoLabel: tipo === 'ligante' ? 'Ligante' : 'Diretivo', materiais });
 });
 
 
