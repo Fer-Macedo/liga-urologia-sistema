@@ -7604,7 +7604,12 @@ router.get("/auth/instagram/callback", async (req, res) => {
 router.get("/api/pendencias", requireAuth, async (req, res) => {
   try {
     const r = await query("SELECT COUNT(*) as total FROM instagram_posts WHERE status='agendado'");
-    const lig = await query("SELECT COUNT(*) as total FROM ligantes WHERE status='pendente'"); const dir = await query("SELECT COUNT(*) as total FROM diretivos WHERE status='pendente'"); const pal = await query("SELECT COUNT(*) as total FROM palestrantes WHERE status='pendente' OR ativo=0 LIMIT 1").catch(()=>({rows:[{total:0}]})); const l=parseInt(lig.rows[0].total)||0; const d=parseInt(dir.rows[0].total)||0; const p=parseInt(pal.rows[0].total)||0; res.json({ ok:true, ligantes:l, diretivos:d, palestrantes:p, total:l+d+p });
+    const lig = await query("SELECT COUNT(*) as total FROM ligantes WHERE status='pendente'"); const dir = await query("SELECT COUNT(*) as total FROM diretivos WHERE status='pendente'"); const pal = await query("SELECT COUNT(*) as total FROM palestrantes WHERE status='pendente' OR ativo=0 LIMIT 1").catch(()=>({rows:[{total:0}]})); const l=parseInt(lig.rows[0].total)||0; const d=parseInt(dir.rows[0].total)||0; const p=parseInt(pal.rows[0].total)||0;
+    const _perfil = req.session.usuario && req.session.usuario.perfil;
+    const _isAdmin = _perfil === 'admin' || _perfil === 'presidencia';
+    const atendR = await query("SELECT COUNT(*) as total FROM lauro_atendimentos WHERE status='aguardando'" + (_isAdmin?'':' AND area=$1'), _isAdmin?[]:[_perfil]).catch(()=>({rows:[{total:0}]}));
+    const atend = parseInt(atendR.rows[0].total)||0;
+    res.json({ ok:true, ligantes:l, diretivos:d, palestrantes:p, atendimentos:atend, total:l+d+p });
   } catch(e) { res.json({ ok: true, pendencias: 0 }); }
 });
 

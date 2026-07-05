@@ -275,9 +275,10 @@ aside.sidebar .sidebar-logout:hover{color:#fff;border-color:#C0392B;background:r
       </a>
       <% } %>
       <% if (temPerm('atendimentos')) { %>
-      <a href="/atendimentos" class="nav-item <%= pa==='atendimentos'?'ativo':'' %>">
+      <a href="/atendimentos" class="nav-item <%= pa==='atendimentos'?'ativo':'' %>" style="position:relative">
         <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
         <span>Atendimentos</span>
+        <span id="nav-atend-badge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;font-size:10.5px;font-weight:700;min-width:18px;height:18px;border-radius:9px;align-items:center;justify-content:center;padding:0 5px"></span>
       </a>
       <% } %>
       <% if (temPerm('processo-seletivo')) { %>
@@ -355,6 +356,8 @@ aside.sidebar .sidebar-logout:hover{color:#fff;border-color:#C0392B;background:r
       if(badgeDir){badgeDir.textContent=data.diretivos;badgeDir.style.display=data.diretivos>0?'inline-flex':'none';}
       const badgePal=document.getElementById('badge-pendentes-palestrantes');
       if(badgePal){badgePal.textContent=data.palestrantes;badgePal.style.display=data.palestrantes>0?'inline-flex':'none';}
+      const badgeAtend=document.getElementById('nav-atend-badge');
+      if(badgeAtend){badgeAtend.textContent=data.atendimentos;badgeAtend.style.display=data.atendimentos>0?'flex':'none';}
     }).catch(()=>{});
   }
   verificarPendencias();
