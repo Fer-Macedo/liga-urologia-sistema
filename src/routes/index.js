@@ -8227,7 +8227,10 @@ router.get('/portal', requirePortal, async (req, res) => {
     WHERE m.origem_tipo=$1 AND m.origem_id=$2
     ORDER BY pc.criado_em DESC
   `, [tipo, id])).rows;
-  res.render('pages/portal/dashboard', { config, membro, grupos, msg });
+  const hora = parseInt(dayjs().tz ? dayjs().tz('America/Asuncion').format('H') : dayjs().format('H'), 10);
+  const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
+  const dataHoje = dayjs().format('DD/MM/YYYY');
+  res.render('pages/portal/dashboard', { config, membro, grupos, msg, saudacao, dataHoje, tipoLabel: tipo === 'ligante' ? 'Ligante' : 'Diretivo' });
 });
 
 

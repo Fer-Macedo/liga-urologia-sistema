@@ -19,8 +19,16 @@
     .topbar-logout{font-size:12px;color:#8FA89C;text-decoration:none;padding:5px 10px;border:1px solid rgba(255,255,255,.15)}
     .topbar-logout:hover{color:#fff;border-color:rgba(255,255,255,.4)}
     .main{max-width:900px;margin:0 auto;padding:32px 20px}
-    .pg-title{font-size:20px;font-weight:700;color:#0C231B;margin-bottom:6px}
-    .pg-sub{font-size:13px;color:#6B7A72;margin-bottom:28px}
+
+    .hero{background:linear-gradient(135deg,#0d2a1b,#0C231B 60%,#071610);position:relative;overflow:hidden;padding:28px 30px;margin-bottom:28px}
+    .hero::before{content:'';position:absolute;width:280px;height:280px;top:-100px;right:-80px;background:radial-gradient(circle,rgba(15,110,86,.35),transparent 65%);pointer-events:none}
+    .hero-tag{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono';font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#4ade80;border:1px solid rgba(74,222,128,.35);padding:4px 10px;margin-bottom:14px;position:relative}
+    .hero h1{position:relative;font-size:24px;font-weight:700;color:#fff;margin-bottom:4px}
+    .hero h1 span{color:#4ade80}
+    .hero p{position:relative;font-size:13px;color:rgba(255,255,255,.55)}
+
+    .pg-title{font-size:18px;font-weight:700;color:#0C231B;margin-bottom:6px}
+    .pg-sub{font-size:13px;color:#6B7A72;margin-bottom:20px}
     .grupos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
     .grupo-card{background:#fff;border:1px solid #DDE3DF;padding:22px;text-decoration:none;display:block;transition:.15s}
     .grupo-card:hover{border-color:#0F6E56;box-shadow:0 2px 12px rgba(15,110,86,.1)}
@@ -34,8 +42,15 @@
     .vstatus-devolvido{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
     .vstatus-aprovado{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
     .grupo-cta{font-size:12.5px;font-weight:600;color:#0F6E56;display:flex;align-items:center;gap:5px}
-    .empty{text-align:center;padding:60px 20px;color:#6B7A72}
-    .empty h3{font-size:16px;font-weight:600;color:#0C231B;margin:12px 0 8px}
+
+    .empty{background:#fff;border:1px solid #DDE3DF;text-align:center;padding:48px 28px}
+    .empty-ic{width:56px;height:56px;background:#E8F5F0;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+    .empty h3{font-size:16px;font-weight:700;color:#0C231B;margin-bottom:8px}
+    .empty p{font-size:13px;color:#6B7A72;max-width:380px;margin:0 auto}
+    .empty-card{display:inline-flex;align-items:center;gap:10px;margin-top:22px;padding:10px 16px;background:#F0F4F2;border:1px solid #DDE3DF;font-size:12.5px;color:#0C231B}
+    .empty-card b{font-weight:700}
+    .empty-badge{font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:#0F6E56;color:#fff;padding:2px 8px;border-radius:2px}
+
     .alert-ok{padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-size:13px;margin-bottom:20px}
     @media(max-width:600px){.grupos-grid{grid-template-columns:1fr}}
   </style>
@@ -53,13 +68,24 @@
 </div>
 <div class="main">
   <%if(msg&&msg.length){%><div class="alert-ok"><%=msg[0]%></div><%}%>
+
+  <div class="hero">
+    <div class="hero-tag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>Portal Cientifico</div>
+    <h1><%=saudacao%>, <span><%=membro.nome.split(' ')[0]%></span>!</h1>
+    <p><%=dataHoje%> &middot; <%=tipoLabel%> da LAURO</p>
+  </div>
+
   <div class="pg-title">Meus Grupos</div>
   <div class="pg-sub">Projetos cientificos nos quais voce esta participando</div>
   <%if(grupos.length===0){%>
   <div class="empty">
-    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#DDE3DF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-    <h3>Nenhum grupo ainda</h3>
-    <p>Voce sera adicionado a grupos pela coordenacao da liga. Aguarde o contato.</p>
+    <div class="empty-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+    <h3>Voce ainda nao esta em nenhum grupo</h3>
+    <p>Assim que a coordenacao do Cientifico te adicionar a um grupo de trabalho, ele vai aparecer bem aqui, com prazo e status da submissao.</p>
+    <div class="empty-card">
+      <span class="empty-badge">Logado</span>
+      <span>como <b><%=membro.nome%></b></span>
+    </div>
   </div>
   <%}else{%>
   <div class="grupos-grid">
