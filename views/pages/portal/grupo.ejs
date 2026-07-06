@@ -48,6 +48,8 @@
     .vstatus-devolvido{background:#fef2f2;color:#b91c1c;border-color:#fecaca}
     .vstatus-aprovado{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
     .comentario-box{background:#fffbeb;border:1px solid #fde68a;padding:10px 14px;font-size:12.5px;color:#92400e;margin-top:8px}
+    .comentario-box.devolvido{background:#fef2f2;border:1.5px solid #fca5a5;color:#b91c1c;font-weight:600}
+    .comentario-box.aprovado{background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d}
     .chat-msgs{border:1px solid #DDE3DF;background:#F8FAF9;padding:16px;min-height:260px;max-height:380px;overflow-y:auto;margin-bottom:12px;display:flex;flex-direction:column;gap:10px}
     .chat-msg{padding:10px 13px;max-width:80%}
     .chat-msg.sistema{background:#fff;border:1px solid #DDE3DF;align-self:flex-start}
@@ -124,7 +126,12 @@
             <div class="versao-nome">v<%=versoes.length-i%> — <%=v.arquivo_nome%></div>
             <div class="versao-meta">Enviado em <%=new Date(v.enviado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%></div>
             <div><span class="vstatus vstatus-<%=v.status%>"><%=v.status.replace('_',' ')%></span></div>
-            <%if(v.comentario_revisor){%><div class="comentario-box"><strong>Comentario do revisor:</strong> <%=v.comentario_revisor%></div><%}%>
+            <%if(v.comentario_revisor){%>
+            <div class="comentario-box <%=v.status%>">
+              <strong><%=v.status==='devolvido'?'⚠ Pontos para corrigir:':(v.status==='aprovado'?'Observacao do revisor:':'Comentario do revisor:')%></strong>
+              <%=v.comentario_revisor%>
+            </div>
+            <%}%>
             <div style="margin-top:10px">
               <button type="button" class="btn btn-sm" id="btn-ia-<%=v.id%>" onclick="revisarComIA(<%=v.id%>)" style="font-size:11.5px">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>

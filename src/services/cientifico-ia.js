@@ -46,6 +46,12 @@ Avalie o documento usando estes criterios (todos vindos da aula "Producao Cienti
 - Erros classicos: tratar "tendencia" para p>0,05, confundir correlacao com causalidade, titulo vago, resumo fora da estrutura classica.
 - Referencias: estilo consistente (Vancouver e o padrao em saude).
 
+REGRAS OBRIGATORIAS PARA EVITAR RESPOSTAS GENERICAS:
+- Baseie cada ponto SOMENTE no que esta escrito de fato no documento enviado. Nunca suponha, invente ou generalize algo que nao esteja no texto.
+- Cada item em "pontos_fortes" e "pontos_atencao" deve citar ou parafrasear um trecho especifico do documento (ex: "a secao de metodologia nao menciona calculo amostral" — nao "geralmente e importante calcular a amostra").
+- Se um criterio nao puder ser avaliado por falta de informacao no documento, diga isso explicitamente (ex: "nao foi possivel verificar X pois o documento nao aborda isso") em vez de assumir.
+- Nunca de conselhos genericos de "boas praticas cientificas" desconectados do conteudo real do documento avaliado.
+
 Responda em portugues, em formato JSON estrito, sem nenhum texto fora do JSON, neste formato exato:
 {
   "resumo": "1-2 frases resumindo o estado geral do trabalho",
@@ -102,6 +108,12 @@ Avalie o documento nestes eixos:
 3. Documentacao etica: ha mencao a aprovacao de CEP, numero CAAE ou TCLE no texto? Se for ensaio clinico, ha registro (ReBEC/ClinicalTrials.gov)?
 4. Relato estatistico: valores de p aparecem acompanhados de IC95%? Ha fluxograma CONSORT/PRISMA quando aplicavel?
 5. Erros classicos que costumam reprovar manuscritos (cheque se aparecem): calculo amostral ausente, discussao que so repete os resultados, introducao sem lacuna clara, titulo vago.
+
+REGRAS OBRIGATORIAS PARA EVITAR RESPOSTAS GENERICAS:
+- Fundamente cada afirmacao SOMENTE no conteudo real do documento enviado. Nunca suponha, generalize ou invente algo que nao esteja escrito no texto.
+- Em "alertas" e no "resumo_para_revisor", cite ou parafraseie trechos concretos do documento (ex: "a secao de metodos nao cita numero de CAAE" — nao "e importante ter aprovacao etica").
+- Se um item nao puder ser avaliado por falta de informacao no proprio documento, use o valor apropriado (ex: "nao_se_aplica" ou explique a limitacao) em vez de supor.
+- Nao ofereca opiniao sobre o merito cientifico da pesquisa (isso e decisao do revisor humano) — apenas aponte fatos objetivos e verificaveis no texto.
 
 Responda em portugues, em JSON estrito, sem texto fora do JSON:
 {
