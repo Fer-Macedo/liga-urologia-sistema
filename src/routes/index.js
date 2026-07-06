@@ -8313,7 +8313,7 @@ router.get('/portal', requirePortal, async (req, res) => {
 
 
 // ─── MATERIAIS DE ESTUDO (ADMIN) ─────────────────────────────────────────────
-router.get('/materiais', requireAuth, async (req, res) => {
+router.get('/materiais', requireAuth, requirePermissao('materiais'), async (req, res) => {
   const materiais = await query('SELECT * FROM materiais_estudo ORDER BY ordem ASC, criado_em DESC');
   res.render('pages/materiais', {
     config: await getConfig(), usuario: req.session.usuario,
@@ -8423,7 +8423,7 @@ router.get('/materiais/:id/arquivo', requireMembro, async (req, res) => {
 });
 
 // Tambem permitir acesso admin ao arquivo
-router.get('/materiais/:id/arquivo-admin', requireAuth, async (req, res) => {
+router.get('/materiais/:id/arquivo-admin', requireAuth, requirePermissao('materiais'), async (req, res) => {
   try {
     const r = await query('SELECT * FROM materiais_estudo WHERE id=$1', [req.params.id]);
     if (!r.rows.length) return res.status(404).send('Material nao encontrado');
