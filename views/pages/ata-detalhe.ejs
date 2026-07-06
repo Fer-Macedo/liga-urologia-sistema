@@ -62,6 +62,21 @@
       </a>
       <button class="btn btn-secondary" onclick="toggleEdicao()" id="btn-toggle-edicao">Editar Ata</button>
       <button class="btn btn-secondary" style="background:#fee2e2;color:#dc2626" onclick="excluirAta()">Excluir Ata</button>
+      <button class="btn btn-primary" style="background:#7c3aed" onclick="toggleGravacao()" id="btn-gravar">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="8"/></svg>
+        Gravar Reunião com IA
+      </button>
+    </div>
+  </div>
+
+  <!-- PAINEL DE GRAVACAO -->
+  <div class="card" id="card-gravacao" style="display:none">
+    <div class="card-titulo">Gravação da Reunião (IA)</div>
+    <div id="gravacao-status" style="font-size:13px;color:#64748b;margin-bottom:10px">Clique em "Gravar Reunião com IA" para começar. O áudio fica gravando até você clicar em "Parar e Gerar Ata".</div>
+    <div id="gravacao-timer" style="display:none;font-family:monospace;font-size:22px;font-weight:700;color:#7c3aed;margin-bottom:10px">00:00</div>
+    <div id="gravacao-loading" style="display:none;font-size:13px;color:#7c3aed;margin-bottom:10px">Transcrevendo e redigindo a ata... isso pode levar até 1 minuto para reuniões longas.</div>
+    <div id="gravacao-resultado" style="display:none">
+      <div style="font-size:12px;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;padding:8px 12px;margin-bottom:12px">Rascunho gerado a partir do áudio! Revise a Pauta e o Corpo abaixo (abertos no modo de edição) antes de salvar.</div>
     </div>
   </div>
 
@@ -385,6 +400,77 @@ function excluirAta(){
   confirmarAcao('Excluir esta ata permanentemente? Esta ação não pode ser desfeita.', function(){
     fetch('/atas/<%=ata.id%>',{method:'DELETE',credentials:'same-origin'})
     .then(r=>r.json()).then(d=>{if(d.ok)window.location='/atas';else alert('Erro ao excluir.');});
+  });
+}
+
+// ─── GRAVACAO DA REUNIAO COM IA ────────────────────────────────────────────
+let _gravador=null, _chunksAudio=[], _gravando=false, _timerInterval=null, _segundos=0;
+function toggleGravacao(){
+  document.getElementById('card-gravacao').style.display='block';
+  if(!_gravando) iniciarGravacao(); else pararGravacao();
+}
+function iniciarGravacao(){
+  if(!navigator.mediaDevices || !window.MediaRecorder){
+    alert('Seu navegador não suporta gravação de áudio. Use o Chrome atualizado.');
+    return;
+  }
+  navigator.mediaDevices.getUserMedia({audio:true}).then(function(stream){
+    _chunksAudio=[];
+    _gravador=new MediaRecorder(stream);
+    _gravador.ondataavailable=function(e){ if(e.data.size>0) _chunksAudio.push(e.data); };
+    _gravador.onstop=function(){
+      stream.getTracks().forEach(t=>t.stop());
+      enviarGravacao(new Blob(_chunksAudio,{type:_gravador.mimeType||'audio/webm'}));
+    };
+    _gravador.start();
+    _gravando=true;
+    _segundos=0;
+    document.getElementById('gravacao-status').textContent='Gravando... fale normalmente durante a reunião.';
+    document.getElementById('gravacao-timer').style.display='block';
+    document.getElementById('gravacao-resultado').style.display='none';
+    document.getElementById('btn-gravar').innerHTML='⏹ Parar e Gerar Ata';
+    _timerInterval=setInterval(function(){
+      _segundos++;
+      const m=String(Math.floor(_segundos/60)).padStart(2,'0');
+      const s=String(_segundos%60).padStart(2,'0');
+      document.getElementById('gravacao-timer').textContent=m+':'+s;
+    },1000);
+  }).catch(function(){
+    alert('Não foi possível acessar o microfone. Verifique as permissões do navegador.');
+  });
+}
+function pararGravacao(){
+  if(_gravador && _gravando){
+    _gravador.stop();
+    _gravando=false;
+    clearInterval(_timerInterval);
+    document.getElementById('gravacao-status').textContent='Processando...';
+    document.getElementById('gravacao-timer').style.display='none';
+    document.getElementById('gravacao-loading').style.display='block';
+    document.getElementById('btn-gravar').innerHTML='Gravar Reunião com IA';
+  }
+}
+function enviarGravacao(blob){
+  const fd=new FormData();
+  fd.append('audio',blob,'reuniao.webm');
+  fetch('/atas/<%=ata.id%>/transcrever',{method:'POST',body:fd,credentials:'same-origin'})
+  .then(r=>r.json()).then(function(d){
+    document.getElementById('gravacao-loading').style.display='none';
+    if(!d.ok){
+      document.getElementById('gravacao-status').textContent='Erro: '+(d.erro||'não foi possível processar o áudio.');
+      return;
+    }
+    document.getElementById('gravacao-status').textContent='Pronto! Revise o rascunho abaixo antes de salvar.';
+    document.getElementById('gravacao-resultado').style.display='block';
+    // Abre o modo de edicao e preenche com o rascunho gerado pela IA
+    const form=document.getElementById('form-editar-ata');
+    if(form.style.display==='none') toggleEdicao();
+    form.querySelector('[name="pauta"]').value=d.pauta||'';
+    form.querySelector('[name="corpo"]').value=d.corpo||'';
+    form.scrollIntoView({behavior:'smooth'});
+  }).catch(function(){
+    document.getElementById('gravacao-loading').style.display='none';
+    document.getElementById('gravacao-status').textContent='Erro ao enviar o áudio. Tente novamente.';
   });
 }
 function gerarPDF(){

@@ -24,6 +24,7 @@
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^7.4.0",
     "express-session": "^1.17.3",
+    "form-data": "^4.0.6",
     "googleapis": "^173.0.0",
     "helmet": "^7.1.0",
     "html-pdf-node": "^1.0.7",

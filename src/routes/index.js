@@ -7908,6 +7908,26 @@ router.post('/atas/:id/editar', requireAuth, async (req, res) => {
   req.session.msg = ['Ata atualizada com sucesso!'];
   res.redirect('/atas/'+req.params.id);
 });
+
+const multerAudio = require('multer')({
+  storage: require('multer').memoryStorage(),
+  limits: { fileSize: 200 * 1024 * 1024 }
+});
+router.post('/atas/:id/transcrever', requireAuth, multerAudio.single('audio'), async (req, res) => {
+  try {
+    if (!req.file) return res.json({ ok: false, erro: 'Nenhum audio recebido.' });
+    const { transcreverAudio, gerarAtaDeTranscricao } = require('../services/atas-ia');
+    const t = await transcreverAudio(req.file.buffer, req.file.originalname, req.file.mimetype);
+    if (!t.ok) return res.json(t);
+    const ataR = await query('SELECT tipo FROM atas_reuniao WHERE id=$1', [req.params.id]);
+    const g = await gerarAtaDeTranscricao(query, { transcricao: t.texto, tipoReuniao: ataR.rows[0] && ataR.rows[0].tipo });
+    if (!g.ok) return res.json(g);
+    res.json({ ok: true, transcricao: t.texto, pauta: g.pauta, corpo: g.corpo });
+  } catch (e) {
+    console.error('[ATAS TRANSCREVER]', e);
+    res.json({ ok: false, erro: 'Erro ao processar a gravacao.' });
+  }
+});
 // ─── FIM ATAS ─────────────────────────────────────────────────────────────────
 
 module.exports = router;
