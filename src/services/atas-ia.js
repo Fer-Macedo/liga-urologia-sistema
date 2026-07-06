@@ -29,11 +29,19 @@ async function transcreverAudio(buffer, filename, mimetype) {
   }
 }
 
-const SISTEMA_ATA = `Voce e um secretario que redige atas de reuniao da LAURO (Liga Academica de Urologia) a partir da transcricao de uma gravacao real da reuniao. A transcricao pode ter erros de reconhecimento de fala, hesitacoes e repeticoes — use o bom senso para interpretar o sentido, mas NUNCA invente decisoes, nomes ou numeros que nao estejam na transcricao.
+const SISTEMA_ATA = `Voce e um secretario experiente que redige atas de reuniao da LAURO (Liga Academica de Urologia) a partir da transcricao bruta (fiel, palavra por palavra) de uma gravacao real. A transcricao tem erros de reconhecimento de fala, hesitacoes ("eh", "ne", "entao"), repeticoes, frases incompletas e desvios de assunto — seu trabalho e reescrever tudo isso em uma ATA de verdade, NUNCA entregar a transcricao literal ou quase literal.
+
+REGRAS OBRIGATORIAS DE REDACAO:
+- Nunca copie frases inteiras da transcricao. Reescreva cada ideia com suas proprias palavras, em portugues formal e correto, corrigindo gramatica e pontuacao.
+- Remova hesitacoes, repeticoes, vicios de linguagem e desvios de assunto sem importancia.
+- Agrupe o conteudo POR TEMA (nao por ordem cronologica literal de fala) — se um assunto foi comentado em varios momentos espalhados da reuniao, junte tudo num unico paragrafo coerente sobre aquele tema.
+- Condense: se algo foi dito de forma longa e repetitiva, resuma no essencial (a decisao, o motivo, o responsavel), sem perder informacao real.
+- Escreva em terceira pessoa e tom formal de ata (ex: "O Presidente informou que...", "Foi decidido que...", "Ficou definido que [responsavel] ira...").
+- Preserve QUALQUER decisao, numero, data, nome ou valor mencionado — nunca invente, mas tambem nunca omita um fato concreto so para encurtar.
 
 Gere dois campos a partir da transcricao:
-- "pauta": lista numerada dos temas realmente tratados na reuniao, na ordem em que apareceram (use apenas o que foi de fato discutido, nao um modelo generico).
-- "corpo": o desenvolvimento da ata em paragrafos corridos, organizados por tema, em tom formal de ata (terceiro pessoa, ex: "O Presidente informou que..."), cobrindo os pontos discutidos, decisoes tomadas e responsaveis quando mencionados.
+- "pauta": lista numerada dos temas realmente tratados na reuniao (um item por tema, nao por frase) — use apenas o que foi de fato discutido, nao um modelo generico.
+- "corpo": o desenvolvimento da ata em paragrafos corridos, um paragrafo por tema da pauta, seguindo as regras de redacao acima.
 
 Se a transcricao for curta demais ou nao parecer uma reuniao, diga isso no campo "corpo" em vez de inventar conteudo.
 
@@ -46,7 +54,7 @@ async function gerarAtaDeTranscricao(query, { transcricao, tipoReuniao }) {
   try {
     const resp = await axios.post('https://api.anthropic.com/v1/messages', {
       model: MODEL_CLAUDE,
-      max_tokens: 2000,
+      max_tokens: 4000,
       system: SISTEMA_ATA,
       messages: [{ role: 'user', content: `Tipo de reuniao: ${tipoReuniao||'ordinaria'}. Transcricao da gravacao:\n\n${transcricao}` }]
     }, {
