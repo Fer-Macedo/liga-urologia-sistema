@@ -203,28 +203,8 @@ async function enviarNotificacoes() {
     }
   }
 
-  // 1 dia após vencimento
-  if (config.notif_pos1_ativo === '1') {
-    const ontem = hoje.subtract(1, 'day').format('YYYY-MM-DD');
-    const r = await query(
-      "SELECT c.*, m.nome, m.email, m.whatsapp FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.data_vencimento::date=$1::date AND c.status IN ('pendente','atrasado') AND m.ativo=1",
-      [ontem]
-    );
-    for (const cob of r.rows) {
-      if (!podeMensagem()) break;
-      // Verificar se já recebeu qualquer notificação hoje (evita duplicata com atrasados)
-      const j = await query(
-        "SELECT id FROM notificacoes_log WHERE cobranca_id=$1 AND tipo IN ('pos','atrasado') AND DATE(enviado_em)=CURRENT_DATE",
-        [cob.id]
-      );
-      if (j.rows.length === 0) {
-        await notificarCobranca({ membro: {...cob, id: cob.membro_id}, cobranca: cob, tipo: 'pos', config });
-        incrementarContador();
-        count++;
-        await esperarIntervalo(count);
-      }
-    }
-  }
+  // Cobranca de atrasados (1 dia apos vencimento em diante) fica a cargo de notificarAtrasadosDiario(),
+  // que roda todo dia sem parar ate o pagamento - superset do antigo aviso unico de "1 dia apos".
 }
 
 // ─── NOTIFICAÇÃO DIÁRIA DE ATRASADOS ─────────────────────────────────────────

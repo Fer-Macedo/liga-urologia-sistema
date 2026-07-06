@@ -1229,7 +1229,7 @@ router.get('/notificacoes', requireAuth, requirePermissao('notificacoes'), async
 });
 
 router.post('/notificacoes', requireAuth, requireAdmin, async (req, res) => {
-  const campos = ['notif_pre_ativo','notif_dia_ativo','notif_pos1_ativo','notif_pos7_ativo','notif_aniversario_ativo','notif_atrasados_diario',
+  const campos = ['notif_pre_ativo','notif_dia_ativo','notif_aniversario_ativo','notif_atrasados_diario',
     'msg_cobranca_pre','msg_cobranca_dia','msg_cobranca_pos','msg_aniversario'];
   for (const c of campos) {
     const val = req.body[c] !== undefined ? (req.body[c] === 'on' ? '1' : req.body[c]) : '0';
@@ -1251,7 +1251,7 @@ router.post('/configuracoes', requireAuth, requireAdmin, async (req, res) => {
   upCfg.fields([{name:'assinatura_presidente'},{name:'assinatura_vicepresidente'},{name:'assinatura_secretario'},{name:'assinatura_financeiro'},{name:'assinatura_director_ensino'},{name:'assinatura_director_extension'},{name:'timbrado'}])(req, res, async(err)=>{
     try {
       if (err) { req.flash('erro','Error al subir archivo: '+err.message); return res.redirect('/configuracoes'); }
-      const camposCheckbox = ['notif_pre_ativo','notif_dia_ativo','notif_pos1_ativo','notif_aniversario_ativo'];
+      const camposCheckbox = ['notif_pre_ativo','notif_dia_ativo','notif_aniversario_ativo','notif_atrasados_diario'];
       const ignorar = ['_csrf'];
       // Salva DINAMICAMENTE qualquer campo de texto (escalável p/ outras ligas)
       for (const chave of Object.keys(req.body || {})) {

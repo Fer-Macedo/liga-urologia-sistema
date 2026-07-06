@@ -139,8 +139,6 @@ async function initSchema() {
     ['msg_cobranca_pos','Olá {nome}, sua mensalidade da Liga está em atraso desde {data}. Valor: R$ {valor_cheio}. Regularize agora: {link}'],
     ['notif_pre_ativo','1'],
     ['notif_dia_ativo','1'],
-    ['notif_pos1_ativo','1'],
-    ['notif_pos7_ativo','1'],
     ['notif_aniversario_ativo','1']
   ];
 
