@@ -78,6 +78,11 @@
     <div id="gravacao-resultado" style="display:none">
       <div style="font-size:12px;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;padding:8px 12px;margin-bottom:12px">Rascunho gerado a partir do áudio! Revise a Pauta e o Corpo abaixo (abertos no modo de edição) antes de salvar.</div>
     </div>
+    <div style="border-top:1px solid #e2e8f0;margin-top:14px;padding-top:14px">
+      <div style="font-size:12px;color:#64748b;margin-bottom:8px">Prefere mais segurança em reuniões longas? Grave com o gravador de voz nativo do celular (continua gravando mesmo com a tela apagada ou trocando de app) e envie o arquivo de áudio aqui depois:</div>
+      <input type="file" id="input-audio-upload" accept="audio/*" style="font-size:12px">
+      <button type="button" class="btn btn-secondary" onclick="enviarArquivoAudio()">Enviar áudio e gerar ata</button>
+    </div>
   </div>
 
   <% if(msg&&msg.length){%><div style="background:#dcfce7;border:1px solid #86efac;color:#166534;padding:10px 14px;border-radius:2px;margin-bottom:16px;font-size:13px;font-weight:600"><%=msg[0]%></div><%}%>
@@ -404,7 +409,7 @@ function excluirAta(){
 }
 
 // ─── GRAVACAO DA REUNIAO COM IA ────────────────────────────────────────────
-let _gravador=null, _chunksAudio=[], _gravando=false, _timerInterval=null, _segundos=0;
+let _gravador=null, _chunksAudio=[], _gravando=false, _timerInterval=null, _segundos=0, _wakeLock=null;
 function toggleGravacao(){
   document.getElementById('card-gravacao').style.display='block';
   if(!_gravando) iniciarGravacao(); else pararGravacao();
@@ -420,12 +425,17 @@ function iniciarGravacao(){
     _gravador.ondataavailable=function(e){ if(e.data.size>0) _chunksAudio.push(e.data); };
     _gravador.onstop=function(){
       stream.getTracks().forEach(t=>t.stop());
-      enviarGravacao(new Blob(_chunksAudio,{type:_gravador.mimeType||'audio/webm'}));
+      enviarAudioParaIA(new Blob(_chunksAudio,{type:_gravador.mimeType||'audio/webm'}), 'reuniao.webm');
     };
     _gravador.start();
     _gravando=true;
     _segundos=0;
-    document.getElementById('gravacao-status').textContent='Gravando... fale normalmente durante a reunião.';
+    // Wake Lock: evita que a tela apague sozinha enquanto a gravação estiver ativa.
+    // Só funciona com a aba em primeiro plano — se trocar de app/tela, o navegador libera o wake lock e pode pausar a gravação.
+    if('wakeLock' in navigator){
+      navigator.wakeLock.request('screen').then(function(wl){ _wakeLock=wl; }).catch(function(){});
+    }
+    document.getElementById('gravacao-status').innerHTML='Gravando... fale normalmente durante a reunião.<br><b>Mantenha esta aba aberta e em primeiro plano até parar a gravação</b> — se trocar de app ou a tela travar, a gravação pode ser interrompida pelo sistema do celular. Para reuniões longas, prefira gravar com o app nativo de voz do celular e enviar o arquivo depois (opção abaixo).';
     document.getElementById('gravacao-timer').style.display='block';
     document.getElementById('gravacao-resultado').style.display='none';
     document.getElementById('btn-gravar').innerHTML='⏹ Parar e Gerar Ata';
@@ -444,15 +454,24 @@ function pararGravacao(){
     _gravador.stop();
     _gravando=false;
     clearInterval(_timerInterval);
+    if(_wakeLock){ _wakeLock.release().catch(function(){}); _wakeLock=null; }
     document.getElementById('gravacao-status').textContent='Processando...';
     document.getElementById('gravacao-timer').style.display='none';
     document.getElementById('gravacao-loading').style.display='block';
     document.getElementById('btn-gravar').innerHTML='Gravar Reunião com IA';
   }
 }
-function enviarGravacao(blob){
+function enviarArquivoAudio(){
+  const input=document.getElementById('input-audio-upload');
+  if(!input.files.length){ alert('Selecione um arquivo de áudio primeiro.'); return; }
+  document.getElementById('card-gravacao').style.display='block';
+  document.getElementById('gravacao-loading').style.display='block';
+  document.getElementById('gravacao-status').textContent='Processando o áudio enviado...';
+  enviarAudioParaIA(input.files[0], input.files[0].name);
+}
+function enviarAudioParaIA(blob, nomeArquivo){
   const fd=new FormData();
-  fd.append('audio',blob,'reuniao.webm');
+  fd.append('audio',blob,nomeArquivo);
   fetch('/atas/<%=ata.id%>/transcrever',{method:'POST',body:fd,credentials:'same-origin'})
   .then(r=>r.json()).then(function(d){
     document.getElementById('gravacao-loading').style.display='none';
