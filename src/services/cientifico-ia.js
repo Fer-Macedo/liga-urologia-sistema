@@ -94,9 +94,45 @@ async function refinarPico(query, { ideiaLivre }) {
   }
 }
 
+const SISTEMA_APOIO_REVISOR = `Voce e um assistente que da apoio TECNICO a um revisor humano da equipe Cientifica da LAURO (Liga Academica de Urologia), que vai decidir se aprova ou devolve um trabalho cientifico. Voce NAO decide nada — sua funcao e levantar pontos objetivos para o revisor considerar, com base na aula "Producao Cientifica: como escrever e publicar artigos medicos".
+
+Avalie o documento nestes eixos:
+1. Perguntas essenciais de qualidade: O objetivo esta claro? A metodologia e adequada? A amostra parece suficiente? Ha indicio de vies? A analise estatistica parece correta? Os resultados respondem a pergunta de pesquisa?
+2. Pontos criticos pelo desenho do estudo (identifique o desenho e aponte o risco especifico): Coorte -> perda de seguimento; Caso-controle -> vies de memoria; Transversal -> confundir associacao com causalidade; Ensaio clinico (RCT) -> intention-to-treat vs. por protocolo.
+3. Documentacao etica: ha mencao a aprovacao de CEP, numero CAAE ou TCLE no texto? Se for ensaio clinico, ha registro (ReBEC/ClinicalTrials.gov)?
+4. Relato estatistico: valores de p aparecem acompanhados de IC95%? Ha fluxograma CONSORT/PRISMA quando aplicavel?
+5. Erros classicos que costumam reprovar manuscritos (cheque se aparecem): calculo amostral ausente, discussao que so repete os resultados, introducao sem lacuna clara, titulo vago.
+
+Responda em portugues, em JSON estrito, sem texto fora do JSON:
+{
+  "desenho_estudo_identificado": "ex: coorte retrospectiva, caso-controle, transversal, RCT, serie de casos, revisao...",
+  "risco_especifico_desenho": "o ponto critico relevante para esse desenho, conforme os pontos 2 acima",
+  "qualidade": { "objetivo_claro": "sim|nao|parcial", "metodologia_adequada": "sim|nao|parcial", "amostra_suficiente": "sim|nao|parcial", "indicio_vies": "sim|nao|parcial", "estatistica_correta": "sim|nao|parcial", "resultados_respondem_pergunta": "sim|nao|parcial" },
+  "documentacao_etica": "presente|ausente|nao_se_aplica",
+  "relato_estatistico_ok": "sim|nao|nao_se_aplica",
+  "alertas": ["lista curta de pontos que merecem atencao do revisor antes de decidir"],
+  "resumo_para_revisor": "2-3 frases resumindo o estado geral, em tom neutro, para apoiar (nao substituir) a decisao humana"
+}`;
+
+// Gera um apoio tecnico para o revisor humano (equipe Cientifica) antes de aprovar/devolver
+async function apoioRevisor(query, { base64Pdf, tituloProjeto, tipoTrabalho }) {
+  const content = [
+    { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64Pdf } },
+    { type: 'text', text: `Projeto: ${tituloProjeto || 'sem titulo'}. Tipo de trabalho: ${tipoTrabalho || 'nao informado'}. Gere o apoio tecnico para o revisor.` }
+  ];
+  const r = await chamarClaude(query, { system: SISTEMA_APOIO_REVISOR, content, contexto: 'cientifico-apoio-revisor', maxTokens: 1200 });
+  if (!r.ok) return r;
+  try {
+    const parsed = JSON.parse(r.texto.replace(/```json|```/g, '').trim());
+    return { ok: true, apoio: parsed };
+  } catch(e) {
+    return { ok: false, erro: 'Resposta da IA em formato inesperado.' };
+  }
+}
+
 // Wrapper simples de texto-para-texto, reutilizado por outros modulos do Cientifico (ex: busca de literatura)
 async function chamarClaudeTexto(query, { prompt, contexto, maxTokens }) {
   return await chamarClaude(query, { system: 'Voce e um assistente cientifico objetivo e honesto.', content: prompt, contexto, maxTokens });
 }
 
-module.exports = { revisarTrabalho, refinarPico, chamarClaudeTexto };
+module.exports = { revisarTrabalho, refinarPico, chamarClaudeTexto, apoioRevisor };

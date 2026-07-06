@@ -8193,6 +8193,28 @@ router.get('/cientifico/versao/:versaoId/download', requireAuth, async (req, res
   res.redirect(url);
 });
 
+// POST /cientifico/versao/:versaoId/apoio-revisor — painel de apoio tecnico para o revisor humano
+router.post('/cientifico/versao/:versaoId/apoio-revisor', requireAuth, requireCientifico, async (req, res) => {
+  try {
+    const vR = await query('SELECT v.*, g.tipo_trabalho, pc.titulo as projeto_titulo FROM versoes_trabalho v JOIN grupos_cientificos g ON g.id=v.grupo_id JOIN projetos_cientificos pc ON pc.id=g.projeto_id WHERE v.id=$1', [req.params.versaoId]);
+    if (!vR.rows.length) return res.json({ ok: false, erro: 'Versao nao encontrada.' });
+    const versao = vR.rows[0];
+    if (!/\.pdf$/i.test(versao.arquivo_nome || '')) {
+      return res.json({ ok: false, erro: 'O apoio automatico hoje so funciona com arquivos em PDF.' });
+    }
+    const { gerarUrlTemporaria } = require('../services/arquivos');
+    const url = await gerarUrlTemporaria(versao.arquivo_chave, 120);
+    const axios = require('axios');
+    const resp = await axios.get(url, { responseType: 'arraybuffer', timeout: 30000 });
+    const base64Pdf = Buffer.from(resp.data).toString('base64');
+    const { apoioRevisor } = require('../services/cientifico-ia');
+    const r = await apoioRevisor(query, { base64Pdf, tituloProjeto: versao.projeto_titulo, tipoTrabalho: versao.tipo_trabalho });
+    if (!r.ok) return res.json({ ok: false, erro: r.erro });
+    await query('UPDATE versoes_trabalho SET ia_analise_revisor=$1 WHERE id=$2', [JSON.stringify(r.apoio), req.params.versaoId]);
+    res.json({ ok: true, apoio: r.apoio });
+  } catch(e) { res.json({ ok: false, erro: e.message }); }
+});
+
 // ─── PORTAL CIENTIFICO (membros externos) ────────────────────────────────────
 const bcryptPortal = bcryptCient; // alias
 
