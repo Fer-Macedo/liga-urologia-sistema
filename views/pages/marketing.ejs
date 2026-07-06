@@ -881,14 +881,13 @@ async function gerarHashtags(){
   const grid=document.getElementById('hashtag-grid');
   grid.innerHTML='<span style="font-size:12px;color:var(--texto2)">Gerando...</span>';
   try{
-    const r=await fetch("https://api.anthropic.com/v1/messages",{
+    const r=await fetch("/marketing/gerar-hashtags",{
       method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:300,
-        messages:[{role:"user",content:"Liste 15 hashtags para post sobre: "+titulo+" de liga academica de urologia. Retorne APENAS hashtags separadas por espaco."}]})
+      body:JSON.stringify({titulo})
     });
     const data=await r.json();
-    const tags=data.content[0].text.trim().split(/\s+/).filter(t=>t.startsWith('#')).slice(0,15);
-    grid.innerHTML=tags.map(t=>'<span class="hashtag-chip" onclick="toggleHashtag(this,\''+t+'\')">'+t+'</span>').join('');
+    if(!data.ok){grid.innerHTML='<span style="color:#dc2626;font-size:12px">'+(data.erro||'Erro ao gerar')+'</span>';return;}
+    grid.innerHTML=data.tags.map(t=>'<span class="hashtag-chip" onclick="toggleHashtag(this,\''+t+'\')">'+t+'</span>').join('');
   }catch(e){grid.innerHTML='<span style="color:#dc2626;font-size:12px">Erro ao gerar</span>';}
 }
 function toggleHashtag(el,tag){
@@ -936,9 +935,11 @@ async function gerarComIA(){
   const loading=document.getElementById('ia-loading');
   loading.classList.add('ativo');
   try{
-    const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:500,messages:[{role:"user",content:"Crie uma legenda profissional para post de marketing de uma liga academica de urologia sobre: "+titulo+". Maximo 150 palavras, tom profissional e engajador."}]})});
+    const r=await fetch("/marketing/gerar-legenda",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({titulo})});
     const data=await r.json();
-    document.getElementById('post-conteudo').value=data.content[0].text;
+    if(!data.ok){alert('Erro ao gerar com IA: '+(data.erro||'tente novamente')); loading.classList.remove('ativo'); return;}
+    document.getElementById('post-conteudo').value=data.texto;
+    atualizarPreview();
   }catch(e){alert('Erro ao gerar com IA. Tente novamente.');}
   loading.classList.remove('ativo');
 }

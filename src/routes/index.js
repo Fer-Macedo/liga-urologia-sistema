@@ -4351,27 +4351,10 @@ router.post('/marketing/posts', requireAuth, async (req, res) => {
 
 router.post('/marketing/:id/publicar', requireAuth, async (req, res) => {
   try {
-    const r = await query('SELECT * FROM marketing_posts WHERE id=$1', [req.params.id]);
-    const post = r.rows[0];
-    if (!post) { req.session.erro=['Post não encontrado']; return res.redirect('/marketing'); }
-    const mktConfig = await getMktConfig();
-    const redes = post.redes || [];
-    const erros = [];
-    if (redes.includes('instagram') && mktConfig.instagram_token && mktConfig.instagram_id) {
-      try { const axios=require('axios'); const mediaRes=await axios.post(`https://graph.facebook.com/v18.0/${mktConfig.instagram_id}/media`,{caption:post.conteudo,access_token:mktConfig.instagram_token}); await axios.post(`https://graph.facebook.com/v18.0/${mktConfig.instagram_id}/media_publish`,{creation_id:mediaRes.data.id,access_token:mktConfig.instagram_token}); } catch(e){erros.push('Instagram: '+e.message);}
-    }
-    if (redes.includes('facebook') && mktConfig.facebook_token && mktConfig.facebook_id) {
-      try { const axios=require('axios'); await axios.post(`https://graph.facebook.com/v18.0/${mktConfig.facebook_id}/feed`,{message:post.conteudo,access_token:mktConfig.facebook_token}); } catch(e){erros.push('Facebook: '+e.message);}
-    }
-    if (redes.includes('whatsapp')) {
-      try {
-        const wapi=require('axios');
-        const pessoas=await query('SELECT whatsapp FROM ligantes WHERE ativo=1 AND whatsapp IS NOT NULL UNION SELECT whatsapp FROM diretivos WHERE ativo=1 AND whatsapp IS NOT NULL');
-        for (const p of pessoas.rows) { if(p.whatsapp){await wapi.post(`https://api.w-api.app/v1/message/send-text?instanceId=${process.env.WAPI_INSTANCE_ID}`,{phone:p.whatsapp.replace(/\D/g,''),message:post.conteudo},{headers:{Authorization:'Bearer '+process.env.WAPI_TOKEN}}).catch(()=>{});} }
-      } catch(e){erros.push('WhatsApp: '+e.message);}
-    }
-    await query('UPDATE marketing_posts SET status=$1, publicado_em=NOW() WHERE id=$2', [erros.length===0?'publicado':'erro', req.params.id]);
-    req.session.msg = erros.length===0?['Post publicado!']:['Publicado com erros: '+erros.join(', ')];
+    const { publicarPostMarketing } = require('../services/marketing-publish');
+    const resultado = await publicarPostMarketing(req.params.id);
+    if (!resultado.ok && resultado.erro === 'Post não encontrado') { req.session.erro=['Post não encontrado']; return res.redirect('/marketing'); }
+    req.session.msg = resultado.ok ? ['Post publicado!'] : ['Publicado com erros: '+(resultado.erros||[]).join(', ')];
     res.redirect('/marketing');
   } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing'); }
 });
@@ -4421,20 +4404,55 @@ router.post('/marketing/config/facebook', requireAuth, requireAdmin, async (req,
   req.session.msg = ['Configuração Facebook salva!']; res.redirect('/marketing');
 });
 
+router.post('/marketing/gerar-legenda', requireAuth, async (req, res) => {
+  try {
+    const { chamarClaudeTexto } = require('../services/cientifico-ia');
+    const titulo = req.body.titulo || '';
+    const r = await chamarClaudeTexto(query, {
+      prompt: 'Crie uma legenda profissional para post de marketing de uma liga academica de urologia sobre: ' + titulo + '. Maximo 150 palavras, tom profissional e engajador. Responda APENAS com o texto da legenda, sem comentarios extras.',
+      contexto: 'marketing-legenda', maxTokens: 500
+    });
+    if (!r.ok) return res.json({ ok: false, erro: r.erro });
+    res.json({ ok: true, texto: r.texto.trim() });
+  } catch(e) { res.json({ ok: false, erro: e.message }); }
+});
+
+router.post('/marketing/gerar-hashtags', requireAuth, async (req, res) => {
+  try {
+    const { chamarClaudeTexto } = require('../services/cientifico-ia');
+    const titulo = req.body.titulo || '';
+    const r = await chamarClaudeTexto(query, {
+      prompt: 'Liste 15 hashtags para post sobre: ' + titulo + ' de liga academica de urologia. Retorne APENAS hashtags separadas por espaco, sem comentarios extras.',
+      contexto: 'marketing-hashtags', maxTokens: 300
+    });
+    if (!r.ok) return res.json({ ok: false, erro: r.erro });
+    const tags = r.texto.trim().split(/\s+/).filter(t => t.startsWith('#')).slice(0, 15);
+    res.json({ ok: true, tags });
+  } catch(e) { res.json({ ok: false, erro: e.message }); }
+});
+
 router.post('/marketing/whatsapp-massa', requireAuth, async (req, res) => {
   try {
     const { destinatarios, mensagem } = req.body;
     if (!mensagem) { req.session.erro=['Mensagem obrigatória!']; return res.redirect('/marketing'); }
+    const { enviarWhatsApp } = require('../services/notificacoes');
     let pessoas = [];
     if (destinatarios==='ligantes'||destinatarios==='todos') { const r=await query('SELECT nome,whatsapp FROM ligantes WHERE ativo=1 AND whatsapp IS NOT NULL'); pessoas=[...pessoas,...r.rows]; }
     if (destinatarios==='diretivos'||destinatarios==='todos') { const r=await query('SELECT nome,whatsapp FROM diretivos WHERE ativo=1 AND whatsapp IS NOT NULL'); pessoas=[...pessoas,...r.rows]; }
-    const axios = require('axios');
-    let enviados=0, erros=0;
+    let enviados=0, erros=0, bloqueados=0;
     for (const p of pessoas) {
       if (!p.whatsapp) continue;
-      try { await axios.post(`https://api.w-api.app/v1/message/send-text?instanceId=${process.env.WAPI_INSTANCE_ID}`,{phone:p.whatsapp.replace(/\D/g,''),message:mensagem.replace('{nome}',p.nome)},{headers:{Authorization:'Bearer '+process.env.WAPI_TOKEN}}); enviados++; await new Promise(r=>setTimeout(r,500)); } catch(e){erros++;}
+      try {
+        const r = await enviarWhatsApp(p.whatsapp, mensagem.replace('{nome}', p.nome));
+        if (r && r.blocked) bloqueados++; else enviados++;
+      } catch(e) { erros++; }
     }
-    req.session.msg=[`WhatsApp enviado! ${enviados} enviados, ${erros} erros.`]; res.redirect('/marketing');
+    if (bloqueados > 0 && enviados === 0) {
+      req.session.erro = ['Envio de WhatsApp em massa esta bloqueado no momento (numero em modo de aquecimento, protecao contra banimento). Use o email ou aguarde a liberacao.'];
+    } else {
+      req.session.msg=[`WhatsApp enviado! ${enviados} enviados, ${erros} erros${bloqueados?', '+bloqueados+' bloqueados (protecao anti-banimento)':''}.`];
+    }
+    res.redirect('/marketing');
   } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing'); }
 });
 

@@ -579,6 +579,14 @@ function iniciarAgendamentos() {
     } catch(e) { console.error('[INSTAGRAM] Cron erro:', e.message); }
   }, { timezone: 'America/Asuncion' });
 
+  // Marketing — publicar posts agendados (marketing_posts) a cada 5 minutos
+  cron.schedule('*/5 * * * *', async () => {
+    try {
+      const { processarPostsMarketingAgendados } = require('./marketing-publish');
+      await processarPostsMarketingAgendados();
+    } catch(e) { console.error('[MARKETING] Cron erro:', e.message); }
+  }, { timezone: 'America/Asuncion' });
+
   // Instagram — post aniversariantes às 9h
   cron.schedule('0 9 * * *', async () => {
     try {
