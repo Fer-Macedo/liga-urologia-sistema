@@ -8,8 +8,8 @@
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     html,body{height:100%}
-    body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:#F0F4F2;min-height:100vh;display:flex;flex-direction:column}
-    .topbar{background:#0C231B;padding:0 28px;height:76px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50}
+    body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:#F0F4F2;min-height:100vh;display:flex;flex-direction:column;padding-top:84px;padding-bottom:76px}
+    .topbar{background:#0C231B;padding:0 28px;height:84px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:0;right:0;z-index:50}
     .topbar-brand{display:flex;align-items:center;gap:10px}
     .topbar-logo{width:32px;height:32px;background:#fff;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center}
     .topbar-logo img{width:100%;height:100%;object-fit:cover;border-radius:50%}
@@ -78,7 +78,7 @@
     .check-col li{font-size:12.5px;color:#374151;padding-left:16px;position:relative}
     .check-col li::before{content:'';position:absolute;left:0;top:6px;width:6px;height:6px;background:#dc2626;border-radius:50%}
 
-    footer{background:#0C231B;padding:16px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-top:40px}
+    footer{background:#0C231B;padding:0 28px;height:76px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;position:fixed;bottom:0;left:0;right:0;z-index:50}
     .pf-logo-f{width:22px;height:22px;border-radius:50%;object-fit:cover}
     .pf-n{font-size:12px;font-weight:700;color:#fff}
     .pf-sep{color:rgba(255,255,255,.3);margin:0 4px}
@@ -88,7 +88,7 @@
     .pf-soc{width:28px;height:28px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.5);transition:all .15s;text-decoration:none}
     .pf-soc:hover{background:#0F6E56;color:#fff}
     .pf-soc svg{width:13px;height:13px}
-    @media(max-width:600px){footer{flex-direction:column;align-items:flex-start}}
+    @media(max-width:600px){footer{flex-direction:column;align-items:flex-start;height:auto;padding:12px 20px;position:static}body{padding-bottom:0}}
   </style>
 </head>
 <body>
