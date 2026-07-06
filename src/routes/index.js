@@ -8567,6 +8567,54 @@ router.post('/portal/projeto/:projetoId/pico', requirePortal, async (req, res) =
   } catch(e) { res.json({ ok: false, erro: e.message }); }
 });
 
+// POST /portal/grupo/:grupoId/buscar-literatura — busca real no PubMed + sintese com IA
+router.post('/portal/grupo/:grupoId/buscar-literatura', requirePortal, async (req, res) => {
+  const { tipo, id } = req.session.portalMembro;
+  const { termo } = req.body;
+  if (!termo || !termo.trim()) return res.json({ ok: false, erro: 'Descreva o tema da busca.' });
+  try {
+    const mR = await query('SELECT 1 FROM membros_grupo_cientifico WHERE grupo_id=$1 AND origem_tipo=$2 AND origem_id=$3', [req.params.grupoId, tipo, id]);
+    if (!mR.rows.length) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    const { buscarPubMed, sintetizarAchados } = require('../services/cientifico-busca');
+    const r = await buscarPubMed(termo.trim());
+    if (!r.ok) return res.json(r);
+    let sintese = null;
+    if (r.artigos.length) {
+      const s = await sintetizarAchados(query, { tema: termo.trim(), artigos: r.artigos });
+      if (s.ok) sintese = s.texto;
+    }
+    res.json({ ok: true, artigos: r.artigos, sintese });
+  } catch(e) { res.json({ ok: false, erro: e.message }); }
+});
+
+// POST /portal/grupo/:grupoId/artigos-relacionados — busca real no Semantic Scholar
+router.post('/portal/grupo/:grupoId/artigos-relacionados', requirePortal, async (req, res) => {
+  const { tipo, id } = req.session.portalMembro;
+  const { termo } = req.body;
+  if (!termo || !termo.trim()) return res.json({ ok: false, erro: 'Descreva o tema ou cole o titulo do artigo.' });
+  try {
+    const mR = await query('SELECT 1 FROM membros_grupo_cientifico WHERE grupo_id=$1 AND origem_tipo=$2 AND origem_id=$3', [req.params.grupoId, tipo, id]);
+    if (!mR.rows.length) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    const { artigosRelacionados } = require('../services/cientifico-busca');
+    const r = await artigosRelacionados(termo.trim());
+    res.json(r);
+  } catch(e) { res.json({ ok: false, erro: e.message }); }
+});
+
+// POST /portal/grupo/:grupoId/polir-texto — reescreve trecho em tom cientifico e sugere titulo
+router.post('/portal/grupo/:grupoId/polir-texto', requirePortal, async (req, res) => {
+  const { tipo, id } = req.session.portalMembro;
+  const { texto } = req.body;
+  if (!texto || !texto.trim()) return res.json({ ok: false, erro: 'Cole o texto que deseja polir.' });
+  try {
+    const mR = await query('SELECT 1 FROM membros_grupo_cientifico WHERE grupo_id=$1 AND origem_tipo=$2 AND origem_id=$3', [req.params.grupoId, tipo, id]);
+    if (!mR.rows.length) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    const { polirTexto } = require('../services/cientifico-busca');
+    const r = await polirTexto(query, texto.trim());
+    res.json(r);
+  } catch(e) { res.json({ ok: false, erro: e.message }); }
+});
+
 // POST /portal/grupo/:grupoId/chat
 router.post('/portal/grupo/:grupoId/chat', requirePortal, uploadArq.single('arquivo_chat'), async (req, res) => {
   const { tipo, id } = req.session.portalMembro;

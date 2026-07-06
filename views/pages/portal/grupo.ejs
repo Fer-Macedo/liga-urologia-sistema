@@ -94,6 +94,7 @@
   </div>
   <div class="tabs">
     <button class="tab ativo" onclick="tab(this,'trabalho')">Trabalho</button>
+    <button class="tab" onclick="tab(this,'pesquisa')">Pesquisa</button>
     <button class="tab" onclick="tab(this,'avisos')">Avisos</button>
     <button class="tab" onclick="tab(this,'chat')">Chat</button>
     <button class="tab" onclick="tab(this,'timeline')">Linha do Tempo</button>
@@ -176,6 +177,33 @@
         </div>
         <%}%>
       </div>
+    </div>
+  </div>
+
+  <!-- PESQUISA -->
+  <div id="tab-pesquisa" class="tab-content">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+      <div class="card">
+        <h3>Buscar Literatura (PubMed)</h3>
+        <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Busca real em artigos publicados, com sintese por IA.</p>
+        <textarea id="pesq-termo" placeholder="Ex: cateter duplo J e infeccao urinaria" style="width:100%;min-height:50px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"></textarea>
+        <button type="button" class="btn btn-sm" id="btn-pesq" onclick="buscarLiteratura()" style="margin-top:8px;font-size:11.5px">Buscar</button>
+        <div id="pesq-resultado" style="margin-top:12px;font-size:12.5px"></div>
+      </div>
+      <div class="card">
+        <h3>Artigos Relacionados (Semantic Scholar)</h3>
+        <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Cole o titulo do seu artigo base para encontrar trabalhos relacionados.</p>
+        <textarea id="relac-termo" placeholder="Cole o titulo ou tema do artigo" style="width:100%;min-height:50px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"></textarea>
+        <button type="button" class="btn btn-sm" id="btn-relac" onclick="buscarRelacionados()" style="margin-top:8px;font-size:11.5px">Buscar relacionados</button>
+        <div id="relac-resultado" style="margin-top:12px;font-size:12.5px"></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Polir Texto Cientifico</h3>
+      <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Cole um paragrafo (ex: introducao, resumo) para deixar em tom cientifico formal, e receber sugestoes de titulo.</p>
+      <textarea id="polir-texto" placeholder="Cole seu texto aqui..." style="width:100%;min-height:100px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"></textarea>
+      <button type="button" class="btn btn-sm" id="btn-polir" onclick="polirTexto()" style="margin-top:8px;font-size:11.5px">Polir texto</button>
+      <div id="polir-resultado" style="margin-top:12px;font-size:12.5px"></div>
     </div>
   </div>
 
@@ -333,6 +361,87 @@ function gerarPico() {
         + '<span><b>O:</b> '+p.desfecho+'</span></div>';
     })
     .catch(function(){ btn.disabled=false; btn.innerHTML=orig; alert('Erro de conexao.'); });
+}
+
+function listaArtigosHtml(artigos) {
+  if(!artigos || !artigos.length) return '<p style="color:#6B7A72">Nenhum artigo encontrado.</p>';
+  return '<div style="display:flex;flex-direction:column;gap:8px">' + artigos.map(function(a){
+    return '<a href="'+a.link+'" target="_blank" style="display:block;text-decoration:none;color:inherit;border:1px solid #DDE3DF;padding:10px 12px">'
+      + '<div style="font-weight:700;color:#0C231B;font-size:12.5px">'+a.titulo+'</div>'
+      + '<div style="color:#6B7A72;font-size:11px;margin-top:2px">'+(a.autores||'')+' &middot; '+(a.revista||'')+' &middot; '+(a.ano||'')+'</div>'
+      + '</a>';
+  }).join('') + '</div>';
+}
+
+function buscarLiteratura() {
+  var termo = document.getElementById('pesq-termo').value.trim();
+  if(!termo){ alert('Descreva o tema da busca.'); return; }
+  var btn = document.getElementById('btn-pesq');
+  var out = document.getElementById('pesq-resultado');
+  btn.disabled = true; var orig = btn.innerHTML; btn.innerHTML = 'Buscando...';
+  out.innerHTML = '';
+  fetch('/portal/grupo/'+GRUPO_ID+'/buscar-literatura', {
+    method: 'POST', credentials: 'same-origin',
+    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    body: 'termo=' + encodeURIComponent(termo)
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      btn.disabled = false; btn.innerHTML = orig;
+      if(!data.ok){ out.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro na busca.')+'</span>'; return; }
+      var html = '';
+      if(data.sintese) html += '<div style="background:#F0F4F2;padding:10px 12px;margin-bottom:10px;border:1px solid #DDE3DF"><b>Sintese:</b> '+data.sintese+'</div>';
+      html += listaArtigosHtml(data.artigos);
+      out.innerHTML = html;
+    })
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
+}
+
+function buscarRelacionados() {
+  var termo = document.getElementById('relac-termo').value.trim();
+  if(!termo){ alert('Cole um titulo ou tema.'); return; }
+  var btn = document.getElementById('btn-relac');
+  var out = document.getElementById('relac-resultado');
+  btn.disabled = true; var orig = btn.innerHTML; btn.innerHTML = 'Buscando...';
+  out.innerHTML = '';
+  fetch('/portal/grupo/'+GRUPO_ID+'/artigos-relacionados', {
+    method: 'POST', credentials: 'same-origin',
+    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    body: 'termo=' + encodeURIComponent(termo)
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      btn.disabled = false; btn.innerHTML = orig;
+      if(!data.ok){ out.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro na busca.')+'</span>'; return; }
+      out.innerHTML = listaArtigosHtml(data.artigos);
+    })
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
+}
+
+function polirTexto() {
+  var texto = document.getElementById('polir-texto').value.trim();
+  if(!texto){ alert('Cole o texto primeiro.'); return; }
+  var btn = document.getElementById('btn-polir');
+  var out = document.getElementById('polir-resultado');
+  btn.disabled = true; var orig = btn.innerHTML; btn.innerHTML = 'Analisando...';
+  out.innerHTML = '';
+  fetch('/portal/grupo/'+GRUPO_ID+'/polir-texto', {
+    method: 'POST', credentials: 'same-origin',
+    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    body: 'texto=' + encodeURIComponent(texto)
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      btn.disabled = false; btn.innerHTML = orig;
+      if(!data.ok){ out.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro ao polir texto.')+'</span>'; return; }
+      var r = data.resultado;
+      var html = '<div style="background:#F0F4F2;padding:10px 12px;border:1px solid #DDE3DF;margin-bottom:8px">'+r.texto_polido+'</div>';
+      if(r.sugestoes_titulo && r.sugestoes_titulo.length){
+        html += '<div><b>Sugestoes de titulo:</b><ul style="margin:4px 0 0 18px">' + r.sugestoes_titulo.map(function(t){return '<li>'+t+'</li>';}).join('') + '</ul></div>';
+      }
+      out.innerHTML = html;
+    })
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
 }
 </script>
 </body></html>

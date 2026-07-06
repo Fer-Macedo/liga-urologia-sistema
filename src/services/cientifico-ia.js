@@ -94,4 +94,9 @@ async function refinarPico(query, { ideiaLivre }) {
   }
 }
 
-module.exports = { revisarTrabalho, refinarPico };
+// Wrapper simples de texto-para-texto, reutilizado por outros modulos do Cientifico (ex: busca de literatura)
+async function chamarClaudeTexto(query, { prompt, contexto, maxTokens }) {
+  return await chamarClaude(query, { system: 'Voce e um assistente cientifico objetivo e honesto.', content: prompt, contexto, maxTokens });
+}
+
+module.exports = { revisarTrabalho, refinarPico, chamarClaudeTexto };
