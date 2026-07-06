@@ -60,8 +60,12 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         Baixar DOCX
       </a>
+      <button class="btn btn-secondary" onclick="toggleEdicao()" id="btn-toggle-edicao">Editar Ata</button>
+      <button class="btn btn-secondary" style="background:#fee2e2;color:#dc2626" onclick="excluirAta()">Excluir Ata</button>
     </div>
   </div>
+
+  <% if(msg&&msg.length){%><div style="background:#dcfce7;border:1px solid #86efac;color:#166534;padding:10px 14px;border-radius:2px;margin-bottom:16px;font-size:13px;font-weight:600"><%=msg[0]%></div><%}%>
 
   <div style="border-bottom:1px solid #e2e8f0;margin-bottom:4px;display:flex">
     <button class="tab-btn ativo" data-tab="info">Informações</button>
@@ -72,15 +76,58 @@
 
   <!-- TAB INFO -->
   <div class="tab-content ativo" id="tab-info">
-    <div class="card">
+    <div class="card" id="card-visualizacao">
       <div class="card-titulo">Dados da Reunião</div>
       <div class="info-row"><span class="info-label">Data:</span><span><%=new Date(ata.data_reuniao).toLocaleDateString('pt-BR',{timeZone:'UTC'})%></span></div>
       <%if(ata.hora_inicio){%><div class="info-row"><span class="info-label">Horário:</span><span><%=ata.hora_inicio%><%if(ata.hora_fim){%> às <%=ata.hora_fim%><%}%></span></div><%}%>
       <div class="info-row"><span class="info-label">Local:</span><span><%=ata.local||'—'%></span></div>
       <div class="info-row"><span class="info-label">Tipo:</span><span><%=ata.tipo==='ordinaria'?'Ordinária':ata.tipo==='extraordinaria'?'Extraordinária':'Especial'%></span></div>
     </div>
-    <%if(ata.pauta){%><div class="card"><div class="card-titulo">Pauta</div><div style="font-size:13px;line-height:1.7;white-space:pre-wrap;color:#374151"><%=ata.pauta%></div></div><%}%>
-    <%if(ata.corpo){%><div class="card"><div class="card-titulo">Corpo da Ata</div><div style="font-size:13px;line-height:1.8;white-space:pre-wrap;color:#374151"><%=ata.corpo%></div></div><%}%>
+    <%if(ata.pauta){%><div class="card" id="card-pauta-view"><div class="card-titulo">Pauta</div><div style="font-size:13px;line-height:1.7;white-space:pre-wrap;color:#374151"><%=ata.pauta%></div></div><%}%>
+    <%if(ata.corpo){%><div class="card" id="card-corpo-view"><div class="card-titulo">Corpo da Ata</div><div style="font-size:13px;line-height:1.8;white-space:pre-wrap;color:#374151"><%=ata.corpo%></div></div><%}%>
+
+    <!-- FORMULARIO DE EDICAO (oculto por padrao) -->
+    <form method="POST" action="/atas/<%=ata.id%>/editar" id="form-editar-ata" class="card" style="display:none">
+      <div class="card-titulo">Editar Dados da Reunião</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="campo">
+          <label class="label">Tipo</label>
+          <select name="tipo" class="input">
+            <option value="ordinaria" <%=ata.tipo==='ordinaria'?'selected':''%>>Ordinária</option>
+            <option value="extraordinaria" <%=ata.tipo==='extraordinaria'?'selected':''%>>Extraordinária</option>
+            <option value="especial" <%=ata.tipo==='especial'?'selected':''%>>Especial</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label class="label">Data</label>
+          <input type="date" name="data_reuniao" class="input" value="<%=new Date(ata.data_reuniao).toISOString().split('T')[0]%>">
+        </div>
+        <div class="campo">
+          <label class="label">Hora de Início</label>
+          <input type="time" name="hora_inicio" class="input" value="<%=ata.hora_inicio||''%>">
+        </div>
+        <div class="campo">
+          <label class="label">Hora de Encerramento</label>
+          <input type="time" name="hora_fim" class="input" value="<%=ata.hora_fim||''%>">
+        </div>
+      </div>
+      <div class="campo" style="margin-bottom:12px">
+        <label class="label">Local</label>
+        <input type="text" name="local" class="input" value="<%=ata.local||''%>">
+      </div>
+      <div class="campo" style="margin-bottom:12px">
+        <label class="label">Pauta</label>
+        <textarea name="pauta" class="input" rows="6"><%=ata.pauta||''%></textarea>
+      </div>
+      <div class="campo" style="margin-bottom:12px">
+        <label class="label">Corpo da Ata</label>
+        <textarea name="corpo" class="input" rows="12"><%=ata.corpo||''%></textarea>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button type="button" class="btn btn-secondary" onclick="toggleEdicao()">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar alterações</button>
+      </div>
+    </form>
   </div>
 
   <!-- TAB ASSINATURAS -->
@@ -322,6 +369,22 @@ function mudarStatus(status){
   confirmarAcao(labels[status], function(){
     fetch('/atas/<%=ata.id%>/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status})})
     .then(r=>r.json()).then(()=>location.reload());
+  });
+}
+function toggleEdicao(){
+  const form=document.getElementById('form-editar-ata');
+  const editando=form.style.display!=='none';
+  form.style.display=editando?'none':'block';
+  ['card-visualizacao','card-pauta-view','card-corpo-view'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.display=editando?'block':'none';
+  });
+  document.getElementById('btn-toggle-edicao').textContent=editando?'Editar Ata':'Fechar Edição';
+}
+function excluirAta(){
+  confirmarAcao('Excluir esta ata permanentemente? Esta ação não pode ser desfeita.', function(){
+    fetch('/atas/<%=ata.id%>',{method:'DELETE',credentials:'same-origin'})
+    .then(r=>r.json()).then(d=>{if(d.ok)window.location='/atas';else alert('Erro ao excluir.');});
   });
 }
 function gerarPDF(){

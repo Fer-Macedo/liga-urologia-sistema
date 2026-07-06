@@ -7745,12 +7745,14 @@ router.post('/atas', requireAuth, async (req, res) => {
 
 router.get('/atas/:id', requireAuth, requirePermissao('atas'), async (req, res) => {
   const config = await getConfig();
+  const msg = req.session.msg||[]; req.session.msg=[];
+  const erro = req.session.erro||[]; req.session.erro=[];
   const ata = await query('SELECT a.*,u.nome as criado_por_nome FROM atas_reuniao a LEFT JOIN usuarios u ON u.id=a.criado_por WHERE a.id=$1', [req.params.id]);
   if(!ata.rows.length) return res.redirect('/atas');
   const presentes = await query('SELECT * FROM atas_presentes WHERE ata_id=$1 ORDER BY membro_nome', [req.params.id]);
   const diretivos = await query("SELECT id,nome,cargo FROM diretivos WHERE ativo=1 AND pendente=false ORDER BY nome");
   const ligantes = await query("SELECT id,nome FROM ligantes WHERE ativo=1 AND pendente=false ORDER BY nome");
-  res.render('pages/ata-detalhe', { config, usuario: req.session.usuario, ata: ata.rows[0], presentes: presentes.rows, diretivos: diretivos.rows, ligantes: ligantes.rows, msg:[], erro:[] });
+  res.render('pages/ata-detalhe', { config, usuario: req.session.usuario, ata: ata.rows[0], presentes: presentes.rows, diretivos: diretivos.rows, ligantes: ligantes.rows, msg, erro });
 });
 
 router.post('/atas/:id/status', requireAuth, async (req, res) => {
@@ -7892,6 +7894,16 @@ router.get('/atas/:id/docx', requireAuth, requirePermissao('atas'), async (req, 
 router.delete('/atas/:id', requireAuth, async (req, res) => {
   await query('DELETE FROM atas_reuniao WHERE id=$1', [req.params.id]);
   res.json({ok:true});
+});
+
+router.post('/atas/:id/editar', requireAuth, async (req, res) => {
+  const { tipo, data_reuniao, hora_inicio, hora_fim, local, pauta, corpo } = req.body;
+  await query(
+    'UPDATE atas_reuniao SET tipo=$1, data_reuniao=$2, hora_inicio=$3, hora_fim=$4, local=$5, pauta=$6, corpo=$7, atualizado_em=NOW() WHERE id=$8',
+    [tipo, data_reuniao, hora_inicio||null, hora_fim||null, local, pauta, corpo, req.params.id]
+  );
+  req.session.msg = ['Ata atualizada com sucesso!'];
+  res.redirect('/atas/'+req.params.id);
 });
 // ─── FIM ATAS ─────────────────────────────────────────────────────────────────
 
