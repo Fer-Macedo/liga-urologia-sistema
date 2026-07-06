@@ -8520,6 +8520,53 @@ https://sistema.lauroucpcde.com/cientifico`;
   res.redirect('/portal/grupo/'+req.params.grupoId);
 });
 
+// POST /portal/grupo/:grupoId/versao/:versaoId/revisar-ia — pre-check com IA antes da submissao oficial
+router.post('/portal/grupo/:grupoId/versao/:versaoId/revisar-ia', requirePortal, async (req, res) => {
+  const { tipo, id } = req.session.portalMembro;
+  try {
+    const mR = await query('SELECT 1 FROM membros_grupo_cientifico WHERE grupo_id=$1 AND origem_tipo=$2 AND origem_id=$3', [req.params.grupoId, tipo, id]);
+    if (!mR.rows.length) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    const vR = await query('SELECT * FROM versoes_trabalho WHERE id=$1 AND grupo_id=$2', [req.params.versaoId, req.params.grupoId]);
+    if (!vR.rows.length) return res.json({ ok: false, erro: 'Versao nao encontrada.' });
+    const versao = vR.rows[0];
+    if (!/\.pdf$/i.test(versao.arquivo_nome || '')) {
+      return res.json({ ok: false, erro: 'A revisao automatica hoje so funciona com arquivos em PDF.' });
+    }
+    const gR = await query('SELECT gc.tipo_trabalho, pc.titulo FROM grupos_cientificos gc JOIN projetos_cientificos pc ON pc.id=gc.projeto_id WHERE gc.id=$1', [req.params.grupoId]);
+    const grupo = gR.rows[0] || {};
+    const { gerarUrlTemporaria } = require('../services/arquivos');
+    const url = await gerarUrlTemporaria(versao.arquivo_chave, 120);
+    const axios = require('axios');
+    const resp = await axios.get(url, { responseType: 'arraybuffer', timeout: 30000 });
+    const base64Pdf = Buffer.from(resp.data).toString('base64');
+    const { revisarTrabalho } = require('../services/cientifico-ia');
+    const r = await revisarTrabalho(query, { base64Pdf, tituloProjeto: grupo.titulo, tipoTrabalho: grupo.tipo_trabalho });
+    if (!r.ok) return res.json({ ok: false, erro: r.erro });
+    await query('UPDATE versoes_trabalho SET ia_revisao=$1, ia_revisado_em=NOW() WHERE id=$2', [JSON.stringify(r.revisao), req.params.versaoId]);
+    res.json({ ok: true, revisao: r.revisao });
+  } catch(e) { res.json({ ok: false, erro: e.message }); }
+});
+
+// POST /portal/projeto/:projetoId/pico — assistente de construcao da pergunta PICO
+router.post('/portal/projeto/:projetoId/pico', requirePortal, async (req, res) => {
+  const { tipo, id } = req.session.portalMembro;
+  const { ideia } = req.body;
+  if (!ideia || !ideia.trim()) return res.json({ ok: false, erro: 'Descreva a ideia do estudo.' });
+  try {
+    const mR = await query(
+      `SELECT 1 FROM membros_grupo_cientifico m JOIN grupos_cientificos gc ON gc.id=m.grupo_id
+       WHERE gc.projeto_id=$1 AND m.origem_tipo=$2 AND m.origem_id=$3`,
+      [req.params.projetoId, tipo, id]
+    );
+    if (!mR.rows.length) return res.json({ ok: false, erro: 'Sem permissao para este projeto.' });
+    const { refinarPico } = require('../services/cientifico-ia');
+    const r = await refinarPico(query, { ideiaLivre: ideia.trim() });
+    if (!r.ok) return res.json({ ok: false, erro: r.erro });
+    await query('UPDATE projetos_cientificos SET pico_pergunta=$1 WHERE id=$2', [JSON.stringify(r.pico), req.params.projetoId]);
+    res.json({ ok: true, pico: r.pico });
+  } catch(e) { res.json({ ok: false, erro: e.message }); }
+});
+
 // POST /portal/grupo/:grupoId/chat
 router.post('/portal/grupo/:grupoId/chat', requirePortal, uploadArq.single('arquivo_chat'), async (req, res) => {
   const { tipo, id } = req.session.portalMembro;

@@ -124,11 +124,43 @@
             <div class="versao-meta">Enviado em <%=new Date(v.enviado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%></div>
             <div><span class="vstatus vstatus-<%=v.status%>"><%=v.status.replace('_',' ')%></span></div>
             <%if(v.comentario_revisor){%><div class="comentario-box"><strong>Comentario do revisor:</strong> <%=v.comentario_revisor%></div><%}%>
+            <div style="margin-top:10px">
+              <button type="button" class="btn btn-sm" id="btn-ia-<%=v.id%>" onclick="revisarComIA(<%=v.id%>)" style="font-size:11.5px">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
+                Revisar com IA (pre-check antes de submeter)
+              </button>
+              <div class="ia-revisao-box" id="ia-revisao-<%=v.id%>" style="display:none;margin-top:10px;background:#F0F4F2;border:1px solid #DDE3DF;padding:12px 14px;font-size:12.5px"></div>
+              <%if(v.ia_revisao){%>
+              <script>window.addEventListener('DOMContentLoaded',function(){ renderRevisaoIA(<%=v.id%>, <%- v.ia_revisao %>); });</script>
+              <%}%>
+            </div>
           </div>
           <%})%>
         </div>
       </div>
       <div>
+        <div class="card">
+          <h3>Pergunta PICO</h3>
+          <%
+            let picoAtual = null;
+            try { if (projeto.pico_pergunta) picoAtual = JSON.parse(projeto.pico_pergunta); } catch(e){}
+          %>
+          <div id="pico-conteudo">
+            <%if(picoAtual){%>
+            <div style="font-size:12.5px;color:#0C231B;margin-bottom:10px;line-height:1.5"><%=picoAtual.pergunta_formatada%></div>
+            <div style="font-size:11px;color:#6B7A72;display:flex;flex-direction:column;gap:3px">
+              <span><b>P:</b> <%=picoAtual.populacao%></span>
+              <span><b>I:</b> <%=picoAtual.intervencao%></span>
+              <span><b>C:</b> <%=picoAtual.comparacao%></span>
+              <span><b>O:</b> <%=picoAtual.desfecho%></span>
+            </div>
+            <%}else{%>
+            <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Descreva sua ideia de estudo em linguagem livre e a IA ajuda a estruturar no formato PICO.</p>
+            <%}%>
+          </div>
+          <textarea id="pico-ideia" placeholder="Ex: queremos avaliar se o uso de tal exame reduz o tempo de diagnostico em recem-nascidos..." style="width:100%;min-height:60px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;margin-top:8px;box-sizing:border-box"></textarea>
+          <button type="button" class="btn btn-sm" id="btn-pico" onclick="gerarPico()" style="margin-top:8px;font-size:11.5px"><%=picoAtual?'Gerar novamente':'Estruturar com IA'%></button>
+        </div>
         <div class="card">
           <h3>Documentos</h3>
           <div class="doc-btns">
@@ -223,5 +255,84 @@ document.addEventListener('DOMContentLoaded',function(){
   var t=new URLSearchParams(window.location.search).get('tab');
   if(t){var b=document.querySelector('.tab[onclick*="\''+t+'\'"]');if(b)tab(b,t);}
 });
+
+var GRUPO_ID = <%=grupo.id%>;
+var PROJETO_ID = <%=projeto.id%>;
+var statusLbl = {ok:{txt:'OK',cor:'#15803d',bg:'#f0fdf4'},atencao:{txt:'Atencao',cor:'#c2410c',bg:'#fff7ed'},ausente:{txt:'Ausente',cor:'#b91c1c',bg:'#fef2f2'}};
+
+function renderRevisaoIA(versaoId, revisao) {
+  var box = document.getElementById('ia-revisao-'+versaoId);
+  if(!box) return;
+  var html = '';
+  if(revisao.resumo) html += '<div style="margin-bottom:10px"><b>Resumo:</b> '+revisao.resumo+'</div>';
+  if(revisao.estrutura_imrad){
+    html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">';
+    ['introducao','metodos','resultados','discussao'].forEach(function(k){
+      var v = revisao.estrutura_imrad[k]; if(!v) return;
+      var s = statusLbl[v] || statusLbl.atencao;
+      html += '<span style="background:'+s.bg+';color:'+s.cor+';font-weight:700;padding:2px 8px;font-size:10.5px;text-transform:capitalize">'+k+': '+s.txt+'</span>';
+    });
+    html += '</div>';
+  }
+  if(revisao.pontos_fortes && revisao.pontos_fortes.length){
+    html += '<div style="margin-bottom:8px"><b style="color:#15803d">Pontos fortes:</b><ul style="margin:4px 0 0 18px">';
+    revisao.pontos_fortes.forEach(function(p){ html += '<li>'+p+'</li>'; });
+    html += '</ul></div>';
+  }
+  if(revisao.pontos_atencao && revisao.pontos_atencao.length){
+    html += '<div style="margin-bottom:8px"><b style="color:#c2410c">Pontos de atencao:</b><ul style="margin:4px 0 0 18px">';
+    revisao.pontos_atencao.forEach(function(p){ html += '<li>'+p+'</li>'; });
+    html += '</ul></div>';
+  }
+  if(revisao.sugestao_periodicos && revisao.sugestao_periodicos.length){
+    html += '<div><b>Periodicos sugeridos:</b> '+revisao.sugestao_periodicos.join(', ')+'</div>';
+  }
+  box.innerHTML = html;
+  box.style.display = 'block';
+}
+
+function revisarComIA(versaoId) {
+  var btn = document.getElementById('btn-ia-'+versaoId);
+  var box = document.getElementById('ia-revisao-'+versaoId);
+  btn.disabled = true;
+  var orig = btn.innerHTML;
+  btn.innerHTML = 'Analisando... (pode levar ate 30s)';
+  fetch('/portal/grupo/'+GRUPO_ID+'/versao/'+versaoId+'/revisar-ia', { method: 'POST', credentials: 'same-origin' })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      btn.disabled = false; btn.innerHTML = orig;
+      if(!data.ok){ box.style.display='block'; box.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro ao revisar.')+'</span>'; return; }
+      renderRevisaoIA(versaoId, data.revisao);
+    })
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; box.style.display='block'; box.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
+}
+
+function gerarPico() {
+  var ideia = document.getElementById('pico-ideia').value.trim();
+  if(!ideia){ alert('Descreva a ideia do estudo primeiro.'); return; }
+  var btn = document.getElementById('btn-pico');
+  btn.disabled = true;
+  var orig = btn.innerHTML;
+  btn.innerHTML = 'Gerando...';
+  fetch('/portal/projeto/'+PROJETO_ID+'/pico', {
+    method: 'POST', credentials: 'same-origin',
+    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    body: 'ideia=' + encodeURIComponent(ideia)
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      btn.disabled = false; btn.innerHTML = 'Gerar novamente';
+      if(!data.ok){ alert(data.erro || 'Erro ao gerar PICO.'); return; }
+      var p = data.pico;
+      document.getElementById('pico-conteudo').innerHTML =
+        '<div style="font-size:12.5px;color:#0C231B;margin-bottom:10px;line-height:1.5">'+p.pergunta_formatada+'</div>'
+        + '<div style="font-size:11px;color:#6B7A72;display:flex;flex-direction:column;gap:3px">'
+        + '<span><b>P:</b> '+p.populacao+'</span>'
+        + '<span><b>I:</b> '+p.intervencao+'</span>'
+        + '<span><b>C:</b> '+p.comparacao+'</span>'
+        + '<span><b>O:</b> '+p.desfecho+'</span></div>';
+    })
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; alert('Erro de conexao.'); });
+}
 </script>
 </body></html>
