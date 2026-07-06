@@ -340,6 +340,14 @@
           <label class="label">Descrição (opcional)</label>
           <textarea name="descricao" class="input" rows="2" placeholder="Descrição breve do evento..."></textarea>
         </div>
+        <div class="campo">
+          <label class="label">Quem entra na lista?</label>
+          <select name="tipo_publico" class="input">
+            <option value="todos">Todos (ligantes e diretivos)</option>
+            <option value="ligantes">Somente ligantes</option>
+            <option value="diretivos">Somente diretivos</option>
+          </select>
+        </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-nova')">Cancelar</button>

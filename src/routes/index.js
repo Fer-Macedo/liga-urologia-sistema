@@ -4205,13 +4205,18 @@ router.get('/lista-assinaturas', requireAuth, async (req, res) => {
 });
 
 router.post('/lista-assinaturas', requireAuth, async (req, res) => {
-  const { nome, data_evento, descricao } = req.body;
-  await query('INSERT INTO listas_assinaturas (nome,data_evento,descricao,criado_por) VALUES ($1,$2,$3,$4)', [nome, data_evento||null, descricao||null, req.session.usuario.id]);
+  const { nome, data_evento, descricao, tipo_publico } = req.body;
+  await query('INSERT INTO listas_assinaturas (nome,data_evento,descricao,tipo_publico,criado_por) VALUES ($1,$2,$3,$4,$5)', [nome, data_evento||null, descricao||null, tipo_publico||'todos', req.session.usuario.id]);
   req.session.msg = ['Lista criada!']; res.redirect('/lista-assinaturas');
 });
 
-async function getPessoasLista() {
-  const [ligR, dirR] = await Promise.all([query('SELECT nome, rg, catraca FROM ligantes WHERE ativo=1 ORDER BY nome'), query('SELECT nome, rg, catraca FROM diretivos WHERE ativo=1 ORDER BY nome')]);
+async function getPessoasLista(tipoPublico) {
+  const incluirLigantes = tipoPublico !== 'diretivos';
+  const incluirDiretivos = tipoPublico !== 'ligantes';
+  const [ligR, dirR] = await Promise.all([
+    incluirLigantes ? query('SELECT nome, rg, catraca FROM ligantes WHERE ativo=1 ORDER BY nome') : { rows: [] },
+    incluirDiretivos ? query('SELECT nome, rg, catraca FROM diretivos WHERE ativo=1 ORDER BY nome') : { rows: [] }
+  ]);
   const todas = [...ligR.rows, ...dirR.rows];
   todas.sort((a,b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   return todas;
@@ -4226,7 +4231,7 @@ async function gerarHTMLLista(lista, config) {
   const nomePresidente = (config.presidente_nome || 'PRESIDENTE').toUpperCase();
   const nomeVice = (config.vicepresidente_nome || 'VICE-PRESIDENTE').toUpperCase();
   const nomeSecretario = (config.secretario_nome || 'SECRETÁRIO').toUpperCase();
-  const pessoas = await getPessoasLista();
+  const pessoas = await getPessoasLista(lista.tipo_publico);
   const d = lista.data_evento ? new Date(lista.data_evento).toLocaleDateString('es-PY') : '___/___/______';
   const LINHAS_POR_PAGINA = 32;
   const paginas = [];
