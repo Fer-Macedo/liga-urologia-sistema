@@ -7764,6 +7764,35 @@ router.get('/atas/:id', requireAuth, requirePermissao('atas'), async (req, res) 
   res.render('pages/ata-detalhe', { config, usuario: req.session.usuario, ata: ata.rows[0], presentes: presentes.rows, diretivos: diretivos.rows, ligantes: ligantes.rows, msg, erro });
 });
 
+// Gera token de assinatura, envia o email de convite/reenvio e registra o resultado em notificacoes_log
+async function notificarAssinaturaAta(ata, presente, { reenvio } = {}) {
+  const crypto = require('crypto');
+  const { enviarEmail } = require('../services/notificacoes');
+  const chaveLog = 'ata_' + ata.id + '_presente_' + presente.id;
+  if (!presente.email) {
+    await query("INSERT INTO notificacoes_log(tipo,canal,status,observacao,criado_em) VALUES('ata_assinatura','email','sem_email',$1,NOW())", [chaveLog]);
+    return;
+  }
+  const token = crypto.randomBytes(32).toString('hex');
+  const expira = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+  await query('UPDATE atas_presentes SET token_assinatura=$1, token_usado=false, token_expira_em=$2 WHERE id=$3', [token, expira, presente.id]);
+  const appUrl = (process.env.APP_URL || 'https://sistema.lauroucpcde.com').replace(/\/$/, '');
+  const linkAssinar = appUrl + '/assinar-ata/' + token;
+  const primeiroNome = presente.membro_nome.split(' ')[0];
+  const numAta = ata.numero || ata.id;
+  const dataFormatada = ata.data_reuniao ? new Date(ata.data_reuniao).toLocaleDateString('pt-BR',{timeZone:'UTC',day:'2-digit',month:'2-digit',year:'numeric'}) : '';
+  const tipoAta = ata.tipo === 'ordinaria' ? 'Ordinaria' : ata.tipo === 'extraordinaria' ? 'Extraordinaria' : 'Especial';
+  const cfg = await query("SELECT valor FROM configuracoes WHERE chave='org_logo'");
+  const orgLogo = cfg.rows[0]?.valor || null;
+  const logoHtml = orgLogo ? '<div style="width:80px;height:80px;border-radius:50%;background:white;margin:0 auto 16px;padding:8px;box-sizing:border-box"><img src="' + orgLogo + '" style="width:64px;height:64px;object-fit:contain;border-radius:50%"></div>' : '';
+  const tituloEmail = (reenvio ? 'REENVIO — ' : '') + 'ASSINATURA DE ATA';
+  const assunto = (reenvio ? 'Reenvio — ' : '') + 'Ata N' + numAta + ' aguarda sua assinatura — LAURO';
+  const html = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,sans-serif"><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px"><tr><td><div style="background:linear-gradient(160deg,#1a3d2b 0%,#0a1f1a 100%);padding:36px 40px;text-align:center">' + logoHtml + '<div style="display:inline-block;background:rgba(34,197,94,0.2);border-radius:4px;padding:4px 16px"><span style="color:#86efac;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase">' + tituloEmail + '</span></div></div></td></tr><tr><td style="background:white;padding:36px 40px"><h2 style="margin:0 0 8px;font-size:20px;color:#0f172a">Ola, ' + primeiroNome + '!</h2><p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">A <strong>Ata N' + numAta + '</strong> (Reuniao ' + tipoAta + ' — ' + dataFormatada + ') aguarda sua assinatura digital.</p><p style="text-align:center;margin:28px 0"><a href="' + linkAssinar + '" style="background:#1a3d2b;color:#fff;padding:14px 32px;text-decoration:none;font-weight:bold;font-size:15px;display:inline-block">Assinar Ata</a></p><p style="margin:0;font-size:12px;color:#94a3b8;text-align:center">Link de uso unico — expira apos a assinatura ou em 30 dias.</p></td></tr><tr><td style="background:#0f172a;padding:24px 40px"><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">Liga Academica de Urologia — LAURO</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">Universidad Central del Paraguay | Ciudad del Este</p></td></tr></table></td></tr></table></body></html>';
+  const r = await enviarEmail({ para: presente.email, assunto, html, texto: 'Ola ' + primeiroNome + ', acesse: ' + linkAssinar });
+  await query("INSERT INTO notificacoes_log(tipo,canal,status,observacao,criado_em) VALUES('ata_assinatura','email',$1,$2,NOW())", [r.ok ? 'ok' : 'erro', chaveLog]);
+  return { link: linkAssinar };
+}
+
 router.post('/atas/:id/status', requireAuth, async (req, res) => {
   const novoStatus = req.body.status;
   await query('UPDATE atas_reuniao SET status=$1,atualizado_em=NOW() WHERE id=$2', [novoStatus, req.params.id]);
@@ -7771,8 +7800,7 @@ router.post('/atas/:id/status', requireAuth, async (req, res) => {
   // Notificar presentes quando enviado para assinatura
   if (novoStatus === 'em_assinatura') {
     try {
-      const crypto = require('crypto');
-      const { enviarWhatsApp, enviarEmail } = require('../services/notificacoes');
+      const { enviarWhatsApp } = require('../services/notificacoes');
       const ata = await query('SELECT * FROM atas_reuniao WHERE id=$1', [req.params.id]);
       const presentes = await query(`
         SELECT ap.*,
@@ -7785,32 +7813,22 @@ router.post('/atas/:id/status', requireAuth, async (req, res) => {
       `, [req.params.id]);
       const a = ata.rows[0];
       const dataFormatada = a.data_reuniao ? new Date(a.data_reuniao).toLocaleDateString('pt-BR',{timeZone:'UTC',day:'2-digit',month:'2-digit',year:'numeric'}) : '';
-      const cfg = await query("SELECT valor FROM configuracoes WHERE chave='org_logo'");
-      const orgLogo = cfg.rows[0]?.valor || null;
-      const appUrl = (process.env.APP_URL || 'https://sistema.lauroucpcde.com').replace(/\/$/, '');
       for (const p of presentes.rows) {
-        const token = crypto.randomBytes(32).toString('hex');
-        const expira = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-        await query('UPDATE atas_presentes SET token_assinatura=$1, token_usado=false, token_expira_em=$2 WHERE id=$3', [token, expira, p.id]);
-        const linkAssinar = appUrl + '/assinar-ata/' + token;
-        const primeiroNome = p.membro_nome.split(' ')[0];
-        const tipoAta = a.tipo === 'ordinaria' ? 'Ordinaria' : a.tipo === 'extraordinaria' ? 'Extraordinaria' : 'Especial';
-        const numAta = a.numero || a.id;
-        if (p.whatsapp) {
+        let resultado;
+        try { resultado = await notificarAssinaturaAta(a, p); } catch(e) { console.error('Email ata:', e.message); }
+        if (p.whatsapp && resultado && resultado.link) {
           try {
             const jaNotif = await query("SELECT id FROM notificacoes_log WHERE tipo='ata_assinatura' AND canal='whatsapp' AND status='ok' AND observacao=$1", ['ata_' + req.params.id + '_presente_' + p.id]);
             if (!jaNotif.rows.length) {
-              const msgWapp = '*LAURO — Assinatura de Ata*\n\nOla, ' + primeiroNome + '!\n\nA *Ata N ' + numAta + '* (Reuniao ' + tipoAta + ' — ' + dataFormatada + ') aguarda sua assinatura.\n\nLink de uso unico (expira em 30 dias):\n' + linkAssinar + '\n\n_Liga Academica de Urologia — LAURO | UCP | CDE_';
+              const primeiroNome = p.membro_nome.split(' ')[0];
+              const tipoAta = a.tipo === 'ordinaria' ? 'Ordinaria' : a.tipo === 'extraordinaria' ? 'Extraordinaria' : 'Especial';
+              const numAta = a.numero || a.id;
+              const msgWapp = '*LAURO — Assinatura de Ata*\n\nOla, ' + primeiroNome + '!\n\nA *Ata N ' + numAta + '* (Reuniao ' + tipoAta + ' — ' + dataFormatada + ') aguarda sua assinatura.\n\nLink de uso unico (expira em 30 dias):\n' + resultado.link + '\n\n_Liga Academica de Urologia — LAURO | UCP | CDE_';
               await enviarWhatsApp(p.whatsapp, msgWapp, {urgente:true});
               await new Promise(r=>setTimeout(r,15000));
               await query("INSERT INTO notificacoes_log(tipo,canal,status,observacao,criado_em) VALUES('ata_assinatura','whatsapp','ok',$1,NOW())", ['ata_' + req.params.id + '_presente_' + p.id]);
             }
           } catch(e) { console.error('Wapp ata:', e.message); }
-        }
-        if (p.email) {
-          const logoHtml = orgLogo ? '<div style="width:80px;height:80px;border-radius:50%;background:white;margin:0 auto 16px;padding:8px;box-sizing:border-box"><img src="' + orgLogo + '" style="width:64px;height:64px;object-fit:contain;border-radius:50%"></div>' : '';
-          const html = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,sans-serif"><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px"><tr><td><div style="background:linear-gradient(160deg,#1a3d2b 0%,#0a1f1a 100%);padding:36px 40px;text-align:center">' + logoHtml + '<div style="display:inline-block;background:rgba(34,197,94,0.2);border-radius:4px;padding:4px 16px"><span style="color:#86efac;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase">ASSINATURA DE ATA</span></div></div></td></tr><tr><td style="background:white;padding:36px 40px"><h2 style="margin:0 0 8px;font-size:20px;color:#0f172a">Ola, ' + primeiroNome + '!</h2><p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">A <strong>Ata N' + numAta + '</strong> (Reuniao ' + tipoAta + ' — ' + dataFormatada + ') aguarda sua assinatura digital.</p><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 24px"><tr style="background:#f8fafc"><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Numero da ata</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#0f172a">' + numAta + '</td></tr><tr><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Tipo</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#0f172a">Reuniao ' + tipoAta + '</td></tr><tr style="background:#f8fafc"><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Data</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#0f172a">' + dataFormatada + '</td></tr><tr><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Validade do link</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:right;font-weight:700;color:#0f172a">30 dias</td></tr></table><p style="text-align:center;margin:28px 0"><a href="' + linkAssinar + '" style="background:#1a3d2b;color:#fff;padding:14px 32px;text-decoration:none;font-weight:bold;font-size:15px;display:inline-block">Assinar Ata</a></p><p style="margin:0;font-size:12px;color:#94a3b8;text-align:center">Link de uso unico — expira apos a assinatura ou em 30 dias.</p></td></tr><tr><td style="background:#0f172a;padding:24px 40px"><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">Liga Academica de Urologia — LAURO</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">Universidad Central del Paraguay | Ciudad del Este</p></td></tr></table></td></tr></table></body></html>';
-          try { await enviarEmail({ para: p.email, assunto: 'Ata N' + numAta + ' aguarda sua assinatura — LAURO', html, texto: 'Ola ' + primeiroNome + ', acesse: ' + linkAssinar }); } catch(e) { console.error('Email ata:', e.message); }
         }
       }
     } catch(e) { console.error('Erro notif ata:', e.message); }
@@ -7833,46 +7851,37 @@ router.post('/atas/:id/pdf-upload', requireAuth, async (req, res) => {
 
 router.post('/atas/:id/presentes', requireAuth, async (req, res) => {
   const { membro_id, membro_tipo, membro_nome, membro_cargo } = req.body;
-  await query('INSERT INTO atas_presentes(ata_id,membro_tipo,membro_id,membro_nome,membro_cargo,presente) VALUES($1,$2,$3,$4,$5,true)',
+  const r = await query('INSERT INTO atas_presentes(ata_id,membro_tipo,membro_id,membro_nome,membro_cargo,presente) VALUES($1,$2,$3,$4,$5,true) RETURNING id',
     [req.params.id, membro_tipo, membro_id, membro_nome, membro_cargo||'']);
+  // Se a ata ja estiver em assinatura, notifica o novo presente imediatamente (nao depende de trocar o status de novo)
+  try {
+    const ataR = await query('SELECT * FROM atas_reuniao WHERE id=$1', [req.params.id]);
+    if (ataR.rows[0] && ataR.rows[0].status === 'em_assinatura') {
+      const pR = await query(`
+        SELECT ap.*, COALESCE(d.email, l.email) as email
+        FROM atas_presentes ap
+        LEFT JOIN diretivos d ON d.id=ap.membro_id AND ap.membro_tipo='diretivo'
+        LEFT JOIN ligantes l ON l.id=ap.membro_id AND ap.membro_tipo='ligante'
+        WHERE ap.id=$1
+      `, [r.rows[0].id]);
+      if (pR.rows[0]) await notificarAssinaturaAta(ataR.rows[0], pR.rows[0]);
+    }
+  } catch(e) { console.error('Notif novo presente:', e.message); }
   res.json({ok:true});
 });
 router.post('/atas/:id/presentes/:presenteId/reenviar', requireAuth, async (req, res) => {
   try {
-    const crypto = require('crypto');
-    const { enviarWhatsApp, enviarEmail } = require('../services/notificacoes');
     const ata = await query('SELECT * FROM atas_reuniao WHERE id=$1', [req.params.id]);
     const pR = await query(`
-      SELECT ap.*, COALESCE(d.email, l.email) as email, COALESCE(d.whatsapp, l.whatsapp) as whatsapp
+      SELECT ap.*, COALESCE(d.email, l.email) as email
       FROM atas_presentes ap
       LEFT JOIN diretivos d ON d.id=ap.membro_id AND ap.membro_tipo='diretivo'
       LEFT JOIN ligantes l ON l.id=ap.membro_id AND ap.membro_tipo='ligante'
       WHERE ap.id=$1 AND ap.ata_id=$2
     `, [req.params.presenteId, req.params.id]);
     if (!pR.rows.length) return res.json({ok:false, erro:'Presente não encontrado'});
-    const p = pR.rows[0];
-    const a = ata.rows[0];
-
-    // Gerar novo token
-    const token = crypto.randomBytes(32).toString('hex');
-    const expira = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
-    await query('UPDATE atas_presentes SET token_assinatura=$1, token_usado=false, token_expira_em=$2 WHERE id=$3', [token, expira, p.id]);
-
-    const appUrl = (process.env.APP_URL || 'https://sistema.lauroucpcde.com').replace(/\/$/, '');
-    const linkAssinar = appUrl + '/assinar-ata/' + token;
-    const primeiroNome = p.membro_nome.split(' ')[0];
-    const numAta = a.numero || a.id;
-    const dataFormatada = a.data_reuniao ? new Date(a.data_reuniao).toLocaleDateString('pt-BR',{timeZone:'UTC',day:'2-digit',month:'2-digit',year:'numeric'}) : '';
-    const tipoAta = a.tipo === 'ordinaria' ? 'Ordinaria' : a.tipo === 'extraordinaria' ? 'Extraordinaria' : 'Especial';
-
     // Reenvio: somente email — WhatsApp só na primeira vez para evitar ban
-    if (p.email) {
-      const cfg = await query("SELECT valor FROM configuracoes WHERE chave='org_logo'");
-      const orgLogo = cfg.rows[0]?.valor || null;
-      const logoHtml = orgLogo ? '<div style="width:80px;height:80px;border-radius:50%;background:white;margin:0 auto 16px;padding:8px;box-sizing:border-box"><img src="' + orgLogo + '" style="width:64px;height:64px;object-fit:contain;border-radius:50%"></div>' : '';
-      const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,sans-serif"><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px"><tr><td><div style="background:linear-gradient(160deg,#1a3d2b 0%,#0a1f1a 100%);padding:36px 40px;text-align:center">' + logoHtml + '<div style="display:inline-block;background:rgba(34,197,94,0.2);border-radius:4px;padding:4px 16px"><span style="color:#86efac;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase">REENVIO — ASSINATURA DE ATA</span></div></div></td></tr><tr><td style="background:white;padding:36px 40px"><h2 style="margin:0 0 8px;font-size:20px;color:#0f172a">Ola, ' + primeiroNome + '!</h2><p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">Segue novo link para assinar a <strong>Ata N' + numAta + '</strong> (Reuniao ' + tipoAta + ' — ' + dataFormatada + ').</p><p style="text-align:center;margin:28px 0"><a href="' + linkAssinar + '" style="background:#1a3d2b;color:#fff;padding:14px 32px;text-decoration:none;font-weight:bold;font-size:15px;display:inline-block">Assinar Ata</a></p><p style="margin:0;font-size:12px;color:#94a3b8;text-align:center">Link de uso unico — expira apos a assinatura ou em 30 dias.</p></td></tr><tr><td style="background:#0f172a;padding:24px 40px"><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">Liga Academica de Urologia — LAURO</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">Universidad Central del Paraguay | Ciudad del Este</p></td></tr></table></td></tr></table></body></html>';
-      try { await enviarEmail({ para: p.email, assunto: 'Reenvio — Ata N' + numAta + ' aguarda sua assinatura — LAURO', html, texto: 'Novo link: ' + linkAssinar }); } catch(e) {}
-    }
+    await notificarAssinaturaAta(ata.rows[0], pR.rows[0], { reenvio: true });
     res.json({ok:true});
   } catch(e) { console.error('Reenviar ata:', e.message); res.json({ok:false, erro:e.message}); }
 });
