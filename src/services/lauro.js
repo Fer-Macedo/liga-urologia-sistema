@@ -339,6 +339,14 @@ REGLAS IMPORTANTES:
       timeout: 30000
     });
 
+    try {
+      const uso = response.data.usage || {};
+      const tIn = uso.input_tokens || 0, tOut = uso.output_tokens || 0;
+      const custo = (tIn * 0.003 / 1000) + (tOut * 0.015 / 1000);
+      await query('INSERT INTO anthropic_uso (contexto,modelo,tokens_entrada,tokens_saida,custo_estimado) VALUES ($1,$2,$3,$4,$5)',
+        ['lauro-whatsapp', 'claude-sonnet-4-5', tIn, tOut, custo]);
+    } catch(e) {}
+
     return response.data.content[0].text;
   } catch(e) {
     const errMsg = JSON.stringify(e.response?.data || e.message || '');

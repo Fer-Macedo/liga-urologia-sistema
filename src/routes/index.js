@@ -6624,7 +6624,10 @@ router.get('/assistente-virtual/uso', requireAuth, async (req, res) => {
       hoje: { tokens: parseInt(hoje_r.rows[0].tokens)||0, custo: parseFloat(hoje_r.rows[0].custo)||0, chamadas: parseInt(hoje_r.rows[0].chamadas)||0 },
       saldo_inicial, saldo_data, consumido_desde_saldo
     });
-  } catch(e) { res.json({ total:{tokens:0,custo:0,chamadas:0}, mes:{tokens:0,custo:0,chamadas:0}, hoje:{tokens:0,custo:0,chamadas:0}, saldo_inicial:0, saldo_data:null, consumido_desde_saldo:0 }); }
+  } catch(e) {
+    console.error('[USO API] erro ao carregar uso:', e.message);
+    res.json({ total:{tokens:0,custo:0,chamadas:0}, mes:{tokens:0,custo:0,chamadas:0}, hoje:{tokens:0,custo:0,chamadas:0}, saldo_inicial:0, saldo_data:null, consumido_desde_saldo:0 });
+  }
 });
 
 router.post('/assistente-virtual/saldo', requireAuth, async (req, res) => {
@@ -6634,7 +6637,10 @@ router.post('/assistente-virtual/saldo', requireAuth, async (req, res) => {
     await query("INSERT INTO configuracoes(chave,valor) VALUES('anthropic_saldo_inicial',$1) ON CONFLICT(chave) DO UPDATE SET valor=$1", [saldo.toString()]);
     await query("INSERT INTO configuracoes(chave,valor) VALUES('anthropic_saldo_data',$1) ON CONFLICT(chave) DO UPDATE SET valor=$1", [agora]);
     res.json({ok:true});
-  } catch(e) { res.json({ok:false}); }
+  } catch(e) {
+    console.error('[USO API] erro ao salvar saldo:', e.message);
+    res.json({ok:false});
+  }
 });
 router.get('/assistente-virtual', requireAuth, async (req, res) => {
   try {

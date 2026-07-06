@@ -206,6 +206,38 @@
 </div>
 <script src="/js/app.js"></script>
 <script>
+// Widget de Uso da API - roda isolado e antes do resto do script, para que um erro
+// em qualquer outro trecho da pagina (ex: conteudo da base de conhecimento) nunca
+// impeca este painel de carregar.
+(function(){
+  function carregarUso(){
+    fetch('/assistente-virtual/uso').then(function(r){return r.json();}).then(function(d){
+      var fmt=function(v){return '$'+(parseFloat(v)||0).toFixed(2);};
+      document.getElementById('uso-hoje-custo').textContent=fmt(d.hoje.custo);
+      document.getElementById('uso-mes-custo').textContent=fmt(d.mes.custo);
+      document.getElementById('uso-total-custo').textContent=fmt(d.total.custo);
+      var saldo=parseFloat(d.saldo_inicial)||0;
+      var consumido=parseFloat(d.consumido_desde_saldo)||0;
+      document.getElementById('uso-consumido').textContent=fmt(consumido);
+      document.getElementById('uso-restante').textContent=saldo>0?fmt(Math.max(0,saldo-consumido)):'—';
+      if(d.saldo_inicial>0) document.getElementById('saldo-input').value=parseFloat(d.saldo_inicial).toFixed(2);
+      if(d.saldo_data) document.getElementById('saldo-data-label').textContent='Desde '+new Date(d.saldo_data).toLocaleDateString('pt-BR');
+    }).catch(function(e){
+      console.error('[Uso da API] falha ao carregar:', e);
+      document.getElementById('uso-consumido').textContent='erro';
+      document.getElementById('uso-restante').textContent='erro';
+    });
+  }
+  window.carregarUso=carregarUso;
+  window.salvarSaldo=function(){
+    var v=parseFloat(document.getElementById('saldo-input').value)||0;
+    fetch('/assistente-virtual/saldo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({saldo:v})})
+      .then(function(r){return r.json();})
+      .then(function(d){ if(!d.ok) console.error('[Uso da API] falha ao salvar saldo'); carregarUso(); })
+      .catch(function(e){ console.error('[Uso da API] erro ao salvar saldo:', e); });
+  };
+  carregarUso();
+})();
 const msgs=document.getElementById('msgs'),inp=document.getElementById('inp'),sendBtn=document.getElementById('sendBtn');
 function sc(){msgs.scrollTop=msgs.scrollHeight;}
 function addMsg(t,h){const d=document.createElement('div');d.className='msg '+t;d.innerHTML=`<div class="m-av">${t==='admin'?'A':'L'}</div><div class="m-bub">${h}</div>`;msgs.appendChild(d);sc();return d;}
@@ -329,26 +361,6 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')fecharEdit();});
 
 inp.addEventListener('input',()=>{inp.style.height='auto';inp.style.height=Math.min(inp.scrollHeight,120)+'px';});
 sc();
-function carregarUso(){
-  fetch('/assistente-virtual/uso').then(function(r){return r.json();}).then(function(d){
-    var fmt=function(v){return '$'+(parseFloat(v)||0).toFixed(2);};
-    document.getElementById('uso-hoje-custo').textContent=fmt(d.hoje.custo);
-    document.getElementById('uso-mes-custo').textContent=fmt(d.mes.custo);
-    document.getElementById('uso-total-custo').textContent=fmt(d.total.custo);
-    var saldo=parseFloat(d.saldo_inicial)||0;
-    var consumido=parseFloat(d.consumido_desde_saldo)||0;
-    document.getElementById('uso-consumido').textContent=fmt(consumido);
-    document.getElementById('uso-restante').textContent=saldo>0?fmt(Math.max(0,saldo-consumido)):'—';
-    if(d.saldo_inicial>0) document.getElementById('saldo-input').value=parseFloat(d.saldo_inicial).toFixed(2);
-    if(d.saldo_data) document.getElementById('saldo-data-label').textContent='Desde '+new Date(d.saldo_data).toLocaleDateString('pt-BR');
-  }).catch(function(){});
-}
-function salvarSaldo(){
-  var v=parseFloat(document.getElementById('saldo-input').value)||0;
-  fetch('/assistente-virtual/saldo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({saldo:v})})
-    .then(function(){carregarUso();});
-}
-carregarUso();
 </script>
 
 <div class="edit-modal" id="editModal">
