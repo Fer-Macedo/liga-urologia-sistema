@@ -90,7 +90,7 @@
   <%if(g.ultimo_status){%><div class="grupo-status status-<%=g.ultimo_status%>"><%=g.ultimo_status.replace('_',' ')%></div><%}%>
   <div class="grupo-acoes">
     <a href="/cientifico/projeto/<%=projeto.id%>/grupo/<%=g.id%>" class="btn btn-sm pri">Abrir</a>
-    <a href="/cientifico/projeto/<%=projeto.id%>/grupo/<%=g.id%>/membros" class="btn btn-sm">Membros</a>
+    <a href="/cientifico/projeto/<%=projeto.id%>/grupo/<%=g.id%>?tab=membros" class="btn btn-sm">Membros</a>
   </div>
 </div>
 <%})%>
