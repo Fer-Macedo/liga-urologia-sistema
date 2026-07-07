@@ -117,8 +117,13 @@
   <%if(erro&&erro.length){%><div class="alert-err"><%=erro[0]%></div><%}%>
   <div class="pg-header">
     <a href="/portal" class="pg-back"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Meus grupos</a>
-    <div style="flex:1"><div class="pg-title"><%=grupo.nome%></div><div class="pg-proj"><%=projeto.titulo%></div></div>
+    <div style="flex:1"><div class="pg-title"><%=grupo.nome%><%if(grupo.status==='encerrado'){%> <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;vertical-align:middle">Encerrado</span><%}%></div><div class="pg-proj"><%=projeto.titulo%></div></div>
   </div>
+  <%if(grupo.status==='encerrado'){%>
+  <div style="background:#f3f4f6;border-left:4px solid #6b7280;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#374151">
+    <b>Este grupo foi encerrado.</b> O trabalho ja foi finalizado e nao aceita mais alteracoes — mas continua disponivel aqui para consulta e download a qualquer momento.
+  </div>
+  <%}%>
   <div class="tabs">
     <button class="tab ativo" onclick="tab(this,'trabalho')">Trabalho</button>
     <button class="tab" onclick="tab(this,'pesquisa')">Pesquisa</button>
@@ -131,6 +136,7 @@
   <div id="tab-trabalho" class="tab-content ativo">
     <div style="display:grid;grid-template-columns:1fr 300px;gap:20px">
       <div>
+        <%if(grupo.status!=='encerrado'){%>
         <div class="card">
           <details>
             <summary style="cursor:pointer;font-size:12.5px;color:#6B7A72;list-style:none;display:flex;align-items:center;gap:6px">
@@ -144,6 +150,7 @@
             </form>
           </details>
         </div>
+        <%}%>
         <div class="card">
           <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>Historico de versoes</h3>
           <%if(versoes.length===0){%><div class="empty-small">Nenhuma versao enviada ainda.</div><%}%>
@@ -158,7 +165,7 @@
               <%=v.comentario_revisor%>
             </div>
             <%}%>
-            <%if(v.status==='aprovado' && v.enviado_por_tipo===meuTipo && v.enviado_por_id===meuId){%>
+            <%if(v.status==='aprovado' && v.enviado_por_tipo===meuTipo && v.enviado_por_id===meuId && grupo.status!=='encerrado'){%>
             <div style="margin-top:10px;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0">
               <%if(v.finalizado_em){%>
               <div style="font-size:11.5px;color:#15803d;margin-bottom:8px">✓ Trabalho final ja enviado em <%=new Date(v.finalizado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%> — pode reenviar abaixo se precisar substituir.</div>
@@ -171,7 +178,7 @@
               </form>
             </div>
             <%}%>
-            <%if(v.enviado_por_tipo===meuTipo && v.enviado_por_id===meuId){%>
+            <%if(v.enviado_por_tipo===meuTipo && v.enviado_por_id===meuId && grupo.status!=='encerrado'){%>
             <div style="margin-top:10px">
               <button type="button" class="btn btn-sm" id="btn-ia-<%=v.id%>" onclick="revisarComIA(<%=v.id%>)" style="font-size:11.5px">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
@@ -268,11 +275,15 @@
       <div style="background:#fff7ed;border-left:3px solid #c2410c;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#7c2d12">
         <b>Este trabalho pertence a <%=donoNomeRascunho%>.</b> Voce pode visualizar e copiar o conteudo abaixo, mas somente <%=donoNomeRascunho%> (ou a equipe do Cientifico) pode editar ou enviar para avaliacao.
       </div>
+      <%}else if(grupo.status==='encerrado'){%>
+      <div style="background:#f3f4f6;border-left:3px solid #6b7280;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#374151">
+        Este grupo foi encerrado — o conteudo abaixo e so para consulta, nao aceita mais edicoes.
+      </div>
       <%}%>
       <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Escreva ou cole o trabalho final aqui (pode colar o texto ja polido acima). O rascunho fica salvo no sistema — pode continuar de qualquer lugar depois, sem perder nada. Escolha a norma, edite direto no Google Docs se quiser, e so envie para avaliacao quando estiver pronto.</p>
-      <input type="text" id="editor-titulo" placeholder="Titulo do trabalho" value="<%=rascunho&&rascunho.titulo?rascunho.titulo:''%>" <%=souDonoRascunho?'':'readonly'%> style="width:100%;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box;margin-bottom:8px<%=souDonoRascunho?'':';background:#F8FAF9'%>">
-      <textarea id="editor-documento" placeholder="Escreva o trabalho aqui... (separe secoes/paragrafos com uma linha em branco)" <%=souDonoRascunho?'':'readonly'%> style="width:100%;min-height:220px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box<%=souDonoRascunho?'':';background:#F8FAF9'%>"><%=rascunho&&rascunho.texto?rascunho.texto:''%></textarea>
-      <%if(souDonoRascunho){%>
+      <input type="text" id="editor-titulo" placeholder="Titulo do trabalho" value="<%=rascunho&&rascunho.titulo?rascunho.titulo:''%>" <%=podeEditarRascunho?'':'readonly'%> style="width:100%;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box;margin-bottom:8px<%=podeEditarRascunho?'':';background:#F8FAF9'%>">
+      <textarea id="editor-documento" placeholder="Escreva o trabalho aqui... (separe secoes/paragrafos com uma linha em branco)" <%=podeEditarRascunho?'':'readonly'%> style="width:100%;min-height:220px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box<%=podeEditarRascunho?'':';background:#F8FAF9'%>"><%=rascunho&&rascunho.texto?rascunho.texto:''%></textarea>
+      <%if(podeEditarRascunho){%>
       <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">
         <select id="editor-norma" style="font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF">
           <option value="abnt" <%=(!rascunho||rascunho.norma==='abnt')?'selected':''%>>Norma ABNT</option>

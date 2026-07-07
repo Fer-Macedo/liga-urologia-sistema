@@ -143,6 +143,25 @@
   </div>
   <%}%>
 
+  <%if(gruposEncerrados && gruposEncerrados.length){%>
+  <div class="sec">
+    <div class="pg-title">Grupos encerrados</div>
+    <div class="pg-sub">Trabalhos ja finalizados — continuam disponiveis so para consulta e download.</div>
+    <div class="grupos-grid">
+      <%gruposEncerrados.forEach(function(g){%>
+      <a href="/portal/grupo/<%=g.grupo_id%>" class="grupo-card" style="opacity:.75">
+        <div class="grupo-proj"><%=g.projeto_titulo%></div>
+        <div class="grupo-nome"><%=g.grupo_nome%></div>
+        <div class="grupo-meta">
+          <span style="background:#f3f4f6;color:#6b7280;font-weight:700;padding:2px 8px;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;border:1px solid #e5e7eb">Encerrado</span>
+        </div>
+        <div class="grupo-cta">Consultar <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </a>
+      <%})%>
+    </div>
+  </div>
+  <%}%>
+
   <%if(materiais && materiais.length){%>
   <div class="sec">
     <div class="pg-title">Materiais de Apoio</div>

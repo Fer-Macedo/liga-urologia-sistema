@@ -82,8 +82,13 @@
   <%- include('../../partials/sidebar',{paginaAtual:'cientifico',config,usuario,permissoesAtivas:permissoesAtivas||[]}) %>
   <main class="main">
     <div class="topbar" style="position:relative;z-index:95">
-      <h1 class="page-titulo" style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:12px"><%=grupo.nome%></h1>
-      <div class="topbar-acoes" style="position:absolute;top:50%;right:80px;transform:translateY(-50%);z-index:90;flex-shrink:0">
+      <h1 class="page-titulo" style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:12px"><%=grupo.nome%>
+        <%if(grupo.status==='encerrado'){%><span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;vertical-align:middle;margin-left:8px">Encerrado</span><%}%>
+      </h1>
+      <div class="topbar-acoes" style="position:absolute;top:50%;right:80px;transform:translateY(-50%);z-index:90;flex-shrink:0;display:flex;gap:8px">
+        <form action="/cientifico/projeto/<%=projeto.id%>/grupo/<%=grupo.id%>/toggle-status" method="POST" style="margin:0" onsubmit="var f=this; confirmarAcao('<%=grupo.status==='encerrado'?'Reabrir este grupo para novas alteracoes?':'Encerrar este grupo? O trabalho fica travado para edicao, mas continua disponivel para consulta e download.'%>', function(){ f.submit(); }); return false;">
+          <button type="submit" class="btn btn-sm" style="position:relative;z-index:90"><%=grupo.status==='encerrado'?'Reabrir grupo':'Encerrar grupo'%></button>
+        </form>
         <a href="/cientifico/projeto/<%=projeto.id%>" onclick="window.location.href='/cientifico/projeto/<%=projeto.id%>';return false;" class="btn btn-sm" style="position:relative;z-index:90"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg><%=projeto.titulo%></a>
       </div>
     </div>

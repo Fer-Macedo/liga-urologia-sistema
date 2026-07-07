@@ -8616,6 +8616,20 @@ router.post('/cientifico/grupo/:grupoId/membro/:membroId/remover', requireAuth, 
   res.redirect('/cientifico/projeto/'+g.projeto_id+'/grupo/'+req.params.grupoId+'?tab=membros');
 });
 
+// POST /cientifico/projeto/:projetoId/grupo/:grupoId/toggle-status — encerra ou reabre o grupo.
+// Grupo encerrado: fica travado para edicao no portal (nao aceita mais versoes/rascunhos),
+// mas continua visivel para consulta e download do trabalho final por todos os membros.
+router.post('/cientifico/projeto/:projetoId/grupo/:grupoId/toggle-status', requireAuth, requireCientifico, async (req, res) => {
+  const gR = await query('SELECT status FROM grupos_cientificos WHERE id=$1 AND projeto_id=$2',[req.params.grupoId,req.params.projetoId]);
+  if (!gR.rows.length) return res.redirect('/cientifico');
+  const novoStatus = gR.rows[0].status === 'encerrado' ? 'ativo' : 'encerrado';
+  await query('UPDATE grupos_cientificos SET status=$1 WHERE id=$2',[novoStatus,req.params.grupoId]);
+  await registrarTimeline(req.params.grupoId, novoStatus === 'encerrado' ? 'Grupo encerrado' : 'Grupo reaberto',
+    novoStatus === 'encerrado' ? 'O trabalho foi finalizado e o grupo foi encerrado.' : 'O grupo foi reaberto para novas alteracoes.');
+  req.session.msg=[novoStatus === 'encerrado' ? 'Grupo encerrado!' : 'Grupo reaberto!'];
+  res.redirect('/cientifico/projeto/'+req.params.projetoId+'/grupo/'+req.params.grupoId);
+});
+
 // POST /cientifico/projeto/:projetoId/aviso
 router.post('/cientifico/projeto/:projetoId/aviso', requireAuth, requireCientifico, async (req, res) => {
   const { texto, grupo_id } = req.body;
@@ -8748,8 +8762,8 @@ router.get('/portal', requirePortal, async (req, res) => {
   const { tipo, id } = req.session.portalMembro;
   const membro = await getPortalMembro(tipo, id);
   if (!membro) { req.session.portalMembro = null; return res.redirect('/portal/login'); }
-  const grupos = (await query(`
-    SELECT m.grupo_id, gc.nome as grupo_nome, pc.titulo as projeto_titulo, pc.prazo,
+  const gruposTodos = (await query(`
+    SELECT m.grupo_id, gc.nome as grupo_nome, gc.status as grupo_status, pc.titulo as projeto_titulo, pc.prazo,
       (SELECT status FROM versoes_trabalho v WHERE v.grupo_id=m.grupo_id ORDER BY v.enviado_em DESC LIMIT 1) as ultimo_status
     FROM membros_grupo_cientifico m
     JOIN grupos_cientificos gc ON gc.id=m.grupo_id
@@ -8757,13 +8771,15 @@ router.get('/portal', requirePortal, async (req, res) => {
     WHERE m.origem_tipo=$1 AND m.origem_id=$2
     ORDER BY pc.criado_em DESC
   `, [tipo, id])).rows;
+  const grupos = gruposTodos.filter(g => g.grupo_status !== 'encerrado');
+  const gruposEncerrados = gruposTodos.filter(g => g.grupo_status === 'encerrado');
   const hora = parseInt(dayjs().tz ? dayjs().tz('America/Asuncion').format('H') : dayjs().format('H'), 10);
   const saudacao = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
   const dataHoje = dayjs().format('DD/MM/YYYY');
   const materiais = (await query(
     "SELECT id, titulo, descricao, arquivo_nome FROM materiais_estudo WHERE ativo=true AND categoria='PRODUÇÃO CIENTÍFICA' ORDER BY ordem ASC, criado_em DESC"
   )).rows;
-  res.render('pages/portal/dashboard', { config, membro, grupos, msg, saudacao, dataHoje, tipoLabel: tipo === 'ligante' ? 'Ligante' : 'Diretivo', materiais });
+  res.render('pages/portal/dashboard', { config, membro, grupos, gruposEncerrados, msg, saudacao, dataHoje, tipoLabel: tipo === 'ligante' ? 'Ligante' : 'Diretivo', materiais });
 });
 
 
@@ -9016,6 +9032,7 @@ router.get('/portal/grupo/:grupoId', requirePortal, async (req, res) => {
     const donoM = await getPortalMembro(rascunho.dono_tipo, rascunho.dono_id);
     donoNomeRascunho = donoM ? donoM.nome : 'outro membro do grupo';
   }
+  const podeEditarRascunho = souDonoRascunho && grupo.status !== 'encerrado';
 
   // Alerta de prazo - dispara quando faltam 5,4,3,2,1 dias ou e o proprio dia do prazo,
   // desde que o trabalho ainda nao tenha sido aprovado.
@@ -9028,7 +9045,7 @@ router.get('/portal/grupo/:grupoId', requirePortal, async (req, res) => {
     if (diff >= 0 && diff <= 5) diasRestantesPrazo = diff;
   }
 
-  res.render('pages/portal/grupo', { config, membro, grupo, projeto, versoes, chat, timeline, avisos, msg, erro, rascunho, diasRestantesPrazo, souDonoRascunho, donoNomeRascunho, meuTipo: tipo, meuId: id });
+  res.render('pages/portal/grupo', { config, membro, grupo, projeto, versoes, chat, timeline, avisos, msg, erro, rascunho, diasRestantesPrazo, souDonoRascunho, donoNomeRascunho, podeEditarRascunho, meuTipo: tipo, meuId: id });
 });
 
 // POST /portal/grupo/:grupoId/upload
@@ -9036,6 +9053,7 @@ router.post('/portal/grupo/:grupoId/upload', requirePortal, uploadArq.single('ar
   const { tipo, id } = req.session.portalMembro;
   const mR = await query('SELECT 1 FROM membros_grupo_cientifico WHERE grupo_id=$1 AND origem_tipo=$2 AND origem_id=$3', [req.params.grupoId, tipo, id]);
   if (!mR.rows.length) return res.redirect('/portal');
+  if (await grupoEstaEncerrado(req.params.grupoId)) { req.session.erro=['Este grupo foi encerrado e nao aceita mais alteracoes.']; return res.redirect('/portal/grupo/'+req.params.grupoId); }
   if (!req.file) { req.session.erro=['Selecione um arquivo.']; return res.redirect('back'); }
   const chave = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'cientifico/trabalhos');
   await query('INSERT INTO versoes_trabalho (grupo_id,arquivo_chave,arquivo_nome,enviado_por_tipo,enviado_por_id) VALUES ($1,$2,$3,$4,$5)',
@@ -9101,6 +9119,7 @@ router.post('/portal/grupo/:grupoId/versao/:versaoId/final', requirePortal, uplo
   try {
     const mR = await query('SELECT 1 FROM membros_grupo_cientifico WHERE grupo_id=$1 AND origem_tipo=$2 AND origem_id=$3', [req.params.grupoId, tipo, id]);
     if (!mR.rows.length) { req.session.erro=['Sem permissao para este grupo.']; return res.redirect('/portal'); }
+    if (await grupoEstaEncerrado(req.params.grupoId)) { req.session.erro=['Este grupo foi encerrado e nao aceita mais alteracoes.']; return res.redirect('/portal/grupo/'+req.params.grupoId); }
     const vR = await query('SELECT * FROM versoes_trabalho WHERE id=$1 AND grupo_id=$2', [req.params.versaoId, req.params.grupoId]);
     if (!vR.rows.length) { req.session.erro=['Versao nao encontrada.']; return res.redirect('/portal/grupo/'+req.params.grupoId); }
     const versao = vR.rows[0];
@@ -9216,6 +9235,13 @@ async function membroPertenceAoGrupo(grupoId, tipo, id) {
   return r.rows.length > 0;
 }
 
+// Grupo encerrado nao aceita mais alteracoes (envio de versao, edicao de rascunho, upload de
+// trabalho final) - continua so para consulta/download.
+async function grupoEstaEncerrado(grupoId) {
+  const r = await query('SELECT status FROM grupos_cientificos WHERE id=$1', [grupoId]);
+  return r.rows.length > 0 && r.rows[0].status === 'encerrado';
+}
+
 // So o "dono" do trabalho (quem criou o rascunho) pode editar/gerar/enviar; os demais membros
 // do grupo so podem visualizar e copiar o conteudo. Se ainda ninguem e dono (rascunho novo ou
 // inexistente), a pessoa atual assume a posse automaticamente ao ser a primeira a mexer.
@@ -9236,6 +9262,7 @@ router.post('/portal/grupo/:grupoId/rascunho/salvar', requirePortal, async (req,
   const { texto, titulo, norma } = req.body;
   try {
     if (!(await membroPertenceAoGrupo(req.params.grupoId, tipo, id))) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    if (await grupoEstaEncerrado(req.params.grupoId)) return res.json({ ok: false, erro: 'Este grupo foi encerrado e nao aceita mais alteracoes.' });
     const dono = await garantirDonoRascunho(req.params.grupoId, tipo, id);
     if (!dono.ok) return res.json(dono);
     await query(`
@@ -9257,6 +9284,7 @@ router.post('/portal/grupo/:grupoId/rascunho/baixar', requirePortal, async (req,
   if (!texto || !texto.trim()) return res.status(400).send('Escreva ou cole o texto do trabalho primeiro.');
   try {
     if (!(await membroPertenceAoGrupo(req.params.grupoId, tipo, id))) return res.status(403).send('Sem permissao para este grupo.');
+    if (await grupoEstaEncerrado(req.params.grupoId)) return res.status(403).send('Este grupo foi encerrado e nao aceita mais alteracoes.');
     const dono = await garantirDonoRascunho(req.params.grupoId, tipo, id);
     if (!dono.ok) return res.status(403).send(dono.erro);
     const { gerarDocumentoCientifico } = require('../services/gerador-docx');
@@ -9278,6 +9306,7 @@ router.post('/portal/grupo/:grupoId/rascunho/editar-google', requirePortal, asyn
   const { texto, titulo, norma } = req.body;
   try {
     if (!(await membroPertenceAoGrupo(req.params.grupoId, tipo, id))) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    if (await grupoEstaEncerrado(req.params.grupoId)) return res.json({ ok: false, erro: 'Este grupo foi encerrado e nao aceita mais alteracoes.' });
     const dono = await garantirDonoRascunho(req.params.grupoId, tipo, id);
     if (!dono.ok) return res.json(dono);
     const tokensR = await query("SELECT valor FROM configuracoes WHERE chave='google_tokens'");
@@ -9320,6 +9349,7 @@ router.post('/portal/grupo/:grupoId/rascunho/revisar-ia', requirePortal, async (
   const { tipo, id } = req.session.portalMembro;
   try {
     if (!(await membroPertenceAoGrupo(req.params.grupoId, tipo, id))) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    if (await grupoEstaEncerrado(req.params.grupoId)) return res.json({ ok: false, erro: 'Este grupo foi encerrado e nao aceita mais alteracoes.' });
     const dono = await garantirDonoRascunho(req.params.grupoId, tipo, id);
     if (!dono.ok) return res.json(dono);
     const rascunhoR = await query('SELECT * FROM rascunhos_trabalho WHERE grupo_id=$1', [req.params.grupoId]);
@@ -9363,6 +9393,7 @@ router.post('/portal/grupo/:grupoId/rascunho/enviar', requirePortal, async (req,
   const { tipo, id } = req.session.portalMembro;
   try {
     if (!(await membroPertenceAoGrupo(req.params.grupoId, tipo, id))) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    if (await grupoEstaEncerrado(req.params.grupoId)) return res.json({ ok: false, erro: 'Este grupo foi encerrado e nao aceita mais alteracoes.' });
     const dono = await garantirDonoRascunho(req.params.grupoId, tipo, id);
     if (!dono.ok) return res.json(dono);
     const rascunhoR = await query('SELECT * FROM rascunhos_trabalho WHERE grupo_id=$1', [req.params.grupoId]);
