@@ -58,7 +58,7 @@
           <span class="table-titulo"><%=usuarios.length%> usuario(s)</span>
         </div>
         <table class="tabela"><thead><tr>
-          <th>Usuario</th><th>Email</th><th>Perfil</th><th>Status</th><th>Criado em</th><th>Acoes</th>
+          <th>Usuario</th><th>Email</th><th>Telefone</th><th>Perfil</th><th>Status</th><th>Criado em</th><th>Acoes</th>
         </tr></thead><tbody>
         <%usuarios.forEach(u=>{%>
         <tr>
@@ -67,6 +67,7 @@
             <div style="font-weight:600"><%=u.nome%></div>
           </div></td>
           <td style="color:var(--texto2)"><%=u.email%></td>
+          <td style="color:var(--texto2)"><%=u.telefone||'—'%></td>
           <td>
             <%if(u.perfil==='admin'){%><span class="badge-perfil badge-admin">Administrador</span>
             <%}else if(u.perfil==='presidencia'){%><span class="badge-perfil badge-presidencia">Presidencia</span>
@@ -83,6 +84,7 @@
           <td><%if(u.perfil!=='admin'){%>
             <div style="display:flex;gap:5px">
               <button class="btn-xs roxo" onclick="abrirPermissoes(<%=u.id%>,'<%=u.nome%>','<%=u.perfil%>')">Permissoes</button>
+              <button class="btn-xs" onclick="abrirTelefone(<%=u.id%>,'<%=u.nome%>','<%=u.telefone||''%>')">Telefone</button>
               <form action="/usuarios/<%=u.id%>/toggle" method="POST" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('<%=u.ativo?'Desativar':'Ativar'%>?', function(){ f.submit(); }); return false;">
                 <button type="submit" class="btn-xs"><%=u.ativo?'Desativar':'Ativar'%></button>
               </form>
@@ -91,7 +93,12 @@
                 <button type="submit" class="btn-xs" style="background:#dc2626;color:white;border-color:transparent">Excluir</button>
               </form>
             </div>
-          <%}else{%><span style="color:var(--texto2);font-size:12px">Admin principal</span><%}%></td>
+          <%}else{%>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="color:var(--texto2);font-size:12px">Admin principal</span>
+              <button class="btn-xs" onclick="abrirTelefone(<%=u.id%>,'<%=u.nome%>','<%=u.telefone||''%>')">Telefone</button>
+            </div>
+          <%}%></td>
         </tr>
         <%});%>
         </tbody></table>
@@ -121,6 +128,7 @@
         <div class="campo"><label class="label">Nome completo</label><input name="nome" class="input" required></div>
         <div class="campo"><label class="label">Email</label><input name="email" type="email" class="input" required></div>
         <div class="campo"><label class="label">Senha inicial</label><input name="senha" type="password" class="input" required minlength="6" placeholder="Minimo 6 caracteres"></div>
+        <div class="campo"><label class="label">Telefone (WhatsApp)</label><input name="telefone" class="input" placeholder="+595 9XX XXX XXX"></div>
         <div class="campo"><label class="label">Perfil</label>
           <select name="perfil" class="input" id="selectPerfil" onchange="atualizarPermissoesDefault()">
             <option value="presidencia">Presidencia</option>
@@ -162,6 +170,15 @@
     <form id="form-senha" action="" method="POST">
       <div class="campo" style="margin-bottom:16px"><label class="label">Nova senha</label><input name="nova_senha" type="password" class="input" required minlength="6" placeholder="Minimo 6 caracteres"></div>
       <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-senha')">Cancelar</button><button type="submit" class="btn btn-primario">Salvar</button></div>
+    </form>
+  </div>
+</div>
+<div class="modal-overlay" id="modal-telefone" style="display:none">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><span class="modal-titulo" id="titulo-telefone">Telefone</span><button class="icon-btn" onclick="fecharModal('modal-telefone')">&#x2715;</button></div>
+    <form id="form-telefone" action="" method="POST">
+      <div class="campo" style="margin-bottom:16px"><label class="label">Telefone (WhatsApp)</label><input name="telefone" id="input-telefone" class="input" placeholder="+595 9XX XXX XXX"></div>
+      <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-telefone')">Cancelar</button><button type="submit" class="btn btn-primario">Salvar</button></div>
     </form>
   </div>
 </div>
@@ -219,6 +236,12 @@ function abrirSenha(id,nome){
   document.getElementById("titulo-senha").textContent="Redefinir senha — "+nome;
   document.getElementById("form-senha").action="/usuarios/"+id+"/senha";
   abrirModal("modal-senha");
+}
+function abrirTelefone(id,nome,telefoneAtual){
+  document.getElementById("titulo-telefone").textContent="Telefone — "+nome;
+  document.getElementById("form-telefone").action="/usuarios/"+id+"/telefone";
+  document.getElementById("input-telefone").value=telefoneAtual||"";
+  abrirModal("modal-telefone");
 }
 atualizarPermissoesDefault();
 </script>

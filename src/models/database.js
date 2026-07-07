@@ -83,6 +83,7 @@ async function initSchema() {
       criado_em TIMESTAMP DEFAULT NOW()
     );
     ALTER TABLE cobrancas ADD COLUMN IF NOT EXISTS valor_pago REAL;
+    ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS telefone TEXT;
     ALTER TABLE listas_assinaturas ADD COLUMN IF NOT EXISTS tipo_publico TEXT DEFAULT 'todos';
     ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
@@ -97,6 +98,14 @@ async function initSchema() {
       ordem INTEGER DEFAULT 0,
       criado_por INTEGER,
       criado_em TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS aniversario_lembretes_enviados (
+      id SERIAL PRIMARY KEY,
+      data DATE NOT NULL,
+      momento TEXT NOT NULL,
+      criado_em TIMESTAMP DEFAULT NOW(),
+      UNIQUE(data, momento)
     );
 
     CREATE TABLE IF NOT EXISTS galerias_eventos (

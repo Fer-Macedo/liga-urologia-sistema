@@ -603,6 +603,22 @@ function iniciarAgendamentos() {
     } catch(e) { console.error('[INSTAGRAM] Story aniversário erro:', e.message); }
   }, { timezone: 'America/Asuncion' });
 
+  // Lembrete WhatsApp p/ equipe (marketing/presidencia/admin) — vespera do aniversario, às 19h
+  cron.schedule('0 19 * * *', async () => {
+    try {
+      const { enviarLembreteAniversarioEquipe } = require('./aniversario-lembrete');
+      await enviarLembreteAniversarioEquipe('antes');
+    } catch(e) { console.error('[LEMBRETE ANIVERSARIO] erro (antes):', e.message); }
+  }, { timezone: 'America/Asuncion' });
+
+  // Lembrete WhatsApp p/ equipe (marketing/presidencia/admin) — dia do aniversario, às 6h
+  cron.schedule('0 6 * * *', async () => {
+    try {
+      const { enviarLembreteAniversarioEquipe } = require('./aniversario-lembrete');
+      await enviarLembreteAniversarioEquipe('dia');
+    } catch(e) { console.error('[LEMBRETE ANIVERSARIO] erro (dia):', e.message); }
+  }, { timezone: 'America/Asuncion' });
+
   // Encerramento automático de eventos — a cada hora
   cron.schedule('0 * * * *', async () => {
     try {

@@ -1315,6 +1315,12 @@ router.post('/usuarios/:id/senha', requireAuth, requireAdmin, async (req, res) =
   res.redirect('/usuarios');
 });
 
+router.post('/usuarios/:id/telefone', requireAuth, requireAdmin, async (req, res) => {
+  await query('UPDATE usuarios SET telefone=$1 WHERE id=$2', [req.body.telefone || null, req.params.id]);
+  req.flash('msg', 'Telefone atualizado!');
+  res.redirect('/usuarios');
+});
+
 // ─── MEU PERFIL ───────────────────────────────────────────────────────────────
 
 router.post('/minha-senha', requireAuth, async (req, res) => {
@@ -2249,7 +2255,7 @@ router.post('/frequencia/turma/:id/enviar', requireAuth, requireSecretaria, asyn
 
 router.get('/usuarios', requireAuth, requirePermissao('usuarios'), async (req, res) => {
   const config = await getConfig();
-  const r = await query('SELECT id,nome,email,perfil,ativo,criado_em FROM usuarios ORDER BY criado_em');
+  const r = await query('SELECT id,nome,email,perfil,ativo,criado_em,telefone FROM usuarios ORDER BY criado_em');
 
   const permR = await query('SELECT usuario_id, modulo FROM usuario_permissoes');
   const permissoesUsuarios = {};
@@ -2277,11 +2283,11 @@ router.post('/usuarios/:id/permissoes', requireAuth, requireAdmin, async (req, r
 });
 
 router.post('/usuarios', requireAuth, requireAdmin, async (req, res) => {
-  const { nome, email, senha, perfil } = req.body;
+  const { nome, email, senha, perfil, telefone } = req.body;
   const modulosInicial = [].concat(req.body.modulos_inicial || []);
   const hash = bcrypt.hashSync(senha, 10);
   try {
-    const r = await query('INSERT INTO usuarios (nome,email,senha,perfil) VALUES ($1,$2,$3,$4) RETURNING id', [nome, email, hash, perfil]);
+    const r = await query('INSERT INTO usuarios (nome,email,senha,perfil,telefone) VALUES ($1,$2,$3,$4,$5) RETURNING id', [nome, email, hash, perfil, telefone || null]);
     const novoId = r.rows[0].id;
     const PADRAO = {
       secretaria:  ['dashboard', 'frequencia', 'aniversarios'],
