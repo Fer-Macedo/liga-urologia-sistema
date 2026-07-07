@@ -9020,6 +9020,24 @@ async function getMembroPortal(tipo, id) {
   }
 }
 
+// GET /membro/perfil/:tipo/:id - pagina publica de perfil, linkada pelo site institucional (lauroucpcde.com)
+// Mostra so nome, foto e cargo/semestre (mesmos dados ja expostos em /api/equipe-publica) - sem login, sem dado sensivel.
+router.get('/membro/perfil/:tipo/:id', async (req, res) => {
+  try {
+    const { gerarUrlInline } = require('../services/arquivos');
+    const tipo = req.params.tipo === 'diretivo' ? 'diretivo' : 'ligante';
+    const r = tipo === 'diretivo'
+      ? await query("SELECT id, nome, cargo, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM diretivos WHERE id=$1 AND ativo=1 AND pendente=false", [req.params.id])
+      : await query("SELECT id, nome, semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM ligantes WHERE id=$1 AND ativo=1 AND pendente=false", [req.params.id]);
+    if (!r.rows.length) return res.status(404).send('Perfil não encontrado');
+    const m = r.rows[0];
+    let foto_url = null;
+    if (m.foto_chave) { try { foto_url = await gerarUrlInline(m.foto_chave); } catch(e) {} }
+    const pessoa = { nome: m.nome, cargo: tipo === 'diretivo' ? (m.cargo || 'Diretivo') : ((m.semestre||'') + '° Semestre'), foto_url };
+    res.render('pages/membro/perfil-publico', { pessoa, tipo });
+  } catch(e) { res.status(500).send('Erro ao carregar perfil'); }
+});
+
 // GET /membro/login
 router.get('/membro/login', (req, res) => {
   if (req.session.membroPortal) return res.redirect('/membro/dashboard');
