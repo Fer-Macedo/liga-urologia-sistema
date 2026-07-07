@@ -271,6 +271,11 @@
         <iframe id="google-doc-iframe" src="<%=rascunho&&rascunho.google_embed_url?rascunho.google_embed_url:''%>" style="width:100%;min-height:520px;border:1px solid #DDE3DF"></iframe>
       </div>
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid #DDE3DF">
+        <p style="font-size:12px;color:#6B7A72;margin-bottom:8px">Antes de enviar, peça uma última conferência da IA — ela aponta pontos fortes, pontos de atenção e se a estrutura do trabalho parece completa. Não substitui a avaliação da equipe do Científico, é só um pré-check.</p>
+        <button type="button" class="btn btn-sm" id="btn-rascunho-ia" onclick="revisarRascunhoComIA()" style="font-size:11.5px">Revisar com IA antes de enviar</button>
+        <div id="ia-revisao-rascunho" style="margin-top:10px;background:#F0F4F2;border:1px solid #DDE3DF;padding:12px 14px;font-size:12.5px;display:none"></div>
+      </div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid #DDE3DF">
         <p style="font-size:12px;color:#6B7A72;margin-bottom:8px">Quando o trabalho estiver pronto (revisado, sem o bloco de orientacoes), envie para avaliacao da equipe do Cientifico. Voce pode fazer isso a qualquer momento, de qualquer lugar.</p>
         <button type="button" class="btn pri btn-sm" id="btn-rascunho-enviar" onclick="enviarRascunhoParaAvaliacao()" style="font-size:11.5px">Enviar para avaliacao</button>
         <div id="rascunho-envio-status" style="margin-top:8px;font-size:12.5px"></div>
@@ -596,6 +601,23 @@ function editarNoGoogle() {
       out.innerHTML = '<span style="color:#0F6E56">Documento aberto no Google Docs abaixo. Edite direto ali — e salvo automaticamente pelo Google. So quem tiver acesso a esta pagina do grupo consegue editar; apos enviar para avaliacao, o documento e travado automaticamente (fica so-leitura).</span>';
     })
     .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
+}
+
+function revisarRascunhoComIA() {
+  var btn = document.getElementById('btn-rascunho-ia');
+  var box = document.getElementById('ia-revisao-rascunho');
+  btn.disabled = true;
+  var orig = btn.innerHTML;
+  btn.innerHTML = 'Analisando... (pode levar ate 30s)';
+  box.style.display = 'none';
+  fetch('/portal/grupo/'+GRUPO_ID+'/rascunho/revisar-ia', { method: 'POST', credentials: 'same-origin' })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      btn.disabled = false; btn.innerHTML = orig;
+      if(!data.ok){ box.style.display='block'; box.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro ao revisar.')+'</span>'; return; }
+      renderRevisaoIA('rascunho', data.revisao);
+    })
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; box.style.display='block'; box.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
 }
 
 function enviarRascunhoParaAvaliacao() {

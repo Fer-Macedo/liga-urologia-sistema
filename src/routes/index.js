@@ -9217,6 +9217,47 @@ router.post('/portal/grupo/:grupoId/rascunho/editar-google', requirePortal, asyn
   } catch(e) { console.error('rascunho/editar-google erro:', e.message); res.json({ ok: false, erro: 'Erro ao abrir no Google Docs.' }); }
 });
 
+// POST /portal/grupo/:grupoId/rascunho/revisar-ia — ultima conferencia da IA antes de enviar
+// para avaliacao oficial: aponta pontos fortes, pontos de atencao e se a estrutura
+// IMRAD/norma parece completa, com base no conteudo mais atual do rascunho (ou do Google
+// Docs, se a pessoa estiver editando por la). Nao substitui a avaliacao humana do Cientifico.
+router.post('/portal/grupo/:grupoId/rascunho/revisar-ia', requirePortal, async (req, res) => {
+  const { tipo, id } = req.session.portalMembro;
+  try {
+    if (!(await membroPertenceAoGrupo(req.params.grupoId, tipo, id))) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    const rascunhoR = await query('SELECT * FROM rascunhos_trabalho WHERE grupo_id=$1', [req.params.grupoId]);
+    if (!rascunhoR.rows.length || !(rascunhoR.rows[0].texto || '').trim()) return res.json({ ok: false, erro: 'Escreva ou salve o rascunho antes de revisar.' });
+    let rascunho = rascunhoR.rows[0];
+
+    const tokensR = await query("SELECT valor FROM configuracoes WHERE chave='google_tokens'");
+    if (!tokensR.rows.length) return res.json({ ok: false, erro: 'Google Drive nao esta conectado. Fale com o administrador.' });
+    const tokens = JSON.parse(tokensR.rows[0].valor);
+    const { uploadParaDrive, exportarArquivo } = require('../services/google-drive');
+
+    let fileId = rascunho.google_file_id;
+    if (!fileId) {
+      // Ainda nao existe documento no Google - cria um agora so pra poder exportar em PDF e analisar.
+      const { gerarDocumentoCientifico } = require('../services/gerador-docx');
+      const tituloFinal = rascunho.titulo || 'Trabalho Cientifico';
+      const buffer = await gerarDocumentoCientifico({ titulo: tituloFinal, texto: rascunho.texto, norma: rascunho.norma });
+      const resultado = await uploadParaDrive(tokens, buffer, tituloFinal + '.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'writer');
+      fileId = resultado.fileId;
+      await query('UPDATE rascunhos_trabalho SET google_file_id=$1, google_doc_url=$2, google_embed_url=$3 WHERE grupo_id=$4',
+        [resultado.fileId, resultado.webViewLink, resultado.embedUrl, req.params.grupoId]);
+    }
+
+    const pdfBuffer = await exportarArquivo(tokens, fileId, 'application/pdf');
+    const base64Pdf = pdfBuffer.toString('base64');
+
+    const gR = await query('SELECT gc.tipo_trabalho, pc.titulo FROM grupos_cientificos gc JOIN projetos_cientificos pc ON pc.id=gc.projeto_id WHERE gc.id=$1', [req.params.grupoId]);
+    const grupo = gR.rows[0] || {};
+    const { revisarTrabalho } = require('../services/cientifico-ia');
+    const r = await revisarTrabalho(query, { base64Pdf, tituloProjeto: grupo.titulo, tipoTrabalho: grupo.tipo_trabalho });
+    if (!r.ok) return res.json({ ok: false, erro: r.erro });
+    res.json({ ok: true, revisao: r.revisao });
+  } catch(e) { console.error('rascunho/revisar-ia erro:', e.message); res.json({ ok: false, erro: 'Erro ao revisar com IA.' }); }
+});
+
 // POST /portal/grupo/:grupoId/rascunho/enviar — envia o rascunho como nova versao oficial
 // do trabalho, para avaliacao da equipe do Cientifico. Se a pessoa editou no Google Docs
 // embutido, busca o conteudo mais atual direto do Google (o que ela tiver editado por
