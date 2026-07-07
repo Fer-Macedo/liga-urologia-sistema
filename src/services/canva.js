@@ -6,7 +6,7 @@ const { query } = require('../models/database');
 
 const AUTH_URL = 'https://www.canva.com/api/oauth/authorize';
 const TOKEN_URL = 'https://api.canva.com/rest/v1/oauth/token';
-const SCOPES = ['design:content:read', 'design:content:write', 'asset:read', 'brandtemplate:content:read', 'brandtemplate:meta:read'];
+const SCOPES = ['design:content:read', 'design:content:write', 'design:meta:read', 'asset:read', 'brandtemplate:content:read', 'brandtemplate:meta:read'];
 
 function base64url(buf) {
   return buf.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
