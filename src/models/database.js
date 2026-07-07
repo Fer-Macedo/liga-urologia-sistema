@@ -84,6 +84,8 @@ async function initSchema() {
     );
     ALTER TABLE cobrancas ADD COLUMN IF NOT EXISTS valor_pago REAL;
     ALTER TABLE listas_assinaturas ADD COLUMN IF NOT EXISTS tipo_publico TEXT DEFAULT 'todos';
+    ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
+    ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
 
     CREATE TABLE IF NOT EXISTS notificacoes_log (
       id SERIAL PRIMARY KEY,

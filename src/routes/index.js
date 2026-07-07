@@ -957,8 +957,8 @@ router.get('/api/equipe-publica', corsPublico, limiterApiPublica, async (req, re
   try {
     const { gerarUrlInline } = require('../services/arquivos');
     const [dirsR, ligsR] = await Promise.all([
-      query('SELECT id, nome, cargo, foto_chave FROM diretivos WHERE ativo=1 AND pendente=false ORDER BY cargo, nome'),
-      query('SELECT id, nome, semestre, foto_chave FROM ligantes WHERE ativo=1 AND pendente=false ORDER BY nome LIMIT 50')
+      query("SELECT id, nome, cargo, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM diretivos WHERE ativo=1 AND pendente=false ORDER BY cargo, nome"),
+      query("SELECT id, nome, semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM ligantes WHERE ativo=1 AND pendente=false ORDER BY nome LIMIT 50")
     ]);
     const mapFoto = async (rows) => Promise.all(rows.map(async m => {
       let foto_url = null;
@@ -4409,12 +4409,58 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
   const [postsR, midiasR] = await Promise.all([query('SELECT * FROM marketing_posts ORDER BY criado_em DESC'), query('SELECT * FROM marketing_midias ORDER BY criado_em DESC')]);
   const mktConfig = await getMktConfig();
   const { estaConectado } = require('../services/canva');
+  const { gerarUrlInline } = require('../services/arquivos');
   const canvaConectado = await estaConectado();
   const posts = postsR.rows; const total = posts.length||1;
   const igPct = Math.round(posts.filter(p=>(p.redes||[]).includes('instagram')).length/total*100);
   const fbPct = Math.round(posts.filter(p=>(p.redes||[]).includes('facebook')).length/total*100);
   const waPct = Math.round(posts.filter(p=>(p.redes||[]).includes('whatsapp')).length/total*100);
-  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado });
+  // Dados leves para a gestao das fotos do site - so nome e foto, sem nenhum dado sensivel (cpf/rg/email/whatsapp)
+  const [ligEquipeR, dirEquipeR, eventosR] = await Promise.all([
+    query("SELECT id, nome, foto_site_chave FROM ligantes WHERE ativo=1 AND pendente=false ORDER BY nome"),
+    query("SELECT id, nome, foto_site_chave FROM diretivos WHERE ativo=1 AND pendente=false ORDER BY cargo, nome"),
+    query("SELECT id, nome, banner_chave FROM eventos ORDER BY data_inicio DESC LIMIT 30")
+  ]);
+  const comFoto = async (rows, chaveCampo) => Promise.all(rows.map(async r => {
+    let foto_url = null;
+    if (r[chaveCampo]) { try { foto_url = await gerarUrlInline(r[chaveCampo]); } catch(e) {} }
+    return { id: r.id, nome: r.nome, foto_url };
+  }));
+  const [equipeLigantes, equipeDiretivos, eventosComBanner] = await Promise.all([
+    comFoto(ligEquipeR.rows, 'foto_site_chave'),
+    comFoto(dirEquipeR.rows, 'foto_site_chave'),
+    comFoto(eventosR.rows, 'banner_chave')
+  ]);
+  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, eventosComBanner });
+});
+
+// Foto padronizada da equipe para o site publico - gerido pelo Marketing, separado da foto interna
+// de cadastro (que ligantes/diretivos continuam anexando normalmente no proprio formulario deles).
+router.post('/marketing/equipe/:tipo/:id/foto', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.single('foto')(req, res, async (err) => {
+      if (err || !req.file) { req.session.erro=['Nenhuma imagem enviada.']; return res.redirect('/marketing?tab=equipe'); }
+      const tabela = req.params.tipo === 'diretivo' ? 'diretivos' : 'ligantes';
+      const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'equipe-site');
+      await query(`UPDATE ${tabela} SET foto_site_chave=$1 WHERE id=$2`, [r.chave, req.params.id]);
+      req.session.msg = ['Foto do site atualizada!'];
+      res.redirect('/marketing?tab=equipe');
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing?tab=equipe'); }
+});
+
+router.post('/marketing/evento/:id/banner', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.single('banner')(req, res, async (err) => {
+      if (err || !req.file) { req.session.erro=['Nenhuma imagem enviada.']; return res.redirect('/marketing?tab=equipe'); }
+      const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'eventos');
+      await query('UPDATE eventos SET banner_chave=$1 WHERE id=$2', [r.chave, req.params.id]);
+      req.session.msg = ['Banner do evento atualizado!'];
+      res.redirect('/marketing?tab=equipe');
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing?tab=equipe'); }
 });
 
 router.post('/marketing/posts', requireAuth, async (req, res) => {
