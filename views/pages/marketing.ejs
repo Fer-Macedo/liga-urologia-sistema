@@ -557,6 +557,32 @@
             <%});%>
           </div>
         </div>
+
+        <div class="equipe-bloco">
+          <div class="equipe-bloco-header">
+            <div class="equipe-bloco-icone" style="background:#6366f1">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
+            </div>
+            <div class="equipe-bloco-titulo">Video Institucional</div>
+            <div class="equipe-bloco-contagem"><%=siteVideoUrl?'Ativo':'Nenhum video'%></div>
+          </div>
+          <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">Video de apresentacao exibido no site institucional (lauroucpcde.com). Ao subir um novo video, ele substitui automaticamente o que estiver no ar.</p>
+          <%if(siteVideoUrl){%>
+          <video src="<%=siteVideoUrl%>" controls style="width:100%;max-width:480px;border-radius:var(--rad);margin-bottom:14px;display:block;background:#000"></video>
+          <%}%>
+          <form action="/marketing/video" method="POST" enctype="multipart/form-data" style="margin-bottom:12px;padding:14px;background:var(--fundo);border-radius:var(--rad)">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+              <div class="campo" style="flex:1;min-width:200px"><label class="label">Arquivo de video</label><input type="file" name="video" class="input" accept="video/*" required></div>
+              <button type="submit" class="btn btn-primario btn-sm"><%=siteVideoUrl?'Substituir video':'+ Adicionar video'%></button>
+            </div>
+            <div style="font-size:11px;color:var(--texto2);margin-top:8px">Formato MP4 recomendado, 16:9</div>
+          </form>
+          <%if(siteVideoUrl){%>
+          <form action="/marketing/video/remover" method="POST" style="margin:0" onsubmit="var f=this; confirmarAcao('Remover o video do site?', function(){ f.submit(); }); return false;">
+            <button type="submit" class="btn-xs verm" style="border-color:#fecaca">Remover video do site</button>
+          </form>
+          <%}%>
+        </div>
       </div>
       <div class="mkt-section" id="tab-whatsapp">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">

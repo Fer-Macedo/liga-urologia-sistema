@@ -4435,7 +4435,10 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
     if (b.imagem_chave) { try { imagem_url = await gerarUrlInline(b.imagem_chave); } catch(e) {} }
     return { ...b, imagem_url };
   }));
-  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners });
+  const siteVideoR = await query("SELECT valor FROM configuracoes WHERE chave='site_video_chave'");
+  let siteVideoUrl = null;
+  if (siteVideoR.rows.length && siteVideoR.rows[0].valor) { try { siteVideoUrl = await gerarUrlInline(siteVideoR.rows[0].valor, 'video/mp4'); } catch(e) {} }
+  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl });
 });
 
 // Foto padronizada da equipe para o site publico - gerido pelo Marketing, separado da foto interna
@@ -4490,6 +4493,38 @@ router.get('/api/banners-publicos', corsPublico, limiterApiPublica, async (req, 
     const banners = await Promise.all(r.rows.map(async b => ({ id: b.id, titulo: b.titulo, link_url: b.link_url, imagem_url: await gerarUrlInline(b.imagem_chave).catch(()=>null) })));
     res.json({ banners });
   } catch(e) { res.json({ banners: [] }); }
+});
+
+// Video institucional do site - o Marketing sobe/substitui o video direto pela plataforma,
+// sem precisar mexer em codigo. O video some do site se for removido.
+router.post('/marketing/video', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.single('video')(req, res, async (err) => {
+      if (err || !req.file) { req.session.erro=['Nenhum video enviado.']; return res.redirect('/marketing?tab=equipe'); }
+      const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'site-video');
+      await query("INSERT INTO configuracoes (chave,valor) VALUES ('site_video_chave',$1) ON CONFLICT (chave) DO UPDATE SET valor=$1", [r.chave]);
+      req.session.msg = ['Video do site atualizado!'];
+      res.redirect('/marketing?tab=equipe');
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing?tab=equipe'); }
+});
+
+router.post('/marketing/video/remover', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  await query("DELETE FROM configuracoes WHERE chave='site_video_chave'");
+  req.session.msg = ['Video do site removido!'];
+  res.redirect('/marketing?tab=equipe');
+});
+
+// API publica - consumida pelo site lauroucpcde.com para exibir o video institucional
+router.get('/api/video-publico', corsPublico, limiterApiPublica, async (req, res) => {
+  try {
+    const { gerarUrlInline } = require('../services/arquivos');
+    const r = await query("SELECT valor FROM configuracoes WHERE chave='site_video_chave'");
+    if (!r.rows.length || !r.rows[0].valor) return res.json({ video_url: null });
+    const video_url = await gerarUrlInline(r.rows[0].valor, 'video/mp4').catch(()=>null);
+    res.json({ video_url });
+  } catch(e) { res.json({ video_url: null }); }
 });
 
 router.post('/marketing/posts', requireAuth, async (req, res) => {
