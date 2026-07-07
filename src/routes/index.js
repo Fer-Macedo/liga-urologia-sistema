@@ -9021,7 +9021,7 @@ router.get('/portal/grupo/:grupoId', requirePortal, async (req, res) => {
     if (diff >= 0 && diff <= 5) diasRestantesPrazo = diff;
   }
 
-  res.render('pages/portal/grupo', { config, membro, grupo, projeto, versoes, chat, timeline, avisos, msg, erro, rascunho, diasRestantesPrazo, souDonoRascunho, donoNomeRascunho });
+  res.render('pages/portal/grupo', { config, membro, grupo, projeto, versoes, chat, timeline, avisos, msg, erro, rascunho, diasRestantesPrazo, souDonoRascunho, donoNomeRascunho, meuTipo: tipo, meuId: id });
 });
 
 // POST /portal/grupo/:grupoId/upload
@@ -9082,6 +9082,33 @@ router.post('/portal/grupo/:grupoId/versao/:versaoId/revisar-ia', requirePortal,
     await query('UPDATE versoes_trabalho SET ia_revisao=$1, ia_revisado_em=NOW() WHERE id=$2', [JSON.stringify(r.revisao), req.params.versaoId]);
     res.json({ ok: true, revisao: r.revisao });
   } catch(e) { res.json({ ok: false, erro: e.message }); }
+});
+
+// POST /portal/grupo/:grupoId/versao/:versaoId/final — depois do trabalho aprovado, o dono
+// sobe o arquivo final ja adaptado para o modelo/normas exigidos pelo congresso ou evento
+// especifico (cada um tem seu proprio padrao, as vezes com logomarca e capa proprias, que a
+// pessoa preenche por fora do sistema). Esse arquivo SUBSTITUI o arquivo aprovado na mesma
+// versao - fica salvo no portal para acompanhamento e download futuro.
+router.post('/portal/grupo/:grupoId/versao/:versaoId/final', requirePortal, uploadArq.single('arquivo_final'), async (req, res) => {
+  const { tipo, id } = req.session.portalMembro;
+  try {
+    const mR = await query('SELECT 1 FROM membros_grupo_cientifico WHERE grupo_id=$1 AND origem_tipo=$2 AND origem_id=$3', [req.params.grupoId, tipo, id]);
+    if (!mR.rows.length) { req.session.erro=['Sem permissao para este grupo.']; return res.redirect('/portal'); }
+    const vR = await query('SELECT * FROM versoes_trabalho WHERE id=$1 AND grupo_id=$2', [req.params.versaoId, req.params.grupoId]);
+    if (!vR.rows.length) { req.session.erro=['Versao nao encontrada.']; return res.redirect('/portal/grupo/'+req.params.grupoId); }
+    const versao = vR.rows[0];
+    if (versao.status !== 'aprovado') { req.session.erro=['So e possivel enviar o trabalho final depois que a versao for aprovada.']; return res.redirect('/portal/grupo/'+req.params.grupoId); }
+    if (versao.enviado_por_tipo !== tipo || versao.enviado_por_id !== id) { req.session.erro=['Apenas quem enviou este trabalho pode subir a versao final.']; return res.redirect('/portal/grupo/'+req.params.grupoId); }
+    if (!req.file) { req.session.erro=['Selecione o arquivo final.']; return res.redirect('/portal/grupo/'+req.params.grupoId); }
+
+    const chave = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'cientifico/trabalhos');
+    await query('UPDATE versoes_trabalho SET arquivo_chave=$1, arquivo_nome=$2, finalizado_em=NOW() WHERE id=$3', [chave, req.file.originalname, req.params.versaoId]);
+
+    const membro = await getPortalMembro(tipo, id);
+    await registrarTimeline(req.params.grupoId, 'Trabalho final enviado', (membro?.nome||'Membro')+' enviou o trabalho final, ja no modelo do evento/congresso');
+    req.session.msg=['Trabalho final enviado e salvo no portal!'];
+    res.redirect('/portal/grupo/'+req.params.grupoId);
+  } catch(e) { console.error('versao/final erro:', e.message); req.session.erro=['Erro ao enviar o trabalho final.']; res.redirect('/portal/grupo/'+req.params.grupoId); }
 });
 
 // POST /portal/projeto/:projetoId/pico — assistente de construcao da pergunta PICO

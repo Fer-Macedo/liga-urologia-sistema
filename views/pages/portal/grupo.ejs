@@ -158,6 +158,19 @@
               <%=v.comentario_revisor%>
             </div>
             <%}%>
+            <%if(v.status==='aprovado' && v.enviado_por_tipo===meuTipo && v.enviado_por_id===meuId){%>
+            <div style="margin-top:10px;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0">
+              <%if(v.finalizado_em){%>
+              <div style="font-size:11.5px;color:#15803d;margin-bottom:8px">✓ Trabalho final ja enviado em <%=new Date(v.finalizado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%> — pode reenviar abaixo se precisar substituir.</div>
+              <%}else{%>
+              <div style="font-size:11.5px;color:#15803d;margin-bottom:8px">Trabalho aprovado! Cada evento/congresso tem seu proprio modelo (as vezes com logomarca e capa proprias). Adapte o seu trabalho para esse modelo e suba o arquivo final aqui — ele fica salvo no portal pra voce acompanhar ou baixar depois.</div>
+              <%}%>
+              <form method="POST" action="/portal/grupo/<%=grupo.id%>/versao/<%=v.id%>/final" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                <input type="file" name="arquivo_final" accept=".pdf,.doc,.docx" style="font-size:12px" required>
+                <button type="submit" class="btn pri btn-sm" style="font-size:11.5px"><%=v.finalizado_em?'Substituir trabalho final':'Enviar trabalho final'%></button>
+              </form>
+            </div>
+            <%}%>
             <div style="margin-top:10px">
               <button type="button" class="btn btn-sm" id="btn-ia-<%=v.id%>" onclick="revisarComIA(<%=v.id%>)" style="font-size:11.5px">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
