@@ -529,15 +529,14 @@
             <div class="equipe-bloco-contagem"><%=siteBanners.length%> banner<%=siteBanners.length!==1?'s':''%></div>
           </div>
           <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">Propagandas e avisos do Marketing sem vinculo com um evento especifico. Banner de evento continua sendo gerido direto na aba Eventos (aparece/some sozinho conforme a data do evento).</p>
-          <form action="/marketing/banners" method="POST" enctype="multipart/form-data" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px;padding:14px;background:var(--fundo);border-radius:var(--rad)">
-            <div class="campo" style="flex:1;min-width:140px"><label class="label">Titulo (opcional)</label><input type="text" name="titulo" class="input" placeholder="Ex: Inscricoes abertas"></div>
-            <div class="campo" style="flex:1;min-width:140px"><label class="label">Link (opcional)</label><input type="text" name="link_url" class="input" placeholder="https://..."></div>
-            <div class="campo" style="flex:1;min-width:160px">
-              <label class="label">Imagem</label>
-              <input type="file" name="imagem" class="input" accept="image/*" required>
-              <div style="font-size:11px;color:var(--texto2);margin-top:4px">Tamanho recomendado: 1920x1080px (16:9), formato JPG ou PNG</div>
+          <form action="/marketing/banners" method="POST" enctype="multipart/form-data" style="margin-bottom:16px;padding:14px;background:var(--fundo);border-radius:var(--rad)">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+              <div class="campo" style="flex:1;min-width:140px"><label class="label">Titulo (opcional)</label><input type="text" name="titulo" class="input" placeholder="Ex: Inscricoes abertas"></div>
+              <div class="campo" style="flex:1;min-width:140px"><label class="label">Link (opcional)</label><input type="text" name="link_url" class="input" placeholder="https://..."></div>
+              <div class="campo" style="flex:1;min-width:160px"><label class="label">Imagem</label><input type="file" name="imagem" class="input" accept="image/*" required></div>
+              <button type="submit" class="btn btn-primario btn-sm">+ Adicionar banner</button>
             </div>
-            <button type="submit" class="btn btn-primario btn-sm">+ Adicionar banner</button>
+            <div style="font-size:11px;color:var(--texto2);margin-top:8px">Tamanho recomendado para a imagem: 1920x1080px (16:9), formato JPG ou PNG</div>
           </form>
           <div class="equipe-grid">
             <%siteBanners.forEach(function(b){%>
