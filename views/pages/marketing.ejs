@@ -709,7 +709,20 @@
           <%if(aniversarioTemplateUrl){%>
           <div style="padding:14px;background:var(--fundo);border-radius:var(--rad);margin-bottom:14px">
             <div class="label" style="margin-bottom:8px">Testar a arte com qualquer ligante/diretivo (gera a previa, nao publica)</div>
-            <form onsubmit="var s=document.getElementById('aniv-teste-select'); if(s.value) window.open('/marketing/aniversario/preview/'+s.value,'_blank'); return false;" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+            <script>
+              function anivMontarUrl(download){
+                var s=document.getElementById('aniv-teste-select');
+                var nomeManual=document.getElementById('aniv-nome-manual').value.trim();
+                var usarCompleto=document.getElementById('aniv-nome-completo').checked;
+                if(!s.value) return null;
+                var url='/marketing/aniversario/preview/'+s.value+'?';
+                if(nomeManual) url+='nome='+encodeURIComponent(nomeManual);
+                else if(usarCompleto) url+='nome_completo=1';
+                if(download) url+='&download=1';
+                return url;
+              }
+            </script>
+            <form onsubmit="var u=anivMontarUrl(false); if(u) window.open(u,'_blank'); return false;" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
               <div class="campo" style="flex:1;min-width:220px">
                 <label class="label">Pessoa</label>
                 <select id="aniv-teste-select" class="input">
@@ -730,9 +743,16 @@
                   <%}%>
                 </select>
               </div>
+              <div class="campo" style="flex:1;min-width:200px">
+                <label class="label">Nome a exibir (opcional)</label>
+                <input type="text" id="aniv-nome-manual" class="input" placeholder="Deixe em branco para automatico">
+              </div>
               <button type="submit" class="btn btn-primario btn-sm">Testar previa</button>
-              <button type="button" class="btn btn-secundario btn-sm" onclick="var s=document.getElementById('aniv-teste-select'); if(s.value) window.open('/marketing/aniversario/preview/'+s.value+'?download=1','_blank');">Baixar imagem</button>
+              <button type="button" class="btn btn-secundario btn-sm" onclick="var u=anivMontarUrl(true); if(u) window.open(u,'_blank');">Baixar imagem</button>
             </form>
+            <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--texto2);margin-top:10px">
+              <input type="checkbox" id="aniv-nome-completo"> Usar nome completo (por padrao, sem campo manual, usa so primeiro + ultimo nome pra nao estourar a arte)
+            </label>
             <div style="font-size:11px;color:var(--texto2);margin-top:8px">Use "Baixar imagem" para salvar o arquivo e postar tambem no grupo interno de WhatsApp no dia do aniversario.</div>
           </div>
           <%}%>

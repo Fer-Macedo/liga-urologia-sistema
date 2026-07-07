@@ -233,7 +233,7 @@ async function postarStoriesAniversarioDoDia() {
   if (!r.rows.length) return;
 
   const { baixarArquivoBuffer, uploadArquivo, gerarUrlInline } = require('./arquivos');
-  const { gerarArteAniversario } = require('./aniversario-arte');
+  const { gerarArteAniversario, nomeCurto } = require('./aniversario-arte');
   const templateBuffer = await baixarArquivoBuffer(cfg.aniversario_template_chave);
 
   for (const pessoa of r.rows) {
@@ -247,7 +247,7 @@ async function postarStoriesAniversarioDoDia() {
 
       const fotoBuffer = await baixarArquivoBuffer(pessoa.foto_chave);
       const cargo = pessoa.tipo === 'diretivo' ? (pessoa.cargo || 'Diretivo') : `${pessoa.semestre || ''}° Semestre`;
-      const arteBuffer = await gerarArteAniversario({ templateBuffer, fotoBuffer, nome: pessoa.nome, cargo });
+      const arteBuffer = await gerarArteAniversario({ templateBuffer, fotoBuffer, nome: nomeCurto(pessoa.nome), cargo });
 
       const upload = await uploadArquivo(arteBuffer, `aniversario-${pessoa.tipo}-${pessoa.id}.jpg`, 'image/jpeg', 'aniversario-stories');
       const imageUrl = await gerarUrlInline(upload.chave, 'image/jpeg');

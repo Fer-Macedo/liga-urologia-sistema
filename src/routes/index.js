@@ -4653,7 +4653,7 @@ router.post('/marketing/aniversario/toggle', requireAuth, requirePermissao('mark
 router.get('/marketing/aniversario/preview/:tipo/:id', requireAuth, requirePermissao('marketing'), async (req, res) => {
   try {
     const { baixarArquivoBuffer } = require('../services/arquivos');
-    const { gerarArteAniversario } = require('../services/aniversario-arte');
+    const { gerarArteAniversario, nomeCurto } = require('../services/aniversario-arte');
     const tipo = req.params.tipo === 'diretivo' ? 'diretivo' : 'ligante';
     const p = tipo === 'diretivo'
       ? await query("SELECT nome, cargo, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM diretivos WHERE id=$1", [req.params.id])
@@ -4663,11 +4663,12 @@ router.get('/marketing/aniversario/preview/:tipo/:id', requireAuth, requirePermi
     const templateR = await query("SELECT valor FROM configuracoes WHERE chave='aniversario_template_chave'");
     if (!templateR.rows.length) return res.status(400).send('Nenhuma arte-modelo configurada ainda');
     const cargo = tipo === 'diretivo' ? (pessoa.cargo || 'Diretivo') : `${pessoa.semestre||''}° Semestre`;
+    const nomeExibir = req.query.nome_completo === '1' ? pessoa.nome : (req.query.nome || nomeCurto(pessoa.nome));
     const [templateBuffer, fotoBuffer] = await Promise.all([
       baixarArquivoBuffer(templateR.rows[0].valor),
       baixarArquivoBuffer(pessoa.foto_chave)
     ]);
-    const arte = await gerarArteAniversario({ templateBuffer, fotoBuffer, nome: pessoa.nome, cargo });
+    const arte = await gerarArteAniversario({ templateBuffer, fotoBuffer, nome: nomeExibir, cargo });
     res.set('Content-Type', 'image/jpeg');
     if (req.query.download) {
       res.set('Content-Disposition', `attachment; filename="aniversario-${tipo}-${pessoa.nome.replace(/[^a-zA-Z0-9]+/g,'-')}.jpg"`);
