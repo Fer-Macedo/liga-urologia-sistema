@@ -117,7 +117,6 @@ async function initSchema() {
     );
     ALTER TABLE rascunhos_trabalho ADD COLUMN IF NOT EXISTS dono_tipo TEXT;
     ALTER TABLE rascunhos_trabalho ADD COLUMN IF NOT EXISTS dono_id INTEGER;
-    ALTER TABLE versoes_trabalho ADD COLUMN IF NOT EXISTS finalizado_em TIMESTAMP;
 
     CREATE TABLE IF NOT EXISTS aniversario_lembretes_enviados (
       id SERIAL PRIMARY KEY,
