@@ -8992,7 +8992,19 @@ router.get('/portal/grupo/:grupoId', requirePortal, async (req, res) => {
   const avisos = (await query('SELECT * FROM avisos_cientificos WHERE projeto_id=$1 AND (grupo_id=$2 OR grupo_id IS NULL) ORDER BY criado_em DESC', [projeto.id, req.params.grupoId])).rows;
   const rascunhoR = await query('SELECT * FROM rascunhos_trabalho WHERE grupo_id=$1', [req.params.grupoId]);
   const rascunho = rascunhoR.rows[0] || null;
-  res.render('pages/portal/grupo', { config, membro, grupo, projeto, versoes, chat, timeline, avisos, msg, erro, rascunho });
+
+  // Alerta de prazo - dispara quando faltam 5,4,3,2,1 dias ou e o proprio dia do prazo,
+  // desde que o trabalho ainda nao tenha sido aprovado.
+  let diasRestantesPrazo = null;
+  const jaAprovado = versoes.some(v => v.status === 'aprovado');
+  if (projeto.prazo && !jaAprovado) {
+    const hoje = new Date(); hoje.setHours(0,0,0,0);
+    const prazoData = new Date(projeto.prazo); prazoData.setHours(0,0,0,0);
+    const diff = Math.round((prazoData - hoje) / (1000*60*60*24));
+    if (diff >= 0 && diff <= 5) diasRestantesPrazo = diff;
+  }
+
+  res.render('pages/portal/grupo', { config, membro, grupo, projeto, versoes, chat, timeline, avisos, msg, erro, rascunho, diasRestantesPrazo });
 });
 
 // POST /portal/grupo/:grupoId/upload
@@ -9181,7 +9193,7 @@ router.post('/portal/grupo/:grupoId/rascunho/editar-google', requirePortal, asyn
     const { uploadParaDrive } = require('../services/google-drive');
     const tituloFinal = (titulo && titulo.trim()) ? titulo.trim() : 'Trabalho Cientifico';
     const buffer = await gerarDocumentoCientifico({ titulo: tituloFinal, texto: texto.trim(), norma });
-    const resultado = await uploadParaDrive(tokens, buffer, tituloFinal + '.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    const resultado = await uploadParaDrive(tokens, buffer, tituloFinal + '.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'writer');
 
     await query(`
       INSERT INTO rascunhos_trabalho (grupo_id, titulo, norma, texto, google_file_id, google_doc_url, google_embed_url, atualizado_por_tipo, atualizado_por_id, atualizado_em)

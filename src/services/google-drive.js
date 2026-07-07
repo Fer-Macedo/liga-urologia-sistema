@@ -41,8 +41,10 @@ function getClient(tokens) {
   return client;
 }
 
-// Faz upload de arquivo para o Drive
-async function uploadParaDrive(tokens, buffer, nome, mimetype) {
+// Faz upload de arquivo para o Drive. Por padrao o link compartilhado e so-leitura
+// (usado no modulo de Arquivos, so pra visualizar/baixar); passe permissaoRole='writer'
+// quando o objetivo for permitir edicao direto por quem tiver o link (ex: Portal Cientifico).
+async function uploadParaDrive(tokens, buffer, nome, mimetype, permissaoRole) {
   const client = getClient(tokens);
   const drive = google.drive({ version: 'v3', auth: client });
 
@@ -74,10 +76,11 @@ async function uploadParaDrive(tokens, buffer, nome, mimetype) {
     ...(googleMime ? { supportsAllDrives: true } : {})
   });
 
-  // Torna publico para visualizacao
+  // Compartilha por link - "reader" (so visualizar) e o padrao; "writer" permite editar
+  // direto por quem tiver o link, sem precisar de login Google individual de cada pessoa.
   await drive.permissions.create({
     fileId: res.data.id,
-    requestBody: { role: 'reader', type: 'anyone' }
+    requestBody: { role: permissaoRole === 'writer' ? 'writer' : 'reader', type: 'anyone' }
   });
 
   // Gera embed URL
