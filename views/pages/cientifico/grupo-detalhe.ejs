@@ -43,7 +43,8 @@
     .membro-item{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border:1px solid var(--borda);background:var(--card)}
     .membro-nome{font-size:13px;font-weight:600;color:var(--texto)}
     .membro-tipo{font-size:11px;color:var(--texto2)}
-    .membro-papel{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 7px;border:1px solid;display:inline-flex}
+    .membro-papel{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 7px;border:1px solid;display:inline-flex;font-family:inherit}
+    .membro-papel:hover{filter:brightness(0.95)}
     .papel-lider{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
     .papel-membro{background:#f8fafc;color:#64748b;border-color:#e2e8f0}
     .add-membro-form{background:var(--card);border:1px solid var(--borda);padding:16px}
@@ -240,7 +241,10 @@
           <div class="membro-tipo"><%=m.origem_tipo==='ligante'?'Ligante':'Diretivo'%> — <%=m.email||''%></div>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
-          <span class="membro-papel <%=m.papel==='lider'?'papel-lider':'papel-membro'%>"><%=m.papel%></span>
+          <form method="POST" action="/cientifico/grupo/<%=grupo.id%>/membro/<%=m.id%>/papel" style="display:inline;margin:0">
+            <input type="hidden" name="papel" value="<%=m.papel==='lider'?'membro':'lider'%>">
+            <button type="submit" class="membro-papel <%=m.papel==='lider'?'papel-lider':'papel-membro'%>" style="border:none;cursor:pointer" title="Clique para <%=m.papel==='lider'?'remover de':'tornar'%> lider"><%=m.papel%></button>
+          </form>
           <form method="POST" action="/cientifico/grupo/<%=grupo.id%>/membro/<%=m.id%>/remover" style="display:inline;margin:0">
             <button class="btn btn-sm" style="color:#ef4444" onclick="var f=this.form; confirmarAcao('Remover membro do grupo?', function(){ f.submit(); }); return false;">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>

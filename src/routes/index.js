@@ -8203,6 +8203,24 @@ router.post('/cientifico/grupo/:grupoId/membro/adicionar', requireAuth, requireC
   res.redirect('/cientifico/projeto/'+g.projeto_id+'/grupo/'+req.params.grupoId+'?tab=membros');
 });
 
+// POST /cientifico/grupo/:grupoId/membro/:membroId/papel - alterna membro <-> lider (pode haver varios lideres)
+router.post('/cientifico/grupo/:grupoId/membro/:membroId/papel', requireAuth, requireCientifico, async (req, res) => {
+  const gR = await query('SELECT * FROM grupos_cientificos WHERE id=$1',[req.params.grupoId]);
+  if (!gR.rows.length) return res.redirect('/cientifico');
+  const g = gR.rows[0];
+  const novoPapel = req.body.papel === 'lider' ? 'lider' : 'membro';
+  const mR = await query('SELECT * FROM membros_grupo_cientifico WHERE id=$1 AND grupo_id=$2',[req.params.membroId,req.params.grupoId]);
+  if (mR.rows.length) {
+    await query('UPDATE membros_grupo_cientifico SET papel=$1 WHERE id=$2',[novoPapel,req.params.membroId]);
+    const m = mR.rows[0];
+    const nomeR = m.origem_tipo==='ligante' ? await query('SELECT nome FROM ligantes WHERE id=$1',[m.origem_id]) : await query('SELECT nome FROM diretivos WHERE id=$1',[m.origem_id]);
+    const nome = nomeR.rows[0]?.nome||'Membro';
+    await registrarTimeline(req.params.grupoId, 'Papel alterado', nome+' agora e '+novoPapel);
+    req.session.msg=['Papel atualizado!'];
+  }
+  res.redirect('/cientifico/projeto/'+g.projeto_id+'/grupo/'+req.params.grupoId+'?tab=membros');
+});
+
 // POST /cientifico/grupo/:grupoId/membro/:membroId/remover
 router.post('/cientifico/grupo/:grupoId/membro/:membroId/remover', requireAuth, requireCientifico, async (req, res) => {
   const gR = await query('SELECT * FROM grupos_cientificos WHERE id=$1',[req.params.grupoId]);
