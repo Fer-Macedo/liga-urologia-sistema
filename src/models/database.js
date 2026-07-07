@@ -109,10 +109,14 @@ async function initSchema() {
       google_file_id TEXT,
       google_doc_url TEXT,
       google_embed_url TEXT,
+      dono_tipo TEXT,
+      dono_id INTEGER,
       atualizado_por_tipo TEXT,
       atualizado_por_id INTEGER,
       atualizado_em TIMESTAMP DEFAULT NOW()
     );
+    ALTER TABLE rascunhos_trabalho ADD COLUMN IF NOT EXISTS dono_tipo TEXT;
+    ALTER TABLE rascunhos_trabalho ADD COLUMN IF NOT EXISTS dono_id INTEGER;
 
     CREATE TABLE IF NOT EXISTS aniversario_lembretes_enviados (
       id SERIAL PRIMARY KEY,

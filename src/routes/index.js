@@ -8370,6 +8370,17 @@ async function requireCientifico(req, res, next) {
   return res.redirect('/dashboard');
 }
 
+// Criacao de grupos e restrita: apenas secretaria, equipe do cientifico, presidencia ou admin.
+async function requireCriarGrupoCientifico(req, res, next) {
+  if (!req.session.usuario) return res.redirect('/login');
+  const perfil = req.session.usuario.perfil;
+  if (['admin', 'presidencia', 'secretaria'].includes(perfil)) return next();
+  const r = await query('SELECT 1 FROM usuario_permissoes WHERE usuario_id=$1 AND modulo=$2', [req.session.usuario.id, 'cientifico']);
+  if (r.rows.length > 0) return next();
+  req.session.erro = ['Apenas secretaria, equipe do cientifico, presidencia ou administrador podem criar grupos.'];
+  return res.redirect('/dashboard');
+}
+
 async function registrarTimeline(grupoId, evento, descricao) {
   await query('INSERT INTO timeline_grupo_cientifico (grupo_id,evento,descricao) VALUES ($1,$2,$3)', [grupoId, evento, descricao || null]);
 }
@@ -8492,7 +8503,7 @@ router.get('/cientifico/arquivo/:projetoId/:tipo', requireAuth, async (req, res)
 });
 
 // GET /cientifico/projeto/:projetoId/grupo/novo
-router.get('/cientifico/projeto/:projetoId/grupo/novo', requireAuth, requireCientifico, async (req, res) => {
+router.get('/cientifico/projeto/:projetoId/grupo/novo', requireAuth, requireCriarGrupoCientifico, async (req, res) => {
   const config = await getConfig();
   const permsR = await query('SELECT modulo FROM usuario_permissoes WHERE usuario_id=$1',[req.session.usuario.id]);
   const permissoesAtivas = permsR.rows.map(r=>r.modulo);
@@ -8503,7 +8514,7 @@ router.get('/cientifico/projeto/:projetoId/grupo/novo', requireAuth, requireCien
 });
 
 // POST /cientifico/projeto/:projetoId/grupo/novo
-router.post('/cientifico/projeto/:projetoId/grupo/novo', requireAuth, requireCientifico, async (req, res) => {
+router.post('/cientifico/projeto/:projetoId/grupo/novo', requireAuth, requireCriarGrupoCientifico, async (req, res) => {
   const { nome, tipo_trabalho } = req.body;
   if (!nome) { req.session.erro=['Nome obrigatorio']; return res.redirect('back'); }
   const tipoT = tipo_trabalho==='individual' ? 'individual' : 'colaborativo';
@@ -8992,6 +9003,12 @@ router.get('/portal/grupo/:grupoId', requirePortal, async (req, res) => {
   const avisos = (await query('SELECT * FROM avisos_cientificos WHERE projeto_id=$1 AND (grupo_id=$2 OR grupo_id IS NULL) ORDER BY criado_em DESC', [projeto.id, req.params.grupoId])).rows;
   const rascunhoR = await query('SELECT * FROM rascunhos_trabalho WHERE grupo_id=$1', [req.params.grupoId]);
   const rascunho = rascunhoR.rows[0] || null;
+  const souDonoRascunho = !rascunho || !rascunho.dono_tipo || (rascunho.dono_tipo === tipo && rascunho.dono_id === id);
+  let donoNomeRascunho = null;
+  if (rascunho && rascunho.dono_tipo && !souDonoRascunho) {
+    const donoM = await getPortalMembro(rascunho.dono_tipo, rascunho.dono_id);
+    donoNomeRascunho = donoM ? donoM.nome : 'outro membro do grupo';
+  }
 
   // Alerta de prazo - dispara quando faltam 5,4,3,2,1 dias ou e o proprio dia do prazo,
   // desde que o trabalho ainda nao tenha sido aprovado.
@@ -9004,7 +9021,7 @@ router.get('/portal/grupo/:grupoId', requirePortal, async (req, res) => {
     if (diff >= 0 && diff <= 5) diasRestantesPrazo = diff;
   }
 
-  res.render('pages/portal/grupo', { config, membro, grupo, projeto, versoes, chat, timeline, avisos, msg, erro, rascunho, diasRestantesPrazo });
+  res.render('pages/portal/grupo', { config, membro, grupo, projeto, versoes, chat, timeline, avisos, msg, erro, rascunho, diasRestantesPrazo, souDonoRascunho, donoNomeRascunho });
 });
 
 // POST /portal/grupo/:grupoId/upload
@@ -9141,18 +9158,34 @@ async function membroPertenceAoGrupo(grupoId, tipo, id) {
   return r.rows.length > 0;
 }
 
+// So o "dono" do trabalho (quem criou o rascunho) pode editar/gerar/enviar; os demais membros
+// do grupo so podem visualizar e copiar o conteudo. Se ainda ninguem e dono (rascunho novo ou
+// inexistente), a pessoa atual assume a posse automaticamente ao ser a primeira a mexer.
+async function garantirDonoRascunho(grupoId, tipo, id) {
+  const r = await query('SELECT dono_tipo, dono_id FROM rascunhos_trabalho WHERE grupo_id=$1', [grupoId]);
+  if (!r.rows.length || !r.rows[0].dono_tipo) return { ok: true };
+  const dono = r.rows[0];
+  if (dono.dono_tipo === tipo && dono.dono_id === id) return { ok: true };
+  return { ok: false, erro: 'Apenas quem criou este trabalho pode edita-lo. Voce pode visualizar e copiar o conteudo, mas nao editar.' };
+}
+
 // POST /portal/grupo/:grupoId/rascunho/salvar — salva o titulo/norma/texto do Editor de
-// Documento no sistema (um rascunho por grupo, compartilhado entre os membros), para a
-// pessoa poder continuar de qualquer lugar depois, sem precisar terminar tudo de uma vez.
+// Documento no sistema (um rascunho por grupo). So o dono do trabalho pode salvar; os demais
+// membros do grupo podem visualizar mas nao editar. A pessoa pode continuar de qualquer
+// lugar depois, sem precisar terminar tudo de uma vez.
 router.post('/portal/grupo/:grupoId/rascunho/salvar', requirePortal, async (req, res) => {
   const { tipo, id } = req.session.portalMembro;
   const { texto, titulo, norma } = req.body;
   try {
     if (!(await membroPertenceAoGrupo(req.params.grupoId, tipo, id))) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    const dono = await garantirDonoRascunho(req.params.grupoId, tipo, id);
+    if (!dono.ok) return res.json(dono);
     await query(`
-      INSERT INTO rascunhos_trabalho (grupo_id, titulo, norma, texto, atualizado_por_tipo, atualizado_por_id, atualizado_em)
-      VALUES ($1,$2,$3,$4,$5,$6,NOW())
-      ON CONFLICT (grupo_id) DO UPDATE SET titulo=$2, norma=$3, texto=$4, atualizado_por_tipo=$5, atualizado_por_id=$6, atualizado_em=NOW()
+      INSERT INTO rascunhos_trabalho (grupo_id, titulo, norma, texto, dono_tipo, dono_id, atualizado_por_tipo, atualizado_por_id, atualizado_em)
+      VALUES ($1,$2,$3,$4,$5,$6,$5,$6,NOW())
+      ON CONFLICT (grupo_id) DO UPDATE SET titulo=$2, norma=$3, texto=$4,
+        dono_tipo=COALESCE(rascunhos_trabalho.dono_tipo,$5), dono_id=COALESCE(rascunhos_trabalho.dono_id,$6),
+        atualizado_por_tipo=$5, atualizado_por_id=$6, atualizado_em=NOW()
     `, [req.params.grupoId, titulo || null, norma || 'abnt', texto || '', tipo, id]);
     res.json({ ok: true });
   } catch(e) { console.error('rascunho/salvar erro:', e.message); res.json({ ok: false, erro: 'Erro ao salvar o rascunho.' }); }
@@ -9166,6 +9199,8 @@ router.post('/portal/grupo/:grupoId/rascunho/baixar', requirePortal, async (req,
   if (!texto || !texto.trim()) return res.status(400).send('Escreva ou cole o texto do trabalho primeiro.');
   try {
     if (!(await membroPertenceAoGrupo(req.params.grupoId, tipo, id))) return res.status(403).send('Sem permissao para este grupo.');
+    const dono = await garantirDonoRascunho(req.params.grupoId, tipo, id);
+    if (!dono.ok) return res.status(403).send(dono.erro);
     const { gerarDocumentoCientifico } = require('../services/gerador-docx');
     const tituloFinal = (titulo && titulo.trim()) ? titulo.trim() : 'Trabalho Cientifico';
     const nomeArquivo = tituloFinal.replace(/[^a-zA-Z0-9 ]+/g, '').trim().substring(0, 60) + '.docx';
@@ -9185,6 +9220,8 @@ router.post('/portal/grupo/:grupoId/rascunho/editar-google', requirePortal, asyn
   const { texto, titulo, norma } = req.body;
   try {
     if (!(await membroPertenceAoGrupo(req.params.grupoId, tipo, id))) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    const dono = await garantirDonoRascunho(req.params.grupoId, tipo, id);
+    if (!dono.ok) return res.json(dono);
     const tokensR = await query("SELECT valor FROM configuracoes WHERE chave='google_tokens'");
     if (!tokensR.rows.length) return res.json({ ok: false, erro: 'Google Drive nao esta conectado. Fale com o administrador.' });
     const tokens = JSON.parse(tokensR.rows[0].valor);
@@ -9225,6 +9262,8 @@ router.post('/portal/grupo/:grupoId/rascunho/revisar-ia', requirePortal, async (
   const { tipo, id } = req.session.portalMembro;
   try {
     if (!(await membroPertenceAoGrupo(req.params.grupoId, tipo, id))) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    const dono = await garantirDonoRascunho(req.params.grupoId, tipo, id);
+    if (!dono.ok) return res.json(dono);
     const rascunhoR = await query('SELECT * FROM rascunhos_trabalho WHERE grupo_id=$1', [req.params.grupoId]);
     if (!rascunhoR.rows.length || !(rascunhoR.rows[0].texto || '').trim()) return res.json({ ok: false, erro: 'Escreva ou salve o rascunho antes de revisar.' });
     let rascunho = rascunhoR.rows[0];
@@ -9266,6 +9305,8 @@ router.post('/portal/grupo/:grupoId/rascunho/enviar', requirePortal, async (req,
   const { tipo, id } = req.session.portalMembro;
   try {
     if (!(await membroPertenceAoGrupo(req.params.grupoId, tipo, id))) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    const dono = await garantirDonoRascunho(req.params.grupoId, tipo, id);
+    if (!dono.ok) return res.json(dono);
     const rascunhoR = await query('SELECT * FROM rascunhos_trabalho WHERE grupo_id=$1', [req.params.grupoId]);
     if (!rascunhoR.rows.length) return res.json({ ok: false, erro: 'Nenhum rascunho salvo ainda para este grupo.' });
     const rascunho = rascunhoR.rows[0];

@@ -249,9 +249,15 @@
     </div>
     <div class="card" style="margin-top:20px">
       <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>Editor de Documento</h3>
+      <%if(!souDonoRascunho){%>
+      <div style="background:#fff7ed;border-left:3px solid #c2410c;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#7c2d12">
+        <b>Este trabalho pertence a <%=donoNomeRascunho%>.</b> Voce pode visualizar e copiar o conteudo abaixo, mas somente <%=donoNomeRascunho%> (ou a equipe do Cientifico) pode editar ou enviar para avaliacao.
+      </div>
+      <%}%>
       <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Escreva ou cole o trabalho final aqui (pode colar o texto ja polido acima). O rascunho fica salvo no sistema — pode continuar de qualquer lugar depois, sem perder nada. Escolha a norma, edite direto no Google Docs se quiser, e so envie para avaliacao quando estiver pronto.</p>
-      <input type="text" id="editor-titulo" placeholder="Titulo do trabalho" value="<%=rascunho&&rascunho.titulo?rascunho.titulo:''%>" style="width:100%;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box;margin-bottom:8px">
-      <textarea id="editor-documento" placeholder="Escreva o trabalho aqui... (separe secoes/paragrafos com uma linha em branco)" style="width:100%;min-height:220px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"><%=rascunho&&rascunho.texto?rascunho.texto:''%></textarea>
+      <input type="text" id="editor-titulo" placeholder="Titulo do trabalho" value="<%=rascunho&&rascunho.titulo?rascunho.titulo:''%>" <%=souDonoRascunho?'':'readonly'%> style="width:100%;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box;margin-bottom:8px<%=souDonoRascunho?'':';background:#F8FAF9'%>">
+      <textarea id="editor-documento" placeholder="Escreva o trabalho aqui... (separe secoes/paragrafos com uma linha em branco)" <%=souDonoRascunho?'':'readonly'%> style="width:100%;min-height:220px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box<%=souDonoRascunho?'':';background:#F8FAF9'%>"><%=rascunho&&rascunho.texto?rascunho.texto:''%></textarea>
+      <%if(souDonoRascunho){%>
       <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">
         <select id="editor-norma" style="font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF">
           <option value="abnt" <%=(!rascunho||rascunho.norma==='abnt')?'selected':''%>>Norma ABNT</option>
@@ -261,6 +267,7 @@
         <button type="button" class="btn btn-sm" id="btn-rascunho-google" onclick="editarNoGoogle()" style="font-size:11.5px">Editar no Google Docs</button>
         <button type="button" class="btn btn-sm" id="btn-rascunho-baixar" onclick="baixarRascunho()" style="font-size:11.5px">Baixar Word</button>
       </div>
+      <%}%>
       <div id="editor-resultado" style="margin-top:12px;font-size:12.5px"></div>
       <div id="google-doc-area" style="margin-top:14px;<%=rascunho&&rascunho.google_embed_url?'':'display:none'%>">
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
@@ -270,6 +277,7 @@
         </div>
         <iframe id="google-doc-iframe" src="<%=rascunho&&rascunho.google_embed_url?rascunho.google_embed_url:''%>" style="width:100%;min-height:520px;border:1px solid #DDE3DF"></iframe>
       </div>
+      <%if(souDonoRascunho){%>
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid #DDE3DF">
         <p style="font-size:12px;color:#6B7A72;margin-bottom:8px">Antes de enviar, peça uma última conferência da IA — ela aponta pontos fortes, pontos de atenção e se a estrutura do trabalho parece completa. Não substitui a avaliação da equipe do Científico, é só um pré-check.</p>
         <button type="button" class="btn btn-sm" id="btn-rascunho-ia" onclick="revisarRascunhoComIA()" style="font-size:11.5px">Revisar com IA antes de enviar</button>
@@ -280,6 +288,7 @@
         <button type="button" class="btn pri btn-sm" id="btn-rascunho-enviar" onclick="enviarRascunhoParaAvaliacao()" style="font-size:11.5px">Enviar para avaliacao</button>
         <div id="rascunho-envio-status" style="margin-top:8px;font-size:12.5px"></div>
       </div>
+      <%}%>
     </div>
   </div>
 
