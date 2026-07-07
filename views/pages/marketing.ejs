@@ -706,6 +706,35 @@
             </div>
           </div>
 
+          <%if(aniversarioTemplateUrl){%>
+          <div style="padding:14px;background:var(--fundo);border-radius:var(--rad);margin-bottom:14px">
+            <div class="label" style="margin-bottom:8px">Testar a arte com qualquer ligante/diretivo (gera a previa, nao publica)</div>
+            <form onsubmit="var s=document.getElementById('aniv-teste-select'); if(s.value) window.open('/marketing/aniversario/preview/'+s.value,'_blank'); return false;" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+              <div class="campo" style="flex:1;min-width:220px">
+                <label class="label">Pessoa</label>
+                <select id="aniv-teste-select" class="input">
+                  <option value="">Selecione...</option>
+                  <%if(equipeDiretivos.length){%>
+                  <optgroup label="Diretivos">
+                    <%equipeDiretivos.forEach(function(p){%>
+                    <option value="diretivo/<%=p.id%>"><%=p.nome%></option>
+                    <%});%>
+                  </optgroup>
+                  <%}%>
+                  <%if(equipeLigantes.length){%>
+                  <optgroup label="Ligantes">
+                    <%equipeLigantes.forEach(function(p){%>
+                    <option value="ligante/<%=p.id%>"><%=p.nome%></option>
+                    <%});%>
+                  </optgroup>
+                  <%}%>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-primario btn-sm">Testar previa</button>
+            </form>
+          </div>
+          <%}%>
+
           <%if(aniversarioTemplateUrl && aniversariantesHoje.length){%>
           <div style="font-size:12px;color:var(--texto2);margin-bottom:8px">Aniversariantes de hoje (previa da arte, sem publicar):</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
