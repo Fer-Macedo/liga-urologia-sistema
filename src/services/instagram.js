@@ -223,10 +223,10 @@ async function postarStoriesAniversarioDoDia() {
   const hojeData = dayjs().format('YYYY-MM-DD');
 
   const r = await query(
-    `SELECT id, nome, cargo, NULL as semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave, 'diretivo' as tipo
+    `SELECT id, nome, cargo, sexo, NULL as semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave, 'diretivo' as tipo
        FROM diretivos WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1
      UNION ALL
-     SELECT id, nome, NULL as cargo, semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave, 'ligante' as tipo
+     SELECT id, nome, NULL as cargo, NULL as sexo, semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave, 'ligante' as tipo
        FROM ligantes WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1`,
     [hoje]
   );
@@ -234,6 +234,7 @@ async function postarStoriesAniversarioDoDia() {
 
   const { baixarArquivoBuffer, uploadArquivo, gerarUrlInline } = require('./arquivos');
   const { gerarArteAniversario, nomeCurto } = require('./aniversario-arte');
+  const { cargoComGenero } = require('./cargo-genero');
   const templateBuffer = await baixarArquivoBuffer(cfg.aniversario_template_chave);
 
   for (const pessoa of r.rows) {
@@ -246,7 +247,7 @@ async function postarStoriesAniversarioDoDia() {
       if (!pessoa.foto_chave) continue;
 
       const fotoBuffer = await baixarArquivoBuffer(pessoa.foto_chave);
-      const cargo = pessoa.tipo === 'diretivo' ? (pessoa.cargo || 'Diretivo') : `${pessoa.semestre || ''}° Semestre`;
+      const cargo = pessoa.tipo === 'diretivo' ? cargoComGenero(pessoa.cargo || 'Diretivo', pessoa.sexo) : `${pessoa.semestre || ''}° Semestre`;
       const arteBuffer = await gerarArteAniversario({ templateBuffer, fotoBuffer, nome: nomeCurto(pessoa.nome), cargo });
 
       const upload = await uploadArquivo(arteBuffer, `aniversario-${pessoa.tipo}-${pessoa.id}.jpg`, 'image/jpeg', 'aniversario-stories');

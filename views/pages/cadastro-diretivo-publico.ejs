@@ -82,6 +82,15 @@
           <input name="data_nascimento" type="date" required value="<%= form.data_nascimento || '' %>">
         </div>
         <div class="campo">
+          <label>Sexo <span>*</span></label>
+          <select name="sexo" required>
+            <option value="">Selecione...</option>
+            <option value="Masculino" <%= form.sexo==='Masculino'?'selected':'' %>>Masculino</option>
+            <option value="Feminino" <%= form.sexo==='Feminino'?'selected':'' %>>Feminino</option>
+            <option value="Prefiro não informar" <%= form.sexo==='Prefiro não informar'?'selected':'' %>>Prefiro não informar</option>
+          </select>
+        </div>
+        <div class="campo">
           <label>E-mail <span>*</span></label>
           <input name="email" type="email" required placeholder="seu@email.com" value="<%= form.email || '' %>">
         </div>

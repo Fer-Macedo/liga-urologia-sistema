@@ -273,6 +273,14 @@
         </div>
         <div class="campo"><label class="label">Semestre/Turma</label><input name="semestre_turma" class="input"></div>
         <div class="campo"><label class="label">Data de nascimento</label><input name="data_nascimento" type="date" class="input"></div>
+        <div class="campo"><label class="label">Sexo</label>
+          <select name="sexo" class="input">
+            <option value="">Selecione...</option>
+            <option value="Masculino">Masculino</option>
+            <option value="Feminino">Feminino</option>
+            <option value="Prefiro não informar">Prefiro não informar</option>
+          </select>
+        </div>
         <div class="campo"><label class="label">Onde reside</label><input name="onde_reside" class="input"></div>
         <div class="campo"><label class="label">Disponibilidade</label><input name="disponibilidade" class="input"></div>
       </div>
@@ -313,6 +321,14 @@
         </div>
         <div class="campo"><label class="label">Semestre/Turma</label><input name="semestre_turma" id="e-semestre" class="input"></div>
         <div class="campo"><label class="label">Data de nascimento</label><input name="data_nascimento" id="e-nascimento" type="date" class="input"></div>
+        <div class="campo"><label class="label">Sexo</label>
+          <select name="sexo" id="e-sexo" class="input">
+            <option value="">Selecione...</option>
+            <option value="Masculino">Masculino</option>
+            <option value="Feminino">Feminino</option>
+            <option value="Prefiro não informar">Prefiro não informar</option>
+          </select>
+        </div>
         <div class="campo"><label class="label">Onde reside</label><input name="onde_reside" id="e-reside" class="input"></div>
         <div class="campo"><label class="label">Disponibilidade</label><input name="disponibilidade" id="e-disponibilidade" class="input"></div>
         <div class="campo"><label class="label">Ano ingresso</label><input name="ano_ingresso" id="e-ingresso" class="input"></div>
@@ -454,6 +470,7 @@ function abrirEditar(id) {
   document.getElementById('e-catraca').value = d.catraca || '';
   document.getElementById('e-cargo').value = d.cargo || '';
   document.getElementById('e-semestre').value = d.semestre_turma || '';
+  document.getElementById('e-sexo').value = d.sexo || '';
   document.getElementById('e-nascimento').value = d.data_nascimento ? d.data_nascimento.substring(0,10) : '';
   document.getElementById('e-reside').value = d.onde_reside || '';
   document.getElementById('e-disponibilidade').value = d.disponibilidade || '';
