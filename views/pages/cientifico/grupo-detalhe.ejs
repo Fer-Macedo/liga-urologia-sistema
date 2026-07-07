@@ -81,7 +81,7 @@
 <div class="layout">
   <%- include('../../partials/sidebar',{paginaAtual:'cientifico',config,usuario,permissoesAtivas:permissoesAtivas||[]}) %>
   <main class="main">
-    <div class="topbar" style="position:relative">
+    <div class="topbar" style="position:relative;z-index:95">
       <h1 class="page-titulo" style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:12px"><%=grupo.nome%></h1>
       <div class="topbar-acoes" style="position:absolute;top:50%;right:80px;transform:translateY(-50%);z-index:90;flex-shrink:0">
         <a href="/cientifico/projeto/<%=projeto.id%>" onclick="window.location.href='/cientifico/projeto/<%=projeto.id%>';return false;" class="btn btn-sm" style="position:relative;z-index:90"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg><%=projeto.titulo%></a>
