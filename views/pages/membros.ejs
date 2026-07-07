@@ -377,6 +377,18 @@ function validarM(){
   if(!document.getElementById('motivo-m').value){alert('Informe o motivo.');return false;}
   return true;
 }
+function buscar(termo){
+  const t=termo.trim().toLowerCase();
+  const linhas=document.querySelectorAll('#tabela-body tr[data-busca]');
+  let visiveis=0;
+  linhas.forEach(function(tr){
+    const bate=!t||tr.getAttribute('data-busca').includes(t);
+    tr.style.display=bate?'':'none';
+    if(bate)visiveis++;
+  });
+  const contador=document.getElementById('contador');
+  if(contador)contador.textContent=visiveis+' cadastro'+(visiveis===1?'':'s');
+}
 </script>
 </body>
 </html>
