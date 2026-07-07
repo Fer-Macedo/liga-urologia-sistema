@@ -845,9 +845,32 @@ router.get('/api/pendentes', requireAuth, async (req, res) => {
       query('SELECT COUNT(*) n FROM ligantes WHERE pendente=true')
     ]);
     const nD=parseInt(rD.rows[0].n), nL=parseInt(rL.rows[0].n);
-    const count=nD+nL, itens=[];
+    const count0=nD+nL, itens=[];
     if(nD>0) itens.push({tipo:'diretivo',label:nD+' diretivo'+(nD>1?'s':'')+' aguardando aprovacao',url:'/diretivos?status=pendente'});
     if(nL>0) itens.push({tipo:'ligante',label:nL+' ligante'+(nL>1?'s':'')+' aguardando aprovacao',url:'/ligantes?status=pendente'});
+
+    // Trabalhos cientificos aguardando revisao/decisao - so aparece para quem tem acesso
+    // ao modulo (permissao cientifico, presidencia ou admin). Fica visivel para TODOS eles
+    // ate o trabalho ser efetivamente aprovado ou devolvido - nao some so por alguem abrir.
+    let count = count0;
+    const perfil = req.session.usuario.perfil;
+    let temAcessoCientifico = perfil==='presidencia' || perfil==='admin';
+    if (!temAcessoCientifico) {
+      const pr = await query("SELECT 1 FROM usuario_permissoes WHERE usuario_id=$1 AND modulo='cientifico'", [req.session.usuario.id]);
+      temAcessoCientifico = pr.rows.length > 0;
+    }
+    if (temAcessoCientifico) {
+      const vR = await query(`
+        SELECT v.id, gc.nome as gnome, v.status FROM versoes_trabalho v
+        JOIN grupos_cientificos gc ON gc.id=v.grupo_id
+        WHERE v.status IN ('aguardando','em_revisao')
+        ORDER BY v.enviado_em ASC
+      `);
+      if (vR.rows.length) {
+        count += vR.rows.length;
+        itens.push({tipo:'cientifico',label:vR.rows.length+' trabalho'+(vR.rows.length>1?'s':'')+' aguardando correcao no Cientifico',url:'/cientifico'});
+      }
+    }
     res.json({count,itens});
   } catch(e){ res.json({count:0,itens:[]}); }
 });
@@ -8677,18 +8700,28 @@ router.post('/cientifico/versao/:versaoId/revisar', requireAuth, requireCientifi
   await query('UPDATE versoes_trabalho SET status=$1,comentario_revisor=$2,revisado_por=$3,revisado_em=NOW() WHERE id=$4',
     [novoStatus,comentario||null,req.session.usuario.id,req.params.versaoId]);
   try {
-    const { enviarWhatsApp: _wppR } = require('../services/notificacoes');
+    const { enviarEmail, htmlSimples } = require('../services/notificacoes');
     const _gIR = await query('SELECT gc.nome as gnome, pc.titulo as ptitulo FROM grupos_cientificos gc JOIN projetos_cientificos pc ON pc.id=gc.projeto_id WHERE gc.id=$1',[v.grupo_id]);
-    const _gI = _gIR.rows[0];
-    const _mbR = await query("SELECT CASE WHEN m.origem_tipo='ligante' THEN l.whatsapp ELSE d.whatsapp END as whatsapp FROM membros_grupo_cientifico m LEFT JOIN ligantes l ON m.origem_tipo='ligante' AND l.id=m.origem_id LEFT JOIN diretivos d ON m.origem_tipo='diretivo' AND d.id=m.origem_id WHERE m.grupo_id=$1",[v.grupo_id]);
+    const _gI = _gIR.rows[0] || {};
+    const _mbR = await query("SELECT CASE WHEN m.origem_tipo='ligante' THEN l.email ELSE d.email END as email FROM membros_grupo_cientifico m LEFT JOIN ligantes l ON m.origem_tipo='ligante' AND l.id=m.origem_id LEFT JOIN diretivos d ON m.origem_tipo='diretivo' AND d.id=m.origem_id WHERE m.grupo_id=$1",[v.grupo_id]);
+    const config = await getConfig();
+    const agora = new Date();
+    const html = htmlSimples({
+      config, faixaLabel: 'PORTAL CIENTIFICO',
+      titulo: acao==='aprovar' ? 'Trabalho aprovado!' : 'Trabalho devolvido para correcao',
+      mensagem: (acao==='aprovar'
+        ? `Seu trabalho foi <strong>aprovado</strong> pela equipe do Cientifico em ${agora.toLocaleDateString('pt-BR')} as ${agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}. Parabens!`
+        : `Seu trabalho foi <strong>devolvido para correcao</strong> em ${agora.toLocaleDateString('pt-BR')} as ${agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}.`)
+        + `<br><br><strong>Projeto:</strong> ${_gI.ptitulo||''}<br><strong>Grupo:</strong> ${_gI.gnome||''}`
+        + (comentario ? `<br><br><strong>Comentario do revisor:</strong><br>${comentario}` : '')
+        + `<br><br>Verifique o portal para dar continuidade ao andamento do seu projeto.`,
+      cta: { label: 'Acessar o Portal', url: 'https://cientifico.lauroucpcde.com' }
+    });
     for (const _mb of _mbR.rows) {
-      if (!_mb.whatsapp) continue;
-      const _msg = acao==='aprovar'
-        ? `*LAURO - Portal Cientifico*\n\n✅ *Trabalho APROVADO!*\n\n*Projeto:* ${_gI?.ptitulo||''}\n*Grupo:* ${_gI?.gnome||''}\n\n${comentario?'*Comentario:* '+comentario+'\n\n':''}Parabens!\nPortal: https://cientifico.lauroucpcde.com`
-        : `*LAURO - Portal Cientifico*\n\n🔄 *Trabalho devolvido para correcao*\n\n*Projeto:* ${_gI?.ptitulo||''}\n*Grupo:* ${_gI?.gnome||''}\n\n${comentario?'*Comentario do revisor:* '+comentario+'\n\n':''}Envie a versao corrigida:\nhttps://cientifico.lauroucpcde.com`;
-      try { await _wppR(_mb.whatsapp, _msg); } catch(e){}
+      if (!_mb.email) continue;
+      try { await enviarEmail({ para: _mb.email, assunto: (acao==='aprovar'?'Trabalho aprovado':'Trabalho devolvido para correcao')+' - Cientifico', html }); } catch(e){}
     }
-  } catch(e) { console.error('[WPP Cientifico] Erro notificar membros:', e.message); }
+  } catch(e) { console.error('[Email Cientifico] Erro notificar membros:', e.message); }
   await registrarTimeline(v.grupo_id, acao==='aprovar'?'Trabalho aprovado':'Devolvido para correcao', comentario||null);
   req.session.msg=[acao==='aprovar'?'Trabalho aprovado!':'Trabalho devolvido para correcao.'];
   res.redirect('/cientifico/projeto/'+v.projeto_id+'/grupo/'+v.grupo_id);
@@ -8708,14 +8741,22 @@ router.post('/cientifico/versao/:versaoId/apoio-revisor', requireAuth, requireCi
     const vR = await query('SELECT v.*, g.tipo_trabalho, pc.titulo as projeto_titulo FROM versoes_trabalho v JOIN grupos_cientificos g ON g.id=v.grupo_id JOIN projetos_cientificos pc ON pc.id=g.projeto_id WHERE v.id=$1', [req.params.versaoId]);
     if (!vR.rows.length) return res.json({ ok: false, erro: 'Versao nao encontrada.' });
     const versao = vR.rows[0];
-    if (!/\.pdf$/i.test(versao.arquivo_nome || '')) {
-      return res.json({ ok: false, erro: 'O apoio automatico hoje so funciona com arquivos em PDF.' });
+    const ehPdf = /\.pdf$/i.test(versao.arquivo_nome || '');
+    const ehWord = /\.docx?$/i.test(versao.arquivo_nome || '');
+    if (!ehPdf && !ehWord) {
+      return res.json({ ok: false, erro: 'O apoio automatico so funciona com arquivos em PDF ou Word.' });
     }
     const { gerarUrlTemporaria } = require('../services/arquivos');
     const url = await gerarUrlTemporaria(versao.arquivo_chave, 120);
     const axios = require('axios');
     const resp = await axios.get(url, { responseType: 'arraybuffer', timeout: 30000 });
-    const base64Pdf = Buffer.from(resp.data).toString('base64');
+    let base64Pdf;
+    if (ehPdf) {
+      base64Pdf = Buffer.from(resp.data).toString('base64');
+    } else {
+      const mimetype = /\.docx$/i.test(versao.arquivo_nome) ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/msword';
+      base64Pdf = await converterWordParaPdfBase64(Buffer.from(resp.data), versao.arquivo_nome, mimetype);
+    }
     const { apoioRevisor } = require('../services/cientifico-ia');
     const r = await apoioRevisor(query, { base64Pdf, tituloProjeto: versao.projeto_titulo, tipoTrabalho: versao.tipo_trabalho });
     if (!r.ok) return res.json({ ok: false, erro: r.erro });
@@ -9060,24 +9101,8 @@ router.post('/portal/grupo/:grupoId/upload', requirePortal, uploadArq.single('ar
     [req.params.grupoId, chave, req.file.originalname, tipo, id]);
   const membro = await getPortalMembro(tipo, id);
   await registrarTimeline(req.params.grupoId, 'Nova versao enviada', (membro?.nome||'Membro')+' enviou uma nova versao do trabalho');
-  // Notificar diretores cientificos via WhatsApp
-  try {
-    const { enviarWhatsApp } = require('../services/notificacoes');
-    const gInfoR = await query('SELECTgc.nome as gnome, pc.titulo as ptitulo FROM grupos_cientificos gc JOIN projetos_cientificos pc ON pc.id=gc.projeto_id WHERE gc.id=$1',[req.params.grupoId]);
-    const gInfo = gInfoR.rows[0];
-    const diretoresR = await query("SESECT u.id, d.whatsapp, d.nome FROM usuario_permissoes up JOIN usuarios u ON u.id=up.usuario_id LEFT JOIN diretivos d ON LOWER(d.email)=LOWER(u.email) WHERE up.modulo='cientifico' AND d.whatsapp IS NOT NULL");
-    const msgDir = `*LAURO - Portal Cientifico*
-
-Nova versao de trabalho enviada!
-
-*Projeto:* ${gInfo?.ptitulo||''}
-)]rupo: * ${gInfo?.gnome||''}
-*Enviado por:* ${membro?.nome||'Membro'}
-
-Acesse o sistema para revisar:
-https://sistema.lauroucpcde.com/cientifico`;
-    for (const d of diretoresR.rows) { if (d.whatsapp) { try { await enviarWhatsApp(d.whatsapp, msgDir); } catch(e){} } }
-  } catch(e) { console.error('[WPP Cientifico] Erro ao notificar diretores:', e.message); }
+  await notificarStaffNovoTrabalho({ grupoId: req.params.grupoId, membroNome: membro?.nome });
+  await confirmarEnvioParaMembro({ grupoId: req.params.grupoId, tipo, id });
   req.session.msg=['Versao enviada com sucesso!'];
   res.redirect('/portal/grupo/'+req.params.grupoId);
 });
@@ -9091,8 +9116,10 @@ router.post('/portal/grupo/:grupoId/versao/:versaoId/revisar-ia', requirePortal,
     const vR = await query('SELECT * FROM versoes_trabalho WHERE id=$1 AND grupo_id=$2', [req.params.versaoId, req.params.grupoId]);
     if (!vR.rows.length) return res.json({ ok: false, erro: 'Versao nao encontrada.' });
     const versao = vR.rows[0];
-    if (!/\.pdf$/i.test(versao.arquivo_nome || '')) {
-      return res.json({ ok: false, erro: 'A revisao automatica hoje so funciona com arquivos em PDF.' });
+    const ehPdf = /\.pdf$/i.test(versao.arquivo_nome || '');
+    const ehWord = /\.docx?$/i.test(versao.arquivo_nome || '');
+    if (!ehPdf && !ehWord) {
+      return res.json({ ok: false, erro: 'A revisao automatica so funciona com arquivos em PDF ou Word.' });
     }
     const gR = await query('SELECT gc.tipo_trabalho, pc.titulo FROM grupos_cientificos gc JOIN projetos_cientificos pc ON pc.id=gc.projeto_id WHERE gc.id=$1', [req.params.grupoId]);
     const grupo = gR.rows[0] || {};
@@ -9100,7 +9127,13 @@ router.post('/portal/grupo/:grupoId/versao/:versaoId/revisar-ia', requirePortal,
     const url = await gerarUrlTemporaria(versao.arquivo_chave, 120);
     const axios = require('axios');
     const resp = await axios.get(url, { responseType: 'arraybuffer', timeout: 30000 });
-    const base64Pdf = Buffer.from(resp.data).toString('base64');
+    let base64Pdf;
+    if (ehPdf) {
+      base64Pdf = Buffer.from(resp.data).toString('base64');
+    } else {
+      const mimetype = /\.docx$/i.test(versao.arquivo_nome) ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : 'application/msword';
+      base64Pdf = await converterWordParaPdfBase64(Buffer.from(resp.data), versao.arquivo_nome, mimetype);
+    }
     const { revisarTrabalho } = require('../services/cientifico-ia');
     const r = await revisarTrabalho(query, { base64Pdf, tituloProjeto: grupo.titulo, tipoTrabalho: grupo.tipo_trabalho });
     if (!r.ok) return res.json({ ok: false, erro: r.erro });
@@ -9240,6 +9273,75 @@ async function membroPertenceAoGrupo(grupoId, tipo, id) {
 async function grupoEstaEncerrado(grupoId) {
   const r = await query('SELECT status FROM grupos_cientificos WHERE id=$1', [grupoId]);
   return r.rows.length > 0 && r.rows[0].status === 'encerrado';
+}
+
+// Usuarios do sistema que devem ser avisados por email sobre o Cientifico:
+// equipe com permissao do modulo 'cientifico', presidencia e administrador.
+async function emailsStaffCientifico() {
+  const r = await query(`
+    SELECT DISTINCT u.email, u.nome FROM usuarios u
+    LEFT JOIN usuario_permissoes up ON up.usuario_id=u.id AND up.modulo='cientifico'
+    WHERE u.ativo=1 AND u.email IS NOT NULL AND u.email <> ''
+      AND (up.usuario_id IS NOT NULL OR u.perfil IN ('presidencia','admin'))
+  `);
+  return r.rows;
+}
+
+// Converte um arquivo Word (.doc/.docx) para PDF (base64) usando o Google Drive como
+// conversor (sobe como Google Doc, exporta em PDF, apaga a copia temporaria). Usado para
+// a IA de apoio/revisao, que so consegue ler PDF.
+async function converterWordParaPdfBase64(buffer, nome, mimetype) {
+  const tokensR = await query("SELECT valor FROM configuracoes WHERE chave='google_tokens'");
+  if (!tokensR.rows.length) throw new Error('Google Drive nao esta conectado. Fale com o administrador.');
+  const tokens = JSON.parse(tokensR.rows[0].valor);
+  const { uploadParaDrive, exportarArquivo, getClient } = require('../services/google-drive');
+  const resultado = await uploadParaDrive(tokens, buffer, nome, mimetype, 'reader');
+  const pdfBuffer = await exportarArquivo(tokens, resultado.fileId, 'application/pdf');
+  try {
+    const { google } = require('googleapis');
+    await google.drive({ version: 'v3', auth: getClient(tokens) }).files.delete({ fileId: resultado.fileId });
+  } catch(e) { console.error('[Cientifico] Erro ao apagar copia temporaria do Drive:', e.message); }
+  return pdfBuffer.toString('base64');
+}
+
+// Dispara email para a equipe do Cientifico/presidencia/admin avisando de um trabalho novo.
+async function notificarStaffNovoTrabalho({ grupoId, membroNome }) {
+  try {
+    const { enviarEmail, htmlSimples } = require('../services/notificacoes');
+    const gInfoR = await query('SELECT gc.nome as gnome, pc.titulo as ptitulo FROM grupos_cientificos gc JOIN projetos_cientificos pc ON pc.id=gc.projeto_id WHERE gc.id=$1', [grupoId]);
+    const gInfo = gInfoR.rows[0] || {};
+    const config = await getConfig();
+    const staff = await emailsStaffCientifico();
+    const html = htmlSimples({
+      config, faixaLabel: 'PORTAL CIENTIFICO',
+      titulo: 'Novo trabalho para correcao',
+      mensagem: `<strong>${membroNome||'Um membro'}</strong> enviou uma nova versao do trabalho para avaliacao.<br><br><strong>Projeto:</strong> ${gInfo.ptitulo||''}<br><strong>Grupo:</strong> ${gInfo.gnome||''}`,
+      cta: { label: 'Abrir para revisar', url: 'https://sistema.lauroucpcde.com/cientifico' }
+    });
+    for (const s of staff) {
+      try { await enviarEmail({ para: s.email, assunto: 'Novo trabalho para correcao - Cientifico', html }); } catch(e){}
+    }
+  } catch(e) { console.error('[Email Cientifico] Erro ao notificar staff:', e.message); }
+}
+
+// Confirma por email para quem enviou que o trabalho chegou (comprovante com data/hora).
+async function confirmarEnvioParaMembro({ grupoId, tipo, id }) {
+  try {
+    const { enviarEmail, htmlSimples } = require('../services/notificacoes');
+    const membro = await getPortalMembro(tipo, id);
+    if (!membro || !membro.email) return;
+    const gInfoR = await query('SELECT gc.nome as gnome, pc.titulo as ptitulo FROM grupos_cientificos gc JOIN projetos_cientificos pc ON pc.id=gc.projeto_id WHERE gc.id=$1', [grupoId]);
+    const gInfo = gInfoR.rows[0] || {};
+    const config = await getConfig();
+    const agora = new Date();
+    const html = htmlSimples({
+      config, faixaLabel: 'PORTAL CIENTIFICO',
+      titulo: 'Trabalho enviado com sucesso',
+      mensagem: `Recebemos o seu trabalho em <strong>${agora.toLocaleDateString('pt-BR')} as ${agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</strong>.<br><br><strong>Projeto:</strong> ${gInfo.ptitulo||''}<br><strong>Grupo:</strong> ${gInfo.gnome||''}<br><strong>Status:</strong> Enviado - aguardando avaliacao<br><br>Este email serve como comprovante do envio. Assim que a equipe do Cientifico avaliar, voce recebe um novo aviso por aqui.`,
+      cta: { label: 'Acompanhar no Portal', url: 'https://cientifico.lauroucpcde.com' }
+    });
+    await enviarEmail({ para: membro.email, assunto: 'Comprovante: trabalho enviado - Cientifico', html });
+  } catch(e) { console.error('[Email Cientifico] Erro ao confirmar envio ao membro:', e.message); }
 }
 
 // So o "dono" do trabalho (quem criou o rascunho) pode editar/gerar/enviar; os demais membros
@@ -9424,6 +9526,8 @@ router.post('/portal/grupo/:grupoId/rascunho/enviar', requirePortal, async (req,
 
     const membro = await getPortalMembro(tipo, id);
     await registrarTimeline(req.params.grupoId, 'Nova versao enviada', (membro?.nome || 'Membro') + ' enviou o trabalho para avaliacao');
+    await notificarStaffNovoTrabalho({ grupoId: req.params.grupoId, membroNome: membro?.nome });
+    await confirmarEnvioParaMembro({ grupoId: req.params.grupoId, tipo, id });
 
     res.json({ ok: true });
   } catch(e) { console.error('rascunho/enviar erro:', e.message); res.json({ ok: false, erro: 'Erro ao enviar o trabalho para avaliacao.' }); }
