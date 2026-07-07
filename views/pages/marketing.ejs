@@ -390,7 +390,7 @@
               <button class="btn btn-sm" onclick="canvaCarregarDesigns()">Atualizar</button>
             </div>
           </div>
-          <div id="canva-designs-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">
+          <div id="canva-designs-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
             <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--texto2)">Carregando designs do Canva...</div>
           </div>
         </div>
@@ -1154,9 +1154,9 @@ function canvaCarregarDesigns(){
       var editUrl=des.urls&&des.urls.edit_url;
       return '<div class="midia-card">'
         +'<img src="'+thumb+'" alt="'+titulo+'" onerror="this.src=\'/img/placeholder.png\'">'
-        +'<div class="midia-overlay">'
-        +(editUrl?'<a href="'+editUrl+'" target="_blank" class="btn-xs" style="background:white;color:#111;text-decoration:none">Editar no Canva</a>':'')
-        +'<button onclick="canvaImportar(\''+des.id+'\',\''+titulo.replace(/'/g,"\\'")+'\',this)" class="btn-xs" style="background:#0F6E56;color:white;border-color:transparent">Importar p/ Midias</button>'
+        +'<div class="midia-overlay" style="flex-direction:column;gap:6px;padding:8px">'
+        +(editUrl?'<a href="'+editUrl+'" target="_blank" class="btn-xs" style="background:white;color:#111;text-decoration:none;width:100%;justify-content:center">Editar</a>':'')
+        +'<button onclick="canvaImportar(\''+des.id+'\',\''+titulo.replace(/'/g,"\\'")+'\',this)" class="btn-xs" style="background:#0F6E56;color:white;border-color:transparent;width:100%;justify-content:center">Importar</button>'
         +'</div>'
         +'<div class="midia-card-info">'+titulo+'</div>'
         +'</div>';
