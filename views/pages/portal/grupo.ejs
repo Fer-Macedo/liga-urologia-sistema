@@ -217,10 +217,18 @@
     </div>
     <div class="card">
       <h3>Polir Texto Cientifico</h3>
-      <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Cole um paragrafo (ex: introducao, resumo) para deixar em tom cientifico formal, e receber sugestoes de titulo.</p>
-      <textarea id="polir-texto" placeholder="Cole seu texto aqui..." style="width:100%;min-height:100px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"></textarea>
+      <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Cole o trabalho (um paragrafo ou o texto completo) para deixar em tom cientifico formal e receber sugestoes de titulo. Depois, envie o resultado direto como nova versao do trabalho — sem precisar abrir o Word por fora.</p>
+      <textarea id="polir-texto" placeholder="Cole seu texto aqui (pode ser o trabalho completo)..." style="width:100%;min-height:180px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"></textarea>
       <button type="button" class="btn btn-sm" id="btn-polir" onclick="polirTexto()" style="margin-top:8px;font-size:11.5px">Polir texto</button>
       <div id="polir-resultado" style="margin-top:12px;font-size:12.5px"></div>
+    </div>
+    <div class="card" style="margin-top:20px">
+      <h3>Editor de Documento</h3>
+      <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Prefere escrever direto na plataforma? Escreva ou cole o trabalho aqui e envie como nova versao — o sistema gera o arquivo Word automaticamente.</p>
+      <input type="text" id="editor-titulo" placeholder="Titulo do trabalho" style="width:100%;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box;margin-bottom:8px">
+      <textarea id="editor-documento" placeholder="Escreva o trabalho aqui... (separe paragrafos com uma linha em branco)" style="width:100%;min-height:260px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"></textarea>
+      <button type="button" class="btn pri btn-sm" id="btn-editor-enviar" onclick="enviarEditorComoVersao()" style="margin-top:8px;font-size:11.5px">Salvar como nova versao do trabalho</button>
+      <div id="editor-resultado" style="margin-top:12px;font-size:12.5px"></div>
     </div>
   </div>
 
@@ -435,6 +443,8 @@ function buscarRelacionados() {
     .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
 }
 
+var _textoPolidoAtual = null;
+var _tituloSugeridoAtual = '';
 function polirTexto() {
   var texto = document.getElementById('polir-texto').value.trim();
   if(!texto){ alert('Cole o texto primeiro.'); return; }
@@ -452,13 +462,45 @@ function polirTexto() {
       btn.disabled = false; btn.innerHTML = orig;
       if(!data.ok){ out.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro ao polir texto.')+'</span>'; return; }
       var r = data.resultado;
+      _textoPolidoAtual = r.texto_polido;
+      _tituloSugeridoAtual = (r.sugestoes_titulo && r.sugestoes_titulo[0]) || '';
       var html = '<div style="background:#F0F4F2;padding:10px 12px;border:1px solid #DDE3DF;margin-bottom:8px">'+r.texto_polido+'</div>';
       if(r.sugestoes_titulo && r.sugestoes_titulo.length){
-        html += '<div><b>Sugestoes de titulo:</b><ul style="margin:4px 0 0 18px">' + r.sugestoes_titulo.map(function(t){return '<li>'+t+'</li>';}).join('') + '</ul></div>';
+        html += '<div style="margin-bottom:10px"><b>Sugestoes de titulo:</b><ul style="margin:4px 0 0 18px">' + r.sugestoes_titulo.map(function(t){return '<li>'+t+'</li>';}).join('') + '</ul></div>';
       }
+      html += '<button type="button" class="btn pri btn-sm" id="btn-enviar-polido" onclick="enviarTextoPolidoComoVersao()" style="font-size:11.5px">Enviar esta versao como novo trabalho</button>';
+      html += '<div id="polir-envio-status" style="margin-top:8px"></div>';
       out.innerHTML = html;
     })
     .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
+}
+
+function enviarTextoComoVersao(texto, titulo, btn, statusEl) {
+  if(!texto || !texto.trim()){ statusEl.innerHTML = '<span style="color:#b91c1c">Nada para enviar.</span>'; return; }
+  var orig = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = 'Gerando documento...';
+  statusEl.innerHTML = '';
+  fetch('/portal/grupo/'+GRUPO_ID+'/enviar-texto-como-versao', {
+    method: 'POST', credentials: 'same-origin',
+    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    body: 'texto=' + encodeURIComponent(texto) + '&titulo=' + encodeURIComponent(titulo || '')
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      btn.disabled = false; btn.innerHTML = orig;
+      if(!data.ok){ statusEl.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro ao enviar.')+'</span>'; return; }
+      statusEl.innerHTML = '<span style="color:#0F6E56">Enviado! Atualizando pagina...</span>';
+      setTimeout(function(){ location.reload(); }, 1200);
+    })
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; statusEl.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
+}
+function enviarTextoPolidoComoVersao() {
+  enviarTextoComoVersao(_textoPolidoAtual, _tituloSugeridoAtual, document.getElementById('btn-enviar-polido'), document.getElementById('polir-envio-status'));
+}
+function enviarEditorComoVersao() {
+  var texto = document.getElementById('editor-documento').value.trim();
+  var titulo = document.getElementById('editor-titulo').value.trim();
+  enviarTextoComoVersao(texto, titulo, document.getElementById('btn-editor-enviar'), document.getElementById('editor-resultado'));
 }
 </script>
 </body></html>
