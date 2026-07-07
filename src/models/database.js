@@ -100,6 +100,20 @@ async function initSchema() {
       criado_em TIMESTAMP DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS rascunhos_trabalho (
+      id SERIAL PRIMARY KEY,
+      grupo_id INTEGER NOT NULL UNIQUE,
+      titulo TEXT,
+      norma TEXT DEFAULT 'abnt',
+      texto TEXT,
+      google_file_id TEXT,
+      google_doc_url TEXT,
+      google_embed_url TEXT,
+      atualizado_por_tipo TEXT,
+      atualizado_por_id INTEGER,
+      atualizado_em TIMESTAMP DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS aniversario_lembretes_enviados (
       id SERIAL PRIMARY KEY,
       data DATE NOT NULL,

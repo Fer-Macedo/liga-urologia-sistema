@@ -103,6 +103,19 @@ async function uploadParaDrive(tokens, buffer, nome, mimetype) {
   };
 }
 
+// Exporta um Google Doc/Sheet/Slide para um formato "nativo" (docx, pdf, etc) - usado para
+// pegar o conteudo mais atual de um documento que a pessoa esteja editando no Google Docs
+// embutido na plataforma, no momento de enviar a versao final.
+async function exportarArquivo(tokens, fileId, mimeType) {
+  const client = getClient(tokens);
+  const drive = google.drive({ version: 'v3', auth: client });
+  const res = await drive.files.export(
+    { fileId, mimeType },
+    { responseType: 'arraybuffer' }
+  );
+  return Buffer.from(res.data);
+}
+
 // Obtém cliente com refresh automático
 async function getClientAtualizado(pool) {
   const r = await pool.query("SELECT valor FROM configuracoes WHERE chave='google_tokens'");
@@ -122,4 +135,4 @@ async function getClientAtualizado(pool) {
   return client;
 }
 
-module.exports = { getAuthUrl, getTokens, getClient, getClientAtualizado, uploadParaDrive };
+module.exports = { getAuthUrl, getTokens, getClient, getClientAtualizado, uploadParaDrive, exportarArquivo };

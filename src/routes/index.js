@@ -8990,7 +8990,9 @@ router.get('/portal/grupo/:grupoId', requirePortal, async (req, res) => {
   const chat = (await query('SELECT * FROM chat_grupo_cientifico WHERE grupo_id=$1 ORDER BY criado_em ASC', [req.params.grupoId])).rows;
   const timeline = (await query('SELECT * FROM timeline_grupo_cientifico WHERE grupo_id=$1 ORDER BY criado_em DESC', [req.params.grupoId])).rows;
   const avisos = (await query('SELECT * FROM avisos_cientificos WHERE projeto_id=$1 AND (grupo_id=$2 OR grupo_id IS NULL) ORDER BY criado_em DESC', [projeto.id, req.params.grupoId])).rows;
-  res.render('pages/portal/grupo', { config, membro, grupo, projeto, versoes, chat, timeline, avisos, msg, erro });
+  const rascunhoR = await query('SELECT * FROM rascunhos_trabalho WHERE grupo_id=$1', [req.params.grupoId]);
+  const rascunho = rascunhoR.rows[0] || null;
+  res.render('pages/portal/grupo', { config, membro, grupo, projeto, versoes, chat, timeline, avisos, msg, erro, rascunho });
 });
 
 // POST /portal/grupo/:grupoId/upload
@@ -9121,27 +9123,112 @@ router.post('/portal/grupo/:grupoId/polir-texto', requirePortal, async (req, res
   } catch(e) { res.json({ ok: false, erro: e.message }); }
 });
 
-// POST /portal/grupo/:grupoId/gerar-documento — gera um .docx formatado na norma escolhida
-// (ABNT ou Vancouver) a partir do texto do Editor de Documento, com um bloco de orientacoes
-// no final. O arquivo e baixado pela pessoa; ela revisa, apaga as orientacoes e so entao
-// anexa a versao final no formulario de upload ja existente, que e o que vai para avaliacao.
-router.post('/portal/grupo/:grupoId/gerar-documento', requirePortal, async (req, res) => {
+// Confere se o membro logado pertence ao grupo (usado pelas rotas do Editor de Documento)
+async function membroPertenceAoGrupo(grupoId, tipo, id) {
+  const r = await query('SELECT 1 FROM membros_grupo_cientifico WHERE grupo_id=$1 AND origem_tipo=$2 AND origem_id=$3', [grupoId, tipo, id]);
+  return r.rows.length > 0;
+}
+
+// POST /portal/grupo/:grupoId/rascunho/salvar — salva o titulo/norma/texto do Editor de
+// Documento no sistema (um rascunho por grupo, compartilhado entre os membros), para a
+// pessoa poder continuar de qualquer lugar depois, sem precisar terminar tudo de uma vez.
+router.post('/portal/grupo/:grupoId/rascunho/salvar', requirePortal, async (req, res) => {
+  const { tipo, id } = req.session.portalMembro;
+  const { texto, titulo, norma } = req.body;
+  try {
+    if (!(await membroPertenceAoGrupo(req.params.grupoId, tipo, id))) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    await query(`
+      INSERT INTO rascunhos_trabalho (grupo_id, titulo, norma, texto, atualizado_por_tipo, atualizado_por_id, atualizado_em)
+      VALUES ($1,$2,$3,$4,$5,$6,NOW())
+      ON CONFLICT (grupo_id) DO UPDATE SET titulo=$2, norma=$3, texto=$4, atualizado_por_tipo=$5, atualizado_por_id=$6, atualizado_em=NOW()
+    `, [req.params.grupoId, titulo || null, norma || 'abnt', texto || '', tipo, id]);
+    res.json({ ok: true });
+  } catch(e) { console.error('rascunho/salvar erro:', e.message); res.json({ ok: false, erro: 'Erro ao salvar o rascunho.' }); }
+});
+
+// POST /portal/grupo/:grupoId/rascunho/baixar — gera e baixa o .docx formatado na norma,
+// com o bloco de orientacoes no final (para quem so quer o arquivo local, sem usar o Google Docs).
+router.post('/portal/grupo/:grupoId/rascunho/baixar', requirePortal, async (req, res) => {
   const { tipo, id } = req.session.portalMembro;
   const { texto, titulo, norma } = req.body;
   if (!texto || !texto.trim()) return res.status(400).send('Escreva ou cole o texto do trabalho primeiro.');
   try {
-    const mR = await query('SELECT 1 FROM membros_grupo_cientifico WHERE grupo_id=$1 AND origem_tipo=$2 AND origem_id=$3', [req.params.grupoId, tipo, id]);
-    if (!mR.rows.length) return res.status(403).send('Sem permissao para este grupo.');
-
+    if (!(await membroPertenceAoGrupo(req.params.grupoId, tipo, id))) return res.status(403).send('Sem permissao para este grupo.');
     const { gerarDocumentoCientifico } = require('../services/gerador-docx');
     const tituloFinal = (titulo && titulo.trim()) ? titulo.trim() : 'Trabalho Cientifico';
     const nomeArquivo = tituloFinal.replace(/[^a-zA-Z0-9 ]+/g, '').trim().substring(0, 60) + '.docx';
     const buffer = await gerarDocumentoCientifico({ titulo: tituloFinal, texto: texto.trim(), norma });
-
     res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.set('Content-Disposition', `attachment; filename="${nomeArquivo}"`);
     res.send(buffer);
-  } catch(e) { console.error('gerar-documento erro:', e.message); res.status(500).send('Erro ao gerar o documento.'); }
+  } catch(e) { console.error('rascunho/baixar erro:', e.message); res.status(500).send('Erro ao gerar o documento.'); }
+});
+
+// POST /portal/grupo/:grupoId/rascunho/editar-google — gera o .docx formatado, sobe pro
+// Google Drive da liga como Google Doc editavel, e retorna o link para embutir na plataforma
+// (mesmo mecanismo ja usado no modulo de Arquivos).
+router.post('/portal/grupo/:grupoId/rascunho/editar-google', requirePortal, async (req, res) => {
+  const { tipo, id } = req.session.portalMembro;
+  const { texto, titulo, norma } = req.body;
+  if (!texto || !texto.trim()) return res.json({ ok: false, erro: 'Escreva ou cole o texto do trabalho primeiro.' });
+  try {
+    if (!(await membroPertenceAoGrupo(req.params.grupoId, tipo, id))) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    const tokensR = await query("SELECT valor FROM configuracoes WHERE chave='google_tokens'");
+    if (!tokensR.rows.length) return res.json({ ok: false, erro: 'Google Drive nao esta conectado. Fale com o administrador.' });
+    const tokens = JSON.parse(tokensR.rows[0].valor);
+
+    const { gerarDocumentoCientifico } = require('../services/gerador-docx');
+    const { uploadParaDrive } = require('../services/google-drive');
+    const tituloFinal = (titulo && titulo.trim()) ? titulo.trim() : 'Trabalho Cientifico';
+    const buffer = await gerarDocumentoCientifico({ titulo: tituloFinal, texto: texto.trim(), norma });
+    const resultado = await uploadParaDrive(tokens, buffer, tituloFinal + '.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+
+    await query(`
+      INSERT INTO rascunhos_trabalho (grupo_id, titulo, norma, texto, google_file_id, google_doc_url, google_embed_url, atualizado_por_tipo, atualizado_por_id, atualizado_em)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())
+      ON CONFLICT (grupo_id) DO UPDATE SET titulo=$2, norma=$3, texto=$4, google_file_id=$5, google_doc_url=$6, google_embed_url=$7, atualizado_por_tipo=$8, atualizado_por_id=$9, atualizado_em=NOW()
+    `, [req.params.grupoId, tituloFinal, norma || 'abnt', texto.trim(), resultado.fileId, resultado.webViewLink, resultado.embedUrl, tipo, id]);
+
+    res.json({ ok: true, embedUrl: resultado.embedUrl, docUrl: resultado.webViewLink, fileId: resultado.fileId });
+  } catch(e) { console.error('rascunho/editar-google erro:', e.message); res.json({ ok: false, erro: 'Erro ao abrir no Google Docs.' }); }
+});
+
+// POST /portal/grupo/:grupoId/rascunho/enviar — envia o rascunho como nova versao oficial
+// do trabalho, para avaliacao da equipe do Cientifico. Se a pessoa editou no Google Docs
+// embutido, busca o conteudo mais atual direto do Google (o que ela tiver editado por
+// ultimo); senao, gera a partir do texto salvo.
+router.post('/portal/grupo/:grupoId/rascunho/enviar', requirePortal, async (req, res) => {
+  const { tipo, id } = req.session.portalMembro;
+  try {
+    if (!(await membroPertenceAoGrupo(req.params.grupoId, tipo, id))) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    const rascunhoR = await query('SELECT * FROM rascunhos_trabalho WHERE grupo_id=$1', [req.params.grupoId]);
+    if (!rascunhoR.rows.length) return res.json({ ok: false, erro: 'Nenhum rascunho salvo ainda para este grupo.' });
+    const rascunho = rascunhoR.rows[0];
+
+    const { uploadArquivo } = require('../services/arquivos');
+    const tituloFinal = rascunho.titulo || 'Trabalho Cientifico';
+    const nomeArquivo = tituloFinal.replace(/[^a-zA-Z0-9 ]+/g, '').trim().substring(0, 60) + '.docx';
+    let buffer;
+
+    if (rascunho.google_file_id) {
+      const tokensR = await query("SELECT valor FROM configuracoes WHERE chave='google_tokens'");
+      const { exportarArquivo } = require('../services/google-drive');
+      const tokens = JSON.parse(tokensR.rows[0].valor);
+      buffer = await exportarArquivo(tokens, rascunho.google_file_id, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    } else {
+      const { gerarDocumentoCientifico } = require('../services/gerador-docx');
+      buffer = await gerarDocumentoCientifico({ titulo: tituloFinal, texto: rascunho.texto || '', norma: rascunho.norma });
+    }
+
+    const chave = await uploadArquivo(buffer, nomeArquivo, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'cientifico/trabalhos');
+    await query('INSERT INTO versoes_trabalho (grupo_id,arquivo_chave,arquivo_nome,enviado_por_tipo,enviado_por_id) VALUES ($1,$2,$3,$4,$5)',
+      [req.params.grupoId, chave, nomeArquivo, tipo, id]);
+
+    const membro = await getPortalMembro(tipo, id);
+    await registrarTimeline(req.params.grupoId, 'Nova versao enviada', (membro?.nome || 'Membro') + ' enviou o trabalho para avaliacao');
+
+    res.json({ ok: true });
+  } catch(e) { console.error('rascunho/enviar erro:', e.message); res.json({ ok: false, erro: 'Erro ao enviar o trabalho para avaliacao.' }); }
 });
 
 // POST /portal/grupo/:grupoId/chat

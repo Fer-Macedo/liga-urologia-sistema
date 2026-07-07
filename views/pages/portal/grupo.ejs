@@ -224,17 +224,32 @@
     </div>
     <div class="card" style="margin-top:20px">
       <h3>Editor de Documento</h3>
-      <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Escreva ou cole o trabalho final aqui (pode colar o texto ja polido acima). Escolha a norma e gere o Word formatado — o arquivo baixa no seu computador com um bloco de orientacoes da norma no final. Revise, apague as orientacoes e so entao anexe a versao final em "Enviar nova versao do trabalho".</p>
-      <input type="text" id="editor-titulo" placeholder="Titulo do trabalho" style="width:100%;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box;margin-bottom:8px">
-      <textarea id="editor-documento" placeholder="Escreva o trabalho aqui... (separe secoes/paragrafos com uma linha em branco)" style="width:100%;min-height:260px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"></textarea>
+      <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Escreva ou cole o trabalho final aqui (pode colar o texto ja polido acima). O rascunho fica salvo no sistema — pode continuar de qualquer lugar depois, sem perder nada. Escolha a norma, edite direto no Google Docs se quiser, e so envie para avaliacao quando estiver pronto.</p>
+      <input type="text" id="editor-titulo" placeholder="Titulo do trabalho" value="<%=rascunho&&rascunho.titulo?rascunho.titulo:''%>" style="width:100%;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box;margin-bottom:8px">
+      <textarea id="editor-documento" placeholder="Escreva o trabalho aqui... (separe secoes/paragrafos com uma linha em branco)" style="width:100%;min-height:220px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"><%=rascunho&&rascunho.texto?rascunho.texto:''%></textarea>
       <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">
         <select id="editor-norma" style="font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF">
-          <option value="abnt">Norma ABNT</option>
-          <option value="vancouver">Norma Vancouver</option>
+          <option value="abnt" <%=(!rascunho||rascunho.norma==='abnt')?'selected':''%>>Norma ABNT</option>
+          <option value="vancouver" <%=(rascunho&&rascunho.norma==='vancouver')?'selected':''%>>Norma Vancouver</option>
         </select>
-        <button type="button" class="btn pri btn-sm" id="btn-editor-gerar" onclick="gerarDocumentoEditor()" style="font-size:11.5px">Gerar documento Word</button>
+        <button type="button" class="btn btn-sm" id="btn-rascunho-salvar" onclick="salvarRascunho()" style="font-size:11.5px">Salvar rascunho</button>
+        <button type="button" class="btn btn-sm" id="btn-rascunho-google" onclick="editarNoGoogle()" style="font-size:11.5px">Editar no Google Docs</button>
+        <button type="button" class="btn btn-sm" id="btn-rascunho-baixar" onclick="baixarRascunho()" style="font-size:11.5px">Baixar Word</button>
       </div>
       <div id="editor-resultado" style="margin-top:12px;font-size:12.5px"></div>
+      <div id="google-doc-area" style="margin-top:14px;<%=rascunho&&rascunho.google_embed_url?'':'display:none'%>">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+          <a id="link-google-abrir" href="<%=rascunho&&rascunho.google_doc_url?rascunho.google_doc_url:'#'%>" target="_blank" class="btn btn-sm" style="font-size:11.5px">Abrir em nova aba</a>
+          <a id="link-google-baixar" href="<%=rascunho&&rascunho.google_file_id?('https://docs.google.com/document/d/'+rascunho.google_file_id+'/export?format=docx'):'#'%>" class="btn btn-sm" style="font-size:11.5px">Baixar Word (Google)</a>
+          <a id="link-google-imprimir" href="<%=rascunho&&rascunho.google_file_id?('https://docs.google.com/document/d/'+rascunho.google_file_id+'/export?format=pdf'):'#'%>" target="_blank" class="btn btn-sm" style="font-size:11.5px">Imprimir / PDF</a>
+        </div>
+        <iframe id="google-doc-iframe" src="<%=rascunho&&rascunho.google_embed_url?rascunho.google_embed_url:''%>" style="width:100%;min-height:520px;border:1px solid #DDE3DF"></iframe>
+      </div>
+      <div style="margin-top:16px;padding-top:14px;border-top:1px solid #DDE3DF">
+        <p style="font-size:12px;color:#6B7A72;margin-bottom:8px">Quando o trabalho estiver pronto (revisado, sem o bloco de orientacoes), envie para avaliacao da equipe do Cientifico. Voce pode fazer isso a qualquer momento, de qualquer lugar.</p>
+        <button type="button" class="btn pri btn-sm" id="btn-rascunho-enviar" onclick="enviarRascunhoParaAvaliacao()" style="font-size:11.5px">Enviar para avaliacao</button>
+        <div id="rascunho-envio-status" style="margin-top:8px;font-size:12.5px"></div>
+      </div>
     </div>
   </div>
 
@@ -476,20 +491,44 @@ function polirTexto() {
     .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
 }
 
-function gerarDocumentoEditor() {
-  var texto = document.getElementById('editor-documento').value.trim();
-  var titulo = document.getElementById('editor-titulo').value.trim();
-  var norma = document.getElementById('editor-norma').value;
-  var btn = document.getElementById('btn-editor-gerar');
+function _editorCampos() {
+  return {
+    texto: document.getElementById('editor-documento').value.trim(),
+    titulo: document.getElementById('editor-titulo').value.trim(),
+    norma: document.getElementById('editor-norma').value
+  };
+}
+
+function salvarRascunho() {
+  var c = _editorCampos();
+  var btn = document.getElementById('btn-rascunho-salvar');
   var out = document.getElementById('editor-resultado');
-  if(!texto){ out.innerHTML = '<span style="color:#b91c1c">Escreva ou cole o trabalho primeiro.</span>'; return; }
   var orig = btn.innerHTML;
-  btn.disabled = true; btn.innerHTML = 'Gerando documento...';
-  out.innerHTML = '';
-  fetch('/portal/grupo/'+GRUPO_ID+'/gerar-documento', {
+  btn.disabled = true; btn.innerHTML = 'Salvando...';
+  fetch('/portal/grupo/'+GRUPO_ID+'/rascunho/salvar', {
     method: 'POST', credentials: 'same-origin',
     headers: {'Content-Type':'application/x-www-form-urlencoded'},
-    body: 'texto=' + encodeURIComponent(texto) + '&titulo=' + encodeURIComponent(titulo) + '&norma=' + encodeURIComponent(norma)
+    body: 'texto=' + encodeURIComponent(c.texto) + '&titulo=' + encodeURIComponent(c.titulo) + '&norma=' + encodeURIComponent(c.norma)
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      btn.disabled = false; btn.innerHTML = orig;
+      out.innerHTML = data.ok ? '<span style="color:#0F6E56">Rascunho salvo! Pode continuar de onde parou a qualquer momento.</span>' : '<span style="color:#b91c1c">'+(data.erro||'Erro ao salvar.')+'</span>';
+    })
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
+}
+
+function baixarRascunho() {
+  var c = _editorCampos();
+  var btn = document.getElementById('btn-rascunho-baixar');
+  var out = document.getElementById('editor-resultado');
+  if(!c.texto){ out.innerHTML = '<span style="color:#b91c1c">Escreva ou cole o trabalho primeiro.</span>'; return; }
+  var orig = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = 'Gerando...';
+  fetch('/portal/grupo/'+GRUPO_ID+'/rascunho/baixar', {
+    method: 'POST', credentials: 'same-origin',
+    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    body: 'texto=' + encodeURIComponent(c.texto) + '&titulo=' + encodeURIComponent(c.titulo) + '&norma=' + encodeURIComponent(c.norma)
   })
     .then(function(r){
       if(!r.ok) return r.text().then(function(t){ throw new Error(t || 'Erro ao gerar o documento.'); });
@@ -500,12 +539,55 @@ function gerarDocumentoEditor() {
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
-      a.download = (titulo || 'Trabalho Cientifico').replace(/[^a-zA-Z0-9 ]+/g,'').trim() + '.docx';
+      a.download = (c.titulo || 'Trabalho Cientifico').replace(/[^a-zA-Z0-9 ]+/g,'').trim() + '.docx';
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      out.innerHTML = '<span style="color:#0F6E56">Documento gerado! Abra o arquivo baixado, revise, apague o bloco de orientacoes no final e anexe a versao final em "Enviar nova versao do trabalho".</span>';
+      out.innerHTML = '<span style="color:#0F6E56">Documento baixado.</span>';
     })
     .catch(function(e){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">'+(e.message||'Erro de conexao.')+'</span>'; });
+}
+
+function editarNoGoogle() {
+  var c = _editorCampos();
+  var btn = document.getElementById('btn-rascunho-google');
+  var out = document.getElementById('editor-resultado');
+  if(!c.texto){ out.innerHTML = '<span style="color:#b91c1c">Escreva ou cole o trabalho primeiro.</span>'; return; }
+  var orig = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = 'Abrindo no Google Docs...';
+  fetch('/portal/grupo/'+GRUPO_ID+'/rascunho/editar-google', {
+    method: 'POST', credentials: 'same-origin',
+    headers: {'Content-Type':'application/x-www-form-urlencoded'},
+    body: 'texto=' + encodeURIComponent(c.texto) + '&titulo=' + encodeURIComponent(c.titulo) + '&norma=' + encodeURIComponent(c.norma)
+  })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      btn.disabled = false; btn.innerHTML = orig;
+      if(!data.ok){ out.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro ao abrir no Google Docs.')+'</span>'; return; }
+      document.getElementById('google-doc-area').style.display = '';
+      document.getElementById('google-doc-iframe').src = data.embedUrl;
+      document.getElementById('link-google-abrir').href = data.docUrl;
+      document.getElementById('link-google-baixar').href = 'https://docs.google.com/document/d/'+data.fileId+'/export?format=docx';
+      document.getElementById('link-google-imprimir').href = 'https://docs.google.com/document/d/'+data.fileId+'/export?format=pdf';
+      out.innerHTML = '<span style="color:#0F6E56">Documento aberto no Google Docs abaixo. Edite direto ali — e salvo automaticamente pelo Google.</span>';
+    })
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
+}
+
+function enviarRascunhoParaAvaliacao() {
+  var btn = document.getElementById('btn-rascunho-enviar');
+  var statusEl = document.getElementById('rascunho-envio-status');
+  var orig = btn.innerHTML;
+  btn.disabled = true; btn.innerHTML = 'Enviando...';
+  statusEl.innerHTML = '';
+  fetch('/portal/grupo/'+GRUPO_ID+'/rascunho/enviar', { method: 'POST', credentials: 'same-origin' })
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      btn.disabled = false; btn.innerHTML = orig;
+      if(!data.ok){ statusEl.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro ao enviar.')+'</span>'; return; }
+      statusEl.innerHTML = '<span style="color:#0F6E56">Enviado para avaliacao! Atualizando pagina...</span>';
+      setTimeout(function(){ location.reload(); }, 1200);
+    })
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; statusEl.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
 }
 </script>
 </body></html>
