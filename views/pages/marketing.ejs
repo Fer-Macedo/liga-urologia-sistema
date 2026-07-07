@@ -583,6 +583,84 @@
           </form>
           <%}%>
         </div>
+
+        <div class="equipe-bloco">
+          <div class="equipe-bloco-header">
+            <div class="equipe-bloco-icone" style="background:#0891b2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16l4.586-4.586a2 2 0 0 1 2.828 0L16 16"/><path d="M14 14l1.586-1.586a2 2 0 0 1 2.828 0L20 14"/><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="8" cy="9" r="1.5"/></svg>
+            </div>
+            <div class="equipe-bloco-titulo">Galeria de Eventos</div>
+            <div class="equipe-bloco-contagem"><%=galerias.length%> galeria<%=galerias.length!==1?'s':''%></div>
+          </div>
+          <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">Fotos de eventos (aulas, corridas, festas) exibidas em galeria no site institucional, para o publico visualizar e salvar. Toda foto enviada aqui recebe automaticamente a marca dagua da liga, se configurada.</p>
+
+          <div style="padding:14px;background:var(--fundo);border-radius:var(--rad);margin-bottom:16px">
+            <div class="label" style="margin-bottom:8px">Marca dagua (carimbo)</div>
+            <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+              <%if(marcaDaguaUrl){%>
+              <img src="<%=marcaDaguaUrl%>" alt="Marca dagua" style="width:80px;height:80px;object-fit:contain;background:repeating-conic-gradient(#e5e7eb 0% 25%,#fff 0% 50%) 50%/16px 16px;border-radius:8px;border:1px solid var(--borda)">
+              <%}else{%>
+              <div style="width:80px;height:80px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--texto2);background:var(--card);border:1px dashed var(--borda);border-radius:8px;text-align:center">Nenhuma marca configurada</div>
+              <%}%>
+              <form action="/marketing/marca-dagua" method="POST" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+                <div class="campo" style="min-width:200px"><label class="label">Imagem PNG (fundo transparente)</label><input type="file" name="marca" class="input" accept="image/png" required></div>
+                <button type="submit" class="btn btn-primario btn-sm"><%=marcaDaguaUrl?'Substituir':'+ Definir marca'%></button>
+              </form>
+              <%if(marcaDaguaUrl){%>
+              <form action="/marketing/marca-dagua/remover" method="POST" style="margin:0" onsubmit="var f=this; confirmarAcao('Remover a marca dagua?', function(){ f.submit(); }); return false;">
+                <button type="submit" class="btn-xs verm" style="border-color:#fecaca">Remover</button>
+              </form>
+              <%}%>
+            </div>
+          </div>
+
+          <form action="/marketing/galerias" method="POST" style="margin-bottom:16px;padding:14px;background:var(--fundo);border-radius:var(--rad)">
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+              <div class="campo" style="flex:1;min-width:180px"><label class="label">Nome do evento</label><input type="text" name="nome_evento" class="input" placeholder="Ex: Corrida da Liga 2026" required></div>
+              <div class="campo" style="min-width:160px"><label class="label">Data (opcional)</label><input type="date" name="data_evento" class="input"></div>
+              <button type="submit" class="btn btn-primario btn-sm">+ Criar galeria</button>
+            </div>
+          </form>
+
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <%galerias.forEach(function(g){%>
+            <div style="padding:14px;background:var(--fundo);border-radius:var(--rad)">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+                <div>
+                  <div style="font-weight:700;font-size:14px"><%=g.nome_evento%></div>
+                  <div style="font-size:11px;color:var(--texto2)"><%=g.data_evento||'Sem data'%> · <%=g.total_fotos%> foto<%=g.total_fotos!==1?'s':''%></div>
+                </div>
+                <div style="display:flex;gap:6px">
+                  <form action="/marketing/galerias/<%=g.id%>/toggle" method="POST" style="margin:0">
+                    <button type="submit" class="btn-xs" style="background:<%=g.ativo?'#0F6E56':'#94a3b8'%>;color:white;border-color:transparent"><%=g.ativo?'Ativa':'Inativa'%></button>
+                  </form>
+                  <form action="/marketing/galerias/<%=g.id%>/deletar" method="POST" style="margin:0" onsubmit="var f=this; confirmarAcao('Excluir esta galeria e todas as fotos?', function(){ f.submit(); }); return false;">
+                    <button type="submit" class="btn-xs verm" style="border-color:#fecaca">Excluir galeria</button>
+                  </form>
+                </div>
+              </div>
+              <form action="/marketing/galerias/<%=g.id%>/fotos" method="POST" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px">
+                <div class="campo" style="flex:1;min-width:220px"><label class="label">Adicionar fotos (selecao multipla)</label><input type="file" name="fotos" class="input" accept="image/*" multiple required></div>
+                <button type="submit" class="btn btn-secundario btn-sm">Enviar fotos</button>
+              </form>
+              <%if(g.fotos.length){%>
+              <div class="equipe-grid">
+                <%g.fotos.forEach(function(f){%>
+                <div class="equipe-card">
+                  <img src="<%=f.url||'/img/placeholder.png'%>" alt="Foto" onerror="this.onerror=null;this.src='/img/placeholder.png'">
+                  <div class="equipe-card-corpo">
+                    <form action="/marketing/galeria-fotos/<%=f.id%>/deletar" method="POST" style="margin:0" onsubmit="var fo=this; confirmarAcao('Excluir esta foto?', function(){ fo.submit(); }); return false;">
+                      <button type="submit" class="btn-xs verm" style="width:100%;justify-content:center;border-color:#fecaca">Excluir</button>
+                    </form>
+                  </div>
+                </div>
+                <%});%>
+              </div>
+              <%}%>
+            </div>
+            <%});%>
+          </div>
+        </div>
       </div>
       <div class="mkt-section" id="tab-whatsapp">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">

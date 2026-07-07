@@ -4438,7 +4438,19 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
   const siteVideoR = await query("SELECT valor FROM configuracoes WHERE chave='site_video_chave'");
   let siteVideoUrl = null;
   if (siteVideoR.rows.length && siteVideoR.rows[0].valor) { try { siteVideoUrl = await gerarUrlInline(siteVideoR.rows[0].valor, 'video/mp4'); } catch(e) {} }
-  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl });
+  const marcaDaguaR = await query("SELECT valor FROM configuracoes WHERE chave='marca_dagua_chave'");
+  let marcaDaguaUrl = null;
+  if (marcaDaguaR.rows.length && marcaDaguaR.rows[0].valor) { try { marcaDaguaUrl = await gerarUrlInline(marcaDaguaR.rows[0].valor); } catch(e) {} }
+  const galeriasR = await query(`
+    SELECT g.*, (SELECT COUNT(*) FROM galeria_fotos WHERE galeria_id=g.id) as total_fotos
+    FROM galerias_eventos g ORDER BY g.criado_em DESC
+  `);
+  const galerias = await Promise.all(galeriasR.rows.map(async g => {
+    const fotosR = await query('SELECT id, imagem_chave FROM galeria_fotos WHERE galeria_id=$1 ORDER BY criado_em', [g.id]);
+    const fotos = await Promise.all(fotosR.rows.map(async f => ({ id: f.id, url: await gerarUrlInline(f.imagem_chave).catch(()=>null) })));
+    return { ...g, total_fotos: Number(g.total_fotos), fotos };
+  }));
+  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias });
 });
 
 // Foto padronizada da equipe para o site publico - gerido pelo Marketing, separado da foto interna
@@ -4525,6 +4537,113 @@ router.get('/api/video-publico', corsPublico, limiterApiPublica, async (req, res
     const video_url = await gerarUrlInline(r.rows[0].valor, 'video/mp4').catch(()=>null);
     res.json({ video_url });
   } catch(e) { res.json({ video_url: null }); }
+});
+
+// Marca d'agua (carimbo) usada em todas as fotos das galerias de eventos - PNG com fundo transparente
+router.post('/marketing/marca-dagua', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.single('marca')(req, res, async (err) => {
+      if (err || !req.file) { req.session.erro=['Nenhuma imagem enviada.']; return res.redirect('/marketing?tab=equipe'); }
+      const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'marca-dagua');
+      await query("INSERT INTO configuracoes (chave,valor) VALUES ('marca_dagua_chave',$1) ON CONFLICT (chave) DO UPDATE SET valor=$1", [r.chave]);
+      req.session.msg = ['Marca dagua atualizada! Sera aplicada nas proximas fotos enviadas.'];
+      res.redirect('/marketing?tab=equipe');
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing?tab=equipe'); }
+});
+
+router.post('/marketing/marca-dagua/remover', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  await query("DELETE FROM configuracoes WHERE chave='marca_dagua_chave'");
+  req.session.msg = ['Marca dagua removida!'];
+  res.redirect('/marketing?tab=equipe');
+});
+
+// Galerias de fotos de eventos - o Marketing cria a galeria e sobe as fotos em lote, ja
+// carimbadas com a marca dagua da liga, para exibicao/download no site institucional.
+router.post('/marketing/galerias', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { nome_evento, data_evento } = req.body;
+    if (!nome_evento) { req.session.erro=['Informe o nome do evento.']; return res.redirect('/marketing?tab=equipe'); }
+    await query('INSERT INTO galerias_eventos (nome_evento, data_evento, criado_por) VALUES ($1,$2,$3)', [nome_evento, data_evento||null, req.session.usuario.id]);
+    req.session.msg = ['Galeria criada!'];
+    res.redirect('/marketing?tab=equipe');
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing?tab=equipe'); }
+});
+
+router.post('/marketing/galerias/:id/toggle', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  await query('UPDATE galerias_eventos SET ativo = NOT ativo WHERE id=$1', [req.params.id]);
+  res.redirect('/marketing?tab=equipe');
+});
+
+router.post('/marketing/galerias/:id/deletar', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { deletarArquivo } = require('../services/arquivos');
+    const fotos = await query('SELECT imagem_chave FROM galeria_fotos WHERE galeria_id=$1', [req.params.id]);
+    await Promise.all(fotos.rows.map(f => deletarArquivo(f.imagem_chave).catch(()=>{})));
+    await query('DELETE FROM galerias_eventos WHERE id=$1', [req.params.id]);
+    req.session.msg = ['Galeria excluida!'];
+    res.redirect('/marketing?tab=equipe');
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing?tab=equipe'); }
+});
+
+router.post('/marketing/galerias/:id/fotos', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { upload, uploadArquivo, aplicarMarcaDagua } = require('../services/arquivos');
+    upload.array('fotos', 60)(req, res, async (err) => {
+      if (err || !req.files || !req.files.length) { req.session.erro=['Nenhuma foto enviada.']; return res.redirect('/marketing?tab=equipe'); }
+      const marcaR = await query("SELECT valor FROM configuracoes WHERE chave='marca_dagua_chave'");
+      const marcaChave = marcaR.rows[0]?.valor || null;
+      for (const file of req.files) {
+        const buffer = await aplicarMarcaDagua(file.buffer, marcaChave);
+        const r = await uploadArquivo(buffer, file.originalname, marcaChave ? 'image/jpeg' : file.mimetype, 'galeria-eventos');
+        await query('INSERT INTO galeria_fotos (galeria_id, imagem_chave) VALUES ($1,$2)', [req.params.id, r.chave]);
+      }
+      req.session.msg = [`${req.files.length} foto(s) adicionada(s)!`];
+      res.redirect('/marketing?tab=equipe');
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing?tab=equipe'); }
+});
+
+router.post('/marketing/galeria-fotos/:id/deletar', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { deletarArquivo } = require('../services/arquivos');
+    const f = await query('SELECT imagem_chave FROM galeria_fotos WHERE id=$1', [req.params.id]);
+    if (f.rows.length) await deletarArquivo(f.rows[0].imagem_chave).catch(()=>{});
+    await query('DELETE FROM galeria_fotos WHERE id=$1', [req.params.id]);
+    res.redirect('/marketing?tab=equipe');
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing?tab=equipe'); }
+});
+
+// API publica - lista de galerias ativas, consumida pelo site lauroucpcde.com
+router.get('/api/galerias-publicas', corsPublico, limiterApiPublica, async (req, res) => {
+  try {
+    const { gerarUrlInline } = require('../services/arquivos');
+    const r = await query(`
+      SELECT g.id, g.nome_evento, g.data_evento,
+        (SELECT imagem_chave FROM galeria_fotos WHERE galeria_id=g.id ORDER BY criado_em LIMIT 1) as capa_chave,
+        (SELECT COUNT(*) FROM galeria_fotos WHERE galeria_id=g.id) as total_fotos
+      FROM galerias_eventos g WHERE g.ativo=true
+      ORDER BY g.data_evento DESC NULLS LAST, g.criado_em DESC
+    `);
+    const galerias = await Promise.all(r.rows.map(async g => ({
+      id: g.id, nome_evento: g.nome_evento, data_evento: g.data_evento, total_fotos: Number(g.total_fotos),
+      capa_url: g.capa_chave ? await gerarUrlInline(g.capa_chave).catch(()=>null) : null
+    })));
+    res.json({ galerias });
+  } catch(e) { res.json({ galerias: [] }); }
+});
+
+// API publica - fotos de uma galeria especifica
+router.get('/api/galerias-publicas/:id/fotos', corsPublico, limiterApiPublica, async (req, res) => {
+  try {
+    const { gerarUrlInline } = require('../services/arquivos');
+    const g = await query('SELECT nome_evento, data_evento FROM galerias_eventos WHERE id=$1 AND ativo=true', [req.params.id]);
+    if (!g.rows.length) return res.status(404).json({ erro: 'Galeria nao encontrada' });
+    const fotosR = await query('SELECT id, imagem_chave FROM galeria_fotos WHERE galeria_id=$1 ORDER BY criado_em', [req.params.id]);
+    const fotos = await Promise.all(fotosR.rows.map(async f => ({ id: f.id, url: await gerarUrlInline(f.imagem_chave).catch(()=>null) })));
+    res.json({ nome_evento: g.rows[0].nome_evento, data_evento: g.rows[0].data_evento, fotos });
+  } catch(e) { res.status(500).json({ erro: 'Erro ao carregar galeria' }); }
 });
 
 router.post('/marketing/posts', requireAuth, async (req, res) => {

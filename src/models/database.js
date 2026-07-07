@@ -98,6 +98,22 @@ async function initSchema() {
       criado_em TIMESTAMP DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS galerias_eventos (
+      id SERIAL PRIMARY KEY,
+      nome_evento TEXT NOT NULL,
+      data_evento TEXT,
+      ativo BOOLEAN DEFAULT true,
+      criado_por INTEGER,
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS galeria_fotos (
+      id SERIAL PRIMARY KEY,
+      galeria_id INTEGER NOT NULL REFERENCES galerias_eventos(id) ON DELETE CASCADE,
+      imagem_chave TEXT NOT NULL,
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS notificacoes_log (
       id SERIAL PRIMARY KEY,
       membro_id INTEGER,

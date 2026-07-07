@@ -109,4 +109,28 @@ async function gerarUrlTemporaria(chave, expiresIn) {
   return getSignedUrl(R2, cmd, { expiresIn: expiresIn || 300 });
 }
 
-module.exports = { upload, uploadArquivo, deletarArquivo, gerarUrlDownload, listarArquivos, iconeArquivo, categoriaArquivo, gerarUrlInline, gerarUrlTemporaria, getSignedDownloadUrl: gerarUrlInline };
+async function baixarArquivoBuffer(chave) {
+  const r = await R2.send(new GetObjectCommand({ Bucket: BUCKET, Key: chave }));
+  const chunks = [];
+  for await (const chunk of r.Body) chunks.push(chunk);
+  return Buffer.concat(chunks);
+}
+
+// Sobrepõe uma marca d'água (PNG com fundo transparente) no canto inferior direito da imagem
+async function aplicarMarcaDagua(buffer, marcaChave) {
+  if (!marcaChave) return buffer;
+  try {
+    const sharp = require('sharp');
+    const marcaBuf = await baixarArquivoBuffer(marcaChave);
+    const img = sharp(buffer).rotate();
+    const meta = await img.metadata();
+    const larguraMarca = Math.round((meta.width || 1200) * 0.22);
+    const marcaResized = await sharp(marcaBuf).resize({ width: larguraMarca }).toBuffer();
+    return await img.composite([{ input: marcaResized, gravity: 'southeast' }]).jpeg({ quality: 90 }).toBuffer();
+  } catch (e) {
+    console.error('Erro ao aplicar marca dagua:', e.message);
+    return buffer;
+  }
+}
+
+module.exports = { upload, uploadArquivo, deletarArquivo, gerarUrlDownload, listarArquivos, iconeArquivo, categoriaArquivo, gerarUrlInline, gerarUrlTemporaria, baixarArquivoBuffer, aplicarMarcaDagua, getSignedDownloadUrl: gerarUrlInline };
