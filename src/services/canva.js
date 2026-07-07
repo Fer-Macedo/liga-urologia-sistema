@@ -105,13 +105,27 @@ async function listarDesigns() {
   }
 }
 
+// Formatos disponiveis na tela de criacao - a API do Canva so aceita presets fixos
+// (doc, email, presentation, whiteboard); qualquer formato de rede social precisa
+// ser criado como design_type "custom" com largura/altura em pixels.
+const FORMATOS = {
+  InstagramPost: { width: 1080, height: 1080 },
+  InstagramStory: { width: 1080, height: 1920 },
+  FacebookPost: { width: 1200, height: 630 },
+  Presentation: { preset: 'presentation' }
+};
+
 // Cria um novo design (post do Instagram, por padrao) e devolve a URL de edicao no Canva
 async function criarDesign(tipoNome) {
   const token = await getTokenValido();
   if (!token) return { ok: false, erro: 'Canva nao conectado.' };
+  const formato = FORMATOS[tipoNome] || FORMATOS.InstagramPost;
+  const design_type = formato.preset
+    ? { type: 'preset', name: formato.preset }
+    : { type: 'custom', width: formato.width, height: formato.height };
   try {
     const resp = await axios.post('https://api.canva.com/rest/v1/designs', {
-      design_type: { type: 'preset', name: tipoNome || 'InstagramPost' }
+      design_type
     }, { headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' } });
     const d = resp.data.design;
     return { ok: true, designId: d.id, editUrl: d.urls && d.urls.edit_url };

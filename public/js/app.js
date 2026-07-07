@@ -48,6 +48,51 @@
     var m = document.getElementById('modal-confirmacao-global');
     if (m) m.style.display = 'none';
   };
+
+  // ─── Aviso padrão (substitui o alert() nativo do navegador) ──
+  function garantirModalAviso() {
+    if (document.getElementById('modal-aviso-global')) return;
+    var wrap = document.createElement('div');
+    wrap.innerHTML =
+      '<div class="modal-overlay" id="modal-aviso-global" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:3000;align-items:center;justify-content:center">' +
+        '<div class="modal" style="max-width:420px;width:90%;background:#fff;border:1px solid #e2e8f0;padding:0;border-radius:0;box-shadow:none">' +
+          '<div style="padding:24px 24px 0">' +
+            '<div id="mag-icone" style="width:44px;height:44px;display:flex;align-items:center;justify-content:center;margin-bottom:16px"></div>' +
+            '<h3 id="mag-titulo" style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 8px"></h3>' +
+            '<p id="mag-mensagem" style="font-size:13px;color:#64748b;line-height:1.6;margin:0"></p>' +
+          '</div>' +
+          '<div style="display:flex;padding:20px 24px;margin-top:16px;border-top:1px solid #e2e8f0">' +
+            '<button type="button" id="mag-ok" style="flex:1;padding:9px;font-size:13px;font-weight:600;border:none;color:#fff;cursor:pointer;border-radius:0">OK</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(wrap.firstChild);
+    document.getElementById('mag-ok').addEventListener('click', window.fecharModalAviso);
+    document.getElementById('modal-aviso-global').addEventListener('click', function(e){ if(e.target===this) window.fecharModalAviso(); });
+  }
+
+  var ICONE_ERRO = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/></svg>';
+  var ICONE_SUCESSO = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+
+  // mostrarAviso(mensagem, tipo, opts) — tipo: 'erro' (padrão) ou 'sucesso'. opts: { titulo }
+  window.mostrarAviso = function(mensagem, tipo, opts) {
+    garantirModalAviso();
+    opts = opts || {};
+    var sucesso = tipo === 'sucesso';
+    document.getElementById('mag-titulo').textContent = opts.titulo || (sucesso ? 'Sucesso' : 'Erro');
+    document.getElementById('mag-mensagem').textContent = mensagem;
+    var icone = document.getElementById('mag-icone');
+    icone.style.background = sucesso ? '#f0fdf4' : '#fef2f2';
+    icone.style.border = '1px solid ' + (sucesso ? '#bbf7d0' : '#fecaca');
+    icone.innerHTML = sucesso ? ICONE_SUCESSO : ICONE_ERRO;
+    document.getElementById('mag-ok').style.background = sucesso ? '#15803d' : '#b91c1c';
+    document.getElementById('modal-aviso-global').style.display = 'flex';
+  };
+
+  window.fecharModalAviso = function() {
+    var m = document.getElementById('modal-aviso-global');
+    if (m) m.style.display = 'none';
+  };
 })();
 
 // ─── Modais ──────────────────────────────────────────────────────────────────

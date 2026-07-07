@@ -1166,21 +1166,24 @@ function canvaCarregarDesigns(){
 }
 function canvaCriarDesign(){
   var tipo=document.getElementById('canva-tipo-novo').value;
+  var win=window.open('','_blank'); // abre a aba na hora do clique, para o navegador nao bloquear como pop-up
+  if(win) win.document.write('Abrindo o Canva...');
   fetch('/marketing/canva/criar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo:tipo})})
     .then(function(r){return r.json();}).then(function(d){
-      if(!d.ok){alert('Erro: '+(d.erro||'nao foi possivel criar o design'));return;}
-      if(d.editUrl) window.open(d.editUrl,'_blank');
+      if(!d.ok){if(win)win.close(); mostrarAviso(d.erro||'Nao foi possivel criar o design.','erro');return;}
+      if(d.editUrl && win) win.location.href=d.editUrl;
+      else if(d.editUrl) window.open(d.editUrl,'_blank');
       setTimeout(canvaCarregarDesigns,1500);
-    }).catch(function(){alert('Erro ao criar design no Canva.');});
+    }).catch(function(){if(win)win.close(); mostrarAviso('Erro ao criar design no Canva.','erro');});
 }
 function canvaImportar(designId,titulo,btn){
   btn.disabled=true; btn.textContent='Importando...';
   fetch('/marketing/canva/importar/'+designId,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:titulo})})
     .then(function(r){return r.json();}).then(function(d){
-      if(!d.ok){alert('Erro: '+(d.erro||'nao foi possivel importar')); btn.disabled=false; btn.textContent='Importar p/ Midias'; return;}
-      alert('Design importado para a biblioteca de midias!');
-      location.reload();
-    }).catch(function(){alert('Erro ao importar design.'); btn.disabled=false; btn.textContent='Importar p/ Midias';});
+      if(!d.ok){mostrarAviso(d.erro||'Nao foi possivel importar.','erro'); btn.disabled=false; btn.textContent='Importar'; return;}
+      mostrarAviso('Design importado para a biblioteca de midias!','sucesso');
+      setTimeout(function(){location.reload();},1200);
+    }).catch(function(){mostrarAviso('Erro ao importar design.','erro'); btn.disabled=false; btn.textContent='Importar';});
 }
 </script>
 </body>
