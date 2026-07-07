@@ -9121,32 +9121,27 @@ router.post('/portal/grupo/:grupoId/polir-texto', requirePortal, async (req, res
   } catch(e) { res.json({ ok: false, erro: e.message }); }
 });
 
-// POST /portal/grupo/:grupoId/enviar-texto-como-versao — gera um .docx a partir do texto
-// colado/escrito na plataforma (vindo do Polir Texto ou do Editor de Documento) e ja
-// submete como nova versao do trabalho, sem precisar abrir o Word por fora e reanexar.
-router.post('/portal/grupo/:grupoId/enviar-texto-como-versao', requirePortal, async (req, res) => {
+// POST /portal/grupo/:grupoId/gerar-documento — gera um .docx formatado na norma escolhida
+// (ABNT ou Vancouver) a partir do texto do Editor de Documento, com um bloco de orientacoes
+// no final. O arquivo e baixado pela pessoa; ela revisa, apaga as orientacoes e so entao
+// anexa a versao final no formulario de upload ja existente, que e o que vai para avaliacao.
+router.post('/portal/grupo/:grupoId/gerar-documento', requirePortal, async (req, res) => {
   const { tipo, id } = req.session.portalMembro;
-  const { texto, titulo } = req.body;
-  if (!texto || !texto.trim()) return res.json({ ok: false, erro: 'Cole ou escreva o texto do trabalho primeiro.' });
+  const { texto, titulo, norma } = req.body;
+  if (!texto || !texto.trim()) return res.status(400).send('Escreva ou cole o texto do trabalho primeiro.');
   try {
     const mR = await query('SELECT 1 FROM membros_grupo_cientifico WHERE grupo_id=$1 AND origem_tipo=$2 AND origem_id=$3', [req.params.grupoId, tipo, id]);
-    if (!mR.rows.length) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
+    if (!mR.rows.length) return res.status(403).send('Sem permissao para este grupo.');
 
-    const { uploadArquivo } = require('../services/arquivos');
-    const { gerarDocxDeTexto } = require('../services/gerador-docx');
+    const { gerarDocumentoCientifico } = require('../services/gerador-docx');
     const tituloFinal = (titulo && titulo.trim()) ? titulo.trim() : 'Trabalho Cientifico';
     const nomeArquivo = tituloFinal.replace(/[^a-zA-Z0-9 ]+/g, '').trim().substring(0, 60) + '.docx';
-    const buffer = await gerarDocxDeTexto(tituloFinal, texto.trim());
-    const chave = await uploadArquivo(buffer, nomeArquivo, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'cientifico/trabalhos');
+    const buffer = await gerarDocumentoCientifico({ titulo: tituloFinal, texto: texto.trim(), norma });
 
-    await query('INSERT INTO versoes_trabalho (grupo_id,arquivo_chave,arquivo_nome,enviado_por_tipo,enviado_por_id) VALUES ($1,$2,$3,$4,$5)',
-      [req.params.grupoId, chave, nomeArquivo, tipo, id]);
-
-    const membro = await getPortalMembro(tipo, id);
-    await registrarTimeline(req.params.grupoId, 'Nova versao enviada', (membro?.nome || 'Membro') + ' enviou uma nova versao do trabalho, gerada direto na plataforma');
-
-    res.json({ ok: true });
-  } catch(e) { console.error('enviar-texto-como-versao erro:', e.message); res.json({ ok: false, erro: 'Erro ao gerar/enviar o documento.' }); }
+    res.set('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    res.set('Content-Disposition', `attachment; filename="${nomeArquivo}"`);
+    res.send(buffer);
+  } catch(e) { console.error('gerar-documento erro:', e.message); res.status(500).send('Erro ao gerar o documento.'); }
 });
 
 // POST /portal/grupo/:grupoId/chat
