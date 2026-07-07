@@ -4330,7 +4330,11 @@ router.get('/lista-assinaturas/:id/assinada', requireAuth, async (req, res) => {
 });
 
 router.post('/lista-assinaturas/:id/deletar', requireAuth, requireAdmin, async (req, res) => {
+  const r = await query('SELECT nome, data_evento FROM listas_assinaturas WHERE id=$1', [req.params.id]);
   await query('DELETE FROM listas_assinaturas WHERE id=$1', [req.params.id]);
+  if (r.rows[0]) {
+    await logAtividade(req.session.usuario.id, 'LISTA_ASSINATURA_EXCLUIDA', 'Lista "'+r.rows[0].nome+'" (evento '+(r.rows[0].data_evento||'sem data')+') excluida, ID: '+req.params.id, req);
+  }
   req.session.msg = ['Lista excluida!']; res.redirect('/lista-assinaturas');
 });
 
