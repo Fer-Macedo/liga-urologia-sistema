@@ -119,6 +119,23 @@ async function exportarArquivo(tokens, fileId, mimeType) {
   return Buffer.from(res.data);
 }
 
+// Troca a permissao publica ("qualquer pessoa com o link") de um arquivo ja existente entre
+// "reader" (so visualizar - trava a edicao) e "writer" (permite editar). Usado no Portal
+// Cientifico para travar o documento automaticamente apos o envio para avaliacao (ninguem
+// mexe mais por acidente depois de enviado) e destravar de novo se precisar corrigir.
+async function definirPermissaoPublica(tokens, fileId, role) {
+  const client = getClient(tokens);
+  const drive = google.drive({ version: 'v3', auth: client });
+  const lista = await drive.permissions.list({ fileId, fields: 'permissions(id,type,role)' });
+  const publica = (lista.data.permissions || []).find(p => p.type === 'anyone');
+  const roleFinal = role === 'writer' ? 'writer' : 'reader';
+  if (publica) {
+    await drive.permissions.update({ fileId, permissionId: publica.id, requestBody: { role: roleFinal } });
+  } else {
+    await drive.permissions.create({ fileId, requestBody: { role: roleFinal, type: 'anyone' } });
+  }
+}
+
 // Obtém cliente com refresh automático
 async function getClientAtualizado(pool) {
   const r = await pool.query("SELECT valor FROM configuracoes WHERE chave='google_tokens'");
@@ -138,4 +155,4 @@ async function getClientAtualizado(pool) {
   return client;
 }
 
-module.exports = { getAuthUrl, getTokens, getClient, getClientAtualizado, uploadParaDrive, exportarArquivo };
+module.exports = { getAuthUrl, getTokens, getClient, getClientAtualizado, uploadParaDrive, exportarArquivo, definirPermissaoPublica };

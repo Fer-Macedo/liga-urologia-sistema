@@ -82,6 +82,18 @@
     .empty-small{padding:20px;text-align:center;color:#6B7A72;font-size:13px}
     textarea:focus,input[type=text]:focus,input[type=file]:focus,select:focus{outline:none;border-color:#0F6E56!important;box-shadow:0 0 0 3px rgba(15,110,86,.12)}
     select{font-family:inherit}
+    .prazo-ov{position:fixed;inset:0;background:rgba(12,35,27,.72);z-index:200;display:none;align-items:center;justify-content:center;padding:20px}
+    .prazo-ov.open{display:flex}
+    .prazo-card{background:#fff;max-width:420px;width:100%;border-top:5px solid #0F6E56;box-shadow:0 24px 64px rgba(0,0,0,.35)}
+    .prazo-card.urgente{border-top-color:#b91c1c}
+    .prazo-card-body{padding:30px 28px 26px;text-align:center}
+    .prazo-icone{width:52px;height:52px;background:#F0F4F2;border:2px solid #0F6E56;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+    .prazo-icone svg{color:#0F6E56}
+    .prazo-card.urgente .prazo-icone{background:#fef2f2;border-color:#b91c1c}
+    .prazo-card.urgente .prazo-icone svg{color:#b91c1c}
+    .prazo-titulo{font-family:'Archivo',sans-serif;font-weight:800;font-size:17px;color:#0C231B;margin-bottom:8px}
+    .prazo-texto{font-size:13px;color:#3F5349;line-height:1.5;margin-bottom:20px}
+    .prazo-btns{display:flex;gap:10px;justify-content:center}
   </style>
 </head>
 <body>
@@ -581,7 +593,7 @@ function editarNoGoogle() {
       document.getElementById('link-google-abrir').href = data.docUrl;
       document.getElementById('link-google-baixar').href = 'https://docs.google.com/document/d/'+data.fileId+'/export?format=docx';
       document.getElementById('link-google-imprimir').href = 'https://docs.google.com/document/d/'+data.fileId+'/export?format=pdf';
-      out.innerHTML = '<span style="color:#0F6E56">Documento aberto no Google Docs abaixo. Edite direto ali — e salvo automaticamente pelo Google.</span>';
+      out.innerHTML = '<span style="color:#0F6E56">Documento aberto no Google Docs abaixo. Edite direto ali — e salvo automaticamente pelo Google. So quem tiver acesso a esta pagina do grupo consegue editar; apos enviar para avaliacao, o documento e travado automaticamente (fica so-leitura).</span>';
     })
     .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
 }
@@ -597,7 +609,7 @@ function enviarRascunhoParaAvaliacao() {
     .then(function(data){
       btn.disabled = false; btn.innerHTML = orig;
       if(!data.ok){ statusEl.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro ao enviar.')+'</span>'; return; }
-      statusEl.innerHTML = '<span style="color:#0F6E56">Enviado para avaliacao! Atualizando pagina...</span>';
+      statusEl.innerHTML = '<span style="color:#0F6E56">Enviado para avaliacao! O documento foi travado (so-leitura) para ninguem editar por acidente ate a correcao. Atualizando pagina...</span>';
       setTimeout(function(){ location.reload(); }, 1200);
     })
     .catch(function(){ btn.disabled=false; btn.innerHTML=orig; statusEl.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });

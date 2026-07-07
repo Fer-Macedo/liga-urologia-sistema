@@ -9176,21 +9176,33 @@ router.post('/portal/grupo/:grupoId/rascunho/baixar', requirePortal, async (req,
   } catch(e) { console.error('rascunho/baixar erro:', e.message); res.status(500).send('Erro ao gerar o documento.'); }
 });
 
-// POST /portal/grupo/:grupoId/rascunho/editar-google — gera o .docx formatado, sobe pro
-// Google Drive da liga como Google Doc editavel, e retorna o link para embutir na plataforma
-// (mesmo mecanismo ja usado no modulo de Arquivos).
+// POST /portal/grupo/:grupoId/rascunho/editar-google — na primeira vez, gera o .docx
+// formatado e sobe pro Google Drive da liga como Google Doc editavel. Nas proximas vezes,
+// reaproveita o MESMO documento (nao cria um novo, pra nao perder edicoes feitas direto no
+// Google Docs) e apenas destrava a edicao, caso tenha sido travada apos um envio anterior.
 router.post('/portal/grupo/:grupoId/rascunho/editar-google', requirePortal, async (req, res) => {
   const { tipo, id } = req.session.portalMembro;
   const { texto, titulo, norma } = req.body;
-  if (!texto || !texto.trim()) return res.json({ ok: false, erro: 'Escreva ou cole o texto do trabalho primeiro.' });
   try {
     if (!(await membroPertenceAoGrupo(req.params.grupoId, tipo, id))) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
     const tokensR = await query("SELECT valor FROM configuracoes WHERE chave='google_tokens'");
     if (!tokensR.rows.length) return res.json({ ok: false, erro: 'Google Drive nao esta conectado. Fale com o administrador.' });
     const tokens = JSON.parse(tokensR.rows[0].valor);
+    const { uploadParaDrive, definirPermissaoPublica } = require('../services/google-drive');
 
+    const rascunhoR = await query('SELECT google_file_id, google_doc_url, google_embed_url FROM rascunhos_trabalho WHERE grupo_id=$1', [req.params.grupoId]);
+    const existente = rascunhoR.rows[0];
+
+    if (existente && existente.google_file_id) {
+      // Ja existe um documento pra este grupo - so destrava a edicao (caso estivesse travado
+      // apos um envio anterior) em vez de criar um documento novo e perder o que ja tem la.
+      await definirPermissaoPublica(tokens, existente.google_file_id, 'writer');
+      await query('UPDATE rascunhos_trabalho SET atualizado_por_tipo=$1, atualizado_por_id=$2, atualizado_em=NOW() WHERE grupo_id=$3', [tipo, id, req.params.grupoId]);
+      return res.json({ ok: true, embedUrl: existente.google_embed_url, docUrl: existente.google_doc_url, fileId: existente.google_file_id });
+    }
+
+    if (!texto || !texto.trim()) return res.json({ ok: false, erro: 'Escreva ou cole o texto do trabalho primeiro.' });
     const { gerarDocumentoCientifico } = require('../services/gerador-docx');
-    const { uploadParaDrive } = require('../services/google-drive');
     const tituloFinal = (titulo && titulo.trim()) ? titulo.trim() : 'Trabalho Cientifico';
     const buffer = await gerarDocumentoCientifico({ titulo: tituloFinal, texto: texto.trim(), norma });
     const resultado = await uploadParaDrive(tokens, buffer, tituloFinal + '.docx', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'writer');
@@ -9224,9 +9236,12 @@ router.post('/portal/grupo/:grupoId/rascunho/enviar', requirePortal, async (req,
 
     if (rascunho.google_file_id) {
       const tokensR = await query("SELECT valor FROM configuracoes WHERE chave='google_tokens'");
-      const { exportarArquivo } = require('../services/google-drive');
+      const { exportarArquivo, definirPermissaoPublica } = require('../services/google-drive');
       const tokens = JSON.parse(tokensR.rows[0].valor);
       buffer = await exportarArquivo(tokens, rascunho.google_file_id, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+      // Trava o documento (volta pra so-leitura) assim que enviado - ninguem mais edita por
+      // acidente o que ja foi submetido para avaliacao. Destrava de novo em "Editar no Google Docs".
+      try { await definirPermissaoPublica(tokens, rascunho.google_file_id, 'reader'); } catch(e) { console.error('travar doc erro:', e.message); }
     } else {
       const { gerarDocumentoCientifico } = require('../services/gerador-docx');
       buffer = await gerarDocumentoCientifico({ titulo: tituloFinal, texto: rascunho.texto || '', norma: rascunho.norma });
