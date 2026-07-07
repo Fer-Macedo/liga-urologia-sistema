@@ -8,7 +8,7 @@
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:#F0F4F2;min-height:100vh;padding-top:84px}
-    .topbar{background:#0C231B;padding:0 28px;height:84px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:0;right:0;z-index:50}
+    .topbar{background:linear-gradient(115deg,#0C231B 0%,#0F6E56 160%);padding:0 28px;height:84px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:0;right:0;z-index:50;border-bottom:3px solid #163C2E}
     .topbar-brand{display:flex;align-items:center;gap:10px}
     .topbar-logo{width:32px;height:32px;background:#fff;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center}
     .topbar-logo img{width:100%;height:100%;object-fit:cover;border-radius:50%}
@@ -24,18 +24,19 @@
     .topbar-menu-drop a{display:block;padding:9px 12px;font-size:12.5px;color:#0C231B;text-decoration:none;border-radius:2px}
     .topbar-menu-drop a:hover{background:#F0F4F2;color:#0F6E56}
     .main{max-width:1000px;margin:0 auto;padding:28px 20px}
-    .pg-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+    .pg-header{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;padding-left:14px;border-left:4px solid #0F6E56}
     .pg-back{font-size:13px;color:#5E7A6D;text-decoration:none;display:flex;align-items:center;gap:4px}
     .pg-back:hover{color:#0F6E56}
-    .pg-title{font-size:19px;font-weight:700;color:#0C231B;flex:1}
-    .pg-proj{font-size:12px;color:#6B7A72}
-    .tabs{display:flex;border-bottom:2px solid #DDE3DF;margin-bottom:24px}
-    .tab{padding:10px 20px;font-size:13px;font-weight:600;color:#6B7A72;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
-    .tab:hover{color:#0C231B}
-    .tab.ativo{color:#0F6E56;border-bottom-color:#0F6E56}
+    .pg-title{font-family:'Archivo',sans-serif;font-size:20px;font-weight:800;color:#0C231B;flex:1}
+    .pg-proj{font-size:12px;color:#6B7A72;text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+    .tabs{display:flex;gap:4px;border-bottom:2px solid #DDE3DF;margin-bottom:24px}
+    .tab{padding:10px 18px;font-size:13px;font-weight:600;color:#6B7A72;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit;transition:background .15s,color .15s}
+    .tab:hover{color:#0C231B;background:#E8F2EE}
+    .tab.ativo{color:#0F6E56;border-bottom-color:#0F6E56;background:#E8F2EE;font-weight:700}
     .tab-content{display:none}.tab-content.ativo{display:block}
-    .card{background:#fff;border:1px solid #DDE3DF;padding:20px;margin-bottom:16px}
-    .card h3{font-size:13px;font-weight:700;color:#0C231B;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #EEF0ED}
+    .card{background:#fff;border:1px solid #DDE3DF;border-top:3px solid #0F6E56;padding:20px;margin-bottom:16px}
+    .card h3{font-size:13px;font-weight:700;color:#0C231B;margin:0 0 14px;padding-bottom:10px;border-bottom:1px solid #EEF0ED;display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.04em}
+    .card h3 svg{color:#0F6E56;flex-shrink:0}
     .btn{padding:9px 18px;font-size:13px;font-weight:600;border:1px solid #DDE3DF;background:#fff;color:#0C231B;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:7px;border-radius:0;font-family:inherit}
     .btn:hover{background:#F0F4F2}
     .btn.pri{background:#0F6E56;color:#fff;border-color:#0F6E56}
@@ -79,6 +80,8 @@
     .alert-ok{padding:10px 14px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-size:13px;margin-bottom:16px}
     .alert-err{padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:13px;margin-bottom:16px}
     .empty-small{padding:20px;text-align:center;color:#6B7A72;font-size:13px}
+    textarea:focus,input[type=text]:focus,input[type=file]:focus,select:focus{outline:none;border-color:#0F6E56!important;box-shadow:0 0 0 3px rgba(15,110,86,.12)}
+    select{font-family:inherit}
   </style>
 </head>
 <body>
@@ -130,7 +133,7 @@
           </details>
         </div>
         <div class="card">
-          <h3>Historico de versoes</h3>
+          <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>Historico de versoes</h3>
           <%if(versoes.length===0){%><div class="empty-small">Nenhuma versao enviada ainda.</div><%}%>
           <%versoes.forEach(function(v,i){%>
           <div class="versao-item">
@@ -159,7 +162,7 @@
       </div>
       <div>
         <div class="card">
-          <h3>Pergunta PICO</h3>
+          <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Pergunta PICO</h3>
           <%
             let picoAtual = null;
             try { if (projeto.pico_pergunta) picoAtual = JSON.parse(projeto.pico_pergunta); } catch(e){}
@@ -181,7 +184,7 @@
           <button type="button" class="btn btn-sm" id="btn-pico" onclick="gerarPico()" style="margin-top:8px;font-size:11.5px"><%=picoAtual?'Gerar novamente':'Estruturar com IA'%></button>
         </div>
         <div class="card">
-          <h3>Documentos</h3>
+          <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Documentos</h3>
           <div class="doc-btns">
             <%if(projeto.edital_chave){%><a href="/portal/arquivo/<%=projeto.id%>/edital" class="btn" target="_blank"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Baixar Edital</a><%}%>
             <%if(projeto.modelo_chave){%><a href="/portal/arquivo/<%=projeto.id%>/modelo" class="btn" target="_blank"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Baixar Modelo</a><%}%>
@@ -190,7 +193,7 @@
         </div>
         <%if(projeto.prazo){%>
         <div class="card">
-          <h3>Prazo</h3>
+          <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="0"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Prazo</h3>
           <p style="font-size:14px;font-weight:700;color:#0C231B"><%=new Date(projeto.prazo).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})%></p>
         </div>
         <%}%>
@@ -202,14 +205,14 @@
   <div id="tab-pesquisa" class="tab-content">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
       <div class="card">
-        <h3>Buscar Literatura (PubMed)</h3>
+        <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Buscar Literatura (PubMed)</h3>
         <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Busca real em artigos publicados, com sintese por IA.</p>
         <textarea id="pesq-termo" placeholder="Ex: cateter duplo J e infeccao urinaria" style="width:100%;min-height:50px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"></textarea>
         <button type="button" class="btn btn-sm" id="btn-pesq" onclick="buscarLiteratura()" style="margin-top:8px;font-size:11.5px">Buscar</button>
         <div id="pesq-resultado" style="margin-top:12px;font-size:12.5px"></div>
       </div>
       <div class="card">
-        <h3>Artigos Relacionados (Semantic Scholar)</h3>
+        <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/><rect x="3" y="3" width="18" height="18"/></svg>Artigos Relacionados (Semantic Scholar)</h3>
         <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Cole o titulo do seu artigo base para encontrar trabalhos relacionados.</p>
         <textarea id="relac-termo" placeholder="Cole o titulo ou tema do artigo" style="width:100%;min-height:50px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"></textarea>
         <button type="button" class="btn btn-sm" id="btn-relac" onclick="buscarRelacionados()" style="margin-top:8px;font-size:11.5px">Buscar relacionados</button>
@@ -217,14 +220,14 @@
       </div>
     </div>
     <div class="card">
-      <h3>Polir Texto Cientifico</h3>
+      <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>Polir Texto Cientifico</h3>
       <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Cole um trecho (ou o trabalho todo) para deixar em tom cientifico formal e receber sugestoes de titulo. Depois, copie o resultado e cole no Editor de Documento abaixo — e de la que o trabalho final e gerado.</p>
       <textarea id="polir-texto" placeholder="Cole seu texto aqui..." style="width:100%;min-height:140px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"></textarea>
       <button type="button" class="btn btn-sm" id="btn-polir" onclick="polirTexto()" style="margin-top:8px;font-size:11.5px">Polir texto</button>
       <div id="polir-resultado" style="margin-top:12px;font-size:12.5px"></div>
     </div>
     <div class="card" style="margin-top:20px">
-      <h3>Editor de Documento</h3>
+      <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>Editor de Documento</h3>
       <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Escreva ou cole o trabalho final aqui (pode colar o texto ja polido acima). O rascunho fica salvo no sistema — pode continuar de qualquer lugar depois, sem perder nada. Escolha a norma, edite direto no Google Docs se quiser, e so envie para avaliacao quando estiver pronto.</p>
       <input type="text" id="editor-titulo" placeholder="Titulo do trabalho" value="<%=rascunho&&rascunho.titulo?rascunho.titulo:''%>" style="width:100%;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box;margin-bottom:8px">
       <textarea id="editor-documento" placeholder="Escreva o trabalho aqui... (separe secoes/paragrafos com uma linha em branco)" style="width:100%;min-height:220px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"><%=rascunho&&rascunho.texto?rascunho.texto:''%></textarea>
