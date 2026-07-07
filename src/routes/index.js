@@ -967,7 +967,7 @@ router.get('/api/equipe-publica', corsPublico, limiterApiPublica, async (req, re
       return { ...m, foto_url };
     }));
     const [diretivosRaw, ligantes] = await Promise.all([mapFoto(dirsR.rows), mapFoto(ligsR.rows)]);
-    const diretivos = diretivosRaw.map(d => ({ ...d, cargo: d.cargo ? cargoComGenero(d.cargo, d.sexo) : 'Directivo' }));
+    const diretivos = diretivosRaw.map(d => ({ id: d.id, nome: d.nome, foto_chave: d.foto_chave, foto_url: d.foto_url, cargo: d.cargo ? cargoComGenero(d.cargo, d.sexo) : 'Directivo' }));
     res.json({ diretivos, ligantes });
   } catch(e) { console.error('[API-PUBLIC] equipe:', e.message); res.json({ diretivos: [], ligantes: [] }); }
 });
