@@ -35,9 +35,11 @@ async function enviarLembreteAniversarioEquipe(momento) {
       ? `🎂 *Aniversário hoje (${dataFormatada})*\n\n${nomes}\n\nNão esqueça de fazer o post de aniversário no grupo dos Ligantes e no grupo de Avisos!`
       : `🎂 *Aniversário amanhã (${dataFormatada})*\n\n${nomes}\n\nJá deixe preparado o post de aniversário para amanhã, no grupo dos Ligantes e no grupo de Avisos!`;
 
+    // Usa a fila (nao "urgente") para respeitar o intervalo anti-banimento ja existente
+    // entre cada envio, mesmo sendo poucos destinatarios (marketing/presidencia/admin).
     const { enviarWhatsApp } = require('./notificacoes');
     for (const d of destinatarios.rows) {
-      try { await enviarWhatsApp(d.telefone, mensagem, { aniversario: true, urgente: true }); }
+      try { await enviarWhatsApp(d.telefone, mensagem, { aniversario: true }); }
       catch (e) { console.error('[LEMBRETE ANIVERSARIO] erro ao enviar:', e.message); }
     }
 
