@@ -11,14 +11,13 @@
     .table-card{background:var(--card);border:1px solid var(--borda);border-radius:14px;overflow:hidden;margin-bottom:16px;}
     .table-header{padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;align-items:center;justify-content:space-between;}
     .table-titulo{font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;}
-    table.tabela{width:100% !important;min-width:980px !important;border-collapse:collapse;}
+    table.tabela{width:100% !important;table-layout:fixed;border-collapse:collapse;}
     table.tabela thead th{background:var(--fundo);padding:10px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--texto2);text-align:left;border-bottom:1px solid var(--borda);}
     table.tabela tbody tr{border-bottom:1px solid var(--borda);transition:background .15s;}
     table.tabela tbody tr:last-child{border-bottom:none;}
     table.tabela tbody tr:hover{background:var(--fundo);}
-    table.tabela tbody td{padding:12px 14px;font-size:13px;vertical-align:middle;}
+    table.tabela tbody td{padding:12px 14px;font-size:13px;vertical-align:middle;word-break:break-word;}
     table.tabela .btn-xs{white-space:nowrap;}
-    table.tabela td:last-child > div{flex-wrap:nowrap;}
     .avatar{width:34px;height:34px;border-radius:50%;background:var(--cor-primaria);color:white;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
     .badge-perfil{padding:3px 10px;border-radius:999px;font-size:11px;font-weight:700;}
     .badge-admin{background:#dbeafe;color:#1e40af;}
@@ -61,7 +60,7 @@
         </div>
         <div style="overflow-x:auto">
         <table class="tabela"><thead><tr>
-          <th>Usuario</th><th>Email</th><th>Telefone</th><th>Perfil</th><th>Status</th><th>Criado em</th><th>Acoes</th>
+          <th style="width:16%">Usuario</th><th style="width:18%">Email</th><th style="width:11%">Telefone</th><th style="width:9%">Perfil</th><th style="width:7%">Status</th><th style="width:9%">Criado em</th><th style="width:30%">Acoes</th>
         </tr></thead><tbody>
         <%usuarios.forEach(u=>{%>
         <tr>
@@ -84,8 +83,8 @@
           </td>
           <td><%if(u.ativo){%><span class="badge-ativo">Ativo</span><%}else{%><span class="badge-inativo">Inativo</span><%}%></td>
           <td style="color:var(--texto2);font-size:12px"><%=new Date(u.criado_em).toLocaleDateString('pt-BR')%></td>
-          <td><%if(u.perfil!=='admin'){%>
-            <div style="display:flex;gap:5px">
+          <td style="max-width:220px"><%if(u.perfil!=='admin'){%>
+            <div style="display:flex;flex-wrap:wrap;gap:5px">
               <button class="btn-xs roxo" onclick="abrirPermissoes(<%=u.id%>,'<%=u.nome%>','<%=u.perfil%>')">Permissoes</button>
               <button class="btn-xs" onclick="abrirTelefone(<%=u.id%>,'<%=u.nome%>','<%=u.telefone||''%>')">Telefone</button>
               <form action="/usuarios/<%=u.id%>/toggle" method="POST" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('<%=u.ativo?'Desativar':'Ativar'%>?', function(){ f.submit(); }); return false;">
