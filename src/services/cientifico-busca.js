@@ -53,26 +53,47 @@ async function buscarPubMed(query, termo, limite) {
   }
 }
 
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
 // Artigos relacionados via Semantic Scholar (API publica e gratuita)
+// O tier sem chave de API e compartilhado por todo mundo e esbarra em 429 (Too Many
+// Requests) com frequencia - nao e um erro do nosso lado. Tenta novamente com pausas
+// crescentes antes de desistir.
 async function artigosRelacionados(termo, limite) {
   limite = limite || 8;
-  try {
-    const searchResp = await axios.get('https://api.semanticscholar.org/graph/v1/paper/search', {
-      params: { query: termo, limit: limite, fields: 'title,authors,year,venue,externalIds,abstract' },
-      timeout: 15000
-    });
-    const artigos = (searchResp.data.data || []).map(p => ({
-      titulo: p.title || '',
-      autores: (p.authors || []).slice(0, 3).map(a => a.name).join(', ') + ((p.authors || []).length > 3 ? ' et al.' : ''),
-      revista: p.venue || '',
-      ano: p.year || '',
-      link: p.externalIds && p.externalIds.DOI ? 'https://doi.org/' + p.externalIds.DOI : (p.externalIds && p.externalIds.PubMed ? 'https://pubmed.ncbi.nlm.nih.gov/' + p.externalIds.PubMed + '/' : '')
-    }));
-    return { ok: true, artigos };
-  } catch(e) {
-    console.error('artigosRelacionados erro:', e.message);
-    return { ok: false, erro: 'Nao foi possivel buscar artigos relacionados agora.' };
+  const ATRASOS = [0, 3000, 7000];
+  let ultimoErro = null;
+  for (const atraso of ATRASOS) {
+    if (atraso) await sleep(atraso);
+    try {
+      const searchResp = await axios.get('https://api.semanticscholar.org/graph/v1/paper/search', {
+        params: { query: termo, limit: limite, fields: 'title,authors,year,venue,externalIds,abstract' },
+        timeout: 15000,
+        headers: process.env.SEMANTIC_SCHOLAR_API_KEY ? { 'x-api-key': process.env.SEMANTIC_SCHOLAR_API_KEY } : {}
+      });
+      const artigos = (searchResp.data.data || []).map(p => ({
+        titulo: p.title || '',
+        autores: (p.authors || []).slice(0, 3).map(a => a.name).join(', ') + ((p.authors || []).length > 3 ? ' et al.' : ''),
+        revista: p.venue || '',
+        ano: p.year || '',
+        link: p.externalIds && p.externalIds.DOI ? 'https://doi.org/' + p.externalIds.DOI : (p.externalIds && p.externalIds.PubMed ? 'https://pubmed.ncbi.nlm.nih.gov/' + p.externalIds.PubMed + '/' : '')
+      }));
+      return { ok: true, artigos };
+    } catch(e) {
+      ultimoErro = e;
+      if (e.response && e.response.status === 429) continue; // tenta de novo
+      break; // outro tipo de erro, nao adianta insistir
+    }
   }
+  const e = ultimoErro;
+  console.error('artigosRelacionados erro:', e && e.message);
+  const foi429 = e && e.response && e.response.status === 429;
+  return {
+    ok: false,
+    erro: foi429
+      ? 'O servico de artigos relacionados esta sobrecarregado no momento (limite da API gratuita). Tente novamente em 1 minuto.'
+      : 'Nao foi possivel buscar artigos relacionados agora.'
+  };
 }
 
 // Usa o Claude para sintetizar os achados de uma lista de artigos reais (titulo/autores/ano)
