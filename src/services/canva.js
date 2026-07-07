@@ -111,15 +111,29 @@ async function listarDesigns() {
 const FORMATOS = {
   InstagramPost: { width: 1080, height: 1080 },
   InstagramStory: { width: 1080, height: 1920 },
+  InstagramReel: { width: 1080, height: 1920 },
+  InstagramPortrait: { width: 1080, height: 1350 },
   FacebookPost: { width: 1200, height: 630 },
-  Presentation: { preset: 'presentation' }
+  FacebookCover: { width: 820, height: 312 },
+  FacebookStory: { width: 1080, height: 1920 },
+  TwitterPost: { width: 1600, height: 900 },
+  YoutubeThumbnail: { width: 1280, height: 720 },
+  YoutubeBanner: { width: 2560, height: 1440 },
+  LinkedinPost: { width: 1200, height: 627 },
+  WhatsappStatus: { width: 1080, height: 1920 },
+  Poster: { width: 1080, height: 1350 },
+  Flyer: { width: 1240, height: 1754 },
+  Presentation: { preset: 'presentation' },
+  Doc: { preset: 'doc' },
+  Whiteboard: { preset: 'whiteboard' }
 };
 
-// Cria um novo design (post do Instagram, por padrao) e devolve a URL de edicao no Canva
-async function criarDesign(tipoNome) {
+// Cria um novo design e devolve a URL de edicao no Canva. Para "Personalizado",
+// passe custom={width,height} diretamente (ignora o mapa FORMATOS).
+async function criarDesign(tipoNome, custom) {
   const token = await getTokenValido();
   if (!token) return { ok: false, erro: 'Canva nao conectado.' };
-  const formato = FORMATOS[tipoNome] || FORMATOS.InstagramPost;
+  const formato = (custom && custom.width && custom.height) ? custom : (FORMATOS[tipoNome] || FORMATOS.InstagramPost);
   const design_type = formato.preset
     ? { type: 'preset', name: formato.preset }
     : { type: 'custom', width: formato.width, height: formato.height };

@@ -4390,7 +4390,9 @@ router.get('/marketing/canva/designs', requireAuth, requirePermissao('marketing'
 
 router.post('/marketing/canva/criar', requireAuth, requirePermissao('marketing'), async (req, res) => {
   const { criarDesign } = require('../services/canva');
-  const r = await criarDesign(req.body.tipo);
+  const { tipo, largura, altura } = req.body;
+  const custom = (largura && altura) ? { width: parseInt(largura), height: parseInt(altura) } : null;
+  const r = await criarDesign(tipo, custom);
   res.json(r);
 });
 

@@ -380,12 +380,38 @@
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
             <div class="card-titulo" style="margin:0">Canva</div>
             <div style="display:flex;gap:8px">
-              <select id="canva-tipo-novo" class="input" style="width:auto">
-                <option value="InstagramPost">Post Instagram</option>
-                <option value="InstagramStory">Story Instagram</option>
-                <option value="FacebookPost">Post Facebook</option>
-                <option value="Presentation">Apresentacao</option>
+              <select id="canva-tipo-novo" class="input" style="width:auto" onchange="canvaTogglePersonalizado(this.value)">
+                <optgroup label="Instagram">
+                  <option value="InstagramPost">Post (1080x1080)</option>
+                  <option value="InstagramPortrait">Post vertical (1080x1350)</option>
+                  <option value="InstagramStory">Story (1080x1920)</option>
+                  <option value="InstagramReel">Reel (1080x1920)</option>
+                </optgroup>
+                <optgroup label="Facebook">
+                  <option value="FacebookPost">Post (1200x630)</option>
+                  <option value="FacebookCover">Capa (820x312)</option>
+                  <option value="FacebookStory">Story (1080x1920)</option>
+                </optgroup>
+                <optgroup label="Outras redes">
+                  <option value="TwitterPost">Post X/Twitter (1600x900)</option>
+                  <option value="LinkedinPost">Post LinkedIn (1200x627)</option>
+                  <option value="WhatsappStatus">Status WhatsApp (1080x1920)</option>
+                  <option value="YoutubeThumbnail">Thumbnail YouTube (1280x720)</option>
+                  <option value="YoutubeBanner">Banner YouTube (2560x1440)</option>
+                </optgroup>
+                <optgroup label="Impressos e documentos">
+                  <option value="Poster">Cartaz (1080x1350)</option>
+                  <option value="Flyer">Panfleto A4 (1240x1754)</option>
+                  <option value="Presentation">Apresentacao</option>
+                  <option value="Doc">Documento</option>
+                  <option value="Whiteboard">Quadro branco</option>
+                </optgroup>
+                <optgroup label="Outro">
+                  <option value="Personalizado">Personalizado (definir tamanho)</option>
+                </optgroup>
               </select>
+              <input type="number" id="canva-largura" class="input" placeholder="Largura (px)" style="width:110px;display:none">
+              <input type="number" id="canva-altura" class="input" placeholder="Altura (px)" style="width:110px;display:none">
               <button class="btn btn-primario btn-sm" onclick="canvaCriarDesign()">+ Criar novo design</button>
               <button class="btn btn-sm" onclick="canvaCarregarDesigns()">Atualizar</button>
             </div>
@@ -1164,11 +1190,22 @@ function canvaCarregarDesigns(){
     _canvaCarregado=true;
   }).catch(function(){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:#dc2626">Erro ao carregar designs do Canva</div>';});
 }
+function canvaTogglePersonalizado(tipo){
+  var mostrar=tipo==='Personalizado';
+  document.getElementById('canva-largura').style.display=mostrar?'':'none';
+  document.getElementById('canva-altura').style.display=mostrar?'':'none';
+}
 function canvaCriarDesign(){
   var tipo=document.getElementById('canva-tipo-novo').value;
+  var largura=document.getElementById('canva-largura').value;
+  var altura=document.getElementById('canva-altura').value;
+  if(tipo==='Personalizado' && (!largura||!altura)){
+    mostrarAviso('Informe largura e altura para o formato personalizado.','erro');
+    return;
+  }
   var win=window.open('','_blank'); // abre a aba na hora do clique, para o navegador nao bloquear como pop-up
   if(win) win.document.write('Abrindo o Canva...');
-  fetch('/marketing/canva/criar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo:tipo})})
+  fetch('/marketing/canva/criar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo:tipo,largura:largura,altura:altura})})
     .then(function(r){return r.json();}).then(function(d){
       if(!d.ok){if(win)win.close(); mostrarAviso(d.erro||'Nao foi possivel criar o design.','erro');return;}
       if(d.editUrl && win) win.location.href=d.editUrl;
