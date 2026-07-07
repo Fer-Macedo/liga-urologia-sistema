@@ -9082,7 +9082,7 @@ router.post('/portal/grupo/:grupoId/buscar-literatura', requirePortal, async (re
     const mR = await query('SELECT 1 FROM membros_grupo_cientifico WHERE grupo_id=$1 AND origem_tipo=$2 AND origem_id=$3', [req.params.grupoId, tipo, id]);
     if (!mR.rows.length) return res.json({ ok: false, erro: 'Sem permissao para este grupo.' });
     const { buscarPubMed, sintetizarAchados } = require('../services/cientifico-busca');
-    const r = await buscarPubMed(termo.trim());
+    const r = await buscarPubMed(query, termo.trim());
     if (!r.ok) return res.json(r);
     let sintese = null;
     if (r.artigos.length) {

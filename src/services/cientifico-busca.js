@@ -5,16 +5,30 @@
 const axios = require('axios');
 const { chamarClaudeTexto } = require('./cientifico-ia');
 
+// PubMed indexa titulos/resumos quase exclusivamente em ingles. Uma busca em portugues
+// nao falha com erro - o "term mapping" automatico do NCBI so tenta encaixar cada palavra
+// (ex: "de" vira "drug effects", "em" vira "embryology") e combina tudo com AND, entao
+// praticamente nunca acha nada. Por isso traduzimos o termo para ingles antes de buscar.
+async function traduzirTermoBusca(query, termo) {
+  try {
+    const prompt = `Traduza o termo de busca cientifica abaixo do portugues para o ingles, em linguagem simples e objetiva, adequada para busca no PubMed (sem aspas, sem explicacao, responda so com o termo traduzido em uma linha):\n\n${termo}`;
+    const r = await chamarClaudeTexto(query, { prompt, contexto: 'cientifico-busca-traducao', maxTokens: 60 });
+    if (r.ok && r.texto) return r.texto.trim().replace(/^["']|["']$/g, '');
+  } catch (e) { console.error('traduzirTermoBusca erro:', e.message); }
+  return termo;
+}
+
 // Busca artigos reais no PubMed (NCBI E-utilities, gratuito, sem chave obrigatoria)
-async function buscarPubMed(termo, limite) {
+async function buscarPubMed(query, termo, limite) {
   limite = limite || 8;
   try {
+    const termoIngles = await traduzirTermoBusca(query, termo);
     const searchResp = await axios.get('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi', {
-      params: { db: 'pubmed', term: termo, retmax: limite, retmode: 'json', sort: 'relevance' },
+      params: { db: 'pubmed', term: termoIngles, retmax: limite, retmode: 'json', sort: 'relevance' },
       timeout: 15000
     });
     const ids = (searchResp.data.esearchresult && searchResp.data.esearchresult.idlist) || [];
-    if (!ids.length) return { ok: true, artigos: [] };
+    if (!ids.length) return { ok: true, artigos: [], termo_traduzido: termoIngles };
     const summaryResp = await axios.get('https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi', {
       params: { db: 'pubmed', id: ids.join(','), retmode: 'json' },
       timeout: 15000
@@ -32,7 +46,7 @@ async function buscarPubMed(termo, limite) {
         link: 'https://pubmed.ncbi.nlm.nih.gov/' + id + '/'
       };
     }).filter(Boolean);
-    return { ok: true, artigos };
+    return { ok: true, artigos, termo_traduzido: termoIngles };
   } catch(e) {
     console.error('buscarPubMed erro:', e.message);
     return { ok: false, erro: 'Nao foi possivel buscar no PubMed agora.' };
