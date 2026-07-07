@@ -678,13 +678,37 @@
       <div class="mkt-section" id="tab-aniversario">
         <div class="equipe-bloco">
           <div class="equipe-bloco-header">
+            <div class="equipe-bloco-icone" style="background:#8b5cf6">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <div class="equipe-bloco-titulo">Aniversariantes de <%=nomeMesAtual%></div>
+            <div class="equipe-bloco-contagem"><%=aniversariantesMes.length%> pessoa<%=aniversariantesMes.length!==1?'s':''%></div>
+          </div>
+          <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">Panorama do mes para a equipe do Marketing se planejar com antecedencia.</p>
+          <%if(aniversariantesMes.length){%>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <%aniversariantesMes.forEach(function(p){%>
+            <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;background:var(--fundo);border-radius:var(--rad)">
+              <div style="font-weight:700;font-size:13px;color:var(--cor-primaria);min-width:28px">Dia <%=p.dia%></div>
+              <div style="flex:1;font-size:13px"><%=p.nome%></div>
+              <div style="font-size:11px;color:var(--texto2);text-transform:capitalize"><%=p.tipo%></div>
+            </div>
+            <%});%>
+          </div>
+          <%}else{%>
+          <p style="font-size:13px;color:var(--texto2)">Nenhum aniversariante este mes.</p>
+          <%}%>
+        </div>
+
+        <div class="equipe-bloco">
+          <div class="equipe-bloco-header">
             <div class="equipe-bloco-icone" style="background:#ec4899">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
             </div>
             <div class="equipe-bloco-titulo">Stories de Aniversario</div>
             <div class="equipe-bloco-contagem"><%=aniversarioAtivo?'Ativo':'Inativo'%></div>
           </div>
-          <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">Todo dia as 7h, o sistema publica automaticamente um Story de "Feliz Aniversario" no Instagram da liga para cada ligante/diretivo aniversariante, usando a arte-modelo abaixo com a foto, nome e cargo da pessoa sobrepostos.</p>
+          <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">Todo dia as 6h, o sistema publica automaticamente um Story de "Feliz Aniversario" no Instagram da liga para cada ligante/diretivo aniversariante, usando a arte-modelo abaixo com a foto, nome e cargo da pessoa sobrepostos.</p>
 
           <div style="padding:14px;background:var(--fundo);border-radius:var(--rad);margin-bottom:14px">
             <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">

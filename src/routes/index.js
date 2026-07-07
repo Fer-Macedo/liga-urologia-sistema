@@ -4462,7 +4462,17 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
      SELECT id, nome, NULL as cargo, semestre, 'ligante' as tipo FROM ligantes WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1`,
     [hojeMD]
   );
-  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows });
+  const mesAtual = require('dayjs')().format('MM');
+  const aniversariantesMesR = await query(
+    `SELECT id, nome, cargo, NULL as semestre, 'diretivo' as tipo, TO_CHAR(data_nascimento::date,'DD') as dia FROM diretivos WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM')=$1
+     UNION ALL
+     SELECT id, nome, NULL as cargo, semestre, 'ligante' as tipo, TO_CHAR(data_nascimento::date,'DD') as dia FROM ligantes WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM')=$1
+     ORDER BY dia`,
+    [mesAtual]
+  );
+  const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const nomeMesAtual = MESES_PT[parseInt(mesAtual, 10) - 1];
+  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows, aniversariantesMes: aniversariantesMesR.rows, nomeMesAtual });
 });
 
 // Foto padronizada da equipe para o site publico - gerido pelo Marketing, separado da foto interna
