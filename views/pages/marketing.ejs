@@ -606,6 +606,7 @@
                 <div class="campo" style="min-width:200px"><label class="label">Imagem PNG (fundo transparente)</label><input type="file" name="marca" class="input" accept="image/png" required></div>
                 <button type="submit" class="btn btn-primario btn-sm"><%=marcaDaguaUrl?'Substituir':'+ Definir marca'%></button>
               </form>
+              <div style="font-size:11px;color:var(--texto2);width:100%">Tamanho recomendado: 500x500px, PNG com fundo transparente</div>
               <%if(marcaDaguaUrl){%>
               <form action="/marketing/marca-dagua/remover" method="POST" style="margin:0" onsubmit="var f=this; confirmarAcao('Remover a marca dagua?', function(){ f.submit(); }); return false;">
                 <button type="submit" class="btn-xs verm" style="border-color:#fecaca">Remover</button>
@@ -639,9 +640,12 @@
                   </form>
                 </div>
               </div>
-              <form action="/marketing/galerias/<%=g.id%>/fotos" method="POST" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px">
-                <div class="campo" style="flex:1;min-width:220px"><label class="label">Adicionar fotos (selecao multipla)</label><input type="file" name="fotos" class="input" accept="image/*" multiple required></div>
-                <button type="submit" class="btn btn-secundario btn-sm">Enviar fotos</button>
+              <form action="/marketing/galerias/<%=g.id%>/fotos" method="POST" enctype="multipart/form-data" style="margin-bottom:10px">
+                <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+                  <div class="campo" style="flex:1;min-width:220px"><label class="label">Adicionar fotos (selecao multipla)</label><input type="file" name="fotos" class="input" accept="image/*" multiple required></div>
+                  <button type="submit" class="btn btn-secundario btn-sm">Enviar fotos</button>
+                </div>
+                <div style="font-size:11px;color:var(--texto2);margin-top:8px">Tamanho recomendado: 1920x1080px (16:9), formato JPG ou PNG</div>
               </form>
               <%if(g.fotos.length){%>
               <div class="equipe-grid">
