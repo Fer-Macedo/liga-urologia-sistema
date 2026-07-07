@@ -8992,9 +8992,16 @@ router.get('/portal/grupo/:grupoId', requirePortal, async (req, res) => {
   const grupo = gR.rows[0];
   const pR = await query('SELECT * FROM projetos_cientificos WHERE id=$1', [grupo.projeto_id]);
   const projeto = pR.rows[0];
+  // Em trabalho "individual", cada um ve so as proprias versoes em andamento (rascunho,
+  // em revisao, devolvido) - mas versoes APROVADAS ficam visiveis para todo o grupo, pois
+  // colegas podem ter colaborado/coautorado e precisam poder consultar/baixar o trabalho
+  // final depois de aprovado. Em trabalho "colaborativo", todo o historico ja e compartilhado.
   let versoes;
   if (grupo.tipo_trabalho === 'individual') {
-    versoes = (await query('SELECT * FROM versoes_trabalho WHERE grupo_id=$1 AND enviado_por_tipo=$2 AND enviado_por_id=$3 ORDER BY enviado_em DESC', [req.params.grupoId, tipo, id])).rows;
+    versoes = (await query(
+      "SELECT * FROM versoes_trabalho WHERE grupo_id=$1 AND (status='aprovado' OR (enviado_por_tipo=$2 AND enviado_por_id=$3)) ORDER BY enviado_em DESC",
+      [req.params.grupoId, tipo, id]
+    )).rows;
   } else {
     versoes = (await query('SELECT * FROM versoes_trabalho WHERE grupo_id=$1 ORDER BY enviado_em DESC', [req.params.grupoId])).rows;
   }
@@ -9109,6 +9116,30 @@ router.post('/portal/grupo/:grupoId/versao/:versaoId/final', requirePortal, uplo
     req.session.msg=['Trabalho final enviado e salvo no portal!'];
     res.redirect('/portal/grupo/'+req.params.grupoId);
   } catch(e) { console.error('versao/final erro:', e.message); req.session.erro=['Erro ao enviar o trabalho final.']; res.redirect('/portal/grupo/'+req.params.grupoId); }
+});
+
+// GET /portal/grupo/:grupoId/versao/:versaoId/download — consulta/download do arquivo de uma
+// versao, disponivel para qualquer membro do grupo (dono ou coautor/colega) a qualquer momento,
+// respeitando a mesma regra de visibilidade da listagem (trabalho individual so mostra versoes
+// aprovadas para quem nao enviou; trabalho colaborativo mostra tudo).
+router.get('/portal/grupo/:grupoId/versao/:versaoId/download', requirePortal, async (req, res) => {
+  const { tipo, id } = req.session.portalMembro;
+  try {
+    const mR = await query('SELECT 1 FROM membros_grupo_cientifico WHERE grupo_id=$1 AND origem_tipo=$2 AND origem_id=$3', [req.params.grupoId, tipo, id]);
+    if (!mR.rows.length) return res.status(403).send('Sem permissao para este grupo.');
+    const gR = await query('SELECT tipo_trabalho FROM grupos_cientificos WHERE id=$1', [req.params.grupoId]);
+    if (!gR.rows.length) return res.status(404).send('Grupo nao encontrado.');
+    const vR = await query('SELECT * FROM versoes_trabalho WHERE id=$1 AND grupo_id=$2', [req.params.versaoId, req.params.grupoId]);
+    if (!vR.rows.length) return res.status(404).send('Versao nao encontrada.');
+    const versao = vR.rows[0];
+    const ehDono = versao.enviado_por_tipo === tipo && versao.enviado_por_id === id;
+    if (gR.rows[0].tipo_trabalho === 'individual' && versao.status !== 'aprovado' && !ehDono) {
+      return res.status(403).send('Esta versao ainda nao esta disponivel para consulta.');
+    }
+    const { gerarUrlInline } = require('../services/arquivos');
+    const url = await gerarUrlInline(versao.arquivo_chave);
+    res.redirect(url);
+  } catch(e) { console.error('versao/download erro:', e.message); res.status(500).send('Erro ao baixar o arquivo.'); }
 });
 
 // POST /portal/projeto/:projetoId/pico — assistente de construcao da pergunta PICO
