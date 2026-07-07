@@ -595,6 +595,14 @@ function iniciarAgendamentos() {
     } catch(e) { console.error('[INSTAGRAM] Aniversário erro:', e.message); }
   }, { timezone: 'America/Asuncion' });
 
+  // Instagram — story de aniversário de ligantes/diretivos às 7h
+  cron.schedule('0 7 * * *', async () => {
+    try {
+      const { postarStoriesAniversarioDoDia } = require('./instagram');
+      await postarStoriesAniversarioDoDia();
+    } catch(e) { console.error('[INSTAGRAM] Story aniversário erro:', e.message); }
+  }, { timezone: 'America/Asuncion' });
+
   // Encerramento automático de eventos — a cada hora
   cron.schedule('0 * * * *', async () => {
     try {

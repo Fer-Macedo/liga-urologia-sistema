@@ -670,6 +670,46 @@
             <%});%>
           </div>
         </div>
+
+        <div class="equipe-bloco">
+          <div class="equipe-bloco-header">
+            <div class="equipe-bloco-icone" style="background:#ec4899">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+            </div>
+            <div class="equipe-bloco-titulo">Stories de Aniversario</div>
+            <div class="equipe-bloco-contagem"><%=aniversarioAtivo?'Ativo':'Inativo'%></div>
+          </div>
+          <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">Todo dia as 7h, o sistema publica automaticamente um Story de "Feliz Aniversario" no Instagram da liga para cada ligante/diretivo aniversariante, usando a arte-modelo abaixo com a foto, nome e cargo da pessoa sobrepostos.</p>
+
+          <div style="padding:14px;background:var(--fundo);border-radius:var(--rad);margin-bottom:14px">
+            <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+              <%if(aniversarioTemplateUrl){%>
+              <img src="<%=aniversarioTemplateUrl%>" alt="Arte modelo" style="width:90px;height:160px;object-fit:cover;border-radius:8px;border:1px solid var(--borda)">
+              <%}else{%>
+              <div style="width:90px;height:160px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--texto2);background:var(--card);border:1px dashed var(--borda);border-radius:8px;text-align:center">Nenhuma arte configurada</div>
+              <%}%>
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <form action="/marketing/aniversario/template" method="POST" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+                  <div class="campo" style="min-width:200px"><label class="label">Arte-modelo (exportada do Canva, sem foto/nome)</label><input type="file" name="template" class="input" accept="image/*" required></div>
+                  <button type="submit" class="btn btn-primario btn-sm"><%=aniversarioTemplateUrl?'Substituir':'+ Definir arte'%></button>
+                </form>
+                <div style="font-size:11px;color:var(--texto2)">Tamanho: 1080x1920px (Story), seguindo o mesmo layout do modelo atual (moldura de foto no centro, espaco pro nome e cargo abaixo)</div>
+                <form action="/marketing/aniversario/toggle" method="POST" style="margin:0">
+                  <button type="submit" class="btn-xs" style="background:<%=aniversarioAtivo?'#0F6E56':'#94a3b8'%>;color:white;border-color:transparent"><%=aniversarioAtivo?'Automacao ativa — clique para desativar':'Automacao inativa — clique para ativar'%></button>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <%if(aniversarioTemplateUrl && aniversariantesHoje.length){%>
+          <div style="font-size:12px;color:var(--texto2);margin-bottom:8px">Aniversariantes de hoje (previa da arte, sem publicar):</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <%aniversariantesHoje.forEach(function(p){%>
+            <a href="/marketing/aniversario/preview/<%=p.tipo%>/<%=p.id%>" target="_blank" class="btn-xs" style="background:var(--card);border:1px solid var(--borda)"><%=p.nome%> (<%=p.tipo%>)</a>
+            <%});%>
+          </div>
+          <%}%>
+        </div>
       </div>
       <div class="mkt-section" id="tab-whatsapp">
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">

@@ -4450,7 +4450,19 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
     const fotos = await Promise.all(fotosR.rows.map(async f => ({ id: f.id, url: await gerarUrlInline(f.imagem_chave).catch(()=>null) })));
     return { ...g, total_fotos: Number(g.total_fotos), fotos };
   }));
-  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias });
+  const anivCfgR = await query("SELECT chave,valor FROM configuracoes WHERE chave IN ('aniversario_story_ativo','aniversario_template_chave')");
+  const anivCfg = {}; anivCfgR.rows.forEach(x => anivCfg[x.chave] = x.valor);
+  const aniversarioAtivo = anivCfg.aniversario_story_ativo === '1';
+  let aniversarioTemplateUrl = null;
+  if (anivCfg.aniversario_template_chave) { try { aniversarioTemplateUrl = await gerarUrlInline(anivCfg.aniversario_template_chave); } catch(e) {} }
+  const hojeMD = require('dayjs')().format('MM-DD');
+  const aniversariantesHojeR = await query(
+    `SELECT id, nome, cargo, NULL as semestre, 'diretivo' as tipo FROM diretivos WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1
+     UNION ALL
+     SELECT id, nome, NULL as cargo, semestre, 'ligante' as tipo FROM ligantes WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1`,
+    [hojeMD]
+  );
+  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows });
 });
 
 // Foto padronizada da equipe para o site publico - gerido pelo Marketing, separado da foto interna
@@ -4613,6 +4625,52 @@ router.post('/marketing/galeria-fotos/:id/deletar', requireAuth, requirePermissa
     await query('DELETE FROM galeria_fotos WHERE id=$1', [req.params.id]);
     res.redirect('/marketing?tab=equipe');
   } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing?tab=equipe'); }
+});
+
+// Stories automaticos de aniversario (ligantes/diretivos) - publica sozinho no Instagram
+// as 7h, usando a arte-modelo do Canva + foto/nome/cargo da pessoa sobrepostos.
+router.post('/marketing/aniversario/template', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.single('template')(req, res, async (err) => {
+      if (err || !req.file) { req.session.erro=['Nenhuma imagem enviada.']; return res.redirect('/marketing?tab=equipe'); }
+      const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'aniversario-template');
+      await query("INSERT INTO configuracoes (chave,valor) VALUES ('aniversario_template_chave',$1) ON CONFLICT (chave) DO UPDATE SET valor=$1", [r.chave]);
+      req.session.msg = ['Arte-modelo atualizada!'];
+      res.redirect('/marketing?tab=equipe');
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing?tab=equipe'); }
+});
+
+router.post('/marketing/aniversario/toggle', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  const atualR = await query("SELECT valor FROM configuracoes WHERE chave='aniversario_story_ativo'");
+  const novoValor = atualR.rows[0]?.valor === '1' ? '0' : '1';
+  await query("INSERT INTO configuracoes (chave,valor) VALUES ('aniversario_story_ativo',$1) ON CONFLICT (chave) DO UPDATE SET valor=$1", [novoValor]);
+  res.redirect('/marketing?tab=equipe');
+});
+
+// Gera uma previa da arte (sem publicar) para o marketing conferir visualmente
+router.get('/marketing/aniversario/preview/:tipo/:id', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { baixarArquivoBuffer } = require('../services/arquivos');
+    const { gerarArteAniversario } = require('../services/aniversario-arte');
+    const tipo = req.params.tipo === 'diretivo' ? 'diretivo' : 'ligante';
+    const p = tipo === 'diretivo'
+      ? await query("SELECT nome, cargo, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM diretivos WHERE id=$1", [req.params.id])
+      : await query("SELECT nome, semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM ligantes WHERE id=$1", [req.params.id]);
+    if (!p.rows.length || !p.rows[0].foto_chave) return res.status(404).send('Pessoa ou foto nao encontrada');
+    const pessoa = p.rows[0];
+    const templateR = await query("SELECT valor FROM configuracoes WHERE chave='aniversario_template_chave'");
+    if (!templateR.rows.length) return res.status(400).send('Nenhuma arte-modelo configurada ainda');
+    const cargo = tipo === 'diretivo' ? (pessoa.cargo || 'Diretivo') : `${pessoa.semestre||''}° Semestre`;
+    const [templateBuffer, fotoBuffer] = await Promise.all([
+      baixarArquivoBuffer(templateR.rows[0].valor),
+      baixarArquivoBuffer(pessoa.foto_chave)
+    ]);
+    const arte = await gerarArteAniversario({ templateBuffer, fotoBuffer, nome: pessoa.nome, cargo });
+    res.set('Content-Type', 'image/jpeg');
+    res.send(arte);
+  } catch(e) { res.status(500).send('Erro ao gerar previa: ' + e.message); }
 });
 
 // API publica - lista de galerias ativas, consumida pelo site lauroucpcde.com

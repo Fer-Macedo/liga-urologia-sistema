@@ -212,6 +212,58 @@ async function postarAniversariantesDoDia() {
   }
 }
 
+// ─── AUTOMAÇÃO: STORY DE ANIVERSÁRIO DE LIGANTES/DIRETIVOS ───────────────────
+async function postarStoriesAniversarioDoDia() {
+  const cfg = await query("SELECT chave,valor FROM configuracoes WHERE chave IN ('aniversario_story_ativo','aniversario_template_chave')")
+    .then(r => { const c = {}; r.rows.forEach(x => c[x.chave] = x.valor); return c; });
+  if (cfg.aniversario_story_ativo !== '1' || !cfg.aniversario_template_chave) return;
+
+  const dayjs = require('dayjs');
+  const hoje = dayjs().format('MM-DD');
+  const hojeData = dayjs().format('YYYY-MM-DD');
+
+  const r = await query(
+    `SELECT id, nome, cargo, NULL as semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave, 'diretivo' as tipo
+       FROM diretivos WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1
+     UNION ALL
+     SELECT id, nome, NULL as cargo, semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave, 'ligante' as tipo
+       FROM ligantes WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1`,
+    [hoje]
+  );
+  if (!r.rows.length) return;
+
+  const { baixarArquivoBuffer, uploadArquivo, gerarUrlInline } = require('./arquivos');
+  const { gerarArteAniversario } = require('./aniversario-arte');
+  const templateBuffer = await baixarArquivoBuffer(cfg.aniversario_template_chave);
+
+  for (const pessoa of r.rows) {
+    try {
+      const jaPostou = await query(
+        'SELECT id FROM aniversario_stories_postados WHERE pessoa_tipo=$1 AND pessoa_id=$2 AND data=$3',
+        [pessoa.tipo, pessoa.id, hojeData]
+      );
+      if (jaPostou.rows.length > 0) continue;
+      if (!pessoa.foto_chave) continue;
+
+      const fotoBuffer = await baixarArquivoBuffer(pessoa.foto_chave);
+      const cargo = pessoa.tipo === 'diretivo' ? (pessoa.cargo || 'Diretivo') : `${pessoa.semestre || ''}° Semestre`;
+      const arteBuffer = await gerarArteAniversario({ templateBuffer, fotoBuffer, nome: pessoa.nome, cargo });
+
+      const upload = await uploadArquivo(arteBuffer, `aniversario-${pessoa.tipo}-${pessoa.id}.jpg`, 'image/jpeg', 'aniversario-stories');
+      const imageUrl = await gerarUrlInline(upload.chave, 'image/jpeg');
+
+      await publicarStory({ imageUrl });
+      await query(
+        'INSERT INTO aniversario_stories_postados (pessoa_tipo, pessoa_id, data) VALUES ($1,$2,$3)',
+        [pessoa.tipo, pessoa.id, hojeData]
+      );
+      console.log('[INSTAGRAM] Story de aniversário publicado:', pessoa.tipo, pessoa.nome);
+    } catch (e) {
+      console.error('[INSTAGRAM] Erro story aniversário:', pessoa.nome, e.message);
+    }
+  }
+}
+
 module.exports = {
   publicarFoto,
   publicarCarrossel,
@@ -222,6 +274,7 @@ module.exports = {
   agendarPost,
   processarPostsAgendados,
   postarAniversariantesDoDia,
+  postarStoriesAniversarioDoDia,
   buscarFeedCompleto,
   buscarComentarios,
   responderComentario,

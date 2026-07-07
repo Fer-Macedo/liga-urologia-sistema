@@ -114,6 +114,15 @@ async function initSchema() {
       criado_em TIMESTAMP DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS aniversario_stories_postados (
+      id SERIAL PRIMARY KEY,
+      pessoa_tipo TEXT NOT NULL,
+      pessoa_id INTEGER NOT NULL,
+      data DATE NOT NULL,
+      criado_em TIMESTAMP DEFAULT NOW(),
+      UNIQUE(pessoa_tipo, pessoa_id, data)
+    );
+
     CREATE TABLE IF NOT EXISTS notificacoes_log (
       id SERIAL PRIMARY KEY,
       membro_id INTEGER,
