@@ -247,7 +247,7 @@ async function postarStoriesAniversarioDoDia() {
       if (!pessoa.foto_chave) continue;
 
       const fotoBuffer = await baixarArquivoBuffer(pessoa.foto_chave);
-      const cargo = pessoa.tipo === 'diretivo' ? cargoComGenero(pessoa.cargo || 'Diretivo', pessoa.sexo) : `${pessoa.semestre || ''}° Semestre`;
+      const cargo = pessoa.tipo === 'diretivo' ? (pessoa.cargo ? cargoComGenero(pessoa.cargo, pessoa.sexo) : 'Directivo') : `${pessoa.semestre || ''}° Semestre`;
       const arteBuffer = await gerarArteAniversario({ templateBuffer, fotoBuffer, nome: nomeCurto(pessoa.nome), cargo });
 
       const upload = await uploadArquivo(arteBuffer, `aniversario-${pessoa.tipo}-${pessoa.id}.jpg`, 'image/jpeg', 'aniversario-stories');

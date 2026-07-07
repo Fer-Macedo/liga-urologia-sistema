@@ -956,8 +956,9 @@ router.get('/api/eventos-publicos', corsPublico, limiterApiPublica, async (req, 
 router.get('/api/equipe-publica', corsPublico, limiterApiPublica, async (req, res) => {
   try {
     const { gerarUrlInline } = require('../services/arquivos');
+    const { cargoComGenero } = require('../services/cargo-genero');
     const [dirsR, ligsR] = await Promise.all([
-      query("SELECT id, nome, cargo, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM diretivos WHERE ativo=1 AND pendente=false ORDER BY cargo, nome"),
+      query("SELECT id, nome, cargo, sexo, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM diretivos WHERE ativo=1 AND pendente=false ORDER BY cargo, nome"),
       query("SELECT id, nome, semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM ligantes WHERE ativo=1 AND pendente=false ORDER BY nome LIMIT 50")
     ]);
     const mapFoto = async (rows) => Promise.all(rows.map(async m => {
@@ -965,7 +966,8 @@ router.get('/api/equipe-publica', corsPublico, limiterApiPublica, async (req, re
       if (m.foto_chave) { try { foto_url = await gerarUrlInline(m.foto_chave); } catch(e) {} }
       return { ...m, foto_url };
     }));
-    const [diretivos, ligantes] = await Promise.all([mapFoto(dirsR.rows), mapFoto(ligsR.rows)]);
+    const [diretivosRaw, ligantes] = await Promise.all([mapFoto(dirsR.rows), mapFoto(ligsR.rows)]);
+    const diretivos = diretivosRaw.map(d => ({ ...d, cargo: d.cargo ? cargoComGenero(d.cargo, d.sexo) : 'Directivo' }));
     res.json({ diretivos, ligantes });
   } catch(e) { console.error('[API-PUBLIC] equipe:', e.message); res.json({ diretivos: [], ligantes: [] }); }
 });
@@ -4673,7 +4675,7 @@ router.get('/marketing/aniversario/preview/:tipo/:id', requireAuth, requirePermi
     const pessoa = p.rows[0];
     const templateR = await query("SELECT valor FROM configuracoes WHERE chave='aniversario_template_chave'");
     if (!templateR.rows.length) return res.status(400).send('Nenhuma arte-modelo configurada ainda');
-    const cargo = tipo === 'diretivo' ? cargoComGenero(pessoa.cargo || 'Diretivo', pessoa.sexo) : `${pessoa.semestre||''}° Semestre`;
+    const cargo = tipo === 'diretivo' ? (pessoa.cargo ? cargoComGenero(pessoa.cargo, pessoa.sexo) : 'Directivo') : `${pessoa.semestre||''}° Semestre`;
     const nomeExibir = req.query.nome_completo === '1' ? pessoa.nome : (req.query.nome || nomeCurto(pessoa.nome));
     const [templateBuffer, fotoBuffer] = await Promise.all([
       baixarArquivoBuffer(templateR.rows[0].valor),
@@ -9257,13 +9259,13 @@ router.get('/membro/perfil/:tipo/:id', async (req, res) => {
     const r = tipo === 'diretivo'
       ? await query("SELECT id, nome, cargo, sexo, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM diretivos WHERE id=$1 AND ativo=1 AND pendente=false", [req.params.id])
       : await query("SELECT id, nome, semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM ligantes WHERE id=$1 AND ativo=1 AND pendente=false", [req.params.id]);
-    if (!r.rows.length) return res.status(404).send('Perfil não encontrado');
+    if (!r.rows.length) return res.status(404).send('Perfil no encontrado');
     const m = r.rows[0];
     let foto_url = null;
     if (m.foto_chave) { try { foto_url = await gerarUrlInline(m.foto_chave); } catch(e) {} }
-    const pessoa = { nome: m.nome, cargo: tipo === 'diretivo' ? cargoComGenero(m.cargo || 'Diretivo', m.sexo) : ((m.semestre||'') + '° Semestre'), foto_url };
+    const pessoa = { nome: m.nome, cargo: tipo === 'diretivo' ? (m.cargo ? cargoComGenero(m.cargo, m.sexo) : 'Directivo') : ((m.semestre||'') + '° Semestre'), foto_url };
     res.render('pages/membro/perfil-publico', { pessoa, tipo });
-  } catch(e) { res.status(500).send('Erro ao carregar perfil'); }
+  } catch(e) { res.status(500).send('Error al cargar el perfil'); }
 });
 
 // GET /membro/login
