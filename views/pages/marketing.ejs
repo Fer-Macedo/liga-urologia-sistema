@@ -731,7 +731,9 @@
                 </select>
               </div>
               <button type="submit" class="btn btn-primario btn-sm">Testar previa</button>
+              <button type="button" class="btn btn-secundario btn-sm" onclick="var s=document.getElementById('aniv-teste-select'); if(s.value) window.open('/marketing/aniversario/preview/'+s.value+'?download=1','_blank');">Baixar imagem</button>
             </form>
+            <div style="font-size:11px;color:var(--texto2);margin-top:8px">Use "Baixar imagem" para salvar o arquivo e postar tambem no grupo interno de WhatsApp no dia do aniversario.</div>
           </div>
           <%}%>
 

@@ -4669,6 +4669,9 @@ router.get('/marketing/aniversario/preview/:tipo/:id', requireAuth, requirePermi
     ]);
     const arte = await gerarArteAniversario({ templateBuffer, fotoBuffer, nome: pessoa.nome, cargo });
     res.set('Content-Type', 'image/jpeg');
+    if (req.query.download) {
+      res.set('Content-Disposition', `attachment; filename="aniversario-${tipo}-${pessoa.nome.replace(/[^a-zA-Z0-9]+/g,'-')}.jpg"`);
+    }
     res.send(arte);
   } catch(e) { res.status(500).send('Erro ao gerar previa: ' + e.message); }
 });
