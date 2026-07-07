@@ -4345,17 +4345,62 @@ async function getMktConfig() {
   const cfg = {}; r.rows.forEach(row => cfg[row.chave] = row.valor); return cfg;
 }
 
+router.get('/marketing/canva/conectar', requireAuth, requireAdmin, async (req, res) => {
+  const { gerarPkce, montarUrlAutorizacao } = require('../services/canva');
+  const { verifier, challenge } = gerarPkce();
+  const state = require('crypto').randomBytes(16).toString('hex');
+  req.session.canvaVerifier = verifier;
+  req.session.canvaState = state;
+  const redirectUri = (process.env.APP_URL || 'https://sistema.lauroucpcde.com').replace(/\/$/, '') + '/marketing/canva/callback';
+  res.redirect(montarUrlAutorizacao({ challenge, state, redirectUri }));
+});
+
+router.get('/marketing/canva/callback', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { code, state } = req.query;
+    if (!code || !state || state !== req.session.canvaState) {
+      req.session.erro = ['Falha ao conectar com o Canva (state invalido). Tente novamente.'];
+      return res.redirect('/marketing?tab=integracao');
+    }
+    const { trocarCodigoPorToken } = require('../services/canva');
+    const redirectUri = (process.env.APP_URL || 'https://sistema.lauroucpcde.com').replace(/\/$/, '') + '/marketing/canva/callback';
+    await trocarCodigoPorToken({ code, verifier: req.session.canvaVerifier, redirectUri });
+    delete req.session.canvaVerifier; delete req.session.canvaState;
+    req.session.msg = ['Canva conectado com sucesso!'];
+    res.redirect('/marketing?tab=integracao');
+  } catch(e) {
+    console.error('Canva callback erro:', e.response ? JSON.stringify(e.response.data).substring(0,300) : e.message);
+    req.session.erro = ['Erro ao conectar com o Canva.'];
+    res.redirect('/marketing?tab=integracao');
+  }
+});
+
+router.post('/marketing/canva/desconectar', requireAuth, requireAdmin, async (req, res) => {
+  const { desconectar } = require('../services/canva');
+  await desconectar();
+  req.session.msg = ['Canva desconectado.'];
+  res.redirect('/marketing?tab=integracao');
+});
+
+router.get('/marketing/canva/designs', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  const { listarDesigns } = require('../services/canva');
+  const r = await listarDesigns();
+  res.json(r);
+});
+
 router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg||[]; req.session.msg=[];
   const erro = req.session.erro||[]; req.session.erro=[];
   const [postsR, midiasR] = await Promise.all([query('SELECT * FROM marketing_posts ORDER BY criado_em DESC'), query('SELECT * FROM marketing_midias ORDER BY criado_em DESC')]);
   const mktConfig = await getMktConfig();
+  const { estaConectado } = require('../services/canva');
+  const canvaConectado = await estaConectado();
   const posts = postsR.rows; const total = posts.length||1;
   const igPct = Math.round(posts.filter(p=>(p.redes||[]).includes('instagram')).length/total*100);
   const fbPct = Math.round(posts.filter(p=>(p.redes||[]).includes('facebook')).length/total*100);
   const waPct = Math.round(posts.filter(p=>(p.redes||[]).includes('whatsapp')).length/total*100);
-  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct });
+  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado });
 });
 
 router.post('/marketing/posts', requireAuth, async (req, res) => {
