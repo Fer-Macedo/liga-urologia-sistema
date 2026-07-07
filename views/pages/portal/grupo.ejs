@@ -117,16 +117,17 @@
     <div style="display:grid;grid-template-columns:1fr 300px;gap:20px">
       <div>
         <div class="card">
-          <h3>Enviar nova versao do trabalho</h3>
-          <form method="POST" action="/portal/grupo/<%=grupo.id%>/upload" enctype="multipart/form-data">
-            <div class="upload-area" onclick="document.getElementById('arq-upload').click()">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9AB0A6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              <p>Clique para selecionar o arquivo (PDF, Word)</p>
-            </div>
-            <input type="file" id="arq-upload" name="arquivo" accept=".pdf,.doc,.docx" style="display:none" onchange="document.getElementById('nome-arq').textContent=this.files[0]?this.files[0].name:''">
-            <div id="nome-arq" style="font-size:12px;color:#0F6E56;margin:6px 0 12px"></div>
-            <button type="submit" class="btn pri btn-sm">Enviar versao</button>
-          </form>
+          <details>
+            <summary style="cursor:pointer;font-size:12.5px;color:#6B7A72;list-style:none;display:flex;align-items:center;gap:6px">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9AB0A6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Ja tem o arquivo pronto? Anexe aqui pra avaliacao
+            </summary>
+            <form method="POST" action="/portal/grupo/<%=grupo.id%>/upload" enctype="multipart/form-data" style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <input type="file" id="arq-upload" name="arquivo" accept=".pdf,.doc,.docx" style="font-size:12px" onchange="document.getElementById('nome-arq').textContent=this.files[0]?this.files[0].name:''">
+              <button type="submit" class="btn btn-sm">Enviar versao</button>
+              <span id="nome-arq" style="font-size:12px;color:#0F6E56"></span>
+            </form>
+          </details>
         </div>
         <div class="card">
           <h3>Historico de versoes</h3>
