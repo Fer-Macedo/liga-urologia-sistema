@@ -4416,22 +4416,26 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
   const fbPct = Math.round(posts.filter(p=>(p.redes||[]).includes('facebook')).length/total*100);
   const waPct = Math.round(posts.filter(p=>(p.redes||[]).includes('whatsapp')).length/total*100);
   // Dados leves para a gestao das fotos do site - so nome e foto, sem nenhum dado sensivel (cpf/rg/email/whatsapp)
-  const [ligEquipeR, dirEquipeR, eventosR] = await Promise.all([
+  const [ligEquipeR, dirEquipeR, bannersR] = await Promise.all([
     query("SELECT id, nome, foto_site_chave FROM ligantes WHERE ativo=1 AND pendente=false ORDER BY nome"),
     query("SELECT id, nome, foto_site_chave FROM diretivos WHERE ativo=1 AND pendente=false ORDER BY cargo, nome"),
-    query("SELECT id, nome, banner_chave FROM eventos ORDER BY data_inicio DESC LIMIT 30")
+    query("SELECT id, titulo, imagem_chave, link_url, ativo FROM site_banners ORDER BY ordem, criado_em DESC")
   ]);
   const comFoto = async (rows, chaveCampo) => Promise.all(rows.map(async r => {
     let foto_url = null;
     if (r[chaveCampo]) { try { foto_url = await gerarUrlInline(r[chaveCampo]); } catch(e) {} }
     return { id: r.id, nome: r.nome, foto_url };
   }));
-  const [equipeLigantes, equipeDiretivos, eventosComBanner] = await Promise.all([
+  const [equipeLigantes, equipeDiretivos] = await Promise.all([
     comFoto(ligEquipeR.rows, 'foto_site_chave'),
-    comFoto(dirEquipeR.rows, 'foto_site_chave'),
-    comFoto(eventosR.rows, 'banner_chave')
+    comFoto(dirEquipeR.rows, 'foto_site_chave')
   ]);
-  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, eventosComBanner });
+  const siteBanners = await Promise.all(bannersR.rows.map(async b => {
+    let imagem_url = null;
+    if (b.imagem_chave) { try { imagem_url = await gerarUrlInline(b.imagem_chave); } catch(e) {} }
+    return { ...b, imagem_url };
+  }));
+  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners });
 });
 
 // Foto padronizada da equipe para o site publico - gerido pelo Marketing, separado da foto interna
@@ -4450,17 +4454,42 @@ router.post('/marketing/equipe/:tipo/:id/foto', requireAuth, requirePermissao('m
   } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing?tab=equipe'); }
 });
 
-router.post('/marketing/evento/:id/banner', requireAuth, requirePermissao('marketing'), async (req, res) => {
+// Banners gerais do site - propaganda/avisos do Marketing, SEM vinculo com nenhum evento
+// especifico (o banner de evento continua 100% gerido pela aba Eventos, aparece/some sozinho
+// conforme a data do evento e ja leva direto pra inscricao).
+router.post('/marketing/banners', requireAuth, requirePermissao('marketing'), async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
-    upload.single('banner')(req, res, async (err) => {
+    upload.single('imagem')(req, res, async (err) => {
       if (err || !req.file) { req.session.erro=['Nenhuma imagem enviada.']; return res.redirect('/marketing?tab=equipe'); }
-      const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'eventos');
-      await query('UPDATE eventos SET banner_chave=$1 WHERE id=$2', [r.chave, req.params.id]);
-      req.session.msg = ['Banner do evento atualizado!'];
+      const { titulo, link_url } = req.body;
+      const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'site-banners');
+      await query('INSERT INTO site_banners (titulo, imagem_chave, link_url, criado_por) VALUES ($1,$2,$3,$4)', [titulo||null, r.chave, link_url||null, req.session.usuario.id]);
+      req.session.msg = ['Banner adicionado!'];
       res.redirect('/marketing?tab=equipe');
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing?tab=equipe'); }
+});
+
+router.post('/marketing/banners/:id/toggle', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  await query('UPDATE site_banners SET ativo = NOT ativo WHERE id=$1', [req.params.id]);
+  res.redirect('/marketing?tab=equipe');
+});
+
+router.post('/marketing/banners/:id/deletar', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  await query('DELETE FROM site_banners WHERE id=$1', [req.params.id]);
+  req.session.msg = ['Banner excluido!'];
+  res.redirect('/marketing?tab=equipe');
+});
+
+// API publica - consumida pelo site lauroucpcde.com para exibir os banners gerais ativos
+router.get('/api/banners-publicos', corsPublico, limiterApiPublica, async (req, res) => {
+  try {
+    const { gerarUrlInline } = require('../services/arquivos');
+    const r = await query('SELECT id, titulo, imagem_chave, link_url FROM site_banners WHERE ativo=true ORDER BY ordem, criado_em DESC');
+    const banners = await Promise.all(r.rows.map(async b => ({ id: b.id, titulo: b.titulo, link_url: b.link_url, imagem_url: await gerarUrlInline(b.imagem_chave).catch(()=>null) })));
+    res.json({ banners });
+  } catch(e) { res.json({ banners: [] }); }
 });
 
 router.post('/marketing/posts', requireAuth, async (req, res) => {

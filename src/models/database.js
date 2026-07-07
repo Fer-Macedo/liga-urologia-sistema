@@ -87,6 +87,17 @@ async function initSchema() {
     ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
 
+    CREATE TABLE IF NOT EXISTS site_banners (
+      id SERIAL PRIMARY KEY,
+      titulo TEXT,
+      imagem_chave TEXT NOT NULL,
+      link_url TEXT,
+      ativo BOOLEAN DEFAULT true,
+      ordem INTEGER DEFAULT 0,
+      criado_por INTEGER,
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS notificacoes_log (
       id SERIAL PRIMARY KEY,
       membro_id INTEGER,
