@@ -163,6 +163,15 @@
       <div>
         <div class="card">
           <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Pergunta PICO</h3>
+          <div style="background:#F0F4F2;border-left:3px solid #0F6E56;padding:10px 12px;margin-bottom:12px;font-size:11.5px;color:#3F5349;line-height:1.5">
+            <b style="color:#0C231B">O que e PICO?</b> E um jeito padronizado de estruturar a pergunta de uma pesquisa cientifica, dividido em 4 partes:
+            <div style="margin-top:6px;display:flex;flex-direction:column;gap:2px">
+              <span><b style="color:#0F6E56">P</b> — Populacao/Paciente: quem esta sendo estudado (ex: idosos com fratura de tibia)</span>
+              <span><b style="color:#0F6E56">I</b> — Intervencao: o que sera avaliado/aplicado (ex: um exame, tratamento ou procedimento)</span>
+              <span><b style="color:#0F6E56">C</b> — Comparacao: com o que a intervencao sera comparada (ex: outro tratamento, ou nenhum)</span>
+              <span><b style="color:#0F6E56">O</b> — Outcome/Desfecho: o resultado que se quer medir (ex: reducao do tempo de recuperacao)</span>
+            </div>
+          </div>
           <%
             let picoAtual = null;
             try { if (projeto.pico_pergunta) picoAtual = JSON.parse(projeto.pico_pergunta); } catch(e){}
