@@ -199,7 +199,7 @@
           </span>
           <div class="search-bar">
             <svg viewBox="0 0 24 24"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>
-            <input type="text" placeholder="Buscar membro..." oninput="filtrarTabela(this.value)">
+            <input type="text" id="input-busca-cobranca" placeholder="Buscar membro... (Enter busca todo o historico)" value="<%=typeof busca!=='undefined'?busca:''%>" oninput="filtrarTabela(this.value)" onkeydown="if(event.key==='Enter')buscarHistoricoCompleto(this.value)">
           </div>
         </div>
 
@@ -477,6 +477,11 @@ function filtrarTabela(q) {
   document.querySelectorAll('.cob-row').forEach(r => {
     r.style.display = r.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
   });
+}
+function buscarHistoricoCompleto(termo) {
+  if (!termo || !termo.trim()) return;
+  // Busca no historico completo do membro (todos os periodos, pago/cancelado/etc incluidos)
+  window.location = '/cobrancas?busca=' + encodeURIComponent(termo.trim());
 }
 </script>
 <div class="modal-overlay" id="modal-relatorio" style="display:none">

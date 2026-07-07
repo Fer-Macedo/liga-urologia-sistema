@@ -1135,14 +1135,21 @@ router.get('/cobrancas', requireAuth, requirePermissao('cobrancas'), async (req,
   ]);
 
   const membroId = req.query.membro ? parseInt(req.query.membro) : null;
-  let whereClause = `m.ativo=1${periodoWhere}`;
+  const busca = (req.query.busca || '').trim();
+  // Busca por nome do membro ignora o filtro de periodo - o historico completo (pago/cancelado/etc)
+  // deve aparecer independente do mes selecionado, senao some quando a pessoa foi reativada
+  // e nao tem cobranca no periodo atual.
+  let whereClause = busca ? 'm.ativo=1' : `m.ativo=1${periodoWhere}`;
   if (membroId) whereClause = `c.membro_id=${membroId}${periodoWhere}`;
+  if (busca) whereClause += ' AND m.nome ILIKE $1';
   if (filtro === 'pagas') whereClause += " AND c.status='pago'";
   else if (filtro === 'pendentes') whereClause += " AND c.status='pendente'";
   else if (filtro === 'atrasadas') whereClause += " AND c.status='atrasado'";
 
   const [r, membroR] = await Promise.all([
-    query(`SELECT c.*, m.nome, m.whatsapp, m.email FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE ${whereClause} ORDER BY c.data_vencimento DESC, m.nome ASC LIMIT 500`),
+    busca
+      ? query(`SELECT c.*, m.nome, m.whatsapp, m.email FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE ${whereClause} ORDER BY c.data_vencimento DESC, m.nome ASC LIMIT 500`, ['%'+busca+'%'])
+      : query(`SELECT c.*, m.nome, m.whatsapp, m.email FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE ${whereClause} ORDER BY c.data_vencimento DESC, m.nome ASC LIMIT 500`),
     membroId ? query('SELECT nome FROM membros WHERE id=$1', [membroId]) : Promise.resolve({ rows: [] })
   ]);
   const membroFiltro = membroR.rows[0] || null;
@@ -1153,7 +1160,7 @@ router.get('/cobrancas', requireAuth, requirePermissao('cobrancas'), async (req,
     totalPendentes: parseInt(tPendentes.rows[0].n),
     totalAtrasadas: parseInt(tAtrasadas.rows[0].n),
     totalTodas: parseInt(tTodas.rows[0].n),
-    membroId: membroId || null, membroFiltro,
+    membroId: membroId || null, membroFiltro, busca,
     periodo, dtInicio: dtInicio||'', dtFim: dtFim||'',
     dataInicio: dataInicio||'', dataFim: dataFim||'',
   });
@@ -2499,15 +2506,28 @@ router.get('/diretivos/:id/foto', requireAuth, async (req, res) => {
 });
 
 router.post('/diretivos/:id/toggle', requireAuth, requireAdmin, async (req, res) => {
-  const r = await query('SELECT ativo FROM diretivos WHERE id=$1', [req.params.id]);
+  const r = await query('SELECT ativo, email, cpf, nome, whatsapp FROM diretivos WHERE id=$1', [req.params.id]);
   const atual = r.rows[0]?.ativo;
   const novoStatus = atual == 0 ? 1 : 0;
   const motivo = req.body.motivo || null;
   await query('UPDATE diretivos SET ativo=$1 WHERE id=$2', [novoStatus, req.params.id]);
+  // Sincronizar membros (cadastro financeiro) automaticamente ao inativar/ativar diretivo - mesma logica do toggle de ligante
+  try {
+    const { email, cpf, nome, whatsapp } = r.rows[0];
+    const memStatus = novoStatus === 1 ? 'ativo' : 'inativo';
+    if (email) await query("UPDATE membros SET ativo=$1, status=$2 WHERE email=$3", [novoStatus, memStatus, email]);
+    if (cpf) await query("UPDATE membros SET ativo=$1, status=$2 WHERE regexp_replace(cpf,'[^0-9]','','g')=regexp_replace($3,'[^0-9]','','g')", [novoStatus, memStatus, cpf]).catch(()=>{});
+    if (nome) await query("UPDATE membros SET ativo=$1, status=$2 WHERE LOWER(TRIM(nome))=LOWER(TRIM($3))", [novoStatus, memStatus, nome]).catch(()=>{});
+    if (whatsapp) await query("UPDATE membros SET ativo=$1 WHERE whatsapp=$2 AND (email IS NULL OR email='')", [novoStatus, whatsapp]).catch(()=>{});
+    if (novoStatus === 0) {
+      if (cpf) await query("UPDATE cobrancas SET status='cancelado' WHERE membro_id IN (SELECT id FROM membros WHERE regexp_replace(cpf,'[^0-9]','','g')=regexp_replace($1,'[^0-9]','','g')) AND status IN ('pendente','atrasado')", [cpf]).catch(()=>{});
+      if (email) await query("UPDATE cobrancas SET status='cancelado' WHERE membro_id IN (SELECT id FROM membros WHERE email=$1) AND status IN ('pendente','atrasado')", [email]).catch(()=>{});
+    }
+  } catch(e) {}
   if (novoStatus === 0 && motivo) {
     await query('INSERT INTO inativacoes_log (tipo, referencia_id, motivo, usuario_id) VALUES ($1,$2,$3,$4) ON CONFLICT DO NOTHING', ['diretivo', req.params.id, motivo, req.session.usuario.id]).catch(()=>{});
   }
-  req.session.msg = [novoStatus == 1 ? 'Diretivo reativado!' : 'Diretivo inativado.'];
+  req.session.msg = [novoStatus == 1 ? 'Diretivo reativado! Cadastro financeiro sincronizado.' : 'Diretivo inativado, cobranças canceladas e cadastro financeiro atualizado!'];
   res.redirect('/diretivos' + (req.query.status ? '?status=' + req.query.status : ''));
 });
 
