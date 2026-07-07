@@ -457,7 +457,7 @@
                   </select>
                 </div>
                 <div class="campo"><label class="label">Mensagem</label>
-                  <textarea name="mensagem" class="input" rows="5" placeholder="Digite a mensagem..." oninput="previewWpp(this.value)"></textarea>
+                  <textarea name="mensagem" id="wpp-mensagem" class="input" rows="5" placeholder="Digite a mensagem..." oninput="previewWpp(this.value)"></textarea>
                 </div>
                 <button type="submit" class="btn btn-primario" onclick="var f=this.form; confirmarAcao('Enviar para todos?', function(){ f.submit(); }); return false;">Enviar Agora</button>
               </div>
@@ -1189,6 +1189,17 @@ function canvaCarregarDesigns(){
     }).join('');
     _canvaCarregado=true;
   }).catch(function(){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:#dc2626">Erro ao carregar designs do Canva</div>';});
+}
+function previewWpp(texto){
+  var p=document.getElementById('wpp-preview-text');
+  if(p) p.textContent=texto||'Sua mensagem aparecera aqui...';
+}
+function usarTemplate(btn){
+  var ta=document.getElementById('wpp-mensagem');
+  if(!ta) return;
+  ta.value=btn.textContent.trim();
+  previewWpp(ta.value);
+  ta.scrollIntoView({behavior:'smooth',block:'center'});
 }
 function canvaTogglePersonalizado(tipo){
   var mostrar=tipo==='Personalizado';
