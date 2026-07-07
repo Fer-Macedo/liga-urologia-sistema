@@ -4531,12 +4531,12 @@ router.post('/marketing/whatsapp-massa', requireAuth, async (req, res) => {
       } catch(e) { erros++; }
     }
     if (bloqueados > 0 && enviados === 0) {
-      req.session.erro = ['Envio de WhatsApp em massa esta bloqueado no momento (numero em modo de aquecimento, protecao contra banimento). Use o email ou aguarde a liberacao.'];
+      req.session.erro = ['Por enquanto, o envio de mensagens via WhatsApp esta suspenso pelo administrador (numero em periodo de aquecimento, para evitar banimento). Em breve retornaremos com o servico normalmente. Enquanto isso, use o e-mail para se comunicar.'];
     } else {
-      req.session.msg=[`WhatsApp enviado! ${enviados} enviados, ${erros} erros${bloqueados?', '+bloqueados+' bloqueados (protecao anti-banimento)':''}.`];
+      req.session.msg=[`WhatsApp enviado! ${enviados} enviados, ${erros} erros${bloqueados?', '+bloqueados+' bloqueados (envio suspenso pelo administrador)':''}.`];
     }
-    res.redirect('/marketing');
-  } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing'); }
+    res.redirect('/marketing?tab=whatsapp');
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing?tab=whatsapp'); }
 });
 
 // ─── EVENTOS ──────────────────────────────────────────────────────────────────

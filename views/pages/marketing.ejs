@@ -26,6 +26,13 @@
       }
       if(id==='midias' && typeof canvaCarregarDesigns==='function') canvaCarregarDesigns();
     }
+    document.addEventListener('DOMContentLoaded',function(){
+      var tab=new URLSearchParams(window.location.search).get('tab');
+      if(tab){
+        var btn=document.querySelector('.mkt-tab[onclick*="\''+tab+'\'"]');
+        if(btn) showTab(tab,btn);
+      }
+    });
   </script>
   <style>
     .mkt-section{display:none!important;}
