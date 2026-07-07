@@ -105,8 +105,60 @@ async function listarDesigns() {
   }
 }
 
+// Cria um novo design (post do Instagram, por padrao) e devolve a URL de edicao no Canva
+async function criarDesign(tipoNome) {
+  const token = await getTokenValido();
+  if (!token) return { ok: false, erro: 'Canva nao conectado.' };
+  try {
+    const resp = await axios.post('https://api.canva.com/rest/v1/designs', {
+      design_type: { type: 'preset', name: tipoNome || 'InstagramPost' }
+    }, { headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' } });
+    const d = resp.data.design;
+    return { ok: true, designId: d.id, editUrl: d.urls && d.urls.edit_url };
+  } catch(e) {
+    console.error('Canva criarDesign erro:', e.response ? JSON.stringify(e.response.data).substring(0,300) : e.message);
+    return { ok: false, erro: 'Nao foi possivel criar o design no Canva.' };
+  }
+}
+
+// Exporta um design como PNG e aguarda o job terminar (poll simples, ate ~20s)
+async function exportarDesign(designId) {
+  const token = await getTokenValido();
+  if (!token) return { ok: false, erro: 'Canva nao conectado.' };
+  try {
+    const criar = await axios.post('https://api.canva.com/rest/v1/exports', {
+      design_id: designId, format: { type: 'png' }
+    }, { headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' } });
+    const jobId = criar.data.job.id;
+    for (let i = 0; i < 10; i++) {
+      await new Promise(r => setTimeout(r, 2000));
+      const status = await axios.get('https://api.canva.com/rest/v1/exports/' + jobId, {
+        headers: { Authorization: 'Bearer ' + token }
+      });
+      const job = status.data.job;
+      if (job.status === 'success') return { ok: true, urls: job.urls || [] };
+      if (job.status === 'failed') return { ok: false, erro: 'Exportacao falhou no Canva.' };
+    }
+    return { ok: false, erro: 'Exportacao demorou demais - tente novamente em instantes.' };
+  } catch(e) {
+    console.error('Canva exportarDesign erro:', e.response ? JSON.stringify(e.response.data).substring(0,300) : e.message);
+    return { ok: false, erro: 'Nao foi possivel exportar o design do Canva.' };
+  }
+}
+
+// Exporta um design e importa a imagem final direto para a biblioteca de midias do Marketing
+async function importarDesignParaMidia(designId, nome) {
+  const exportado = await exportarDesign(designId);
+  if (!exportado.ok || !exportado.urls.length) return { ok: false, erro: exportado.erro || 'Sem arquivo exportado.' };
+  const imgResp = await axios.get(exportado.urls[0], { responseType: 'arraybuffer' });
+  const { uploadArquivo } = require('./arquivos');
+  const r = await uploadArquivo(Buffer.from(imgResp.data), (nome || 'canva-design') + '.png', 'image/png', 'marketing');
+  await query('INSERT INTO marketing_midias (nome, chave, tipo) VALUES ($1,$2,$3)', [nome || 'Design do Canva', r.chave, 'image/png']);
+  return { ok: true };
+}
+
 async function desconectar() {
   await query("DELETE FROM marketing_config WHERE chave LIKE 'canva_%'");
 }
 
-module.exports = { gerarPkce, montarUrlAutorizacao, trocarCodigoPorToken, getTokenValido, estaConectado, listarDesigns, desconectar };
+module.exports = { gerarPkce, montarUrlAutorizacao, trocarCodigoPorToken, getTokenValido, estaConectado, listarDesigns, criarDesign, exportarDesign, importarDesignParaMidia, desconectar };

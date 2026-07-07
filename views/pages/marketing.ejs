@@ -24,6 +24,7 @@
         carregarIgFeed();
         if(typeof carregarIgPerfil==='function') carregarIgPerfil();
       }
+      if(id==='midias' && typeof canvaCarregarDesigns==='function') canvaCarregarDesigns();
     }
   </script>
   <style>
@@ -374,6 +375,26 @@
         <div class="calendario-grid" id="cal-grid" style="margin-top:4px"></div>
       </div>
       <div class="mkt-section" id="tab-midias">
+        <%if(typeof canvaConectado!=='undefined' && canvaConectado){%>
+        <div class="card" style="margin-bottom:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div class="card-titulo" style="margin:0">Canva</div>
+            <div style="display:flex;gap:8px">
+              <select id="canva-tipo-novo" class="input" style="width:auto">
+                <option value="InstagramPost">Post Instagram</option>
+                <option value="InstagramStory">Story Instagram</option>
+                <option value="FacebookPost">Post Facebook</option>
+                <option value="Presentation">Apresentacao</option>
+              </select>
+              <button class="btn btn-primario btn-sm" onclick="canvaCriarDesign()">+ Criar novo design</button>
+              <button class="btn btn-sm" onclick="canvaCarregarDesigns()">Atualizar</button>
+            </div>
+          </div>
+          <div id="canva-designs-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">
+            <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--texto2)">Carregando designs do Canva...</div>
+          </div>
+        </div>
+        <%}%>
         <div style="margin-bottom:16px">
           <form action="/marketing/midias/upload" method="POST" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
             <input type="file" name="midia" class="input" accept="image/*,video/*" style="flex:1;min-width:200px">
@@ -1117,6 +1138,50 @@ function enviarRespostaComentario(comId) {
 
 // Carrega feed quando clicar na aba Integracoes - integrado via evento
 // ─── FIM INSTAGRAM JS ─────────────────────────────────────────────────────────
+
+// ─── CANVA ────────────────────────────────────────────────────────────────────
+var _canvaCarregado=false;
+function canvaCarregarDesigns(){
+  var grid=document.getElementById('canva-designs-grid');
+  if(!grid) return;
+  grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--texto2)">Carregando designs do Canva...</div>';
+  fetch('/marketing/canva/designs').then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:#dc2626">'+(d.erro||'Erro ao carregar designs')+'</div>';return;}
+    if(!d.designs.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--texto2)">Nenhum design encontrado na conta Canva. Clique em "Criar novo design" para comecar.</div>';return;}
+    grid.innerHTML=d.designs.map(function(des){
+      var thumb=(des.thumbnail&&des.thumbnail.url)||'/img/placeholder.png';
+      var titulo=des.title||'Sem titulo';
+      var editUrl=des.urls&&des.urls.edit_url;
+      return '<div class="midia-card">'
+        +'<img src="'+thumb+'" alt="'+titulo+'" onerror="this.src=\'/img/placeholder.png\'">'
+        +'<div class="midia-overlay">'
+        +(editUrl?'<a href="'+editUrl+'" target="_blank" class="btn-xs" style="background:white;color:#111;text-decoration:none">Editar no Canva</a>':'')
+        +'<button onclick="canvaImportar(\''+des.id+'\',\''+titulo.replace(/'/g,"\\'")+'\',this)" class="btn-xs" style="background:#0F6E56;color:white;border-color:transparent">Importar p/ Midias</button>'
+        +'</div>'
+        +'<div class="midia-card-info">'+titulo+'</div>'
+        +'</div>';
+    }).join('');
+    _canvaCarregado=true;
+  }).catch(function(){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:20px;color:#dc2626">Erro ao carregar designs do Canva</div>';});
+}
+function canvaCriarDesign(){
+  var tipo=document.getElementById('canva-tipo-novo').value;
+  fetch('/marketing/canva/criar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo:tipo})})
+    .then(function(r){return r.json();}).then(function(d){
+      if(!d.ok){alert('Erro: '+(d.erro||'nao foi possivel criar o design'));return;}
+      if(d.editUrl) window.open(d.editUrl,'_blank');
+      setTimeout(canvaCarregarDesigns,1500);
+    }).catch(function(){alert('Erro ao criar design no Canva.');});
+}
+function canvaImportar(designId,titulo,btn){
+  btn.disabled=true; btn.textContent='Importando...';
+  fetch('/marketing/canva/importar/'+designId,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome:titulo})})
+    .then(function(r){return r.json();}).then(function(d){
+      if(!d.ok){alert('Erro: '+(d.erro||'nao foi possivel importar')); btn.disabled=false; btn.textContent='Importar p/ Midias'; return;}
+      alert('Design importado para a biblioteca de midias!');
+      location.reload();
+    }).catch(function(){alert('Erro ao importar design.'); btn.disabled=false; btn.textContent='Importar p/ Midias';});
+}
 </script>
 </body>
 </html>

@@ -4388,6 +4388,18 @@ router.get('/marketing/canva/designs', requireAuth, requirePermissao('marketing'
   res.json(r);
 });
 
+router.post('/marketing/canva/criar', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  const { criarDesign } = require('../services/canva');
+  const r = await criarDesign(req.body.tipo);
+  res.json(r);
+});
+
+router.post('/marketing/canva/importar/:designId', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  const { importarDesignParaMidia } = require('../services/canva');
+  const r = await importarDesignParaMidia(req.params.designId, req.body.nome);
+  res.json(r);
+});
+
 router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg||[]; req.session.msg=[];
