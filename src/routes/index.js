@@ -8408,6 +8408,16 @@ async function registrarTimeline(grupoId, evento, descricao) {
   await query('INSERT INTO timeline_grupo_cientifico (grupo_id,evento,descricao) VALUES ($1,$2,$3)', [grupoId, evento, descricao || null]);
 }
 
+// Historico completo de uma versao do trabalho (enviado, em_revisao, transferido, aprovado,
+// devolvido) - ao contrario de versoes_trabalho.comentario_revisor, que so guarda o ultimo,
+// aqui fica registrado tudo o que ja aconteceu, pra dar pra rastrear o caso inteiro.
+async function registrarEventoVersao(versaoId, tipo, { comentario, autorTipo, autorId, autorNome, destinoNome } = {}) {
+  await query(
+    'INSERT INTO versao_trabalho_eventos (versao_id,tipo,comentario,autor_tipo,autor_id,autor_nome,destino_nome) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+    [versaoId, tipo, comentario || null, autorTipo || null, autorId || null, autorNome || null, destinoNome || null]
+  );
+}
+
 // GET /cientifico
 router.get('/cientifico', requireAuth, requireCientifico, async (req, res) => {
   const config = await getConfig();
@@ -8424,6 +8434,30 @@ router.get('/cientifico', requireAuth, requireCientifico, async (req, res) => {
   };
   const appUrl = 'https://cientifico.lauroucpcde.com';
   res.render('pages/cientifico/index', { config, usuario: req.session.usuario, permissoesAtivas, projetos, stats, msg, erro, appUrl });
+});
+
+// GET /cientifico/pendencias — painel unico com todos os trabalhos aguardando correcao,
+// de todos os projetos/grupos, sem precisar entrar um por um.
+router.get('/cientifico/pendencias', requireAuth, requireCientifico, async (req, res) => {
+  const config = await getConfig();
+  const permsR = await query('SELECT modulo FROM usuario_permissoes WHERE usuario_id=$1',[req.session.usuario.id]);
+  const permissoesAtivas = permsR.rows.map(r=>r.modulo);
+  const pendentesR = await query(`
+    SELECT v.id, v.status, v.enviado_em, v.arquivo_nome, v.revisor_atual_id,
+           gc.id as grupo_id, gc.nome as grupo_nome,
+           pc.id as projeto_id, pc.titulo as projeto_titulo,
+           CASE WHEN v.enviado_por_tipo='ligante' THEN l.nome ELSE d.nome END as enviado_por_nome,
+           ru.nome as revisor_atual_nome
+    FROM versoes_trabalho v
+    JOIN grupos_cientificos gc ON gc.id=v.grupo_id
+    JOIN projetos_cientificos pc ON pc.id=gc.projeto_id
+    LEFT JOIN ligantes l ON v.enviado_por_tipo='ligante' AND l.id=v.enviado_por_id
+    LEFT JOIN diretivos d ON v.enviado_por_tipo='diretivo' AND d.id=v.enviado_por_id
+    LEFT JOIN usuarios ru ON ru.id=v.revisor_atual_id
+    WHERE v.status IN ('aguardando','em_revisao')
+    ORDER BY v.enviado_em ASC
+  `);
+  res.render('pages/cientifico/pendencias', { config, usuario: req.session.usuario, permissoesAtivas, pendentes: pendentesR.rows });
 });
 
 // GET /cientifico/novo
@@ -8538,14 +8572,25 @@ router.get('/cientifico/projeto/:projetoId/grupo/novo', requireAuth, requireCria
 
 // POST /cientifico/projeto/:projetoId/grupo/novo
 router.post('/cientifico/projeto/:projetoId/grupo/novo', requireAuth, requireCriarGrupoCientifico, async (req, res) => {
-  const { nome, tipo_trabalho } = req.body;
+  const { nome, tipo_trabalho, prazo } = req.body;
   if (!nome) { req.session.erro=['Nome obrigatorio']; return res.redirect('back'); }
   const tipoT = tipo_trabalho==='individual' ? 'individual' : 'colaborativo';
-  const gR = await query('INSERT INTO grupos_cientificos (projeto_id,nome,tipo_trabalho) VALUES ($1,$2,$3) RETURNING id',[req.params.projetoId,nome,tipoT]);
+  const gR = await query('INSERT INTO grupos_cientificos (projeto_id,nome,tipo_trabalho,prazo) VALUES ($1,$2,$3,$4) RETURNING id',[req.params.projetoId,nome,tipoT,prazo||null]);
   const grupoId = gR.rows[0].id;
   await registrarTimeline(grupoId, 'Grupo criado', 'Grupo "'+nome+'" criado no sistema');
   req.session.msg=['Grupo criado!'];
   res.redirect('/cientifico/projeto/'+req.params.projetoId+'/grupo/'+grupoId);
+});
+
+// POST /cientifico/grupo/:grupoId/prazo — define/edita o prazo especifico deste trabalho
+// (cada grupo pode ter um prazo proprio, diferente do prazo geral do projeto/edital).
+router.post('/cientifico/grupo/:grupoId/prazo', requireAuth, requireCientifico, async (req, res) => {
+  const { prazo } = req.body;
+  const gR = await query('SELECT projeto_id FROM grupos_cientificos WHERE id=$1', [req.params.grupoId]);
+  if (!gR.rows.length) return res.redirect('/cientifico');
+  await query('UPDATE grupos_cientificos SET prazo=$1 WHERE id=$2', [prazo||null, req.params.grupoId]);
+  req.session.msg=['Prazo atualizado.'];
+  res.redirect('/cientifico/projeto/'+gR.rows[0].projeto_id+'/grupo/'+req.params.grupoId);
 });
 
 // GET /cientifico/projeto/:projetoId/grupo/:grupoId
@@ -8560,7 +8605,13 @@ router.get('/cientifico/projeto/:projetoId/grupo/:grupoId', requireAuth, require
   if (!pR.rows.length||!gR.rows.length) return res.redirect('/cientifico');
   const projeto=pR.rows[0], grupo=gR.rows[0];
   const membros = (await query(`SELECT m.*, CASE WHEN m.origem_tipo='ligante' THEN l.nome ELSE d.nome END as nome, CASE WHEN m.origem_tipo='ligante' THEN l.email ELSE d.email END as email FROM membros_grupo_cientifico m LEFT JOIN ligantes l ON m.origem_tipo='ligante' AND l.id=m.origem_id LEFT JOIN diretivos d ON m.origem_tipo='diretivo' AND d.id=m.origem_id WHERE m.grupo_id=$1`,[req.params.grupoId])).rows;
-  const versoes = (await query(`SELECT v.*, CASE WHEN v.enviado_por_tipo='ligante' THEN l.nome ELSE d.nome END as enviado_por_nome FROM versoes_trabalho v LEFT JOIN ligantes l ON v.enviado_por_tipo='ligante' AND l.id=v.enviado_por_id LEFT JOIN diretivos d ON v.enviado_por_tipo='diretivo' AND d.id=v.enviado_por_id WHERE v.grupo_id=$1 ORDER BY v.enviado_em DESC`,[req.params.grupoId])).rows;
+  const versoes = (await query(`SELECT v.*, CASE WHEN v.enviado_por_tipo='ligante' THEN l.nome ELSE d.nome END as enviado_por_nome, ru.nome as revisor_atual_nome FROM versoes_trabalho v LEFT JOIN ligantes l ON v.enviado_por_tipo='ligante' AND l.id=v.enviado_por_id LEFT JOIN diretivos d ON v.enviado_por_tipo='diretivo' AND d.id=v.enviado_por_id LEFT JOIN usuarios ru ON ru.id=v.revisor_atual_id WHERE v.grupo_id=$1 ORDER BY v.enviado_em DESC`,[req.params.grupoId])).rows;
+  if (versoes.length) {
+    const versaoIds = versoes.map(v=>v.id);
+    const eventosR = await query('SELECT * FROM versao_trabalho_eventos WHERE versao_id = ANY($1::int[]) ORDER BY criado_em ASC', [versaoIds]);
+    for (const v of versoes) v.eventos = eventosR.rows.filter(e => e.versao_id === v.id);
+  }
+  const staffCientifico = (await query(`SELECT DISTINCT u.id, u.nome FROM usuarios u LEFT JOIN usuario_permissoes up ON up.usuario_id=u.id AND up.modulo='cientifico' WHERE u.ativo=1 AND (up.usuario_id IS NOT NULL OR u.perfil IN ('presidencia','admin')) ORDER BY u.nome`)).rows;
   const chat = (await query('SELECT * FROM chat_grupo_cientifico WHERE grupo_id=$1 ORDER BY criado_em ASC',[req.params.grupoId])).rows;
   const timeline = (await query('SELECT * FROM timeline_grupo_cientifico WHERE grupo_id=$1 ORDER BY criado_em DESC',[req.params.grupoId])).rows;
   const avisos = (await query(`SELECT a.* FROM avisos_cientificos a WHERE a.projeto_id=$1 AND (a.grupo_id=$2 OR a.grupo_id IS NULL) ORDER BY a.criado_em DESC LIMIT 5`,[req.params.projetoId,req.params.grupoId])).rows;
@@ -8583,7 +8634,7 @@ router.get('/cientifico/projeto/:projetoId/grupo/:grupoId', requireAuth, require
     }
     versoesPorAutor = Object.values(mapa);
   }
-  res.render('pages/cientifico/grupo-detalhe', { config, usuario: req.session.usuario, permissoesAtivas, projeto, grupo, membros, versoes, versoesPorAutor, chat, timeline, avisos, ligantesDisponiveis, diretivosDisponiveis, msg, erro });
+  res.render('pages/cientifico/grupo-detalhe', { config, usuario: req.session.usuario, permissoesAtivas, projeto, grupo, membros, versoes, versoesPorAutor, chat, timeline, avisos, ligantesDisponiveis, diretivosDisponiveis, staffCientifico, msg, erro });
 });
 
 // POST /cientifico/grupo/:grupoId/membro/adicionar
@@ -8680,13 +8731,36 @@ router.post('/cientifico/grupo/:grupoId/chat', requireAuth, requireCientifico, u
   res.redirect('/cientifico/projeto/'+g.projeto_id+'/grupo/'+req.params.grupoId+'?tab=chat');
 });
 
-// POST /cientifico/versao/:versaoId/iniciar-revisao
+// POST /cientifico/versao/:versaoId/iniciar-revisao — revisor unico: quem clica "Revisar"
+// fica responsavel pelo caso (pode transferir depois se precisar de ajuda).
 router.post('/cientifico/versao/:versaoId/iniciar-revisao', requireAuth, requireCientifico, async (req, res) => {
   const vR = await query('SELECT v.*, g.projeto_id FROM versoes_trabalho v JOIN grupos_cientificos g ON g.id=v.grupo_id WHERE v.id=$1',[req.params.versaoId]);
   if (!vR.rows.length) return res.redirect('/cientifico');
   const v = vR.rows[0];
-  await query("UPDATE versoes_trabalho SET status='em_revisao' WHERE id=$1",[req.params.versaoId]);
-  await registrarTimeline(v.grupo_id,'Em revisao','Versao em revisao pelo cientifico');
+  await query("UPDATE versoes_trabalho SET status='em_revisao', revisor_atual_id=$1 WHERE id=$2",[req.session.usuario.id, req.params.versaoId]);
+  await registrarTimeline(v.grupo_id,'Em revisao','Versao em revisao por '+req.session.usuario.nome);
+  await registrarEventoVersao(req.params.versaoId, 'em_revisao', { autorTipo:'usuario', autorId:req.session.usuario.id, autorNome:req.session.usuario.nome });
+  res.redirect('/cientifico/projeto/'+v.projeto_id+'/grupo/'+v.grupo_id);
+});
+
+// POST /cientifico/versao/:versaoId/transferir — o revisor atual passa o caso para outro
+// membro da equipe do Cientifico (ex: precisa de ajuda com um caso especifico).
+router.post('/cientifico/versao/:versaoId/transferir', requireAuth, requireCientifico, async (req, res) => {
+  const { usuario_id } = req.body;
+  const vR = await query('SELECT v.*, g.projeto_id FROM versoes_trabalho v JOIN grupos_cientificos g ON g.id=v.grupo_id WHERE v.id=$1',[req.params.versaoId]);
+  if (!vR.rows.length) return res.redirect('/cientifico');
+  const v = vR.rows[0];
+  if (v.revisor_atual_id !== req.session.usuario.id) {
+    req.session.erro=['Somente quem esta revisando este trabalho pode transferi-lo.'];
+    return res.redirect('/cientifico/projeto/'+v.projeto_id+'/grupo/'+v.grupo_id);
+  }
+  const destinoR = await query('SELECT id, nome FROM usuarios WHERE id=$1', [usuario_id]);
+  if (!destinoR.rows.length) { req.session.erro=['Usuario destino nao encontrado.']; return res.redirect('back'); }
+  const destino = destinoR.rows[0];
+  await query('UPDATE versoes_trabalho SET revisor_atual_id=$1 WHERE id=$2', [destino.id, req.params.versaoId]);
+  await registrarTimeline(v.grupo_id, 'Revisao transferida', req.session.usuario.nome+' transferiu para '+destino.nome);
+  await registrarEventoVersao(req.params.versaoId, 'transferido', { autorTipo:'usuario', autorId:req.session.usuario.id, autorNome:req.session.usuario.nome, destinoNome:destino.nome });
+  req.session.msg=['Trabalho transferido para '+destino.nome+'.'];
   res.redirect('/cientifico/projeto/'+v.projeto_id+'/grupo/'+v.grupo_id);
 });
 
@@ -8696,9 +8770,14 @@ router.post('/cientifico/versao/:versaoId/revisar', requireAuth, requireCientifi
   const vR = await query('SELECT v.*, g.projeto_id FROM versoes_trabalho v JOIN grupos_cientificos g ON g.id=v.grupo_id WHERE v.id=$1',[req.params.versaoId]);
   if (!vR.rows.length) return res.redirect('/cientifico');
   const v = vR.rows[0];
+  if (v.revisor_atual_id !== req.session.usuario.id) {
+    req.session.erro=['Somente quem esta revisando este trabalho pode aprovar ou devolver. Transfira para si mesmo clicando em "Revisar" primeiro.'];
+    return res.redirect('/cientifico/projeto/'+v.projeto_id+'/grupo/'+v.grupo_id);
+  }
   const novoStatus = acao==='aprovar' ? 'aprovado' : 'devolvido';
   await query('UPDATE versoes_trabalho SET status=$1,comentario_revisor=$2,revisado_por=$3,revisado_em=NOW() WHERE id=$4',
     [novoStatus,comentario||null,req.session.usuario.id,req.params.versaoId]);
+  await registrarEventoVersao(req.params.versaoId, novoStatus, { comentario, autorTipo:'usuario', autorId:req.session.usuario.id, autorNome:req.session.usuario.nome });
   try {
     const { enviarEmail, htmlSimples } = require('../services/notificacoes');
     const _gIR = await query('SELECT gc.nome as gnome, pc.titulo as ptitulo FROM grupos_cientificos gc JOIN projetos_cientificos pc ON pc.id=gc.projeto_id WHERE gc.id=$1',[v.grupo_id]);
@@ -9079,9 +9158,10 @@ router.get('/portal/grupo/:grupoId', requirePortal, async (req, res) => {
   // desde que o trabalho ainda nao tenha sido aprovado.
   let diasRestantesPrazo = null;
   const jaAprovado = versoes.some(v => v.status === 'aprovado');
-  if (projeto.prazo && !jaAprovado) {
+  const prazoEfetivo = grupo.prazo || projeto.prazo;
+  if (prazoEfetivo && !jaAprovado) {
     const hoje = new Date(); hoje.setHours(0,0,0,0);
-    const prazoData = new Date(projeto.prazo); prazoData.setHours(0,0,0,0);
+    const prazoData = new Date(prazoEfetivo); prazoData.setHours(0,0,0,0);
     const diff = Math.round((prazoData - hoje) / (1000*60*60*24));
     if (diff >= 0 && diff <= 5) diasRestantesPrazo = diff;
   }
@@ -9097,10 +9177,11 @@ router.post('/portal/grupo/:grupoId/upload', requirePortal, uploadArq.single('ar
   if (await grupoEstaEncerrado(req.params.grupoId)) { req.session.erro=['Este grupo foi encerrado e nao aceita mais alteracoes.']; return res.redirect('/portal/grupo/'+req.params.grupoId); }
   if (!req.file) { req.session.erro=['Selecione um arquivo.']; return res.redirect('back'); }
   const chave = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'cientifico/trabalhos');
-  await query('INSERT INTO versoes_trabalho (grupo_id,arquivo_chave,arquivo_nome,enviado_por_tipo,enviado_por_id) VALUES ($1,$2,$3,$4,$5)',
+  const insR = await query('INSERT INTO versoes_trabalho (grupo_id,arquivo_chave,arquivo_nome,enviado_por_tipo,enviado_por_id) VALUES ($1,$2,$3,$4,$5) RETURNING id',
     [req.params.grupoId, chave, req.file.originalname, tipo, id]);
   const membro = await getPortalMembro(tipo, id);
   await registrarTimeline(req.params.grupoId, 'Nova versao enviada', (membro?.nome||'Membro')+' enviou uma nova versao do trabalho');
+  await registrarEventoVersao(insR.rows[0].id, 'enviado', { autorTipo: tipo, autorId: id, autorNome: membro?.nome });
   await notificarStaffNovoTrabalho({ grupoId: req.params.grupoId, membroNome: membro?.nome });
   await confirmarEnvioParaMembro({ grupoId: req.params.grupoId, tipo, id });
   req.session.msg=['Versao enviada com sucesso!'];
@@ -9521,11 +9602,12 @@ router.post('/portal/grupo/:grupoId/rascunho/enviar', requirePortal, async (req,
     }
 
     const chave = await uploadArquivo(buffer, nomeArquivo, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'cientifico/trabalhos');
-    await query('INSERT INTO versoes_trabalho (grupo_id,arquivo_chave,arquivo_nome,enviado_por_tipo,enviado_por_id) VALUES ($1,$2,$3,$4,$5)',
+    const insR = await query('INSERT INTO versoes_trabalho (grupo_id,arquivo_chave,arquivo_nome,enviado_por_tipo,enviado_por_id) VALUES ($1,$2,$3,$4,$5) RETURNING id',
       [req.params.grupoId, chave, nomeArquivo, tipo, id]);
 
     const membro = await getPortalMembro(tipo, id);
     await registrarTimeline(req.params.grupoId, 'Nova versao enviada', (membro?.nome || 'Membro') + ' enviou o trabalho para avaliacao');
+    await registrarEventoVersao(insR.rows[0].id, 'enviado', { autorTipo: tipo, autorId: id, autorNome: membro?.nome });
     await notificarStaffNovoTrabalho({ grupoId: req.params.grupoId, membroNome: membro?.nome });
     await confirmarEnvioParaMembro({ grupoId: req.params.grupoId, tipo, id });
 
@@ -9804,7 +9886,12 @@ router.get('/membro/dashboard', requireMembro, async (req, res) => {
       OR a.projeto_id IN (SELECT gc.projeto_id FROM membros_grupo_cientifico m JOIN grupos_cientificos gc ON gc.id=m.grupo_id WHERE m.origem_tipo=$1 AND m.origem_id=$2)
     )
   `, [tipo, id]).catch(()=>({rows:[{total:0}]}));
-  const cientificoAvisos = parseInt(cientAvisosR.rows[0]?.total)||0;
+  // Trabalhos devolvidos para correcao contam como pendencia do membro tambem, nao so avisos
+  const cientDevolvidosR = await query(`
+    SELECT COUNT(*) as total FROM versoes_trabalho v
+    WHERE v.status='devolvido' AND v.grupo_id IN (SELECT grupo_id FROM membros_grupo_cientifico WHERE origem_tipo=$1 AND origem_id=$2)
+  `, [tipo, id]).catch(()=>({rows:[{total:0}]}));
+  const cientificoAvisos = (parseInt(cientAvisosR.rows[0]?.total)||0) + (parseInt(cientDevolvidosR.rows[0]?.total)||0);
   res.render('pages/membro/dashboard', { membro, cobrancaAtual, frequencia, comunicados: comR.rows, comunicadosNaoLidos, proximoEvento: evR.rows[0]||null, grupos: grR.rows, cientificoAvisos });
 });
 
@@ -10094,14 +10181,16 @@ router.get('/membro/cientifico/dados', requireMembro, async (req, res) => {
   const { tipo, id } = req.session.membroPortal;
   try {
     const grR = await query(`
-      SELECT gc.id as grupo_id, gc.nome as grupo_nome, gc.tipo_trabalho,
-             pc.id as projeto_id, pc.titulo as projeto_titulo, pc.prazo, pc.status as projeto_status,
-             (SELECT status FROM versoes_trabalho v WHERE v.grupo_id=gc.id ORDER BY v.enviado_em DESC LIMIT 1) as ultimo_status
+      SELECT gc.id as grupo_id, gc.nome as grupo_nome, gc.tipo_trabalho, gc.status as grupo_status,
+             pc.id as projeto_id, pc.titulo as projeto_titulo, COALESCE(gc.prazo, pc.prazo) as prazo, pc.status as projeto_status,
+             (SELECT status FROM versoes_trabalho v WHERE v.grupo_id=gc.id ORDER BY v.enviado_em DESC LIMIT 1) as ultimo_status,
+             (SELECT ru.nome FROM versoes_trabalho v LEFT JOIN usuarios ru ON ru.id=v.revisor_atual_id WHERE v.grupo_id=gc.id ORDER BY v.enviado_em DESC LIMIT 1) as revisor_atual_nome,
+             (SELECT COUNT(*) FROM versoes_trabalho v WHERE v.grupo_id=gc.id AND v.status IN ('aguardando','em_revisao')) as pendentes
       FROM membros_grupo_cientifico m
       JOIN grupos_cientificos gc ON gc.id=m.grupo_id
       JOIN projetos_cientificos pc ON pc.id=gc.projeto_id
       WHERE m.origem_tipo=$1 AND m.origem_id=$2
-      ORDER BY pc.prazo ASC NULLS LAST
+      ORDER BY COALESCE(gc.prazo, pc.prazo) ASC NULLS LAST
     `, [tipo, id]);
     const grupoIds = grR.rows.map(g => g.grupo_id);
     const projetoIds = [...new Set(grR.rows.map(g => g.projeto_id))];

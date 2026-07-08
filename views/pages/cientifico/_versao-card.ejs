@@ -1,0 +1,69 @@
+<%
+// Partial reutilizado nos modos colaborativo e individual da aba Trabalho.
+// Espera: v (versao), numero, usuario, staffCientifico
+%>
+<div class="versao-item">
+  <div class="versao-info">
+    <div class="versao-nome">v<%=numero%> — <%=v.arquivo_nome%></div>
+    <div class="versao-meta">Enviado em <%=new Date(v.enviado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%> por <%=v.enviado_por_nome||'Membro'%></div>
+    <%if(v.revisor_atual_id && (v.status==='em_revisao')){%><div class="versao-meta">Em revisao por <strong><%=v.revisor_atual_nome||'-'%></strong></div><%}%>
+    <%if(v.comentario_revisor){%><div class="comentario-box"><strong>Comentario do revisor:</strong> <%=v.comentario_revisor%></div><%}%>
+    <%if(v.eventos && v.eventos.length){%>
+    <details style="margin-top:6px">
+      <summary style="cursor:pointer;font-size:11.5px;color:var(--texto2)">Historico completo (<%=v.eventos.length%>)</summary>
+      <div style="margin-top:6px">
+        <% var rotulos={enviado:'Enviado',em_revisao:'Em revisao',transferido:'Transferido',aprovado:'Aprovado',devolvido:'Devolvido'}; %>
+        <% v.eventos.forEach(function(ev){ %>
+        <div style="padding:6px 0;border-top:1px solid var(--borda);font-size:11.5px;color:var(--texto2)">
+          <strong style="color:var(--texto)"><%=rotulos[ev.tipo]||ev.tipo%></strong>
+          por <%=ev.autor_nome||'-'%><%=ev.destino_nome?(' para '+ev.destino_nome):''%>
+          — <%=new Date(ev.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%>
+          <%if(ev.comentario){%><div style="margin-top:2px"><%=ev.comentario%></div><%}%>
+        </div>
+        <% }); %>
+      </div>
+    </details>
+    <%}%>
+  </div>
+  <div class="versao-acoes">
+    <span class="vstatus vstatus-<%=v.status%>"><%=v.status.replace('_',' ')%></span>
+    <a href="/cientifico/versao/<%=v.id%>/download" class="btn btn-sm" target="_blank"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Baixar</a>
+    <%if(v.status==='aguardando'||v.status==='devolvido'){%>
+    <form method="POST" action="/cientifico/versao/<%=v.id%>/iniciar-revisao" style="display:inline;margin:0"><button class="btn btn-sm" style="background:#fff7ed;color:#c2410c;border-color:#fed7aa">Revisar</button></form>
+    <%}%>
+  </div>
+</div>
+<%if(v.status==='em_revisao'){%>
+<div class="revisao-form">
+  <%if(v.revisor_atual_id===usuario.id){%>
+    <button type="button" class="btn btn-sm" onclick="gerarApoioRevisor(<%=v.id%>)" id="btn-apoio-<%=v.id%>" style="margin-bottom:10px">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
+      Gerar apoio tecnico com IA
+    </button>
+    <div id="apoio-revisor-<%=v.id%>" style="display:none;margin-bottom:12px;background:var(--fundo);border:1px solid var(--borda);padding:12px 14px;font-size:12.5px"></div>
+    <h4>Devolver ou Aprovar</h4>
+    <form method="POST" action="/cientifico/versao/<%=v.id%>/revisar">
+      <textarea name="comentario" placeholder="Comentario para o grupo (opcional ao aprovar, recomendado ao devolver)"></textarea>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button type="submit" name="acao" value="devolver" class="btn btn-sm vermelho">Devolver com correcoes</button>
+        <button type="submit" name="acao" value="aprovar" class="btn btn-sm verde">Aprovar trabalho</button>
+      </div>
+    </form>
+    <%if(staffCientifico && staffCientifico.filter(function(s){return s.id!==usuario.id}).length){%>
+    <details style="margin-top:10px">
+      <summary style="cursor:pointer;font-size:12px;color:var(--texto2)">Transferir para outro revisor</summary>
+      <form method="POST" action="/cientifico/versao/<%=v.id%>/transferir" style="margin-top:8px;display:flex;gap:8px">
+        <select name="usuario_id" required style="flex:1;padding:7px;border:1px solid var(--borda);background:var(--card);color:var(--texto)">
+          <% staffCientifico.filter(function(s){return s.id!==usuario.id}).forEach(function(s){ %>
+          <option value="<%=s.id%>"><%=s.nome%></option>
+          <% }); %>
+        </select>
+        <button type="submit" class="btn btn-sm">Transferir</button>
+      </form>
+    </details>
+    <%}%>
+  <%}else{%>
+    <div style="font-size:12.5px;color:var(--texto2);padding:8px 0">Este trabalho esta sendo revisado por <strong><%=v.revisor_atual_nome||'outro membro da equipe'%></strong>. Somente essa pessoa pode aprovar, devolver ou transferir.</div>
+  <%}%>
+</div>
+<%}%>

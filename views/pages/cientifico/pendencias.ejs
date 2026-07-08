@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <title>Pendencias — Cientifico — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%=config.org_cor||'#1a56db'%>}
+    .pg-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:16px;flex-wrap:wrap}
+    .pg-header h1{font-size:22px;font-weight:700;color:var(--texto);margin:0}
+    .pg-header p{font-size:13px;color:var(--texto2);margin:4px 0 0}
+    .btn{padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--borda);background:var(--card);color:var(--texto);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:7px;border-radius:0!important;box-shadow:none!important}
+    .btn:hover{background:var(--hover)}
+    .btn-sm{padding:6px 12px;font-size:12px}
+    .lista{display:flex;flex-direction:column;gap:10px}
+    .pend-card{background:var(--card);border:1px solid var(--borda);padding:16px 18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+    .pend-info{flex:1;min-width:220px}
+    .pend-titulo{font-size:14px;font-weight:700;color:var(--texto)}
+    .pend-sub{font-size:12px;color:var(--texto2);margin-top:3px}
+    .badge{display:inline-flex;align-items:center;padding:3px 10px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;border:1px solid;white-space:nowrap;border-radius:0!important}
+    .badge-aguardando{background:#f1f5f9;color:#475569;border-color:#e2e8f0}
+    .badge-em_revisao{background:#fff7ed;color:#c2410c;border-color:#fed7aa}
+    .empty{text-align:center;padding:60px 20px;color:var(--texto2)}
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../../partials/sidebar',{paginaAtual:'cientifico',config,usuario,permissoesAtivas:permissoesAtivas||[]}) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Pendencias do Cientifico</h1>
+      <div class="topbar-acoes">
+        <a href="/cientifico" class="btn btn-sm">Voltar</a>
+      </div>
+    </div>
+    <div class="content">
+      <div class="pg-header">
+        <div>
+          <p>Todos os trabalhos aguardando correcao, de todos os projetos e grupos, em um so lugar.</p>
+        </div>
+      </div>
+
+      <% if (!pendentes.length) { %>
+        <div class="empty">Nenhum trabalho pendente no momento. Tudo em dia!</div>
+      <% } else { %>
+      <div class="lista">
+        <% pendentes.forEach(function(p){ %>
+        <div class="pend-card">
+          <div class="pend-info">
+            <div class="pend-titulo"><%=p.projeto_titulo%> — <%=p.grupo_nome%></div>
+            <div class="pend-sub">
+              Enviado por <%=p.enviado_por_nome||'membro'%> em <%=new Date(p.enviado_em).toLocaleDateString('pt-BR')%>
+              <%=p.arquivo_nome?(' · '+p.arquivo_nome):''%>
+              <% if(p.revisor_atual_nome){ %> · Em revisao por <strong><%=p.revisor_atual_nome%></strong><% } %>
+            </div>
+          </div>
+          <span class="badge badge-<%=p.status%>"><%=p.status==='em_revisao'?'Em revisao':'Aguardando'%></span>
+          <a href="/cientifico/projeto/<%=p.projeto_id%>/grupo/<%=p.grupo_id%>" class="btn btn-sm">Abrir</a>
+        </div>
+        <% }); %>
+      </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+</body>
+</html>
