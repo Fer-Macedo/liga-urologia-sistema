@@ -2656,13 +2656,15 @@ router.get('/diretivos/:id/excluir', requireAuth, requireSecretaria, async (req,
   res.redirect('/diretivos?status=pendente');
 });
 
-router.post('/diretivos/:id/liberar-edicao', requireAuth, requireSecretaria, async (req, res) => {
-  const r = await query('SELECT edicao_liberada, nome FROM diretivos WHERE id=$1', [req.params.id]);
-  if (!r.rows.length) { req.session.erro = ['Diretivo não encontrado.']; return res.redirect('/diretivos'); }
-  const novo = !r.rows[0].edicao_liberada;
-  await query('UPDATE diretivos SET edicao_liberada=$1 WHERE id=$2', [novo, req.params.id]);
-  await logAtividade(req.session.usuario.id, novo ? 'DIRETIVO_EDICAO_LIBERADA' : 'DIRETIVO_EDICAO_BLOQUEADA', r.rows[0].nome, req);
-  req.session.msg = [novo ? 'Edição de cadastro liberada para este diretivo.' : 'Edição de cadastro bloqueada para este diretivo.'];
+router.post('/diretivos/:id(\\d+)/liberar-edicao', requireAuth, requireSecretaria, async (req, res) => {
+  try {
+    const r = await query('SELECT edicao_liberada, nome FROM diretivos WHERE id=$1', [req.params.id]);
+    if (!r.rows.length) { req.session.erro = ['Diretivo não encontrado.']; return res.redirect('/diretivos'); }
+    const novo = !r.rows[0].edicao_liberada;
+    await query('UPDATE diretivos SET edicao_liberada=$1 WHERE id=$2', [novo, req.params.id]);
+    await logAtividade(req.session.usuario.id, novo ? 'DIRETIVO_EDICAO_LIBERADA' : 'DIRETIVO_EDICAO_BLOQUEADA', r.rows[0].nome, req);
+    req.session.msg = [novo ? 'Edição de cadastro liberada para este diretivo.' : 'Edição de cadastro bloqueada para este diretivo.'];
+  } catch(e) { req.session.erro = ['Erro ao alterar edição: ' + e.message]; }
   res.redirect('/diretivos');
 });
 
@@ -3386,13 +3388,15 @@ router.get('/ligantes/:id/excluir-pendente', requireAuth, requirePermissao('liga
   res.redirect('/ligantes?status=pendente');
 });
 
-router.post('/ligantes/:id/liberar-edicao', requireAuth, requireSecretaria, async (req, res) => {
-  const r = await query('SELECT edicao_liberada, nome FROM ligantes WHERE id=$1', [req.params.id]);
-  if (!r.rows.length) { req.session.erro = ['Ligante não encontrado.']; return res.redirect('/ligantes'); }
-  const novo = !r.rows[0].edicao_liberada;
-  await query('UPDATE ligantes SET edicao_liberada=$1 WHERE id=$2', [novo, req.params.id]);
-  await logAtividade(req.session.usuario.id, novo ? 'LIGANTE_EDICAO_LIBERADA' : 'LIGANTE_EDICAO_BLOQUEADA', r.rows[0].nome, req);
-  req.session.msg = [novo ? 'Edição de cadastro liberada para este ligante.' : 'Edição de cadastro bloqueada para este ligante.'];
+router.post('/ligantes/:id(\\d+)/liberar-edicao', requireAuth, requireSecretaria, async (req, res) => {
+  try {
+    const r = await query('SELECT edicao_liberada, nome FROM ligantes WHERE id=$1', [req.params.id]);
+    if (!r.rows.length) { req.session.erro = ['Ligante não encontrado.']; return res.redirect('/ligantes'); }
+    const novo = !r.rows[0].edicao_liberada;
+    await query('UPDATE ligantes SET edicao_liberada=$1 WHERE id=$2', [novo, req.params.id]);
+    await logAtividade(req.session.usuario.id, novo ? 'LIGANTE_EDICAO_LIBERADA' : 'LIGANTE_EDICAO_BLOQUEADA', r.rows[0].nome, req);
+    req.session.msg = [novo ? 'Edição de cadastro liberada para este ligante.' : 'Edição de cadastro bloqueada para este ligante.'];
+  } catch(e) { req.session.erro = ['Erro ao alterar edição: ' + e.message]; }
   res.redirect('/ligantes');
 });
 
