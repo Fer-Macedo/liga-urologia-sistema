@@ -1033,27 +1033,54 @@ router.get('/dashboard', requireAuth, async (req, res) => {
   const hoje = dayjs();
   const mes = hoje.format('YYYY-MM');
   const mesStr = '%-' + mes;
-  const [total, pagos, pendentes, atrasados, recTot, pendTot, atrTot, recentes, aniversariantes] = await Promise.all([
-    query("SELECT COUNT(*) n FROM membros WHERE ativo=1"),
-    query("SELECT COUNT(*) n FROM cobrancas WHERE status='pago' AND referencia LIKE $1", [mesStr]),
-    query("SELECT COUNT(*) n FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='pendente' AND c.referencia LIKE $1 AND m.ativo=1", [mesStr]),
-    query("SELECT COUNT(*) n FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE (c.status='atrasado' OR (c.status='pendente' AND c.data_vencimento::date < CURRENT_DATE)) AND m.ativo=1"),
-    query("SELECT COALESCE(SUM(COALESCE(valor_pago,valor_desconto)),0) v FROM cobrancas WHERE status='pago' AND referencia LIKE $1", [mesStr]),
-    query("SELECT COALESCE(SUM(valor_cheio),0) v FROM cobrancas WHERE status='pendente' AND referencia LIKE $1", [mesStr]),
-    query("SELECT COALESCE(SUM(valor_cheio),0) v FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE (c.status='atrasado' OR (c.status='pendente' AND c.data_vencimento::date < CURRENT_DATE)) AND m.ativo=1"),
-    query("SELECT c.*, m.nome FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='pago' ORDER BY c.data_pagamento DESC LIMIT 8"),
-    query("SELECT * FROM (SELECT nome, whatsapp, data_nascimento::text, TO_CHAR(data_nascimento::date,'MM-DD') as aniv, 'membro' as tipo FROM membros WHERE ativo=1 AND data_nascimento IS NOT NULL UNION ALL SELECT nome, whatsapp, data_nascimento::text, TO_CHAR(data_nascimento::date,'MM-DD') as aniv, 'diretivo' as tipo FROM diretivos WHERE ativo=1 AND data_nascimento IS NOT NULL) t ORDER BY CASE WHEN aniv >= TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','MM-DD') THEN 0 ELSE 1 END, aniv LIMIT 8")
-  ]);
 
-  const stats = {
-    total: total.rows[0].n, pagos: pagos.rows[0].n, pendentes: pendentes.rows[0].n,
-    atrasados: atrasados.rows[0].n, totalRecebido: recTot.rows[0].v,
-    totalPendente: pendTot.rows[0].v, totalAtrasado: atrTot.rows[0].v
-  };
+  // Dados financeiros (inadimplencia, receita, pagamentos) so fazem sentido para quem
+  // realmente acompanha as financas da Liga - os demais perfis veem um painel diferente.
+  const verFinanceiro = ['admin', 'presidencia', 'secretaria', 'financeiro'].includes(req.session.usuario.perfil);
+
+  const consultas = [
+    query("SELECT COUNT(*) n FROM membros WHERE ativo=1"),
+    query("SELECT * FROM (SELECT nome, whatsapp, data_nascimento::text, TO_CHAR(data_nascimento::date,'MM-DD') as aniv, 'membro' as tipo FROM membros WHERE ativo=1 AND data_nascimento IS NOT NULL UNION ALL SELECT nome, whatsapp, data_nascimento::text, TO_CHAR(data_nascimento::date,'MM-DD') as aniv, 'diretivo' as tipo FROM diretivos WHERE ativo=1 AND data_nascimento IS NOT NULL) t ORDER BY CASE WHEN aniv >= TO_CHAR(NOW() AT TIME ZONE 'America/Sao_Paulo','MM-DD') THEN 0 ELSE 1 END, aniv LIMIT 8")
+  ];
+  if (verFinanceiro) {
+    consultas.push(
+      query("SELECT COUNT(*) n FROM cobrancas WHERE status='pago' AND referencia LIKE $1", [mesStr]),
+      query("SELECT COUNT(*) n FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='pendente' AND c.referencia LIKE $1 AND m.ativo=1", [mesStr]),
+      query("SELECT COUNT(*) n FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE (c.status='atrasado' OR (c.status='pendente' AND c.data_vencimento::date < CURRENT_DATE)) AND m.ativo=1"),
+      query("SELECT COALESCE(SUM(COALESCE(valor_pago,valor_desconto)),0) v FROM cobrancas WHERE status='pago' AND referencia LIKE $1", [mesStr]),
+      query("SELECT COALESCE(SUM(valor_cheio),0) v FROM cobrancas WHERE status='pendente' AND referencia LIKE $1", [mesStr]),
+      query("SELECT COALESCE(SUM(valor_cheio),0) v FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE (c.status='atrasado' OR (c.status='pendente' AND c.data_vencimento::date < CURRENT_DATE)) AND m.ativo=1"),
+      query("SELECT c.*, m.nome FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='pago' ORDER BY c.data_pagamento DESC LIMIT 8")
+    );
+  } else {
+    // Sem acesso financeiro: mostra os proximos eventos no lugar, se tiver permissao pra isso.
+    const temEventos = req.session.usuario.perfil === 'admin' || (req.session.permissoesAtivas || []).includes('eventos');
+    consultas.push(temEventos
+      ? query("SELECT id, nome, data_inicio, local FROM eventos WHERE data_inicio >= NOW() ORDER BY data_inicio ASC LIMIT 5")
+      : Promise.resolve({ rows: [] })
+    );
+  }
+
+  const resultados = await Promise.all(consultas);
+  const [total, aniversariantes] = resultados;
+
+  let stats = { total: total.rows[0].n, pagos: 0, pendentes: 0, atrasados: 0, totalRecebido: 0, totalPendente: 0, totalAtrasado: 0 };
+  let recentes = [], proximosEventos = [];
+  if (verFinanceiro) {
+    const [pagos, pendentes, atrasados, recTot, pendTot, atrTot, recentesR] = resultados.slice(2);
+    stats = {
+      total: total.rows[0].n, pagos: pagos.rows[0].n, pendentes: pendentes.rows[0].n,
+      atrasados: atrasados.rows[0].n, totalRecebido: recTot.rows[0].v,
+      totalPendente: pendTot.rows[0].v, totalAtrasado: atrTot.rows[0].v
+    };
+    recentes = recentesR.rows;
+  } else {
+    proximosEventos = resultados[2].rows;
+  }
 
   res.render('pages/dashboard', {
-    config, usuario: req.session.usuario, stats,
-    recentes: recentes.rows, aniversariantes: aniversariantes.rows,
+    config, usuario: req.session.usuario, stats, verFinanceiro,
+    recentes, aniversariantes: aniversariantes.rows, proximosEventos,
     dayjs, msg: req.flash('msg'), erro: req.flash('erro')
   });
 });
