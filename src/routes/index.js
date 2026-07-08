@@ -8174,21 +8174,29 @@ router.get('/atas', requireAuth, requirePermissao('atas'), async (req, res) => {
 });
 
 router.post('/atas', requireAuth, requirePermissao('atas'), async (req, res) => {
-  const { numero, tipo, data_reuniao, hora_inicio, hora_fim, local, pauta, corpo, membros_json } = req.body;
-  const r = await query(
-    'INSERT INTO atas_reuniao(numero,tipo,data_reuniao,hora_inicio,hora_fim,local,pauta,corpo,status,criado_por) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id',
-    [numero||null, tipo, data_reuniao, hora_inicio||null, hora_fim||null, local, pauta, corpo, 'rascunho', req.session.usuario.id]
-  );
-  const ataId = r.rows[0].id;
-  if(membros_json) {
-    const membros = JSON.parse(membros_json);
-    for(const m of membros) {
-      await query('INSERT INTO atas_presentes(ata_id,membro_tipo,membro_id,membro_nome,membro_cargo,presente) VALUES($1,$2,$3,$4,$5,$6)',
-        [ataId, m.tipo, m.id, m.nome, m.cargo||'', true]);
+  try {
+    let { numero, tipo, data_reuniao, hora_inicio, hora_fim, local, pauta, corpo, membros_json } = req.body;
+    if (Array.isArray(numero)) numero = numero[0]; // campo duplicado no form antigo podia mandar array
+    if (numero) numero = String(numero).slice(0, 20);
+    const r = await query(
+      'INSERT INTO atas_reuniao(numero,tipo,data_reuniao,hora_inicio,hora_fim,local,pauta,corpo,status,criado_por) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id',
+      [numero||null, tipo, data_reuniao, hora_inicio||null, hora_fim||null, local, pauta, corpo, 'rascunho', req.session.usuario.id]
+    );
+    const ataId = r.rows[0].id;
+    if(membros_json) {
+      const membros = JSON.parse(membros_json);
+      for(const m of membros) {
+        await query('INSERT INTO atas_presentes(ata_id,membro_tipo,membro_id,membro_nome,membro_cargo,presente) VALUES($1,$2,$3,$4,$5,$6)',
+          [ataId, m.tipo, m.id, m.nome, m.cargo||'', true]);
+      }
     }
+    req.session.msg = ['Ata criada com sucesso!'];
+    res.redirect('/atas');
+  } catch(e) {
+    console.error('[Atas] Erro ao criar ata:', e.message);
+    req.session.erro = ['Erro ao criar a ata: ' + e.message];
+    res.redirect('/atas');
   }
-  req.session.msg = ['Ata criada com sucesso!'];
-  res.redirect('/atas');
 });
 
 router.get('/atas/:id', requireAuth, requirePermissao('atas'), async (req, res) => {
