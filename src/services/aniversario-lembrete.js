@@ -14,12 +14,13 @@ async function enviarLembreteAniversarioEquipe(momento) {
     if (jaEnviado.rows.length) return;
 
     const aniversariantes = await query(
-      `SELECT nome, 'Ligante' as tipo FROM ligantes WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1
+      `SELECT nome, 'Ligante' as tipo, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM ligantes WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1
        UNION ALL
-       SELECT nome, 'Diretivo' as tipo FROM diretivos WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1`,
+       SELECT nome, 'Diretivo' as tipo, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM diretivos WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1`,
       [md]
     );
     if (!aniversariantes.rows.length) return;
+    const semFoto = aniversariantes.rows.filter(a => !a.foto_chave);
 
     const destinatarios = await query(
       `SELECT DISTINCT u.telefone FROM usuarios u
@@ -31,9 +32,12 @@ async function enviarLembreteAniversarioEquipe(momento) {
 
     const nomes = aniversariantes.rows.map(a => `• ${a.nome} (${a.tipo})`).join('\n');
     const dataFormatada = alvo.format('DD/MM');
+    const avisoFoto = semFoto.length
+      ? `\n\n⚠️ Sem foto cadastrada: ${semFoto.map(a => a.nome).join(', ')}. Cadastre a foto até antes das 6h de amanhã, senão o Story automático dessa(s) pessoa(s) não sai.`
+      : '';
     const mensagem = momento === 'dia'
       ? `🎂 *Aniversário hoje (${dataFormatada})*\n\n${nomes}\n\nNão esqueça de fazer o post de aniversário no grupo dos Ligantes e no grupo de Avisos!`
-      : `🎂 *Aniversário amanhã (${dataFormatada})*\n\n${nomes}\n\nJá deixe preparado o post de aniversário para amanhã, no grupo dos Ligantes e no grupo de Avisos!`;
+      : `🎂 *Aniversário amanhã (${dataFormatada})*\n\n${nomes}\n\nJá deixe preparado o post de aniversário para amanhã, no grupo dos Ligantes e no grupo de Avisos!${avisoFoto}`;
 
     // Usa a fila (nao "urgente") para respeitar o intervalo anti-banimento ja existente
     // entre cada envio, mesmo sendo poucos destinatarios (marketing/presidencia/admin).
