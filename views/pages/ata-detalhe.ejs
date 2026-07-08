@@ -80,7 +80,13 @@
         <div id="gravacao-upload-barra" style="width:0%;background:#7c3aed;height:8px;border-radius:99px;transition:width .15s"></div>
       </div>
     </div>
-    <div id="gravacao-loading" style="display:none;font-size:13px;color:#7c3aed;margin-bottom:10px">Transcrevendo e redigindo a ata... para reuniões curtas leva menos de 1 minuto, mas para reuniões de 1h ou mais pode levar <b>vários minutos</b>. Não feche nem atualize esta aba — o processamento continua no servidor mesmo assim, mas você perde o acompanhamento.</div>
+    <div id="gravacao-loading" style="display:none;margin-bottom:10px">
+      <div style="font-size:13px;color:#7c3aed;margin-bottom:6px" id="gravacao-proc-label">Transcrevendo e redigindo a ata...</div>
+      <div style="background:#ede9fe;border-radius:99px;height:8px;overflow:hidden">
+        <div id="gravacao-proc-barra" style="width:0%;background:#7c3aed;height:8px;border-radius:99px;transition:width .4s linear"></div>
+      </div>
+      <div style="font-size:11.5px;color:#94a3b8;margin-top:6px">Estimativa com base no tamanho do áudio — para reuniões de 1h ou mais pode levar vários minutos de verdade. Não feche nem atualize esta aba: o processamento continua no servidor mesmo assim, mas você perde o acompanhamento.</div>
+    </div>
     <div id="gravacao-resultado" style="display:none">
       <div style="font-size:12px;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;padding:8px 12px;margin-bottom:12px">Rascunho gerado a partir do áudio! Revise a Pauta e o Corpo abaixo (abertos no modo de edição) antes de salvar.</div>
     </div>
@@ -505,13 +511,39 @@ function enviarAudioParaIA(blob, nomeArquivo){
     barra.style.width=pct+'%';
     label.textContent='Enviando áudio... '+pct+'%';
   };
+  let procInterval=null;
+  function iniciarProgressoEstimado(tamanhoBytes){
+    const procBarra=document.getElementById('gravacao-proc-barra');
+    const procLabel=document.getElementById('gravacao-proc-label');
+    // Estimativa grosseira: duracao do audio ~ 1MB por minuto de gravacao (varia por
+    // formato/qualidade), e o processamento (transcricao + redacao) leva uns 3s por
+    // minuto de audio - so para dar uma nocao de progresso, nao e um numero exato.
+    const duracaoMin = Math.max(1, tamanhoBytes/(1024*1024));
+    const estimadoSeg = Math.min(850, Math.max(20, duracaoMin*3));
+    const inicio = Date.now();
+    procInterval=setInterval(function(){
+      const decorridoSeg=(Date.now()-inicio)/1000;
+      const pct=Math.min(92, Math.round(92*(1-Math.exp(-decorridoSeg/estimadoSeg))));
+      procBarra.style.width=pct+'%';
+      const min=Math.floor(decorridoSeg/60), seg=Math.floor(decorridoSeg%60);
+      procLabel.textContent='Transcrevendo e redigindo a ata... '+pct+'% (estimado) — '+min+'min '+String(seg).padStart(2,'0')+'s decorridos';
+    },500);
+  }
+  function pararProgressoEstimado(sucesso){
+    if(procInterval){ clearInterval(procInterval); procInterval=null; }
+    const procBarra=document.getElementById('gravacao-proc-barra');
+    if(procBarra) procBarra.style.width = sucesso ? '100%' : procBarra.style.width;
+  }
+
   xhr.upload.onload=function(){
     label.textContent='Envio concluído! Processando...';
     barra.style.width='100%';
     barraBox.style.display='none';
     document.getElementById('gravacao-loading').style.display='block';
+    iniciarProgressoEstimado(blob.size||0);
   };
   xhr.onload=function(){
+    pararProgressoEstimado(true);
     document.getElementById('gravacao-loading').style.display='none';
     barraBox.style.display='none';
     let d;
@@ -530,6 +562,7 @@ function enviarAudioParaIA(blob, nomeArquivo){
     form.scrollIntoView({behavior:'smooth'});
   };
   xhr.onerror=function(){
+    pararProgressoEstimado(false);
     barraBox.style.display='none';
     document.getElementById('gravacao-loading').style.display='none';
     document.getElementById('gravacao-status').textContent='Erro ao enviar o áudio. Tente novamente.';
