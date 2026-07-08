@@ -29,10 +29,10 @@
 <div class="layout">
   <%- include('../../partials/sidebar',{paginaAtual:'cientifico',config,usuario,permissoesAtivas:permissoesAtivas||[]}) %>
   <main class="main">
-    <div class="topbar">
+    <div class="topbar" style="position:relative;z-index:95">
       <h1 class="page-titulo">Pendencias do Cientifico</h1>
-      <div class="topbar-acoes">
-        <a href="/cientifico" class="btn btn-sm">Voltar</a>
+      <div class="topbar-acoes" style="position:relative;z-index:90">
+        <a href="/cientifico" class="btn btn-sm" style="position:relative;z-index:90">Voltar</a>
       </div>
     </div>
     <div class="content">

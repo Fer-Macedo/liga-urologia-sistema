@@ -51,12 +51,12 @@
 <div class="layout">
   <%- include('../../partials/sidebar',{paginaAtual:'cientifico',config,usuario,permissoesAtivas:permissoesAtivas||[]}) %>
   <main class="main">
-    <div class="topbar">
+    <div class="topbar" style="position:relative;z-index:95">
       <h1 class="page-titulo"><%=projeto.titulo%></h1>
-      <div class="topbar-acoes">
-        <a href="/cientifico" class="btn btn-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Projetos</a>
+      <div class="topbar-acoes" style="position:relative;z-index:90">
+        <a href="/cientifico" class="btn btn-sm" style="position:relative;z-index:90"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Projetos</a>
         <span class="badge <%=projeto.status==='aberto'?'badge-aberto':projeto.status==='encerrado'?'badge-encerrado':'badge-revisao'%>"><%=projeto.status%></span>
-        <a href="/cientifico/projeto/<%=projeto.id%>/editar" class="btn btn-sm">Editar</a>
+        <a href="/cientifico/projeto/<%=projeto.id%>/editar" class="btn btn-sm" style="position:relative;z-index:90">Editar</a>
       </div>
     </div>
     <div class="content">
