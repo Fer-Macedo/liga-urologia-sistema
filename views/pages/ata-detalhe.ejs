@@ -64,24 +64,34 @@
       <button class="btn btn-secondary" style="background:#fee2e2;color:#dc2626" onclick="excluirAta()">Excluir Ata</button>
       <button class="btn btn-primary" style="background:#7c3aed" onclick="toggleGravacao()" id="btn-gravar">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:4px"><circle cx="12" cy="12" r="8"/></svg>
-        Gravar Reunião com IA
+        Gerar Ata com IA
       </button>
     </div>
   </div>
 
   <!-- PAINEL DE GRAVACAO -->
   <div class="card" id="card-gravacao" style="display:none">
-    <div class="card-titulo">Gravação da Reunião (IA)</div>
-    <div id="gravacao-status" style="font-size:13px;color:#64748b;margin-bottom:10px">Clique em "Gravar Reunião com IA" para começar. O áudio fica gravando até você clicar em "Parar e Gerar Ata".</div>
+    <div class="card-titulo">Gerar Ata com IA</div>
+    <div id="gravacao-status" style="font-size:13px;color:#64748b;margin-bottom:10px">Grave a reunião agora pelo navegador, ou envie um áudio já gravado (ex: pelo gravador de voz do celular) para a IA transcrever e redigir o rascunho da ata.</div>
     <div id="gravacao-timer" style="display:none;font-family:monospace;font-size:22px;font-weight:700;color:#7c3aed;margin-bottom:10px">00:00</div>
     <div id="gravacao-loading" style="display:none;font-size:13px;color:#7c3aed;margin-bottom:10px">Transcrevendo e redigindo a ata... isso pode levar até 1 minuto para reuniões longas.</div>
     <div id="gravacao-resultado" style="display:none">
       <div style="font-size:12px;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;padding:8px 12px;margin-bottom:12px">Rascunho gerado a partir do áudio! Revise a Pauta e o Corpo abaixo (abertos no modo de edição) antes de salvar.</div>
     </div>
-    <div style="border-top:1px solid #e2e8f0;margin-top:14px;padding-top:14px">
-      <div style="font-size:12px;color:#64748b;margin-bottom:8px">Prefere mais segurança em reuniões longas? Grave com o gravador de voz nativo do celular (continua gravando mesmo com a tela apagada ou trocando de app) e envie o arquivo de áudio aqui depois:</div>
-      <input type="file" id="input-audio-upload" accept="audio/*" style="font-size:12px">
-      <button type="button" class="btn btn-secondary" onclick="enviarArquivoAudio()">Enviar áudio e gerar ata</button>
+    <div id="gravacao-acao-inicial" style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:1;min-width:220px">
+        <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:6px">Gravar agora pelo navegador</div>
+        <button type="button" class="btn btn-secondary" onclick="iniciarGravacao()" id="btn-iniciar-gravacao">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="#dc2626" style="vertical-align:-1px;margin-right:4px"><circle cx="12" cy="12" r="8"/></svg>
+          Iniciar gravação ao vivo
+        </button>
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px">Mantenha esta aba aberta durante a reunião.</div>
+      </div>
+      <div style="flex:1;min-width:220px;border-left:1px solid #e2e8f0;padding-left:16px">
+        <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:6px">Já tem um áudio gravado (ex: no celular)?</div>
+        <input type="file" id="input-audio-upload" accept="audio/*" style="font-size:12px;display:block;margin-bottom:8px">
+        <button type="button" class="btn btn-secondary" onclick="enviarArquivoAudio()">Enviar áudio e gerar ata</button>
+      </div>
     </div>
   </div>
 
@@ -411,8 +421,9 @@ function excluirAta(){
 // ─── GRAVACAO DA REUNIAO COM IA ────────────────────────────────────────────
 let _gravador=null, _chunksAudio=[], _gravando=false, _timerInterval=null, _segundos=0, _wakeLock=null;
 function toggleGravacao(){
-  document.getElementById('card-gravacao').style.display='block';
-  if(!_gravando) iniciarGravacao(); else pararGravacao();
+  const card=document.getElementById('card-gravacao');
+  if(_gravando){ pararGravacao(); return; }
+  card.style.display = card.style.display==='none' ? 'block' : 'none';
 }
 function iniciarGravacao(){
   if(!navigator.mediaDevices || !window.MediaRecorder){
@@ -435,9 +446,10 @@ function iniciarGravacao(){
     if('wakeLock' in navigator){
       navigator.wakeLock.request('screen').then(function(wl){ _wakeLock=wl; }).catch(function(){});
     }
-    document.getElementById('gravacao-status').innerHTML='Gravando... fale normalmente durante a reunião.<br><b>Mantenha esta aba aberta e em primeiro plano até parar a gravação</b> — se trocar de app ou a tela travar, a gravação pode ser interrompida pelo sistema do celular. Para reuniões longas, prefira gravar com o app nativo de voz do celular e enviar o arquivo depois (opção abaixo).';
+    document.getElementById('gravacao-status').innerHTML='Gravando... fale normalmente durante a reunião.<br><b>Mantenha esta aba aberta e em primeiro plano até parar a gravação</b> — se trocar de app ou a tela travar, a gravação pode ser interrompida pelo sistema do celular. Para reuniões longas, prefira gravar com o app nativo de voz do celular e enviar o arquivo depois.';
     document.getElementById('gravacao-timer').style.display='block';
     document.getElementById('gravacao-resultado').style.display='none';
+    document.getElementById('gravacao-acao-inicial').style.display='none';
     document.getElementById('btn-gravar').innerHTML='⏹ Parar e Gerar Ata';
     _timerInterval=setInterval(function(){
       _segundos++;
@@ -458,13 +470,14 @@ function pararGravacao(){
     document.getElementById('gravacao-status').textContent='Processando...';
     document.getElementById('gravacao-timer').style.display='none';
     document.getElementById('gravacao-loading').style.display='block';
-    document.getElementById('btn-gravar').innerHTML='Gravar Reunião com IA';
+    document.getElementById('btn-gravar').innerHTML='Gerar Ata com IA';
   }
 }
 function enviarArquivoAudio(){
   const input=document.getElementById('input-audio-upload');
   if(!input.files.length){ alert('Selecione um arquivo de áudio primeiro.'); return; }
   document.getElementById('card-gravacao').style.display='block';
+  document.getElementById('gravacao-acao-inicial').style.display='none';
   document.getElementById('gravacao-loading').style.display='block';
   document.getElementById('gravacao-status').textContent='Processando o áudio enviado...';
   enviarAudioParaIA(input.files[0], input.files[0].name);
