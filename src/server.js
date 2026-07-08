@@ -60,6 +60,10 @@ app.use(session({
 }));
 app.use(flash());
 
+const { csrfInjetar, csrfVerificar } = require('./middleware/csrf');
+app.use(csrfInjetar);
+app.use(csrfVerificar);
+
 app.use((req, res, next) => {
   res.locals.usuarioLogado = req.session.usuario || null;
   res.locals.permissoesAtivas = req.session.permissoesAtivas || [];
