@@ -2824,7 +2824,7 @@ router.post('/live/:token/sair', async (req, res) => {
     res.json({ok:true});
   } catch(e) { res.json({ok:false}); }
 });
-router.post('/eventos/:id/enviar-link-live', requireAuth, async (req, res) => {
+router.post('/eventos/:id/enviar-link-live', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const crypto = require('crypto');
     const { enviarWhatsApp, enviarEmail } = require('../services/notificacoes');
@@ -2851,7 +2851,7 @@ router.post('/eventos/:id/enviar-link-live', requireAuth, async (req, res) => {
     res.json({ok:true,msg:enviados+' links enviados!'});
   } catch(e) { res.json({ok:false,msg:e.message}); }
 });
-router.get('/eventos/:id/presencas', requireAuth, async (req, res) => {
+router.get('/eventos/:id/presencas', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const config = await getConfig();
     const evR = await query('SELECT * FROM eventos WHERE id=$1',[req.params.id]);
@@ -2868,7 +2868,7 @@ router.get('/eventos/:id/presencas', requireAuth, async (req, res) => {
     res.render('pages/evento-presencas',{config,evento:ev,inscricoes:inscrR.rows,duracaoSeg,usuario:req.session.usuario,msg:req.flash('msg')});
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
-router.get('/eventos/:id/presencas-pdf', requireAuth, async (req, res) => {
+router.get('/eventos/:id/presencas-pdf', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const config = await getConfig();
     const evR = await query('SELECT * FROM eventos WHERE id=$1',[req.params.id]);
@@ -2961,7 +2961,7 @@ router.get('/certificado/validar/:codigo', async (req, res) => {
 });
 
 // ─── AVALIACAO POS-EVENTO ────────────────────────────────────────────────────
-router.post('/eventos/:id/enviar-avaliacao', requireAuth, async (req, res) => {
+router.post('/eventos/:id/enviar-avaliacao', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const crypto = require('crypto');
     const {enviarWhatsApp} = require('../services/notificacoes');
@@ -3003,7 +3003,7 @@ router.post('/avaliacao/:token', async (req, res) => {
     res.render('pages/avaliacao-obrigado',{config});
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
-router.get('/eventos/:id/avaliacoes', requireAuth, async (req, res) => {
+router.get('/eventos/:id/avaliacoes', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const config = await getConfig();
     const evR = await query('SELECT * FROM eventos WHERE id=$1',[req.params.id]);
@@ -3037,7 +3037,7 @@ router.post('/inscricao/:id/lista-espera', async (req, res) => {
   } catch(e) { res.json({ok:false, msg:'Erro: '+e.message}); }
 });
 
-router.get('/eventos/:id/lista-espera', requireAuth, async (req, res) => {
+router.get('/eventos/:id/lista-espera', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const r = await query('SELECT * FROM evento_lista_espera WHERE evento_id=$1 ORDER BY criado_em ASC', [req.params.id]);
     res.json({ok:true, espera: r.rows});
@@ -3466,7 +3466,7 @@ router.get('/diretivos/relatorio', requireAuth, requireSecretaria, async (req, r
 
 // ─── ARQUIVOS FINANCEIROS ─────────────────────────────────────────────────────
 
-router.get('/financeiro-arquivos', requireAuth, async (req, res) => {
+router.get('/financeiro-arquivos', requireAuth, requirePermissao('financeiro-arquivos'), async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg||[]; req.session.msg=[];
   const erro = req.session.erro||[]; req.session.erro=[];
@@ -3478,7 +3478,7 @@ router.get('/financeiro-arquivos', requireAuth, async (req, res) => {
   res.render('pages/financeiro-arquivos', { config, usuario: req.session.usuario, msg, erro, pastas: pastasR.rows, arquivos: arquivosR.rows, pastaAtual });
 });
 
-router.post('/financeiro-arquivos/pasta', requireAuth, async (req, res) => {
+router.post('/financeiro-arquivos/pasta', requireAuth, requirePermissao('financeiro-arquivos'), async (req, res) => {
   const { nome, pai_id } = req.body;
   const pasta_id = pai_id && pai_id !== '' ? pai_id : null;
   await query('INSERT INTO financeiro_pastas (nome, pai_id, criado_por) VALUES ($1,$2,$3)', [nome, pasta_id, req.session.usuario.id]);
@@ -3486,7 +3486,7 @@ router.post('/financeiro-arquivos/pasta', requireAuth, async (req, res) => {
   res.redirect(pasta_id ? '/financeiro-arquivos?pasta=' + pasta_id : '/financeiro-arquivos');
 });
 
-router.post('/financeiro-arquivos/upload', requireAuth, async (req, res) => {
+router.post('/financeiro-arquivos/upload', requireAuth, requirePermissao('financeiro-arquivos'), async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
     upload.array('arquivos', 20)(req, res, async (err) => {
@@ -3499,7 +3499,7 @@ router.post('/financeiro-arquivos/upload', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/financeiro-arquivos'); }
 });
 
-router.post('/financeiro-arquivos/google', requireAuth, async (req, res) => {
+router.post('/financeiro-arquivos/google', requireAuth, requirePermissao('financeiro-arquivos'), async (req, res) => {
   const { nome, google_url, google_tipo, pasta_id } = req.body;
   const pid = pasta_id && pasta_id !== '' ? pasta_id : null;
   let embed = google_url;
@@ -3510,7 +3510,7 @@ router.post('/financeiro-arquivos/google', requireAuth, async (req, res) => {
   res.redirect('/financeiro-arquivos' + (pid ? '?pasta='+pid : ''));
 });
 
-router.get('/financeiro-arquivos/:id/visualizar', requireAuth, async (req, res) => {
+router.get('/financeiro-arquivos/:id/visualizar', requireAuth, requirePermissao('financeiro-arquivos'), async (req, res) => {
   try {
     const r = await query('SELECT * FROM financeiro_arquivos WHERE id=$1', [req.params.id]);
     const a = r.rows[0];
@@ -3520,7 +3520,7 @@ router.get('/financeiro-arquivos/:id/visualizar', requireAuth, async (req, res) 
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
-router.get('/financeiro-arquivos/:id/download', requireAuth, async (req, res) => {
+router.get('/financeiro-arquivos/:id/download', requireAuth, requirePermissao('financeiro-arquivos'), async (req, res) => {
   try {
     const r = await query('SELECT * FROM financeiro_arquivos WHERE id=$1', [req.params.id]);
     const a = r.rows[0];
@@ -3530,7 +3530,7 @@ router.get('/financeiro-arquivos/:id/download', requireAuth, async (req, res) =>
   } catch(e) { res.status(500).send('Erro'); }
 });
 
-router.post('/financeiro-arquivos/:id/deletar', requireAuth, async (req, res) => {
+router.post('/financeiro-arquivos/:id/deletar', requireAuth, requirePermissao('financeiro-arquivos'), async (req, res) => {
   const r = await query('SELECT pasta_id FROM financeiro_arquivos WHERE id=$1', [req.params.id]);
   const pid = r.rows[0]?.pasta_id;
   await query('DELETE FROM financeiro_arquivos WHERE id=$1', [req.params.id]);
@@ -3545,7 +3545,7 @@ router.post('/financeiro-pastas/:id/deletar', requireAuth, async (req, res) => {
   res.redirect('/financeiro-arquivos');
 });
 
-router.post('/financeiro-arquivos/deletar-multiplos', requireAuth, async (req, res) => {
+router.post('/financeiro-arquivos/deletar-multiplos', requireAuth, requirePermissao('financeiro-arquivos'), async (req, res) => {
   try {
     const ids = req.body.ids ? (Array.isArray(req.body.ids) ? req.body.ids : [req.body.ids]) : [];
     const pasta_id = req.body.pasta_id || null;
@@ -3555,7 +3555,7 @@ router.post('/financeiro-arquivos/deletar-multiplos', requireAuth, async (req, r
   } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/financeiro-arquivos'); }
 });
 
-router.post('/financeiro-arquivos/:id/mover', requireAuth, async (req, res) => {
+router.post('/financeiro-arquivos/:id/mover', requireAuth, requirePermissao('financeiro-arquivos'), async (req, res) => {
   try { await query('UPDATE financeiro_arquivos SET pasta_id=$1 WHERE id=$2', [req.body.pasta_id||null, req.params.id]); res.json({ ok: true }); }
   catch(e) { res.status(500).json({ erro: e.message }); }
 });
@@ -3703,7 +3703,7 @@ router.get("/arquivos/:id/url", requireAuth, async (req, res) => {
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
-router.get('/financeiro-arquivos/:id/url', requireAuth, async (req, res) => {
+router.get('/financeiro-arquivos/:id/url', requireAuth, requirePermissao('financeiro-arquivos'), async (req, res) => {
   try {
     const r = await query('SELECT chave_r2 FROM financeiro_arquivos WHERE id=$1', [req.params.id]);
     const a = r.rows[0];
@@ -3965,7 +3965,7 @@ router.get('/carta-cobranca', requireAuth, requirePermissao('carta-cobranca'), a
   res.render('pages/carta-cobranca', { config, usuario: req.session.usuario, msg, erro, cartas: cartasR.rows, membros: membrosR.rows, ligantes: ligantesR.rows });
 });
 
-router.post('/carta-cobranca', requireAuth, async (req, res) => {
+router.post('/carta-cobranca', requireAuth, requirePermissao('carta-cobranca'), async (req, res) => {
   const { membro_id, ligante_id, mes_referencia, vencimento } = req.body;
   const mid = membro_id && membro_id !== '' ? parseInt(membro_id) : null;
   const lid = ligante_id && ligante_id !== '' ? parseInt(ligante_id) : null;
@@ -4020,9 +4020,9 @@ async function enviarCartaCobranca(id, req, res, reenvio) {
   } catch(e) { console.log('ERRO carta cobranca:', e.message); req.session.erro=['Erro: '+e.message]; res.redirect('/carta-cobranca'); }
 }
 
-router.post('/carta-cobranca/:id/enviar', requireAuth, (req, res) => enviarCartaCobranca(req.params.id, req, res, false));
-router.post('/carta-cobranca/:id/reenviar', requireAuth, (req, res) => enviarCartaCobranca(req.params.id, req, res, true));
-router.post('/carta-cobranca/:id/deletar', requireAuth, async (req, res) => {
+router.post('/carta-cobranca/:id/enviar', requireAuth, requirePermissao('carta-cobranca'), (req, res) => enviarCartaCobranca(req.params.id, req, res, false));
+router.post('/carta-cobranca/:id/reenviar', requireAuth, requirePermissao('carta-cobranca'), (req, res) => enviarCartaCobranca(req.params.id, req, res, true));
+router.post('/carta-cobranca/:id/deletar', requireAuth, requirePermissao('carta-cobranca'), async (req, res) => {
   await query('DELETE FROM cartas_cobranca WHERE id=$1', [req.params.id]);
   req.session.msg = ['Carta excluída!']; res.redirect('/carta-cobranca');
 });
@@ -4173,7 +4173,7 @@ router.get('/carta-notificacao', requireAuth, requirePermissao('carta-notificaca
   });
 });
 
-router.post('/carta-notificacao', requireAuth, async (req, res) => {
+router.post('/carta-notificacao', requireAuth, requirePermissao('carta-notificacao'), async (req, res) => {
   const { tipo_dest, membro_id, ligante_id, diretivo_id, texto_livre } = req.body;
   const mid = (tipo_dest==='membro'   && membro_id   && membro_id!=='')   ? parseInt(membro_id)   : null;
   const lid = (tipo_dest==='ligante'  && ligante_id  && ligante_id!=='')  ? parseInt(ligante_id)  : null;
@@ -4228,7 +4228,7 @@ async function enviarCartaNotificacao(id, req, res, reenvio) {
   } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/carta-notificacao'); }
 }
 
-router.post('/carta-notificacao/:id/editar', requireAuth, async (req, res) => {
+router.post('/carta-notificacao/:id/editar', requireAuth, requirePermissao('carta-notificacao'), async (req, res) => {
   try {
     const r = await query('SELECT status FROM cartas_notificacao WHERE id=$1',[req.params.id]);
     if (!r.rows[0]) { req.session.erro=['Carta nao encontrada.']; return res.redirect('/carta-notificacao'); }
@@ -4242,9 +4242,9 @@ router.post('/carta-notificacao/:id/editar', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/carta-notificacao'); }
 });
 
-router.post('/carta-notificacao/:id/enviar',   requireAuth, (req,res) => enviarCartaNotificacao(req.params.id,req,res,false));
-router.post('/carta-notificacao/:id/reenviar', requireAuth, (req,res) => enviarCartaNotificacao(req.params.id,req,res,true));
-router.post('/carta-notificacao/:id/deletar',  requireAuth, async (req,res) => {
+router.post('/carta-notificacao/:id/enviar',   requireAuth, requirePermissao('carta-notificacao'), (req,res) => enviarCartaNotificacao(req.params.id,req,res,false));
+router.post('/carta-notificacao/:id/reenviar', requireAuth, requirePermissao('carta-notificacao'), (req,res) => enviarCartaNotificacao(req.params.id,req,res,true));
+router.post('/carta-notificacao/:id/deletar',  requireAuth, requirePermissao('carta-notificacao'), async (req,res) => {
   await query('DELETE FROM cartas_notificacao WHERE id=$1',[req.params.id]);
   req.session.msg=['Carta excluida!']; res.redirect('/carta-notificacao');
 });
@@ -4889,7 +4889,7 @@ async function getEventoStats(eventoId) {
   return { total: parseInt(t.rows[0].count), confirmados: parseInt(conf.rows[0].count), checkins: parseInt(chk.rows[0].count), receita: rec.rows[0].total };
 }
 
-router.get('/eventos', requireAuth, async (req, res) => {
+router.get('/eventos', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg||[]; req.session.msg=[];
   const erro = req.session.erro||[]; req.session.erro=[];
@@ -4900,7 +4900,7 @@ router.get('/eventos', requireAuth, async (req, res) => {
   res.render('pages/eventos', { config, usuario: req.session.usuario, msg, erro, eventos: r.rows, totalInscritos, totalReceita, totalCheckins });
 });
 
-router.post('/eventos', requireAuth, async (req, res) => {
+router.post('/eventos', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const {upload, uploadArquivo} = require('../services/arquivos');
     upload.single('banner')(req, res, async (err) => {
@@ -4914,7 +4914,7 @@ router.post('/eventos', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos'); }
 });
 
-router.get('/eventos/:id', requireAuth, async (req, res) => {
+router.get('/eventos/:id', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg||[]; req.session.msg=[];
   const erro = req.session.erro||[]; req.session.erro=[];
@@ -4935,7 +4935,7 @@ router.get('/eventos/:id', requireAuth, async (req, res) => {
   res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows, cupons: cuponsR.rows });
 });
 
-router.post('/eventos/:id/editar', requireAuth, async (req, res) => {
+router.post('/eventos/:id/editar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const {upload, uploadArquivo} = require('../services/arquivos');
     upload.single('banner')(req, res, async (err) => {
@@ -4968,7 +4968,7 @@ router.get('/eventos/:id/banner', async (req, res) => {
   } catch(e) { res.status(500).send(''); }
 });
 
-router.post('/eventos/:id/lotes', requireAuth, async (req, res) => {
+router.post('/eventos/:id/lotes', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const {nome,preco,vagas,data_inicio,data_fim} = req.body;
   const ordem = await query('SELECT COUNT(*) FROM evento_lotes WHERE evento_id=$1',[req.params.id]);
   await query('INSERT INTO evento_lotes (evento_id,nome,preco,vagas,data_inicio,data_fim,ordem) VALUES ($1,$2,$3,$4,$5,$6,$7)',
@@ -4976,7 +4976,7 @@ router.post('/eventos/:id/lotes', requireAuth, async (req, res) => {
   req.session.msg=['Lote criado!']; res.redirect('/eventos/'+req.params.id);
 });
 
-router.post('/eventos/:id/lotes/:lid/deletar', requireAuth, async (req, res) => {
+router.post('/eventos/:id/lotes/:lid/deletar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   await query('DELETE FROM evento_lotes WHERE id=$1',[req.params.lid]);
   req.session.msg=['Lote excluído!']; res.redirect('/eventos/'+req.params.id);
 });
@@ -5346,7 +5346,7 @@ function traduzirRecusaCartao(msg) {
 }
 
 
-router.post('/eventos/:id/inscricoes/manual', requireAuth, async (req, res) => {
+router.post('/eventos/:id/inscricoes/manual', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const {nome,email,whatsapp,cpf,lote_id,status} = req.body;
   const qrcode = 'LAURO-' + req.params.id + '-' + Date.now();
   await query('INSERT INTO evento_inscricoes (evento_id,lote_id,nome,email,whatsapp,cpf,status,qrcode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
@@ -5354,12 +5354,12 @@ router.post('/eventos/:id/inscricoes/manual', requireAuth, async (req, res) => {
   req.session.msg=['Inscrição manual adicionada!']; res.redirect('/eventos/'+req.params.id);
 });
 
-router.post('/eventos/:id/inscricoes/:iid/confirmar', requireAuth, async (req, res) => {
+router.post('/eventos/:id/inscricoes/:iid/confirmar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1",[req.params.iid]);
   req.session.msg=['Inscrição confirmada!']; res.redirect('/eventos/'+req.params.id);
 });
 
-router.post('/eventos/:id/inscricoes/:iid/deletar', requireAuth, async (req, res) => {
+router.post('/eventos/:id/inscricoes/:iid/deletar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const iid=req.params.iid;
     await query('DELETE FROM evento_pagamentos WHERE inscricao_id=$1',[iid]);
@@ -5387,7 +5387,7 @@ router.post('/eventos/:id/inscricoes/:iid/deletar', requireAuth, async (req, res
   });
 });
 
-router.get('/eventos/:id/checkin', requireAuth, async (req, res) => {
+router.get('/eventos/:id/checkin', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg||[]; req.session.msg=[];
   const [evR, inscrR] = await Promise.all([
@@ -5399,7 +5399,7 @@ router.get('/eventos/:id/checkin', requireAuth, async (req, res) => {
 });
 
 // ─── CHECK-IN COM TEMPO (ENTRADA/SAIDA) ──────────────────────────────────────
-router.post('/eventos/:id/checkin/buscar', requireAuth, async (req, res) => {
+router.post('/eventos/:id/checkin/buscar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const {busca} = req.body;
     const r = await query("SELECT * FROM evento_inscricoes WHERE evento_id=$1 AND (LOWER(nome) LIKE $2 OR qrcode=$3) LIMIT 1",
@@ -5438,7 +5438,7 @@ router.post('/eventos/:id/checkin/buscar', requireAuth, async (req, res) => {
   } catch(e) { res.json({ok:false, msg:'Erro: '+e.message}); }
 });
 
-router.post('/eventos/:id/inscricoes/:iid/reenviar-email', requireAuth, async (req, res) => {
+router.post('/eventos/:id/inscricoes/:iid/reenviar-email', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     await enviarEmailConfirmacaoEvento(req.params.iid);
     req.session.msg = ['E-mail de confirmação reenviado com sucesso!'];
@@ -5447,12 +5447,12 @@ router.post('/eventos/:id/inscricoes/:iid/reenviar-email', requireAuth, async (r
   }
   res.redirect('/eventos/' + req.params.id + '?tab=inscritos');
 });
-router.post('/eventos/:id/inscricoes/:iid/checkin', requireAuth, async (req, res) => {
+router.post('/eventos/:id/inscricoes/:iid/checkin', requireAuth, requirePermissao('eventos'), async (req, res) => {
   await query('UPDATE evento_inscricoes SET checkin_em=NOW() WHERE id=$1',[req.params.iid]);
   req.session.msg=['Check-in realizado!']; res.redirect('/eventos/'+req.params.id+'/checkin');
 });
 
-router.post('/eventos/:id/pagamentos/:pid/confirmar', requireAuth, async (req, res) => {
+router.post('/eventos/:id/pagamentos/:pid/confirmar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   await query("UPDATE evento_pagamentos SET status='pago', pago_em=NOW() WHERE id=$1",[req.params.pid]);
   const iR = await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=(SELECT inscricao_id FROM evento_pagamentos WHERE id=$1) RETURNING id",[req.params.pid]);
   try {
@@ -5462,7 +5462,7 @@ router.post('/eventos/:id/pagamentos/:pid/confirmar', requireAuth, async (req, r
   req.session.msg=['Pagamento confirmado!']; res.redirect('/eventos/'+req.params.id);
 });
 
-router.get('/eventos/:id/relatorio-pdf', requireAuth, async (req, res) => {
+router.get('/eventos/:id/relatorio-pdf', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const [evR, inscrR, pgR, config] = await Promise.all([
       query('SELECT * FROM eventos WHERE id=$1',[req.params.id]),
@@ -5523,7 +5523,7 @@ router.get('/eventos/:id/relatorio-pdf', requireAuth, async (req, res) => {
     res.send(html);
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
-router.get('/eventos/:id/inscritos-pdf', requireAuth, async (req, res) => {
+router.get('/eventos/:id/inscritos-pdf', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const [evR, inscrR, config] = await Promise.all([
       query('SELECT * FROM eventos WHERE id=$1',[req.params.id]),
@@ -5581,7 +5581,7 @@ router.get('/eventos/:id/inscritos-pdf', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 // GET /eventos/:id/inscritos-excel — download planilha Excel dos inscritos
-router.get('/eventos/:id/inscritos-excel', requireAuth, async (req, res) => {
+router.get('/eventos/:id/inscritos-excel', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const [evR, inscrR] = await Promise.all([
       query('SELECT * FROM eventos WHERE id=$1', [req.params.id]),
@@ -5634,7 +5634,7 @@ router.get('/eventos/:id/inscritos-excel', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
-router.get('/eventos/:id/inscricoes/:iid/cracha', requireAuth, async (req, res) => {
+router.get('/eventos/:id/inscricoes/:iid/cracha', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const [inscR, evR, config] = await Promise.all([
       query('SELECT * FROM evento_inscricoes WHERE id=$1',[req.params.iid]),
@@ -5687,7 +5687,7 @@ router.get('/eventos/:id/inscricoes/:iid/cracha', requireAuth, async (req, res) 
     res.send(html);
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
-router.get('/eventos/:id/inscricoes/:iid/certificado', requireAuth, async (req, res) => {
+router.get('/eventos/:id/inscricoes/:iid/certificado', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const [inscR, evR, config] = await Promise.all([query('SELECT * FROM evento_inscricoes WHERE id=$1',[req.params.iid]), query('SELECT * FROM eventos WHERE id=$1',[req.params.id]), getConfig()]);
     const insc=inscR.rows[0]; const ev=evR.rows[0];
@@ -5735,7 +5735,7 @@ router.get('/eventos/:id/inscricoes/:iid/certificado', requireAuth, async (req, 
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
-router.post('/eventos/:id/cert-bg', requireAuth, async (req, res) => {
+router.post('/eventos/:id/cert-bg', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const {upload, uploadArquivo} = require('../services/arquivos');
     upload.single('cert_bg')(req, res, async (err) => {
@@ -5748,7 +5748,7 @@ router.post('/eventos/:id/cert-bg', requireAuth, async (req, res) => {
     });
   } catch(e) { res.redirect('/eventos/'+req.params.id+'?tab=certificados'); }
 });
-router.post('/eventos/:id/cert-bg/remover', requireAuth, async (req, res) => {
+router.post('/eventos/:id/cert-bg/remover', requireAuth, requirePermissao('eventos'), async (req, res) => {
   await query('UPDATE eventos SET cert_bg_chave=NULL WHERE id=$1', [req.params.id]);
   req.session.msg = ['Fundo removido!'];
   res.redirect('/eventos/'+req.params.id+'?tab=certificados');
@@ -5765,13 +5765,13 @@ router.get('/eventos/:id/cert-bg', async (req, res) => {
     res.send(buffer);
   } catch(e) { res.status(500).send('Erro'); }
 });
-router.post('/eventos/:id/certificados/emitir-todos', requireAuth, async (req, res) => {
+router.post('/eventos/:id/certificados/emitir-todos', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const inscritos = await query("SELECT id FROM evento_inscricoes WHERE evento_id=$1 AND checkin_em IS NOT NULL",[req.params.id]);
   for (const i of inscritos.rows) { await query('INSERT INTO evento_certificados (inscricao_id) VALUES ($1) ON CONFLICT DO NOTHING',[i.id]); }
   req.session.msg=['Certificados emitidos para '+inscritos.rows.length+' participantes!']; res.redirect('/eventos/'+req.params.id);
 });
 
-router.post('/eventos/:id/campos', requireAuth, async (req, res) => {
+router.post('/eventos/:id/campos', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const {label,tipo,opcoes,obrigatorio} = req.body;
   const ord = await query('SELECT COUNT(*) FROM evento_campos WHERE evento_id=$1',[req.params.id]);
   await query('INSERT INTO evento_campos (evento_id,label,tipo,opcoes,obrigatorio,ordem) VALUES ($1,$2,$3,$4,$5,$6)',
@@ -5779,7 +5779,7 @@ router.post('/eventos/:id/campos', requireAuth, async (req, res) => {
   req.session.msg=['Campo adicionado!']; res.redirect('/eventos/'+req.params.id);
 });
 
-router.post('/eventos/:id/campos/:cid/mover', requireAuth, async (req, res) => {
+router.post('/eventos/:id/campos/:cid/mover', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const { direcao } = req.body;
   const r = await query('SELECT * FROM evento_campos WHERE id=$1', [req.params.cid]);
   const campo = r.rows[0];
@@ -5794,12 +5794,12 @@ router.post('/eventos/:id/campos/:cid/mover', requireAuth, async (req, res) => {
   res.redirect('/eventos/'+req.params.id+'?tab=campos');
 });
 
-router.post('/eventos/:id/campos/:cid/deletar', requireAuth, async (req, res) => {
+router.post('/eventos/:id/campos/:cid/deletar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   await query('DELETE FROM evento_campos WHERE id=$1',[req.params.cid]);
   req.session.msg=['Campo removido!']; res.redirect('/eventos/'+req.params.id);
 });
 
-router.post('/eventos/:id/lotes/:lid/editar', requireAuth, async (req, res) => {
+router.post('/eventos/:id/lotes/:lid/editar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const {nome,preco,vagas,data_inicio,data_fim} = req.body;
   await query('UPDATE evento_lotes SET nome=$1,preco=$2,vagas=$3,data_inicio=$4,data_fim=$5 WHERE id=$6',
     [nome,parseFloat(preco)||0,parseInt(vagas),data_inicio||null,data_fim||null,req.params.lid]);
@@ -5828,7 +5828,7 @@ router.get('/eventos/:id/cupom', async (req, res) => {
   } catch(e) { res.json({ok:false}); }
 });
 
-router.post('/eventos/:id/avancado', requireAuth, async (req, res) => {
+router.post('/eventos/:id/avancado', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const {email_inscricao,email_confirmacao,notif_email,wpp_grupo,inscricao_gratuita_auto,inscricao_unica,termos_texto,lgpd_texto} = req.body;
   await query('UPDATE eventos SET email_inscricao=$1,email_confirmacao=$2,wpp_grupo=$3,inscricao_gratuita_auto=$4,inscricao_unica=$5,termos_texto=$6,lgpd_texto=$7 WHERE id=$8',
     [email_inscricao||null,email_confirmacao||null,wpp_grupo||null,inscricao_gratuita_auto==='true',inscricao_unica==='true',termos_texto||null,lgpd_texto||null,req.params.id]);
@@ -5836,7 +5836,7 @@ router.post('/eventos/:id/avancado', requireAuth, async (req, res) => {
   req.session.msg=['Configurações avançadas salvas!']; res.redirect('/eventos/'+req.params.id+'?tab=avancado');
 });
 
-router.post('/eventos/:id/programacao', requireAuth, async (req, res) => {
+router.post('/eventos/:id/programacao', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const {horario,titulo,descricao,local} = req.body;
   const ord = await query('SELECT COUNT(*) FROM evento_programacao WHERE evento_id=$1',[req.params.id]);
   await query('INSERT INTO evento_programacao (evento_id,horario,titulo,descricao,local,ordem) VALUES ($1,$2,$3,$4,$5,$6)',
@@ -5844,12 +5844,12 @@ router.post('/eventos/:id/programacao', requireAuth, async (req, res) => {
   req.session.msg=['Item adicionado!']; res.redirect('/eventos/'+req.params.id);
 });
 
-router.post('/eventos/:id/programacao/:pid/deletar', requireAuth, async (req, res) => {
+router.post('/eventos/:id/programacao/:pid/deletar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   await query('DELETE FROM evento_programacao WHERE id=$1',[req.params.pid]);
   req.session.msg=['Item removido!']; res.redirect('/eventos/'+req.params.id);
 });
 
-router.post('/eventos/:id/palestrantes', requireAuth, async (req, res) => {
+router.post('/eventos/:id/palestrantes', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const {upload,uploadArquivo} = require('../services/arquivos');
     upload.single('foto')(req, res, async (err) => {
@@ -5872,12 +5872,12 @@ router.get('/eventos/palestrantes/:id/foto', async (req, res) => {
   } catch(e) { res.status(500).send(''); }
 });
 
-router.post('/eventos/:id/palestrantes/:pid/deletar', requireAuth, async (req, res) => {
+router.post('/eventos/:id/palestrantes/:pid/deletar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   await query('DELETE FROM evento_palestrantes WHERE id=$1',[req.params.pid]);
   req.session.msg=['Palestrante removido!']; res.redirect('/eventos/'+req.params.id);
 });
 
-router.post('/eventos/:id/palestrantes/:pid/editar', requireAuth, async (req, res) => {
+router.post('/eventos/:id/palestrantes/:pid/editar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const {upload,uploadArquivo} = require('../services/arquivos');
     upload.single('foto')(req, res, async (err) => {
@@ -5893,7 +5893,7 @@ router.post('/eventos/:id/palestrantes/:pid/editar', requireAuth, async (req, re
   } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
 });
 
-router.post('/eventos/:id/palestrantes/:pid/editar', requireAuth, async (req, res) => {
+router.post('/eventos/:id/palestrantes/:pid/editar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const {upload,uploadArquivo} = require('../services/arquivos');
     upload.single('foto')(req, res, async (err) => {
@@ -5909,7 +5909,7 @@ router.post('/eventos/:id/palestrantes/:pid/editar', requireAuth, async (req, re
   } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
 });
 
-router.post('/eventos/:id/patrocinadores', requireAuth, async (req, res) => {
+router.post('/eventos/:id/patrocinadores', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const {upload,uploadArquivo} = require('../services/arquivos');
     upload.single('logo')(req, res, async (err) => {
@@ -5932,12 +5932,12 @@ router.get('/eventos/patrocinadores/:id/logo', async (req, res) => {
   } catch(e) { res.status(500).send(''); }
 });
 
-router.post('/eventos/:id/patrocinadores/:pid/deletar', requireAuth, async (req, res) => {
+router.post('/eventos/:id/patrocinadores/:pid/deletar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   await query('DELETE FROM evento_patrocinadores WHERE id=$1',[req.params.pid]);
   req.session.msg=['Patrocinador removido!']; res.redirect('/eventos/'+req.params.id);
 });
 
-router.post('/eventos/:id/cupons', requireAuth, async (req, res) => {
+router.post('/eventos/:id/cupons', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const {codigo,tipo,valor,usos_max} = req.body;
   try {
     await query('INSERT INTO evento_cupons (evento_id,codigo,tipo,valor,usos_max) VALUES ($1,$2,$3,$4,$5)',
@@ -5947,7 +5947,7 @@ router.post('/eventos/:id/cupons', requireAuth, async (req, res) => {
   res.redirect('/eventos/'+req.params.id+'?tab=cupons');
 });
 
-router.post('/eventos/:id/cupons/:cid/reenviar', requireAuth, async (req, res) => {
+router.post('/eventos/:id/cupons/:cid/reenviar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const { enviarWhatsApp, enviarEmail } = require('../services/notificacoes');
     const eventoR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
@@ -5984,17 +5984,17 @@ router.post('/eventos/:id/cupons/:cid/reenviar', requireAuth, async (req, res) =
   } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id+'?tab=cupons'); }
 });
 
-router.post('/eventos/:id/cupons/:cid/deletar', requireAuth, async (req, res) => {
+router.post('/eventos/:id/cupons/:cid/deletar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   await query('DELETE FROM evento_cupons WHERE id=$1',[req.params.cid]);
   req.session.msg=['Cupom excluído!']; res.redirect('/eventos/'+req.params.id);
 });
 
 // Gerar cupons em lote para ligantes EM DIA e diretivos com envio via WhatsApp/email
-router.post('/eventos/:id/cupons/gerar-ligantes', requireAuth, async (req, res) => {
+router.post('/eventos/:id/cupons/gerar-ligantes', requireAuth, requirePermissao('eventos'), async (req, res) => {
   // versao nova abaixo
   const _dummy = 1;
 });
-router.post('/eventos/:id/cupons/gerar-ligantes-v2', requireAuth, async (req, res) => {
+router.post('/eventos/:id/cupons/gerar-ligantes-v2', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const { prefixo, destino, enviar_wpp, enviar_email } = req.body;
   const pref = (prefixo||'LAURO').toUpperCase().replace(/[^A-Z0-9]/g,'');
   const eventoR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
@@ -6080,7 +6080,7 @@ router.post('/eventos/:id/cupons/gerar-ligantes-v2', requireAuth, async (req, re
 });
 
 // ─── EDITAR INSCRITO ──────────────────────────────────────────────────────────
-router.post('/eventos/:id/inscricoes/:iid/editar', requireAuth, async (req, res) => {
+router.post('/eventos/:id/inscricoes/:iid/editar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const { nome, email, whatsapp, cpf, instituicao, status, rg, semestre, turma, catraca, tipo_participante, lote_id, cupom_codigo, isento } = req.body;
   await query(
     'UPDATE evento_inscricoes SET nome=$1, email=$2, whatsapp=$3, cpf=$4, instituicao=$5, status=$6, rg=$7, semestre=$8, turma=$9, catraca=$10, tipo_participante=$11, lote_id=$12, cupom_codigo=$13, isento=$14 WHERE id=$15',
@@ -6091,7 +6091,7 @@ router.post('/eventos/:id/inscricoes/:iid/editar', requireAuth, async (req, res)
 });
 
 // ─── EMAIL EM MASSA PARA INSCRITOS ────────────────────────────────────────────
-router.post('/eventos/:id/campos/ordem', requireAuth, async (req, res) => {
+router.post('/eventos/:id/campos/ordem', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const { campos } = req.body;
     const lista = JSON.parse(campos);
@@ -6105,7 +6105,7 @@ router.post('/eventos/:id/campos/ordem', requireAuth, async (req, res) => {
   } catch(e) { res.json({ ok: false, msg: e.message }); }
 });
 
-router.get('/eventos/:id/mala-direta/historico', requireAuth, async (req, res) => {
+router.get('/eventos/:id/mala-direta/historico', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const r = await query(
       'SELECT e.*, u.nome as enviado_por_nome FROM mala_direta_envios e LEFT JOIN usuarios u ON u.id=e.enviado_por WHERE e.evento_id=$1 ORDER BY e.criado_em DESC',
@@ -6115,7 +6115,7 @@ router.get('/eventos/:id/mala-direta/historico', requireAuth, async (req, res) =
   } catch(e) { res.json({ ok: false }); }
 });
 
-router.get('/eventos/:id/mala-direta/:envio_id/logs', requireAuth, async (req, res) => {
+router.get('/eventos/:id/mala-direta/:envio_id/logs', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const r = await query(
       'SELECT * FROM mala_direta_logs WHERE envio_id=$1 ORDER BY criado_em',
@@ -6125,7 +6125,7 @@ router.get('/eventos/:id/mala-direta/:envio_id/logs', requireAuth, async (req, r
   } catch(e) { res.json({ ok: false }); }
 });
 
-router.post('/eventos/:id/mala-direta', requireAuth, async (req, res) => {
+router.post('/eventos/:id/mala-direta', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const { assunto, conteudo_html, destinatarios } = req.body;
   try {
     const config = await getConfig();
@@ -6177,7 +6177,7 @@ router.post('/eventos/:id/mala-direta', requireAuth, async (req, res) => {
   res.redirect('/eventos/'+req.params.id+'?tab=mala-direta');
 });
 
-router.post('/eventos/:id/mala-direta', requireAuth, async (req, res) => {
+router.post('/eventos/:id/mala-direta', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const { assunto, conteudo_html, destinatarios } = req.body;
   try {
     const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
@@ -6216,7 +6216,7 @@ router.post('/eventos/:id/mala-direta', requireAuth, async (req, res) => {
   res.redirect('/eventos/'+req.params.id+'?tab=mala-direta');
 });
 
-router.post('/eventos/:id/email-massa', requireAuth, async (req, res) => {
+router.post('/eventos/:id/email-massa', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const { assunto, mensagem, apenas_confirmados } = req.body;
   try {
     let sql = 'SELECT * FROM evento_inscricoes WHERE evento_id=$1 AND email IS NOT NULL';
@@ -6284,7 +6284,7 @@ router.get('/contratos', requireAuth, requirePermissao('contratos'), async (req,
   res.render('pages/contratos', { config, usuario: req.session.usuario, msg, erro, contratos: cR.rows, ligantes: lR.rows, textoGlobal, turmaFiltro, statusFiltro, turmas, semContrato, statsTotal, statsAssinados, statsPendentes });
 });
 
-router.post('/contratos', requireAuth, async (req, res) => {
+router.post('/contratos', requireAuth, requirePermissao('contratos'), async (req, res) => {
   try {
     const { ligante_id, data_inicio } = req.body;
     const tgR = await query("SELECT valor FROM configuracoes WHERE chave='contrato_texto_global'");
@@ -6295,7 +6295,7 @@ router.post('/contratos', requireAuth, async (req, res) => {
   res.redirect('/contratos');
 });
 
-router.post('/contratos/:id/editar', requireAuth, async (req, res) => {
+router.post('/contratos/:id/editar', requireAuth, requirePermissao('contratos'), async (req, res) => {
   try {
     await query('UPDATE contratos_ligantes SET texto_contrato=$1 WHERE id=$2', [req.body.texto_contrato, req.params.id]);
     req.session.msg = ['Contrato atualizado!'];
@@ -6308,7 +6308,7 @@ router.post('/contratos/:id/deletar', requireAuth, requireAdmin, async (req, res
   req.session.msg = ['Excluido!']; res.redirect('/contratos');
 });
 
-router.get('/contratos/:id/pdf', requireAuth, async (req, res) => {
+router.get('/contratos/:id/pdf', requireAuth, requirePermissao('contratos'), async (req, res) => {
   try {
     const r = await query('SELECT c.*, l.nome, l.rg, l.catraca, l.turma, l.semestre, l.email FROM contratos_ligantes c LEFT JOIN ligantes l ON l.id=c.ligante_id WHERE c.id=$1', [req.params.id]);
     const d = r.rows[0];
@@ -6345,7 +6345,7 @@ router.get('/contratos/:id/pdf', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
-router.get('/contratos/:id/visualizar', requireAuth, async (req, res) => {
+router.get('/contratos/:id/visualizar', requireAuth, requirePermissao('contratos'), async (req, res) => {
   try {
     const r = await query('SELECT c.*, l.nome, l.rg, l.catraca, l.turma, l.semestre, l.email FROM contratos_ligantes c LEFT JOIN ligantes l ON l.id=c.ligante_id WHERE c.id=$1', [req.params.id]);
     const d = r.rows[0];
@@ -6361,7 +6361,7 @@ router.get('/contratos/:id/visualizar', requireAuth, async (req, res) => {
     res.send(html);
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
-router.post('/contratos/timbrado', requireAuth, async (req, res) => {
+router.post('/contratos/timbrado', requireAuth, requirePermissao('contratos'), async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
     upload.single('timbrado_contrato')(req, res, async (err) => {
@@ -6374,7 +6374,7 @@ router.post('/contratos/timbrado', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=[e.message]; res.redirect('/contratos'); }
 });
 
-router.post('/contratos/texto-global', requireAuth, async (req, res) => {
+router.post('/contratos/texto-global', requireAuth, requirePermissao('contratos'), async (req, res) => {
   try {
     const texto_contrato = req.body?.texto_contrato || '';
     await query('UPDATE contratos_ligantes SET texto_contrato=$1', [texto_contrato]);
@@ -6383,9 +6383,9 @@ router.post('/contratos/texto-global', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=[e.message]; res.redirect('/contratos'); }
 });
 
-router.get('/contratos/:id/imprimir', requireAuth, async (req, res) => { res.redirect('/contratos/'+req.params.id+'/visualizar'); });
+router.get('/contratos/:id/imprimir', requireAuth, requirePermissao('contratos'), async (req, res) => { res.redirect('/contratos/'+req.params.id+'/visualizar'); });
 
-router.post('/contratos/:id/enviar', requireAuth, async (req, res) => {
+router.post('/contratos/:id/enviar', requireAuth, requirePermissao('contratos'), async (req, res) => {
   req.setTimeout && req.setTimeout(120000);
   res.setTimeout && res.setTimeout(120000);
   try {
@@ -6567,7 +6567,7 @@ router.post('/contratos/:id/enviar', requireAuth, async (req, res) => {
   res.redirect('/contratos');
 });
 
-router.post('/contratos/:id/assinado', requireAuth, async (req, res) => {
+router.post('/contratos/:id/assinado', requireAuth, requirePermissao('contratos'), async (req, res) => {
   try {
     upload.single('pdf_assinado')(req, res, async (err) => {
       if (err||!req.file) { req.session.erro=['Erro no upload.']; return res.redirect('/contratos'); }
@@ -6580,7 +6580,7 @@ router.post('/contratos/:id/assinado', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=[e.message]; res.redirect('/contratos'); }
 });
 
-router.get('/contratos/:id/assinado', requireAuth, async (req, res) => {
+router.get('/contratos/:id/assinado', requireAuth, requirePermissao('contratos'), async (req, res) => {
   try {
     const r = await query('SELECT pdf_assinado_chave FROM contratos_ligantes WHERE id=$1',[req.params.id]);
     const d = r.rows[0];
@@ -6593,7 +6593,7 @@ router.get('/contratos/:id/assinado', requireAuth, async (req, res) => {
 
 // ─── CONTRATOS DIRETIVOS ───────────────────────────────────────────────────────
 
-router.get('/contratos-diretivos', requireAuth, async (req, res) => {
+router.get('/contratos-diretivos', requireAuth, requirePermissao('contratos-diretivos'), async (req, res) => {
   const config = await getConfig();
   const tgR = await query("SELECT valor FROM configuracoes WHERE chave='contrato_dir_texto_global'");
   const textoGlobalDir = tgR.rows[0]?.valor || '';
@@ -6619,7 +6619,7 @@ router.get('/contratos-diretivos', requireAuth, async (req, res) => {
   res.render('pages/contratos-diretivos', { config, usuario: req.session.usuario, msg, erro, contratos, diretivos, textoGlobalDir, turmaFiltro, statusFiltro, turmas, semContrato, statsTotal, statsAssinados, statsPendentes });
 });
 
-router.post('/contratos-diretivos', requireAuth, async (req, res) => {
+router.post('/contratos-diretivos', requireAuth, requirePermissao('contratos-diretivos'), async (req, res) => {
   try {
     const { diretivo_id, data_inicio } = req.body;
     const tgR = await query("SELECT valor FROM configuracoes WHERE chave='contrato_dir_texto_global'");
@@ -6630,7 +6630,7 @@ router.post('/contratos-diretivos', requireAuth, async (req, res) => {
   res.redirect('/contratos-diretivos');
 });
 
-router.post('/contratos-diretivos/:id/editar', requireAuth, async (req, res) => {
+router.post('/contratos-diretivos/:id/editar', requireAuth, requirePermissao('contratos-diretivos'), async (req, res) => {
   try {
     await query('UPDATE contratos_diretivos SET texto_contrato=$1 WHERE id=$2', [req.body.texto_contrato, req.params.id]);
     req.session.msg = ['Contrato atualizado!'];
@@ -6643,7 +6643,7 @@ router.post('/contratos-diretivos/:id/deletar', requireAuth, requireAdmin, async
   req.session.msg = ['Excluido!']; res.redirect('/contratos-diretivos');
 });
 
-router.post('/contratos-diretivos/timbrado', requireAuth, async (req, res) => {
+router.post('/contratos-diretivos/timbrado', requireAuth, requirePermissao('contratos-diretivos'), async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
     upload.single('timbrado_contrato')(req, res, async (err) => {
@@ -6655,7 +6655,7 @@ router.post('/contratos-diretivos/timbrado', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=[e.message]; res.redirect('/contratos-diretivos'); }
 });
 
-router.post('/contratos-diretivos/texto-global', requireAuth, async (req, res) => {
+router.post('/contratos-diretivos/texto-global', requireAuth, requirePermissao('contratos-diretivos'), async (req, res) => {
   try {
     const texto_contrato = req.body?.texto_contrato || '';
     await query('UPDATE contratos_diretivos SET texto_contrato=$1', [texto_contrato]);
@@ -6664,7 +6664,7 @@ router.post('/contratos-diretivos/texto-global', requireAuth, async (req, res) =
   } catch(e) { req.session.erro=[e.message]; res.redirect('/contratos-diretivos'); }
 });
 
-router.get('/contratos-diretivos/:id/pdf', requireAuth, async (req, res) => {
+router.get('/contratos-diretivos/:id/pdf', requireAuth, requirePermissao('contratos-diretivos'), async (req, res) => {
   try {
     const r = await query('SELECT c.*, d.nome, d.rg, d.email, d.cargo FROM contratos_diretivos c LEFT JOIN diretivos d ON d.id=c.diretivo_id WHERE c.id=$1', [req.params.id]);
     const d = r.rows[0];
@@ -6683,11 +6683,11 @@ router.get('/contratos-diretivos/:id/pdf', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
-router.get('/contratos-diretivos/:id/imprimir', requireAuth, async (req, res) => {
+router.get('/contratos-diretivos/:id/imprimir', requireAuth, requirePermissao('contratos-diretivos'), async (req, res) => {
   res.redirect('/contratos-diretivos/'+req.params.id+'/pdf');
 });
 
-router.post('/contratos-diretivos/:id/enviar', requireAuth, async (req, res) => {
+router.post('/contratos-diretivos/:id/enviar', requireAuth, requirePermissao('contratos-diretivos'), async (req, res) => {
   try {
     const r = await query('SELECT c.*, d.nome, d.rg, d.email, d.cargo FROM contratos_diretivos c LEFT JOIN diretivos d ON d.id=c.diretivo_id WHERE c.id=$1', [req.params.id]);
     const d = r.rows[0];
@@ -6717,7 +6717,7 @@ router.post('/contratos-diretivos/:id/enviar', requireAuth, async (req, res) => 
   res.redirect('/contratos-diretivos');
 });
 
-router.post('/contratos-diretivos/:id/assinado', requireAuth, async (req, res) => {
+router.post('/contratos-diretivos/:id/assinado', requireAuth, requirePermissao('contratos-diretivos'), async (req, res) => {
   try {
     upload.single('pdf_assinado')(req, res, async (err) => {
       if (err||!req.file) { req.session.erro=['Erro no upload.']; return res.redirect('/contratos-diretivos'); }
@@ -6729,7 +6729,7 @@ router.post('/contratos-diretivos/:id/assinado', requireAuth, async (req, res) =
   } catch(e) { req.session.erro=[e.message]; res.redirect('/contratos-diretivos'); }
 });
 
-router.get('/contratos-diretivos/:id/assinado', requireAuth, async (req, res) => {
+router.get('/contratos-diretivos/:id/assinado', requireAuth, requirePermissao('contratos-diretivos'), async (req, res) => {
   try {
     const r = await query('SELECT pdf_assinado_chave FROM contratos_diretivos WHERE id=$1',[req.params.id]);
     const d = r.rows[0];
@@ -7329,7 +7329,7 @@ router.get('/sorteios/roleta', requireAuth, requirePermissao('sorteios'), async 
 });
 
 // Criar sorteio
-router.post('/sorteios/criar', requireAuth, async (req, res) => {
+router.post('/sorteios/criar', requireAuth, requirePermissao('sorteios'), async (req, res) => {
   try {
     console.log('[SORTEIO DEBUG] body:', JSON.stringify({
       publico_alvo: req.body.publico_alvo,
@@ -7409,7 +7409,7 @@ router.get('/sorteios/:id', requireAuth, requirePermissao('sorteios'), async (re
 });
 
 // Salvar resultado do sorteio
-router.post('/sorteios/:id/salvar-resultado', requireAuth, async (req, res) => {
+router.post('/sorteios/:id/salvar-resultado', requireAuth, requirePermissao('sorteios'), async (req, res) => {
   try {
     const ganhadores = JSON.parse(req.body.ganhadores || '[]');
     const ganhadorNome = ganhadores.join('|');
@@ -7422,7 +7422,7 @@ router.post('/sorteios/:id/salvar-resultado', requireAuth, async (req, res) => {
 });
 
 // Validar ganhador
-router.post('/sorteios/:id/validar', requireAuth, async (req, res) => {
+router.post('/sorteios/:id/validar', requireAuth, requirePermissao('sorteios'), async (req, res) => {
   try {
     const { brinde, ganhador_contato, observacoes_validacao, validado } = req.body;
     const tarefasCumpridas = req.body.tarefas_cumpridas
@@ -7449,7 +7449,7 @@ router.get('/sorteios/:id/resetar', requireAuth, requirePermissao('sorteios'), a
 });
 
 // Excluir sorteio
-router.post('/sorteios/:id/excluir', requireAuth, async (req, res) => {
+router.post('/sorteios/:id/excluir', requireAuth, requirePermissao('sorteios'), async (req, res) => {
   try {
     await query('DELETE FROM sorteios WHERE id=$1', [req.params.id]);
     req.flash('msg', ['Sorteio excluído.']);
@@ -7714,7 +7714,7 @@ router.post('/checkout/:id', async (req, res) => {
 });
 
 // Abrir / Encerrar check-out (painel)
-router.post('/eventos/:id/checkout-toggle', requireAuth, async (req, res) => {
+router.post('/eventos/:id/checkout-toggle', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const acao = req.body.acao;
     if (acao === 'abrir') {
@@ -7730,7 +7730,7 @@ router.post('/eventos/:id/checkout-toggle', requireAuth, async (req, res) => {
 });
 
 // Relatório de check-out (painel) — JSON consumido pela aba
-router.get('/eventos/:id/checkout-relatorio', requireAuth, async (req, res) => {
+router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const evR = await query('SELECT id, nome, checkout_aberto, checkout_fecha_em FROM eventos WHERE id=$1', [req.params.id]);
     if (!evR.rows[0]) return res.json({ok:false, erro:'Evento não encontrado'});
@@ -7774,7 +7774,7 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, async (req, res) => {
   } catch(e) { console.error('Relatorio checkout erro:', e.message); res.json({ok:false, erro:e.message}); }
 });
 
-router.post('/eventos/:id/inscricao/:inscricao_id/desfazer-checkout', requireAuth, async (req, res) => {
+router.post('/eventos/:id/inscricao/:inscricao_id/desfazer-checkout', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     await query('DELETE FROM evento_checkouts WHERE evento_id=$1 AND inscricao_id=$2', [req.params.id, req.params.inscricao_id]);
     res.json({ok:true});
@@ -7782,7 +7782,7 @@ router.post('/eventos/:id/inscricao/:inscricao_id/desfazer-checkout', requireAut
 });
 
 // Exportar lista de aptos em CSV (painel)
-router.get('/eventos/:id/checkout-export', requireAuth, async (req, res) => {
+router.get('/eventos/:id/checkout-export', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const [evR, inscritos] = await Promise.all([
       query('SELECT nome FROM eventos WHERE id=$1', [req.params.id]),
@@ -7823,7 +7823,7 @@ router.get('/eventos/:id/checkout-export', requireAuth, async (req, res) => {
 
 
 // GET /fluxo-caixa/doc/:id/visualizar — proxy para visualizar documento
-router.get('/fluxo-caixa/doc/visualizar', requireAuth, async (req, res) => {
+router.get('/fluxo-caixa/doc/visualizar', requireAuth, requirePermissao('fluxo-caixa'), async (req, res) => {
   try {
     const chave = req.query.chave;
     if (!chave) return res.status(400).send('Chave não informada');
@@ -7834,7 +7834,7 @@ router.get('/fluxo-caixa/doc/visualizar', requireAuth, async (req, res) => {
 });
 
 // GET /fluxo-caixa/doc/baixar — proxy para baixar documento
-router.get('/fluxo-caixa/doc/baixar', requireAuth, async (req, res) => {
+router.get('/fluxo-caixa/doc/baixar', requireAuth, requirePermissao('fluxo-caixa'), async (req, res) => {
   try {
     const { chave, nome } = req.query;
     if (!chave) return res.status(400).send('Chave não informada');
@@ -8173,7 +8173,7 @@ router.get('/atas', requireAuth, requirePermissao('atas'), async (req, res) => {
   res.render('pages/atas', { config, usuario: req.session.usuario, msg, erro, atas: atasR.rows, diretivos: diretivosR.rows, ligantes: ligantesR.rows, proximoSeq, page, totalPages });
 });
 
-router.post('/atas', requireAuth, async (req, res) => {
+router.post('/atas', requireAuth, requirePermissao('atas'), async (req, res) => {
   const { numero, tipo, data_reuniao, hora_inicio, hora_fim, local, pauta, corpo, membros_json } = req.body;
   const r = await query(
     'INSERT INTO atas_reuniao(numero,tipo,data_reuniao,hora_inicio,hora_fim,local,pauta,corpo,status,criado_por) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id',
@@ -8232,7 +8232,7 @@ async function notificarAssinaturaAta(ata, presente, { reenvio } = {}) {
   return { link: linkAssinar };
 }
 
-router.post('/atas/:id/status', requireAuth, async (req, res) => {
+router.post('/atas/:id/status', requireAuth, requirePermissao('atas'), async (req, res) => {
   const novoStatus = req.body.status;
   await query('UPDATE atas_reuniao SET status=$1,atualizado_em=NOW() WHERE id=$2', [novoStatus, req.params.id]);
 
@@ -8276,19 +8276,19 @@ router.post('/atas/:id/status', requireAuth, async (req, res) => {
   res.json({ok:true});
 });
 
-router.post('/atas/:id/assinatura', requireAuth, async (req, res) => {
+router.post('/atas/:id/assinatura', requireAuth, requirePermissao('atas'), async (req, res) => {
   const { presente_id, assinatura_digital } = req.body;
   await query('UPDATE atas_presentes SET assinatura_digital=$1,assinou_em=NOW() WHERE id=$2 AND ata_id=$3',
     [assinatura_digital, presente_id, req.params.id]);
   res.json({ok:true});
 });
 
-router.post('/atas/:id/pdf-upload', requireAuth, async (req, res) => {
+router.post('/atas/:id/pdf-upload', requireAuth, requirePermissao('atas'), async (req, res) => {
   // Upload do PDF físico assinado via Cloudflare R2 (mesmo sistema dos contratos)
   res.json({ok:false, erro:'Use o formulário de upload'});
 });
 
-router.post('/atas/:id/presentes', requireAuth, async (req, res) => {
+router.post('/atas/:id/presentes', requireAuth, requirePermissao('atas'), async (req, res) => {
   const { membro_id, membro_tipo, membro_nome, membro_cargo } = req.body;
   const r = await query('INSERT INTO atas_presentes(ata_id,membro_tipo,membro_id,membro_nome,membro_cargo,presente) VALUES($1,$2,$3,$4,$5,true) RETURNING id',
     [req.params.id, membro_tipo, membro_id, membro_nome, membro_cargo||'']);
@@ -8308,7 +8308,7 @@ router.post('/atas/:id/presentes', requireAuth, async (req, res) => {
   } catch(e) { console.error('Notif novo presente:', e.message); }
   res.json({ok:true});
 });
-router.post('/atas/:id/presentes/:presenteId/reenviar', requireAuth, async (req, res) => {
+router.post('/atas/:id/presentes/:presenteId/reenviar', requireAuth, requirePermissao('atas'), async (req, res) => {
   try {
     const ata = await query('SELECT * FROM atas_reuniao WHERE id=$1', [req.params.id]);
     const pR = await query(`
@@ -8353,7 +8353,7 @@ router.delete('/atas/:id', requireAuth, async (req, res) => {
   res.json({ok:true});
 });
 
-router.post('/atas/:id/editar', requireAuth, async (req, res) => {
+router.post('/atas/:id/editar', requireAuth, requirePermissao('atas'), async (req, res) => {
   const { tipo, data_reuniao, hora_inicio, hora_fim, local, pauta, corpo } = req.body;
   await query(
     'UPDATE atas_reuniao SET tipo=$1, data_reuniao=$2, hora_inicio=$3, hora_fim=$4, local=$5, pauta=$6, corpo=$7, atualizado_em=NOW() WHERE id=$8',
@@ -8367,7 +8367,7 @@ const multerAudio = require('multer')({
   storage: require('multer').memoryStorage(),
   limits: { fileSize: 200 * 1024 * 1024 }
 });
-router.post('/atas/:id/transcrever', requireAuth, multerAudio.single('audio'), async (req, res) => {
+router.post('/atas/:id/transcrever', requireAuth, requirePermissao('atas'), multerAudio.single('audio'), async (req, res) => {
   try {
     if (!req.file) return res.json({ ok: false, erro: 'Nenhum audio recebido.' });
     const { transcreverAudio, gerarAtaDeTranscricao } = require('../services/atas-ia');

@@ -499,8 +499,8 @@ function gerarPDF(){
   const ataData = '<%=new Date(ata.data_reuniao).toLocaleDateString("es-PY",{timeZone:"UTC",weekday:"long",year:"numeric",month:"long",day:"numeric"})%>';
   const ataLocal = '<%=ata.local||""  %>';
   const ataHora = '<%=(ata.hora_inicio||"")+(ata.hora_fim?" — "+ata.hora_fim:"")%>';
-  const ataPauta = `<%- (ata.pauta||"").replace(/`/g,"'") %>`;
-  const ataCorpo = `<%- (ata.corpo||"").replace(/`/g,"'") %>`;
+  const ataPauta = <%- JSON.stringify(ata.pauta||"").replace(/</g,'\\u003c') %>;
+  const ataCorpo = <%- JSON.stringify(ata.corpo||"").replace(/</g,'\\u003c') %>;
   const timbradoUrl = window.location.origin + '/img/timbrado-lauro.jpg';
 
   // Coletar assinaturas
