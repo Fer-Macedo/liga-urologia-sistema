@@ -8750,8 +8750,9 @@ router.post('/cientifico/versao/:versaoId/transferir', requireAuth, requireCient
   const vR = await query('SELECT v.*, g.projeto_id FROM versoes_trabalho v JOIN grupos_cientificos g ON g.id=v.grupo_id WHERE v.id=$1',[req.params.versaoId]);
   if (!vR.rows.length) return res.redirect('/cientifico');
   const v = vR.rows[0];
-  if (v.revisor_atual_id !== req.session.usuario.id) {
-    req.session.erro=['Somente quem esta revisando este trabalho pode transferi-lo.'];
+  const podeAgirEmEmergencia = ['admin','presidencia'].includes(req.session.usuario.perfil);
+  if (v.revisor_atual_id !== req.session.usuario.id && !podeAgirEmEmergencia) {
+    req.session.erro=['Somente quem esta revisando este trabalho (ou admin/presidencia, em caso de emergencia) pode transferi-lo.'];
     return res.redirect('/cientifico/projeto/'+v.projeto_id+'/grupo/'+v.grupo_id);
   }
   const destinoR = await query('SELECT id, nome FROM usuarios WHERE id=$1', [usuario_id]);
@@ -8770,8 +8771,9 @@ router.post('/cientifico/versao/:versaoId/revisar', requireAuth, requireCientifi
   const vR = await query('SELECT v.*, g.projeto_id FROM versoes_trabalho v JOIN grupos_cientificos g ON g.id=v.grupo_id WHERE v.id=$1',[req.params.versaoId]);
   if (!vR.rows.length) return res.redirect('/cientifico');
   const v = vR.rows[0];
-  if (v.revisor_atual_id !== req.session.usuario.id) {
-    req.session.erro=['Somente quem esta revisando este trabalho pode aprovar ou devolver. Transfira para si mesmo clicando em "Revisar" primeiro.'];
+  const podeAgirEmEmergencia = ['admin','presidencia'].includes(req.session.usuario.perfil);
+  if (v.revisor_atual_id !== req.session.usuario.id && !podeAgirEmEmergencia) {
+    req.session.erro=['Somente quem esta revisando este trabalho (ou admin/presidencia, em caso de emergencia) pode aprovar ou devolver. Transfira para si mesmo clicando em "Revisar" primeiro.'];
     return res.redirect('/cientifico/projeto/'+v.projeto_id+'/grupo/'+v.grupo_id);
   }
   const novoStatus = acao==='aprovar' ? 'aprovado' : 'devolvido';
