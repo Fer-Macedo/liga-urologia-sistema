@@ -74,6 +74,12 @@
     <div class="card-titulo">Gerar Ata com IA</div>
     <div id="gravacao-status" style="font-size:13px;color:#64748b;margin-bottom:10px">Grave a reunião agora pelo navegador, ou envie um áudio já gravado (ex: pelo gravador de voz do celular) para a IA transcrever e redigir o rascunho da ata.</div>
     <div id="gravacao-timer" style="display:none;font-family:monospace;font-size:22px;font-weight:700;color:#7c3aed;margin-bottom:10px">00:00</div>
+    <div id="gravacao-upload-box" style="display:none;margin-bottom:10px">
+      <div style="font-size:13px;color:#7c3aed;margin-bottom:6px" id="gravacao-upload-label">Enviando áudio... 0%</div>
+      <div style="background:#ede9fe;border-radius:99px;height:8px;overflow:hidden">
+        <div id="gravacao-upload-barra" style="width:0%;background:#7c3aed;height:8px;border-radius:99px;transition:width .15s"></div>
+      </div>
+    </div>
     <div id="gravacao-loading" style="display:none;font-size:13px;color:#7c3aed;margin-bottom:10px">Transcrevendo e redigindo a ata... isso pode levar até 1 minuto para reuniões longas.</div>
     <div id="gravacao-resultado" style="display:none">
       <div style="font-size:12px;color:#166534;background:#f0fdf4;border:1px solid #bbf7d0;padding:8px 12px;margin-bottom:12px">Rascunho gerado a partir do áudio! Revise a Pauta e o Corpo abaixo (abertos no modo de edição) antes de salvar.</div>
@@ -478,18 +484,40 @@ function enviarArquivoAudio(){
   if(!input.files.length){ alert('Selecione um arquivo de áudio primeiro.'); return; }
   document.getElementById('card-gravacao').style.display='block';
   document.getElementById('gravacao-acao-inicial').style.display='none';
-  document.getElementById('gravacao-loading').style.display='block';
-  document.getElementById('gravacao-status').textContent='Processando o áudio enviado...';
+  document.getElementById('gravacao-status').textContent='Enviando o áudio...';
   enviarAudioParaIA(input.files[0], input.files[0].name);
 }
 function enviarAudioParaIA(blob, nomeArquivo){
   const fd=new FormData();
   fd.append('audio',blob,nomeArquivo);
-  fetch('/atas/<%=ata.id%>/transcrever',{method:'POST',body:fd,credentials:'same-origin'})
-  .then(r=>r.json()).then(function(d){
+  const barraBox=document.getElementById('gravacao-upload-box');
+  const barra=document.getElementById('gravacao-upload-barra');
+  const label=document.getElementById('gravacao-upload-label');
+  barraBox.style.display='block';
+  barra.style.width='0%';
+  label.textContent='Enviando áudio... 0%';
+
+  const xhr=new XMLHttpRequest();
+  xhr.open('POST', '/atas/<%=ata.id%>/transcrever', true);
+  xhr.upload.onprogress=function(e){
+    if(!e.lengthComputable) return;
+    const pct=Math.round((e.loaded/e.total)*100);
+    barra.style.width=pct+'%';
+    label.textContent='Enviando áudio... '+pct+'%';
+  };
+  xhr.upload.onload=function(){
+    label.textContent='Envio concluído! Processando...';
+    barra.style.width='100%';
+    barraBox.style.display='none';
+    document.getElementById('gravacao-loading').style.display='block';
+  };
+  xhr.onload=function(){
     document.getElementById('gravacao-loading').style.display='none';
-    if(!d.ok){
-      document.getElementById('gravacao-status').textContent='Erro: '+(d.erro||'não foi possível processar o áudio.');
+    barraBox.style.display='none';
+    let d;
+    try { d=JSON.parse(xhr.responseText); } catch(e){ d=null; }
+    if(!d || !d.ok){
+      document.getElementById('gravacao-status').textContent='Erro: '+((d&&d.erro)||'não foi possível processar o áudio.');
       return;
     }
     document.getElementById('gravacao-status').textContent='Pronto! Revise o rascunho abaixo antes de salvar.';
@@ -500,10 +528,13 @@ function enviarAudioParaIA(blob, nomeArquivo){
     form.querySelector('[name="pauta"]').value=d.pauta||'';
     form.querySelector('[name="corpo"]').value=d.corpo||'';
     form.scrollIntoView({behavior:'smooth'});
-  }).catch(function(){
+  };
+  xhr.onerror=function(){
+    barraBox.style.display='none';
     document.getElementById('gravacao-loading').style.display='none';
     document.getElementById('gravacao-status').textContent='Erro ao enviar o áudio. Tente novamente.';
-  });
+  };
+  xhr.send(fd);
 }
 function gerarPDF(){
   // Coletar apenas os dados necessários, sem o header duplicado
