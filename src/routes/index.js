@@ -796,7 +796,7 @@ router.get('/login', async (req, res) => {
   res.render('pages/login', { config: await getConfig(), erro: req.flash('erro'), msg: req.flash('msg') });
 });
 
-router.post('/login', async (req, res) => {
+router.post('/login', limiterLogin, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress;
 
   if (verificarBloqueio(ip)) {
@@ -9654,9 +9654,12 @@ router.post('/portal/grupo/:grupoId/chat', requirePortal, uploadArq.single('arqu
 
 // GET /portal/arquivo/:projetoId/:tipo
 router.get('/portal/arquivo/:projetoId/:tipo', requirePortal, async (req, res) => {
+  const { tipo: tipoMembro, id: idMembro } = req.session.portalMembro;
   const pR = await query('SELECT * FROM projetos_cientificos WHERE id=$1', [req.params.projetoId]);
   if (!pR.rows.length) return res.status(404).send('Nao encontrado');
   const p = pR.rows[0];
+  const pertenceR = await query(`SELECT 1 FROM membros_grupo_cientifico m JOIN grupos_cientificos gc ON gc.id=m.grupo_id WHERE gc.projeto_id=$1 AND m.origem_tipo=$2 AND m.origem_id=$3`, [req.params.projetoId, tipoMembro, idMembro]);
+  if (!pertenceR.rows.length) return res.status(403).send('Sem permissao para este arquivo.');
   const chave = req.params.tipo==='edital' ? p.edital_chave : p.modelo_chave;
   if (!chave) return res.status(404).send('Arquivo nao encontrado');
   const url = await gerarUrlInline(chave);
@@ -9723,8 +9726,10 @@ router.get('/cientifico/chat-arquivo/:chatId', requireAuth, requireCientifico, a
 
 // GET /portal/chat-arquivo/:chatId
 router.get('/portal/chat-arquivo/:chatId', requirePortal, async (req, res) => {
+  const { tipo, id } = req.session.portalMembro;
   const r = await query('SELECT * FROM chat_grupo_cientifico WHERE id=$1',[req.params.chatId]);
   if (!r.rows.length || !r.rows[0].arquivo_chave) return res.status(404).send('Nao encontrado');
+  if (!(await membroPertenceAoGrupo(r.rows[0].grupo_id, tipo, id))) return res.status(403).send('Sem permissao para este arquivo.');
   const url = await gerarUrlInline(r.rows[0].arquivo_chave);
   res.redirect(url);
 });
