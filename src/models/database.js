@@ -89,6 +89,19 @@ async function initSchema() {
     ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS sexo TEXT;
+    ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS edicao_liberada BOOLEAN DEFAULT false;
+    ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS edicao_liberada BOOLEAN DEFAULT false;
+
+    CREATE TABLE IF NOT EXISTS cadastro_correcoes (
+      id SERIAL PRIMARY KEY,
+      origem_tipo TEXT NOT NULL CHECK (origem_tipo IN ('ligante','diretivo')),
+      origem_id INTEGER NOT NULL,
+      dados JSONB NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pendente',
+      criado_em TIMESTAMP DEFAULT NOW(),
+      avaliado_por INTEGER,
+      avaliado_em TIMESTAMP
+    );
 
     CREATE TABLE IF NOT EXISTS marketing_calendario (
       id SERIAL PRIMARY KEY,

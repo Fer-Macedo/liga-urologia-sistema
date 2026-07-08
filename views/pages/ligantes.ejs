@@ -296,6 +296,9 @@
         <a href="/ligantes/relatorio" class="btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Relatório</a>
         <a href="/cadastro-ligante" target="_blank" class="btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Link de Cadastro</a>
         <% if (['admin','secretaria','presidencia'].includes(usuario.perfil)) { %>
+        <form action="/ligantes/grupo/liberar-edicao" method="POST" style="display:inline" onsubmit="return confirm('<%=config.edicao_ligantes_grupo==='1'?'Bloquear':'Liberar'%> a edição de cadastro para TODOS os ligantes?')">
+          <button type="submit" class="btn" style="<%=config.edicao_ligantes_grupo==='1'?'background:#f59e0b;color:#fff;border-color:#f59e0b':''%>">Edição em Grupo: <%=config.edicao_ligantes_grupo==='1'?'Ativada':'Desativada'%></button>
+        </form>
         <button class="btn btn-primario" onclick="abrirModal('modal-cadastrar-ligante')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Cadastrar Diretamente</button>
         <% } %>
       </div>
@@ -396,6 +399,11 @@
           <div class="card-acoes">
             <button class="btn btn-primario btn-abrir-detalhe-card" data-ligante-id="<%= l.id %>"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Detalhes</button>
             <a href="/ligantes/<%= l.id %>/editar" class="btn" style="display:inline-flex;align-items:center;gap:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar</a>
+            <% if(['admin','secretaria','presidencia'].includes(usuario.perfil) && statusFiltro !== 'pendente'){ %>
+            <form action="/ligantes/<%= l.id %>/liberar-edicao" method="POST" style="display:inline;margin:0">
+              <button type="submit" class="btn btn-sm" style="<%=l.edicao_liberada?'background:#f59e0b;color:#fff;border-color:#f59e0b':''%>" title="Permite que o próprio ligante edite os dados no Portal Científico"><%=l.edicao_liberada?'Bloquear Edição':'Liberar Edição'%></button>
+            </form>
+            <% } %>
             <% if(typeof statusFiltro!=='undefined' && statusFiltro==='pendente' && l.pendente){ %>
             <button class="btn" style="background:#22c55e;color:white;border:none;font-weight:600;font-size:12px" onclick="confirmarAcao('Liberar este ligante?', function(){ const f=document.createElement('form');f.method='POST';f.action='/ligantes/<%= l.id %>/aprovar';document.body.append(f);f.submit(); })"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Liberar</button>
             <a href="/ligantes/<%= l.id %>/excluir-pendente" class="btn" style="background:#ef4444;color:white;border:none;font-weight:600;font-size:12px" onclick="var u=this.href; confirmarAcao('Recusar e excluir permanentemente?', function(){ window.location.href=u; }); return false;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Recusar</a>

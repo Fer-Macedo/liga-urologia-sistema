@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <title>Correções de Cadastro — <%= config.org_nome %></title>
+  <link rel="stylesheet" href="/css/style.css"><link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%=config.org_cor||'#1a56db'%>}
+    .btn{padding:8px 16px;font-size:13px;font-weight:600;border:1px solid var(--borda);background:var(--card);color:var(--texto);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:7px;border-radius:0}
+    .btn:hover{background:var(--hover)}
+    .btn-sm{padding:6px 12px;font-size:12px}
+    .btn.verde{background:#10b981;color:#fff;border-color:#10b981}
+    .btn.verm{color:#dc2626;border-color:#fecaca;background:#fef2f2}
+    .alert-ok{padding:12px 16px;background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d;font-size:13px;margin-bottom:20px}
+    .alert-err{padding:12px 16px;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;font-size:13px;margin-bottom:20px}
+    .empty-small{padding:40px;text-align:center;color:var(--texto2);font-size:13px;background:var(--card);border:1px solid var(--borda)}
+    .correcao-card{background:var(--card);border:1px solid var(--borda);margin-bottom:18px}
+    .correcao-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--borda);flex-wrap:wrap;gap:8px}
+    .correcao-nome{font-size:14px;font-weight:700;color:var(--texto)}
+    .correcao-meta{font-size:11.5px;color:var(--texto2);margin-top:2px}
+    .tipo-badge{display:inline-flex;padding:2px 9px;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border:1px solid;margin-right:8px}
+    .tipo-ligante{background:#eff6ff;color:#1d4ed8;border-color:#bfdbfe}
+    .tipo-diretivo{background:#f0fdf4;color:#15803d;border-color:#bbf7d0}
+    .diff-grid{display:grid;grid-template-columns:1fr 1fr;gap:0}
+    .diff-col{padding:14px 18px}
+    .diff-col.novo{border-left:1px solid var(--borda)}
+    .diff-col-titulo{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--texto2);margin-bottom:10px}
+    .diff-item{font-size:12.5px;margin-bottom:8px;line-height:1.4}
+    .diff-item b{display:block;font-size:10.5px;color:var(--texto2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:1px}
+    .diff-mudou{background:#fef9c3}
+    .correcao-acoes{display:flex;gap:8px;padding:14px 18px;border-top:1px solid var(--borda);justify-content:flex-end}
+    @media(max-width:800px){.diff-grid{grid-template-columns:1fr}.diff-col.novo{border-left:none;border-top:1px solid var(--borda)}}
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar',{paginaAtual:'correcoes-cadastro',config,usuario}) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Correções de Cadastro</h1>
+    </div>
+    <div class="content">
+      <%if(msg&&msg.length){%><div class="alert-ok"><%=msg[0]%></div><%}%>
+      <%if(erro&&erro.length){%><div class="alert-err"><%=erro[0]%></div><%}%>
+      <p style="font-size:13px;color:var(--texto2);margin-bottom:20px">Atualizações de cadastro enviadas por ligantes/diretivos pelo Portal Científico, aguardando aprovação. Aprovar aplica os dados novos direto no cadastro.</p>
+      <%if(correcoes.length===0){%>
+      <div class="empty-small">Nenhuma correção pendente no momento.</div>
+      <%}else{%>
+      <%correcoes.forEach(function(c){%>
+      <div class="correcao-card">
+        <div class="correcao-head">
+          <div>
+            <span class="tipo-badge tipo-<%=c.origem_tipo%>"><%=c.origem_tipo%></span>
+            <span class="correcao-nome"><%=c.atual?c.atual.nome:'(cadastro não encontrado)'%></span>
+            <div class="correcao-meta">Enviado em <%=new Date(c.criado_em).toLocaleString('pt-BR')%></div>
+          </div>
+        </div>
+        <%if(c.atual){%>
+        <div class="diff-grid">
+          <div class="diff-col">
+            <div class="diff-col-titulo">Dados atuais</div>
+            <%Object.keys(c.dados).forEach(function(campo){%>
+            <%const valorAtual=campo==='data_nascimento'&&c.atual[campo]?new Date(c.atual[campo]).toLocaleDateString('pt-BR',{timeZone:'UTC'}):c.atual[campo];%>
+            <div class="diff-item"><b><%=campo%></b><%=valorAtual!==null&&valorAtual!==undefined&&valorAtual!==''?valorAtual:'—'%></div>
+            <%})%>
+          </div>
+          <div class="diff-col novo">
+            <div class="diff-col-titulo">Dados enviados (novos)</div>
+            <%Object.keys(c.dados).forEach(function(campo){%>
+            <%const valorAtual2=campo==='data_nascimento'&&c.atual[campo]?new Date(c.atual[campo]).toISOString().substring(0,10):String(c.atual[campo]||'');%>
+            <%const mudou=valorAtual2!==String(c.dados[campo]||'');%>
+            <div class="diff-item<%=mudou?' diff-mudou':''%>"><b><%=campo%></b><%=c.dados[campo]||'—'%></div>
+            <%})%>
+          </div>
+        </div>
+        <%}%>
+        <div class="correcao-acoes">
+          <form method="POST" action="/correcoes-cadastro/<%=c.id%>/rejeitar" onsubmit="return confirm('Rejeitar esta atualização? Os dados novos serão descartados.')">
+            <button type="submit" class="btn btn-sm verm">Rejeitar</button>
+          </form>
+          <form method="POST" action="/correcoes-cadastro/<%=c.id%>/aprovar" onsubmit="return confirm('Aplicar esses dados novos ao cadastro?')">
+            <button type="submit" class="btn btn-sm verde">Aprovar e Aplicar</button>
+          </form>
+        </div>
+      </div>
+      <%})%>
+      <%}%>
+    </div>
+  </main>
+</div>
+</body>
+</html>

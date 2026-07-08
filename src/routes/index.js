@@ -1238,7 +1238,15 @@ router.get('/cobrancas', requireAuth, requirePermissao('cobrancas'), async (req,
 
   let dtInicio, dtFim;
   if (dataInicio && dataFim) {
-    dtInicio = dataInicio; dtFim = dataFim;
+    // Reformata via dayjs para YYYY-MM-DD canonico — impede SQL injection na
+    // interpolacao de periodoWhere (a saida de .format() e sempre uma data limpa).
+    const di = dayjs(dataInicio), df = dayjs(dataFim);
+    if (di.isValid() && df.isValid()) {
+      dtInicio = di.format('YYYY-MM-DD'); dtFim = df.format('YYYY-MM-DD');
+    } else {
+      dtInicio = hoje.startOf('month').format('YYYY-MM-DD');
+      dtFim = hoje.endOf('month').format('YYYY-MM-DD');
+    }
   } else if (periodo === '30') {
     dtInicio = hoje.subtract(30,'day').format('YYYY-MM-DD'); dtFim = hoje.format('YYYY-MM-DD');
   } else if (periodo === '60') {
@@ -2608,8 +2616,10 @@ router.get('/diretivos', requireAuth, requireSecretaria, async (req, res) => {
   const r = await query('SELECT * FROM diretivos WHERE ' + whereAtivo + ' ORDER BY cargo, nome');
   const pcR = await query('SELECT COUNT(*) n FROM diretivos WHERE pendente=true');
   const pendentesCount = parseInt(pcR.rows[0].n);
+  const ccR = await query("SELECT COUNT(*) n FROM cadastro_correcoes WHERE status='pendente'");
+  const correcoesPendentesCount = parseInt(ccR.rows[0].n);
   res.render('pages/diretivos', {
-    config, msg, erro, diretivos: r.rows, usuario: req.session.usuario,
+    config, msg, erro, diretivos: r.rows, usuario: req.session.usuario, correcoesPendentesCount,
     appUrl: process.env.APP_URL || 'https://liga-urologia.onrender.com',
     statusFiltro, pendentesCount
   });
@@ -2644,6 +2654,16 @@ router.get('/diretivos/:id/excluir', requireAuth, requireSecretaria, async (req,
   await logAtividade(req.session.usuario.id, 'DIRETIVO_RECUSADO', 'Cadastro pendente recusado ID: ' + req.params.id, req);
   req.session.msg = ['Cadastro pendente recusado e removido.'];
   res.redirect('/diretivos?status=pendente');
+});
+
+router.post('/diretivos/:id/liberar-edicao', requireAuth, requireSecretaria, async (req, res) => {
+  const r = await query('SELECT edicao_liberada, nome FROM diretivos WHERE id=$1', [req.params.id]);
+  if (!r.rows.length) { req.session.erro = ['Diretivo não encontrado.']; return res.redirect('/diretivos'); }
+  const novo = !r.rows[0].edicao_liberada;
+  await query('UPDATE diretivos SET edicao_liberada=$1 WHERE id=$2', [novo, req.params.id]);
+  await logAtividade(req.session.usuario.id, novo ? 'DIRETIVO_EDICAO_LIBERADA' : 'DIRETIVO_EDICAO_BLOQUEADA', r.rows[0].nome, req);
+  req.session.msg = [novo ? 'Edição de cadastro liberada para este diretivo.' : 'Edição de cadastro bloqueada para este diretivo.'];
+  res.redirect('/diretivos');
 });
 
 router.post('/diretivos/:id/editar', requireAuth, requireSecretaria, (req, res) => {
@@ -3300,7 +3320,9 @@ router.get('/ligantes', requireAuth, requirePermissao('ligantes'), async (req, r
   const ativos = parseInt(atvR.rows[0].t);
   const inativos = total - ativos;
   const pendentesCount = parseInt(pcR.rows[0].n);
-  res.render('pages/ligantes', { config, usuario: req.session.usuario, ligantes, msg, erro, total, ativos, inativos, statusFiltro: sfL, pendentesCount });
+  const ccR = await query("SELECT COUNT(*) n FROM cadastro_correcoes WHERE status='pendente'");
+  const correcoesPendentesCount = parseInt(ccR.rows[0].n);
+  res.render('pages/ligantes', { config, usuario: req.session.usuario, ligantes, msg, erro, total, ativos, inativos, statusFiltro: sfL, pendentesCount, correcoesPendentesCount });
 });
 
 router.get('/ligantes/:id/aprovar', requireAuth, requirePermissao('ligantes'), async (req, res) => {
@@ -3362,6 +3384,67 @@ router.get('/ligantes/:id/excluir-pendente', requireAuth, requirePermissao('liga
   await logAtividade(req.session.usuario.id, 'LIGANTE_RECUSADO', 'Ligante recusado ID: ' + req.params.id, req);
   req.session.msg = ['Cadastro recusado e removido.'];
   res.redirect('/ligantes?status=pendente');
+});
+
+router.post('/ligantes/:id/liberar-edicao', requireAuth, requireSecretaria, async (req, res) => {
+  const r = await query('SELECT edicao_liberada, nome FROM ligantes WHERE id=$1', [req.params.id]);
+  if (!r.rows.length) { req.session.erro = ['Ligante não encontrado.']; return res.redirect('/ligantes'); }
+  const novo = !r.rows[0].edicao_liberada;
+  await query('UPDATE ligantes SET edicao_liberada=$1 WHERE id=$2', [novo, req.params.id]);
+  await logAtividade(req.session.usuario.id, novo ? 'LIGANTE_EDICAO_LIBERADA' : 'LIGANTE_EDICAO_BLOQUEADA', r.rows[0].nome, req);
+  req.session.msg = [novo ? 'Edição de cadastro liberada para este ligante.' : 'Edição de cadastro bloqueada para este ligante.'];
+  res.redirect('/ligantes');
+});
+
+router.post('/ligantes/grupo/liberar-edicao', requireAuth, requireSecretaria, async (req, res) => {
+  const r = await query("SELECT valor FROM configuracoes WHERE chave='edicao_ligantes_grupo'");
+  const novo = (r.rows[0]?.valor === '1') ? '0' : '1';
+  await query("INSERT INTO configuracoes (chave,valor) VALUES ('edicao_ligantes_grupo',$1) ON CONFLICT (chave) DO UPDATE SET valor=$1", [novo]);
+  req.session.msg = [novo === '1' ? 'Edição de cadastro liberada para todos os ligantes.' : 'Edição de cadastro em grupo bloqueada para os ligantes.'];
+  res.redirect('/ligantes');
+});
+
+router.post('/diretivos/grupo/liberar-edicao', requireAuth, requireSecretaria, async (req, res) => {
+  const r = await query("SELECT valor FROM configuracoes WHERE chave='edicao_diretivos_grupo'");
+  const novo = (r.rows[0]?.valor === '1') ? '0' : '1';
+  await query("INSERT INTO configuracoes (chave,valor) VALUES ('edicao_diretivos_grupo',$1) ON CONFLICT (chave) DO UPDATE SET valor=$1", [novo]);
+  req.session.msg = [novo === '1' ? 'Edição de cadastro liberada para todos os diretivos.' : 'Edição de cadastro em grupo bloqueada para os diretivos.'];
+  res.redirect('/diretivos');
+});
+
+// ─── CORREÇÕES DE CADASTRO (autoatualização feita pelo proprio ligante/diretivo no Portal) ──
+router.get('/correcoes-cadastro', requireAuth, requireSecretaria, async (req, res) => {
+  const config = await getConfig();
+  const msg = req.session.msg||[]; req.session.msg=[];
+  const erro = req.session.erro||[]; req.session.erro=[];
+  const r = await query("SELECT * FROM cadastro_correcoes WHERE status='pendente' ORDER BY criado_em ASC");
+  const correcoes = await Promise.all(r.rows.map(async c => {
+    const atualR = await query(`SELECT * FROM ${c.origem_tipo === 'ligante' ? 'ligantes' : 'diretivos'} WHERE id=$1`, [c.origem_id]);
+    return { ...c, atual: atualR.rows[0] || null };
+  }));
+  res.render('pages/correcoes-cadastro', { config, usuario: req.session.usuario, correcoes, msg, erro });
+});
+
+router.post('/correcoes-cadastro/:id/aprovar', requireAuth, requireSecretaria, async (req, res) => {
+  const r = await query('SELECT * FROM cadastro_correcoes WHERE id=$1 AND status=$2', [req.params.id, 'pendente']);
+  const c = r.rows[0];
+  if (!c) { req.session.erro = ['Correção não encontrada ou já avaliada.']; return res.redirect('/correcoes-cadastro'); }
+  const tabela = c.origem_tipo === 'ligante' ? 'ligantes' : 'diretivos';
+  const campos = CAMPOS_MEUS_DADOS[c.origem_tipo];
+  const sets = campos.map((campo, i) => `${campo}=$${i+1}`).join(',');
+  const valores = campos.map(campo => c.dados[campo]);
+  await query(`UPDATE ${tabela} SET ${sets} WHERE id=$${campos.length+1}`, [...valores, c.origem_id]);
+  await query("UPDATE cadastro_correcoes SET status='aprovado', avaliado_por=$1, avaliado_em=NOW() WHERE id=$2", [req.session.usuario.id, req.params.id]);
+  await logAtividade(req.session.usuario.id, 'CORRECAO_CADASTRO_APROVADA', c.origem_tipo + ' ID ' + c.origem_id, req);
+  req.session.msg = ['Correção aplicada ao cadastro com sucesso!'];
+  res.redirect('/correcoes-cadastro');
+});
+
+router.post('/correcoes-cadastro/:id/rejeitar', requireAuth, requireSecretaria, async (req, res) => {
+  const r = await query("UPDATE cadastro_correcoes SET status='rejeitado', avaliado_por=$1, avaliado_em=NOW() WHERE id=$2 AND status='pendente' RETURNING origem_tipo, origem_id", [req.session.usuario.id, req.params.id]);
+  if (r.rows.length) await logAtividade(req.session.usuario.id, 'CORRECAO_CADASTRO_REJEITADA', r.rows[0].origem_tipo + ' ID ' + r.rows[0].origem_id, req);
+  req.session.msg = ['Correção rejeitada.'];
+  res.redirect('/correcoes-cadastro');
 });
 
 router.post('/ligantes/:id/toggle', requireAuth, requirePermissao('ligantes'), async (req, res) => {
@@ -3966,6 +4049,7 @@ router.post('/desvinculacoes', requireAuth, requirePermissao('desvinculacoes'), 
 
 router.get('/desvinculacoes/:id/adv/:num', requireAuth, requirePermissao('desvinculacoes'), async (req, res) => {
   try {
+    if (!['1','2','3'].includes(req.params.num)) return res.status(400).send('Inválido');
     const r = await query('SELECT adv'+req.params.num+'_chave as chave FROM desvinculacoes WHERE id=$1', [req.params.id]);
     const chave = r.rows[0]?.chave;
     if (!chave) return res.status(404).send('Não encontrado');
@@ -9141,7 +9225,64 @@ router.get('/portal', requirePortal, async (req, res) => {
   const materiais = (await query(
     "SELECT id, titulo, descricao, arquivo_nome FROM materiais_estudo WHERE ativo=true AND categoria='PRODUÇÃO CIENTÍFICA' ORDER BY ordem ASC, criado_em DESC"
   )).rows;
-  res.render('pages/portal/dashboard', { config, membro, grupos, gruposEncerrados, msg, saudacao, dataHoje, tipoLabel: tipo === 'ligante' ? 'Ligante' : 'Diretivo', materiais });
+  const podeEditar = !!(membroCompletoEdicao(config, membro, tipo));
+  res.render('pages/portal/dashboard', { config, membro, grupos, gruposEncerrados, msg, saudacao, dataHoje, tipoLabel: tipo === 'ligante' ? 'Ligante' : 'Diretivo', materiais, podeEditarCadastro: podeEditar });
+});
+
+function membroCompletoEdicao(config, membro, tipo) {
+  return membro.edicao_liberada || config[`edicao_${tipo}s_grupo`] === '1';
+}
+
+const CAMPOS_MEUS_DADOS = {
+  ligante: ['nome','data_nascimento','sexo','email','email_alternativo','whatsapp','rg','cpf','semestre','turma','catraca','orcid','tem_formacao','qual_formacao','habilidades','aceita_cargo','qual_cargo','contribuicao_grupo','ideia_inovadora','tema_interesse','porque_lauro','apresentacao'],
+  diretivo: ['nome','rg','cpf','email','catraca','cargo','semestre_turma','orcid','data_nascimento','sexo','whatsapp','instagram','graduacao','ano_ingresso','onde_reside','transporte_proprio','tipo_transporte','disponibilidade','experiencia_urologia']
+};
+
+router.get('/portal/meus-dados', requirePortal, async (req, res) => {
+  const config = await getConfig();
+  const msg = req.session.msg||[]; req.session.msg=[];
+  const erro = req.session.erro||[]; req.session.erro=[];
+  const { tipo, id } = req.session.portalMembro;
+  const r = await query(`SELECT * FROM ${tipo === 'ligante' ? 'ligantes' : 'diretivos'} WHERE id=$1`, [id]);
+  const membro = r.rows[0];
+  if (!membro) { req.session.portalMembro = null; return res.redirect('/portal/login'); }
+  const podeEditar = membroCompletoEdicao(config, membro, tipo);
+  const pendR = await query("SELECT id, criado_em FROM cadastro_correcoes WHERE origem_tipo=$1 AND origem_id=$2 AND status='pendente'", [tipo, id]);
+  const CAMPOS_VIEW = {
+    ligante: [{name:'nome',label:'Nome',full:true},{name:'data_nascimento',label:'Nascimento'},{name:'sexo',label:'Sexo'},{name:'email',label:'E-mail'},{name:'email_alternativo',label:'E-mail alternativo'},{name:'whatsapp',label:'WhatsApp'},{name:'rg',label:'RG/CI'},{name:'cpf',label:'CPF'},{name:'semestre',label:'Semestre'},{name:'turma',label:'Turma'},{name:'catraca',label:'Catraca'},{name:'orcid',label:'ORCID'}],
+    diretivo: [{name:'nome',label:'Nome',full:true},{name:'rg',label:'RG/CI'},{name:'cpf',label:'CPF'},{name:'data_nascimento',label:'Nascimento'},{name:'sexo',label:'Sexo'},{name:'email',label:'E-mail'},{name:'whatsapp',label:'WhatsApp'},{name:'instagram',label:'Instagram'},{name:'onde_reside',label:'Onde reside'},{name:'catraca',label:'Catraca'},{name:'cargo',label:'Cargo',full:true}]
+  };
+  res.render('pages/portal/meus-dados', { config, membro, tipo, tipoLabel: tipo === 'ligante' ? 'Ligante' : 'Diretivo', podeEditar, correcaoPendente: pendR.rows[0]||null, msg, erro, CAMPOS_VIEW: CAMPOS_VIEW[tipo] });
+});
+
+router.post('/portal/meus-dados', requirePortal, async (req, res) => {
+  const config = await getConfig();
+  const { tipo, id } = req.session.portalMembro;
+  const r = await query(`SELECT * FROM ${tipo === 'ligante' ? 'ligantes' : 'diretivos'} WHERE id=$1`, [id]);
+  const membro = r.rows[0];
+  if (!membro) { req.session.portalMembro = null; return res.redirect('/portal/login'); }
+  if (!membroCompletoEdicao(config, membro, tipo)) { req.session.erro = ['A edição de cadastro não está liberada para você no momento.']; return res.redirect('/portal/meus-dados'); }
+  const pendR = await query("SELECT id FROM cadastro_correcoes WHERE origem_tipo=$1 AND origem_id=$2 AND status='pendente'", [tipo, id]);
+  if (pendR.rows.length) { req.session.erro = ['Você já tem uma atualização de cadastro em análise. Aguarde a avaliação da equipe.']; return res.redirect('/portal/meus-dados'); }
+  const campos = CAMPOS_MEUS_DADOS[tipo];
+  const dados = {};
+  const faltando = [];
+  campos.forEach(c => {
+    let v = req.body[c];
+    if (c === 'disponibilidade') v = [].concat(req.body.disponibilidade||[]).join(', ');
+    dados[c] = v;
+    if (!v || !String(v).trim()) faltando.push(c);
+  });
+  if (tipo === 'ligante') {
+    if (dados.tem_formacao === 'Sim' && (!dados.qual_formacao || !dados.qual_formacao.trim())) faltando.push('qual_formacao');
+    if (dados.aceita_cargo === 'Sim' && (!dados.qual_cargo || !dados.qual_cargo.trim())) faltando.push('qual_cargo');
+  } else {
+    if (dados.transporte_proprio === 'Sim' && (!dados.tipo_transporte || !dados.tipo_transporte.trim())) faltando.push('tipo_transporte');
+  }
+  if (faltando.length) { req.session.erro = ['Preencha todos os campos obrigatórios para enviar a atualização.']; return res.redirect('/portal/meus-dados'); }
+  await query('INSERT INTO cadastro_correcoes (origem_tipo, origem_id, dados) VALUES ($1,$2,$3)', [tipo, id, JSON.stringify(dados)]);
+  req.session.msg = ['Atualização enviada! A equipe vai revisar e aplicar as mudanças em breve.'];
+  res.redirect('/portal/meus-dados');
 });
 
 

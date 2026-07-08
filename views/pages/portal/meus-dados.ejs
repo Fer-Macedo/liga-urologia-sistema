@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="shortcut icon" href="/favicon.ico">
+  <title>Meus Dados — Portal Cientifico</title>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Archivo:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'IBM Plex Sans',system-ui,sans-serif;background:#F0F4F2;min-height:100vh;padding-top:84px;padding-bottom:40px}
+    .topbar{background:#0C231B;padding:0 28px;height:84px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:0;right:0;z-index:50}
+    .topbar-brand{display:flex;align-items:center;gap:10px}
+    .topbar-logo{width:32px;height:32px;background:#fff;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center}
+    .topbar-logo img{width:100%;height:100%;object-fit:cover;border-radius:50%}
+    .topbar-nome{font-family:'Archivo',sans-serif;font-weight:800;font-size:14px;color:#fff}
+    .topbar-sub{font-size:10px;color:#5E7A6D;text-transform:uppercase;letter-spacing:2px;margin-top:1px}
+    .topbar-user{display:flex;align-items:center;gap:10px;position:relative}
+    .topbar-user span{font-size:12.5px;color:#CFE0D7;cursor:pointer;padding:6px 4px}
+    .topbar-logout{font-size:12px;color:#8FA89C;text-decoration:none;padding:5px 10px;border:1px solid rgba(255,255,255,.15)}
+    .topbar-logout:hover{color:#fff;border-color:rgba(255,255,255,.4)}
+    .main{max-width:760px;margin:0 auto;padding:32px 20px;width:100%}
+    .voltar{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:#5E7A6D;text-decoration:none;margin-bottom:16px}
+    .voltar:hover{color:#0F6E56}
+    .pg-title{font-size:20px;font-weight:700;color:#0C231B;margin-bottom:4px;font-family:'Archivo',sans-serif}
+    .pg-sub{font-size:13px;color:#6B7A72;margin-bottom:22px}
+    .alert{padding:12px 16px;font-size:13px;margin-bottom:18px}
+    .alert-ok{background:#f0fdf4;border:1px solid #bbf7d0;color:#15803d}
+    .alert-erro{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c}
+    .alert-info{background:#fff7ed;border:1px solid #fed7aa;color:#9a3412}
+    .card{background:#fff;border:1px solid #DDE3DF;padding:24px}
+    .sec-titulo{font-size:11.5px;font-weight:700;color:#0F6E56;text-transform:uppercase;letter-spacing:.06em;margin:22px 0 14px;padding-bottom:8px;border-bottom:1.5px solid #EEF0ED}
+    .sec-titulo:first-child{margin-top:0}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .campo{display:flex;flex-direction:column;gap:6px}
+    .campo.full{grid-column:1/-1}
+    label{font-size:11.5px;font-weight:700;color:#4A5568;text-transform:uppercase;letter-spacing:.04em}
+    input,select,textarea{padding:9px 12px;border:1.5px solid #DDE3DF;font-size:13.5px;color:#0C231B;background:#F8FAF9;font-family:inherit;width:100%}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:#0F6E56;background:#fff}
+    textarea{resize:vertical;min-height:70px}
+    .radio-group{display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
+    .radio-option{display:flex;align-items:center;gap:6px;padding:7px 12px;border:1.5px solid #DDE3DF;cursor:pointer;font-size:12.5px}
+    .radio-option input{width:auto}
+    .checkbox-group{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+    .valor-view{font-size:13.5px;color:#0C231B;padding:9px 0;border-bottom:1px solid #EEF0ED}
+    .btn-salvar{width:100%;padding:12px;background:#0F6E56;color:#fff;border:none;font-size:14px;font-weight:700;cursor:pointer;margin-top:24px}
+    .btn-salvar:hover{background:#0a5240}
+    .pendente-box{text-align:center;padding:36px 24px}
+    .pendente-box svg{margin-bottom:12px}
+    .pendente-box h3{font-size:15px;font-weight:700;color:#0C231B;margin-bottom:6px}
+    .pendente-box p{font-size:13px;color:#6B7A72}
+    .bloqueado-box{text-align:center;padding:36px 24px}
+    .bloqueado-box h3{font-size:15px;font-weight:700;color:#0C231B;margin-bottom:6px}
+    .bloqueado-box p{font-size:13px;color:#6B7A72}
+    @media(max-width:600px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<div class="topbar">
+  <div class="topbar-brand">
+    <div class="topbar-logo"><%if(config.org_logo){%><img src="<%=config.org_logo%>" alt=""><%}else{%><span style="font-family:'Archivo';font-weight:800;color:#0F6E56;font-size:13px">LU</span><%}%></div>
+    <div><div class="topbar-nome"><%=config.org_nome||'LAURO'%></div><div class="topbar-sub">Portal Cientifico</div></div>
+  </div>
+  <div class="topbar-user">
+    <span><%=membro.nome%></span>
+    <a href="/portal/logout" class="topbar-logout">Sair</a>
+  </div>
+</div>
+<div class="main">
+  <a href="/portal" class="voltar"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Voltar ao portal</a>
+  <div class="pg-title">Meus Dados</div>
+  <div class="pg-sub">Cadastro de <%=tipoLabel%> — <%=membro.nome%></div>
+
+  <%if(msg&&msg.length){%><div class="alert alert-ok"><%=msg[0]%></div><%}%>
+  <%if(erro&&erro.length){%><div class="alert alert-erro"><%=erro[0]%></div><%}%>
+
+  <div class="card">
+  <%if(correcaoPendente){%>
+    <div class="pendente-box">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#c2410c" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <h3>Sua atualização está em análise</h3>
+      <p>Você enviou uma correção de cadastro em <%=new Date(correcaoPendente.criado_em).toLocaleDateString('pt-BR')%> e a equipe ainda vai revisar. Assim que for aprovada, os dados novos aparecem aqui.</p>
+    </div>
+  <%}else if(!podeEditar){%>
+    <div class="bloqueado-box">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#5E7A6D" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <h3>Edição de cadastro bloqueada</h3>
+      <p>No momento você só pode visualizar seus dados. Se precisar corrigir alguma informação, entre em contato com a secretaria.</p>
+    </div>
+    <div class="sec-titulo">Dados atuais</div>
+    <div class="grid">
+      <%CAMPOS_VIEW.forEach(function(c){%>
+      <div class="campo<%=c.full?' full':''%>"><label><%=c.label%></label><div class="valor-view"><%=c.name==='data_nascimento'&&membro.data_nascimento?new Date(membro.data_nascimento).toLocaleDateString('pt-BR',{timeZone:'UTC'}):(membro[c.name]||'—')%></div></div>
+      <%})%>
+    </div>
+  <%}else{%>
+    <form method="POST" action="/portal/meus-dados">
+      <% if(tipo==='ligante'){ %>
+      <div class="sec-titulo">Dados Pessoais</div>
+      <div class="grid">
+        <div class="campo full"><label>Nome Completo *</label><input name="nome" required value="<%=membro.nome||''%>"></div>
+        <div class="campo"><label>Data de Nascimento *</label><input name="data_nascimento" type="date" required value="<%=membro.data_nascimento?new Date(membro.data_nascimento).toISOString().substring(0,10):''%>"></div>
+        <div class="campo"><label>Sexo *</label>
+          <select name="sexo" required>
+            <option value="">Selecione...</option>
+            <option value="Masculino" <%=membro.sexo==='Masculino'?'selected':''%>>Masculino</option>
+            <option value="Feminino" <%=membro.sexo==='Feminino'?'selected':''%>>Feminino</option>
+            <option value="Prefiro não informar" <%=membro.sexo==='Prefiro não informar'?'selected':''%>>Prefiro não informar</option>
+          </select>
+        </div>
+        <div class="campo"><label>E-mail *</label><input name="email" type="email" required value="<%=membro.email||''%>"></div>
+        <div class="campo"><label>E-mail alternativo *</label><input name="email_alternativo" type="email" required value="<%=membro.email_alternativo||''%>"></div>
+        <div class="campo"><label>WhatsApp *</label><input name="whatsapp" required value="<%=membro.whatsapp||''%>"></div>
+        <div class="campo"><label>RG / C.I. *</label><input name="rg" required value="<%=membro.rg||''%>"></div>
+        <div class="campo"><label>CPF *</label><input name="cpf" required value="<%=membro.cpf||''%>"></div>
+      </div>
+      <div class="sec-titulo">Dados Acadêmicos</div>
+      <div class="grid">
+        <div class="campo"><label>Semestre *</label><input name="semestre" required value="<%=membro.semestre||''%>"></div>
+        <div class="campo"><label>Turma *</label><input name="turma" required value="<%=membro.turma||''%>"></div>
+        <div class="campo"><label>Catraca *</label><input name="catraca" required value="<%=membro.catraca||''%>"></div>
+        <div class="campo"><label>ORCID *</label><input name="orcid" required value="<%=membro.orcid||''%>"></div>
+        <div class="campo full"><label>Já tem alguma formação? *</label>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="tem_formacao" value="Sim" required onchange="document.getElementById('qual-formacao-wrap').style.display='block'" <%=membro.tem_formacao==='Sim'?'checked':''%>>Sim</label>
+            <label class="radio-option"><input type="radio" name="tem_formacao" value="Não" required onchange="document.getElementById('qual-formacao-wrap').style.display='none'" <%=membro.tem_formacao==='Não'?'checked':''%>>Não</label>
+          </div>
+        </div>
+        <div class="campo full" id="qual-formacao-wrap" style="display:<%=membro.tem_formacao==='Sim'?'flex':'none'%>"><label>Qual formação?</label><input name="qual_formacao" value="<%=membro.qual_formacao||''%>"></div>
+      </div>
+      <div class="sec-titulo">Perfil e Motivação</div>
+      <div class="grid">
+        <div class="campo full"><label>Habilidades específicas *</label><textarea name="habilidades" required><%=membro.habilidades||''%></textarea></div>
+        <div class="campo full"><label>Estaria disposto(a) a ocupar cargos? *</label>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="aceita_cargo" value="Sim" required onchange="document.getElementById('qual-cargo-wrap').style.display='block'" <%=membro.aceita_cargo==='Sim'?'checked':''%>>Sim</label>
+            <label class="radio-option"><input type="radio" name="aceita_cargo" value="Não" required onchange="document.getElementById('qual-cargo-wrap').style.display='none'" <%=membro.aceita_cargo==='Não'?'checked':''%>>Não</label>
+            <label class="radio-option"><input type="radio" name="aceita_cargo" value="Talvez" required onchange="document.getElementById('qual-cargo-wrap').style.display='none'" <%=membro.aceita_cargo==='Talvez'?'checked':''%>>Talvez</label>
+          </div>
+        </div>
+        <div class="campo full" id="qual-cargo-wrap" style="display:<%=membro.aceita_cargo==='Sim'?'flex':'none'%>"><label>Qual cargo?</label><input name="qual_cargo" value="<%=membro.qual_cargo||''%>"></div>
+        <div class="campo full"><label>Contribuição em trabalhos em grupo *</label><input name="contribuicao_grupo" required value="<%=membro.contribuicao_grupo||''%>"></div>
+        <div class="campo full"><label>Ideia inovadora *</label><textarea name="ideia_inovadora" required><%=membro.ideia_inovadora||''%></textarea></div>
+        <div class="campo full"><label>Tema de interesse *</label><input name="tema_interesse" required value="<%=membro.tema_interesse||''%>"></div>
+        <div class="campo full"><label>Por que você escolheu a LAURO? *</label><textarea name="porque_lauro" required><%=membro.porque_lauro||''%></textarea></div>
+        <div class="campo full"><label>Apresentação *</label><textarea name="apresentacao" required><%=membro.apresentacao||''%></textarea></div>
+      </div>
+      <% } else { %>
+      <div class="sec-titulo">Dados Pessoais</div>
+      <div class="grid">
+        <div class="campo full"><label>Nome Completo *</label><input name="nome" required value="<%=membro.nome||''%>"></div>
+        <div class="campo"><label>RG / C.I. *</label><input name="rg" required value="<%=membro.rg||''%>"></div>
+        <div class="campo"><label>CPF *</label><input name="cpf" required value="<%=membro.cpf||''%>"></div>
+        <div class="campo"><label>Data de Nascimento *</label><input name="data_nascimento" type="date" required value="<%=membro.data_nascimento?new Date(membro.data_nascimento).toISOString().substring(0,10):''%>"></div>
+        <div class="campo"><label>Sexo *</label>
+          <select name="sexo" required>
+            <option value="">Selecione...</option>
+            <option value="Masculino" <%=membro.sexo==='Masculino'?'selected':''%>>Masculino</option>
+            <option value="Feminino" <%=membro.sexo==='Feminino'?'selected':''%>>Feminino</option>
+            <option value="Prefiro não informar" <%=membro.sexo==='Prefiro não informar'?'selected':''%>>Prefiro não informar</option>
+          </select>
+        </div>
+        <div class="campo"><label>E-mail *</label><input name="email" type="email" required value="<%=membro.email||''%>"></div>
+        <div class="campo"><label>WhatsApp *</label><input name="whatsapp" required value="<%=membro.whatsapp||''%>"></div>
+        <div class="campo"><label>Instagram *</label><input name="instagram" required value="<%=membro.instagram||''%>"></div>
+        <div class="campo"><label>Onde reside? *</label><input name="onde_reside" required value="<%=membro.onde_reside||''%>"></div>
+      </div>
+      <div class="sec-titulo">Dados Acadêmicos</div>
+      <div class="grid">
+        <div class="campo"><label>Catraca *</label><input name="catraca" required value="<%=membro.catraca||''%>"></div>
+        <div class="campo"><label>Ano de Ingresso *</label><input name="ano_ingresso" required value="<%=membro.ano_ingresso||''%>"></div>
+        <div class="campo"><label>Semestre / Turma *</label><input name="semestre_turma" required value="<%=membro.semestre_turma||''%>"></div>
+        <div class="campo"><label>ORCID *</label><input name="orcid" required value="<%=membro.orcid||''%>"></div>
+        <div class="campo full"><label>Graduação *</label><input name="graduacao" required value="<%=membro.graduacao||''%>"></div>
+        <div class="campo full"><label>Experiência com Urologia *</label><textarea name="experiencia_urologia" required><%=membro.experiencia_urologia||''%></textarea></div>
+      </div>
+      <div class="sec-titulo">Dados na Liga</div>
+      <div class="grid">
+        <div class="campo full"><label>Cargo na Liga *</label>
+          <select name="cargo" required>
+            <option value="">Selecione...</option>
+            <% ['Presidente(a)','Vice-presidente(a)','Secretário(a)','Diretor(a) Financeiro(a)','Diretor(a) Científico','Vice Diretor(a) Científico','Diretor(a) de Extensão','Vice Diretor(a) de Extensão','Diretor(a) de Ensino','Vice Diretor(a) de Ensino','Diretor(a) de Marketing','Vice Diretor(a) de Marketing'].forEach(function(c){ %>
+            <option value="<%=c%>" <%=membro.cargo===c?'selected':''%>><%=c%></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="campo full"><label>Disponibilidade *</label>
+          <div class="checkbox-group">
+            <% ['Manhã','Tarde','Noite','Integral'].forEach(function(d){ %>
+            <label class="radio-option"><input type="checkbox" name="disponibilidade" value="<%=d%>" <%=(membro.disponibilidade||'').includes(d)?'checked':''%>><%=d%></label>
+            <% }) %>
+          </div>
+        </div>
+        <div class="campo full"><label>Possui Transporte Próprio? *</label>
+          <div class="radio-group">
+            <label class="radio-option"><input type="radio" name="transporte_proprio" value="Sim" required onchange="document.getElementById('tipo-transporte-wrap').style.display='block'" <%=membro.transporte_proprio==='Sim'?'checked':''%>>Sim</label>
+            <label class="radio-option"><input type="radio" name="transporte_proprio" value="Não" required onchange="document.getElementById('tipo-transporte-wrap').style.display='none'" <%=membro.transporte_proprio==='Não'?'checked':''%>>Não</label>
+          </div>
+        </div>
+        <div class="campo full" id="tipo-transporte-wrap" style="display:<%=membro.transporte_proprio==='Sim'?'flex':'none'%>"><label>Qual tipo?</label><input name="tipo_transporte" value="<%=membro.tipo_transporte||''%>"></div>
+      </div>
+      <% } %>
+      <button type="submit" class="btn-salvar">Enviar atualização para revisão</button>
+    </form>
+  <%}%>
+  </div>
+</div>
+</body>
+</html>
