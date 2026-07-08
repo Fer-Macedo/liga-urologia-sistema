@@ -40,7 +40,7 @@
           <div class="sec-hdr"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Dados Pessoais</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
             <div class="campo" style="grid-column:1/-1"><label class="label">Nome Completo *</label><input name="nome" class="input" required value="<%= ligante.nome||'' %>"></div>
-            <div class="campo"><label class="label">Data de Nascimento</label><input name="data_nascimento" type="date" class="input" value="<%= ligante.data_nascimento ? String(ligante.data_nascimento).substring(0,10) : '' %>"></div>
+            <div class="campo"><label class="label">Data de Nascimento</label><input name="data_nascimento" type="date" class="input" value="<%= ligante.data_nascimento ? new Date(ligante.data_nascimento).toISOString().substring(0,10) : '' %>"></div>
             <div class="campo"><label class="label">Sexo</label>
               <select name="sexo" class="input">
                 <option value="">Selecione...</option>

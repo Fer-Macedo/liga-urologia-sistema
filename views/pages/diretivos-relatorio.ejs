@@ -197,7 +197,7 @@
               <% colunasVisiveis.forEach(col => { %>
               <td>
                 <% if (col==='data_nascimento') { %>
-                  <%= d.data_nascimento ? new Date(String(d.data_nascimento).substring(0,10)+'T12:00:00').toLocaleDateString('pt-BR') : '—' %>
+                  <%= d.data_nascimento ? new Date(d.data_nascimento).toLocaleDateString('pt-BR', {timeZone:'UTC'}) : '—' %>
                 <% } else if (col==='status') { %>
                   <% if (d.ativo==0) { %><span class="badge-inativo">Inativo</span><% } else { %><span class="badge-ativo">Ativo</span><% } %>
                 <% } else if (col==='cadastrado_em') { %>

@@ -34,7 +34,7 @@
     <h2>Defina sua senha</h2>
     <p>Este e seu primeiro acesso. Por seguranca, crie uma senha pessoal para continuar.</p>
     <%if(erro&&erro.length){%><div class="alert-err"><%=erro[0]%></div><%}%>
-    <form method="POST" action="/portal/trocar-senha">
+    <form method="POST" action="<%= typeof baseUrl !== 'undefined' ? baseUrl : '/portal' %>/trocar-senha">
       <div class="form-group">
         <label>Senha atual</label>
         <input type="password" name="senha_atual" required placeholder="Senha atual">
