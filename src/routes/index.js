@@ -2292,6 +2292,32 @@ router.post('/frequencia/turma/:id/enviar', requireAuth, requireSecretaria, asyn
 
 // ─── PERMISSÕES DE USUÁRIO ────────────────────────────────────────────────────
 
+// Le a Sidebar de verdade e extrai a lista de modulos/paginas que existem nela (id da
+// permissao + nome exibido) - usado na tela de Usuarios para montar a lista de permissoes
+// assinaveis. Isso evita a lista de permissoes ficar desatualizada ou com nome diferente do
+// que aparece na Sidebar: toda vez que um item novo e adicionado la (com o devido
+// temPerm('id')), ele passa a aparecer aqui automaticamente, sem precisar editar mais nada.
+function extrairModulosDaSidebar() {
+  const fs = require('fs');
+  const path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, '../../views/partials/sidebar.ejs'), 'utf8');
+  const re = /<% if \(temPerm\('([a-z0-9-]+)'\)\) \{ %>[\s\S]*?<a href="[^"]*" class="nav-item[^"]*"[^>]*>\s*<span class="nav-icon">[\s\S]*?<\/span>\s*<span[^>]*>([^<]+)<\/span>/g;
+  const vistos = new Set();
+  const modulos = [];
+  let m;
+  while ((m = re.exec(src))) {
+    if (vistos.has(m[1])) continue;
+    vistos.add(m[1]);
+    modulos.push({ id: m[1], label: m[2].trim() });
+  }
+  // Itens de admin da Sidebar nao usam temPerm (sao liberados so por isAdmin), mas ainda
+  // fazem sentido como permissao assinavel para outros perfis, entao entram manualmente.
+  ['usuarios', 'auditoria', 'configuracoes'].forEach(id => {
+    if (!vistos.has(id)) modulos.push({ id, label: id.charAt(0).toUpperCase() + id.slice(1) });
+  });
+  return modulos;
+}
+
 router.get('/usuarios', requireAuth, requirePermissao('usuarios'), async (req, res) => {
   const config = await getConfig();
   const r = await query('SELECT id,nome,email,perfil,ativo,criado_em,telefone FROM usuarios ORDER BY criado_em');
@@ -2303,9 +2329,11 @@ router.get('/usuarios', requireAuth, requirePermissao('usuarios'), async (req, r
     permissoesUsuarios[row.usuario_id].push(row.modulo);
   });
 
+  const modulosSidebar = extrairModulosDaSidebar();
+
   res.render('pages/usuarios', {
     config, usuario: req.session.usuario,
-    usuarios: r.rows, permissoesUsuarios,
+    usuarios: r.rows, permissoesUsuarios, modulosSidebar,
     msg: req.flash('msg'), erro: req.flash('erro')
   });
 });

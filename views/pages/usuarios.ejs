@@ -187,27 +187,9 @@
 </div>
 <script src="/js/app.js"></script>
 <script>
-const TODOS_MODULOS=[
-  {id:"dashboard",label:"Dashboard"},
-  {id:"ligantes",label:"Ligantes"},{id:"diretivos",label:"Diretivos"},
-  {id:"aniversarios",label:"Aniversários"},{id:"palestrantes",label:"Palestrantes"},
-  {id:"frequencia",label:"Frequência Ligantes"},{id:"frequencia-diretivos",label:"Frequência Diretivos"},
-  {id:"ensino",label:"Ensino"},{id:"extensao",label:"Extensão"},{id:"cientifico",label:"Científico"},
-  {id:"eventos",label:"Eventos"},{id:"lista-assinaturas",label:"Lista de Assinaturas"},
-  {id:"membros",label:"Membros"},{id:"cobrancas",label:"Cobranças"},
-  {id:"carta-cobranca",label:"Carta Cobrança"},{id:"carta-notificacao",label:"Carta Notificação"},
-  {id:"financeiro-arquivos",label:"Arquivos Financeiros"},
-  {id:"fluxo-caixa",label:"Fluxo de Caixa"},
-  {id:"desligamentos",label:"Desligamentos"},{id:"contratos",label:"Contratos Ligantes"},
-  {id:"contratos-diretivos",label:"Contratos Diretivos"},{id:"desvinculacoes",label:"Desvinculações"},
-  {id:"arquivos",label:"Arquivos"},{id:"atas",label:"Atas de Reunião"},
-  {id:"sorteios",label:"Sorteios"},{id:"materiais",label:"Materiais"},{id:"marketing",label:"Marketing"},
-  {id:"comunicados",label:"Comunicados"},{id:"atendimentos",label:"Atendimentos WA"},
-  {id:"processo-seletivo",label:"Proc. Seletivo"},{id:"notificacoes",label:"Notificações"},
-  {id:"assistente-virtual",label:"Assistente Virtual"},{id:"inventario",label:"Inventário"},
-  {id:"calendario",label:"Calendário"},{id:"usuarios",label:"Usuários"},
-  {id:"auditoria",label:"Auditoria"},{id:"configuracoes",label:"Configurações"}
-];
+// Lista de modulos vem direto da Sidebar real (extraida no servidor) - nunca fica
+// desatualizada nem com nome diferente do que aparece la, porque e a mesma fonte.
+const TODOS_MODULOS=<%- JSON.stringify(modulosSidebar) %>;
 const PERMISSOES_PADRAO={
   presidencia:["dashboard","membros","diretivos","ligantes","arquivos","frequencia","frequencia-diretivos","cobrancas","aniversarios","auditoria","notificacoes","desligamentos","desvinculacoes","carta-cobranca","lista-assinaturas","marketing","eventos"],
   secretaria:["dashboard","membros","diretivos","ligantes","arquivos","frequencia","frequencia-diretivos","aniversarios","desligamentos","desvinculacoes","lista-assinaturas","eventos"],
