@@ -424,7 +424,7 @@ function gerarRelatorioPDF() {
   const colTaxa   = document.getElementById('rel-col-taxa').checked;
   const colStatus = document.getElementById('rel-col-status').checked;
   const fLabel = {todas:'Todas',pago:'Pagas',pendente:'Pendentes',atrasado:'Atrasadas'}[statusFiltro]||'Todas';
-  const todas = <%- JSON.stringify(cobrancas) %>;
+  const todas = <%- JSON.stringify(cobrancas).replace(/</g,"\\u003c") %>;
   const rows = todas.filter(c => {
     if (statusFiltro !== 'todas' && c.status !== statusFiltro) return false;
     if (nomeF && !c.nome.toLowerCase().includes(nomeF)) return false;

@@ -291,8 +291,8 @@
 </div>
 <script src="/js/app.js"></script>
 <script>
-const _diretivos=<%- JSON.stringify(diretivos||[]) %>;
-const _ligantes=<%- JSON.stringify(ligantes||[]) %>;
+const _diretivos=<%- JSON.stringify(diretivos||[]).replace(/</g,"\\u003c") %>;
+const _ligantes=<%- JSON.stringify(ligantes||[]).replace(/</g,"\\u003c") %>;
 const _ataId=<%=ata.id%>;
 
 function carregarAddMembros(){

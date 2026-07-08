@@ -318,7 +318,7 @@
       </div>
       <div class="campo" style="margin:0 24px 16px">
         <div id="editor-global" style="min-height:320px;border:1px solid var(--borda);border-radius:8px"></div>
-        <script>window._textoGlobal=<%- JSON.stringify(textoGlobal||'') %>;</script>
+        <script>window._textoGlobal=<%- JSON.stringify(textoGlobal||'').replace(/</g,"\\u003c") %>;</script>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-texto-global')">Cancelar</button>

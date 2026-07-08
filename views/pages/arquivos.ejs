@@ -482,8 +482,8 @@ function selecionarCor(cor) {
   });
 }
 
-const arquivosData = <%- JSON.stringify(arquivos) %>;
-const todasPastasData = <%- JSON.stringify(todasPastas) %>;
+const arquivosData = <%- JSON.stringify(arquivos).replace(/</g,"\\u003c") %>;
+const todasPastasData = <%- JSON.stringify(todasPastas).replace(/</g,"\\u003c") %>;
 let _moverTipo = null, _moverId = null, _renomearId = null;
 
 function navegarPasta(id) {

@@ -889,7 +889,7 @@ Ao marcar esta opção, você consente com o tratamento dos seus dados.<% } %></
 </footer>
 
 <script>
-const lotesData=<%- JSON.stringify(lotes) %>;
+const lotesData=<%- JSON.stringify(lotes).replace(/</g,"\\u003c") %>;
 let loteId=<%= lotes[0]?.id||'null' %>,precoBase=<%= parseFloat(lotes[0]?.preco||0) %>,desconto=0,quantidade=1;
 
 function selLote(id,el){

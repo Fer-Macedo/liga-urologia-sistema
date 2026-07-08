@@ -283,7 +283,7 @@
 </div></div>
 
 <script>
-const EVS = <%- JSON.stringify(atividades) %>;
+const EVS = <%- JSON.stringify(atividades).replace(/</g,"\\u003c") %>;
 const ICAL = window.location.origin + '/calendario.ics';
 document.getElementById('linkDisplay').textContent = ICAL;
 

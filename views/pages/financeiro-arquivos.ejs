@@ -230,9 +230,9 @@
 </div>
 <script src="/js/app.js"></script>
 <script>
-const arquivosData=<%- JSON.stringify(arquivos) %>;
-const pastasData=<%- JSON.stringify(pastas) %>;
-const pastaAtualId=<%- JSON.stringify(pastaAtual) %>;
+const arquivosData=<%- JSON.stringify(arquivos).replace(/</g,"\\u003c") %>;
+const pastasData=<%- JSON.stringify(pastas).replace(/</g,"\\u003c") %>;
+const pastaAtualId=<%- JSON.stringify(pastaAtual).replace(/</g,"\\u003c") %>;
 function irPasta(id){const u=new URL(window.location.href);if(id)u.searchParams.set('pasta',id);else u.searchParams.delete('pasta');window.location.href=u.toString();}
 function voltarPasta(){if(!pastaAtualId)return;const p=pastasData.find(p=>String(p.id)===String(pastaAtualId));irPasta(p&&p.pai_id?p.pai_id:null);}
 const sel=new Set();

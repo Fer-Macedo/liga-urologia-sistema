@@ -886,7 +886,7 @@
             <% }) %>
           </div>
         </div>
-        <script id="pales-data" type="application/json"><%- JSON.stringify(palestrantes.map(function(p){return {id:p.id,nome:p.nome,instituicao:p.instituicao||'',bio:p.bio||''};})) %></script>
+        <script id="pales-data" type="application/json"><%- JSON.stringify(palestrantes.map(function(p){return {id:p.id,nome:p.nome,instituicao:p.instituicao||'',bio:p.bio||''};})).replace(/</g,"\u003c") %></script>
           <div class="section-card">
           <div class="section-header">Adicionar palestrante</div>
           <div class="section-body">
@@ -1524,7 +1524,7 @@ function salvarOrdem() {
   fetch('/eventos/<%= evento.id %>/campos/ordem',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({campos:JSON.stringify(keys)})})
     .then(r=>r.json()).then(d=>{ if(d.ok){document.getElementById('btn-salvar-ordem').style.display='none';alert('Ordem salva!');} });
 }
-const inscricoesMala=<%- JSON.stringify(inscricoes) %>;
+const inscricoesMala=<%- JSON.stringify(inscricoes).replace(/</g,"\\u003c") %>;
 function atualizarContador() {
   const dest=document.getElementById('sel-dest').value;
   let n=inscricoesMala.length;

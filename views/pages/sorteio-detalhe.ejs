@@ -264,7 +264,7 @@
 
 <script src="/js/app.js"></script>
 <script>
-const participantes = <%- JSON.stringify(participantes) %>;
+const participantes = <%- JSON.stringify(participantes).replace(/</g,"\\u003c") %>;
 const sorteioStatus = '<%= sorteio.status %>';
 const qtdGanhadores = <%= sorteio.qtd_ganhadores %>;
 let rodando = false;

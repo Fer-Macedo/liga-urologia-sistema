@@ -233,8 +233,8 @@
 
 <script src="/js/app.js"></script>
 <script>
-const ligantesDoSistema = <%- JSON.stringify(ligantes) %>;
-const diretivosDoSistema = <%- JSON.stringify(diretivos) %>;
+const ligantesDoSistema = <%- JSON.stringify(ligantes).replace(/</g,"\\u003c") %>;
+const diretivosDoSistema = <%- JSON.stringify(diretivos).replace(/</g,"\\u003c") %>;
 
 let participantes = [];
 let disponiveis = [];
