@@ -186,7 +186,7 @@
               </button>
               <div class="ia-revisao-box" id="ia-revisao-<%=v.id%>" style="display:none;margin-top:10px;background:#F0F4F2;border:1px solid #DDE3DF;padding:12px 14px;font-size:12.5px"></div>
               <%if(v.ia_revisao){%>
-              <script>window.addEventListener('DOMContentLoaded',function(){ renderRevisaoIA(<%=v.id%>, <%- v.ia_revisao %>); });</script>
+              <script>window.addEventListener('DOMContentLoaded',function(){ renderRevisaoIA(<%=v.id%>, JSON.parse(<%- JSON.stringify(v.ia_revisao).replace(/</g,'\\u003c') %>)); });</script>
               <%}%>
             </div>
             <%}%>

@@ -8554,7 +8554,7 @@ router.post('/cientifico/projeto/:id/excluir', requireAuth, requireCientifico, a
 });
 
 // GET /cientifico/arquivo/:projetoId/:tipo (download edital/modelo)
-router.get('/cientifico/arquivo/:projetoId/:tipo', requireAuth, async (req, res) => {
+router.get('/cientifico/arquivo/:projetoId/:tipo', requireAuth, requireCientifico, async (req, res) => {
   const pR = await query('SELECT * FROM projetos_cientificos WHERE id=$1',[req.params.projetoId]);
   if (!pR.rows.length) return res.status(404).send('Nao encontrado');
   const p = pR.rows[0];
@@ -8760,8 +8760,14 @@ router.post('/cientifico/versao/:versaoId/transferir', requireAuth, requireCient
     req.session.erro=['Somente quem esta revisando este trabalho (ou admin/presidencia, em caso de emergencia) pode transferi-lo.'];
     return res.redirect('/cientifico/projeto/'+v.projeto_id+'/grupo/'+v.grupo_id);
   }
-  const destinoR = await query('SELECT id, nome FROM usuarios WHERE id=$1', [usuario_id]);
-  if (!destinoR.rows.length) { req.session.erro=['Usuario destino nao encontrado.']; return res.redirect('back'); }
+  // So pode transferir para quem realmente tem acesso ao Cientifico (permissao do modulo,
+  // presidencia ou admin) - senao qualquer id valido de usuarios viraria revisor autorizado.
+  const destinoR = await query(`
+    SELECT DISTINCT u.id, u.nome FROM usuarios u
+    LEFT JOIN usuario_permissoes up ON up.usuario_id=u.id AND up.modulo='cientifico'
+    WHERE u.id=$1 AND u.ativo=1 AND (up.usuario_id IS NOT NULL OR u.perfil IN ('presidencia','admin'))
+  `, [usuario_id]);
+  if (!destinoR.rows.length) { req.session.erro=['Usuario destino invalido ou sem acesso ao Cientifico.']; return res.redirect('back'); }
   const destino = destinoR.rows[0];
   await query('UPDATE versoes_trabalho SET revisor_atual_id=$1 WHERE id=$2', [destino.id, req.params.versaoId]);
   await registrarTimeline(v.grupo_id, 'Revisao transferida', req.session.usuario.nome+' transferiu para '+destino.nome);
@@ -8798,8 +8804,8 @@ router.post('/cientifico/versao/:versaoId/revisar', requireAuth, requireCientifi
       mensagem: (acao==='aprovar'
         ? `Seu trabalho foi <strong>aprovado</strong> pela equipe do Cientifico em ${agora.toLocaleDateString('pt-BR')} as ${agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}. Parabens!`
         : `Seu trabalho foi <strong>devolvido para correcao</strong> em ${agora.toLocaleDateString('pt-BR')} as ${agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}.`)
-        + `<br><br><strong>Projeto:</strong> ${_gI.ptitulo||''}<br><strong>Grupo:</strong> ${_gI.gnome||''}`
-        + (comentario ? `<br><br><strong>Comentario do revisor:</strong><br>${comentario}` : '')
+        + `<br><br><strong>Projeto:</strong> ${escapeHtml(_gI.ptitulo)}<br><strong>Grupo:</strong> ${escapeHtml(_gI.gnome)}`
+        + (comentario ? `<br><br><strong>Comentario do revisor:</strong><br>${escapeHtml(comentario)}` : '')
         + `<br><br>Verifique o portal para dar continuidade ao andamento do seu projeto.`,
       cta: { label: 'Acessar o Portal', url: 'https://cientifico.lauroucpcde.com' }
     });
@@ -8814,7 +8820,7 @@ router.post('/cientifico/versao/:versaoId/revisar', requireAuth, requireCientifi
 });
 
 // GET /cientifico/versao/:versaoId/download
-router.get('/cientifico/versao/:versaoId/download', requireAuth, async (req, res) => {
+router.get('/cientifico/versao/:versaoId/download', requireAuth, requireCientifico, async (req, res) => {
   const vR = await query('SELECT * FROM versoes_trabalho WHERE id=$1',[req.params.versaoId]);
   if (!vR.rows.length) return res.status(404).send('Nao encontrado');
   const url = await gerarUrlInline(vR.rows[0].arquivo_chave);
@@ -9363,6 +9369,12 @@ async function grupoEstaEncerrado(grupoId) {
   return r.rows.length > 0 && r.rows[0].status === 'encerrado';
 }
 
+// Escapa texto (nome, comentario etc) antes de colocar dentro de HTML de email - evita
+// que um nome ou comentario com <script>/<img onerror> vire XSS no cliente de email.
+function escapeHtml(str) {
+  return String(str||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 // Usuarios do sistema que devem ser avisados por email sobre o Cientifico:
 // equipe com permissao do modulo 'cientifico', presidencia e administrador.
 async function emailsStaffCientifico() {
@@ -9403,7 +9415,7 @@ async function notificarStaffNovoTrabalho({ grupoId, membroNome }) {
     const html = htmlSimples({
       config, faixaLabel: 'PORTAL CIENTIFICO',
       titulo: 'Novo trabalho para correcao',
-      mensagem: `<strong>${membroNome||'Um membro'}</strong> enviou uma nova versao do trabalho para avaliacao.<br><br><strong>Projeto:</strong> ${gInfo.ptitulo||''}<br><strong>Grupo:</strong> ${gInfo.gnome||''}`,
+      mensagem: `<strong>${escapeHtml(membroNome)||'Um membro'}</strong> enviou uma nova versao do trabalho para avaliacao.<br><br><strong>Projeto:</strong> ${escapeHtml(gInfo.ptitulo)}<br><strong>Grupo:</strong> ${escapeHtml(gInfo.gnome)}`,
       cta: { label: 'Abrir para revisar', url: 'https://sistema.lauroucpcde.com/cientifico' }
     });
     for (const s of staff) {
@@ -9425,7 +9437,7 @@ async function confirmarEnvioParaMembro({ grupoId, tipo, id }) {
     const html = htmlSimples({
       config, faixaLabel: 'PORTAL CIENTIFICO',
       titulo: 'Trabalho enviado com sucesso',
-      mensagem: `Recebemos o seu trabalho em <strong>${agora.toLocaleDateString('pt-BR')} as ${agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</strong>.<br><br><strong>Projeto:</strong> ${gInfo.ptitulo||''}<br><strong>Grupo:</strong> ${gInfo.gnome||''}<br><strong>Status:</strong> Enviado - aguardando avaliacao<br><br>Este email serve como comprovante do envio. Assim que a equipe do Cientifico avaliar, voce recebe um novo aviso por aqui.`,
+      mensagem: `Recebemos o seu trabalho em <strong>${agora.toLocaleDateString('pt-BR')} as ${agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</strong>.<br><br><strong>Projeto:</strong> ${escapeHtml(gInfo.ptitulo)}<br><strong>Grupo:</strong> ${escapeHtml(gInfo.gnome)}<br><strong>Status:</strong> Enviado - aguardando avaliacao<br><br>Este email serve como comprovante do envio. Assim que a equipe do Cientifico avaliar, voce recebe um novo aviso por aqui.`,
       cta: { label: 'Acompanhar no Portal', url: 'https://cientifico.lauroucpcde.com' }
     });
     await enviarEmail({ para: membro.email, assunto: 'Comprovante: trabalho enviado - Cientifico', html });
@@ -9702,7 +9714,7 @@ router.post('/admin/disparar-cobrancas-pre', requireAuth, async (req, res) => {
 });
 
 // GET /cientifico/chat-arquivo/:chatId
-router.get('/cientifico/chat-arquivo/:chatId', requireAuth, async (req, res) => {
+router.get('/cientifico/chat-arquivo/:chatId', requireAuth, requireCientifico, async (req, res) => {
   const r = await query('SELECT * FROM chat_grupo_cientifico WHERE id=$1',[req.params.chatId]);
   if (!r.rows.length || !r.rows[0].arquivo_chave) return res.status(404).send('Nao encontrado');
   const url = await gerarUrlInline(r.rows[0].arquivo_chave);
