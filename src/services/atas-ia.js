@@ -21,13 +21,18 @@ function comprimirAudio(buffer, filename) {
     const tmpIn = path.join(os.tmpdir(), `ata-audio-in-${Date.now()}-${Math.random().toString(36).slice(2)}${path.extname(filename||'')||'.dat'}`);
     const tmpOut = tmpIn + '.mp3';
     fs.writeFile(tmpIn, buffer, (errW) => {
-      if (errW) return resolve(null);
-      execFile('ffmpeg', ['-y', '-i', tmpIn, '-ac', '1', '-ar', '16000', '-b:a', '32k', tmpOut], { timeout: 280000 }, (errC) => {
+      if (errW) { console.error('[atas-ia] comprimirAudio: erro ao escrever tmp:', errW.message); return resolve(null); }
+      execFile('ffmpeg', ['-y', '-i', tmpIn, '-ac', '1', '-ar', '16000', '-b:a', '32k', tmpOut], { timeout: 280000 }, (errC, stdout, stderr) => {
         fs.unlink(tmpIn, () => {});
-        if (errC) { fs.unlink(tmpOut, () => {}); return resolve(null); }
+        if (errC) {
+          console.error('[atas-ia] comprimirAudio: ffmpeg falhou:', errC.message, '| stderr:', (stderr||'').slice(-500));
+          fs.unlink(tmpOut, () => {});
+          return resolve(null);
+        }
         fs.readFile(tmpOut, (errR, data) => {
           fs.unlink(tmpOut, () => {});
-          if (errR) return resolve(null);
+          if (errR) { console.error('[atas-ia] comprimirAudio: erro ao ler saida:', errR.message); return resolve(null); }
+          console.log('[atas-ia] comprimirAudio: ok,', buffer.length, '->', data.length, 'bytes');
           resolve(data);
         });
       });
