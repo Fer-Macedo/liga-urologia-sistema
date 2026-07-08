@@ -3798,7 +3798,7 @@ router.post('/financeiro-arquivos/:id/deletar', requireAuth, requirePermissao('f
   res.redirect('/financeiro-arquivos' + (pid ? '?pasta='+pid : ''));
 });
 
-router.post('/financeiro-pastas/:id/deletar', requireAuth, async (req, res) => {
+router.post('/financeiro-pastas/:id/deletar', requireAuth, requirePermissao('financeiro-arquivos'), async (req, res) => {
   await query('DELETE FROM financeiro_arquivos WHERE pasta_id=$1', [req.params.id]);
   await query('DELETE FROM financeiro_pastas WHERE id=$1', [req.params.id]);
   req.session.msg = ['Pasta excluída!'];
@@ -3820,7 +3820,7 @@ router.post('/financeiro-arquivos/:id/mover', requireAuth, requirePermissao('fin
   catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
-router.post('/financeiro-pastas/:id/mover', requireAuth, async (req, res) => {
+router.post('/financeiro-pastas/:id/mover', requireAuth, requirePermissao('financeiro-arquivos'), async (req, res) => {
   try {
     const pai_id = req.body.pai_id || null;
     if (String(pai_id) === String(req.params.id)) return res.status(400).json({ erro: 'Não pode mover para si mesmo' });
@@ -7133,7 +7133,7 @@ router.get('/fluxo-caixa/graficos-data', requireAuth, requirePermissao('fluxo-ca
   } catch(e) { res.json({ erro: e.message }); }
 });
 
-router.post('/fluxo-caixa/novo', requireAuth, async (req, res) => {
+router.post('/fluxo-caixa/novo', requireAuth, requirePermissao('fluxo-caixa'), async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
     upload.fields([{name:'nf',maxCount:1},{name:'nf2',maxCount:1}])(req, res, async (err) => {
@@ -7162,7 +7162,7 @@ router.post('/fluxo-caixa/novo', requireAuth, async (req, res) => {
   } catch(e) { req.flash('erro', [e.message]); res.redirect('/fluxo-caixa'); }
 });
 
-router.post('/fluxo-caixa/:id/editar', requireAuth, async (req, res) => {
+router.post('/fluxo-caixa/:id/editar', requireAuth, requirePermissao('fluxo-caixa'), async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
     upload.fields([{name:'nf',maxCount:1},{name:'nf2',maxCount:1}])(req, res, async (err) => {
@@ -7194,7 +7194,7 @@ router.post('/fluxo-caixa/:id/editar', requireAuth, async (req, res) => {
   } catch(e) { req.flash('erro', [e.message]); res.redirect('/fluxo-caixa'); }
 });
 
-router.post('/fluxo-caixa/excluir-lote', requireAuth, async (req, res) => {
+router.post('/fluxo-caixa/excluir-lote', requireAuth, requirePermissao('fluxo-caixa'), async (req, res) => {
   try {
     const ids = req.body.ids;
     const mesRef = req.body.mes || '';
@@ -7206,7 +7206,7 @@ router.post('/fluxo-caixa/excluir-lote', requireAuth, async (req, res) => {
   } catch(e){ req.flash('erro',[e.message]); res.redirect('/fluxo-caixa'); }
 });
 
-router.post('/fluxo-caixa/:id/excluir', requireAuth, async (req, res) => {
+router.post('/fluxo-caixa/:id/excluir', requireAuth, requirePermissao('fluxo-caixa'), async (req, res) => {
   try {
     const r = await query('SELECT data_lancamento FROM fluxo_caixa WHERE id=$1',[req.params.id]);
     const mes = r.rows[0]?.data_lancamento?.toISOString?.()?.substring(0,7) || '';
@@ -10037,7 +10037,7 @@ router.get('/portal/arquivo/:projetoId/:tipo', requirePortal, async (req, res) =
 });
 
 // POST /admin/disparar-cobrancas-vencidas (só vencidas, a partir do dia 16, com intervalo seguro)
-router.post('/admin/disparar-cobrancas-vencidas', requireAuth, async (req, res) => {
+router.post('/admin/disparar-cobrancas-vencidas', requireAuth, requireFinanceiro, async (req, res) => {
   const hoje = new Date().toISOString().split('T')[0];
   const config = (await query('SELECT chave, valor FROM configuracoes')).rows.reduce((a,r)=>{a[r.chave]=r.valor;return a},{});
   const { notificarCobranca } = require('../services/notificacoes');
@@ -10072,7 +10072,7 @@ router.post('/admin/disparar-cobrancas-vencidas', requireAuth, async (req, res) 
 });
 
 // POST /admin/disparar-cobrancas-pre (disparo seguro via sistema)
-router.post('/admin/disparar-cobrancas-pre', requireAuth, async (req, res) => {
+router.post('/admin/disparar-cobrancas-pre', requireAuth, requireFinanceiro, async (req, res) => {
   const { data_vencimento } = req.body;
   if (!data_vencimento) return res.json({ erro: 'data_vencimento obrigatoria' });
   const config = (await query('SELECT chave, valor FROM configuracoes')).rows.reduce((a,r)=>{a[r.chave]=r.valor;return a},{});

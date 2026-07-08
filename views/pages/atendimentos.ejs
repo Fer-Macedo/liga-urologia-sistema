@@ -350,6 +350,7 @@ function editarContato(area,numero,nome){
   document.getElementById('titulo-contato').textContent='Editar - '+nome;
   abrirModal('modal-contato');
 }
+function _esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function montarBolha(m,data){
   var div=document.createElement('div');
   var hora=new Date(m.criado_em).toLocaleString('pt-BR',{timeZone:'America/Asuncion',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
@@ -369,12 +370,14 @@ function montarBolha(m,data){
     else if(_tipo==='video'){_corpo='<video controls src="'+_url+'" style="max-width:230px;border-radius:6px"></video>';}
     else {_corpo='<a href="'+_url+'" target="_blank" style="display:inline-flex;align-items:center;gap:6px;color:#1e40af;font-weight:600;text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> '+(_nome||'Documento')+'</a>';}
   } else {
-    var _txt=_raw.split('\n').join('<br>');
+    // Escapa HTML ANTES de aplicar <br>/<strong> — impede XSS armazenado a partir
+    // de mensagens recebidas via WhatsApp (que passam por fora do sanitizador de req.body).
+    var _txt=_esc(_raw).split('\n').join('<br>');
     _txt=_txt.replace(/\*([^*\n]+)\*/g,'<strong>$1</strong>');
     _corpo='<div>'+_txt+'</div>';
   }
   div.className='wpp-msg '+cls;
-  div.innerHTML='<div class="wpp-label">'+label+'</div>'+_corpo+'<div class="wpp-time">'+hora+'</div>';
+  div.innerHTML='<div class="wpp-label">'+_esc(label)+'</div>'+_corpo+'<div class="wpp-time">'+hora+'</div>';
   return div;
 }
 function verChat(id,area,status){

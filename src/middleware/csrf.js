@@ -135,6 +135,10 @@ function csrfInjetar(req, res, next) {
   res.send = function(body) {
     if (typeof body === 'string' && body.includes('</body>')) {
       body = body.replace('</body>', SCRIPT_TEMPLATE(token) + '</body>');
+      // A pagina carrega um token CSRF preso a esta sessao. Se o navegador
+      // reaproveitar uma copia em cache (token antigo) apos um restart/deploy,
+      // o envio falha com "Sessao expirada". no-store impede esse reuso.
+      res.setHeader('Cache-Control', 'no-store');
     }
     return originalSend(body);
   };

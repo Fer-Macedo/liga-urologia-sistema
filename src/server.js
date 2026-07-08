@@ -20,20 +20,23 @@ const httpServer = http.createServer(app);
 const io = new SocketServer(httpServer, { cors: { origin: '*' } });
 app._io = io;
 io.on('connection', (socket) => {
-  const tipo = socket.handshake.auth?.tipo;
-  const id = socket.handshake.auth?.id;
-  if (tipo && id) socket.join('membro_' + tipo + '_' + id);
+  // Identidade vem SEMPRE da sessao do servidor (cookie), nunca de dados enviados
+  // pelo cliente no handshake — senao qualquer um personifica membros/entra na sala admin.
+  const sess = socket.request.session;
+  const membro = (sess && (sess.membroPortal || sess.portalMembro)) || null;
+  if (membro && membro.tipo && membro.id) socket.join('membro_' + membro.tipo + '_' + membro.id);
   socket.on('chat_msg', async (data) => {
     try {
-      if (!data.texto || !tipo || !id) return;
+      if (!data.texto || !membro || !membro.tipo || !membro.id) return;
       const { query } = require('./models/database');
       const { registrarMensagemMembro } = require('./services/portal-chat');
-      const r = await registrarMensagemMembro(query, tipo, id, data.texto);
+      const r = await registrarMensagemMembro(query, membro.tipo, membro.id, data.texto);
       socket.emit('chat_msg_ok', { id: r.id, texto: data.texto, criado_em: r.criado_em, autor: 'membro' });
-      io.to('admins').emit('chat_novo', { tipo, id, texto: data.texto, nome: r.nome, atendimentoId: r.atendimentoId });
+      io.to('admins').emit('chat_novo', { tipo: membro.tipo, id: membro.id, texto: data.texto, nome: r.nome, atendimentoId: r.atendimentoId });
     } catch(e) { console.error('chat_msg error:', e.message); }
   });
-  socket.on('join_admin', () => { socket.join('admins'); });
+  // Sala de broadcast dos atendimentos: apenas equipe autenticada.
+  socket.on('join_admin', () => { if (sess && sess.usuario) socket.join('admins'); });
 });
 
 app.set('view engine', 'ejs');
@@ -46,7 +49,7 @@ app.use(methodOverride('_method'));
 if (!process.env.SESSION_SECRET) {
   console.warn('AVISO: SESSION_SECRET nao definido no .env — usando segredo temporario gerado neste boot (sessoes serao invalidadas a cada restart). Configure SESSION_SECRET em producao.');
 }
-app.use(session({
+const sessionMiddleware = session({
   store: new pgSession({ conString: process.env.DATABASE_URL, tableName: 'session', createTableIfMissing: true }),
   secret: process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex'),
   resave: false,
@@ -57,7 +60,10 @@ app.use(session({
     httpOnly: true,
     sameSite: 'lax'
   }
-}));
+});
+app.use(sessionMiddleware);
+// Compartilha a sessao com o Socket.io — expoe socket.request.session no handshake.
+io.engine.use(sessionMiddleware);
 app.use(flash());
 
 const { csrfInjetar, csrfVerificar } = require('./middleware/csrf');
