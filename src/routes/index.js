@@ -2620,6 +2620,16 @@ router.post('/diretivos', requireAuth, requireSecretaria, async (req, res) => {
 router.get('/diretivos/:id/aprovar', requireAuth, requireSecretaria, async (req, res) => {
   await query('UPDATE diretivos SET pendente=false, ativo=1 WHERE id=$1', [req.params.id]);
   await logAtividade(req.session.usuario.id, 'DIRETIVO_LIBERADO', 'Cadastro pendente liberado ID: ' + req.params.id, req);
+
+  // Libera acesso ao Portal de Membros (senha padrao 123456, obriga trocar no primeiro acesso).
+  try {
+    const jaTemSenha = await query('SELECT 1 FROM portal_cientifico_senhas WHERE origem_tipo=$1 AND origem_id=$2', ['diretivo', req.params.id]);
+    if (!jaTemSenha.rows.length) {
+      const hashPadrao = await bcryptCient.hash('123456', 10);
+      await query('INSERT INTO portal_cientifico_senhas (origem_tipo,origem_id,senha_hash,primeiro_acesso) VALUES ($1,$2,$3,true)', ['diretivo', req.params.id, hashPadrao]);
+    }
+  } catch(e) { console.error('[Portal] Erro ao liberar acesso do diretivo:', e.message); }
+
   req.session.msg = ['Cadastro de diretivo liberado com sucesso!'];
   res.redirect('/diretivos?status=pendente');
 });
@@ -3278,6 +3288,15 @@ router.get('/ligantes', requireAuth, requirePermissao('ligantes'), async (req, r
 router.get('/ligantes/:id/aprovar', requireAuth, requirePermissao('ligantes'), async (req, res) => {
   await query('UPDATE ligantes SET pendente=false, ativo=1 WHERE id=$1', [req.params.id]);
   await logAtividade(req.session.usuario.id, 'LIGANTE_APROTADMo', 'Ligante aprovado ID: ' + req.params.id, req);
+
+  // Libera acesso ao Portal de Membros (senha padrao 123456, obriga trocar no primeiro acesso).
+  try {
+    const jaTemSenha = await query('SELECT 1 FROM portal_cientifico_senhas WHERE origem_tipo=$1 AND origem_id=$2', ['ligante', req.params.id]);
+    if (!jaTemSenha.rows.length) {
+      const hashPadrao = await bcryptCient.hash('123456', 10);
+      await query('INSERT INTO portal_cientifico_senhas (origem_tipo,origem_id,senha_hash,primeiro_acesso) VALUES ($1,$2,$3,true)', ['ligante', req.params.id, hashPadrao]);
+    }
+  } catch(e) { console.error('[Portal] Erro ao liberar acesso do ligante:', e.message); }
 
   // AUTO-CADASTRO FINANCEIRO: ao aprovar ligante, criar membro automaticamente se nao existir
   try {
