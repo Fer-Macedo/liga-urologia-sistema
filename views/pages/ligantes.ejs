@@ -294,7 +294,8 @@
       <h1 class="page-titulo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg> Ligantes</h1>
       <div class="topbar-acoes">
         <a href="/ligantes/relatorio" class="btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Relatório</a>
-        <a href="/cadastro-ligante" target="_blank" class="btn btn-primario"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Link de Cadastro</a>
+        <a href="/cadastro-ligante" target="_blank" class="btn"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Link de Cadastro</a>
+        <button class="btn btn-primario" onclick="abrirModal('modal-cadastrar-ligante')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Cadastrar Diretamente</button>
       </div>
     </div>
 
@@ -538,6 +539,41 @@ function fecharModalClick(e) {
     document.getElementById('modal-detalhe').classList.remove('aberto');
 }
 </script>
+
+<div class="modal-overlay" id="modal-cadastrar-ligante" style="display:none">
+  <div class="modal" style="max-width:640px;max-height:90vh;overflow-y:auto">
+    <div class="modal-header">
+      <span class="modal-titulo">Cadastrar Ligante</span>
+      <button class="icon-btn" onclick="fecharModal('modal-cadastrar-ligante')"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    </div>
+    <form action="/ligantes" method="POST">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="campo" style="grid-column:1/-1"><label class="label">Nome completo *</label><input name="nome" class="input" required></div>
+        <div class="campo"><label class="label">RG / C.I.</label><input name="rg" class="input"></div>
+        <div class="campo"><label class="label">CPF</label><input name="cpf" class="input"></div>
+        <div class="campo"><label class="label">E-mail *</label><input name="email" type="email" class="input" required></div>
+        <div class="campo"><label class="label">WhatsApp *</label><input name="whatsapp" class="input" required></div>
+        <div class="campo"><label class="label">Data de nascimento</label><input name="data_nascimento" type="date" class="input"></div>
+        <div class="campo"><label class="label">Sexo</label>
+          <select name="sexo" class="input">
+            <option value="">Selecione...</option>
+            <option value="Masculino">Masculino</option>
+            <option value="Feminino">Feminino</option>
+            <option value="Prefiro não informar">Prefiro não informar</option>
+          </select>
+        </div>
+        <div class="campo"><label class="label">Semestre</label><input name="semestre" class="input"></div>
+        <div class="campo"><label class="label">Turma</label><input name="turma" class="input"></div>
+        <div class="campo"><label class="label">Catraca</label><input name="catraca" class="input"></div>
+      </div>
+      <div style="font-size:12px;color:var(--texto2);margin-top:12px">A foto pode ser adicionada depois, editando o cadastro. Ela é obrigatória apenas no formulário público de auto-cadastro.</div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-cadastrar-ligante')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Cadastrar</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <div class="modal-overlay" id="modal-inativ-l" style="display:none">
   <div class="modal" style="max-width:460px">

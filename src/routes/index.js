@@ -2559,6 +2559,7 @@ router.post('/cadastro-diretivo', require('../services/arquivos').upload.single(
             tipo_transporte, experiencia_urologia } = req.body;
     const disponibilidade = [].concat(req.body.disponibilidade || []).join(', ');
     if (!nome || !email) { req.session.erro = ['Nome e e-mail são obrigatórios.']; return res.redirect('/cadastro-diretivo'); }
+    if (!req.file) { req.session.erro = ['A foto é obrigatória para o cadastro.']; return res.redirect('/cadastro-diretivo'); }
     // Upload de foto se enviada
     let foto_chave = null;
     if (req.file) {
@@ -3253,6 +3254,7 @@ router.post('/cadastro-ligante', require('../services/arquivos').upload.single('
       const campos = ['nome','data_nascimento','sexo','email','whatsapp','rg','semestre','turma','porque_lauro','apresentacao'];
       const faltando = campos.filter(c => !form[c] || form[c].trim() === '');
       if (faltando.length > 0) { req.session.erro = ['Preencha todos os campos obrigatórios.']; return res.render('pages/cadastro-ligante-publico', { config, msg: [], erro: req.session.erro, form }); }
+      if (!req.file) { req.session.erro = ['A foto é obrigatória para o cadastro.']; return res.render('pages/cadastro-ligante-publico', { config, msg: [], erro: req.session.erro, form }); }
       let foto_chave = null;
       if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'ligantes'); foto_chave = r.chave; }
       await query(`INSERT INTO ligantes (nome, data_nascimento, sexo, email, email_alternativo, whatsapp, rg, cpf, semestre, turma, catraca, orcid, tem_formacao, qual_formacao, habilidades, aceita_cargo, qual_cargo, contribuicao_grupo, ideia_inovadora, tema_interesse, porque_lauro, apresentacao, foto_chave, criado_em) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,NOW())`,
@@ -3261,6 +3263,14 @@ router.post('/cadastro-ligante', require('../services/arquivos').upload.single('
       res.redirect('/cadastro-ligante');
     });
   } catch(e) { console.error('Erro cadastro ligante:', e.message); req.session.erro = ['Erro ao salvar cadastro. Tente novamente.']; res.redirect('/cadastro-ligante'); }
+});
+
+router.post('/ligantes', requireAuth, requirePermissao('ligantes'), async (req, res) => {
+  const { nome, rg, cpf, email, whatsapp, data_nascimento, sexo, semestre, turma, catraca } = req.body;
+  await query('INSERT INTO ligantes (nome,rg,cpf,email,whatsapp,data_nascimento,sexo,semestre,turma,catraca) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+    [nome,rg,cpf,email,whatsapp,data_nascimento||null,sexo||null,semestre,turma,catraca||null]);
+  req.session.msg = ['Ligante cadastrado com sucesso!'];
+  res.redirect('/ligantes');
 });
 
 router.get('/ligantes', requireAuth, requirePermissao('ligantes'), async (req, res) => {

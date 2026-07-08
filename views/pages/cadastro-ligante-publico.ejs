@@ -262,6 +262,8 @@ function validarForm(e){
     const idade=(hoje-dn)/(1000*60*60*24*365.25);
     if(idade<14||idade>80) erros.push('Data de nascimento inválida.');
   }
+  const foto=document.getElementById('input-foto');
+  if(!foto || !foto.files || foto.files.length===0) erros.push('A foto é obrigatória para o cadastro.');
   if(erros.length>0){
     e.preventDefault();
     let div=document.getElementById('erros-validacao');
