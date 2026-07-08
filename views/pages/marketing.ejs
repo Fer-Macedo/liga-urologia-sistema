@@ -147,9 +147,9 @@
       .interno-evento-meta{font-size:11px;color:var(--texto2);margin-top:2px;}
       .interno-nota-form{background:var(--card);border:1px solid var(--borda);border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:0 2px 10px rgba(15,110,86,.06);}
       .interno-nota-form textarea{width:100%;border:1px solid var(--borda);border-radius:6px;padding:10px 12px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px;box-sizing:border-box;}
-      .interno-cor-picker label{cursor:pointer;font-size:18px;margin-right:4px;}
+      .interno-cor-picker label{display:inline-block;width:20px;height:20px;border-radius:50%;border:1.5px solid rgba(0,0,0,.15);cursor:pointer;margin-right:6px;vertical-align:middle;}
       .interno-cor-picker input{display:none;}
-      .interno-cor-picker label:has(input:checked){outline:2px solid #0F6E56;border-radius:50%;}
+      .interno-cor-picker label:has(input:checked){outline:2px solid #0F6E56;outline-offset:2px;}
       .interno-notas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;}
       .interno-nota{position:relative;border-radius:2px 2px 10px 10px;padding:16px 14px 12px;box-shadow:0 4px 10px rgba(0,0,0,.12);transform:rotate(-1deg);transition:transform .15s;font-family:'IBM Plex Sans',sans-serif;}
       .interno-notas-grid .interno-nota:nth-child(even){transform:rotate(1deg);}
@@ -181,9 +181,6 @@
         <button class="mkt-tab" onclick="showTab('posts',this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           Posts</button>
-        <button class="mkt-tab" onclick="showTab('calendario',this)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          Calendario</button>
         <button class="mkt-tab" onclick="showTab('midias',this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
           Midias</button>
@@ -214,7 +211,7 @@
         <button class="mkt-tab" onclick="showTab('analytics',this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Analytics</button>
-        <button class="mkt-tab" onclick="showTab('interno',this)" style="margin-left:auto">
+        <button class="mkt-tab" onclick="showTab('interno',this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H8a2 2 0 0 0-2 2v16l6-3 6 3V5a2 2 0 0 0-2-2z"/></svg>
           Espaço da Equipe</button>
       </div>
@@ -403,18 +400,6 @@
         </div>
         <%});%>
       </div>
-      <div class="mkt-section" id="tab-calendario">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <button class="btn btn-sm" onclick="mudarMes(-1)">&#8592; Anterior</button>
-          <h3 id="cal-titulo" style="font-size:16px;font-weight:700;font-family:'Outfit',sans-serif"></h3>
-          <button class="btn btn-sm" onclick="mudarMes(1)">Proximo &#8594;</button>
-        </div>
-        <div class="calendario-grid">
-          <div class="cal-header">Dom</div><div class="cal-header">Seg</div><div class="cal-header">Ter</div>
-          <div class="cal-header">Qua</div><div class="cal-header">Qui</div><div class="cal-header">Sex</div><div class="cal-header">Sab</div>
-        </div>
-        <div class="calendario-grid" id="cal-grid" style="margin-top:4px"></div>
-      </div>
       <div class="mkt-section" id="tab-interno">
         <div class="interno-banner">
           <div>
@@ -465,10 +450,10 @@
               <textarea name="texto" placeholder="Escreva um lembrete, pendência ou recado para a equipe..." required></textarea>
               <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
                 <div class="interno-cor-picker">
-                  <label><input type="radio" name="cor" value="#fff3b0" checked>&#9679;</label>
-                  <label><input type="radio" name="cor" value="#ffd6d6">&#9679;</label>
-                  <label><input type="radio" name="cor" value="#d6f5e3">&#9679;</label>
-                  <label><input type="radio" name="cor" value="#d6e8ff">&#9679;</label>
+                  <label style="background:#fff3b0"><input type="radio" name="cor" value="#fff3b0" checked></label>
+                  <label style="background:#ffd6d6"><input type="radio" name="cor" value="#ffd6d6"></label>
+                  <label style="background:#d6f5e3"><input type="radio" name="cor" value="#d6f5e3"></label>
+                  <label style="background:#d6e8ff"><input type="radio" name="cor" value="#d6e8ff"></label>
                 </div>
                 <button type="submit" class="btn-xs verde">Fixar nota</button>
               </div>
@@ -1395,9 +1380,7 @@
 <script>
 const postsData=<%- JSON.stringify(posts).replace(/</g,"\u003c") %>;
 const MESES_PT_JS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-let calMes=new Date().getMonth(),calAno=new Date().getFullYear();
 // showTab definida no head
-function mudarMes(d){calMes+=d;if(calMes<0){calMes=11;calAno--;}if(calMes>11){calMes=0;calAno++;}renderCal();}
 function montarGrid(gridEl, tituloEl, mes, ano, itensPorDia, corDia){
   tituloEl.textContent=MESES_PT_JS[mes]+' '+ano;
   const hoje=new Date();
@@ -1418,16 +1401,6 @@ function montarGrid(gridEl, tituloEl, mes, ano, itensPorDia, corDia){
   }
   gridEl.innerHTML=html;
 }
-function renderCal(){
-  const porDia={};
-  postsData.forEach(p=>{
-    const d=p.agendado_para||p.criado_em; if(!d) return;
-    const chave=d.slice(0,10);
-    (porDia[chave]=porDia[chave]||[]).push({titulo:p.titulo});
-  });
-  montarGrid(document.getElementById('cal-grid'),document.getElementById('cal-titulo'),calMes,calAno,porDia,'var(--cor-primaria)');
-}
-renderCal();
 const eventosInternosData=<%- JSON.stringify(eventosInternos).replace(/</g,"\\u003c") %>;
 let calMesInt=new Date().getMonth(),calAnoInt=new Date().getFullYear();
 function mudarMesInterno(d){calMesInt+=d;if(calMesInt<0){calMesInt=11;calAnoInt--;}if(calMesInt>11){calMesInt=0;calAnoInt++;}renderCalInterno();}
