@@ -381,7 +381,43 @@
     </div>
   </div>
 </div>
+
+<div class="prazo-ov" id="prazo-modal">
+  <div class="prazo-card" id="prazo-card">
+    <div class="prazo-card-body">
+      <div class="prazo-icone"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+      <div class="prazo-titulo" id="prazo-titulo"></div>
+      <div class="prazo-texto" id="prazo-texto"></div>
+      <div class="prazo-btns">
+        <button class="btn" onclick="fecharPrazoModal()">Ja vi, obrigado</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
+<% if (typeof diasRestantesPrazo !== 'undefined' && diasRestantesPrazo !== null) { %>
+(function(){
+  var dias = <%=diasRestantesPrazo%>;
+  var chave = 'prazoAvisado_<%=grupo.id%>_'+dias;
+  if (sessionStorage.getItem(chave)) return;
+  var titulo = document.getElementById('prazo-titulo');
+  var texto = document.getElementById('prazo-texto');
+  var card = document.getElementById('prazo-card');
+  if (dias === 0) {
+    titulo.textContent = 'Hoje e o ultimo dia do prazo!';
+    texto.textContent = 'O prazo para enviar este trabalho termina hoje. Envie o quanto antes pela aba Trabalho.';
+    card.classList.add('urgente');
+  } else {
+    titulo.textContent = 'Faltam '+dias+(dias===1?' dia':' dias')+' para o prazo!';
+    texto.textContent = 'O prazo para enviar este trabalho esta chegando. Nao deixe para a ultima hora.';
+    if (dias<=1) card.classList.add('urgente');
+  }
+  document.getElementById('prazo-modal').classList.add('open');
+  sessionStorage.setItem(chave, '1');
+})();
+<% } %>
+function fecharPrazoModal(){ document.getElementById('prazo-modal').classList.remove('open'); }
 function tab(btn,id){
   document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('ativo')});
   document.querySelectorAll('.tab-content').forEach(function(t){t.classList.remove('ativo')});
