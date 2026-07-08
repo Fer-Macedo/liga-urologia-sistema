@@ -236,6 +236,7 @@ async function postarStoriesAniversarioDoDia() {
   const { gerarArteAniversario, nomeCurto } = require('./aniversario-arte');
   const { cargoComGenero } = require('./cargo-genero');
   const templateBuffer = await baixarArquivoBuffer(cfg.aniversario_template_chave);
+  const puladosSemFoto = [];
 
   for (const pessoa of r.rows) {
     try {
@@ -244,7 +245,7 @@ async function postarStoriesAniversarioDoDia() {
         [pessoa.tipo, pessoa.id, hojeData]
       );
       if (jaPostou.rows.length > 0) continue;
-      if (!pessoa.foto_chave) continue;
+      if (!pessoa.foto_chave) { puladosSemFoto.push(pessoa); continue; }
 
       const fotoBuffer = await baixarArquivoBuffer(pessoa.foto_chave);
       const cargo = pessoa.tipo === 'diretivo' ? (pessoa.cargo ? cargoComGenero(pessoa.cargo, pessoa.sexo) : 'Directivo') : `${pessoa.semestre || ''}° Semestre`;
@@ -262,6 +263,33 @@ async function postarStoriesAniversarioDoDia() {
     } catch (e) {
       console.error('[INSTAGRAM] Erro story aniversário:', pessoa.nome, e.message);
     }
+  }
+
+  if (puladosSemFoto.length > 0) {
+    try { await alertarAniversariantesSemFoto(puladosSemFoto); }
+    catch (e) { console.error('[INSTAGRAM] Erro ao alertar equipe sobre foto faltando:', e.message); }
+  }
+}
+
+// Avisa a equipe de marketing/presidencia/admin quando um aniversariante do dia
+// nao teve o Story gerado por falta de foto cadastrada - sem isso, o story
+// dessa pessoa simplesmente nao sai e ninguem fica sabendo.
+async function alertarAniversariantesSemFoto(pessoas) {
+  const destinatarios = await query(
+    `SELECT DISTINCT u.telefone FROM usuarios u
+     LEFT JOIN usuario_permissoes p ON p.usuario_id=u.id AND p.modulo='marketing'
+     WHERE u.ativo=1 AND u.telefone IS NOT NULL AND u.telefone <> ''
+       AND (u.perfil IN ('admin','presidencia','marketing') OR p.id IS NOT NULL)`
+  );
+  if (!destinatarios.rows.length) return;
+
+  const nomes = pessoas.map(p => `• ${p.nome} (${p.tipo === 'diretivo' ? 'Diretivo' : 'Ligante'})`).join('\n');
+  const mensagem = `⚠️ *Story de aniversário nao publicado*\n\n${nomes}\n\nEssa(s) pessoa(s) faz(em) aniversário hoje, mas não têm foto cadastrada no perfil - o Story automático não foi gerado. Cadastre a foto e publique manualmente hoje; a automação não tenta novamente depois.`;
+
+  const { enviarWhatsApp } = require('./notificacoes');
+  for (const d of destinatarios.rows) {
+    try { await enviarWhatsApp(d.telefone, mensagem, { aniversario: true }); }
+    catch (e) { console.error('[INSTAGRAM] Erro ao enviar alerta de foto faltando:', e.message); }
   }
 }
 
