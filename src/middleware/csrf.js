@@ -67,10 +67,9 @@ const SCRIPT_TEMPLATE = (token) => `
   }
   // Reforco no momento do envio: paginas que trocam form.action via JS depois do carregamento
   // (ex: reaproveitar um modal de "novo" para "editar") podem apagar o token que foi colocado
-  // na URL na hora do carregamento. Este listener garante o token de novo, bem antes de
+  // na URL/campo na hora do carregamento. Esta funcao garante o token de novo, bem antes de
   // enviar de verdade, nao importa o que a pagina tenha feito com o form nesse meio tempo.
-  document.addEventListener('submit', function(e){
-    var f=e.target;
+  function garantirToken(f){
     if(!f || f.tagName!=='FORM') return;
     var m=(f.getAttribute('method')||'GET').toUpperCase();
     if(m==='GET') return;
@@ -89,7 +88,16 @@ const SCRIPT_TEMPLATE = (token) => `
         f.setAttribute('action', url.pathname+url.search+url.hash);
       }catch(e2){}
     }
-  }, true);
+  }
+  // Cobre envio via clique/Enter (evento "submit" real, fase de captura - roda antes de
+  // qualquer coisa que a pagina faca).
+  document.addEventListener('submit', function(e){ garantirToken(e.target); }, true);
+  // Cobre envio programatico via form.submit() - esse metodo NAO dispara o evento "submit"
+  // (comportamento padrao do navegador), entao precisa de uma segunda garantia aqui. Padrao
+  // usado em varias telas do sistema: criar/pegar um form, ajustar o action, e chamar
+  // f.submit() direto (ex: dentro de confirmarAcao(...) apos o usuario confirmar).
+  var origSubmit=HTMLFormElement.prototype.submit;
+  HTMLFormElement.prototype.submit=function(){ garantirToken(this); return origSubmit.apply(this,arguments); };
   var origFetch=window.fetch;
   if(origFetch){
     window.fetch=function(input,init){
