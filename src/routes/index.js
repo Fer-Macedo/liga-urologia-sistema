@@ -3265,7 +3265,7 @@ router.post('/cadastro-ligante', require('../services/arquivos').upload.single('
   } catch(e) { console.error('Erro cadastro ligante:', e.message); req.session.erro = ['Erro ao salvar cadastro. Tente novamente.']; res.redirect('/cadastro-ligante'); }
 });
 
-router.post('/ligantes', requireAuth, requirePermissao('ligantes'), async (req, res) => {
+router.post('/ligantes', requireAuth, requireSecretaria, async (req, res) => {
   const { nome, rg, cpf, email, whatsapp, data_nascimento, sexo, semestre, turma, catraca } = req.body;
   await query('INSERT INTO ligantes (nome,rg,cpf,email,whatsapp,data_nascimento,sexo,semestre,turma,catraca) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
     [nome,rg,cpf,email,whatsapp,data_nascimento||null,sexo||null,semestre,turma,catraca||null]);
