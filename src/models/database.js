@@ -61,7 +61,7 @@ async function initSchema() {
       email TEXT,
       whatsapp TEXT,
       data_nascimento TEXT,
-      dia_vencimento INTEGER DEFAULT 5,
+      dia_vencimento INTEGER DEFAULT 15,
       mensalidade REAL DEFAULT 100.00,
       desconto_pontualidade REAL DEFAULT 10.00,
       ativo INTEGER DEFAULT 1,
@@ -83,6 +83,7 @@ async function initSchema() {
       criado_em TIMESTAMP DEFAULT NOW()
     );
     ALTER TABLE cobrancas ADD COLUMN IF NOT EXISTS valor_pago REAL;
+    ALTER TABLE membros ALTER COLUMN dia_vencimento SET DEFAULT 15;
     ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS telefone TEXT;
     ALTER TABLE listas_assinaturas ADD COLUMN IF NOT EXISTS tipo_publico TEXT DEFAULT 'todos';
     ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
