@@ -1028,15 +1028,86 @@ router.post('/api/contato-site', corsPublico, limiterContato, async (req, res) =
   } catch(e) { res.json({ ok: false }); }
 });
 
+// Monta o painel de numeros/lista especifico da area do usuario, reaproveitando as mesmas
+// consultas que a propria tela daquela area ja usa - Ensino/Extensao (projetos_academicos),
+// Cientifico (projetos/grupos/versoes) e Marketing (marketing_posts). Cada perfil sem acesso
+// financeiro ve os numeros do que ele de fato acompanha, em vez de ficar sem nada relevante.
+async function montarAreaEspecifica(perfil) {
+  if (perfil === 'ensino' || perfil === 'extensao') {
+    const statusR = await query('SELECT status, COUNT(*) n FROM projetos_academicos WHERE tipo=$1 GROUP BY status', [perfil]);
+    const porStatus = {};
+    statusR.rows.forEach(r => { porStatus[r.status] = parseInt(r.n); });
+    const total = Object.values(porStatus).reduce((a, b) => a + b, 0);
+    const pendentes = (porStatus.pendente||0) + (porStatus.liberado||0) + (porStatus.revisao||0);
+    const andamento = (porStatus.aprovado||0) + (porStatus.andamento||0);
+    const concluidos = porStatus.concluido || 0;
+    const listaR = await query('SELECT id, nome, status FROM projetos_academicos WHERE tipo=$1 ORDER BY id DESC LIMIT 5', [perfil]);
+    return {
+      titulo: perfil === 'ensino' ? 'Projetos de Ensino' : 'Projetos de Extensão',
+      link: '/' + perfil,
+      cards: [
+        { label: 'Total de Projetos', value: total, sub: 'cadastrados' },
+        { label: 'Pendentes', value: pendentes, sub: 'aguardando aprovação' },
+        { label: 'Em Andamento', value: andamento, sub: 'aprovados/em execução' },
+        { label: 'Concluídos', value: concluidos, sub: 'finalizados' },
+      ],
+      listaTitulo: 'Projetos Recentes',
+      itens: listaR.rows.map(r => ({ titulo: r.nome, sub: r.status }))
+    };
+  }
+  if (perfil === 'cientifico') {
+    const [projR, gruposR, aguardR, aprovR, listaR] = await Promise.all([
+      query('SELECT COUNT(*) n FROM projetos_cientificos'),
+      query('SELECT COUNT(*) n FROM grupos_cientificos'),
+      query("SELECT COUNT(*) n FROM versoes_trabalho WHERE status IN ('aguardando','em_revisao')"),
+      query("SELECT COUNT(*) n FROM versoes_trabalho WHERE status='aprovado'"),
+      query('SELECT id, titulo FROM projetos_cientificos ORDER BY criado_em DESC LIMIT 5')
+    ]);
+    return {
+      titulo: 'Portal Científico',
+      link: '/cientifico',
+      cards: [
+        { label: 'Projetos Criados', value: projR.rows[0].n, sub: 'no total' },
+        { label: 'Grupos', value: gruposR.rows[0].n, sub: 'formados' },
+        { label: 'Aguardando Revisão', value: aguardR.rows[0].n, sub: 'trabalhos enviados' },
+        { label: 'Aprovados', value: aprovR.rows[0].n, sub: 'trabalhos concluídos' },
+      ],
+      listaTitulo: 'Projetos Recentes',
+      itens: listaR.rows.map(r => ({ titulo: r.titulo, sub: '' }))
+    };
+  }
+  if (perfil === 'marketing') {
+    const statusR = await query('SELECT status, COUNT(*) n FROM marketing_posts GROUP BY status');
+    const porStatus = {};
+    statusR.rows.forEach(r => { porStatus[r.status] = parseInt(r.n); });
+    const total = Object.values(porStatus).reduce((a, b) => a + b, 0);
+    const listaR = await query('SELECT id, titulo, status FROM marketing_posts ORDER BY criado_em DESC LIMIT 5');
+    return {
+      titulo: 'Marketing',
+      link: '/marketing',
+      cards: [
+        { label: 'Total de Posts', value: total, sub: 'criados' },
+        { label: 'Rascunhos', value: porStatus.rascunho||0, sub: 'não agendados' },
+        { label: 'Agendados', value: porStatus.agendado||0, sub: 'aguardando publicação' },
+        { label: 'Publicados', value: porStatus.publicado||0, sub: 'no ar' },
+      ],
+      listaTitulo: 'Posts Recentes',
+      itens: listaR.rows.map(r => ({ titulo: r.titulo || '(sem título)', sub: r.status }))
+    };
+  }
+  return null;
+}
+
 router.get('/dashboard', requireAuth, async (req, res) => {
   const config = await getConfig();
   const hoje = dayjs();
   const mes = hoje.format('YYYY-MM');
   const mesStr = '%-' + mes;
+  const perfil = req.session.usuario.perfil;
 
   // Dados financeiros (inadimplencia, receita, pagamentos) so fazem sentido para quem
-  // realmente acompanha as financas da Liga - os demais perfis veem um painel diferente.
-  const verFinanceiro = ['admin', 'presidencia', 'secretaria', 'financeiro'].includes(req.session.usuario.perfil);
+  // realmente acompanha as financas da Liga - os demais perfis veem o painel da propria area.
+  const verFinanceiro = ['admin', 'presidencia', 'secretaria', 'financeiro'].includes(perfil);
 
   const consultas = [
     query("SELECT COUNT(*) n FROM membros WHERE ativo=1"),
@@ -1054,14 +1125,17 @@ router.get('/dashboard', requireAuth, async (req, res) => {
     );
   } else {
     // Sem acesso financeiro: mostra os proximos eventos no lugar, se tiver permissao pra isso.
-    const temEventos = req.session.usuario.perfil === 'admin' || (req.session.permissoesAtivas || []).includes('eventos');
+    const temEventos = perfil === 'admin' || (req.session.permissoesAtivas || []).includes('eventos');
     consultas.push(temEventos
       ? query("SELECT id, nome, data_inicio, local FROM eventos WHERE data_inicio >= NOW() ORDER BY data_inicio ASC LIMIT 5")
       : Promise.resolve({ rows: [] })
     );
   }
 
-  const resultados = await Promise.all(consultas);
+  const [resultados, areaEspecifica] = await Promise.all([
+    Promise.all(consultas),
+    verFinanceiro ? Promise.resolve(null) : montarAreaEspecifica(perfil)
+  ]);
   const [total, aniversariantes] = resultados;
 
   let stats = { total: total.rows[0].n, pagos: 0, pendentes: 0, atrasados: 0, totalRecebido: 0, totalPendente: 0, totalAtrasado: 0 };
@@ -1074,12 +1148,12 @@ router.get('/dashboard', requireAuth, async (req, res) => {
       totalPendente: pendTot.rows[0].v, totalAtrasado: atrTot.rows[0].v
     };
     recentes = recentesR.rows;
-  } else {
+  } else if (!areaEspecifica) {
     proximosEventos = resultados[2].rows;
   }
 
   res.render('pages/dashboard', {
-    config, usuario: req.session.usuario, stats, verFinanceiro,
+    config, usuario: req.session.usuario, stats, verFinanceiro, areaEspecifica,
     recentes, aniversariantes: aniversariantes.rows, proximosEventos,
     dayjs, msg: req.flash('msg'), erro: req.flash('erro')
   });
