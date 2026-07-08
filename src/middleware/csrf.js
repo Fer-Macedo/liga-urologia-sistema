@@ -65,6 +65,31 @@ const SCRIPT_TEMPLATE = (token) => `
       });
     }).observe(document.body,{childList:true,subtree:true});
   }
+  // Reforco no momento do envio: paginas que trocam form.action via JS depois do carregamento
+  // (ex: reaproveitar um modal de "novo" para "editar") podem apagar o token que foi colocado
+  // na URL na hora do carregamento. Este listener garante o token de novo, bem antes de
+  // enviar de verdade, nao importa o que a pagina tenha feito com o form nesse meio tempo.
+  document.addEventListener('submit', function(e){
+    var f=e.target;
+    if(!f || f.tagName!=='FORM') return;
+    var m=(f.getAttribute('method')||'GET').toUpperCase();
+    if(m==='GET') return;
+    var campo=f.querySelector('input[name="_csrf"]');
+    if(campo) campo.value=CSRF_TOKEN;
+    else{
+      campo=document.createElement('input');
+      campo.type='hidden'; campo.name='_csrf'; campo.value=CSRF_TOKEN;
+      f.appendChild(campo);
+    }
+    var enctype=(f.getAttribute('enctype')||'').toLowerCase();
+    if(enctype.indexOf('multipart')!==-1){
+      try{
+        var url=new URL(f.action||location.href, location.href);
+        url.searchParams.set('_csrf', CSRF_TOKEN);
+        f.setAttribute('action', url.pathname+url.search+url.hash);
+      }catch(e2){}
+    }
+  }, true);
   var origFetch=window.fetch;
   if(origFetch){
     window.fetch=function(input,init){
