@@ -88,7 +88,7 @@ async function transcreverAudio(buffer, filename, mimetype) {
       headers: { ...form.getHeaders(), Authorization: `Bearer ${apiKey}` },
       maxBodyLength: Infinity,
       maxContentLength: Infinity,
-      timeout: 300000
+      timeout: 900000 // ate 15min - reunioes longas (2h+) podem demorar bastante para transcrever
     });
     return { ok: true, texto: resp.data.text || '' };
   } catch (e) {
@@ -127,7 +127,7 @@ async function gerarAtaDeTranscricao(query, { transcricao, tipoReuniao }) {
       messages: [{ role: 'user', content: `Tipo de reuniao: ${tipoReuniao||'ordinaria'}. Transcricao da gravacao:\n\n${transcricao}` }]
     }, {
       headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01', 'x-api-key': apiKey },
-      timeout: 60000
+      timeout: 180000 // transcricoes longas geram mais texto de entrada, precisa de mais tempo
     });
     const texto = resp.data.content && resp.data.content[0] ? resp.data.content[0].text : '';
     try {
