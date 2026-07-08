@@ -343,7 +343,7 @@ var emailsUCP = 'sergio.marmori@central.edu.py,lilian.ramirez@central.edu.py,raq
 <script src="/js/app.js"></script>
 <script>
 async function mudarStatus(s, label) {
-  var obs = prompt('Marcar como "'+label+'".\nObservación (opcional):');
+  var obs = await pedirTexto('Marcar como "'+label+'".\nObservación (opcional):');
   if (obs === null) return;
   var r = await fetch('/projetos/<%= p.id %>/status', {
     method:'POST', headers:{'Content-Type':'application/json'},

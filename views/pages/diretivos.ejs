@@ -635,7 +635,7 @@ function copiarLinkDiretivo(btn) {
     btn.style.color = '#fff';
     setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; btn.style.color = ''; }, 2000);
   } catch(e) {
-    window.prompt('Copie o link abaixo:', link);
+    mostrarTextoCopiavel('Copie o link abaixo:', link);
   }
   document.body.removeChild(input);
 }

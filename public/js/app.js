@@ -94,6 +94,90 @@
     if (m) m.style.display = 'none';
   };
 
+  // ─── Modal de entrada de texto (substitui prompt()). Retorna Promise<string|null> ──
+  var _ptResolve = null;
+  function garantirModalTexto() {
+    if (document.getElementById('modal-texto-global')) return;
+    var wrap = document.createElement('div');
+    wrap.innerHTML =
+      '<div class="modal-overlay" id="modal-texto-global" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:3000;align-items:center;justify-content:center">' +
+        '<div class="modal" style="max-width:440px;width:90%;background:#fff;border:1px solid #e2e8f0;padding:0;border-radius:0;box-shadow:none">' +
+          '<div style="padding:24px 24px 0">' +
+            '<h3 id="mtg-titulo" style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 8px">Informação</h3>' +
+            '<p id="mtg-mensagem" style="font-size:13px;color:#64748b;line-height:1.6;margin:0 0 14px;white-space:pre-line"></p>' +
+            '<textarea id="mtg-input" rows="2" style="width:100%;padding:9px;font-size:13px;border:1px solid #e2e8f0;border-radius:0;font-family:inherit;resize:vertical;box-sizing:border-box"></textarea>' +
+          '</div>' +
+          '<div style="display:flex;gap:10px;padding:20px 24px;margin-top:16px;border-top:1px solid #e2e8f0">' +
+            '<button type="button" id="mtg-cancelar" style="flex:1;padding:9px;font-size:13px;font-weight:600;border:1px solid #e2e8f0;background:#fff;color:#0f172a;cursor:pointer;border-radius:0">Cancelar</button>' +
+            '<button type="button" id="mtg-confirmar" style="flex:1;padding:9px;font-size:13px;font-weight:600;border:none;background:#0f766e;color:#fff;cursor:pointer;border-radius:0">Confirmar</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(wrap.firstChild);
+    function fechar(val) {
+      document.getElementById('modal-texto-global').style.display = 'none';
+      var r = _ptResolve; _ptResolve = null; if (r) r(val);
+    }
+    document.getElementById('mtg-cancelar').addEventListener('click', function(){ fechar(null); });
+    document.getElementById('mtg-confirmar').addEventListener('click', function(){ fechar(document.getElementById('mtg-input').value); });
+    document.getElementById('modal-texto-global').addEventListener('click', function(e){ if (e.target === this) fechar(null); });
+  }
+  window.pedirTexto = function(mensagem, opts) {
+    return new Promise(function(resolve) {
+      garantirModalTexto();
+      opts = opts || {};
+      document.getElementById('mtg-titulo').textContent = opts.titulo || 'Informação';
+      document.getElementById('mtg-mensagem').textContent = mensagem || '';
+      var inp = document.getElementById('mtg-input');
+      inp.value = opts.valor || '';
+      _ptResolve = resolve;
+      document.getElementById('modal-texto-global').style.display = 'flex';
+      setTimeout(function(){ inp.focus(); }, 50);
+    });
+  };
+
+  // ─── Modal para exibir um texto copiavel (substitui prompt('Copie:', link)) ──
+  var _copText = '';
+  function garantirModalCopiar() {
+    if (document.getElementById('modal-copiar-global')) return;
+    var wrap = document.createElement('div');
+    wrap.innerHTML =
+      '<div class="modal-overlay" id="modal-copiar-global" style="display:none;position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:3000;align-items:center;justify-content:center">' +
+        '<div class="modal" style="max-width:460px;width:90%;background:#fff;border:1px solid #e2e8f0;padding:0;border-radius:0;box-shadow:none">' +
+          '<div style="padding:24px 24px 0">' +
+            '<h3 id="mcp-titulo" style="font-size:16px;font-weight:700;color:#0f172a;margin:0 0 8px">Copiar</h3>' +
+            '<p id="mcp-mensagem" style="font-size:13px;color:#64748b;line-height:1.6;margin:0 0 14px"></p>' +
+            '<input id="mcp-input" readonly style="width:100%;padding:9px;font-size:13px;border:1px solid #e2e8f0;border-radius:0;background:#f8fafc;box-sizing:border-box">' +
+          '</div>' +
+          '<div style="display:flex;gap:10px;padding:20px 24px;margin-top:16px;border-top:1px solid #e2e8f0">' +
+            '<button type="button" id="mcp-fechar" style="flex:1;padding:9px;font-size:13px;font-weight:600;border:1px solid #e2e8f0;background:#fff;color:#0f172a;cursor:pointer;border-radius:0">Fechar</button>' +
+            '<button type="button" id="mcp-copiar" style="flex:1;padding:9px;font-size:13px;font-weight:600;border:none;background:#0f766e;color:#fff;cursor:pointer;border-radius:0">Copiar</button>' +
+          '</div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(wrap.firstChild);
+    document.getElementById('mcp-fechar').addEventListener('click', function(){ document.getElementById('modal-copiar-global').style.display = 'none'; });
+    document.getElementById('modal-copiar-global').addEventListener('click', function(e){ if (e.target === this) this.style.display = 'none'; });
+    document.getElementById('mcp-copiar').addEventListener('click', function(){
+      var inp = document.getElementById('mcp-input'); inp.select(); inp.setSelectionRange(0, 99999);
+      var btn = document.getElementById('mcp-copiar');
+      function ok(){ btn.textContent = 'Copiado!'; setTimeout(function(){ btn.textContent = 'Copiar'; }, 1500); }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(_copText).then(ok).catch(function(){ try { document.execCommand('copy'); ok(); } catch(e){} });
+      } else { try { document.execCommand('copy'); ok(); } catch(e){} }
+    });
+  }
+  window.mostrarTextoCopiavel = function(mensagem, texto, opts) {
+    garantirModalCopiar();
+    opts = opts || {};
+    _copText = texto || '';
+    document.getElementById('mcp-titulo').textContent = opts.titulo || 'Copiar';
+    document.getElementById('mcp-mensagem').textContent = mensagem || '';
+    document.getElementById('mcp-input').value = texto || '';
+    document.getElementById('modal-copiar-global').style.display = 'flex';
+    setTimeout(function(){ document.getElementById('mcp-input').select(); }, 50);
+  };
+
   // Substitui o alert() nativo do navegador pelo modal de aviso padrao do sistema,
   // em qualquer chamada existente ou futura, sem precisar editar cada tela.
   var _alertNativo = window.alert;

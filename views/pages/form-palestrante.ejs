@@ -363,7 +363,7 @@ const T = {
 let idiomaAtual = 'es';
 let paisAtual = '';
 
-function selecionarPais(pais){
+async function selecionarPais(pais){
   paisAtual = pais;
   document.getElementById('inputPais').value = pais;
 
@@ -382,7 +382,7 @@ function selecionarPais(pais){
     document.getElementById('cidade') && (document.getElementById('cidade').required = false);
   } else {
     // Outro — perguntar idioma
-    idiomaAtual = prompt('Seleccione idioma / Selecione idioma:\n1 - Español\n2 - Português') === '2' ? 'pt' : 'es';
+    idiomaAtual = (await pedirTexto('Seleccione idioma / Selecione idioma:\n1 - Español\n2 - Português')) === '2' ? 'pt' : 'es';
     document.getElementById('bandeira').textContent = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
     document.getElementById('cardEndereco').style.display = 'none';
     document.getElementById('rua') && (document.getElementById('rua').required = false);

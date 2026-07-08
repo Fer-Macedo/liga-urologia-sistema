@@ -1552,7 +1552,7 @@ function carregarHistorico() {
 }
 function copiarLink(path) {
   const link = window.location.origin + path;
-  navigator.clipboard.writeText(link).then(() => alert('Link copiado!\n\n'+link)).catch(() => prompt('Copie:', link));
+  navigator.clipboard.writeText(link).then(() => alert('Link copiado!\n\n'+link)).catch(() => mostrarTextoCopiavel('Copie o link:', link));
 }
 function copiarLinkCupom(codigo) {
   const appUrl = window.location.origin;
@@ -1560,7 +1560,7 @@ function copiarLinkCupom(codigo) {
   navigator.clipboard.writeText(link).then(() => {
     alert('Link copiado!\n\n' + link);
   }).catch(() => {
-    prompt('Copie o link abaixo:', link);
+    mostrarTextoCopiavel('Copie o link abaixo:', link);
   });
 }
 function carregarEspera() {

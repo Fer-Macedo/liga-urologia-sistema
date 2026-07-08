@@ -449,7 +449,7 @@ function fechar(id){ document.getElementById(id).classList.remove('open'); }
 function abrirGuia(){ abrir('bdIcal'); }
 function navMes(d){ mes+=d; if(mes>11){mes=0;ano++;} if(mes<0){mes=11;ano--;} render(); }
 function irHoje(){ mes=hoje.getMonth(); ano=hoje.getFullYear(); render(); }
-function copiarLink(){ navigator.clipboard.writeText(ICAL).then(()=>{ fechar('bdIcal'); abrirGuia(); }).catch(()=>prompt('Copie:',ICAL)); }
+function copiarLink(){ navigator.clipboard.writeText(ICAL).then(()=>{ fechar('bdIcal'); abrirGuia(); }).catch(()=>mostrarTextoCopiavel('Copie o link:',ICAL)); }
 
 ['bdEvento','bdMulti','bdIcal'].forEach(id=>{ document.getElementById(id).addEventListener('click',e=>{if(e.target===e.currentTarget)fechar(id);}); });
 
