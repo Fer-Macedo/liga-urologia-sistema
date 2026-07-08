@@ -13,31 +13,53 @@ const CUSTO_ENTRADA_POR_1K = 0.003;
 const CUSTO_SAIDA_POR_1K = 0.015;
 const LIMITE_WHISPER_BYTES = 25 * 1024 * 1024; // limite real da API
 
-// Comprime o audio para mp3 mono em baixa taxa (voz nao perde inteligibilidade abaixo de
-// 25MB, mesmo em gravacoes longas) - resolve o limite de 25MB do Whisper e normaliza
-// formatos variados (webm do navegador, m4a do iPhone, etc) num unico formato aceito.
-function comprimirAudio(buffer, filename) {
+// Descobre a duracao do audio (em segundos) via ffprobe, para calcular a taxa de
+// compressao certa - uma reuniao de 2h30 precisa de uma taxa bem mais baixa que uma de 10min
+// para caber no limite de 25MB do Whisper.
+function obterDuracaoSegundos(caminho) {
   return new Promise((resolve) => {
-    const tmpIn = path.join(os.tmpdir(), `ata-audio-in-${Date.now()}-${Math.random().toString(36).slice(2)}${path.extname(filename||'')||'.dat'}`);
-    const tmpOut = tmpIn + '.mp3';
-    fs.writeFile(tmpIn, buffer, (errW) => {
-      if (errW) { console.error('[atas-ia] comprimirAudio: erro ao escrever tmp:', errW.message); return resolve(null); }
-      execFile('ffmpeg', ['-y', '-i', tmpIn, '-ac', '1', '-ar', '16000', '-b:a', '32k', tmpOut], { timeout: 280000 }, (errC, stdout, stderr) => {
-        fs.unlink(tmpIn, () => {});
-        if (errC) {
-          console.error('[atas-ia] comprimirAudio: ffmpeg falhou:', errC.message, '| stderr:', (stderr||'').slice(-500));
-          fs.unlink(tmpOut, () => {});
-          return resolve(null);
-        }
-        fs.readFile(tmpOut, (errR, data) => {
-          fs.unlink(tmpOut, () => {});
-          if (errR) { console.error('[atas-ia] comprimirAudio: erro ao ler saida:', errR.message); return resolve(null); }
-          console.log('[atas-ia] comprimirAudio: ok,', buffer.length, '->', data.length, 'bytes');
-          resolve(data);
-        });
-      });
+    execFile('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', caminho], (err, stdout) => {
+      if (err) return resolve(null);
+      const seg = parseFloat(String(stdout).trim());
+      resolve(isNaN(seg) ? null : seg);
     });
   });
+}
+
+// Comprime o audio para mp3 mono em taxa calculada dinamicamente pela duracao real (voz
+// continua inteligivel ate taxas bem baixas) - garante que o resultado caiba no limite de
+// 25MB do Whisper mesmo em gravacoes de horas, e normaliza formatos variados (webm do
+// navegador, m4a do iPhone, etc) num unico formato aceito.
+async function comprimirAudio(buffer, filename) {
+  const tmpIn = path.join(os.tmpdir(), `ata-audio-in-${Date.now()}-${Math.random().toString(36).slice(2)}${path.extname(filename||'')||'.dat'}`);
+  const tmpOut = tmpIn + '.mp3';
+  try {
+    await fs.promises.writeFile(tmpIn, buffer);
+    const duracao = await obterDuracaoSegundos(tmpIn);
+    // Alvo: 22MB (margem de seguranca sob o limite de 25MB), taxa entre 12k (minimo
+    // inteligivel para voz) e 32k (mais que suficiente para audios curtos).
+    let bitrateKbps = 32;
+    if (duracao && duracao > 0) {
+      const alvoBits = 22 * 1024 * 1024 * 8;
+      bitrateKbps = Math.floor(alvoBits / duracao / 1000);
+      bitrateKbps = Math.max(12, Math.min(32, bitrateKbps));
+    }
+    console.log('[atas-ia] comprimirAudio: duracao=', duracao, 's, bitrate escolhido=', bitrateKbps, 'kbps');
+    await new Promise((resolve, reject) => {
+      execFile('ffmpeg', ['-y', '-i', tmpIn, '-ac', '1', '-ar', '16000', '-b:a', bitrateKbps + 'k', tmpOut], { timeout: 280000 }, (errC, stdout, stderr) => {
+        if (errC) { console.error('[atas-ia] comprimirAudio: ffmpeg falhou:', errC.message, '| stderr:', (stderr||'').slice(-500)); return reject(errC); }
+        resolve();
+      });
+    });
+    const data = await fs.promises.readFile(tmpOut);
+    console.log('[atas-ia] comprimirAudio: ok,', buffer.length, '->', data.length, 'bytes');
+    return data;
+  } catch (e) {
+    return null;
+  } finally {
+    fs.unlink(tmpIn, () => {});
+    fs.unlink(tmpOut, () => {});
+  }
 }
 
 async function transcreverAudio(buffer, filename, mimetype) {
@@ -54,6 +76,9 @@ async function transcreverAudio(buffer, filename, mimetype) {
       envioMime = 'audio/mpeg';
     } else if (buffer.length > LIMITE_WHISPER_BYTES) {
       return { ok: false, erro: 'O audio e muito grande (acima de 25MB) e nao foi possivel comprimir automaticamente. Tente um arquivo menor ou grave em qualidade mais baixa.' };
+    }
+    if (envioBuffer.length > LIMITE_WHISPER_BYTES) {
+      return { ok: false, erro: 'Esta gravacao e muito longa - mesmo comprimida, passa do limite de 25MB aceito pelo transcritor. Divida a reuniao em duas partes (ex: antes e depois de um intervalo) e envie cada uma separadamente.' };
     }
     const form = new FormData();
     form.append('file', envioBuffer, { filename: envioNome, contentType: envioMime });
