@@ -3,17 +3,55 @@
 // Resumo/redacao da ata: Claude (Anthropic), reaproveitando o mesmo padrao dos outros modulos de IA.
 const axios = require('axios');
 const FormData = require('form-data');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+const { execFile } = require('child_process');
 
 const MODEL_CLAUDE = 'claude-sonnet-4-5';
 const CUSTO_ENTRADA_POR_1K = 0.003;
 const CUSTO_SAIDA_POR_1K = 0.015;
+const LIMITE_WHISPER_BYTES = 25 * 1024 * 1024; // limite real da API
+
+// Comprime o audio para mp3 mono em baixa taxa (voz nao perde inteligibilidade abaixo de
+// 25MB, mesmo em gravacoes longas) - resolve o limite de 25MB do Whisper e normaliza
+// formatos variados (webm do navegador, m4a do iPhone, etc) num unico formato aceito.
+function comprimirAudio(buffer, filename) {
+  return new Promise((resolve) => {
+    const tmpIn = path.join(os.tmpdir(), `ata-audio-in-${Date.now()}-${Math.random().toString(36).slice(2)}${path.extname(filename||'')||'.dat'}`);
+    const tmpOut = tmpIn + '.mp3';
+    fs.writeFile(tmpIn, buffer, (errW) => {
+      if (errW) return resolve(null);
+      execFile('ffmpeg', ['-y', '-i', tmpIn, '-ac', '1', '-ar', '16000', '-b:a', '32k', tmpOut], { timeout: 280000 }, (errC) => {
+        fs.unlink(tmpIn, () => {});
+        if (errC) { fs.unlink(tmpOut, () => {}); return resolve(null); }
+        fs.readFile(tmpOut, (errR, data) => {
+          fs.unlink(tmpOut, () => {});
+          if (errR) return resolve(null);
+          resolve(data);
+        });
+      });
+    });
+  });
+}
 
 async function transcreverAudio(buffer, filename, mimetype) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return { ok: false, erro: 'Transcricao de audio nao configurada (falta OPENAI_API_KEY).' };
   try {
+    let envioBuffer = buffer, envioNome = filename || 'audio.webm', envioMime = mimetype || 'audio/webm';
+    // Sempre comprime: normaliza formato e evita estourar o limite de 25MB do Whisper,
+    // mesmo em gravacoes longas. Se a compressao falhar por algum motivo, envia o original.
+    const comprimido = await comprimirAudio(buffer, filename);
+    if (comprimido && comprimido.length > 0) {
+      envioBuffer = comprimido;
+      envioNome = 'audio-comprimido.mp3';
+      envioMime = 'audio/mpeg';
+    } else if (buffer.length > LIMITE_WHISPER_BYTES) {
+      return { ok: false, erro: 'O audio e muito grande (acima de 25MB) e nao foi possivel comprimir automaticamente. Tente um arquivo menor ou grave em qualidade mais baixa.' };
+    }
     const form = new FormData();
-    form.append('file', buffer, { filename: filename || 'audio.webm', contentType: mimetype || 'audio/webm' });
+    form.append('file', envioBuffer, { filename: envioNome, contentType: envioMime });
     form.append('model', 'whisper-1');
     form.append('language', 'pt');
     const resp = await axios.post('https://api.openai.com/v1/audio/transcriptions', form, {
