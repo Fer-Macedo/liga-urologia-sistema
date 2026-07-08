@@ -127,7 +127,7 @@
       <%if(a.grupo_nome){%><span>Para: <%=a.grupo_nome%></span><%}else{%><span>Para: Todos os grupos</span><%}%>
       <span>Por: <%=a.autor_nome||'Sistema'%></span>
     </div>
-    <form method="POST" action="/cientifico/projeto/<%=projeto.id%>/aviso/<%=a.id%>/excluir" style="margin:0" onsubmit="return confirm('Excluir este aviso? Ele some imediatamente de todos os portais dos membros.');">
+    <form method="POST" action="/cientifico/projeto/<%=projeto.id%>/aviso/<%=a.id%>/excluir" style="margin:0" onsubmit="var f=this;return confirmarAcao('Excluir este aviso? Ele some imediatamente de todos os portais dos membros.',function(){f.submit();});">
       <button type="submit" class="btn btn-sm" style="color:#dc2626;border-color:#fecaca;background:#fef2f2">Excluir</button>
     </form>
   </div>

@@ -353,9 +353,10 @@ function prepararSubmit(){
 }
 
 function excluirAta(id){
-  if(!confirm('Excluir esta ata permanentemente? Esta ação não pode ser desfeita.')) return;
-  fetch('/atas/'+id,{method:'DELETE',credentials:'same-origin'})
-  .then(r=>r.json()).then(d=>{if(d.ok)location.reload();else alert('Erro ao excluir.');});
+  confirmarAcao('Excluir esta ata permanentemente? Esta ação não pode ser desfeita.', function(){
+    fetch('/atas/'+id,{method:'DELETE',credentials:'same-origin'})
+    .then(r=>r.json()).then(d=>{if(d.ok)location.reload();else alert('Erro ao excluir.');});
+  }, { textoConfirmar: 'Excluir' });
 }
 </script>
 </body></html>

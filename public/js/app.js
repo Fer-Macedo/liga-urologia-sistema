@@ -93,6 +93,14 @@
     var m = document.getElementById('modal-aviso-global');
     if (m) m.style.display = 'none';
   };
+
+  // Substitui o alert() nativo do navegador pelo modal de aviso padrao do sistema,
+  // em qualquer chamada existente ou futura, sem precisar editar cada tela.
+  var _alertNativo = window.alert;
+  window.alert = function(mensagem) {
+    try { window.mostrarAviso(mensagem == null ? '' : String(mensagem), undefined, { titulo: 'Aviso' }); }
+    catch (e) { _alertNativo(mensagem); }
+  };
 })();
 
 // ─── Modais ──────────────────────────────────────────────────────────────────
@@ -163,11 +171,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // Confirmar antes de deslogar
+  // Confirmar antes de deslogar (modal padrao do sistema)
   const btnSair = document.querySelector('.btn-sair');
   if (btnSair) {
     btnSair.addEventListener('click', function(e) {
-      if (!confirm('Deseja sair do sistema?')) e.preventDefault();
+      e.preventDefault();
+      var destino = btnSair.getAttribute('href') || '/logout';
+      confirmarAcao('Deseja sair do sistema?', function(){ window.location.href = destino; }, { titulo: 'Sair', textoConfirmar: 'Sair' });
     });
   }
 });

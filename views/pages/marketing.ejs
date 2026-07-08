@@ -438,7 +438,7 @@
                   <div class="interno-evento-titulo"><%=ev.titulo%></div>
                   <div class="interno-evento-meta"><%=new Date(ev.data_inicio).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})%><%if(ev.descricao){%> · <%=ev.descricao%><%}%> · <%=ev.criado_por_nome||'Equipe'%></div>
                 </div>
-                <form method="POST" action="/marketing/interno/evento/<%=ev.id%>/excluir" onsubmit="return confirm('Excluir esta atividade?')">
+                <form method="POST" action="/marketing/interno/evento/<%=ev.id%>/excluir" onsubmit="var f=this;return confirmarAcao('Excluir esta atividade?',function(){f.submit();})">
                   <button type="submit" class="btn-xs verm">Excluir</button>
                 </form>
               </div>
@@ -474,7 +474,7 @@
                   <span><%=n.criado_por_nome||'Equipe'%></span>
                   <div style="display:flex;gap:6px">
                     <form method="POST" action="/marketing/interno/nota/<%=n.id%>/fixar"><button type="submit" class="interno-nota-btn"><%=n.fixado?'Desafixar':'Fixar'%></button></form>
-                    <form method="POST" action="/marketing/interno/nota/<%=n.id%>/excluir" onsubmit="return confirm('Excluir esta nota?')"><button type="submit" class="interno-nota-btn">Excluir</button></form>
+                    <form method="POST" action="/marketing/interno/nota/<%=n.id%>/excluir" onsubmit="var f=this;return confirmarAcao('Excluir esta nota?',function(){f.submit();})"><button type="submit" class="interno-nota-btn">Excluir</button></form>
                   </div>
                 </div>
               </div>

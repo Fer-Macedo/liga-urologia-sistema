@@ -70,6 +70,20 @@ const { csrfInjetar, csrfVerificar } = require('./middleware/csrf');
 app.use(csrfInjetar);
 app.use(csrfVerificar);
 
+// Garante o app.js (modais de confirmacao/aviso padrao + override do alert nativo)
+// em TODA pagina HTML do sistema, mesmo nas que nao o incluem manualmente.
+// Nao duplica onde ja existe.
+app.use((req, res, next) => {
+  const origSend = res.send.bind(res);
+  res.send = function(body) {
+    if (typeof body === 'string' && body.includes('</body>') && !body.includes('/js/app.js')) {
+      body = body.replace('</body>', '<script src="/js/app.js"></script></body>');
+    }
+    return origSend(body);
+  };
+  next();
+});
+
 app.use((req, res, next) => {
   res.locals.usuarioLogado = req.session.usuario || null;
   res.locals.permissoesAtivas = req.session.permissoesAtivas || [];

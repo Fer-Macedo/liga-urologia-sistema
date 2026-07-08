@@ -209,7 +209,7 @@ var pode = function(mod){ return !perms || perms.indexOf(mod) !== -1; };
         <div class="hero-actions">
           <a class="btn btn-ghost" href="/perfil"><svg viewBox="0 0 24 24" class="ic"><circle cx="12" cy="8" r="3.5"/><path d="M5 21c0-3.9 3.1-6.5 7-6.5s7 2.6 7 6.5"/></svg>Meu Perfil</a>
           <% if (typeof permissoesAtivas !== 'undefined' && (usuario.perfil==='admin' || permissoesAtivas.includes('cobrancas'))) { %>
-          <form action="/cobrancas/gerar" method="POST" style="display:inline" onsubmit="return confirm('Gerar cobranças do mês atual?')">
+          <form action="/cobrancas/gerar" method="POST" style="display:inline" onsubmit="var f=this;return confirmarAcao('Gerar cobranças do mês atual?',function(){f.submit();})">
             <button type="submit" class="btn btn-primary"><svg viewBox="0 0 24 24" class="ic"><path d="M13 3L4 14h7l-1 7 9-11h-7z"/></svg>Gerar Cobranças</button>
           </form>
           <% } %>

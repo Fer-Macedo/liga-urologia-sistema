@@ -76,10 +76,10 @@
         </div>
         <%}%>
         <div class="correcao-acoes">
-          <form method="POST" action="/correcoes-cadastro/<%=c.id%>/rejeitar" onsubmit="return confirm('Rejeitar esta atualização? Os dados novos serão descartados.')">
+          <form method="POST" action="/correcoes-cadastro/<%=c.id%>/rejeitar" onsubmit="var f=this;return confirmarAcao('Rejeitar esta atualização? Os dados novos serão descartados.',function(){f.submit();})">
             <button type="submit" class="btn btn-sm verm">Rejeitar</button>
           </form>
-          <form method="POST" action="/correcoes-cadastro/<%=c.id%>/aprovar" onsubmit="return confirm('Aplicar esses dados novos ao cadastro?')">
+          <form method="POST" action="/correcoes-cadastro/<%=c.id%>/aprovar" onsubmit="var f=this;return confirmarAcao('Aplicar esses dados novos ao cadastro?',function(){f.submit();})">
             <button type="submit" class="btn btn-sm verde">Aprovar e Aplicar</button>
           </form>
         </div>
