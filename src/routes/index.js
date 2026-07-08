@@ -8886,6 +8886,14 @@ router.post('/cientifico/projeto/:projetoId/aviso', requireAuth, requireCientifi
   res.redirect('/cientifico/projeto/'+req.params.projetoId);
 });
 
+// POST /cientifico/projeto/:projetoId/aviso/:avisoId/excluir — some de todos os portais na hora,
+// ja que os portais so exibem o que ainda existe na tabela avisos_cientificos.
+router.post('/cientifico/projeto/:projetoId/aviso/:avisoId/excluir', requireAuth, requireCientifico, async (req, res) => {
+  await query('DELETE FROM avisos_cientificos WHERE id=$1 AND projeto_id=$2', [req.params.avisoId, req.params.projetoId]);
+  req.session.msg=['Aviso excluido!'];
+  res.redirect('/cientifico/projeto/'+req.params.projetoId);
+});
+
 // POST /cientifico/grupo/:grupoId/chat
 router.post('/cientifico/grupo/:grupoId/chat', requireAuth, requireCientifico, uploadArq.single('arquivo_chat'), async (req, res) => {
   const { texto } = req.body;

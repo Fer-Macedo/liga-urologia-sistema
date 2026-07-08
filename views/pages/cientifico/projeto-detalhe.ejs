@@ -121,10 +121,15 @@
 <div class="aviso-list">
 <%avisos.forEach(function(a){%>
 <div class="aviso-item">
-  <div class="aviso-meta">
-    <span><%=new Date(a.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%></span>
-    <%if(a.grupo_nome){%><span>Para: <%=a.grupo_nome%></span><%}else{%><span>Para: Todos os grupos</span><%}%>
-    <span>Por: <%=a.autor_nome||'Sistema'%></span>
+  <div class="aviso-meta" style="justify-content:space-between;align-items:center">
+    <div style="display:flex;gap:10px">
+      <span><%=new Date(a.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%></span>
+      <%if(a.grupo_nome){%><span>Para: <%=a.grupo_nome%></span><%}else{%><span>Para: Todos os grupos</span><%}%>
+      <span>Por: <%=a.autor_nome||'Sistema'%></span>
+    </div>
+    <form method="POST" action="/cientifico/projeto/<%=projeto.id%>/aviso/<%=a.id%>/excluir" style="margin:0" onsubmit="return confirm('Excluir este aviso? Ele some imediatamente de todos os portais dos membros.');">
+      <button type="submit" class="btn btn-sm" style="color:#dc2626;border-color:#fecaca;background:#fef2f2">Excluir</button>
+    </form>
   </div>
   <div class="aviso-texto"><%=a.texto%></div>
 </div>
