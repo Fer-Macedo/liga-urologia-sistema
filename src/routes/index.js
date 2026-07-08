@@ -850,8 +850,10 @@ router.get('/api/pendentes', requireAuth, async (req, res) => {
     if(nL>0) itens.push({tipo:'ligante',label:nL+' ligante'+(nL>1?'s':'')+' aguardando aprovacao',url:'/ligantes?status=pendente'});
 
     // Trabalhos cientificos aguardando revisao/decisao - so aparece para quem tem acesso
-    // ao modulo (permissao cientifico, presidencia ou admin). Fica visivel para TODOS eles
-    // ate o trabalho ser efetivamente aprovado ou devolvido - nao some so por alguem abrir.
+    // ao modulo (permissao cientifico, presidencia ou admin).
+    // "Aguardando" (ninguem pegou ainda) conta para TODOS - e uma pendencia coletiva.
+    // "Em revisao" so conta para quem esta revisando (revisor_atual_id) - uma vez que
+    // alguem clica "Revisar", deixa de ser pendencia pros outros, pois ja esta sob controle.
     let count = count0;
     const perfil = req.session.usuario.perfil;
     let temAcessoCientifico = perfil==='presidencia' || perfil==='admin';
@@ -860,15 +862,18 @@ router.get('/api/pendentes', requireAuth, async (req, res) => {
       temAcessoCientifico = pr.rows.length > 0;
     }
     if (temAcessoCientifico) {
-      const vR = await query(`
-        SELECT v.id, gc.nome as gnome, v.status FROM versoes_trabalho v
-        JOIN grupos_cientificos gc ON gc.id=v.grupo_id
-        WHERE v.status IN ('aguardando','em_revisao')
-        ORDER BY v.enviado_em ASC
-      `);
-      if (vR.rows.length) {
-        count += vR.rows.length;
-        itens.push({tipo:'cientifico',label:vR.rows.length+' trabalho'+(vR.rows.length>1?'s':'')+' aguardando correcao no Cientifico',url:'/cientifico'});
+      const [aR, rR] = await Promise.all([
+        query("SELECT COUNT(*) n FROM versoes_trabalho WHERE status='aguardando'"),
+        query("SELECT COUNT(*) n FROM versoes_trabalho WHERE status='em_revisao' AND revisor_atual_id=$1", [req.session.usuario.id])
+      ]);
+      const nAguardando = parseInt(aR.rows[0].n), nComigo = parseInt(rR.rows[0].n);
+      if (nAguardando > 0) {
+        count += nAguardando;
+        itens.push({tipo:'cientifico',label:nAguardando+' trabalho'+(nAguardando>1?'s':'')+' aguardando alguem assumir a correcao',url:'/cientifico/pendencias'});
+      }
+      if (nComigo > 0) {
+        count += nComigo;
+        itens.push({tipo:'cientifico',label:nComigo+' trabalho'+(nComigo>1?'s':'')+' que voce esta revisando',url:'/cientifico/pendencias'});
       }
     }
     res.json({count,itens});
