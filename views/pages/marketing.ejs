@@ -133,6 +133,31 @@
       .btn-xs:hover{transform:translateY(-1px);}
       .pill:hover{transform:translateY(-1px);}
       .mkt-tab:hover{transform:translateY(-1px);}
+      .interno-banner{background:linear-gradient(115deg,#0C231B 0%,#0F6E56 160%);border-radius:10px;padding:22px 26px;margin-bottom:20px;color:#fff;}
+      .interno-banner-titulo{font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;margin-bottom:4px;}
+      .interno-banner-sub{font-size:13px;color:#cfe8de;}
+      .interno-grid{display:grid;grid-template-columns:1.2fr 1fr;gap:24px;align-items:start;}
+      @media(max-width:900px){.interno-grid{grid-template-columns:1fr;}}
+      .interno-h2{font-size:15px;font-weight:700;color:var(--texto);margin:0;font-family:'Outfit',sans-serif;}
+      .interno-card{background:var(--card);border:1px solid var(--borda);border-radius:10px;padding:18px;box-shadow:0 2px 10px rgba(15,110,86,.06);}
+      .interno-lista{margin-top:14px;display:flex;flex-direction:column;gap:8px;}
+      .interno-evento-item{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--borda);border-radius:8px;padding:10px 14px;}
+      .interno-evento-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+      .interno-evento-titulo{font-size:13px;font-weight:600;color:var(--texto);}
+      .interno-evento-meta{font-size:11px;color:var(--texto2);margin-top:2px;}
+      .interno-nota-form{background:var(--card);border:1px solid var(--borda);border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:0 2px 10px rgba(15,110,86,.06);}
+      .interno-nota-form textarea{width:100%;border:1px solid var(--borda);border-radius:6px;padding:10px 12px;font-size:13px;font-family:inherit;resize:vertical;min-height:60px;box-sizing:border-box;}
+      .interno-cor-picker label{cursor:pointer;font-size:18px;margin-right:4px;}
+      .interno-cor-picker input{display:none;}
+      .interno-cor-picker label:has(input:checked){outline:2px solid #0F6E56;border-radius:50%;}
+      .interno-notas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;}
+      .interno-nota{position:relative;border-radius:2px 2px 10px 10px;padding:16px 14px 12px;box-shadow:0 4px 10px rgba(0,0,0,.12);transform:rotate(-1deg);transition:transform .15s;font-family:'IBM Plex Sans',sans-serif;}
+      .interno-notas-grid .interno-nota:nth-child(even){transform:rotate(1deg);}
+      .interno-nota:hover{transform:rotate(0deg) scale(1.02);}
+      .interno-nota-pin{position:absolute;top:-8px;right:10px;font-size:16px;}
+      .interno-nota-texto{font-size:13px;color:#2b2b2b;white-space:pre-wrap;line-height:1.45;min-height:40px;}
+      .interno-nota-rodape{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:10.5px;color:#555;border-top:1px solid rgba(0,0,0,.08);padding-top:6px;}
+      .interno-nota-btn{background:none;border:none;font-size:10.5px;color:#555;text-decoration:underline;cursor:pointer;font-family:inherit;padding:0;}
     </style>
 </head>
 <body>
@@ -189,6 +214,9 @@
         <button class="mkt-tab" onclick="showTab('analytics',this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Analytics</button>
+        <button class="mkt-tab" onclick="showTab('interno',this)" style="margin-left:auto">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H8a2 2 0 0 0-2 2v16l6-3 6 3V5a2 2 0 0 0-2-2z"/></svg>
+          Espaço da Equipe</button>
       </div>
       <div id="mkt-content">
       <div class="mkt-section ativo" id="tab-dashboard">
@@ -386,6 +414,86 @@
           <div class="cal-header">Qua</div><div class="cal-header">Qui</div><div class="cal-header">Sex</div><div class="cal-header">Sab</div>
         </div>
         <div class="calendario-grid" id="cal-grid" style="margin-top:4px"></div>
+      </div>
+      <div class="mkt-section" id="tab-interno">
+        <div class="interno-banner">
+          <div>
+            <div class="interno-banner-titulo">Espaço da Equipe de Marketing</div>
+            <div class="interno-banner-sub">Calendário de atividades e bloco de notas — só a equipe vê, não aparece em nenhum outro lugar do sistema.</div>
+          </div>
+        </div>
+        <div class="interno-grid">
+          <div class="interno-col">
+            <div class="section-header">
+              <h2 class="interno-h2">Calendário Interno</h2>
+              <button class="btn-xs verde" onclick="abrirModal('modal-evento-interno')">+ Nova atividade</button>
+            </div>
+            <div class="interno-card">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <button class="btn btn-sm" onclick="mudarMesInterno(-1)">&#8592;</button>
+                <h3 id="cal-titulo-interno" style="font-size:15px;font-weight:700;font-family:'Outfit',sans-serif;color:#0F6E56"></h3>
+                <button class="btn btn-sm" onclick="mudarMesInterno(1)">&#8594;</button>
+              </div>
+              <div class="calendario-grid">
+                <div class="cal-header">Dom</div><div class="cal-header">Seg</div><div class="cal-header">Ter</div>
+                <div class="cal-header">Qua</div><div class="cal-header">Qui</div><div class="cal-header">Sex</div><div class="cal-header">Sab</div>
+              </div>
+              <div class="calendario-grid" id="cal-grid-interno" style="margin-top:4px"></div>
+            </div>
+            <%if(eventosInternos.length){%>
+            <div class="interno-lista">
+              <%eventosInternos.forEach(function(ev){%>
+              <div class="interno-evento-item">
+                <span class="interno-evento-dot" style="background:<%=ev.cor%>"></span>
+                <div style="flex:1">
+                  <div class="interno-evento-titulo"><%=ev.titulo%></div>
+                  <div class="interno-evento-meta"><%=new Date(ev.data_inicio).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})%><%if(ev.descricao){%> · <%=ev.descricao%><%}%> · <%=ev.criado_por_nome||'Equipe'%></div>
+                </div>
+                <form method="POST" action="/marketing/interno/evento/<%=ev.id%>/excluir" onsubmit="return confirm('Excluir esta atividade?')">
+                  <button type="submit" class="btn-xs verm">Excluir</button>
+                </form>
+              </div>
+              <%})%>
+            </div>
+            <%}%>
+          </div>
+          <div class="interno-col">
+            <div class="section-header">
+              <h2 class="interno-h2">Bloco de Notas</h2>
+            </div>
+            <form method="POST" action="/marketing/interno/nota" class="interno-nota-form">
+              <textarea name="texto" placeholder="Escreva um lembrete, pendência ou recado para a equipe..." required></textarea>
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+                <div class="interno-cor-picker">
+                  <label><input type="radio" name="cor" value="#fff3b0" checked>&#9679;</label>
+                  <label><input type="radio" name="cor" value="#ffd6d6">&#9679;</label>
+                  <label><input type="radio" name="cor" value="#d6f5e3">&#9679;</label>
+                  <label><input type="radio" name="cor" value="#d6e8ff">&#9679;</label>
+                </div>
+                <button type="submit" class="btn-xs verde">Fixar nota</button>
+              </div>
+            </form>
+            <%if(!notas.length){%>
+            <div class="empty-small" style="background:var(--card);border:1px solid var(--borda);padding:24px;text-align:center;color:var(--texto2);font-size:13px">Nenhuma nota ainda.</div>
+            <%}else{%>
+            <div class="interno-notas-grid">
+              <%notas.forEach(function(n){%>
+              <div class="interno-nota" style="background:<%=n.cor%>">
+                <%if(n.fixado){%><div class="interno-nota-pin">&#128204;</div><%}%>
+                <div class="interno-nota-texto"><%=n.texto%></div>
+                <div class="interno-nota-rodape">
+                  <span><%=n.criado_por_nome||'Equipe'%></span>
+                  <div style="display:flex;gap:6px">
+                    <form method="POST" action="/marketing/interno/nota/<%=n.id%>/fixar"><button type="submit" class="interno-nota-btn"><%=n.fixado?'Desafixar':'Fixar'%></button></form>
+                    <form method="POST" action="/marketing/interno/nota/<%=n.id%>/excluir" onsubmit="return confirm('Excluir esta nota?')"><button type="submit" class="interno-nota-btn">Excluir</button></form>
+                  </div>
+                </div>
+              </div>
+              <%})%>
+            </div>
+            <%}%>
+          </div>
+        </div>
       </div>
       <div class="mkt-section" id="tab-midias">
         <%if(typeof canvaConectado!=='undefined' && canvaConectado){%>
@@ -1257,12 +1365,81 @@
     </form>
   </div>
 </div>
+<div class="modal-overlay" id="modal-evento-interno" style="display:none">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-titulo">Nova atividade</span><button class="icon-btn" onclick="fecharModal('modal-evento-interno')">&#x2715;</button></div>
+    <form method="POST" action="/marketing/interno/evento">
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="campo"><label class="label">Título</label><input type="text" name="titulo" class="input" required></div>
+        <div class="campo"><label class="label">Descrição (opcional)</label><textarea name="descricao" class="input" rows="3"></textarea></div>
+        <div style="display:flex;gap:10px">
+          <div class="campo" style="flex:1"><label class="label">Data</label><input type="date" name="data_inicio" class="input" required></div>
+          <div class="campo" style="flex:1"><label class="label">Cor</label>
+            <select name="cor" class="input">
+              <option value="#0F6E56">Verde</option>
+              <option value="#1d4ed8">Azul</option>
+              <option value="#dc2626">Vermelho</option>
+              <option value="#7c3aed">Roxo</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-evento-interno')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Adicionar</button>
+      </div>
+    </form>
+  </div>
+</div>
 <script src="/js/app.js"></script>
 <script>
 const postsData=<%- JSON.stringify(posts).replace(/</g,"\u003c") %>;
+const MESES_PT_JS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 let calMes=new Date().getMonth(),calAno=new Date().getFullYear();
 // showTab definida no head
 function mudarMes(d){calMes+=d;if(calMes<0){calMes=11;calAno--;}if(calMes>11){calMes=0;calAno++;}renderCal();}
+function montarGrid(gridEl, tituloEl, mes, ano, itensPorDia, corDia){
+  tituloEl.textContent=MESES_PT_JS[mes]+' '+ano;
+  const hoje=new Date();
+  const primeiroDia=new Date(ano,mes,1).getDay();
+  const diasNoMes=new Date(ano,mes+1,0).getDate();
+  const diasMesAnt=new Date(ano,mes,0).getDate();
+  let html='';
+  for(let i=0;i<42;i++){
+    let dia,outroMes=false,mesRef=mes,anoRef=ano;
+    if(i<primeiroDia){dia=diasMesAnt-primeiroDia+i+1;outroMes=true;mesRef=mes-1;if(mesRef<0){mesRef=11;anoRef--;}}
+    else if(i>=primeiroDia+diasNoMes){dia=i-primeiroDia-diasNoMes+1;outroMes=true;mesRef=mes+1;if(mesRef>11){mesRef=0;anoRef++;}}
+    else dia=i-primeiroDia+1;
+    const isHoje=!outroMes&&dia===hoje.getDate()&&mes===hoje.getMonth()&&ano===hoje.getFullYear();
+    const chave=anoRef+'-'+String(mesRef+1).padStart(2,'0')+'-'+String(dia).padStart(2,'0');
+    const itens=outroMes?[]:(itensPorDia[chave]||[]);
+    html+='<div class="cal-dia'+(isHoje?' hoje':'')+(outroMes?' outro-mes':'')+'"><div class="cal-num">'+dia+'</div>'+
+      itens.map(it=>'<div class="cal-post" style="background:'+(it.cor||corDia)+'" title="'+it.titulo.replace(/"/g,'&quot;')+'">'+it.titulo+'</div>').join('')+'</div>';
+  }
+  gridEl.innerHTML=html;
+}
+function renderCal(){
+  const porDia={};
+  postsData.forEach(p=>{
+    const d=p.agendado_para||p.criado_em; if(!d) return;
+    const chave=d.slice(0,10);
+    (porDia[chave]=porDia[chave]||[]).push({titulo:p.titulo});
+  });
+  montarGrid(document.getElementById('cal-grid'),document.getElementById('cal-titulo'),calMes,calAno,porDia,'var(--cor-primaria)');
+}
+renderCal();
+const eventosInternosData=<%- JSON.stringify(eventosInternos).replace(/</g,"\\u003c") %>;
+let calMesInt=new Date().getMonth(),calAnoInt=new Date().getFullYear();
+function mudarMesInterno(d){calMesInt+=d;if(calMesInt<0){calMesInt=11;calAnoInt--;}if(calMesInt>11){calMesInt=0;calAnoInt++;}renderCalInterno();}
+function renderCalInterno(){
+  const porDia={};
+  eventosInternosData.forEach(ev=>{
+    const chave=ev.data_inicio.slice(0,10);
+    (porDia[chave]=porDia[chave]||[]).push({titulo:ev.titulo,cor:ev.cor});
+  });
+  montarGrid(document.getElementById('cal-grid-interno'),document.getElementById('cal-titulo-interno'),calMesInt,calAnoInt,porDia,'#0F6E56');
+}
+renderCalInterno();
 const hashtagsSel=new Set();
 function calcScore(){
   const titulo=document.querySelector('[name="titulo"]')?.value||'';

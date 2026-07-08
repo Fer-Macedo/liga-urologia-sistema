@@ -90,6 +90,26 @@ async function initSchema() {
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS sexo TEXT;
 
+    CREATE TABLE IF NOT EXISTS marketing_calendario (
+      id SERIAL PRIMARY KEY,
+      titulo TEXT NOT NULL,
+      descricao TEXT,
+      data_inicio TIMESTAMP NOT NULL,
+      data_fim TIMESTAMP,
+      cor TEXT DEFAULT '#0F6E56',
+      criado_por INTEGER,
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS marketing_notas (
+      id SERIAL PRIMARY KEY,
+      texto TEXT NOT NULL,
+      cor TEXT DEFAULT '#fff3b0',
+      fixado BOOLEAN DEFAULT false,
+      criado_por INTEGER,
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS site_banners (
       id SERIAL PRIMARY KEY,
       titulo TEXT,

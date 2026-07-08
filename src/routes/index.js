@@ -4667,7 +4667,43 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
   );
   const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   const nomeMesAtual = MESES_PT[parseInt(mesAtual, 10) - 1];
-  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows, aniversariantesMes: aniversariantesMesR.rows, nomeMesAtual });
+  const [eventosInternosR, notasR] = await Promise.all([
+    query('SELECT ec.*, u.nome as criado_por_nome FROM marketing_calendario ec LEFT JOIN usuarios u ON u.id=ec.criado_por ORDER BY ec.data_inicio'),
+    query('SELECT n.*, u.nome as criado_por_nome FROM marketing_notas n LEFT JOIN usuarios u ON u.id=n.criado_por ORDER BY n.fixado DESC, n.criado_em DESC')
+  ]);
+  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows, aniversariantesMes: aniversariantesMesR.rows, nomeMesAtual, eventosInternos: eventosInternosR.rows, notas: notasR.rows });
+});
+
+router.post('/marketing/interno/evento', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  const { titulo, descricao, data_inicio, data_fim, cor } = req.body;
+  await query('INSERT INTO marketing_calendario (titulo,descricao,data_inicio,data_fim,cor,criado_por) VALUES ($1,$2,$3,$4,$5,$6)',
+    [titulo, descricao||null, data_inicio, data_fim||null, cor||'#0F6E56', req.session.usuario.id]);
+  req.session.msg = ['Atividade adicionada ao calendario interno!'];
+  res.redirect('/marketing?tab=interno');
+});
+
+router.post('/marketing/interno/evento/:id/excluir', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  await query('DELETE FROM marketing_calendario WHERE id=$1', [req.params.id]);
+  req.session.msg = ['Atividade removida.'];
+  res.redirect('/marketing?tab=interno');
+});
+
+router.post('/marketing/interno/nota', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  const { texto, cor } = req.body;
+  await query('INSERT INTO marketing_notas (texto,cor,criado_por) VALUES ($1,$2,$3)', [texto, cor||'#fff3b0', req.session.usuario.id]);
+  req.session.msg = ['Nota adicionada!'];
+  res.redirect('/marketing?tab=interno');
+});
+
+router.post('/marketing/interno/nota/:id/fixar', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  await query('UPDATE marketing_notas SET fixado = NOT fixado WHERE id=$1', [req.params.id]);
+  res.redirect('/marketing?tab=interno');
+});
+
+router.post('/marketing/interno/nota/:id/excluir', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  await query('DELETE FROM marketing_notas WHERE id=$1', [req.params.id]);
+  req.session.msg = ['Nota removida.'];
+  res.redirect('/marketing?tab=interno');
 });
 
 // Foto padronizada da equipe para o site publico - gerido pelo Marketing, separado da foto interna
