@@ -7120,7 +7120,7 @@ router.post('/assistente-virtual/saldo', requireAuth, async (req, res) => {
     res.json({ok:false});
   }
 });
-router.get('/assistente-virtual', requireAuth, async (req, res) => {
+router.get('/assistente-virtual', requireAuth, requirePermissao('assistente-virtual'), async (req, res) => {
   try {
     const config = await getConfig();
     const r = await query('SELECT id, pergunta, resposta, ativo FROM lauro_conhecimento ORDER BY id DESC LIMIT 200');
@@ -7501,7 +7501,7 @@ router.post('/sorteios/:id/excluir', requireAuth, requirePermissao('sorteios'), 
 //  PALESTRANTES
 // ════════════════════════════════════════════════════════════════
 
-router.get('/palestrantes', requireAuth, async (req, res) => {
+router.get('/palestrantes', requireAuth, requirePermissao('palestrantes'), async (req, res) => {
   try {
     const statusFiltro = req.query.status || 'todos';
     let whereClause = '';
