@@ -2558,7 +2558,12 @@ router.post('/cadastro-diretivo', require('../services/arquivos').upload.single(
             whatsapp, instagram, graduacao, ano_ingresso, onde_reside, transporte_proprio,
             tipo_transporte, experiencia_urologia } = req.body;
     const disponibilidade = [].concat(req.body.disponibilidade || []).join(', ');
-    if (!nome || !email) { req.session.erro = ['Nome e e-mail são obrigatórios.']; return res.redirect('/cadastro-diretivo'); }
+    const camposObrigatorios = { nome, rg, cpf, email, catraca, cargo, semestre_turma, orcid, data_nascimento, sexo,
+      instagram, graduacao, ano_ingresso, onde_reside, transporte_proprio, experiencia_urologia,
+      whatsapp: whatsapp || req.body.whatsapp_num, disponibilidade: disponibilidade || null };
+    const faltandoDiretivo = Object.keys(camposObrigatorios).filter(c => !camposObrigatorios[c] || !String(camposObrigatorios[c]).trim());
+    if (transporte_proprio === 'Sim' && (!tipo_transporte || !tipo_transporte.trim())) faltandoDiretivo.push('tipo_transporte');
+    if (faltandoDiretivo.length > 0) { req.session.erro = ['Preencha todos os campos obrigatórios.']; return res.redirect('/cadastro-diretivo'); }
     if (!req.file) { req.session.erro = ['A foto é obrigatória para o cadastro.']; return res.redirect('/cadastro-diretivo'); }
     // Upload de foto se enviada
     let foto_chave = null;
@@ -3251,8 +3256,11 @@ router.post('/cadastro-ligante', require('../services/arquivos').upload.single('
     const { upload, uploadArquivo } = require('../services/arquivos');
     upload.single('foto')(req, res, async (err) => {
       const form = req.body;
-      const campos = ['nome','data_nascimento','sexo','email','whatsapp','rg','semestre','turma','porque_lauro','apresentacao'];
+      form.whatsapp = form.whatsapp || ((form.ddi||'')+(form.whatsapp_num||'').replace(/\D/g,'')).trim() || null;
+      const campos = ['nome','data_nascimento','sexo','email','email_alternativo','whatsapp','rg','cpf','semestre','turma','catraca','orcid','tem_formacao','habilidades','aceita_cargo','contribuicao_grupo','ideia_inovadora','tema_interesse','porque_lauro','apresentacao'];
       const faltando = campos.filter(c => !form[c] || form[c].trim() === '');
+      if (form.tem_formacao === 'Sim' && (!form.qual_formacao || form.qual_formacao.trim()==='')) faltando.push('qual_formacao');
+      if (form.aceita_cargo === 'Sim' && (!form.qual_cargo || form.qual_cargo.trim()==='')) faltando.push('qual_cargo');
       if (faltando.length > 0) { req.session.erro = ['Preencha todos os campos obrigatórios.']; return res.render('pages/cadastro-ligante-publico', { config, msg: [], erro: req.session.erro, form }); }
       if (!req.file) { req.session.erro = ['A foto é obrigatória para o cadastro.']; return res.render('pages/cadastro-ligante-publico', { config, msg: [], erro: req.session.erro, form }); }
       let foto_chave = null;
