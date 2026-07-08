@@ -139,7 +139,8 @@ function atualizarWpp() {
 }
 // Inicializar com valor atual
 (function() {
-  const atual = '<%= ligante.whatsapp||"" %>';
+  const bruto = '<%= ligante.whatsapp||"" %>';
+  const atual = bruto.replace(/\D/g,'');
   if (!atual) return;
   const ddis = ['595','55','54','598','591','56','57','1'];
   for (const d of ddis) {
