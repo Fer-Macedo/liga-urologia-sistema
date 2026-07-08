@@ -1411,7 +1411,7 @@ router.post('/meu-email', requireAuth, async (req, res) => {
 });
 
 // ─── ATENDIMENTOS WHATSAPP ────────────────────────────────────────────────────
-router.get('/atendimentos', requireAuth, async (req, res) => {
+router.get('/atendimentos', requireAuth, requirePermissao('atendimentos'), async (req, res) => {
   try {
     const config = await getConfig();
     const msg = req.session.msg||[]; req.session.msg=[];
@@ -1434,7 +1434,7 @@ router.get('/atendimentos', requireAuth, async (req, res) => {
   } catch(e) { console.error('CATCH ATEND:', e.message); res.status(500).send(e.message); }
 });
 
-router.get('/atendimentos/:id/conversa', requireAuth, async (req, res) => {
+router.get('/atendimentos/:id/conversa', requireAuth, requirePermissao('atendimentos'), async (req, res) => {
   try {
     const atR = await query('SELECT numero_membro, area, idioma, criado_em, encerrado_em, nome_contato, origem FROM lauro_atendimentos WHERE id=$1', [req.params.id]);
     if (!atR.rows.length) return res.json({msgs:[], area:'', numero:'', idioma:'pt'});
@@ -1476,7 +1476,7 @@ router.get('/atendimentos/:id/conversa', requireAuth, async (req, res) => {
   } catch(e) { res.json({msgs:[], erro: e.message}); }
 });
 
-router.post('/atendimentos/:id/responder', requireAuth, async (req, res) => {
+router.post('/atendimentos/:id/responder', requireAuth, requirePermissao('atendimentos'), async (req, res) => {
   try {
     const { mensagem } = req.body;
     if (!mensagem || !mensagem.trim()) return res.json({ok:false, erro:'Mensagem vazia'});
@@ -1504,7 +1504,7 @@ router.post('/atendimentos/:id/responder', requireAuth, async (req, res) => {
     res.json({ok:true, enviado: mensagem.trim(), area: nomeArea});
   } catch(e) { res.json({ok:false, erro: e.message}); }
 });
-router.post('/atendimentos/:id/responder-arquivo', requireAuth, (req, res) => {
+router.post('/atendimentos/:id/responder-arquivo', requireAuth, requirePermissao('atendimentos'), (req, res) => {
   const { upload } = require('../services/arquivos');
   upload.single('arquivo')(req, res, async function(errUp){
     try {
@@ -1532,17 +1532,28 @@ router.post('/atendimentos/:id/responder-arquivo', requireAuth, (req, res) => {
   });
 });
 
-router.get('/atendimentos/midia', requireAuth, async (req, res) => {
+router.get('/atendimentos/midia', requireAuth, requirePermissao('atendimentos'), async (req, res) => {
   try {
     const chave = req.query.chave;
     if (!chave) return res.status(400).send('chave ausente');
+    // A midia pertence a uma conversa de uma area especifica - so quem e da mesma area
+    // (ou admin/presidencia) pode abrir, mesmo tendo a permissao geral de atendimentos.
+    const _perfil = req.session.usuario.perfil;
+    const _isAdmin = _perfil === 'admin' || _perfil === 'presidencia';
+    if (!_isAdmin) {
+      const convR = await query("SELECT numero FROM lauro_conversas WHERE mensagem LIKE '%'||$1||'%' LIMIT 1", [chave]);
+      const numero = convR.rows[0]?.numero;
+      const areaR = numero ? await query('SELECT area FROM lauro_atendimentos WHERE numero_membro=$1 ORDER BY criado_em DESC LIMIT 1', [numero]) : { rows: [] };
+      const area = areaR.rows[0]?.area;
+      if (!area || area !== _perfil) return res.status(403).send('Sem permissao para este arquivo.');
+    }
     const { gerarUrlInline } = require('../services/arquivos');
     const url = await gerarUrlInline(chave);
     res.redirect(url);
   } catch(e) { res.status(500).send('erro'); }
 });
 
-router.post('/atendimentos/contatos', requireAuth, async (req, res) => {
+router.post('/atendimentos/contatos', requireAuth, requirePermissao('atendimentos'), async (req, res) => {
   try {
     const { area, numero } = req.body;
     const n = (numero||'').replace(/\D/g,'');
@@ -1553,7 +1564,7 @@ router.post('/atendimentos/contatos', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro = [e.message]; }
   res.redirect('/atendimentos');
 });
-router.post('/atendimentos/:id/encerrar', requireAuth, async (req, res) => {
+router.post('/atendimentos/:id/encerrar', requireAuth, requirePermissao('atendimentos'), async (req, res) => {
   try {
     const atR = await query('SELECT numero_membro, area, idioma, origem FROM lauro_atendimentos WHERE id=$1', [req.params.id]);
     if (atR.rows.length > 0) {
@@ -1582,7 +1593,7 @@ router.post('/atendimentos/:id/encerrar', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=[e.message]; }
   res.redirect('/atendimentos');
 });
-router.post('/atendimentos/:id/transferir', requireAuth, async (req, res) => {
+router.post('/atendimentos/:id/transferir', requireAuth, requirePermissao('atendimentos'), async (req, res) => {
   try {
     const { area_destino } = req.body;
     const atR = await query("SELECT numero_membro, area, idioma, origem FROM lauro_atendimentos WHERE id=$1 AND status='aguardando'", [req.params.id]);
@@ -1630,7 +1641,7 @@ async function getPsData(req) {
   const temas=[...new Set(qR.rows.map(q=>q.tema))].sort();
   return {processos:pR.rows, questoes:qR.rows, temas, candidatos:cR.rows, provas:prR.rows};
 }
-router.get('/processo-seletivo', requireAuth, async (req, res) => {
+router.get('/processo-seletivo', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const config=await getConfig();
     const msg=req.session.msg||[]; req.session.msg=[];
@@ -1639,7 +1650,7 @@ router.get('/processo-seletivo', requireAuth, async (req, res) => {
     res.render('pages/processo-seletivo', {config, msg, erro, usuario:req.session.usuario, ...data});
   } catch(e) { req.session.erro=[e.message]; res.redirect('/dashboard'); }
 });
-router.post('/processo-seletivo/criar', requireAuth, async (req, res) => {
+router.post('/processo-seletivo/criar', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const {nome,semestre,data_prova,local_prova,vagas,nota_minima}=req.body;
     await query('INSERT INTO ps_processos (nome,semestre,data_prova,local_prova,vagas,nota_minima) VALUES ($1,$2,$3,$4,$5,$6)',
@@ -1648,12 +1659,12 @@ router.post('/processo-seletivo/criar', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=[e.message]; }
   res.redirect('/processo-seletivo');
 });
-router.post('/processo-seletivo/:id/deletar', requireAuth, async (req, res) => {
+router.post('/processo-seletivo/:id/deletar', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try { await query('DELETE FROM ps_processos WHERE id=$1',[req.params.id]); req.session.msg=['Processo excluído!']; }
   catch(e) { req.session.erro=[e.message]; }
   res.redirect('/processo-seletivo');
 });
-router.post('/processo-seletivo/questao/criar', requireAuth, async (req, res) => {
+router.post('/processo-seletivo/questao/criar', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const {_id,tema,enunciado,opcao_a,opcao_b,opcao_c,opcao_d,resposta_correta,dificuldade}=req.body;
     if(_id) {
@@ -1667,7 +1678,7 @@ router.post('/processo-seletivo/questao/criar', requireAuth, async (req, res) =>
   } catch(e) { req.session.erro=[e.message]; }
   res.redirect('/processo-seletivo');
 });
-router.post('/processo-seletivo/questao/:id/editar', requireAuth, async (req, res) => {
+router.post('/processo-seletivo/questao/:id/editar', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const {tema,enunciado,opcao_a,opcao_b,opcao_c,opcao_d,resposta_correta,dificuldade}=req.body;
     await query('UPDATE ps_questoes SET tema=$1,enunciado=$2,opcao_a=$3,opcao_b=$4,opcao_c=$5,opcao_d=$6,resposta_correta=$7,dificuldade=$8 WHERE id=$9',
@@ -1676,12 +1687,12 @@ router.post('/processo-seletivo/questao/:id/editar', requireAuth, async (req, re
   } catch(e) { req.session.erro=[e.message]; }
   res.redirect('/processo-seletivo');
 });
-router.post('/processo-seletivo/questao/:id/deletar', requireAuth, async (req, res) => {
+router.post('/processo-seletivo/questao/:id/deletar', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try { await query('UPDATE ps_questoes SET ativo=FALSE WHERE id=$1',[req.params.id]); req.session.msg=['Questão removida!']; }
   catch(e) { req.session.erro=[e.message]; }
   res.redirect('/processo-seletivo');
 });
-router.post('/processo-seletivo/candidato/criar', requireAuth, async (req, res) => {
+router.post('/processo-seletivo/candidato/criar', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const {processo_id,nome,rg,email,telefone,curso,semestre_atual,numero_lista,fila_prova}=req.body;
     await query('INSERT INTO ps_candidatos (processo_id,nome,rg,email,telefone,curso,semestre_atual,numero_lista,fila_prova) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
@@ -1690,12 +1701,12 @@ router.post('/processo-seletivo/candidato/criar', requireAuth, async (req, res) 
   } catch(e) { req.session.erro=[e.message]; }
   res.redirect('/processo-seletivo');
 });
-router.post('/processo-seletivo/candidato/:id/deletar', requireAuth, async (req, res) => {
+router.post('/processo-seletivo/candidato/:id/deletar', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try { await query('DELETE FROM ps_candidatos WHERE id=$1',[req.params.id]); req.session.msg=['Candidato removido!']; }
   catch(e) { req.session.erro=[e.message]; }
   res.redirect('/processo-seletivo');
 });
-router.post('/processo-seletivo/candidato/:id/correcao', requireAuth, async (req, res) => {
+router.post('/processo-seletivo/candidato/:id/correcao', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const {respostas_json,total_questoes,total_acertos,percentual,prova_id}=req.body;
     const notaMin=(await query('SELECT nota_minima FROM ps_processos p JOIN ps_candidatos c ON c.processo_id=p.id WHERE c.id=$1',[req.params.id])).rows[0]?.nota_minima||60;
@@ -1714,7 +1725,7 @@ router.post('/processo-seletivo/candidato/:id/correcao', requireAuth, async (req
     res.json({ok:true,percentual,aprovado:aprov});
   } catch(e) { res.json({ok:false,erro:e.message}); }
 });
-router.post('/processo-seletivo/candidato/:id/entrevista', requireAuth, async (req, res) => {
+router.post('/processo-seletivo/candidato/:id/entrevista', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const {respostas_json,pontuacao_total,pontuacao_maxima,percentual_entrevista,entrevistadores,observacoes}=req.body;
     const aprovEntrev=parseFloat(percentual_entrevista)>=60;
@@ -1726,7 +1737,7 @@ router.post('/processo-seletivo/candidato/:id/entrevista', requireAuth, async (r
     res.json({ok:true,percentual_entrevista,resultado:aprovEntrev?'aprovado':'reprovado'});
   } catch(e) { res.json({ok:false,erro:e.message}); }
 });
-router.get('/processo-seletivo/:id/gabarito/:fila', requireAuth, async (req, res) => {
+router.get('/processo-seletivo/:id/gabarito/:fila', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const r=await query("SELECT id,gabarito_json FROM ps_provas WHERE processo_id=$1 AND fila=$2",[req.params.id,req.params.fila]);
     if(!r.rows.length) return res.json({gabarito:{},prova_id:null});
@@ -1734,7 +1745,7 @@ router.get('/processo-seletivo/:id/gabarito/:fila', requireAuth, async (req, res
     res.json({gabarito:gab,prova_id:r.rows[0].id});
   } catch(e) { res.json({gabarito:{},erro:e.message}); }
 });
-router.get('/processo-seletivo/:id/resultados', requireAuth, async (req, res) => {
+router.get('/processo-seletivo/:id/resultados', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const r=await query(`SELECT c.*, r.percentual, r.aprovado_prova, r.total_acertos, r.total_questoes,
       e.percentual_entrevista, e.resultado as resultado_entrevista
@@ -1745,19 +1756,19 @@ router.get('/processo-seletivo/:id/resultados', requireAuth, async (req, res) =>
     res.json({candidatos:r.rows});
   } catch(e) { res.json({candidatos:[],erro:e.message}); }
 });
-router.get('/processo-seletivo/:id/perguntas-entrevista', requireAuth, async (req, res) => {
+router.get('/processo-seletivo/:id/perguntas-entrevista', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const r=await query('SELECT * FROM ps_entrevista_perguntas WHERE (processo_id=$1 OR processo_id IS NULL) AND ativo=TRUE ORDER BY ordem',[req.params.id]);
     res.json({perguntas:r.rows});
   } catch(e) { res.json({perguntas:[]}); }
 });
-router.get('/processo-seletivo/perguntas-entrevista', requireAuth, async (req, res) => {
+router.get('/processo-seletivo/perguntas-entrevista', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const r=await query('SELECT * FROM ps_entrevista_perguntas WHERE processo_id IS NULL AND ativo=TRUE ORDER BY ordem');
     res.json({perguntas:r.rows});
   } catch(e) { res.json({perguntas:[]}); }
 });
-router.post('/processo-seletivo/perguntas-entrevista/salvar', requireAuth, async (req, res) => {
+router.post('/processo-seletivo/perguntas-entrevista/salvar', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const {perguntas}=req.body;
     await query('UPDATE ps_entrevista_perguntas SET ativo=FALSE WHERE processo_id IS NULL');
@@ -1769,7 +1780,7 @@ router.post('/processo-seletivo/perguntas-entrevista/salvar', requireAuth, async
     res.json({ok:true});
   } catch(e) { res.json({ok:false,erro:e.message}); }
 });
-router.get('/processo-seletivo/:id/prova/gerar', requireAuth, async (req, res) => {
+router.get('/processo-seletivo/:id/prova/gerar', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const config=await getConfig();
     const [pR,qR,prvR]=await Promise.all([
@@ -1782,7 +1793,7 @@ router.get('/processo-seletivo/:id/prova/gerar', requireAuth, async (req, res) =
     req.session.msg=[];req.session.erro=[];
   } catch(e) { req.session.erro=[e.message]; res.redirect('/processo-seletivo'); }
 });
-router.post('/processo-seletivo/:id/prova/salvar', requireAuth, async (req, res) => {
+router.post('/processo-seletivo/:id/prova/salvar', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const {fila,questoes_ids}=req.body;
     const ids=Array.isArray(questoes_ids)?questoes_ids:[questoes_ids];
@@ -1796,7 +1807,7 @@ router.post('/processo-seletivo/:id/prova/salvar', requireAuth, async (req, res)
   } catch(e) { req.session.erro=[e.message]; }
   res.redirect('/processo-seletivo/'+req.params.id+'/prova/gerar');
 });
-router.get('/processo-seletivo/prova/:id/pdf', requireAuth, async (req, res) => {
+router.get('/processo-seletivo/prova/:id/pdf', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const pvR=await query(`SELECT pv.*,p.nome as proc_nome,p.data_prova FROM ps_provas pv JOIN ps_processos p ON p.id=pv.processo_id WHERE pv.id=$1`,[req.params.id]);
     if(!pvR.rows.length) return res.status(404).send('Prova não encontrada');
@@ -1838,7 +1849,7 @@ router.get('/processo-seletivo/prova/:id/pdf', requireAuth, async (req, res) => 
     res.send(pdf);
   } catch(e) { res.status(500).send('Erro PDF prova: '+e.message); }
 });
-router.get('/processo-seletivo/prova/:id/gabarito', requireAuth, async (req, res) => {
+router.get('/processo-seletivo/prova/:id/gabarito', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const pvR=await query(`SELECT pv.*,p.nome as proc_nome,p.data_prova FROM ps_provas pv JOIN ps_processos p ON p.id=pv.processo_id WHERE pv.id=$1`,[req.params.id]);
     if(!pvR.rows.length) return res.status(404).send('Prova não encontrada');
@@ -2528,7 +2539,7 @@ router.post('/diretivos/:id/editar', requireAuth, requireSecretaria, (req, res) 
   });
 });
 
-router.get('/diretivos/:id/foto', requireAuth, async (req, res) => {
+router.get('/diretivos/:id/foto', requireAuth, requireSecretaria, async (req, res) => {
   try {
     const r = await query('SELECT foto_chave FROM diretivos WHERE id=$1', [req.params.id]);
     const d = r.rows[0];
@@ -3187,7 +3198,7 @@ router.get('/ligantes/:id/excluir-pendente', requireAuth, requirePermissao('liga
   res.redirect('/ligantes?status=pendente');
 });
 
-router.post('/ligantes/:id/toggle', requireAuth, async (req, res) => {
+router.post('/ligantes/:id/toggle', requireAuth, requirePermissao('ligantes'), async (req, res) => {
   const r = await query('SELECT ativo, email FROM ligantes WHERE id=$1', [req.params.id]);
   const atual = r.rows[0]?.ativo;
   const novoStatus = atual == 0 ? 1 : 0;
@@ -3246,7 +3257,7 @@ router.get('/ligantes/:id/foto', requireAuth, async (req, res) => {
 
 // ─── DESLIGAMENTOS ────────────────────────────────────────────────────────────
 
-router.get('/desligamentos', requireAuth, async (req, res) => {
+router.get('/desligamentos', requireAuth, requirePermissao('desligamentos'), async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg || []; req.session.msg = [];
   const erro = req.session.erro || []; req.session.erro = [];
@@ -3273,7 +3284,7 @@ router.post('/desligamentos/configurar', requireAuth, requireAdmin, async (req, 
   } catch(e) { req.session.erro = ['Erro ao salvar configurações: ' + e.message]; res.redirect('/desligamentos'); }
 });
 
-router.post('/desligamentos', requireAuth, async (req, res) => {
+router.post('/desligamentos', requireAuth, requirePermissao('desligamentos'), async (req, res) => {
   try {
     const { membro_id, ligante_id, diretivo_id, data_solicitacao, motivo, tipo_membro } = req.body;
     const mid = membro_id && membro_id !== '' && membro_id !== 'null' ? parseInt(membro_id) : null;
@@ -3286,7 +3297,7 @@ router.post('/desligamentos', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro = ['Erro ao criar desligamento: ' + e.message]; res.redirect('/desligamentos'); }
 });
 
-router.get('/desligamentos/:id/visualizar', requireAuth, async (req, res) => {
+router.get('/desligamentos/:id/visualizar', requireAuth, requirePermissao('desligamentos'), async (req, res) => {
   try {
     const rd = await query('SELECT * FROM desligamentos WHERE id=$1', [req.params.id]);
     if (!rd.rows[0]) return res.status(404).send('Não encontrado');
@@ -3306,7 +3317,7 @@ router.get('/desligamentos/:id/visualizar', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
-router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
+router.post('/desligamentos/:id/enviar', requireAuth, requirePermissao('desligamentos'), async (req, res) => {
   req.setTimeout(120000); res.setTimeout(120000);
   try {
     const rd = await query('SELECT * FROM desligamentos WHERE id=$1', [req.params.id]);
@@ -3336,7 +3347,7 @@ router.post('/desligamentos/:id/enviar', requireAuth, async (req, res) => {
   } catch(e) { console.log('ERRO DESLIGAMENTO ENVIAR:', e.message); req.session.erro=['Erro ao enviar email: ' + e.message]; res.redirect('/desligamentos'); }
 });
 
-router.post('/desligamentos/:id/assinado', requireAuth, async (req, res) => {
+router.post('/desligamentos/:id/assinado', requireAuth, requirePermissao('desligamentos'), async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
     upload.single('pdf_assinado')(req, res, async (err) => {
@@ -3352,7 +3363,7 @@ router.post('/desligamentos/:id/assinado', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=['Erro: ' + e.message]; res.redirect('/desligamentos'); }
 });
 
-router.get('/desligamentos/:id/assinado', requireAuth, async (req, res) => {
+router.get('/desligamentos/:id/assinado', requireAuth, requirePermissao('desligamentos'), async (req, res) => {
   try {
     const r = await query('SELECT pdf_assinado_chave FROM desligamentos WHERE id=$1', [req.params.id]);
     const d = r.rows[0];
@@ -3372,7 +3383,7 @@ router.get('/ligantes/:id/editar', requireAuth, requirePermissao('ligantes'), as
   req.session.msg = []; req.session.erro = [];
 });
 
-router.post('/ligantes/:id/editar', requireAuth, async (req, res) => {
+router.post('/ligantes/:id/editar', requireAuth, requirePermissao('ligantes'), async (req, res) => {
   try {
     const {upload,uploadArquivo}=require('../services/arquivos');
     upload.single('foto')(req,res,async(err)=>{
@@ -3396,7 +3407,7 @@ router.post('/ligantes/:id/deletar', requireAuth, requireAdmin, async (req, res)
   res.redirect('/ligantes');
 });
 
-router.post('/desligamentos/:id/substituir', requireAuth, async (req, res) => {
+router.post('/desligamentos/:id/substituir', requireAuth, requirePermissao('desligamentos'), async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
     upload.single('pdf_assinado')(req, res, async (err) => {
@@ -3713,7 +3724,7 @@ router.get('/financeiro-arquivos/:id/url', requireAuth, requirePermissao('financ
   } catch(e) { res.status(500).json({ erro: e.message }); }
 });
 
-router.get('/desligamentos/:id/imprimir', requireAuth, async (req, res) => {
+router.get('/desligamentos/:id/imprimir', requireAuth, requirePermissao('desligamentos'), async (req, res) => {
   try {
     const rd = await query('SELECT * FROM desligamentos WHERE id=$1', [req.params.id]);
     if (!rd.rows[0]) return res.status(404).send('Nao encontrado');
@@ -3733,7 +3744,7 @@ router.get('/desligamentos/:id/imprimir', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
-router.post('/desligamentos/:id/reenviar', requireAuth, async (req, res) => {
+router.post('/desligamentos/:id/reenviar', requireAuth, requirePermissao('desligamentos'), async (req, res) => {
   req.setTimeout(120000); res.setTimeout(120000);
   try {
     const rd = await query('SELECT * FROM desligamentos WHERE id=$1',[req.params.id]);
@@ -3760,7 +3771,7 @@ router.post('/desligamentos/:id/reenviar', requireAuth, async (req, res) => {
 
 // ─── DESVINCULAÇÕES ────────────────────────────────────────────────────────────
 
-router.get('/desvinculacoes', requireAuth, async (req, res) => {
+router.get('/desvinculacoes', requireAuth, requirePermissao('desvinculacoes'), async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg || []; req.session.msg = [];
   const erro = req.session.erro || []; req.session.erro = [];
@@ -3771,7 +3782,7 @@ router.get('/desvinculacoes', requireAuth, async (req, res) => {
   res.render('pages/desvinculacoes', { config, usuario: req.session.usuario, msg, erro, desvinculacoes: desvR.rows, ligantes: ligR.rows });
 });
 
-router.post('/desvinculacoes', requireAuth, async (req, res) => {
+router.post('/desvinculacoes', requireAuth, requirePermissao('desvinculacoes'), async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
     upload.fields([{name:'adv1'},{name:'adv2'},{name:'adv3'}])(req, res, async (err) => {
@@ -3787,7 +3798,7 @@ router.post('/desvinculacoes', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=[e.message]; res.redirect('/desvinculacoes'); }
 });
 
-router.get('/desvinculacoes/:id/adv/:num', requireAuth, async (req, res) => {
+router.get('/desvinculacoes/:id/adv/:num', requireAuth, requirePermissao('desvinculacoes'), async (req, res) => {
   try {
     const r = await query('SELECT adv'+req.params.num+'_chave as chave FROM desvinculacoes WHERE id=$1', [req.params.id]);
     const chave = r.rows[0]?.chave;
@@ -3818,7 +3829,7 @@ async function prepararConfigDesvinc(config) {
   return config;
 }
 
-router.get('/desvinculacoes/:id/visualizar', requireAuth, async (req, res) => {
+router.get('/desvinculacoes/:id/visualizar', requireAuth, requirePermissao('desvinculacoes'), async (req, res) => {
   try {
     const rd = await query('SELECT * FROM desvinculacoes WHERE id=$1', [req.params.id]);
     if (!rd.rows[0]) return res.status(404).send('Não encontrado');
@@ -3829,7 +3840,7 @@ router.get('/desvinculacoes/:id/visualizar', requireAuth, async (req, res) => {
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
-router.get('/desvinculacoes/:id/imprimir', requireAuth, async (req, res) => {
+router.get('/desvinculacoes/:id/imprimir', requireAuth, requirePermissao('desvinculacoes'), async (req, res) => {
   try {
     const rd = await query('SELECT * FROM desvinculacoes WHERE id=$1', [req.params.id]);
     if (!rd.rows[0]) return res.status(404).send('Não encontrado');
@@ -3861,10 +3872,10 @@ async function enviarEmailDesvinc(id, req, res, reenvio) {
   } catch(e) { req.session.erro=['Erro: '+e.message]; res.redirect('/desvinculacoes'); }
 }
 
-router.post('/desvinculacoes/:id/enviar', requireAuth, (req, res) => enviarEmailDesvinc(req.params.id, req, res, false));
-router.post('/desvinculacoes/:id/reenviar', requireAuth, (req, res) => enviarEmailDesvinc(req.params.id, req, res, true));
+router.post('/desvinculacoes/:id/enviar', requireAuth, requirePermissao('desvinculacoes'), (req, res) => enviarEmailDesvinc(req.params.id, req, res, false));
+router.post('/desvinculacoes/:id/reenviar', requireAuth, requirePermissao('desvinculacoes'), (req, res) => enviarEmailDesvinc(req.params.id, req, res, true));
 
-router.post('/desvinculacoes/:id/assinado', requireAuth, async (req, res) => {
+router.post('/desvinculacoes/:id/assinado', requireAuth, requirePermissao('desvinculacoes'), async (req, res) => {
   try {
     upload.single('pdf_assinado')(req, res, async (err) => {
       if (err || !req.file) { req.session.erro=['Erro no upload.']; return res.redirect('/desvinculacoes'); }
@@ -3876,7 +3887,7 @@ router.post('/desvinculacoes/:id/assinado', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=[e.message]; res.redirect('/desvinculacoes'); }
 });
 
-router.get('/desvinculacoes/:id/assinado', requireAuth, async (req, res) => {
+router.get('/desvinculacoes/:id/assinado', requireAuth, requirePermissao('desvinculacoes'), async (req, res) => {
   try {
     const r = await query('SELECT pdf_assinado_chave FROM desvinculacoes WHERE id=$1', [req.params.id]);
     const d = r.rows[0];
@@ -3891,7 +3902,7 @@ router.post('/desvinculacoes/:id/deletar', requireAuth, requireAdmin, async (req
   req.session.msg = ['Desvinculação excluída!']; res.redirect('/desvinculacoes');
 });
 
-router.post('/desvinculacoes/:id/editar', requireAuth, async (req, res) => {
+router.post('/desvinculacoes/:id/editar', requireAuth, requirePermissao('desvinculacoes'), async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
     upload.fields([{name:'adv1'},{name:'adv2'},{name:'adv3'}])(req, res, async (err) => {
@@ -4252,7 +4263,7 @@ router.post('/carta-notificacao/:id/deletar',  requireAuth, requirePermissao('ca
 
 // ─── LISTA DE ASSINATURAS ─────────────────────────────────────────────────────
 
-router.get('/lista-assinaturas', requireAuth, async (req, res) => {
+router.get('/lista-assinaturas', requireAuth, requirePermissao('lista-assinaturas'), async (req, res) => {
   const config = await getConfig();
   const msg = req.session.msg||[]; req.session.msg=[];
   const erro = req.session.erro||[]; req.session.erro=[];
@@ -4260,7 +4271,7 @@ router.get('/lista-assinaturas', requireAuth, async (req, res) => {
   res.render('pages/lista-assinaturas', { config, usuario: req.session.usuario, msg, erro, listas: r.rows });
 });
 
-router.post('/lista-assinaturas', requireAuth, async (req, res) => {
+router.post('/lista-assinaturas', requireAuth, requirePermissao('lista-assinaturas'), async (req, res) => {
   const { nome, data_evento, descricao, tipo_publico } = req.body;
   await query('INSERT INTO listas_assinaturas (nome,data_evento,descricao,tipo_publico,criado_por) VALUES ($1,$2,$3,$4,$5)', [nome, data_evento||null, descricao||null, tipo_publico||'todos', req.session.usuario.id]);
   req.session.msg = ['Lista criada!']; res.redirect('/lista-assinaturas');
@@ -4303,7 +4314,7 @@ async function gerarHTMLLista(lista, config) {
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}@page{size:A4;margin:0}body{font-family:'Times New Roman',serif;color:#000}@media print{.pagina{page-break-after:always}}</style></head><body>${paginasHtml}</body></html>`;
 }
 
-router.get('/lista-assinaturas/:id/visualizar', requireAuth, async (req, res) => {
+router.get('/lista-assinaturas/:id/visualizar', requireAuth, requirePermissao('lista-assinaturas'), async (req, res) => {
   try {
     const r = await query('SELECT * FROM listas_assinaturas WHERE id=$1', [req.params.id]);
     if (!r.rows[0]) return res.status(404).send('Nao encontrado');
@@ -4317,7 +4328,7 @@ router.get('/lista-assinaturas/:id/visualizar', requireAuth, async (req, res) =>
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
-router.get('/lista-assinaturas/:id/imprimir', requireAuth, async (req, res) => {
+router.get('/lista-assinaturas/:id/imprimir', requireAuth, requirePermissao('lista-assinaturas'), async (req, res) => {
   try {
     const r = await query('SELECT * FROM listas_assinaturas WHERE id=$1', [req.params.id]);
     if (!r.rows[0]) return res.status(404).send('Nao encontrado');
@@ -4334,7 +4345,7 @@ router.get('/lista-assinaturas/:id/imprimir', requireAuth, async (req, res) => {
 });
 
 
-router.post('/lista-assinaturas/:id/editar', requireAuth, async (req, res) => {
+router.post('/lista-assinaturas/:id/editar', requireAuth, requirePermissao('lista-assinaturas'), async (req, res) => {
   try {
     const { nome, data_evento } = req.body;
     await query('UPDATE listas_assinaturas SET nome=$1, data_evento=$2 WHERE id=$3',
@@ -4343,7 +4354,7 @@ router.post('/lista-assinaturas/:id/editar', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=['Erro: '+e.message]; }
   res.redirect('/lista-assinaturas');
 });
-router.post('/lista-assinaturas/:id/upload-assinada', requireAuth, async (req, res) => {
+router.post('/lista-assinaturas/:id/upload-assinada', requireAuth, requirePermissao('lista-assinaturas'), async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
     upload.single('pdf_assinado')(req, res, async (err) => {
@@ -4355,7 +4366,7 @@ router.post('/lista-assinaturas/:id/upload-assinada', requireAuth, async (req, r
   } catch(e) { req.session.erro=[e.message]; res.redirect('/lista-assinaturas'); }
 });
 
-router.get('/lista-assinaturas/:id/assinada', requireAuth, async (req, res) => {
+router.get('/lista-assinaturas/:id/assinada', requireAuth, requirePermissao('lista-assinaturas'), async (req, res) => {
   try {
     const r = await query('SELECT pdf_assinado_chave FROM listas_assinaturas WHERE id=$1', [req.params.id]);
     const chave = r.rows[0]?.pdf_assinado_chave;
@@ -4755,7 +4766,7 @@ router.get('/api/galerias-publicas/:id/fotos', corsPublico, limiterApiPublica, a
   } catch(e) { res.status(500).json({ erro: 'Erro ao carregar galeria' }); }
 });
 
-router.post('/marketing/posts', requireAuth, async (req, res) => {
+router.post('/marketing/posts', requireAuth, requirePermissao('marketing'), async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
     upload.single('imagem')(req, res, async (err) => {
@@ -4770,7 +4781,7 @@ router.post('/marketing/posts', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing'); }
 });
 
-router.post('/marketing/:id/publicar', requireAuth, async (req, res) => {
+router.post('/marketing/:id/publicar', requireAuth, requirePermissao('marketing'), async (req, res) => {
   try {
     const { publicarPostMarketing } = require('../services/marketing-publish');
     const resultado = await publicarPostMarketing(req.params.id);
@@ -4780,12 +4791,12 @@ router.post('/marketing/:id/publicar', requireAuth, async (req, res) => {
   } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing'); }
 });
 
-router.post('/marketing/:id/deletar', requireAuth, async (req, res) => {
+router.post('/marketing/:id/deletar', requireAuth, requirePermissao('marketing'), async (req, res) => {
   await query('DELETE FROM marketing_posts WHERE id=$1', [req.params.id]);
   req.session.msg = ['Post excluído!']; res.redirect('/marketing');
 });
 
-router.post('/marketing/midias/upload', requireAuth, async (req, res) => {
+router.post('/marketing/midias/upload', requireAuth, requirePermissao('marketing'), async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
     upload.single('midia')(req, res, async (err) => {
@@ -4806,7 +4817,7 @@ router.get('/marketing/midias/:id/img', requireAuth, requirePermissao('marketing
   } catch(e) { res.status(500).send(''); }
 });
 
-router.post('/marketing/midias/:id/deletar', requireAuth, async (req, res) => {
+router.post('/marketing/midias/:id/deletar', requireAuth, requirePermissao('marketing'), async (req, res) => {
   await query('DELETE FROM marketing_midias WHERE id=$1', [req.params.id]);
   req.session.msg = ['Mídia excluída!']; res.redirect('/marketing');
 });
@@ -4825,7 +4836,7 @@ router.post('/marketing/config/facebook', requireAuth, requireAdmin, async (req,
   req.session.msg = ['Configuração Facebook salva!']; res.redirect('/marketing');
 });
 
-router.post('/marketing/gerar-legenda', requireAuth, async (req, res) => {
+router.post('/marketing/gerar-legenda', requireAuth, requirePermissao('marketing'), async (req, res) => {
   try {
     const { chamarClaudeTexto } = require('../services/cientifico-ia');
     const titulo = req.body.titulo || '';
@@ -4838,7 +4849,7 @@ router.post('/marketing/gerar-legenda', requireAuth, async (req, res) => {
   } catch(e) { res.json({ ok: false, erro: e.message }); }
 });
 
-router.post('/marketing/gerar-hashtags', requireAuth, async (req, res) => {
+router.post('/marketing/gerar-hashtags', requireAuth, requirePermissao('marketing'), async (req, res) => {
   try {
     const { chamarClaudeTexto } = require('../services/cientifico-ia');
     const titulo = req.body.titulo || '';
@@ -4852,7 +4863,7 @@ router.post('/marketing/gerar-hashtags', requireAuth, async (req, res) => {
   } catch(e) { res.json({ ok: false, erro: e.message }); }
 });
 
-router.post('/marketing/whatsapp-massa', requireAuth, async (req, res) => {
+router.post('/marketing/whatsapp-massa', requireAuth, requirePermissao('marketing'), async (req, res) => {
   try {
     const { destinatarios, mensagem } = req.body;
     if (!mensagem) { req.session.erro=['Mensagem obrigatória!']; return res.redirect('/marketing'); }
@@ -6935,14 +6946,14 @@ router.get('/fluxo-caixa/:id/nf-url', requireAuth, requirePermissao('fluxo-caixa
 
 
 // ── CATEGORIAS DO CALENDÁRIO ──
-router.get('/calendario/categorias', requireAuth, async (req, res) => {
+router.get('/calendario/categorias', requireAuth, requirePermissao('calendario'), async (req, res) => {
   try {
     const r = await query('SELECT * FROM calendario_categorias ORDER BY criado_em');
     res.json(r.rows);
   } catch(e) { res.json([]); }
 });
 
-router.post('/calendario/categorias', requireAuth, async (req, res) => {
+router.post('/calendario/categorias', requireAuth, requirePermissao('calendario'), async (req, res) => {
   try {
     const { nome, cor } = req.body;
     if(!nome) return res.json({ok:false, erro:'Nome obrigatório'});
@@ -7015,7 +7026,7 @@ async function getAtividades(apenasPublicas = false, incluirAniversarios = false
 
 
 // PAINEL INTERNO
-router.get('/calendario', requireAuth, async (req, res) => {
+router.get('/calendario', requireAuth, requirePermissao('calendario'), async (req, res) => {
   try {
     const atividades = await getAtividades(false, true);
     const icalUrl = (process.env.RAILWAY_PUBLIC_DOMAIN
@@ -7245,7 +7256,7 @@ router.get('/calendario.ics', async (req, res) => {
 });
 
 // CRIAR ATIVIDADE
-router.post('/calendario/novo', requireAuth, async (req, res) => {
+router.post('/calendario/novo', requireAuth, requirePermissao('calendario'), async (req, res) => {
   try {
     const { titulo, descricao, categoria, cor, data_inicio, data_fim, local, link_externo } = req.body;
     const dia_inteiro = req.body.dia_inteiro === 'true';
@@ -7263,7 +7274,7 @@ router.post('/calendario/novo', requireAuth, async (req, res) => {
 });
 
 // EDITAR ATIVIDADE
-router.post('/calendario/:id/editar', requireAuth, async (req, res) => {
+router.post('/calendario/:id/editar', requireAuth, requirePermissao('calendario'), async (req, res) => {
   try {
     const { titulo, descricao, categoria, cor, data_inicio, data_fim, local, link_externo } = req.body;
     const dia_inteiro = req.body.dia_inteiro === 'true';
@@ -7280,7 +7291,7 @@ router.post('/calendario/:id/editar', requireAuth, async (req, res) => {
 });
 
 // EXCLUIR ATIVIDADE
-router.post('/calendario/:id/excluir', requireAuth, async (req, res) => {
+router.post('/calendario/:id/excluir', requireAuth, requirePermissao('calendario'), async (req, res) => {
   try {
     await query('DELETE FROM calendario_atividades WHERE id=$1', [req.params.id]);
     req.flash('msg', ['Atividade excluída.']);
@@ -7964,7 +7975,7 @@ router.get('/inventario', requireAuth, requirePermissao('inventario'), async (re
   res.render('pages/inventario', { config, usuario: req.session.usuario, itens: itens.rows, categorias: categorias.rows, stats: stats.rows[0], busca, categoria, estado, situacao, msg: req.flash('msg'), erro: req.flash('erro') });
 });
 
-router.post('/inventario', requireAuth, async (req, res) => {
+router.post('/inventario', requireAuth, requirePermissao('inventario'), async (req, res) => {
   const { nome, descricao, categoria_id, estado, localizacao, valor_estimado, valor_estimado_brl, data_aquisicao, responsavel, observacoes, codigo_etiqueta } = req.body;
   const ano = new Date().getFullYear();
   const last = await query('SELECT codigo FROM inventario_itens WHERE codigo LIKE $1 ORDER BY codigo DESC LIMIT 1', ['LIG-' + ano + '-%']);
@@ -7977,7 +7988,7 @@ router.post('/inventario', requireAuth, async (req, res) => {
   res.redirect('/inventario');
 });
 
-router.post('/inventario/:id/editar', requireAuth, async (req, res) => {
+router.post('/inventario/:id/editar', requireAuth, requirePermissao('inventario'), async (req, res) => {
   const { nome, descricao, categoria_id, estado, localizacao, valor_estimado, valor_estimado_brl, data_aquisicao, responsavel, observacoes, codigo_etiqueta } = req.body;
   await query('UPDATE inventario_itens SET nome=$1,descricao=$2,categoria_id=$3,estado=$4,localizacao=$5,valor_estimado=$6,valor_estimado_brl=$7,data_aquisicao=$8,responsavel=$9,observacoes=$10,codigo_etiqueta=$11,atualizado_em=NOW() WHERE id=$12',
     [nome, descricao || null, categoria_id || null, estado, localizacao || null, valor_estimado || null, valor_estimado_brl || null, data_aquisicao || null, responsavel || null, observacoes || null, codigo_etiqueta || null, req.params.id]);
@@ -7985,7 +7996,7 @@ router.post('/inventario/:id/editar', requireAuth, async (req, res) => {
   res.redirect('/inventario');
 });
 
-router.post('/inventario/:id/movimentacao', requireAuth, async (req, res) => {
+router.post('/inventario/:id/movimentacao', requireAuth, requirePermissao('inventario'), async (req, res) => {
   const { tipo, descricao, responsavel, data_mov } = req.body;
   await query('INSERT INTO inventario_movimentacoes (item_id,tipo,descricao,responsavel,data_mov) VALUES ($1,$2,$3,$4,$5)',
     [req.params.id, tipo, descricao || null, responsavel || null, data_mov || null]);
@@ -7993,7 +8004,7 @@ router.post('/inventario/:id/movimentacao', requireAuth, async (req, res) => {
   res.redirect('/inventario');
 });
 
-router.post('/inventario/:id/desativar', requireAuth, async (req, res) => {
+router.post('/inventario/:id/desativar', requireAuth, requirePermissao('inventario'), async (req, res) => {
   await query('UPDATE inventario_itens SET ativo=0 WHERE id=$1', [req.params.id]);
   req.flash('msg', 'Item removido do inventário.');
   res.redirect('/inventario');
@@ -10327,19 +10338,19 @@ router.get('/comunicados', requireAuth, requirePermissao('comunicados'), async (
   res.render('pages/comunicados', { comunicados: r.rows, config, ok: req.query.ok||null, erro: req.query.erro||null });
 });
 
-router.post('/comunicados/novo', requireAuth, async (req, res) => {
+router.post('/comunicados/novo', requireAuth, requirePermissao('comunicados'), async (req, res) => {
   const { titulo, texto, destinatarios } = req.body;
   if (!titulo || !texto) return res.redirect('/comunicados?erro=Preencha+titulo+e+texto');
   await query('INSERT INTO comunicados (titulo, texto, destinatarios, autor_id) VALUES ($1,$2,$3,$4)', [titulo.trim(), texto.trim(), destinatarios||'todos', req.session.userId||null]);
   res.redirect('/comunicados?ok=Comunicado+publicado+com+sucesso');
 });
 
-router.post('/comunicados/:id/toggle', requireAuth, async (req, res) => {
+router.post('/comunicados/:id/toggle', requireAuth, requirePermissao('comunicados'), async (req, res) => {
   await query('UPDATE comunicados SET ativo = NOT ativo WHERE id=$1', [req.params.id]);
   res.redirect('/comunicados');
 });
 
-router.post('/comunicados/:id/excluir', requireAuth, async (req, res) => {
+router.post('/comunicados/:id/excluir', requireAuth, requirePermissao('comunicados'), async (req, res) => {
   await query('DELETE FROM comunicados WHERE id=$1', [req.params.id]);
   res.redirect('/comunicados?ok=Comunicado+excluido');
 });

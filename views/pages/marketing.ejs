@@ -1259,7 +1259,7 @@
 </div>
 <script src="/js/app.js"></script>
 <script>
-const postsData=<%- JSON.stringify(posts) %>;
+const postsData=<%- JSON.stringify(posts).replace(/</g,"\u003c") %>;
 let calMes=new Date().getMonth(),calAno=new Date().getFullYear();
 // showTab definida no head
 function mudarMes(d){calMes+=d;if(calMes<0){calMes=11;calAno--;}if(calMes>11){calMes=0;calAno++;}renderCal();}

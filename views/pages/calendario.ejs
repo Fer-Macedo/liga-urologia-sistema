@@ -532,7 +532,7 @@
 <script src="/js/app.js"></script>
 <script>
 // DADOS DO SERVIDOR
-const todosEventos = <%- JSON.stringify(atividades) %>;
+const todosEventos = <%- JSON.stringify(atividades).replace(/</g,"\u003c") %>;
 const icalUrl = '<%= icalUrl %>';
 
 // CATEGORIAS E CORES

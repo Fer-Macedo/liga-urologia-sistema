@@ -368,7 +368,7 @@
 
 <script src="/js/app.js"></script>
 <script>
-const diretivos = <%- JSON.stringify(diretivos) %>;
+const diretivos = <%- JSON.stringify(diretivos).replace(/</g,"\u003c") %>;
 
 function filtrar() {
   const busca = document.getElementById('busca').value.toLowerCase();

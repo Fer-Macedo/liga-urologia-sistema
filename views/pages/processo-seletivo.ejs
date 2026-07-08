@@ -482,9 +482,9 @@
 
 <script src="/js/app.js"></script>
 <script>
-const QUESTOES_DATA = <%- JSON.stringify(questoes) %>;
-const CANDIDATOS_DATA = <%- JSON.stringify(candidatos) %>;
-const PROCESSOS_DATA = <%- JSON.stringify(processos) %>;
+const QUESTOES_DATA = <%- JSON.stringify(questoes).replace(/</g,"\u003c") %>;
+const CANDIDATOS_DATA = <%- JSON.stringify(candidatos).replace(/</g,"\u003c") %>;
+const PROCESSOS_DATA = <%- JSON.stringify(processos).replace(/</g,"\u003c") %>;
 let _gabaritoAtual={}, _correcaoRespostas={}, _entrevistaRespostas={}, _entrevistaCandId=null, _correcaoCandId=null, _correcaoProvaId=null, _perguntasEntrevista=[];
 
 function psTab(id,btn){

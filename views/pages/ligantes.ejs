@@ -433,7 +433,7 @@
 
 <script src="/js/app.js"></script>
 <script>
-const ligantes = <%- JSON.stringify(ligantes) %>;
+const ligantes = <%- JSON.stringify(ligantes).replace(/</g,"\u003c") %>;
 
 function buscar(termo) {
   const t = termo.toLowerCase().trim();
