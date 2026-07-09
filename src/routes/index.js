@@ -892,7 +892,8 @@ router.post('/recuperar-senha', async (req, res) => {
       para: usuario.email,
       assunto: 'Recuperação de senha — ' + orgNome,
       texto: 'Clique no link para redefinir sua senha:\n' + link + '\n\nExpira em 30 minutos.',
-      html: '<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#f4f4f4;padding:30px"><div style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;overflow:hidden"><div style="background:#1a56db;padding:24px 32px"><h1 style="color:white;margin:0;font-size:20px">' + orgNome + '</h1></div><div style="padding:32px"><h2 style="margin:0 0 16px">Recuperação de senha</h2><p style="color:#444;margin:0 0 24px">Olá, <strong>' + usuario.nome + '</strong>!<br><br>Clique no botão abaixo para criar uma nova senha:</p><div style="text-align:center;margin:24px 0"><a href="' + link + '" style="display:inline-block;background:#1a56db;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:bold">🔒 Redefinir minha senha</a></div><p style="color:#888;font-size:12px">Este link expira em <strong>30 minutos</strong>.<br>Se não solicitou, ignore este e-mail.</p></div></div></body></html>'
+      faixaLabel: 'RECUPERAÇÃO DE SENHA',
+      html: '<h2 style="margin:0 0 16px">Recuperação de senha</h2><p style="color:#444;margin:0 0 24px">Olá, <strong>' + usuario.nome + '</strong>!<br><br>Clique no botão abaixo para criar uma nova senha:</p><div style="text-align:center;margin:24px 0"><a href="' + link + '" style="display:inline-block;background:#1a56db;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:bold">🔒 Redefinir minha senha</a></div><p style="color:#888;font-size:12px">Este link expira em <strong>30 minutos</strong>.<br>Se não solicitou, ignore este e-mail.</p>'
     });
 
     console.log('RECUPERACAO SENHA: ' + email + ' | ' + new Date().toISOString());
@@ -2360,18 +2361,13 @@ router.post('/frequencia/turma/:id/enviar', requireAuth, requireSecretaria, asyn
     if (m.whatsapp && process.env.WAPP_SOMENTE_RESPOSTA !== 'true') { try { await enviarWhatsApp(m.whatsapp, msgWpp); enviados++; } catch(e) {} }
     if (m.email) {
       const orgCor = config.org_cor || '#2b6803';
-      const orgCorEsc = '#1a3d02';
-      const orgLogo = config.org_logo || null;
       const pn = m.nome.split(' ')[0];
       const corStatus = pct>=75?'#166534':pct>=50?'#92400e':'#991b1b';
       const bgStatus  = pct>=75?'#dcfce7':pct>=50?'#fef3c7':'#fee2e2';
-      const logoHtml  = orgLogo
-        ? `<div style="width:72px;height:72px;background:#fff;border-radius:50%;display:inline-block;text-align:center;overflow:hidden"><img src="${orgLogo}" alt="${orgNome}" style="width:72px;height:72px;object-fit:cover;border-radius:50%;vertical-align:middle"></div>`
-        : `<span style="color:white;font-size:20px;font-weight:800">${orgNome}</span>`;
       const barW = Math.round(pct);
       const barColor = pct>=75?'#22c55e':pct>=50?'#f59e0b':'#ef4444';
-      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f1f5f9"><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px"><tr><td style="background:linear-gradient(160deg,${orgCor} 0%,${orgCorEsc} 100%);border-radius:12px 12px 0 0;padding:36px 40px;text-align:center">${logoHtml}<div style="margin-top:14px"><span style="color:rgba(255,255,255,0.9);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:rgba(255,255,255,0.15);border-radius:4px;padding:4px 16px;display:inline-block">Reporte de Asistencia</span></div></td></tr><tr><td style="background:white;padding:36px 40px"><div style="border-left:3px solid ${orgCor};padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:${orgCor};letter-spacing:1.5px;text-transform:uppercase">Curso</p><h2 style="margin:4px 0 0;font-size:20px;font-weight:700;color:#0f172a">${turma.nome}</h2></div><p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">¡Hola, <strong>${pn}</strong>! A continuación encontrarás tu reporte de asistencia actualizado.</p><table width="100%" cellpadding="0" cellspacing="0" style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;margin-bottom:24px"><tr style="background:#f8fafc"><td style="padding:12px 16px;font-size:13px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">Actividades realizadas</td><td style="padding:12px 16px;font-size:14px;font-weight:700;color:#0f172a;text-align:right;border-bottom:1px solid #e2e8f0">${m.total_atividades}</td></tr><tr><td style="padding:12px 16px;font-size:13px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">Tus asistencias</td><td style="padding:12px 16px;font-size:14px;font-weight:700;color:#0f172a;text-align:right;border-bottom:1px solid #e2e8f0">${m.presencas}</td></tr><tr style="background:#f8fafc"><td style="padding:12px 16px;font-size:13px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">Frecuencia</td><td style="padding:12px 16px;font-size:14px;font-weight:700;color:#0f172a;text-align:right;border-bottom:1px solid #e2e8f0">${pct}%</td></tr><tr><td style="padding:12px 16px;font-size:13px;color:#64748b;font-weight:600">Estado</td><td style="padding:12px 16px;text-align:right"><span style="background:${bgStatus};color:${corStatus};padding:4px 12px;border-radius:4px;font-size:12px;font-weight:700">${status}</span></td></tr></table><div style="margin-bottom:24px"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;color:#64748b;font-weight:600">Progreso</span><span style="font-size:12px;font-weight:700;color:${barColor}">${pct}%</span></div><div style="background:#e2e8f0;border-radius:99px;height:10px;overflow:hidden"><div style="width:${barW}%;background:${barColor};height:10px;border-radius:99px"></div></div><div style="display:flex;justify-content:flex-end;margin-top:4px"><span style="font-size:10px;color:#94a3b8">Mínimo requerido: 75%</span></div></div><div style="background:#f8fafc;border-radius:8px;padding:16px 20px;border:1px solid #e2e8f0"><p style="margin:0;font-size:12px;color:#64748b;line-height:1.7">${pct>=75?'🎉 ¡Felicitaciones! Estás <strong>apto para el certificado</strong> de 1 año de liga.':pct>=50?'⚠️ ¡Atención! Estás en riesgo. <strong>No faltes a las próximas actividades</strong> para garantizar el certificado.':'❌ Estás por debajo del mínimo requerido (75%). <strong>¡Participa más</strong> en las actividades para revertir esta situación!'}</p></div></td></tr><tr><td style="background:#0f172a;border-radius:0 0 12px 12px;padding:24px 40px"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">${orgNome}</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">Mensaje automático — no responda este correo.</p></td><td align="right"><p style="margin:0;color:rgba(255,255,255,0.3);font-size:9px;letter-spacing:1.5px;text-transform:uppercase">UCP · Ciudad del Este</p></td></tr></table></td></tr></table></td></tr></table></body></html>`;
-      try { await enviarEmail({ para: m.email, assunto: 'Relatório de Frequência — ' + turma.nome, html, texto: msgWpp }); } catch(e) {}
+      const html = `<div style="border-left:3px solid ${orgCor};padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:${orgCor};letter-spacing:1.5px;text-transform:uppercase">Curso</p><h2 style="margin:4px 0 0;font-size:20px;font-weight:700;color:#0f172a">${turma.nome}</h2></div><p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">¡Hola, <strong>${pn}</strong>! A continuación encontrarás tu reporte de asistencia actualizado.</p><table width="100%" cellpadding="0" cellspacing="0" style="border-radius:10px;overflow:hidden;border:1px solid #e2e8f0;margin-bottom:24px"><tr style="background:#f8fafc"><td style="padding:12px 16px;font-size:13px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">Actividades realizadas</td><td style="padding:12px 16px;font-size:14px;font-weight:700;color:#0f172a;text-align:right;border-bottom:1px solid #e2e8f0">${m.total_atividades}</td></tr><tr><td style="padding:12px 16px;font-size:13px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">Tus asistencias</td><td style="padding:12px 16px;font-size:14px;font-weight:700;color:#0f172a;text-align:right;border-bottom:1px solid #e2e8f0">${m.presencas}</td></tr><tr style="background:#f8fafc"><td style="padding:12px 16px;font-size:13px;color:#64748b;font-weight:600;border-bottom:1px solid #e2e8f0">Frecuencia</td><td style="padding:12px 16px;font-size:14px;font-weight:700;color:#0f172a;text-align:right;border-bottom:1px solid #e2e8f0">${pct}%</td></tr><tr><td style="padding:12px 16px;font-size:13px;color:#64748b;font-weight:600">Estado</td><td style="padding:12px 16px;text-align:right"><span style="background:${bgStatus};color:${corStatus};padding:4px 12px;border-radius:4px;font-size:12px;font-weight:700">${status}</span></td></tr></table><div style="margin-bottom:24px"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;color:#64748b;font-weight:600">Progreso</span><span style="font-size:12px;font-weight:700;color:${barColor}">${pct}%</span></div><div style="background:#e2e8f0;border-radius:99px;height:10px;overflow:hidden"><div style="width:${barW}%;background:${barColor};height:10px;border-radius:99px"></div></div><div style="display:flex;justify-content:flex-end;margin-top:4px"><span style="font-size:10px;color:#94a3b8">Mínimo requerido: 75%</span></div></div><div style="background:#f8fafc;border-radius:8px;padding:16px 20px;border:1px solid #e2e8f0"><p style="margin:0;font-size:12px;color:#64748b;line-height:1.7">${pct>=75?'🎉 ¡Felicitaciones! Estás <strong>apto para el certificado</strong> de 1 año de liga.':pct>=50?'⚠️ ¡Atención! Estás en riesgo. <strong>No faltes a las próximas actividades</strong> para garantizar el certificado.':'❌ Estás por debajo del mínimo requerido (75%). <strong>¡Participa más</strong> en las actividades para revertir esta situación!'}</p></div>`;
+      try { await enviarEmail({ para: m.email, assunto: 'Relatório de Frequência — ' + turma.nome, html, texto: msgWpp, faixaLabel: 'RELATÓRIO DE FREQUÊNCIA' }); } catch(e) {}
     }
   }
   res.json({ ok: true, msg: 'Frequência enviada para ' + enviados + ' membros!' });
@@ -5582,19 +5578,13 @@ async function enviarEmailConfirmacaoEvento(inscricaoId) {
     const config = await getConfig();
     // resend
     const cor = insc.cor_tema || '#1a3d2b';
-    const corEsc = '#0a2018';
-    const orgNome = config.org_nome || 'Liga Academica de Urologia';
-    const orgLogo = config.org_logo || null;
     const textoExtra = insc.email_inscricao || '';
     const _defConfEs = '<p>Estimado/a <strong>{nombre}</strong>,</p><p>Confirmamos su inscripción al evento <strong>{evento}</strong>.</p><p>Próximamente recibirá un correo electrónico con toda la información del evento, incluyendo:</p><ul><li>Fecha y hora</li><li>Lugar</li><li>Instrucciones importantes para la participación</li></ul><p>Le recomendamos prestar atención a las instrucciones y ser puntual el día del evento. También le recomendamos unirse al grupo de WhatsApp del evento para recibir toda la información y mantenerse al día con las indicaciones del equipo organizador.</p><p>Si tiene alguna pregunta, no dude en contactarnos.</p><p>Atentamente,<br>Comité Organizador<br>Liga Académica de Urología – LAURO</p>';
     var _corpoConf = (textoExtra && textoExtra.replace(/<[^>]*>/g,'').trim().length) ? textoExtra : _defConfEs;
     _corpoConf = _corpoConf.split('{nombre}').join((insc.nome||'').split(' ')[0]).split('{evento}').join(insc.evento_nome||'');
     const dataStr = insc.data_inicio ? new Date(insc.data_inicio).toLocaleDateString('pt-BR', {day:'2-digit',month:'long',year:'numeric',timeZone:'UTC'}) : '';
-    const logoHtml = orgLogo ? '<img src="'+orgLogo+'" alt="'+orgNome+'" style="width:72px;height:72px;border-radius:50%;object-fit:contain;display:block;margin:0 auto">' : '<span style="color:white;font-size:20px;font-weight:800">'+orgNome+'</span>';
     const wppBtn = insc.wpp_grupo ? '<a href="'+insc.wpp_grupo+'" style="display:inline-block;background:#25d366;color:white;padding:12px 32px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.5px;text-transform:uppercase"><img src="https://sistema.lauroucpcde.com/img/whatsapp-white.svg" width="18" height="18" style="vertical-align:middle;margin-right:8px;display:inline" alt="">Unirse al grupo del evento</a>' : '';
-    const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f1f5f9"><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">'
-      +'<tr><td style="background:linear-gradient(160deg,'+cor+' 0%,'+corEsc+' 100%);border-radius:12px 12px 0 0;padding:36px 40px;text-align:center">'+logoHtml+'<div style="margin-top:14px;display:inline-block;background:rgba(255,255,255,0.15);border-radius:4px;padding:4px 16px"><span style="color:rgba(255,255,255,0.9);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase">INSCRIPCIÓN CONFIRMADA</span></div></td></tr>'
-      +'<tr><td style="background:white;padding:36px 40px"><div style="border-left:3px solid '+cor+';padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:'+cor+';letter-spacing:1.5px;text-transform:uppercase">CONFIRMACIÓN DE INSCRIPCIÓN</p><h2 style="margin:4px 0 0;font-size:20px;font-weight:700;color:#0f172a">'+insc.evento_nome+'</h2></div>'
+    const html = '<div style="border-left:3px solid '+cor+';padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:'+cor+';letter-spacing:1.5px;text-transform:uppercase">CONFIRMACIÓN DE INSCRIPCIÓN</p><h2 style="margin:4px 0 0;font-size:20px;font-weight:700;color:#0f172a">'+insc.evento_nome+'</h2></div>'
       +_corpoConf
       +(wppBtn?'<div style="text-align:center;padding-bottom:24px">'+wppBtn+'</div>':'')
       +'<div style="text-align:center;margin:24px 0;padding:24px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">'
@@ -5602,10 +5592,8 @@ async function enviarEmailConfirmacaoEvento(inscricaoId) {
       +'<img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent(insc.qrcode||insc.id)+'" style="width:160px;height:160px;border-radius:8px" alt="QR Code">'
       +'<p style="margin:12px 0 0;font-size:11px;color:#94a3b8">Presente este código QR en la entrada del evento</p>'
       +'<p style="margin:6px 0 0;font-size:12px;font-family:monospace;color:#475569;font-weight:600">'+insc.qrcode+'</p>'
-      +'</div>'
-      +'</td></tr><tr><td style="background:#0f172a;border-radius:0 0 12px 12px;padding:24px 40px"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">'+orgNome+'</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">¿Dudas? Responda este correo.</p></td><td align="right"><p style="margin:0;color:rgba(255,255,255,0.3);font-size:9px;letter-spacing:1.5px;text-transform:uppercase">Powered by PagBank</p></td></tr></table></td></tr>'
-      +'</table></td></tr></table></body></html>';
-    await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: insc.email, subject: 'Inscripción confirmada — ' + insc.evento_nome, html });
+      +'</div>';
+    await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: insc.email, subject: 'Inscripción confirmada — ' + insc.evento_nome, html, faixaLabel: 'INSCRIPCIÓN CONFIRMADA' });
     if (insc.notif_email) {
       await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: insc.notif_email, subject: 'Pagamento confirmado — ' + insc.nome + ' | ' + insc.evento_nome, html: '<p>Confirmado: <strong>' + insc.nome + '</strong> — ' + insc.evento_nome + '</p>' }).catch(() => {});
     }
@@ -6005,8 +5993,8 @@ router.get('/eventos/:id/inscricoes/:iid/certificado', requireAuth, requirePermi
       try {
         const {enviarEmail} = require('../services/notificacoes');
         const config2 = await getConfig();
-        const htmlEmail = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="font-family:Arial,sans-serif;background:#f8fafc;padding:32px 16px"><table width="100%" style="max-width:600px;margin:0 auto;background:white;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08)"><tr><td style="background:linear-gradient(135deg,'+(config2.org_cor||'#1a56db')+','+(config2.org_cor||'#1a56db')+'cc);padding:32px;text-align:center"><span style="font-size:20px;font-weight:800;color:white">'+(config2.org_nome||'LAURO')+'</span></td></tr><tr><td style="padding:36px 40px;font-size:15px;color:#374151;line-height:1.8"><p>Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p><p>Seu certificado de participacao no evento <strong>'+ev.nome+'</strong> foi emitido com sucesso!</p><div style="text-align:center;margin:24px 0"><img src="'+qrUrl+'" style="width:120px;height:120px"><p style="font-size:12px;color:#6b7280;margin-top:8px">Escaneie o QR Code para validar seu certificado</p></div><div style="text-align:center"><a href="'+urlValidacao+'" style="background:'+(config2.org_cor||'#1a56db')+';color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">Validar certificado</a></div></td></tr><tr><td style="padding:16px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center;font-size:12px;color:#94a3b8">'+(config2.org_nome||'LAURO')+'</td></tr></table></body></html>';
-        await enviarEmail({para:insc.email, assunto:'Seu certificado — '+ev.nome, html:htmlEmail, texto:'Seu certificado esta disponivel: '+urlValidacao});
+        const htmlEmail = '<p>Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p><p>Seu certificado de participacao no evento <strong>'+ev.nome+'</strong> foi emitido com sucesso!</p><div style="text-align:center;margin:24px 0"><img src="'+qrUrl+'" style="width:120px;height:120px"><p style="font-size:12px;color:#6b7280;margin-top:8px">Escaneie o QR Code para validar seu certificado</p></div><div style="text-align:center"><a href="'+urlValidacao+'" style="background:'+(config2.org_cor||'#1a56db')+';color:white;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">Validar certificado</a></div>';
+        await enviarEmail({para:insc.email, assunto:'Seu certificado — '+ev.nome, html:htmlEmail, texto:'Seu certificado esta disponivel: '+urlValidacao, faixaLabel:'SEU CERTIFICADO'});
         await query('UPDATE evento_certificados SET enviado_email=true WHERE inscricao_id=$1',[insc.id]);
       } catch(e) {}
     }
@@ -6254,8 +6242,8 @@ router.post('/eventos/:id/cupons/:cid/reenviar', requireAuth, requirePermissao('
     let okWpp=false, okEmail=false;
     if (pessoa.whatsapp) { try { await enviarWhatsApp(pessoa.whatsapp, msg, { urgente: true }); okWpp=true; } catch(e) {} }
     if (pessoa.email) {
-      const html = (function(){var cor='#1a3d2b',corEsc='#0a2018';var oN=(typeof config!=='undefined'&&config&&config.org_nome)?config.org_nome:'Liga Academica de Urologia';var oL=(typeof config!=='undefined'&&config&&config.org_logo)?config.org_logo:null;var lg=oL?('<div style="width:72px;height:72px;background:#fff;border-radius:50%;display:inline-block;text-align:center;overflow:hidden"><img src="'+oL+'" alt="'+oN+'" style="width:72px;height:72px;object-fit:cover;border-radius:50%;vertical-align:middle"></div>'):('<span style="color:white;font-size:20px;font-weight:800">'+oN+'</span>');var pn=pessoa.nome.split(' ')[0];var linkCupom=appUrl+'/inscricao/'+req.params.id+'?cupom='+encodeURIComponent(codigoFinal);return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f1f5f9"><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">'+'<tr><td style="background:linear-gradient(160deg,'+cor+' 0%,'+corEsc+' 100%);border-radius:12px 12px 0 0;padding:36px 40px;text-align:center">'+lg+'<div style="margin-top:14px;display:block"><span style="color:rgba(255,255,255,0.9);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:rgba(255,255,255,0.15);border-radius:4px;padding:4px 16px;display:inline-block">Cup&oacute;n de Exenci&oacute;n 100%</span></div></td></tr>'+'<tr><td style="background:white;padding:36px 40px"><div style="border-left:3px solid '+cor+';padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:'+cor+';letter-spacing:1.5px;text-transform:uppercase">Tu invitaci&oacute;n gratuita</p><h2 style="margin:4px 0 0;font-size:20px;font-weight:700;color:#0f172a">'+evento.nome+'</h2></div>'+'<p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">&iexcl;Hola, <strong>'+pn+'</strong>! Tienes un <strong>cup&oacute;n de exenci&oacute;n 100%</strong> para participar gratuitamente en este evento.</p>'+'<div style="text-align:center;margin:24px 0;padding:24px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0"><p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">Tu c&oacute;digo de cup&oacute;n</p><div style="font-size:30px;font-weight:900;font-family:monospace;color:'+cor+';letter-spacing:4px">'+codigoFinal+'</div><p style="margin:12px 0 0;font-size:12px;color:'+cor+';font-weight:700">&#128203; Copiar cup&oacute;n</p><p style="margin:4px 0 0;font-size:11px;color:#94a3b8">V&aacute;lido para 1 inscripci&oacute;n</p></div>'+'<div style="text-align:center;padding-top:8px"><a href="'+linkCupom+'" style="display:inline-block;background:'+cor+';color:white;padding:13px 36px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.5px;text-transform:uppercase">Inscribirme con el cup&oacute;n aplicado</a></div>'+'</td></tr><tr><td style="background:#0f172a;border-radius:0 0 12px 12px;padding:24px 40px"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">'+oN+'</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">&iquest;Dudas? Responde a este correo.</p></td><td align="right"><p style="margin:0;color:rgba(255,255,255,0.3);font-size:9px;letter-spacing:1.5px;text-transform:uppercase">UCP - Ciudad del Este</p></td></tr></table></td></tr>'+'</table></td></tr></table></body></html>';})();
-      try { await enviarEmail({ para: pessoa.email, assunto: `🎟️ Seu cupom gratuito — ${evento.nome}`, html, texto: msg }); okEmail=true; } catch(e) {}
+      const html = (function(){var cor='#1a3d2b';var pn=pessoa.nome.split(' ')[0];var linkCupom=appUrl+'/inscricao/'+req.params.id+'?cupom='+encodeURIComponent(codigoFinal);return '<div style="border-left:3px solid '+cor+';padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:'+cor+';letter-spacing:1.5px;text-transform:uppercase">Tu invitaci&oacute;n gratuita</p><h2 style="margin:4px 0 0;font-size:20px;font-weight:700;color:#0f172a">'+evento.nome+'</h2></div>'+'<p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">&iexcl;Hola, <strong>'+pn+'</strong>! Tienes un <strong>cup&oacute;n de exenci&oacute;n 100%</strong> para participar gratuitamente en este evento.</p>'+'<div style="text-align:center;margin:24px 0;padding:24px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0"><p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">Tu c&oacute;digo de cup&oacute;n</p><div style="font-size:30px;font-weight:900;font-family:monospace;color:'+cor+';letter-spacing:4px">'+codigoFinal+'</div><p style="margin:12px 0 0;font-size:12px;color:'+cor+';font-weight:700">&#128203; Copiar cup&oacute;n</p><p style="margin:4px 0 0;font-size:11px;color:#94a3b8">V&aacute;lido para 1 inscripci&oacute;n</p></div>'+'<div style="text-align:center;padding-top:8px"><a href="'+linkCupom+'" style="display:inline-block;background:'+cor+';color:white;padding:13px 36px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.5px;text-transform:uppercase">Inscribirme con el cup&oacute;n aplicado</a></div>';})();
+      try { await enviarEmail({ para: pessoa.email, assunto: `🎟️ Seu cupom gratuito — ${evento.nome}`, html, texto: msg, faixaLabel: 'CUPOM GRATUITO' }); okEmail=true; } catch(e) {}
     }
     const canais = [okWpp?'WhatsApp':null, okEmail?'email':null].filter(Boolean).join(' e ');
     req.session.msg=[canais ? `Cupom reenviado para ${pessoa.nome} via ${canais}.` : `Não foi possível reenviar (pessoa sem WhatsApp/email).`];
@@ -6348,8 +6336,8 @@ router.post('/eventos/:id/cupons/gerar-ligantes-v2', requireAuth, requirePermiss
         try { await enviarWhatsApp(p.whatsapp, msg); enviados++; } catch(e) { erros.push(p.nome); }
       }
       if (enviar_email === 'on' && p.email) {
-        const html = (function(){var cor='#1a3d2b',corEsc='#0a2018';var oN=(typeof config!=='undefined'&&config&&config.org_nome)?config.org_nome:'Liga Academica de Urologia';var oL=(typeof config!=='undefined'&&config&&config.org_logo)?config.org_logo:null;var lg=oL?('<div style="width:72px;height:72px;background:#fff;border-radius:50%;display:inline-block;text-align:center;overflow:hidden"><img src="'+oL+'" alt="'+oN+'" style="width:72px;height:72px;object-fit:cover;border-radius:50%;vertical-align:middle"></div>'):('<span style="color:white;font-size:20px;font-weight:800">'+oN+'</span>');var pn=p.nome.split(' ')[0];var linkCupom=appUrl+'/inscricao/'+req.params.id+'?cupom='+encodeURIComponent(codigoFinal);return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f1f5f9"><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px">'+'<tr><td style="background:linear-gradient(160deg,'+cor+' 0%,'+corEsc+' 100%);border-radius:12px 12px 0 0;padding:36px 40px;text-align:center">'+lg+'<div style="margin-top:14px;display:block"><span style="color:rgba(255,255,255,0.9);font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;background:rgba(255,255,255,0.15);border-radius:4px;padding:4px 16px;display:inline-block">Cup&oacute;n de Exenci&oacute;n 100%</span></div></td></tr>'+'<tr><td style="background:white;padding:36px 40px"><div style="border-left:3px solid '+cor+';padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:'+cor+';letter-spacing:1.5px;text-transform:uppercase">Tu invitaci&oacute;n gratuita</p><h2 style="margin:4px 0 0;font-size:20px;font-weight:700;color:#0f172a">'+evento.nome+'</h2></div>'+'<p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">&iexcl;Hola, <strong>'+pn+'</strong>! Tienes un <strong>cup&oacute;n de exenci&oacute;n 100%</strong> para participar gratuitamente en este evento.</p>'+'<div style="text-align:center;margin:24px 0;padding:24px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0"><p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">Tu c&oacute;digo de cup&oacute;n</p><div style="font-size:30px;font-weight:900;font-family:monospace;color:'+cor+';letter-spacing:4px">'+codigoFinal+'</div><p style="margin:12px 0 0;font-size:12px;color:'+cor+';font-weight:700">&#128203; Copiar cup&oacute;n</p><p style="margin:4px 0 0;font-size:11px;color:#94a3b8">V&aacute;lido para 1 inscripci&oacute;n</p></div>'+'<div style="text-align:center;padding-top:8px"><a href="'+linkCupom+'" style="display:inline-block;background:'+cor+';color:white;padding:13px 36px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.5px;text-transform:uppercase">Inscribirme con el cup&oacute;n aplicado</a></div>'+'</td></tr><tr><td style="background:#0f172a;border-radius:0 0 12px 12px;padding:24px 40px"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">'+oN+'</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">&iquest;Dudas? Responde a este correo.</p></td><td align="right"><p style="margin:0;color:rgba(255,255,255,0.3);font-size:9px;letter-spacing:1.5px;text-transform:uppercase">UCP - Ciudad del Este</p></td></tr></table></td></tr>'+'</table></td></tr></table></body></html>';})();
-        try { await enviarEmail({ para: p.email, assunto: `🎟️ Seu cupom gratuito — ${evento.nome}`, html, texto: msg }); } catch(e) {}
+        const html = (function(){var cor='#1a3d2b';var pn=p.nome.split(' ')[0];var linkCupom=appUrl+'/inscricao/'+req.params.id+'?cupom='+encodeURIComponent(codigoFinal);return '<div style="border-left:3px solid '+cor+';padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:'+cor+';letter-spacing:1.5px;text-transform:uppercase">Tu invitaci&oacute;n gratuita</p><h2 style="margin:4px 0 0;font-size:20px;font-weight:700;color:#0f172a">'+evento.nome+'</h2></div>'+'<p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">&iexcl;Hola, <strong>'+pn+'</strong>! Tienes un <strong>cup&oacute;n de exenci&oacute;n 100%</strong> para participar gratuitamente en este evento.</p>'+'<div style="text-align:center;margin:24px 0;padding:24px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0"><p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">Tu c&oacute;digo de cup&oacute;n</p><div style="font-size:30px;font-weight:900;font-family:monospace;color:'+cor+';letter-spacing:4px">'+codigoFinal+'</div><p style="margin:12px 0 0;font-size:12px;color:'+cor+';font-weight:700">&#128203; Copiar cup&oacute;n</p><p style="margin:4px 0 0;font-size:11px;color:#94a3b8">V&aacute;lido para 1 inscripci&oacute;n</p></div>'+'<div style="text-align:center;padding-top:8px"><a href="'+linkCupom+'" style="display:inline-block;background:'+cor+';color:white;padding:13px 36px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.5px;text-transform:uppercase">Inscribirme con el cup&oacute;n aplicado</a></div>';})();
+        try { await enviarEmail({ para: p.email, assunto: `🎟️ Seu cupom gratuito — ${evento.nome}`, html, texto: msg, faixaLabel: 'CUPOM GRATUITO' }); } catch(e) {}
       }
     } catch(e) { /* código duplicado — ignora */ }
   }
@@ -6408,9 +6396,6 @@ router.post('/eventos/:id/mala-direta', requireAuth, requirePermissao('eventos')
   const { assunto, conteudo_html, destinatarios } = req.body;
   try {
     const config = await getConfig();
-    const orgNome = config.org_nome || 'Liga Academica de Urologia';
-    const orgCor = config.org_cor || '#1a56db';
-    const orgLogo = config.org_logo || null;
     // resend
     let where = "WHERE evento_id=$1 AND email IS NOT NULL";
     const params = [req.params.id];
@@ -6422,28 +6407,14 @@ router.post('/eventos/:id/mala-direta', requireAuth, requirePermissao('eventos')
       [req.params.id, assunto, conteudo_html, destinatarios, req.session.usuario.id]
     );
     const envioId = envioR.rows[0].id;
-    const logoHtml = orgLogo
-      ? '<img src="'+orgLogo+'" style="max-height:56px;max-width:180px;object-fit:contain;display:block;margin:0 auto" alt="'+orgNome+'">'
-      : '<span style="font-size:20px;font-weight:800;color:white">'+orgNome+'</span>';
     let enviados = 0, erros = 0;
     for (const insc of r.rows) {
       const conteudo = conteudo_html.replace(/\{nome\}/g, insc.nome.split(' ')[0]);
-      const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>'
-        +'<body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,sans-serif">'
-        +'<table width="100%" cellpadding="0" cellspacing="0" style="padding:32px 16px"><tr><td align="center">'
-        +'<table width="100%" style="max-width:600px;background:white;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,.08)">'
-        +'<tr><td style="background:linear-gradient(135deg,'+orgCor+','+orgCor+'cc);padding:32px;text-align:center">'+logoHtml
-        +'<div style="color:rgba(255,255,255,.85);font-size:13px;margin-top:8px">'+orgNome+'</div></td></tr>'
-        +'<tr><td style="padding:36px 40px;font-size:15px;color:#374151;line-height:1.8">'
-        +'<p style="margin:0 0 20px;font-size:16px">Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p>'
-        +conteudo
-        +'</td></tr>'
-        +'<tr><td style="padding:20px 40px;background:#f8fafc;border-top:1px solid #e2e8f0;text-align:center">'
-        +'<p style="margin:0;font-size:12px;color:#94a3b8">'+orgNome+' &bull; Esta mensagem foi enviada pela secretaria</p>'
-        +'</td></tr></table></td></tr></table></body></html>';
+      const html = '<p style="margin:0 0 20px;font-size:16px">Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p>'
+        +conteudo;
       let status = 'enviado';
       try {
-        await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: insc.email, subject: assunto, html });
+        await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: insc.email, subject: assunto, html, faixaLabel: 'COMUNICADO' });
         enviados++;
         await new Promise(r => setTimeout(r, 200));
       } catch(e) { status = 'erro'; erros++; }
@@ -6462,33 +6433,17 @@ router.post('/eventos/:id/mala-direta', requireAuth, requirePermissao('eventos')
     const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
     const ev = evR.rows[0];
     const config = await getConfig();
-    const orgNome = config.org_nome || 'Liga Academica de Urologia';
-    const orgLogo = config.org_logo || null;
     // resend
     let where = "WHERE evento_id=$1 AND email IS NOT NULL";
     const params = [req.params.id];
     if (destinatarios === 'confirmados') where += " AND status='confirmado'";
     else if (destinatarios === 'pendentes') where += " AND status='pendente'";
     const r = await query('SELECT * FROM evento_inscricoes '+where, params);
-    const logoHtml = orgLogo
-      ? '<img src="'+orgLogo+'" style="max-height:56px;max-width:180px;object-fit:contain;display:block;margin:0 auto">'
-      : '<span style="font-size:18px;font-weight:800;color:#1a56db">'+orgNome+'</span>';
     let enviados = 0;
     for (const insc of r.rows) {
-      const html = '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>'
-        +'<body style="margin:0;padding:0;background:#f8fafc;font-family:Arial,sans-serif">'
-        +'<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;padding:32px 16px"><tr><td align="center">'
-        +'<table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)">'
-        +'<tr><td style="padding:28px 32px;text-align:center;border-bottom:1px solid #f1f5f9">'+logoHtml+'</td></tr>'
-        +'<tr><td style="padding:32px;font-size:15px;color:#374151;line-height:1.7">'
-        +'<p style="margin:0 0 16px">Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p>'
-        +conteudo_html
-        +'</td></tr>'
-        +'<tr><td style="padding:20px 32px;background:#f8fafc;border-top:1px solid #f1f5f9;text-align:center">'
-        +'<p style="margin:0;font-size:12px;color:#94a3b8">'+orgNome+' · Mensagem enviada pela secretaria</p>'
-        +'</td></tr>'
-        +'</table></td></tr></table></body></html>';
-      try { await enviarEmail({from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>',to:insc.email,subject:assunto,html}); enviados++; await new Promise(r=>setTimeout(r,200)); } catch(e){}
+      const html = '<p style="margin:0 0 16px">Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p>'
+        +conteudo_html;
+      try { await enviarEmail({from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>',to:insc.email,subject:assunto,html, faixaLabel: 'COMUNICADO'}); enviados++; await new Promise(r=>setTimeout(r,200)); } catch(e){}
     }
     req.flash('msg', 'Email enviado para '+enviados+' inscritos!');
   } catch(e) { req.flash('erro', 'Erro: '+e.message); }
@@ -6505,23 +6460,13 @@ router.post('/eventos/:id/email-massa', requireAuth, requirePermissao('eventos')
     const evento = evR.rows[0];
     const config = await query('SELECT chave,valor FROM configuracoes').then(r => { const c={}; r.rows.forEach(x=>c[x.chave]=x.valor); return c; });
     // resend
-    const cor = evento.cor_tema || '#1a3d2b';
     let enviados = 0;
     for (const insc of r.rows) {
-      const html = `<!DOCTYPE html><html><body style="font-family:sans-serif;background:#f4f4f4;padding:20px">
-        <div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden">
-          <div style="background:${cor};padding:22px 28px">
-            <h2 style="color:#fff;margin:0">${config.org_nome||'LAURO'}</h2>
-            <p style="color:rgba(255,255,255,.75);margin:4px 0 0;font-size:13px">${evento.nome}</p>
-          </div>
-          <div style="padding:28px">
-            <p style="color:#555;margin-bottom:20px">Olá, <strong>${insc.nome.split(' ')[0]}</strong>!</p>
+      const html = `<p style="color:#555;margin-bottom:20px">Olá, <strong>${insc.nome.split(' ')[0]}</strong>!</p>
             <div style="color:#374151;line-height:1.7">${mensagem.replace(/\n/g,'<br>')}</div>
-            <p style="font-size:12px;color:#9ca3af;margin-top:24px;padding-top:16px;border-top:1px solid #f3f4f6">${config.org_nome||'LAURO'} · Dúvidas? Responda este e-mail.</p>
-          </div>
-        </div></body></html>`;
+            <p style="font-size:12px;color:#9ca3af;margin-top:24px;padding-top:16px;border-top:1px solid #f3f4f6">${config.org_nome||'LAURO'} · Dúvidas? Responda este e-mail.</p>`;
       try {
-        await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:insc.email, subject:assunto, html });
+        await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:insc.email, subject:assunto, html, faixaLabel: 'COMUNICADO' });
         enviados++;
         await new Promise(r=>setTimeout(r,300));
       } catch(e) { console.error('Email massa erro:', insc.email, e.message); }
@@ -7978,13 +7923,10 @@ router.post('/checkout/:id', async (req, res) => {
     if (inscricao && inscricao.email) {
       try {
         const { enviarEmail } = require('../services/notificacoes');
-        const orgNome = cfgPub.org_nome || 'Liga Académica de Urología';
-        const orgLogo = cfgPub.org_logo || null;
-        const logoHtml = orgLogo ? '<div style="width:80px;height:80px;border-radius:50%;background:white;margin:0 auto;padding:8px;box-sizing:border-box"><img src="'+orgLogo+'" style="width:64px;height:64px;object-fit:contain;border-radius:50%"></div>' : '';
         const primeiro = inscricao.nome.split(' ')[0];
-        const htmlCk = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,sans-serif"><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px"><tr><td><div style="background:linear-gradient(160deg,#1a3d2b 0%,#0a1f1a 100%);padding:32px 40px;text-align:center">'+logoHtml+'<div style="margin-top:12px;display:inline-block;background:rgba(34,197,94,0.2);border-radius:4px;padding:4px 16px"><span style="color:#86efac;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase">✅ ASISTENCIA CONFIRMADA</span></div></div></td></tr><tr><td style="background:white;padding:36px 40px"><h2 style="margin:0 0 8px;font-size:20px;color:#0f172a">¡Hola, '+primeiro+'!</h2><p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.7">Tu <strong>asistencia</strong> al evento <strong>'+evento.nome+'</strong> fue registrada con éxito. ✅</p><div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#166534">Este registro confirma que estuviste presente en el evento. Tu certificado será procesado conforme las reglas del evento.</p></div><p style="margin:0;font-size:12px;color:#94a3b8">¿Dudas? Contáctanos por WhatsApp o responde a este correo.</p></td></tr><tr><td style="background:#0f172a;padding:24px 40px"><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">'+orgNome+'</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">Liga Académica de Urología — UCP | Ciudad del Este</p></td></tr></table></td></tr></table></body></html>';
+        const htmlCk = '<h2 style="margin:0 0 8px;font-size:20px;color:#0f172a">¡Hola, '+primeiro+'!</h2><p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.7">Tu <strong>asistencia</strong> al evento <strong>'+evento.nome+'</strong> fue registrada con éxito. ✅</p><div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#166534">Este registro confirma que estuviste presente en el evento. Tu certificado será procesado conforme las reglas del evento.</p></div><p style="margin:0;font-size:12px;color:#94a3b8">¿Dudas? Contáctanos por WhatsApp o responde a este correo.</p>';
         const textoCk = 'Hola, '+primeiro+'! Tu asistencia al evento '+evento.nome+' fue registrada con éxito.';
-        enviarEmail({ para: inscricao.email, assunto: '✅ Asistencia confirmada — '+evento.nome, html: htmlCk, texto: textoCk }).catch(function(e){ console.error('Email checkout erro:', e.message); });
+        enviarEmail({ para: inscricao.email, assunto: '✅ Asistencia confirmada — '+evento.nome, html: htmlCk, texto: textoCk, faixaLabel: 'ASISTENCIA CONFIRMADA' }).catch(function(e){ console.error('Email checkout erro:', e.message); });
       } catch(e) { console.error('Email checkout falhou:', e.message); }
     }
 
@@ -8508,13 +8450,10 @@ async function notificarAssinaturaAta(ata, presente, { reenvio } = {}) {
   const numAta = ata.numero || ata.id;
   const dataFormatada = ata.data_reuniao ? new Date(ata.data_reuniao).toLocaleDateString('pt-BR',{timeZone:'UTC',day:'2-digit',month:'2-digit',year:'numeric'}) : '';
   const tipoAta = ata.tipo === 'ordinaria' ? 'Ordinaria' : ata.tipo === 'extraordinaria' ? 'Extraordinaria' : 'Especial';
-  const cfg = await query("SELECT valor FROM configuracoes WHERE chave='org_logo'");
-  const orgLogo = cfg.rows[0]?.valor || null;
-  const logoHtml = orgLogo ? '<div style="width:80px;height:80px;border-radius:50%;background:white;margin:0 auto 16px;padding:8px;box-sizing:border-box"><img src="' + orgLogo + '" style="width:64px;height:64px;object-fit:contain;border-radius:50%"></div>' : '';
   const tituloEmail = (reenvio ? 'REENVIO — ' : '') + 'ASSINATURA DE ATA';
   const assunto = (reenvio ? 'Reenvio — ' : '') + 'Ata N' + numAta + ' aguarda sua assinatura — LAURO';
-  const html = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"></head><body style="margin:0;padding:0;background:#f1f5f9;font-family:Arial,sans-serif"><table width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px"><tr><td><div style="background:linear-gradient(160deg,#1a3d2b 0%,#0a1f1a 100%);padding:36px 40px;text-align:center">' + logoHtml + '<div style="display:inline-block;background:rgba(34,197,94,0.2);border-radius:4px;padding:4px 16px"><span style="color:#86efac;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase">' + tituloEmail + '</span></div></div></td></tr><tr><td style="background:white;padding:36px 40px"><h2 style="margin:0 0 8px;font-size:20px;color:#0f172a">Ola, ' + primeiroNome + '!</h2><p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">A <strong>Ata N' + numAta + '</strong> (Reuniao ' + tipoAta + ' — ' + dataFormatada + ') aguarda sua assinatura digital.</p><p style="text-align:center;margin:28px 0"><a href="' + linkAssinar + '" style="background:#1a3d2b;color:#fff;padding:14px 32px;text-decoration:none;font-weight:bold;font-size:15px;display:inline-block">Assinar Ata</a></p><p style="margin:0;font-size:12px;color:#94a3b8;text-align:center">Link de uso unico — expira apos a assinatura ou em 30 dias.</p></td></tr><tr><td style="background:#0f172a;padding:24px 40px"><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">Liga Academica de Urologia — LAURO</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">Universidad Central del Paraguay | Ciudad del Este</p></td></tr></table></td></tr></table></body></html>';
-  const r = await enviarEmail({ para: presente.email, assunto, html, texto: 'Ola ' + primeiroNome + ', acesse: ' + linkAssinar });
+  const html = '<h2 style="margin:0 0 8px;font-size:20px;color:#0f172a">Ola, ' + primeiroNome + '!</h2><p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">A <strong>Ata N' + numAta + '</strong> (Reuniao ' + tipoAta + ' — ' + dataFormatada + ') aguarda sua assinatura digital.</p><p style="text-align:center;margin:28px 0"><a href="' + linkAssinar + '" style="background:#1a3d2b;color:#fff;padding:14px 32px;text-decoration:none;font-weight:bold;font-size:15px;display:inline-block">Assinar Ata</a></p><p style="margin:0;font-size:12px;color:#94a3b8;text-align:center">Link de uso unico — expira apos a assinatura ou em 30 dias.</p>';
+  const r = await enviarEmail({ para: presente.email, assunto, html, texto: 'Ola ' + primeiroNome + ', acesse: ' + linkAssinar, faixaLabel: tituloEmail });
   await query("INSERT INTO notificacoes_log(tipo,canal,status,observacao,criado_em) VALUES('ata_assinatura','email',$1,$2,NOW())", [r.ok ? 'ok' : 'erro', chaveLog]);
   return { link: linkAssinar };
 }
