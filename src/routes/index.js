@@ -2,10 +2,15 @@ const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const xss = require('xss');
-async function enviarEmail({from, to, subject, html, attachments}) {
+async function enviarEmail({from, to, subject, html, attachments, faixaLabel, titulo}) {
   const { Resend } = require('resend');
   const resend = new Resend(process.env.RESEND_API_KEY);
   const fromAddr = from || 'LAURO <lauroucpcde@lauroucpcde.com>';
+  // PADRAO: html que seja fragmento (sem <!doctype>/<html>) e embrulhado no layout padrao.
+  if (html && !/<!doctype|<html[\s>]/i.test(html)) {
+    const { htmlSimples } = require('../services/notificacoes');
+    html = htmlSimples({ titulo: titulo || '', mensagem: html, faixaLabel: faixaLabel || 'AVISO', config: await getConfig() });
+  }
   const opts = { from: fromAddr, to, subject, html };
   if(attachments && attachments.length) opts.attachments = attachments;
   console.log('ENVIANDO EMAIL opts.attachments:', opts.attachments ? opts.attachments.length : 0);
@@ -254,39 +259,12 @@ async function gerarPDFContratoDir(d, config) {
 }
 
 
+// Retorna um FRAGMENTO (titulo + corpo). O layout padrao do sistema (mesmo da
+// cobranca) e aplicado automaticamente no envio por enviarEmail(). Mantido para
+// nao precisar alterar as ~7 chamadas existentes.
 function emailBonito(titulo, corpo, logo) {
-  const logoDefault = 'https://i.imgur.com/LPrFxrF.png';
-  const logoUrl = logo || logoDefault;
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f0f4f0;font-family:'Helvetica Neue',Arial,sans-serif">
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f4f0;padding:32px 0">
-<tr><td align="center">
-<table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.10)">
-  <!-- HEADER -->
-  <tr><td style="background:linear-gradient(160deg,#0a1a08 0%,#1a3410 50%,#253d18 100%);padding:28px 40px;text-align:center">
-    <img src="${logoUrl}" style="height:72px;width:72px;border-radius:50%;border:3px solid rgba(255,255,255,0.35);object-fit:cover;display:block;margin:0 auto 12px">
-    <div style="color:#ffffff;font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:0.75">Liga Académica de Urología</div>
-    <div style="color:#ffffff;font-size:10px;opacity:0.55;margin-top:3px">Universidad Central del Paraguay — Ciudad del Este</div>
-  </td></tr>
-  <!-- TITULO -->
-  <tr><td style="background:#1a3410;padding:16px 40px;text-align:center">
-    <h2 style="color:#ffffff;font-size:16px;font-weight:700;margin:0;letter-spacing:0.3px">${titulo}</h2>
-  </td></tr>
-  <!-- LINHA ACENTO -->
-  <tr><td style="height:4px;background:linear-gradient(90deg,#1a3410,#4a8a20,#1a3410)"></td></tr>
-  <!-- CORPO -->
-  <tr><td style="padding:36px 40px">
-    <div style="color:#1f2937;font-size:14px;line-height:1.8">${corpo}</div>
-  </td></tr>
-  <!-- FOOTER -->
-  <tr><td style="background:#1a3410;padding:20px 40px;text-align:center">
-    <p style="margin:0 0 4px;color:#fff;font-size:12px;font-weight:700">LAURO — Liga Académica de Urología</p>
-    <p style="margin:0 0 4px;color:rgba(255,255,255,0.65);font-size:11px">Universidad Central del Paraguay · Ciudad del Este, PY</p>
-    <p style="margin:0;color:rgba(255,255,255,0.65);font-size:11px">lauroucpcde@lauroucpcde.com</p>
-  </td></tr>
-</table>
-</td></tr></table>
-</body></html>`;
+  var tit = titulo ? '<h2 style="margin:0 0 18px;font-size:18px;font-weight:700;color:#0f172a;line-height:1.3">'+titulo+'</h2>' : '';
+  return tit + corpo;
 }
 
 

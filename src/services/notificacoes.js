@@ -157,6 +157,16 @@ function statusFila() {
 async function enviarEmail(opts) {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return { ok: false };
   try {
+    // PADRAO: todo email cujo html seja um fragmento (sem <!doctype>/<html>) e
+    // automaticamente embrulhado no layout padrao do sistema (mesmo da cobranca).
+    let html = opts.html || '';
+    if (html && !/<!doctype|<html[\s>]/i.test(html)) {
+      html = htmlSimples({
+        titulo: opts.titulo || '', mensagem: html,
+        faixaLabel: opts.faixaLabel || 'AVISO', cta: opts.cta || null,
+        config: opts.config || await getConfig()
+      });
+    }
     const t = nodemailer.createTransport({
       host: 'smtp.gmail.com', port: 587, secure: false,
       auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
@@ -165,7 +175,7 @@ async function enviarEmail(opts) {
     await t.sendMail({
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: opts.para, subject: opts.assunto,
-      text: opts.texto || '', html: opts.html || ''
+      text: opts.texto || '', html: html
     });
     console.log('Email enviado para ' + opts.para);
     return { ok: true };
@@ -257,7 +267,10 @@ function htmlSimples(opts) {
   const ctaHtml=cta
     ?'<div style="text-align:center;margin-top:8px"><a href="'+cta.url+'" style="display:inline-block;background:'+orgCor+';color:white;padding:12px 32px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px">'+cta.label+'</a></div>'
     :'';
-  return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f1f5f9"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px"><tr><td>'+cab+'</td></tr><tr><td style="background:white;padding:36px 40px"><div style="border-left:3px solid '+orgCor+';padding-left:14px;margin-bottom:24px"><h2 style="margin:0;font-size:18px;font-weight:700;color:#0f172a;line-height:1.3">'+titulo+'</h2></div><div style="margin:0 0 8px;font-size:14px;color:#475569;line-height:1.7">'+mensagem+'</div>'+ctaHtml+'</td></tr><tr><td style="background:#0f172a;padding:24px 40px"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">'+orgNome+'</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">Mensagem automatica</p></td></tr></table></td></tr></table></td></tr></table></body></html>';
+  const tituloHtml=titulo
+    ?'<div style="border-left:3px solid '+orgCor+';padding-left:14px;margin-bottom:24px"><h2 style="margin:0;font-size:18px;font-weight:700;color:#0f172a;line-height:1.3">'+titulo+'</h2></div>'
+    :'';
+  return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head><body style="margin:0;padding:0;background:#f1f5f9"><table width="100%" cellpadding="0" cellspacing="0" style="background:#f1f5f9"><tr><td align="center" style="padding:40px 16px"><table width="100%" cellpadding="0" cellspacing="0" style="max-width:560px"><tr><td>'+cab+'</td></tr><tr><td style="background:white;padding:36px 40px">'+tituloHtml+'<div style="margin:0 0 8px;font-size:14px;color:#475569;line-height:1.7">'+mensagem+'</div>'+ctaHtml+'</td></tr><tr><td style="background:#0f172a;padding:24px 40px"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><p style="margin:0;color:rgba(255,255,255,0.8);font-size:12px;font-weight:600">'+orgNome+'</p><p style="margin:4px 0 0;color:rgba(255,255,255,0.4);font-size:10px">Mensagem automatica</p></td></tr></table></td></tr></table></td></tr></table></body></html>';
 }
 
 function preencherTemplate(tpl, dados) {
