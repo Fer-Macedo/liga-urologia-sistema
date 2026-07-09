@@ -8880,19 +8880,19 @@ router.post('/cientifico/grupo/:grupoId/nota', requireAuth, requireCientifico, a
     await query('INSERT INTO cientifico_notas (grupo_id, texto, cor, criado_por, membro_tipo, membro_id) VALUES ($1,$2,$3,$4,$5,$6)',
       [req.params.grupoId, texto.trim(), cor || '#fff3b0', req.session.usuario.id, mt, mid]);
   }
-  res.redirect('/cientifico/projeto/' + (projetoId || '') + '/grupo/' + req.params.grupoId + '?tab=notas');
+  res.redirect('/cientifico/projeto/' + (projetoId || '') + '/grupo/' + req.params.grupoId + '?tab=trabalho');
 });
 
 router.post('/cientifico/nota/:id/fixar', requireAuth, requireCientifico, async (req, res) => {
   await query('UPDATE cientifico_notas SET fixado = NOT fixado WHERE id=$1 AND criado_por=$2', [req.params.id, req.session.usuario.id]);
   const { projetoId, grupoId } = req.body;
-  res.redirect('/cientifico/projeto/' + (projetoId || '') + '/grupo/' + (grupoId || '') + '?tab=notas');
+  res.redirect('/cientifico/projeto/' + (projetoId || '') + '/grupo/' + (grupoId || '') + '?tab=trabalho');
 });
 
 router.post('/cientifico/nota/:id/excluir', requireAuth, requireCientifico, async (req, res) => {
   await query('DELETE FROM cientifico_notas WHERE id=$1 AND criado_por=$2', [req.params.id, req.session.usuario.id]);
   const { projetoId, grupoId } = req.body;
-  res.redirect('/cientifico/projeto/' + (projetoId || '') + '/grupo/' + (grupoId || '') + '?tab=notas');
+  res.redirect('/cientifico/projeto/' + (projetoId || '') + '/grupo/' + (grupoId || '') + '?tab=trabalho');
 });
 
 // POST /cientifico/grupo/:grupoId/membro/adicionar
