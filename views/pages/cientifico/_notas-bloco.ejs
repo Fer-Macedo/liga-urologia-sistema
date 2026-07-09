@@ -1,0 +1,40 @@
+<%
+  // Locais esperados: projetoId, grupoId, lista (array de notas), e opcionais membroTipo/membroId.
+  var _mt = (typeof membroTipo !== 'undefined') ? membroTipo : null;
+  var _mid = (typeof membroId !== 'undefined') ? membroId : null;
+%>
+<form method="POST" action="/cientifico/grupo/<%=grupoId%>/nota">
+  <input type="hidden" name="projetoId" value="<%=projetoId%>">
+  <% if (_mt) { %><input type="hidden" name="membro_tipo" value="<%=_mt%>"><input type="hidden" name="membro_id" value="<%=_mid%>"><% } %>
+  <textarea name="texto" required rows="2" placeholder="Ex.: ortografia do parágrafo 2; palavra 'analise' sem acento; referência incompleta..." style="width:100%;padding:10px 12px;border:1px solid var(--borda);font-family:inherit;font-size:13px;resize:vertical;box-sizing:border-box"></textarea>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;flex-wrap:wrap;gap:8px">
+    <div style="display:flex;gap:6px;align-items:center">
+      <label style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#fff3b0;cursor:pointer;border:1px solid rgba(0,0,0,.12)"><input type="radio" name="cor" value="#fff3b0" checked></label>
+      <label style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#ffd6d6;cursor:pointer;border:1px solid rgba(0,0,0,.12)"><input type="radio" name="cor" value="#ffd6d6"></label>
+      <label style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#d6f5e3;cursor:pointer;border:1px solid rgba(0,0,0,.12)"><input type="radio" name="cor" value="#d6f5e3"></label>
+      <label style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;background:#d6e8ff;cursor:pointer;border:1px solid rgba(0,0,0,.12)"><input type="radio" name="cor" value="#d6e8ff"></label>
+    </div>
+    <button type="submit" style="padding:7px 18px;background:var(--cor-primaria);color:#fff;border:none;font-size:13px;font-weight:600;cursor:pointer">Adicionar nota</button>
+  </div>
+</form>
+<div style="margin-top:16px">
+  <% if (!lista.length) { %>
+    <div style="border:1px dashed var(--borda);padding:20px;text-align:center;color:var(--texto2);font-size:12.5px">Nenhuma nota ainda.</div>
+  <% } else { %>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px">
+      <% lista.forEach(function(n){ %>
+      <div style="background:<%=n.cor||'#fff3b0'%>;border:1px solid rgba(0,0,0,.08);padding:12px 14px;display:flex;flex-direction:column;gap:8px">
+        <% if (n.fixado) { %><div style="font-size:12px">📌</div><% } %>
+        <div style="font-size:13px;color:#1f2937;line-height:1.55;white-space:pre-wrap;word-break:break-word"><%=n.texto%></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;padding-top:8px;border-top:1px solid rgba(0,0,0,.08)">
+          <span style="font-size:10px;color:#6b7280"><%=new Date(n.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})%></span>
+          <div style="display:flex;gap:8px">
+            <form method="POST" action="/cientifico/nota/<%=n.id%>/fixar" style="margin:0"><input type="hidden" name="projetoId" value="<%=projetoId%>"><input type="hidden" name="grupoId" value="<%=grupoId%>"><button type="submit" style="background:none;border:none;cursor:pointer;font-size:11px;color:#374151;text-decoration:underline;padding:0"><%=n.fixado?'Desafixar':'Fixar'%></button></form>
+            <form method="POST" action="/cientifico/nota/<%=n.id%>/excluir" style="margin:0" onsubmit="var f=this;return confirmarAcao('Excluir esta nota?',function(){f.submit();})"><input type="hidden" name="projetoId" value="<%=projetoId%>"><input type="hidden" name="grupoId" value="<%=grupoId%>"><button type="submit" style="background:none;border:none;cursor:pointer;font-size:11px;color:#b91c1c;text-decoration:underline;padding:0">Excluir</button></form>
+          </div>
+        </div>
+      </div>
+      <% }) %>
+    </div>
+  <% } %>
+</div>

@@ -231,6 +231,8 @@ async function initSchema() {
       criado_por INTEGER,
       criado_em TIMESTAMP DEFAULT NOW()
     );
+    ALTER TABLE cientifico_notas ADD COLUMN IF NOT EXISTS membro_tipo TEXT;
+    ALTER TABLE cientifico_notas ADD COLUMN IF NOT EXISTS membro_id INTEGER;
 
     CREATE TABLE IF NOT EXISTS leads_patrocinio (
       id SERIAL PRIMARY KEY,

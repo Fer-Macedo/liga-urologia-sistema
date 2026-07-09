@@ -8873,10 +8873,12 @@ router.get('/cientifico/projeto/:projetoId/grupo/:grupoId', requireAuth, require
 // ─── NOTAS PRIVADAS DO REVISOR (Cientifico) ───────────────────────────────────
 // Anotacoes internas para guiar as correcoes. So o proprio usuario que criou ve/edita.
 router.post('/cientifico/grupo/:grupoId/nota', requireAuth, requireCientifico, async (req, res) => {
-  const { texto, cor, projetoId } = req.body;
+  const { texto, cor, projetoId, membro_tipo, membro_id } = req.body;
+  const mt = (membro_tipo === 'ligante' || membro_tipo === 'diretivo') ? membro_tipo : null;
+  const mid = mt && membro_id ? parseInt(membro_id) : null;
   if (texto && texto.trim()) {
-    await query('INSERT INTO cientifico_notas (grupo_id, texto, cor, criado_por) VALUES ($1,$2,$3,$4)',
-      [req.params.grupoId, texto.trim(), cor || '#fff3b0', req.session.usuario.id]);
+    await query('INSERT INTO cientifico_notas (grupo_id, texto, cor, criado_por, membro_tipo, membro_id) VALUES ($1,$2,$3,$4,$5,$6)',
+      [req.params.grupoId, texto.trim(), cor || '#fff3b0', req.session.usuario.id, mt, mid]);
   }
   res.redirect('/cientifico/projeto/' + (projetoId || '') + '/grupo/' + req.params.grupoId + '?tab=notas');
 });
