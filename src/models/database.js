@@ -276,13 +276,14 @@ async function initSchema() {
   // Admin padrão
   const admin = await query("SELECT id FROM usuarios WHERE perfil = 'admin'");
   if (admin.rows.length === 0) {
-    const senha = bcrypt.hashSync('admin123', 10);
+    // ponytail: senha inicial vem do ambiente; fallback só p/ instalação nova sem env
+    const senha = bcrypt.hashSync(process.env.ADMIN_SENHA_INICIAL || 'admin123', 10);
     await query(
       'INSERT INTO usuarios (nome, email, senha, perfil) VALUES ($1, $2, $3, $4)',
       ['Administrador', 'admin@liga.org.br', senha, 'admin']
     );
-    console.log('✅ Usuário admin criado: admin@liga.org.br / senha: admin123');
-    console.log('⚠️  TROQUE A SENHA APÓS O PRIMEIRO LOGIN!');
+    console.log('✅ Usuário admin criado: admin@liga.org.br');
+    console.log('⚠️  Defina ADMIN_SENHA_INICIAL no .env e TROQUE A SENHA APÓS O PRIMEIRO LOGIN!');
   }
 
   console.log('✅ Banco de dados pronto!');

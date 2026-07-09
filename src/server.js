@@ -107,8 +107,7 @@ async function start() {
     agendarBackup();
     httpServer.listen(PORT, () => {
       console.log('\n🏥 Liga Urologia — Sistema de Cobranças');
-      console.log('🌐 Porta: ' + PORT);
-      console.log('📧 Login: admin@liga.org.br | Senha: admin123\n');
+      console.log('🌐 Porta: ' + PORT + '\n');
 
       // Keep-alive: evita que o Render durma o app no plano gratuito
       const APP_URL = process.env.APP_URL;
