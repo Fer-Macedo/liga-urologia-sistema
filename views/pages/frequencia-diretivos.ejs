@@ -688,8 +688,8 @@ function adicionarTodosSelecionados() {
   </div>
 </div><script>
 (function(){
-  var _atv=<%- JSON.stringify((atividades||[]).map(function(a){return{nome:a.descricao,data:a.data_atividade,membros:(a.membros||[]).map(function(mb){return{id:mb.diretivo_id||mb.membro_id||mb.id,presente:mb.presente}})}})) %>;
-  var _mfr=<%- JSON.stringify((membrosFrequencia||[]).map(function(m){return{id:m.membro_id,nome:m.nome,presencas:parseInt(m.presencas)||0,total:parseInt(m.total_atividades)||0}})) %>;
+  var _atv=<%- JSON.stringify((atividades||[]).map(function(a){return{nome:a.descricao,data:a.data_atividade,membros:(a.membros||[]).map(function(mb){return{id:mb.diretivo_id||mb.membro_id||mb.id,presente:mb.presente}})}})).replace(/</g,"\\u003c") %>;
+  var _mfr=<%- JSON.stringify((membrosFrequencia||[]).map(function(m){return{id:m.membro_id,nome:m.nome,presencas:parseInt(m.presencas)||0,total:parseInt(m.total_atividades)||0}})).replace(/</g,"\\u003c") %>;
   var porMembro={},infoMembro={};
   var svgOk='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>';
   var svgFalta='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#dc2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
