@@ -9013,7 +9013,7 @@ router.post('/cientifico/versao/:versaoId/iniciar-revisao', requireAuth, require
 // membro da equipe do Cientifico (ex: precisa de ajuda com um caso especifico).
 router.post('/cientifico/versao/:versaoId/transferir', requireAuth, requireCientifico, async (req, res) => {
   const { usuario_id } = req.body;
-  const vR = await query('SELECT v.*, g.projeto_id FROM versoes_trabalho v JOIN grupos_cientificos g ON g.id=v.grupo_id WHERE v.id=$1',[req.params.versaoId]);
+  const vR = await query('SELECT v.*, g.projeto_id, g.tipo_trabalho FROM versoes_trabalho v JOIN grupos_cientificos g ON g.id=v.grupo_id WHERE v.id=$1',[req.params.versaoId]);
   if (!vR.rows.length) return res.redirect('/cientifico');
   const v = vR.rows[0];
   const podeAgirEmEmergencia = ['admin','presidencia'].includes(req.session.usuario.perfil);
@@ -9033,7 +9033,26 @@ router.post('/cientifico/versao/:versaoId/transferir', requireAuth, requireCient
   await query('UPDATE versoes_trabalho SET revisor_atual_id=$1 WHERE id=$2', [destino.id, req.params.versaoId]);
   await registrarTimeline(v.grupo_id, 'Revisao transferida', req.session.usuario.nome+' transferiu para '+destino.nome);
   await registrarEventoVersao(req.params.versaoId, 'transferido', { autorTipo:'usuario', autorId:req.session.usuario.id, autorNome:req.session.usuario.nome, destinoNome:destino.nome });
-  req.session.msg=['Trabalho transferido para '+destino.nome+'.'];
+
+  // Se o revisor pediu, encaminha (copia) as suas anotacoes deste trabalho para o novo revisor.
+  let notasCopiadas = 0;
+  if (req.body.encaminhar_notas === '1') {
+    let sel, params;
+    if (v.tipo_trabalho === 'individual') {
+      sel = 'SELECT texto, cor, fixado, membro_tipo, membro_id FROM cientifico_notas WHERE grupo_id=$1 AND criado_por=$2 AND membro_tipo=$3 AND membro_id=$4';
+      params = [v.grupo_id, req.session.usuario.id, v.enviado_por_tipo, v.enviado_por_id];
+    } else {
+      sel = 'SELECT texto, cor, fixado, membro_tipo, membro_id FROM cientifico_notas WHERE grupo_id=$1 AND criado_por=$2 AND membro_id IS NULL';
+      params = [v.grupo_id, req.session.usuario.id];
+    }
+    const notasR = await query(sel, params);
+    for (const n of notasR.rows) {
+      await query('INSERT INTO cientifico_notas (grupo_id, texto, cor, fixado, criado_por, membro_tipo, membro_id) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [v.grupo_id, n.texto, n.cor, n.fixado, destino.id, n.membro_tipo, n.membro_id]);
+    }
+    notasCopiadas = notasR.rows.length;
+  }
+  req.session.msg=['Trabalho transferido para '+destino.nome+'.' + (notasCopiadas ? ' '+notasCopiadas+' anotação(ões) encaminhada(s).' : '')];
   res.redirect('/cientifico/projeto/'+v.projeto_id+'/grupo/'+v.grupo_id);
 });
 

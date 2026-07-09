@@ -57,13 +57,19 @@
     <%if(staffCientifico && staffCientifico.filter(function(s){return s.id!==usuario.id}).length){%>
     <details style="margin-top:10px">
       <summary style="cursor:pointer;font-size:12px;color:var(--texto2)">Transferir para outro revisor</summary>
-      <form method="POST" action="/cientifico/versao/<%=v.id%>/transferir" style="margin-top:8px;display:flex;gap:8px">
-        <select name="usuario_id" required style="flex:1;padding:7px;border:1px solid var(--borda);background:var(--card);color:var(--texto)">
-          <% staffCientifico.filter(function(s){return s.id!==usuario.id}).forEach(function(s){ %>
-          <option value="<%=s.id%>"><%=s.nome%></option>
-          <% }); %>
-        </select>
-        <button type="submit" class="btn btn-sm">Transferir</button>
+      <form method="POST" action="/cientifico/versao/<%=v.id%>/transferir" style="margin-top:8px">
+        <div style="display:flex;gap:8px">
+          <select name="usuario_id" required style="flex:1;padding:7px;border:1px solid var(--borda);background:var(--card);color:var(--texto)">
+            <% staffCientifico.filter(function(s){return s.id!==usuario.id}).forEach(function(s){ %>
+            <option value="<%=s.id%>"><%=s.nome%></option>
+            <% }); %>
+          </select>
+          <button type="submit" class="btn btn-sm">Transferir</button>
+        </div>
+        <label style="display:flex;align-items:center;gap:7px;margin-top:8px;font-size:12px;color:var(--texto2);cursor:pointer">
+          <input type="checkbox" name="encaminhar_notas" value="1" checked>
+          Encaminhar as minhas anotações deste trabalho para o novo revisor
+        </label>
       </form>
     </details>
     <%}%>
