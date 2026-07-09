@@ -220,7 +220,7 @@ function htmlCobranca(opts) {
   const faixaBg=isPos?'#fef2f2':isDia?'#fffbeb':'#eff6ff';
   const faixaLabel=isPos?'MENSALIDADE EM ATRASO':isDia?'VENCIMENTO HOJE':'LEMBRETE DE COBRANCA';
   const logoHtml=orgLogo
-    ?'<img src="'+orgLogo+'" alt="'+orgNome+'" style="max-height:60px;max-width:200px;object-fit:contain;display:block;margin:0 auto">'
+    ?'<img src="'+orgLogo+'" alt="'+orgNome+'" style="max-height:84px;max-width:230px;object-fit:contain;display:block;margin:0 auto">'
     :'<span style="color:white;font-size:20px;font-weight:800;letter-spacing:-0.5px">'+orgNome+'</span>';
   const cab='<div style="background:linear-gradient(160deg,'+orgCor+' 0%,'+corEsc+' 100%);padding:36px 40px;text-align:center">'
     +logoHtml
@@ -261,7 +261,7 @@ function htmlSimples(opts) {
   const orgLogo=config.org_logo||null;
   const corEsc='#0a1f5c';
   const logoHtml=orgLogo
-    ?'<img src="'+orgLogo+'" alt="'+orgNome+'" style="max-height:60px;max-width:200px;object-fit:contain;display:block;margin:0 auto">'
+    ?'<img src="'+orgLogo+'" alt="'+orgNome+'" style="max-height:84px;max-width:230px;object-fit:contain;display:block;margin:0 auto">'
     :'<span style="color:white;font-size:20px;font-weight:800;letter-spacing:-0.5px">'+orgNome+'</span>';
   const cab='<div style="background:linear-gradient(160deg,'+orgCor+' 0%,'+corEsc+' 100%);padding:36px 40px;text-align:center">'
     +logoHtml
