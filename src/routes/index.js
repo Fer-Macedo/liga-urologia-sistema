@@ -769,18 +769,6 @@ router.post('/desafio-azul/contato', limiterContato, async (req, res) => {
 
 router.get('/', (req, res) => res.redirect('/dashboard'));
 
-// TEMP: teste de layout de email — REMOVER apos o teste
-router.get('/_teste-email-layout-2026', async (req, res) => {
-  try {
-    const { enviarEmail } = require('../services/notificacoes');
-    const corpo = '<p style="margin:0 0 16px">Olá! Este é um <strong>email de teste</strong> do sistema LAURO.</p>'
-      + '<p style="margin:0 0 16px">A <strong>logomarca</strong> no topo agora está maior, para dar mais destaque à marca. No rodapé continuam os ícones do Instagram e do WhatsApp. 🎉</p>'
-      + '<div style="text-align:center"><a href="https://sistema.lauroucpcde.com" style="display:inline-block;background:#0F6E56;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px">Botão de exemplo</a></div>';
-    const r = await enviarEmail({ para: 'jrmacedomy@gmail.com', assunto: 'Email de teste — Logo em destaque', html: corpo, faixaLabel: 'EMAIL DE TESTE', titulo: 'Teste de layout de email' });
-    res.json({ ok: r.ok });
-  } catch (e) { res.status(500).json({ ok: false, erro: e.message }); }
-});
-
 router.get('/login', async (req, res) => {
   if (req.session?.usuario) return res.redirect('/dashboard');
   res.render('pages/login', { config: await getConfig(), erro: req.flash('erro'), msg: req.flash('msg') });
