@@ -769,19 +769,6 @@ router.post('/desafio-azul/contato', limiterContato, async (req, res) => {
 
 router.get('/', (req, res) => res.redirect('/dashboard'));
 
-// TEMP: teste de layout de email — REMOVER apos o teste
-router.get('/_teste-email-layout-2026', async (req, res) => {
-  try {
-    const { enviarEmail } = require('../services/notificacoes');
-    const corpo = '<p style="margin:0 0 16px">Olá! Este é um <strong>email de teste</strong> do sistema LAURO.</p>'
-      + '<p style="margin:0 0 16px">Se você recebeu este email com o <strong>cabeçalho colorido</strong>, a faixa acima do título e o rodapé escuro, o <strong>layout padrão</strong> está funcionando. 🎉</p>'
-      + '<p style="margin:0 0 20px;color:#64748b;font-size:13px">A partir de agora, todos os emails do sistema (cobranças, frequência, cartas, cupons, avisos, etc.) seguem exatamente este mesmo visual.</p>'
-      + '<div style="text-align:center"><a href="https://sistema.lauroucpcde.com" style="display:inline-block;background:#0F6E56;color:#fff;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px">Botão de exemplo</a></div>';
-    const r = await enviarEmail({ para: 'jrmacedomy@gmail.com', assunto: 'Email de teste — Layout padrão LAURO', html: corpo, faixaLabel: 'EMAIL DE TESTE', titulo: 'Teste de layout de email' });
-    res.json({ ok: r.ok });
-  } catch (e) { res.status(500).json({ ok: false, erro: e.message }); }
-});
-
 router.get('/login', async (req, res) => {
   if (req.session?.usuario) return res.redirect('/dashboard');
   res.render('pages/login', { config: await getConfig(), erro: req.flash('erro'), msg: req.flash('msg') });
