@@ -134,7 +134,12 @@ function csrfInjetar(req, res, next) {
   const originalSend = res.send.bind(res);
   res.send = function(body) {
     if (typeof body === 'string' && body.includes('</body>')) {
-      body = body.replace('</body>', SCRIPT_TEMPLATE(token) + '</body>');
+      // Injeta antes do ULTIMO </body> (o fechamento real da pagina). Usar replace()
+      // no primeiro </body> quebrava paginas que tem "</body>" dentro de uma string JS
+      // (ex: cobrancas monta um relatorio com "...</body></html>" num template literal):
+      // o <script> do CSRF caia dentro do <script> da pagina e vazava o resto como texto.
+      const idx = body.lastIndexOf('</body>');
+      body = body.slice(0, idx) + SCRIPT_TEMPLATE(token) + body.slice(idx);
       // A pagina carrega um token CSRF preso a esta sessao. Se o navegador
       // reaproveitar uma copia em cache (token antigo) apos um restart/deploy,
       // o envio falha com "Sessao expirada". no-store impede esse reuso.
