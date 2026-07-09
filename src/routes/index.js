@@ -9034,25 +9034,22 @@ router.post('/cientifico/versao/:versaoId/transferir', requireAuth, requireCient
   await registrarTimeline(v.grupo_id, 'Revisao transferida', req.session.usuario.nome+' transferiu para '+destino.nome);
   await registrarEventoVersao(req.params.versaoId, 'transferido', { autorTipo:'usuario', autorId:req.session.usuario.id, autorNome:req.session.usuario.nome, destinoNome:destino.nome });
 
-  // Se o revisor pediu, encaminha (copia) as suas anotacoes deste trabalho para o novo revisor.
-  let notasCopiadas = 0;
+  // Se o revisor pediu, MOVE as suas anotacoes deste trabalho para o novo revisor
+  // (reatribui criado_por) — como o trabalho foi passado adiante, ele deixa de ve-las.
+  let notasMovidas = 0;
   if (req.body.encaminhar_notas === '1') {
-    let sel, params;
+    let upd, params;
     if (v.tipo_trabalho === 'individual') {
-      sel = 'SELECT texto, cor, fixado, membro_tipo, membro_id FROM cientifico_notas WHERE grupo_id=$1 AND criado_por=$2 AND membro_tipo=$3 AND membro_id=$4';
-      params = [v.grupo_id, req.session.usuario.id, v.enviado_por_tipo, v.enviado_por_id];
+      upd = 'UPDATE cientifico_notas SET criado_por=$1 WHERE grupo_id=$2 AND criado_por=$3 AND membro_tipo=$4 AND membro_id=$5';
+      params = [destino.id, v.grupo_id, req.session.usuario.id, v.enviado_por_tipo, v.enviado_por_id];
     } else {
-      sel = 'SELECT texto, cor, fixado, membro_tipo, membro_id FROM cientifico_notas WHERE grupo_id=$1 AND criado_por=$2 AND membro_id IS NULL';
-      params = [v.grupo_id, req.session.usuario.id];
+      upd = 'UPDATE cientifico_notas SET criado_por=$1 WHERE grupo_id=$2 AND criado_por=$3 AND membro_id IS NULL';
+      params = [destino.id, v.grupo_id, req.session.usuario.id];
     }
-    const notasR = await query(sel, params);
-    for (const n of notasR.rows) {
-      await query('INSERT INTO cientifico_notas (grupo_id, texto, cor, fixado, criado_por, membro_tipo, membro_id) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-        [v.grupo_id, n.texto, n.cor, n.fixado, destino.id, n.membro_tipo, n.membro_id]);
-    }
-    notasCopiadas = notasR.rows.length;
+    const r = await query(upd, params);
+    notasMovidas = r.rowCount || 0;
   }
-  req.session.msg=['Trabalho transferido para '+destino.nome+'.' + (notasCopiadas ? ' '+notasCopiadas+' anotação(ões) encaminhada(s).' : '')];
+  req.session.msg=['Trabalho transferido para '+destino.nome+'.' + (notasMovidas ? ' '+notasMovidas+' anotação(ões) transferida(s).' : '')];
   res.redirect('/cientifico/projeto/'+v.projeto_id+'/grupo/'+v.grupo_id);
 });
 
