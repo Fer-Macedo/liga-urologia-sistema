@@ -127,10 +127,12 @@
           <%- include('_versao-card', {v, numero: versoes.length-i, usuario, staffCientifico}) %>
           <%})}%>
 
+          <% if (versoes.length) { %>
           <div style="border-top:1px dashed var(--borda);margin-top:16px;padding-top:14px">
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#854d0e;margin-bottom:4px;display:flex;align-items:center;gap:6px">📝 Minhas notas deste trabalho <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--texto2)">— visíveis só para você, para guiar a correção</span></div>
             <%- include('_notas-bloco', { projetoId: projeto.id, grupoId: grupo.id, lista: notas.filter(function(n){ return !n.membro_id; }) }) %>
           </div>
+          <% } %>
 
         <%/* ---- MODO INDIVIDUAL ---- */%>
         <%}else{%>
@@ -152,10 +154,12 @@
               <%}else{grp.versoes.forEach(function(v,i){%>
               <%- include('_versao-card', {v, numero: grp.versoes.length-i, usuario, staffCientifico}) %>
               <%})}%>
+              <% if (grp.versoes.length) { %>
               <div style="border-top:1px dashed var(--borda);margin-top:12px;padding-top:12px">
                 <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#854d0e;margin-bottom:4px">📝 Minhas notas — <%=grp.autor_nome%> <span style="font-weight:600;text-transform:none;letter-spacing:0;color:var(--texto2)">(só você vê)</span></div>
                 <%- include('_notas-bloco', { projetoId: projeto.id, grupoId: grupo.id, membroTipo: grp.autor_tipo, membroId: grp.autor_id, lista: notas.filter(function(n){ return n.membro_tipo===grp.autor_tipo && n.membro_id===grp.autor_id; }) }) %>
               </div>
+              <% } %>
             </div>
           </div>
           <%})%>
