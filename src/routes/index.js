@@ -8846,6 +8846,8 @@ router.get('/cientifico/projeto/:projetoId/grupo/:grupoId', requireAuth, require
   const chat = (await query('SELECT * FROM chat_grupo_cientifico WHERE grupo_id=$1 ORDER BY criado_em ASC',[req.params.grupoId])).rows;
   const timeline = (await query('SELECT * FROM timeline_grupo_cientifico WHERE grupo_id=$1 ORDER BY criado_em DESC',[req.params.grupoId])).rows;
   const avisos = (await query(`SELECT a.* FROM avisos_cientificos a WHERE a.projeto_id=$1 AND (a.grupo_id=$2 OR a.grupo_id IS NULL) ORDER BY a.criado_em DESC LIMIT 5`,[req.params.projetoId,req.params.grupoId])).rows;
+  // Notas PRIVADAS do revisor logado para este grupo (so quem criou visualiza)
+  const notas = (await query('SELECT * FROM cientifico_notas WHERE grupo_id=$1 AND criado_por=$2 ORDER BY fixado DESC, criado_em DESC',[req.params.grupoId, req.session.usuario.id])).rows;
   const membroIds = membros.map(m=>m.origem_id);
   const ligantesDisponiveis = (await query('SELECT id,nome FROM ligantes WHERE ativo=1 AND pendente=false ORDER BY nome')).rows.filter(l=>!membros.find(m=>m.origem_tipo==='ligante'&&m.origem_id===l.id));
   const diretivosDisponiveis = (await query('SELECT id,nome FROM diretivos WHERE ativo=1 AND pendente=false ORDER BY nome')).rows.filter(d=>!membros.find(m=>m.origem_tipo==='diretivo'&&m.origem_id===d.id));
@@ -8865,7 +8867,30 @@ router.get('/cientifico/projeto/:projetoId/grupo/:grupoId', requireAuth, require
     }
     versoesPorAutor = Object.values(mapa);
   }
-  res.render('pages/cientifico/grupo-detalhe', { config, usuario: req.session.usuario, permissoesAtivas, projeto, grupo, membros, versoes, versoesPorAutor, chat, timeline, avisos, ligantesDisponiveis, diretivosDisponiveis, staffCientifico, msg, erro });
+  res.render('pages/cientifico/grupo-detalhe', { config, usuario: req.session.usuario, permissoesAtivas, projeto, grupo, membros, versoes, versoesPorAutor, chat, timeline, avisos, notas, ligantesDisponiveis, diretivosDisponiveis, staffCientifico, msg, erro });
+});
+
+// ─── NOTAS PRIVADAS DO REVISOR (Cientifico) ───────────────────────────────────
+// Anotacoes internas para guiar as correcoes. So o proprio usuario que criou ve/edita.
+router.post('/cientifico/grupo/:grupoId/nota', requireAuth, requireCientifico, async (req, res) => {
+  const { texto, cor, projetoId } = req.body;
+  if (texto && texto.trim()) {
+    await query('INSERT INTO cientifico_notas (grupo_id, texto, cor, criado_por) VALUES ($1,$2,$3,$4)',
+      [req.params.grupoId, texto.trim(), cor || '#fff3b0', req.session.usuario.id]);
+  }
+  res.redirect('/cientifico/projeto/' + (projetoId || '') + '/grupo/' + req.params.grupoId + '?tab=notas');
+});
+
+router.post('/cientifico/nota/:id/fixar', requireAuth, requireCientifico, async (req, res) => {
+  await query('UPDATE cientifico_notas SET fixado = NOT fixado WHERE id=$1 AND criado_por=$2', [req.params.id, req.session.usuario.id]);
+  const { projetoId, grupoId } = req.body;
+  res.redirect('/cientifico/projeto/' + (projetoId || '') + '/grupo/' + (grupoId || '') + '?tab=notas');
+});
+
+router.post('/cientifico/nota/:id/excluir', requireAuth, requireCientifico, async (req, res) => {
+  await query('DELETE FROM cientifico_notas WHERE id=$1 AND criado_por=$2', [req.params.id, req.session.usuario.id]);
+  const { projetoId, grupoId } = req.body;
+  res.redirect('/cientifico/projeto/' + (projetoId || '') + '/grupo/' + (grupoId || '') + '?tab=notas');
 });
 
 // POST /cientifico/grupo/:grupoId/membro/adicionar

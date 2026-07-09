@@ -222,6 +222,16 @@ async function initSchema() {
       criado_em TIMESTAMP DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS cientifico_notas (
+      id SERIAL PRIMARY KEY,
+      grupo_id INTEGER NOT NULL,
+      texto TEXT NOT NULL,
+      cor TEXT DEFAULT '#fff3b0',
+      fixado BOOLEAN DEFAULT false,
+      criado_por INTEGER,
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
+
     CREATE TABLE IF NOT EXISTS leads_patrocinio (
       id SERIAL PRIMARY KEY,
       nome TEXT NOT NULL,
