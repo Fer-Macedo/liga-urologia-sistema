@@ -295,6 +295,40 @@ async function enviarAniversarios() {
   }
 }
 
+// ─── MARKETING ANIVERSÁRIO (véspera às 19h) ───────────────────────────────────
+async function enviarMarketingAniversario() {
+  const config = await getConfig();
+  if (config.notif_aniversario_ativo !== '1') return;
+  const { enviarWhatsApp } = require('./notificacoes');
+  const amanha = dayjs().add(1, 'day');
+  const md = amanha.format('MM-DD');
+  const r = await query(
+    "SELECT * FROM membros WHERE ativo=1 AND whatsapp IS NOT NULL AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1",
+    [md]
+  );
+  const orgNome = config.org_nome || 'Liga Academica de Urologia';
+  let count = 0;
+  for (const membro of r.rows) {
+    if (!podeMensagem()) break;
+    const j = await query(
+      "SELECT id FROM notificacoes_log WHERE membro_id=$1 AND tipo='aniversario_marketing' AND enviado_em >= CURRENT_DATE",
+      [membro.id]
+    );
+    if (j.rows.length > 0) continue;
+    const primeiroNome = membro.nome.split(' ')[0];
+    const msg = `🎉 *${orgNome}*\n\nOlá, *${primeiroNome}*! Amanhã é o seu aniversário! 🎂\n\nToda a equipe está animada para celebrar esse dia especial com você. Feliz aniversário antecipado! 🥳\n\nCom carinho de toda a equipe! 💙`;
+    const res = await enviarWhatsApp(membro.whatsapp, msg);
+    await query(
+      'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
+      [membro.id, null, 'aniversario_marketing', 'whatsapp', res.ok ? 'ok' : 'erro']
+    );
+    incrementarContador();
+    count++;
+    await esperarIntervalo(count);
+    console.log('[ANIVERSÁRIO MARKETING] Mensagem enviada:', membro.nome);
+  }
+}
+
 // ─── FREQUÊNCIA MENSAL ────────────────────────────────────────────────────────
 async function enviarFrequenciaMensal() {
   console.log('Enviando frequência mensal automática...');
@@ -566,6 +600,11 @@ function iniciarAgendamentos() {
       const { processarPostsAgendados, postarAniversariantesDoDia } = require('./instagram');
       await processarPostsAgendados();
     } catch(e) { console.error('[INSTAGRAM] Cron erro:', e.message); }
+  }, { timezone: 'America/Asuncion' });
+
+  // Marketing aniversário — véspera às 19h
+  cron.schedule('0 19 * * *', async () => {
+    try { await enviarMarketingAniversario(); } catch(e) { console.error('[ANIVERSÁRIO MARKETING] Cron erro:', e.message); }
   }, { timezone: 'America/Asuncion' });
 
   // Instagram — post aniversariantes às 9h
