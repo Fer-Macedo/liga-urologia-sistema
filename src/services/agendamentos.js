@@ -295,37 +295,56 @@ async function enviarAniversarios() {
   }
 }
 
-// ─── MARKETING ANIVERSÁRIO (véspera às 19h) ───────────────────────────────────
-async function enviarMarketingAniversario() {
-  const config = await getConfig();
-  if (config.notif_aniversario_ativo !== '1') return;
+// ─── AVISO INTERNO ANIVERSÁRIO (véspera 19h e dia 6h para marketing/presidência) ──
+async function avisarEquipeAniversario(tipoAviso) {
+  // tipoAviso: 'vespera' (19h do dia anterior) | 'dia' (6h do dia do aniversário)
   const { enviarWhatsApp } = require('./notificacoes');
-  const amanha = dayjs().add(1, 'day');
-  const md = amanha.format('MM-DD');
-  const r = await query(
-    "SELECT * FROM membros WHERE ativo=1 AND whatsapp IS NOT NULL AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1",
+  const orgNome = (await getConfig()).org_nome || 'Liga Academica de Urologia';
+
+  const dataAlvo = tipoAviso === 'vespera' ? dayjs().add(1, 'day') : dayjs();
+  const md = dataAlvo.format('MM-DD');
+  const dataFormatada = dataAlvo.format('DD/MM');
+
+  const membros = await query(
+    "SELECT nome FROM membros WHERE ativo=1 AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1",
     [md]
   );
-  const orgNome = config.org_nome || 'Liga Academica de Urologia';
-  let count = 0;
-  for (const membro of r.rows) {
+  if (membros.rows.length === 0) {
+    console.log(`[AVISO ANIVERSÁRIO] Nenhum aniversariante ${tipoAviso === 'vespera' ? 'amanhã' : 'hoje'}.`);
+    return;
+  }
+
+  const nomes = membros.rows.map(m => '• ' + m.nome).join('\n');
+  const msg = tipoAviso === 'vespera'
+    ? `🎂 *${orgNome} — Aviso de Aniversário*\n\nAmanhã (${dataFormatada}) fazem aniversário:\n\n${nomes}\n\nLembre-se de preparar a homenagem! 🎉`
+    : `🎉 *${orgNome} — Hoje é aniversário!*\n\n${dataFormatada} — aniversariantes de hoje:\n\n${nomes}\n\nNão esqueça de parabenizar! 💙`;
+
+  const logTipo = tipoAviso === 'vespera' ? 'aviso_aniversario_vespera' : 'aviso_aniversario_dia';
+
+  // Busca contatos internos: marketing e presidência
+  const contatos = await query(
+    "SELECT area, numero FROM lauro_contatos WHERE area IN ('marketing','presidencia') AND numero IS NOT NULL AND numero != ''"
+  );
+  if (contatos.rows.length === 0) {
+    console.log('[AVISO ANIVERSÁRIO] Nenhum contato de marketing/presidência cadastrado em lauro_contatos.');
+    return;
+  }
+
+  for (const contato of contatos.rows) {
     if (!podeMensagem()) break;
+    // Evita reenvio no mesmo dia para o mesmo contato e tipo
     const j = await query(
-      "SELECT id FROM notificacoes_log WHERE membro_id=$1 AND tipo='aniversario_marketing' AND enviado_em >= CURRENT_DATE",
-      [membro.id]
+      "SELECT id FROM notificacoes_log WHERE tipo=$1 AND canal='whatsapp' AND status='ok' AND enviado_em::date = CURRENT_DATE AND cobranca_id IS NULL AND membro_id IS NULL",
+      [logTipo + '_' + contato.area]
     );
     if (j.rows.length > 0) continue;
-    const primeiroNome = membro.nome.split(' ')[0];
-    const msg = `🎉 *${orgNome}*\n\nOlá, *${primeiroNome}*! Amanhã é o seu aniversário! 🎂\n\nToda a equipe está animada para celebrar esse dia especial com você. Feliz aniversário antecipado! 🥳\n\nCom carinho de toda a equipe! 💙`;
-    const res = await enviarWhatsApp(membro.whatsapp, msg);
+    const res = await enviarWhatsApp(contato.numero, msg);
     await query(
       'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
-      [membro.id, null, 'aniversario_marketing', 'whatsapp', res.ok ? 'ok' : 'erro']
+      [null, null, logTipo + '_' + contato.area, 'whatsapp', res.ok ? 'ok' : 'erro']
     );
     incrementarContador();
-    count++;
-    await esperarIntervalo(count);
-    console.log('[ANIVERSÁRIO MARKETING] Mensagem enviada:', membro.nome);
+    console.log(`[AVISO ANIVERSÁRIO ${tipoAviso}] Enviado para ${contato.area} (${contato.numero})`);
   }
 }
 
@@ -602,9 +621,14 @@ function iniciarAgendamentos() {
     } catch(e) { console.error('[INSTAGRAM] Cron erro:', e.message); }
   }, { timezone: 'America/Asuncion' });
 
-  // Marketing aniversário — véspera às 19h
+  // Aviso interno aniversário — véspera às 19h (alerta marketing/presidência)
   cron.schedule('0 19 * * *', async () => {
-    try { await enviarMarketingAniversario(); } catch(e) { console.error('[ANIVERSÁRIO MARKETING] Cron erro:', e.message); }
+    try { await avisarEquipeAniversario('vespera'); } catch(e) { console.error('[AVISO ANIVERSÁRIO VÉSPERA] Cron erro:', e.message); }
+  }, { timezone: 'America/Asuncion' });
+
+  // Aviso interno aniversário — dia do aniversário às 6h (lembrete no dia)
+  cron.schedule('0 6 * * *', async () => {
+    try { await avisarEquipeAniversario('dia'); } catch(e) { console.error('[AVISO ANIVERSÁRIO DIA] Cron erro:', e.message); }
   }, { timezone: 'America/Asuncion' });
 
   // Instagram — post aniversariantes às 9h
