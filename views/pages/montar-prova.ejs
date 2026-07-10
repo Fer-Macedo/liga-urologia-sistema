@@ -18,8 +18,7 @@
     .q-op.correta{background:#dcfce7;border-color:#16a34a;font-weight:700;}
     .tema-grupo{margin-bottom:20px;}
     .tema-titulo{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:800;color:var(--texto);margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--borda);}
-    .tema-contador{font-size:11px;font-weight:700;padding:3px 10px;border-radius:var(--rad);background:var(--fundo);border:1px solid var(--borda);color:var(--texto2);white-space:nowrap;}
-    .tema-contador.tem-marcada{background:var(--cor-primaria);border-color:var(--cor-primaria);color:#fff;}
+    .tema-contador{font-size:11px;font-weight:700;padding:3px 10px;border-radius:var(--rad);border:1px solid var(--borda);white-space:nowrap;}
     .btn-xs{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:var(--rad);font-size:11px;font-weight:600;border:1px solid var(--borda);background:var(--fundo);color:var(--texto);cursor:pointer;text-decoration:none;transition:all .15s;font-family:inherit;}
     .btn-xs:hover{border-color:var(--cor-primaria);color:var(--cor-primaria);}
     .btn-xs.roxo{background:#7c3aed;color:white;border-color:transparent;}
@@ -78,19 +77,28 @@
             <span style="font-size:12px;color:var(--texto2)">Marque as questões que entram nesta fila. Você pode montar várias filas (A, B, C…) trocando o nome acima.</span>
           </div>
 
-          <%temas.forEach(function(tema){%>
+          <%
+          // Cor estavel por tema (mesmo tema -> mesma cor sempre, independente de quantos temas existam).
+          // Paleta de pares [fundo-claro, cor-forte] acessiveis; escolhida por hash do nome do tema.
+          function corTema(nome){
+            var pal=[['#dbeafe','#1e40af'],['#dcfce7','#166534'],['#fef3c7','#92400e'],['#fee2e2','#b91c1c'],['#ede9fe','#6d28d9'],['#cffafe','#0e7490'],['#fce7f3','#be185d'],['#ffedd5','#c2410c'],['#e0e7ff','#3730a3'],['#f0fdf4','#15803d']];
+            var h=0; for(var i=0;i<nome.length;i++){ h=(h*31+nome.charCodeAt(i))>>>0; }
+            return pal[h%pal.length];
+          }
+          %>
+          <%temas.forEach(function(tema){ var _c=corTema(tema); var _n=questoes.filter(function(q){return q.tema===tema;}).length; %>
           <div class="tema-grupo">
-            <div class="tema-titulo">
-              <span><%=tema%></span>
+            <div class="tema-titulo" style="border-left:5px solid <%=_c[1]%>;padding-left:10px">
+              <span style="color:<%=_c[1]%>"><%=tema%></span>
               <div style="display:flex;align-items:center;gap:10px">
-                <span class="tema-contador">0 / <%=questoes.filter(function(q){return q.tema===tema;}).length%> marcadas</span>
+                <span class="tema-contador" style="background:<%=_c[0]%>;border-color:<%=_c[1]%>;color:<%=_c[1]%>">0 / <%=_n%> marcadas</span>
                 <button type="button" class="btn-xs" onclick="marcarTema(this)">Marcar todas</button>
               </div>
             </div>
             <%questoes.filter(function(q){return q.tema===tema;}).forEach(function(q){%>
-            <label class="q-select-card" data-tema="<%=tema%>">
+            <label class="q-select-card" data-tema="<%=tema%>" style="box-shadow:inset 5px 0 0 <%=_c[1]%>">
               <input type="checkbox" name="questoes_ids" value="<%=q.id%>" onchange="atualizarSel(this)">
-              <span class="tema-chip">#<%=q.id%></span>
+              <span class="tema-chip" style="background:<%=_c[0]%>;color:<%=_c[1]%>"><%=tema%> · #<%=q.id%></span>
               <div class="q-enunciado"><%=q.enunciado%></div>
               <div class="q-opcoes">
                 <div class="q-op <%=q.resposta_correta==='A'?'correta':''%>">A) <%=q.opcao_a%></div>
@@ -119,7 +127,7 @@ function atualizarContadores(){
     var total = g.querySelectorAll('input[name="questoes_ids"]').length;
     var marc = g.querySelectorAll('input[name="questoes_ids"]:checked').length;
     var c = g.querySelector('.tema-contador');
-    if(c){ c.textContent = marc + ' / ' + total + ' marcadas'; c.classList.toggle('tem-marcada', marc>0); }
+    if(c){ c.textContent = marc + ' / ' + total + ' marcadas'; c.style.fontWeight = marc>0 ? '800' : '700'; c.style.opacity = marc>0 ? '1' : '.75'; }
   });
   document.getElementById('contador').textContent = document.querySelectorAll('input[name="questoes_ids"]:checked').length;
 }
