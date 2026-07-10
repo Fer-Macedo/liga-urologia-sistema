@@ -4245,7 +4245,9 @@ router.get('/carta-cobranca/:id/imprimir', requireAuth, requirePermissao('carta-
     await browser.close();
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline; filename="carta-cobro.pdf"');
-    res.send(pdf);
+    // page.pdf() retorna Uint8Array; sem Buffer.from o Express serializa como JSON
+    // e o navegador acusa "falha ao carregar o PDF".
+    res.end(Buffer.from(pdf));
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
