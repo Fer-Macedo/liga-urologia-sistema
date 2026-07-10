@@ -1,13 +1,11 @@
 <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Times New Roman',serif;font-size:11pt;color:#000;}
-/* Fundo de pagina inteira (a imagem ja traz titulo, divisoria central e rodape).
-   position:fixed faz o fundo repetir em TODAS as paginas no PDF do Chrome. */
-.page-bg{position:fixed;top:0;left:0;width:210mm;height:297mm;z-index:-1;}
-.page-bg img{width:210mm;height:297mm;display:block;}
 .topinfo{text-align:center;font-size:8.5pt;color:#333;margin-bottom:6px;}
-.info-bar{display:flex;justify-content:space-between;gap:8px;font-size:8.5pt;padding:4px 8px;background:rgba(255,255,255,.72);border:1px solid #bbb;margin-bottom:12px;}
-.conteudo{column-count:2;column-gap:22px;}
+.info-bar{display:flex;justify-content:space-between;gap:8px;font-size:8.5pt;padding:4px 8px;background:#f5f5f5;border:1px solid #ccc;margin-bottom:12px;}
+/* 2 colunas com a divisoria central (o cabecalho/rodape com barras e logos vem do
+   header/footer do PDF, que repetem em todas as paginas). */
+.conteudo{column-count:2;column-gap:22px;column-rule:1px solid #333;}
 .tema-titulo{font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;border-bottom:1.5px solid #000;padding-bottom:2px;margin:10px 0 8px;break-after:avoid;}
 .questao{margin-bottom:12px;break-inside:avoid;}
 .questao p{line-height:1.35;margin-bottom:5px;text-align:justify;font-size:10.5pt;}
@@ -15,7 +13,6 @@ body{font-family:'Times New Roman',serif;font-size:11pt;color:#000;}
 .opcoes{padding-left:12px;}
 .opcao{margin-bottom:2px;line-height:1.3;font-size:10pt;}
 </style></head><body>
-<div class="page-bg"><img src="https://sistema.lauroucpcde.com/img/fundo-prova.jpg"></div>
 <div class="topinfo">{{TITULO}}</div>
 <div class="info-bar"><span><strong>Candidato:</strong> _________________________________</span><span><strong>Nº Lista:</strong> _____</span><span><strong>Fila:</strong> {{FILA}}</span><span><strong>Data:</strong> {{DATA}}</span></div>
 <div class="conteudo">{{CONTEUDO}}</div>

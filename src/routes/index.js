@@ -1943,7 +1943,14 @@ router.get('/processo-seletivo/prova/:id/pdf', requireAuth, requirePermissao('pr
     const browser=await puppeteer.launch({args:[...chromium.args,'--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu'],executablePath:await chromium.executablePath(),headless:'new'});
     const page=await browser.newPage();
     await page.setContent(html,{waitUntil:'networkidle0'});
-    const pdf=await page.pdf({format:'A4',printBackground:true,margin:{top:'26mm',bottom:'38mm',left:'14mm',right:'14mm'}});
+    // Cabecalho e rodape da arte (barras + titulo em cima, logos embaixo) repetindo em
+    // TODAS as paginas via displayHeaderFooter; conteudo flui no meio (mesmo metodo do contrato).
+    const _base=__dirname.replace('routes','').replace('src/','');
+    const _hdr='data:image/jpeg;base64,'+require('fs').readFileSync(_base+'public/img/fundo-prova-header.jpg').toString('base64');
+    const _ftr='data:image/jpeg;base64,'+require('fs').readFileSync(_base+'public/img/fundo-prova-footer.jpg').toString('base64');
+    const headerTemplate='<div style="width:210mm;margin:0;padding:0"><img src="'+_hdr+'" style="width:210mm;display:block"></div>';
+    const footerTemplate='<div style="width:210mm;margin:0;padding:0"><img src="'+_ftr+'" style="width:210mm;display:block"></div>';
+    const pdf=await page.pdf({format:'A4',printBackground:true,displayHeaderFooter:true,headerTemplate,footerTemplate,margin:{top:'36mm',bottom:'40mm',left:'14mm',right:'14mm'}});
     await browser.close();
     res.setHeader('Content-Type','application/pdf');
     res.setHeader('Content-Disposition',(req.query.download?'attachment':'inline')+'; filename="prova-fila-'+pv.fila+'.pdf"');
