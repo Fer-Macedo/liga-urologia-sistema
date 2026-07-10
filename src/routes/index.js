@@ -1943,7 +1943,7 @@ router.get('/processo-seletivo/prova/:id/pdf', requireAuth, requirePermissao('pr
     const browser=await puppeteer.launch({args:[...chromium.args,'--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu'],executablePath:await chromium.executablePath(),headless:'new'});
     const page=await browser.newPage();
     await page.setContent(html,{waitUntil:'networkidle0'});
-    const pdf=await page.pdf({format:'A4',printBackground:true,margin:{top:'15mm',bottom:'15mm',left:'15mm',right:'15mm'}});
+    const pdf=await page.pdf({format:'A4',printBackground:true,margin:{top:'26mm',bottom:'38mm',left:'14mm',right:'14mm'}});
     await browser.close();
     res.setHeader('Content-Type','application/pdf');
     res.setHeader('Content-Disposition',(req.query.download?'attachment':'inline')+'; filename="prova-fila-'+pv.fila+'.pdf"');
