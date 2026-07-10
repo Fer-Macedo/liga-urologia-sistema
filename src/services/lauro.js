@@ -479,38 +479,7 @@ async function redirecionarArea(numero, area, idioma) {
 }
 
 
-// ANTI-BAN: o assistente so pode responder a contatos CONHECIDOS. Responder a numeros
-// desconhecidos e um dos maiores gatilhos de banimento do WhatsApp. Conhecido =
-// membro/ligante/diretivo cadastrado, numero de area (staff), ou quem ja tem atendimento
-// aberto/recente. Numero novo/desconhecido e ignorado em silencio.
-async function podeAtender(numero) {
-  const n = (numero || '').replace(/[^0-9]/g, '');
-  if (!n) return false;
-  // Numeros internos das areas (staff)
-  if (Object.values(CONTATOS).some(c => (c || '').replace(/[^0-9]/g, '') === n)) return true;
-  // Variacao BR com/sem o 9 (mesmo tratamento usado no resto do lauro.js)
-  const cand = [n];
-  if (n.length === 12 && n.startsWith('55')) cand.push(n.slice(0, 4) + '9' + n.slice(4));
-  if (n.length === 13 && n.startsWith('55')) cand.push(n.slice(0, 4) + n.slice(5));
-  try {
-    const q = await query(
-      `SELECT 1 FROM membros  WHERE regexp_replace(COALESCE(whatsapp,''),'[^0-9]','','g') = ANY($1)
-       UNION ALL SELECT 1 FROM ligantes  WHERE regexp_replace(COALESCE(whatsapp,''),'[^0-9]','','g') = ANY($1)
-       UNION ALL SELECT 1 FROM diretivos WHERE regexp_replace(COALESCE(whatsapp,''),'[^0-9]','','g') = ANY($1)
-       LIMIT 1`, [cand]);
-    if (q.rows.length) return true;
-    const at = await query(
-      "SELECT 1 FROM lauro_atendimentos WHERE numero_membro = ANY($1) AND (status <> 'encerrado' OR criado_em > NOW() - INTERVAL '2 days') LIMIT 1",
-      [cand]);
-    return at.rows.length > 0;
-  } catch (e) { console.error('[LAURO] podeAtender erro:', e.message); return false; }
-}
-
 async function processarMensagem(numero, texto, midia) {
-  if (!(await podeAtender(numero))) {
-    console.log('[LAURO] Ignorado (numero desconhecido — anti-ban):', numero);
-    return;
-  }
   let msg = (texto || '').trim();
 
   // ── PROXY: se quem envia é número de área, encaminhar ao membro ──────────
@@ -892,4 +861,4 @@ async function recarregarContatos() {
 }
 recarregarContatos();
 
-module.exports = { processarMensagem, podeAtender, enviarMensagemDireta, redirecionarArea, recarregarContatos, enviarImagem, enviarDocumento };
+module.exports = { processarMensagem, enviarMensagemDireta, redirecionarArea, recarregarContatos, enviarImagem, enviarDocumento };

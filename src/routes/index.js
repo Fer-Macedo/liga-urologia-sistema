@@ -2480,6 +2480,18 @@ router.post('/usuarios/:id/excluir', requireAuth, requireAdmin, async (req, res)
 // ─── WEBHOOK WHATSAPP — LAURO ─────────────────────────────────────────────────
 // Dedup de webhooks (a W-API reentrega em retry) — evita o bot responder duplicado.
 const webhookVistos = new Set();
+// Freio ANTI-LOOP (nao anti-pessoa): o assistente atende TODOS os numeros. Isto so
+// corta rajada robotica do MESMO numero em 1 min (dois bots conversando, reentrega em
+// rajada, flood forjado) — conversa humana normal nunca chega perto do limite.
+const webhookRate = new Map();
+function webhookThrottle(numero) {
+  const agora = Date.now();
+  const arr = (webhookRate.get(numero) || []).filter(t => agora - t < 60000);
+  arr.push(agora);
+  webhookRate.set(numero, arr);
+  if (webhookRate.size > 3000) webhookRate.clear();
+  return arr.length <= 20; // >20 msgs/min do mesmo numero = loop, nao pessoa
+}
 router.post('/webhook/whatsapp', async (req, res) => {
   try {
     const body = req.body;
@@ -2519,6 +2531,8 @@ router.post('/webhook/whatsapp', async (req, res) => {
       else if (body.audio && (body.audio.audioUrl || body.audio.url)) midia = { tipo:'audio', url: body.audio.audioUrl || body.audio.url, caption: '' };
     } catch(e) {}
     if (numero.length < 5 || (texto.length < 1 && !midia)) return res.sendStatus(200);
+    // Atende todos os numeros; so barra rajada robotica do mesmo numero (loop).
+    if (!webhookThrottle(numero)) { console.warn('[LAURO] Freio anti-loop (msgs demais do mesmo numero):', numero); return res.sendStatus(200); }
     console.log('Lauro processando:', numero, '-', texto || ('['+(midia && midia.tipo)+']'));
     // R2 persist: baixa midia temporaria Z-API e salva permanentemente
     if (midia && typeof midia.url === 'string' && midia.url.startsWith('http')) {
