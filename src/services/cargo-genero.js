@@ -25,4 +25,11 @@ function cargoComGenero(cargo, sexo) {
   return variantes[sexo] || variantes.Masculino;
 }
 
-module.exports = { cargoComGenero };
+// Rotulo exibido abaixo do nome na arte/story de aniversario. FONTE UNICA:
+// diretivo -> cargo com genero (fallback "Directivo"); ligante -> "Ligante"
+// (NUNCA o semestre). Usado por Story, email da equipe e previa/download manual.
+function rotuloAniversario({ tipo, cargo, sexo }) {
+  return tipo === 'diretivo' ? (cargo ? cargoComGenero(cargo, sexo) : 'Directivo') : 'Ligante';
+}
+
+module.exports = { cargoComGenero, rotuloAniversario };

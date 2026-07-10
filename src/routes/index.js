@@ -4992,16 +4992,16 @@ router.get('/marketing/aniversario/preview/:tipo/:id', requireAuth, requirePermi
   try {
     const { baixarArquivoBuffer } = require('../services/arquivos');
     const { gerarArteAniversario, nomeCurto } = require('../services/aniversario-arte');
-    const { cargoComGenero } = require('../services/cargo-genero');
+    const { rotuloAniversario } = require('../services/cargo-genero');
     const tipo = req.params.tipo === 'diretivo' ? 'diretivo' : 'ligante';
     const p = tipo === 'diretivo'
       ? await query("SELECT nome, cargo, sexo, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM diretivos WHERE id=$1", [req.params.id])
-      : await query("SELECT nome, semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM ligantes WHERE id=$1", [req.params.id]);
+      : await query("SELECT nome, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM ligantes WHERE id=$1", [req.params.id]);
     if (!p.rows.length || !p.rows[0].foto_chave) return res.status(404).send('Pessoa ou foto nao encontrada');
     const pessoa = p.rows[0];
     const templateR = await query("SELECT valor FROM configuracoes WHERE chave='aniversario_template_chave'");
     if (!templateR.rows.length) return res.status(400).send('Nenhuma arte-modelo configurada ainda');
-    const cargo = tipo === 'diretivo' ? (pessoa.cargo ? cargoComGenero(pessoa.cargo, pessoa.sexo) : 'Directivo') : `${pessoa.semestre||''}° Semestre`;
+    const cargo = rotuloAniversario({ tipo, cargo: pessoa.cargo, sexo: pessoa.sexo });
     const nomeExibir = req.query.nome_completo === '1' ? pessoa.nome : (req.query.nome || nomeCurto(pessoa.nome));
     const [templateBuffer, fotoBuffer] = await Promise.all([
       baixarArquivoBuffer(templateR.rows[0].valor),

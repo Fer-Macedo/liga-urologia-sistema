@@ -245,10 +245,9 @@ async function aniversariantesDoDia(md) {
 async function gerarArteAniversarioPessoa(pessoa, templateBuffer) {
   const { baixarArquivoBuffer } = require('./arquivos');
   const { gerarArteAniversario, nomeCurto } = require('./aniversario-arte');
-  const { cargoComGenero } = require('./cargo-genero');
+  const { rotuloAniversario } = require('./cargo-genero');
   const fotoBuffer = await baixarArquivoBuffer(pessoa.foto_chave);
-  const cargo = pessoa.tipo === 'diretivo' ? (pessoa.cargo ? cargoComGenero(pessoa.cargo, pessoa.sexo) : 'Directivo') : 'Ligante';
-  return gerarArteAniversario({ templateBuffer, fotoBuffer, nome: nomeCurto(pessoa.nome), cargo });
+  return gerarArteAniversario({ templateBuffer, fotoBuffer, nome: nomeCurto(pessoa.nome), cargo: rotuloAniversario(pessoa) });
 }
 
 // ─── AUTOMAÇÃO: STORY DE ANIVERSÁRIO DE LIGANTES/DIRETIVOS ───────────────────
