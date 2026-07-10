@@ -1928,8 +1928,10 @@ router.get('/processo-seletivo/prova/:id/pdf', requireAuth, requirePermissao('pr
       .replace(/\{\{FILA\}\}/g,pv.fila)
       .replace(/\{\{DATA\}\}/g,data)
       .replace('{{CONTEUDO}}',conteudo);
-    const puppeteer=require('puppeteer');
-    const browser=await puppeteer.launch({args:['--no-sandbox','--disable-setuid-sandbox']});
+    const puppeteer=require('puppeteer-core');
+    const chromium=require('@sparticuz/chromium');
+    chromium.setHeadlessMode=true; chromium.setGraphicsMode=false;
+    const browser=await puppeteer.launch({args:[...chromium.args,'--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu'],executablePath:await chromium.executablePath(),headless:'new'});
     const page=await browser.newPage();
     await page.setContent(html,{waitUntil:'networkidle0'});
     const pdf=await page.pdf({format:'A4',printBackground:true,margin:{top:'15mm',bottom:'15mm',left:'15mm',right:'15mm'}});
@@ -1970,8 +1972,10 @@ router.get('/processo-seletivo/prova/:id/gabarito', requireAuth, requirePermissa
       .replace(/\{\{FILA\}\}/g,pv.fila)
       .replace(/\{\{DATA\}\}/g,data)
       .replace('{{SECOES_GABARITO}}',secoesGab);
-    const puppeteer=require('puppeteer');
-    const browser=await puppeteer.launch({args:['--no-sandbox','--disable-setuid-sandbox']});
+    const puppeteer=require('puppeteer-core');
+    const chromium=require('@sparticuz/chromium');
+    chromium.setHeadlessMode=true; chromium.setGraphicsMode=false;
+    const browser=await puppeteer.launch({args:[...chromium.args,'--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu'],executablePath:await chromium.executablePath(),headless:'new'});
     const page=await browser.newPage();
     await page.setContent(html,{waitUntil:'networkidle0'});
     const pdf=await page.pdf({format:'A4',printBackground:true,margin:{top:'10mm',bottom:'10mm',left:'15mm',right:'15mm'}});
