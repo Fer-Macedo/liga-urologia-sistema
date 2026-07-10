@@ -10484,14 +10484,33 @@ router.get('/membro/contrato/dados', requireMembro, async (req, res) => {
     const msgSemContrato = 'Você ainda não possui contrato assinado. Por favor, procure a secretaria para regularizar sua situação.';
     if (!r.rows[0]) return res.json({ url: null, msg: msgSemContrato });
     // Mostra somente o PDF assinado (documento final, escaneado) — nunca o rascunho gerado antes da assinatura
-    const chave = r.rows[0].pdf_assinado_chave;
-    if (!chave) return res.json({ url: null, msg: msgSemContrato, status: r.rows[0].status });
-    const { S3Client, GetObjectCommand } = require('@aws-sdk/client-s3');
-    const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
-    const R2 = new S3Client({ region:'auto', endpoint:process.env.R2_ENDPOINT, credentials:{ accessKeyId:process.env.R2_ACCESS_KEY_ID, secretAccessKey:process.env.R2_SECRET_ACCESS_KEY }});
-    const url = await getSignedUrl(R2, new GetObjectCommand({ Bucket:process.env.R2_BUCKET||'liga-urologia-files', Key:chave }), { expiresIn:3600 });
-    res.json({ url, status: r.rows[0].status });
+    if (!r.rows[0].pdf_assinado_chave) return res.json({ url: null, msg: msgSemContrato, status: r.rows[0].status });
+    // Serve pelo proxy same-origin (/membro/contrato/pdf). O iframe apontando direto
+    // pro R2 e bloqueado pelo CSP (frame-src so 'self') — por isso o contrato aparecia em branco.
+    res.json({ url: '/membro/contrato/pdf', status: r.rows[0].status });
   } catch(e) { res.json({ url: null, msg: 'Erro ao carregar contrato.' }); }
+});
+
+// Serve o PDF do contrato assinado pelo proprio servidor (same-origin), para o iframe
+// do portal poder exibir sem ser bloqueado pelo CSP frame-src. Mesmo padrao do proxy
+// de materiais. Cada membro so acessa o proprio contrato (via sessao do portal).
+router.get('/membro/contrato/pdf', requireMembro, async (req, res) => {
+  const { tipo, id } = req.session.membroPortal;
+  try {
+    const r = tipo === 'ligante'
+      ? await query('SELECT pdf_assinado_chave FROM contratos_ligantes WHERE ligante_id=$1 ORDER BY criado_em DESC LIMIT 1', [id])
+      : await query('SELECT pdf_assinado_chave FROM contratos_diretivos WHERE diretivo_id=$1 ORDER BY criado_em DESC LIMIT 1', [id]);
+    const chave = r.rows[0] && r.rows[0].pdf_assinado_chave;
+    if (!chave) return res.status(404).send('Contrato nao disponivel');
+    const { gerarUrlTemporaria } = require('../services/arquivos');
+    const url = await gerarUrlTemporaria(chave, 60);
+    const axios = require('axios');
+    const resp = await axios.get(url, { responseType: 'stream', timeout: 30000 });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="contrato.pdf"');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    resp.data.pipe(res);
+  } catch(e) { res.status(500).send('Erro ao carregar contrato'); }
 });
 
 // Admin upload estatuto/regulamento
