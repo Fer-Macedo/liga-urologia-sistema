@@ -19,6 +19,11 @@
     .tema-grupo{margin-bottom:20px;}
     .tema-titulo{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:800;color:var(--texto);margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--borda);}
     .tema-contador{font-size:11px;font-weight:700;padding:3px 10px;border-radius:var(--rad);border:1px solid var(--borda);white-space:nowrap;}
+    .fila-opcoes{display:inline-flex;gap:6px;}
+    .fila-op{display:inline-flex;align-items:center;gap:5px;padding:6px 16px;border:2px solid var(--borda);border-radius:var(--rad);font-weight:800;font-size:14px;cursor:pointer;background:var(--fundo);transition:all .15s;user-select:none;}
+    .fila-op:hover{border-color:var(--cor-primaria);}
+    .fila-op input{margin:0;}
+    .fila-op.sel{background:var(--cor-primaria);border-color:var(--cor-primaria);color:#fff;}
     .btn-xs{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:var(--rad);font-size:11px;font-weight:600;border:1px solid var(--borda);background:var(--fundo);color:var(--texto);cursor:pointer;text-decoration:none;transition:all .15s;font-family:inherit;}
     .btn-xs:hover{border-color:var(--cor-primaria);color:var(--cor-primaria);}
     .btn-xs.roxo{background:#7c3aed;color:white;border-color:transparent;}
@@ -70,11 +75,14 @@
           <div class="alerta alerta-erro">Nenhuma questão cadastrada no banco. Cadastre questões na aba "Banco de Questões" antes de montar a prova.</div>
         <%}else{%>
         <form method="POST" action="/processo-seletivo/<%=processo.id%>/prova/salvar" id="form-prova">
-          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">
-            <label style="font-size:13px;font-weight:700">Fila / Versão:
-              <input name="fila" value="A" required maxlength="10" style="width:70px;margin-left:6px" placeholder="A">
-            </label>
-            <span style="font-size:12px;color:var(--texto2)">Marque as questões que entram nesta fila. Você pode montar várias filas (A, B, C…) trocando o nome acima.</span>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+            <span style="font-size:13px;font-weight:700">Fila / Versão:</span>
+            <div class="fila-opcoes">
+              <label class="fila-op"><input type="radio" name="fila" value="A" checked onchange="atualizarFila()"> A</label>
+              <label class="fila-op"><input type="radio" name="fila" value="B" onchange="atualizarFila()"> B</label>
+              <label class="fila-op"><input type="radio" name="fila" value="C" onchange="atualizarFila()"> C</label>
+            </div>
+            <span style="font-size:12px;color:var(--texto2)">Escolha a fila e marque as questões dela. Dá pra montar A, B e C separadamente.</span>
           </div>
 
           <%
@@ -143,7 +151,10 @@ function marcarTema(btn){
   atualizarContadores();
   btn.textContent = marcarTodas ? 'Desmarcar todas' : 'Marcar todas';
 }
-document.addEventListener('DOMContentLoaded', atualizarContadores);
+function atualizarFila(){
+  document.querySelectorAll('.fila-op').forEach(function(l){ l.classList.toggle('sel', l.querySelector('input').checked); });
+}
+document.addEventListener('DOMContentLoaded', function(){ atualizarContadores(); atualizarFila(); });
 document.getElementById('form-prova') && document.getElementById('form-prova').addEventListener('submit', function(e){
   if(document.querySelectorAll('input[name="questoes_ids"]:checked').length === 0){
     e.preventDefault(); alert('Selecione ao menos uma questão para montar a prova.');
