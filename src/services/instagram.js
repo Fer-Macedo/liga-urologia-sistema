@@ -226,6 +226,31 @@ async function postarAniversariantesDoDia() {
   }
 }
 
+// Aniversariantes (ligantes + diretivos) num dado dia MM-DD, ja com os campos
+// necessarios para gerar a arte. Fonte unica usada pelo Story e pelo email da equipe.
+async function aniversariantesDoDia(md) {
+  const r = await query(
+    `SELECT id, nome, cargo, sexo, NULL as semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave, 'diretivo' as tipo
+       FROM diretivos WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1
+     UNION ALL
+     SELECT id, nome, NULL as cargo, NULL as sexo, semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave, 'ligante' as tipo
+       FROM ligantes WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1`,
+    [md]
+  );
+  return r.rows;
+}
+
+// Gera a arte de aniversario de uma pessoa. Regra do rotulo (Ligante x cargo do
+// diretivo) mora AQUI, num lugar so, pra Story e email nunca divergirem.
+async function gerarArteAniversarioPessoa(pessoa, templateBuffer) {
+  const { baixarArquivoBuffer } = require('./arquivos');
+  const { gerarArteAniversario, nomeCurto } = require('./aniversario-arte');
+  const { cargoComGenero } = require('./cargo-genero');
+  const fotoBuffer = await baixarArquivoBuffer(pessoa.foto_chave);
+  const cargo = pessoa.tipo === 'diretivo' ? (pessoa.cargo ? cargoComGenero(pessoa.cargo, pessoa.sexo) : 'Directivo') : 'Ligante';
+  return gerarArteAniversario({ templateBuffer, fotoBuffer, nome: nomeCurto(pessoa.nome), cargo });
+}
+
 // ─── AUTOMAÇÃO: STORY DE ANIVERSÁRIO DE LIGANTES/DIRETIVOS ───────────────────
 async function postarStoriesAniversarioDoDia() {
   const cfg = await query("SELECT chave,valor FROM configuracoes WHERE chave IN ('aniversario_story_ativo','aniversario_template_chave')")
@@ -236,23 +261,14 @@ async function postarStoriesAniversarioDoDia() {
   const hoje = dayjs().format('MM-DD');
   const hojeData = dayjs().format('YYYY-MM-DD');
 
-  const r = await query(
-    `SELECT id, nome, cargo, sexo, NULL as semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave, 'diretivo' as tipo
-       FROM diretivos WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1
-     UNION ALL
-     SELECT id, nome, NULL as cargo, NULL as sexo, semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave, 'ligante' as tipo
-       FROM ligantes WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1`,
-    [hoje]
-  );
-  if (!r.rows.length) return;
+  const rows = await aniversariantesDoDia(hoje);
+  if (!rows.length) return;
 
   const { baixarArquivoBuffer, uploadArquivo, gerarUrlInline } = require('./arquivos');
-  const { gerarArteAniversario, nomeCurto } = require('./aniversario-arte');
-  const { cargoComGenero } = require('./cargo-genero');
   const templateBuffer = await baixarArquivoBuffer(cfg.aniversario_template_chave);
   const puladosSemFoto = [];
 
-  for (const pessoa of r.rows) {
+  for (const pessoa of rows) {
     try {
       const jaPostou = await query(
         'SELECT id FROM aniversario_stories_postados WHERE pessoa_tipo=$1 AND pessoa_id=$2 AND data=$3',
@@ -261,9 +277,7 @@ async function postarStoriesAniversarioDoDia() {
       if (jaPostou.rows.length > 0) continue;
       if (!pessoa.foto_chave) { puladosSemFoto.push(pessoa); continue; }
 
-      const fotoBuffer = await baixarArquivoBuffer(pessoa.foto_chave);
-      const cargo = pessoa.tipo === 'diretivo' ? (pessoa.cargo ? cargoComGenero(pessoa.cargo, pessoa.sexo) : 'Directivo') : 'Ligante';
-      const arteBuffer = await gerarArteAniversario({ templateBuffer, fotoBuffer, nome: nomeCurto(pessoa.nome), cargo });
+      const arteBuffer = await gerarArteAniversarioPessoa(pessoa, templateBuffer);
 
       const upload = await uploadArquivo(arteBuffer, `aniversario-${pessoa.tipo}-${pessoa.id}.jpg`, 'image/jpeg', 'aniversario-stories');
       const imageUrl = await gerarUrlInline(upload.chave, 'image/jpeg');
@@ -318,6 +332,8 @@ module.exports = {
   processarPostsAgendados,
   postarAniversariantesDoDia,
   postarStoriesAniversarioDoDia,
+  aniversariantesDoDia,
+  gerarArteAniversarioPessoa,
   buscarFeedCompleto,
   buscarComentarios,
   responderComentario,

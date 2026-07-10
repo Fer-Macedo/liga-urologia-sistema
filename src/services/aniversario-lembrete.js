@@ -57,8 +57,36 @@ async function enviarLembreteAniversarioEquipe(momento) {
     );
     const htmlEmail = mensagem.replace(/\*(.*?)\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
     const assuntoEmail = momento === 'dia' ? `Aniversário hoje (${dataFormatada})` : `Aniversário amanhã (${dataFormatada})`;
+
+    // No dia do aniversario, anexa a arte de cada aniversariante ao email para a
+    // equipe baixar e postar manualmente no grupo do WhatsApp. Gera uma vez e
+    // reaproveita o mesmo anexo para todos os destinatarios.
+    let anexos;
+    if (momento === 'dia') {
+      try {
+        const { aniversariantesDoDia, gerarArteAniversarioPessoa } = require('./instagram');
+        const { baixarArquivoBuffer } = require('./arquivos');
+        const cfgTpl = await query("SELECT valor FROM configuracoes WHERE chave='aniversario_template_chave'");
+        const templateChave = cfgTpl.rows[0] && cfgTpl.rows[0].valor;
+        if (templateChave) {
+          const templateBuffer = await baixarArquivoBuffer(templateChave);
+          const pessoas = await aniversariantesDoDia(md);
+          anexos = [];
+          for (const p of pessoas) {
+            if (!p.foto_chave) continue;
+            try {
+              const arte = await gerarArteAniversarioPessoa(p, templateBuffer);
+              const primeiroNome = p.nome.trim().split(/\s+/)[0];
+              anexos.push({ filename: `aniversario-${primeiroNome}.jpg`, content: arte, contentType: 'image/jpeg' });
+            } catch (e) { console.error('[LEMBRETE ANIVERSARIO] erro ao gerar arte de', p.nome, e.message); }
+          }
+          if (!anexos.length) anexos = undefined;
+        }
+      } catch (e) { console.error('[LEMBRETE ANIVERSARIO] erro ao preparar anexos:', e.message); }
+    }
+
     for (const em of destEmail.rows) {
-      try { await enviarEmail({ para: em.email, assunto: assuntoEmail, html: htmlEmail, titulo: assuntoEmail, faixaLabel: 'ANIVERSÁRIO' }); }
+      try { await enviarEmail({ para: em.email, assunto: assuntoEmail, html: htmlEmail, titulo: assuntoEmail, faixaLabel: 'ANIVERSÁRIO', anexos }); }
       catch (err) { console.error('[LEMBRETE ANIVERSARIO] erro email:', err.message); }
     }
 

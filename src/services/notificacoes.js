@@ -175,7 +175,8 @@ async function enviarEmail(opts) {
     await t.sendMail({
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: opts.para, subject: opts.assunto,
-      text: opts.texto || '', html: html
+      text: opts.texto || '', html: html,
+      attachments: opts.anexos || undefined
     });
     console.log('Email enviado para ' + opts.para);
     return { ok: true };
