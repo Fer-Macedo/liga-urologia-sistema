@@ -1937,7 +1937,7 @@ router.get('/processo-seletivo/prova/:id/pdf', requireAuth, requirePermissao('pr
     const pdf=await page.pdf({format:'A4',printBackground:true,margin:{top:'15mm',bottom:'15mm',left:'15mm',right:'15mm'}});
     await browser.close();
     res.setHeader('Content-Type','application/pdf');
-    res.setHeader('Content-Disposition','attachment; filename="prova-fila-'+pv.fila+'.pdf"');
+    res.setHeader('Content-Disposition',(req.query.download?'attachment':'inline')+'; filename="prova-fila-'+pv.fila+'.pdf"');
     res.end(Buffer.from(pdf)); // page.pdf() retorna Uint8Array; sem Buffer.from o Express serializa como JSON e corrompe o PDF
   } catch(e) { res.status(500).send('Erro PDF prova: '+e.message); }
 });
@@ -1981,7 +1981,7 @@ router.get('/processo-seletivo/prova/:id/gabarito', requireAuth, requirePermissa
     const pdf=await page.pdf({format:'A4',printBackground:true,margin:{top:'10mm',bottom:'10mm',left:'15mm',right:'15mm'}});
     await browser.close();
     res.setHeader('Content-Type','application/pdf');
-    res.setHeader('Content-Disposition','attachment; filename="gabarito-fila-'+pv.fila+'.pdf"');
+    res.setHeader('Content-Disposition',(req.query.download?'attachment':'inline')+'; filename="gabarito-fila-'+pv.fila+'.pdf"');
     res.end(Buffer.from(pdf)); // idem: Buffer.from p/ nao corromper o PDF
   } catch(e) { res.status(500).send('Erro PDF gabarito: '+e.message); }
 });

@@ -63,8 +63,10 @@
           <div class="prova-item">
             <div><strong>Fila <%=pv.fila%></strong> · <%=_n%> questões</div>
             <div style="display:flex;gap:6px;flex-wrap:wrap">
-              <a href="/processo-seletivo/prova/<%=pv.id%>/pdf" target="_blank" class="btn-xs roxo">PDF Prova</a>
-              <a href="/processo-seletivo/prova/<%=pv.id%>/gabarito" target="_blank" class="btn-xs azul">Gabarito</a>
+              <a href="/processo-seletivo/prova/<%=pv.id%>/pdf" target="_blank" class="btn-xs roxo">Ver Prova</a>
+              <a href="/processo-seletivo/prova/<%=pv.id%>/pdf?download=1" class="btn-xs">Baixar Prova</a>
+              <a href="/processo-seletivo/prova/<%=pv.id%>/gabarito" target="_blank" class="btn-xs azul">Ver Gabarito</a>
+              <a href="/processo-seletivo/prova/<%=pv.id%>/gabarito?download=1" class="btn-xs">Baixar Gabarito</a>
             </div>
           </div>
           <%});%>
