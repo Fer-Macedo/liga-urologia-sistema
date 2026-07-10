@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><link rel="shortcut icon" href="/favicon.ico"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Montar Prova — LAURO</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%= config.org_cor||'#2b6803' %>;--rad:2px;}
+    .q-select-card{background:var(--card);border:2px solid var(--borda);border-radius:var(--rad);padding:12px;margin-bottom:6px;cursor:pointer;transition:all .15s;display:block;}
+    .q-select-card.selecionada{border-color:var(--cor-primaria);background:#f0f7eb;}
+    .q-select-card:hover{border-color:var(--cor-primaria);}
+    .q-select-card input{margin-right:8px;}
+    .tema-chip{display:inline-block;padding:2px 8px;border-radius:var(--rad);font-size:10px;font-weight:700;background:#dbefd3;color:#166534;margin-bottom:6px;}
+    .q-enunciado{font-size:13px;font-weight:600;margin:4px 0 8px;line-height:1.4;}
+    .q-opcoes{display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:12px;}
+    .q-op{padding:4px 8px;border-radius:var(--rad);background:var(--fundo);border:1px solid var(--borda);}
+    .q-op.correta{background:#dcfce7;border-color:#16a34a;font-weight:700;}
+    .tema-grupo{margin-bottom:20px;}
+    .tema-titulo{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:800;color:var(--texto);margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--borda);}
+    .btn-xs{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:var(--rad);font-size:11px;font-weight:600;border:1px solid var(--borda);background:var(--fundo);color:var(--texto);cursor:pointer;text-decoration:none;transition:all .15s;font-family:inherit;}
+    .btn-xs:hover{border-color:var(--cor-primaria);color:var(--cor-primaria);}
+    .btn-xs.roxo{background:#7c3aed;color:white;border-color:transparent;}
+    .btn-xs.azul{background:#1d4ed8;color:white;border-color:transparent;}
+    .barra-fixa{position:sticky;bottom:0;background:var(--card);border:1px solid var(--borda);border-radius:var(--rad);padding:12px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:16px;box-shadow:0 -2px 8px rgba(0,0,0,.05);}
+    .prova-item{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--fundo);border:1px solid var(--borda);border-radius:var(--rad);padding:10px 14px;margin-bottom:6px;}
+    @media(max-width:768px){.q-opcoes{grid-template-columns:1fr;}}
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'processo-seletivo' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Montar Prova</h1>
+      <div class="topbar-acoes">
+        <a href="/processo-seletivo" class="btn btn-sm" style="text-decoration:none">← Voltar</a>
+      </div>
+    </div>
+    <div class="content">
+      <%if(msg&&msg.length>0){%><div class="alerta alerta-ok"><%=msg[0]%></div><%}%>
+      <%if(erro&&erro.length>0){%><div class="alerta alerta-erro"><%=erro[0]%></div><%}%>
+
+      <%if(!processo){%>
+        <div class="alerta alerta-erro">Processo não encontrado.</div>
+      <%}else{%>
+        <div style="margin-bottom:16px">
+          <div style="font-size:16px;font-weight:700"><%=processo.nome%></div>
+          <div style="font-size:12px;color:var(--texto2)"><%=processo.vagas%> vagas · nota mínima <%=processo.nota_minima%>%</div>
+        </div>
+
+        <!-- Provas ja montadas -->
+        <%if(provas&&provas.length>0){%>
+        <div style="margin-bottom:20px">
+          <div style="font-size:13px;font-weight:800;margin-bottom:8px">Provas já montadas</div>
+          <%provas.forEach(pv=>{ var _n=0; try{ _n=(Array.isArray(pv.questoes_json)?pv.questoes_json:JSON.parse(pv.questoes_json||'[]')).length; }catch(e){ _n=0; } %>
+          <div class="prova-item">
+            <div><strong>Fila <%=pv.fila%></strong> · <%=_n%> questões</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <a href="/processo-seletivo/prova/<%=pv.id%>/pdf" target="_blank" class="btn-xs roxo">PDF Prova</a>
+              <a href="/processo-seletivo/prova/<%=pv.id%>/gabarito" target="_blank" class="btn-xs azul">Gabarito</a>
+            </div>
+          </div>
+          <%});%>
+        </div>
+        <%}%>
+
+        <%if(!questoes||questoes.length===0){%>
+          <div class="alerta alerta-erro">Nenhuma questão cadastrada no banco. Cadastre questões na aba "Banco de Questões" antes de montar a prova.</div>
+        <%}else{%>
+        <form method="POST" action="/processo-seletivo/<%=processo.id%>/prova/salvar" id="form-prova">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+            <label style="font-size:13px;font-weight:700">Fila / Versão:
+              <input name="fila" value="A" required maxlength="10" style="width:70px;margin-left:6px" placeholder="A">
+            </label>
+            <span style="font-size:12px;color:var(--texto2)">Marque as questões que entram nesta fila. Você pode montar várias filas (A, B, C…) trocando o nome acima.</span>
+          </div>
+
+          <%temas.forEach(function(tema){%>
+          <div class="tema-grupo">
+            <div class="tema-titulo">
+              <span><%=tema%></span>
+              <button type="button" class="btn-xs" onclick="marcarTema(this)">Marcar todas</button>
+            </div>
+            <%questoes.filter(function(q){return q.tema===tema;}).forEach(function(q){%>
+            <label class="q-select-card" data-tema="<%=tema%>">
+              <input type="checkbox" name="questoes_ids" value="<%=q.id%>" onchange="atualizarSel(this)">
+              <span class="tema-chip">#<%=q.id%></span>
+              <div class="q-enunciado"><%=q.enunciado%></div>
+              <div class="q-opcoes">
+                <div class="q-op <%=q.resposta_correta==='A'?'correta':''%>">A) <%=q.opcao_a%></div>
+                <div class="q-op <%=q.resposta_correta==='B'?'correta':''%>">B) <%=q.opcao_b%></div>
+                <div class="q-op <%=q.resposta_correta==='C'?'correta':''%>">C) <%=q.opcao_c%></div>
+                <div class="q-op <%=q.resposta_correta==='D'?'correta':''%>">D) <%=q.opcao_d%></div>
+              </div>
+            </label>
+            <%});%>
+          </div>
+          <%});%>
+
+          <div class="barra-fixa">
+            <strong id="contador">0</strong> questão(ões) selecionada(s)
+            <button type="submit" class="btn btn-primario btn-sm" style="margin-left:auto">Salvar Prova</button>
+          </div>
+        </form>
+        <%}%>
+      <%}%>
+    </div>
+  </main>
+</div>
+<script>
+function atualizarSel(cb){
+  cb.closest('.q-select-card').classList.toggle('selecionada', cb.checked);
+  document.getElementById('contador').textContent = document.querySelectorAll('input[name="questoes_ids"]:checked').length;
+}
+function marcarTema(btn){
+  var grupo = btn.closest('.tema-grupo');
+  var cbs = grupo.querySelectorAll('input[name="questoes_ids"]');
+  var marcarTodas = Array.prototype.some.call(cbs, function(c){return !c.checked;});
+  cbs.forEach(function(c){ c.checked = marcarTodas; atualizarSel(c); });
+  btn.textContent = marcarTodas ? 'Desmarcar todas' : 'Marcar todas';
+}
+document.getElementById('form-prova') && document.getElementById('form-prova').addEventListener('submit', function(e){
+  if(document.querySelectorAll('input[name="questoes_ids"]:checked').length === 0){
+    e.preventDefault(); alert('Selecione ao menos uma questão para montar a prova.');
+  }
+});
+</script>
+</body>
+</html>
