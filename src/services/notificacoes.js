@@ -14,9 +14,9 @@ let filaProcessando = false;
 // Manter true até o número estar aquecido (~10 dias). Só o assistente virtual funciona.
 const WAPP_SOMENTE_RESPOSTA = process.env.WAPP_SOMENTE_RESPOSTA === 'true';
 
-const LOTE_TAM         = parseInt(process.env.WAPP_LOTE_TAM)        || 5;   // msgs por lote
-const INTERVALO_MSG    = parseInt(process.env.WAPP_INTERVALO_MSG)    || 30;  // segundos entre mensagens
-const INTERVALO_LOTE   = parseInt(process.env.WAPP_INTERVALO_LOTE)  || 120; // segundos entre lotes
+const LOTE_TAM         = parseInt(process.env.WAPP_LOTE_TAM)        || 3;   // msgs por lote (padrao conservador)
+const INTERVALO_MSG    = parseInt(process.env.WAPP_INTERVALO_MSG)    || 60;  // segundos-base entre mensagens
+const INTERVALO_LOTE   = parseInt(process.env.WAPP_INTERVALO_LOTE)  || 300; // segundos-base entre lotes
 
 function sleep(segundos) {
   return new Promise(r => setTimeout(r, segundos * 1000));
@@ -90,14 +90,17 @@ async function processarFila() {
         return;
       }
       if (i < lote.length - 1) {
-        const intervalo = INTERVALO_MSG + Math.floor(Math.random() * 15);
+        // Intervalo com jitter amplo (ate +60%) — espacamento fixo parece robo e e detectado.
+        const intervalo = INTERVALO_MSG + Math.floor(Math.random() * Math.max(20, INTERVALO_MSG * 0.6));
         console.log(`[FILA WAPP] Aguardando ${intervalo}s... (${enviosHoje}/${LIMITE_DIARIO} hoje)`);
         await sleep(intervalo);
       }
     }
     if (filaEnvio.length > 0 && enviosHoje < LIMITE_DIARIO && dentroHorarioPermitido()) {
-      console.log(`[FILA WAPP] Lote ok. Aguardando ${INTERVALO_LOTE}s... (${filaEnvio.length} restantes)`);
-      await sleep(INTERVALO_LOTE);
+      // Pausa entre lotes com jitter (ate +40%) — evita cadencia previsivel.
+      const intervaloLote = INTERVALO_LOTE + Math.floor(Math.random() * Math.max(60, INTERVALO_LOTE * 0.4));
+      console.log(`[FILA WAPP] Lote ok. Aguardando ${intervaloLote}s... (${filaEnvio.length} restantes)`);
+      await sleep(intervaloLote);
     }
   }
   console.log(`[FILA WAPP] Sessão ok — ${enviados} enviados, ${erros} erros, ${enviosHoje}/${LIMITE_DIARIO} hoje`);
