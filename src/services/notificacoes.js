@@ -115,12 +115,35 @@ function formatarNumero(numero) {
   return n;
 }
 
+// Verifica se a instancia W-API esta CONECTADA ao WhatsApp. A W-API aceita o send-text
+// (HTTP 200) mesmo desconectada, mas nada e entregue — entao sem esta checagem o sistema
+// registra "enviado" e ninguem recebe. Cacheia 60s pra nao consultar a cada mensagem.
+let _connCache = { ts: 0, connected: null };
+async function instanciaConectada() {
+  const agora = Date.now();
+  if (_connCache.connected !== null && agora - _connCache.ts < 60000) return _connCache.connected;
+  try {
+    const r = await axios.get(
+      'https://api.w-api.app/v1/instance/status-instance?instanceId=' + process.env.WAPI_INSTANCE_ID,
+      { headers: { 'Authorization': 'Bearer ' + process.env.WAPI_TOKEN }, timeout: 10000 }
+    );
+    _connCache = { ts: agora, connected: !!(r.data && r.data.connected) };
+  } catch (e) { _connCache = { ts: agora, connected: false }; }
+  return _connCache.connected;
+}
+
 // Envia direto para a W-API (sem fila)
 async function _enviarWhatsAppDireto(numero, mensagem) {
   const instanceId = process.env.WAPI_INSTANCE_ID;
   const token = process.env.WAPI_TOKEN;
   if (!token || !instanceId) { console.warn('W-API nao configurada'); return { ok: false }; }
   const fone = formatarNumero(numero);
+  // PREFLIGHT: se a instancia esta desconectada, NAO envia e reporta erro honesto
+  // (antes retornava ok:true no 200 da W-API mesmo sem WhatsApp conectado).
+  if (!(await instanciaConectada())) {
+    console.error('[W-API] DESCONECTADA do WhatsApp — mensagem NAO entregue a ' + fone + '. Reconecte a instancia (QR) no painel da W-API.');
+    return { ok: false, disconnected: true };
+  }
   try {
     const url = 'https://api.w-api.app/v1/message/send-text?instanceId=' + instanceId;
     const { data, status } = await axios.post(
