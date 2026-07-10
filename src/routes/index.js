@@ -973,8 +973,10 @@ router.get('/api/equipe-publica', corsPublico, limiterApiPublica, async (req, re
       if (m.foto_chave) { try { foto_url = await gerarUrlInline(m.foto_chave); } catch(e) {} }
       return { ...m, foto_url };
     }));
-    const [diretivosRaw, ligantes] = await Promise.all([mapFoto(dirsR.rows), mapFoto(ligsR.rows)]);
+    const [diretivosRaw, ligantesRaw] = await Promise.all([mapFoto(dirsR.rows), mapFoto(ligsR.rows)]);
     const diretivos = diretivosRaw.map(d => ({ id: d.id, nome: d.nome, foto_chave: d.foto_chave, foto_url: d.foto_url, cargo: d.cargo ? cargoComGenero(d.cargo, d.sexo) : 'Directivo' }));
+    // Ligante nao expoe mais o semestre (desatualiza) — rotulo fixo "Ligante".
+    const ligantes = ligantesRaw.map(l => ({ id: l.id, nome: l.nome, foto_chave: l.foto_chave, foto_url: l.foto_url, cargo: 'Ligante', semestre: 'Ligante' }));
     res.json({ diretivos, ligantes });
   } catch(e) { console.error('[API-PUBLIC] equipe:', e.message); res.json({ diretivos: [], ligantes: [] }); }
 });
@@ -10129,16 +10131,16 @@ async function getMembroPortal(tipo, id) {
 router.get('/membro/perfil/:tipo/:id', async (req, res) => {
   try {
     const { gerarUrlInline } = require('../services/arquivos');
-    const { cargoComGenero } = require('../services/cargo-genero');
+    const { rotuloAniversario } = require('../services/cargo-genero');
     const tipo = req.params.tipo === 'diretivo' ? 'diretivo' : 'ligante';
     const r = tipo === 'diretivo'
       ? await query("SELECT id, nome, cargo, sexo, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM diretivos WHERE id=$1 AND ativo=1 AND pendente=false", [req.params.id])
-      : await query("SELECT id, nome, semestre, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM ligantes WHERE id=$1 AND ativo=1 AND pendente=false", [req.params.id]);
+      : await query("SELECT id, nome, COALESCE(foto_site_chave, foto_chave) as foto_chave FROM ligantes WHERE id=$1 AND ativo=1 AND pendente=false", [req.params.id]);
     if (!r.rows.length) return res.status(404).send('Perfil no encontrado');
     const m = r.rows[0];
     let foto_url = null;
     if (m.foto_chave) { try { foto_url = await gerarUrlInline(m.foto_chave); } catch(e) {} }
-    const pessoa = { nome: m.nome, cargo: tipo === 'diretivo' ? (m.cargo ? cargoComGenero(m.cargo, m.sexo) : 'Directivo') : ((m.semestre||'') + '° Semestre'), foto_url };
+    const pessoa = { nome: m.nome, cargo: rotuloAniversario({ tipo, cargo: m.cargo, sexo: m.sexo }), foto_url };
     res.render('pages/membro/perfil-publico', { pessoa, tipo });
   } catch(e) { res.status(500).send('Error al cargar el perfil'); }
 });
