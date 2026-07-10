@@ -284,24 +284,35 @@ async function enviarAniversarios() {
   if (config.notif_aniversario_ativo !== '1') return;
   const hoje = dayjs();
   const md = hoje.format('MM-DD');
-  const r = await query(
-    "SELECT * FROM membros WHERE ativo=1 AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1",
-    [md]
-  );
+
+  // Aniversariantes de hoje: membros + ligantes + diretivos (antes so cobria membros,
+  // entao ligante/diretivo nunca recebia a mensagem de parabens — so o story do Instagram).
+  const membrosR   = await query("SELECT id, nome, whatsapp, email, 'membro'   AS _tipo FROM membros   WHERE ativo=1 AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1", [md]);
+  const ligantesR  = await query("SELECT id, nome, whatsapp, email, 'ligante'  AS _tipo FROM ligantes  WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1", [md]);
+  const diretivosR = await query("SELECT id, nome, whatsapp, email, 'diretivo' AS _tipo FROM diretivos WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1", [md]);
+  const todos = [...membrosR.rows, ...ligantesR.rows, ...diretivosR.rows];
+
   let count = 0;
-  for (const membro of r.rows) {
+  for (const pessoa of todos) {
     if (!podeMensagem()) break;
-    const j = await query(
-      "SELECT id FROM notificacoes_log WHERE membro_id=$1 AND tipo='aniversario' AND enviado_em >= CURRENT_DATE",
-      [membro.id]
-    );
-    if (j.rows.length === 0) {
-      await notificarAniversario({ membro, config });
-      incrementarContador();
-      count++;
-      await esperarIntervalo(count);
-      console.log('Parabéns enviado:', membro.nome);
-    }
+    // Dedup: membro segue por membro_id (compat); ligante/diretivo por observacao (evita
+    // colisao de id entre tabelas). Chave estavel: aniv_<tipo>_<id>.
+    const dedupKey = 'aniv_' + pessoa._tipo + '_' + pessoa.id;
+    const j = pessoa._tipo === 'membro'
+      ? await query("SELECT id FROM notificacoes_log WHERE membro_id=$1 AND tipo='aniversario' AND enviado_em >= CURRENT_DATE", [pessoa.id])
+      : await query("SELECT id FROM notificacoes_log WHERE observacao=$1 AND tipo='aniversario' AND enviado_em >= CURRENT_DATE", [dedupKey]);
+    if (j.rows.length) continue;
+
+    await notificarAniversario({
+      membro: pessoa,
+      config,
+      membroId: pessoa._tipo === 'membro' ? pessoa.id : null,
+      observacao: dedupKey
+    });
+    incrementarContador();
+    count++;
+    await esperarIntervalo(count);
+    console.log('Parabéns enviado:', pessoa.nome, '(' + pessoa._tipo + ')');
   }
 }
 
