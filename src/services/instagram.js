@@ -62,6 +62,20 @@ async function publicarStory({ imageUrl }) {
     access_token: TOKEN
   });
 
+  // Aguarda o Instagram processar a imagem antes de publicar — sem isso o
+  // media_publish falha com "Media ID is not available" (code 9007).
+  let status = 'IN_PROGRESS';
+  let tentativas = 0;
+  while (status !== 'FINISHED' && tentativas < 15) {
+    await new Promise(r => setTimeout(r, 2000));
+    const check = await axios.get(`${BASE}/${container.data.id}`, {
+      params: { fields: 'status_code', access_token: TOKEN }
+    });
+    status = check.data.status_code;
+    tentativas++;
+  }
+  if (status !== 'FINISHED') throw new Error('Processamento da imagem do story falhou: ' + status);
+
   const pub = await axios.post(`${BASE}/${IG_ID}/media_publish`, {
     creation_id: container.data.id,
     access_token: TOKEN
