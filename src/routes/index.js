@@ -1749,6 +1749,15 @@ router.post('/processo-seletivo/criar', requireAuth, requirePermissao('processo-
   } catch(e) { req.session.erro=[e.message]; }
   res.redirect('/processo-seletivo');
 });
+router.post('/processo-seletivo/:id/editar', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
+  try {
+    const {nome,semestre,data_prova,local_prova,vagas,nota_minima}=req.body;
+    await query('UPDATE ps_processos SET nome=$1,semestre=$2,data_prova=$3,local_prova=$4,vagas=$5,nota_minima=$6 WHERE id=$7',
+      [nome,semestre||null,data_prova||null,local_prova||null,parseInt(vagas)||10,parseFloat(nota_minima)||60,req.params.id]);
+    req.session.msg=['Processo atualizado!'];
+  } catch(e) { req.session.erro=[e.message]; }
+  res.redirect('/processo-seletivo');
+});
 router.post('/processo-seletivo/:id/deletar', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try { await query('DELETE FROM ps_processos WHERE id=$1',[req.params.id]); req.session.msg=['Processo excluído!']; }
   catch(e) { req.session.erro=[e.message]; }
