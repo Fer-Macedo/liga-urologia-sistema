@@ -367,8 +367,10 @@ REGLAS IMPORTANTES:
 // Integração única de WhatsApp: W-API (api.w-api.app)
 const WAPI_BASE = 'https://api.w-api.app/v1/message';
 
-// KILL SWITCH global de WhatsApp (ver notificacoes.js). Pausa tambem o assistente.
-function _wappPausado() { return process.env.WAPP_KILL === 'true'; }
+// O assistente tem trava PROPRIA (WAPP_ASSISTENTE_OFF), separada do WAPP_KILL que
+// desliga so os disparos PROATIVOS (cobranca/aniversario/marketing por _enviarWhatsAppDireto).
+// Assim o proativo pode ficar 100% no e-mail enquanto o LAURO segue atendendo no WhatsApp.
+function _wappPausado() { return process.env.WAPP_ASSISTENTE_OFF === 'true'; }
 
 async function enviarMensagem(numero, mensagem) {
   if (_wappPausado()) { console.warn('[LAURO] Envio PAUSADO (WAPP_KILL).'); return; }
