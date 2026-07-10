@@ -1938,7 +1938,7 @@ router.get('/processo-seletivo/prova/:id/pdf', requireAuth, requirePermissao('pr
     await browser.close();
     res.setHeader('Content-Type','application/pdf');
     res.setHeader('Content-Disposition','attachment; filename="prova-fila-'+pv.fila+'.pdf"');
-    res.send(pdf);
+    res.end(Buffer.from(pdf)); // page.pdf() retorna Uint8Array; sem Buffer.from o Express serializa como JSON e corrompe o PDF
   } catch(e) { res.status(500).send('Erro PDF prova: '+e.message); }
 });
 router.get('/processo-seletivo/prova/:id/gabarito', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
@@ -1982,7 +1982,7 @@ router.get('/processo-seletivo/prova/:id/gabarito', requireAuth, requirePermissa
     await browser.close();
     res.setHeader('Content-Type','application/pdf');
     res.setHeader('Content-Disposition','attachment; filename="gabarito-fila-'+pv.fila+'.pdf"');
-    res.send(pdf);
+    res.end(Buffer.from(pdf)); // idem: Buffer.from p/ nao corromper o PDF
   } catch(e) { res.status(500).send('Erro PDF gabarito: '+e.message); }
 });
 // ─────────────────────────────────────────────────────────────────────────────
@@ -6616,7 +6616,7 @@ router.get('/contratos/:id/pdf', requireAuth, requirePermissao('contratos'), asy
     await browser.close();
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', 'inline; filename="contrato.pdf"');
-    res.send(pdf);
+    res.end(Buffer.from(pdf)); // page.pdf() retorna Uint8Array; Buffer.from evita PDF corrompido
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
