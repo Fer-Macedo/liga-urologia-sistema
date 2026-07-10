@@ -4151,10 +4151,8 @@ router.post('/desvinculacoes/:id/editar', requireAuth, requirePermissao('desvinc
 
 function gerarHTMLCartaCobranca(pessoa, config, carta) {
   const timbrado = config.timbrado_b64 || null;
-  const presidSrc = config.assinatura_presidente_b64 || null;
-  const secretSrc = config.assinatura_secretario_b64 || null;
-  const nomePresidente = (config.presidente_nome || 'PRESIDENTE').toUpperCase();
-  const nomeSecretario = (config.secretario_nome || 'SECRETARIO(A)').toUpperCase();
+  const financeiroSrc = config.assinatura_financeiro_b64 || null;
+  const nomeFinanceiro = (config.financeiro_nome || 'DIRECTOR(A) FINANCIERO(A)').toUpperCase();
   const d = new Date(carta.data || new Date());
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const dataStr = d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
