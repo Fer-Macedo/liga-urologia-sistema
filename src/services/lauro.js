@@ -367,7 +367,11 @@ REGLAS IMPORTANTES:
 // Integração única de WhatsApp: W-API (api.w-api.app)
 const WAPI_BASE = 'https://api.w-api.app/v1/message';
 
+// KILL SWITCH global de WhatsApp (ver notificacoes.js). Pausa tambem o assistente.
+function _wappPausado() { return process.env.WAPP_KILL === 'true'; }
+
 async function enviarMensagem(numero, mensagem) {
+  if (_wappPausado()) { console.warn('[LAURO] Envio PAUSADO (WAPP_KILL).'); return; }
   try {
     const delay = Math.min(Math.max(mensagem.length * 25, 1500), 4000);
     await new Promise(r => setTimeout(r, delay));
@@ -380,6 +384,7 @@ async function enviarMensagem(numero, mensagem) {
   } catch(e) { console.error('Lauro erro envio:', e.response ? JSON.stringify(e.response.data) : e.message); }
 }
 async function enviarImagem(numero, imagem, legenda) {
+  if (_wappPausado()) { console.warn('[LAURO] Envio de imagem PAUSADO (WAPP_KILL).'); return; }
   try {
     await axios.post(
       WAPI_BASE + '/send-image?instanceId=' + process.env.WAPI_INSTANCE_ID,
@@ -390,6 +395,7 @@ async function enviarImagem(numero, imagem, legenda) {
   } catch(e) { console.error('Lauro erro envio imagem:', e.response ? JSON.stringify(e.response.data) : e.message); }
 }
 async function enviarDocumento(numero, documento, fileName) {
+  if (_wappPausado()) { console.warn('[LAURO] Envio de documento PAUSADO (WAPP_KILL).'); return; }
   try {
     await axios.post(
       WAPI_BASE + '/send-document?instanceId=' + process.env.WAPI_INSTANCE_ID,

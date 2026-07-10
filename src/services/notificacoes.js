@@ -134,6 +134,10 @@ async function instanciaConectada() {
 
 // Envia direto para a W-API (sem fila)
 async function _enviarWhatsAppDireto(numero, mensagem) {
+  // KILL SWITCH: pausa TOTAL de envio de WhatsApp. Enquanto a conta estiver sendo banida
+  // a cada mensagem (gateway nao-oficial), qualquer envio so queima a conta. Ligar com
+  // WAPP_KILL=true no .env. Desligar so quando houver canal seguro (API oficial/novo numero).
+  if (process.env.WAPP_KILL === 'true') { console.warn('[W-API] Envio PAUSADO (WAPP_KILL). Nada enviado.'); return { ok: false, killed: true }; }
   const instanceId = process.env.WAPI_INSTANCE_ID;
   const token = process.env.WAPI_TOKEN;
   if (!token || !instanceId) { console.warn('W-API nao configurada'); return { ok: false }; }
