@@ -290,7 +290,16 @@ async function enviarAniversarios() {
   const membrosR   = await query("SELECT id, nome, whatsapp, email, 'membro'   AS _tipo FROM membros   WHERE ativo=1 AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1", [md]);
   const ligantesR  = await query("SELECT id, nome, whatsapp, email, 'ligante'  AS _tipo FROM ligantes  WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1", [md]);
   const diretivosR = await query("SELECT id, nome, whatsapp, email, 'diretivo' AS _tipo FROM diretivos WHERE ativo=1 AND pendente=false AND data_nascimento IS NOT NULL AND TO_CHAR(data_nascimento::date,'MM-DD')=$1", [md]);
-  const todos = [...membrosR.rows, ...ligantesR.rows, ...diretivosR.rows];
+
+  // A MESMA pessoa pode estar em mais de uma tabela (ex.: ligante que tambem e membro).
+  // Deduplica por pessoa (whatsapp > email > tipo+id) para nao mandar 2x. Membro vem
+  // primeiro, entao prevalece (mantem o comportamento/log ja existente para membros).
+  const vistos = new Set();
+  const todos = [...membrosR.rows, ...ligantesR.rows, ...diretivosR.rows].filter(p => {
+    const chave = (p.whatsapp && p.whatsapp.replace(/[^0-9]/g, '')) || (p.email && p.email.toLowerCase()) || (p._tipo + p.id);
+    if (vistos.has(chave)) return false;
+    vistos.add(chave); return true;
+  });
 
   let count = 0;
   for (const pessoa of todos) {
