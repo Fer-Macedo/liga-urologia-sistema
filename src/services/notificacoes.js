@@ -27,6 +27,13 @@ const HORA_INICIO   = parseInt(process.env.WAPP_HORA_INICIO)   || 8;
 const HORA_FIM      = parseInt(process.env.WAPP_HORA_FIM)      || 20;
 let enviosHoje = 0;
 let ultimoResetDia = new Date().toDateString();
+// DISJUNTOR ANTI-BAN: se a W-API falhar em sequencia (sessao caida/banida), para de
+// enviar por um tempo em vez de martelar os mesmos numeros — martelar sessao morta
+// e acelerador de banimento. Retoma sozinho apos a pausa.
+const FALHAS_LIMITE = parseInt(process.env.WAPP_FALHAS_LIMITE) || 5;
+const PAUSA_FALHAS_MIN = parseInt(process.env.WAPP_PAUSA_FALHAS_MIN) || 60;
+let falhasSeguidas = 0;
+let envioPausadoAte = 0;
 function resetarContadorDiario() {
   const hoje = new Date().toDateString();
   if (hoje !== ultimoResetDia) { enviosHoje = 0; ultimoResetDia = hoje; console.log('[FILA WAPP] Contador diário resetado'); }
@@ -39,6 +46,13 @@ async function processarFila() {
   if (filaProcessando || filaEnvio.length === 0) return;
   filaProcessando = true;
   resetarContadorDiario();
+  if (Date.now() < envioPausadoAte) {
+    const faltamMin = Math.ceil((envioPausadoAte - Date.now()) / 60000);
+    console.warn(`[FILA WAPP] DISJUNTOR ativo (muitas falhas seguidas). Enviando de novo em ~${faltamMin}min. ${filaEnvio.length} na fila.`);
+    filaProcessando = false;
+    setTimeout(processarFila, Math.min(envioPausadoAte - Date.now(), 30 * 60 * 1000) + 1000);
+    return;
+  }
   if (!dentroHorarioPermitido()) {
     console.log(`[FILA WAPP] Fora do horário (${HORA_INICIO}h-${HORA_FIM}h). Tentando em 30min...`);
     filaProcessando = false;
@@ -62,8 +76,19 @@ async function processarFila() {
       try {
         const result = await _enviarWhatsAppDireto(numero, mensagem);
         resolve(result);
-        if (result.ok) { enviados++; enviosHoje++; } else erros++;
-      } catch(e) { resolve({ ok: false }); erros++; }
+        if (result.ok) { enviados++; enviosHoje++; falhasSeguidas = 0; }
+        else { erros++; falhasSeguidas++; }
+      } catch(e) { resolve({ ok: false }); erros++; falhasSeguidas++; }
+      // DISJUNTOR: falhas seguidas = sessao provavelmente caida/banida — pausa e para de martelar
+      if (falhasSeguidas >= FALHAS_LIMITE) {
+        envioPausadoAte = Date.now() + PAUSA_FALHAS_MIN * 60 * 1000;
+        falhasSeguidas = 0;
+        console.error(`[FILA WAPP] DISJUNTOR DISPARADO: ${FALHAS_LIMITE} falhas seguidas. Pausando envios por ${PAUSA_FALHAS_MIN}min. Verifique se o numero foi banido/desconectado. ${filaEnvio.length + lote.length - i - 1} msg(s) pendentes.`);
+        filaEnvio.unshift(...lote.slice(i + 1));
+        filaProcessando = false;
+        setTimeout(processarFila, PAUSA_FALHAS_MIN * 60 * 1000 + 1000);
+        return;
+      }
       if (i < lote.length - 1) {
         const intervalo = INTERVALO_MSG + Math.floor(Math.random() * 15);
         console.log(`[FILA WAPP] Aguardando ${intervalo}s... (${enviosHoje}/${LIMITE_DIARIO} hoje)`);
@@ -330,8 +355,11 @@ async function notificarCobranca(opts) {
     pos: '❗ Mensalidade em atraso'
   };
 
-  const cabWpp    = '*' + orgNome + '* 🏥\n\n';
-  const cartaoWpp = linkCartao ? '💳 *Cartão:* ' + linkCartao + '\n\n' : '';
+  const cabWpp = '*' + orgNome + '* 🏥\n\n';
+  // Direciona ao Portal do Membro em vez de mandar PIX/link no WhatsApp: mensagem mais
+  // curta, um unico link de canal proprio (que eles ja conhecem), sem codigo solto —
+  // melhor para o membro e menor risco de ban. PIX/cartao completos ficam no e-mail.
+  const portalWpp = '💳 Para pagar e ver o boleto/PIX, acesse o *Portal do Membro*:\nhttps://membro.lauroucpcde.com\n\n';
 
   const msgWppMap = {
     pre: cabWpp
@@ -339,8 +367,7 @@ async function notificarCobranca(opts) {
       + '⚠️ Sua mensalidade vence em *' + dados.dias + ' dias* (' + dados.data + ').\n\n'
       + '💰 Com desconto: *' + dados.valor_desc + '*\n'
       + '💰 Sem desconto: ' + dados.valor_cheio + '\n\n'
-      + (pixCode ? '⚡ *PIX:* Código enviado na mensagem seguinte — é só copiar!\n\n' : '')
-      + cartaoWpp
+      + portalWpp
       + 'Dúvidas? Estamos à disposição! 😊',
 
     dia: cabWpp
@@ -348,39 +375,41 @@ async function notificarCobranca(opts) {
       + '⏰ *HOJE* é o último dia com desconto!\n\n'
       + '💰 Com desconto: *' + dados.valor_desc + '*\n'
       + '💰 Sem desconto: ' + dados.valor_cheio + '\n\n'
-      + (pixCode ? '⚡ *PIX:* Código enviado na mensagem seguinte — é só copiar!\n\n' : '')
-      + cartaoWpp
+      + portalWpp
       + 'Não perca o desconto! 🙏',
 
     pos: cabWpp
       + 'Olá, *' + dados.nome + '*!\n\n'
       + '❗ Sua mensalidade está *em atraso* desde ' + dados.data + '.\n\n'
       + '💰 Valor: *' + dados.valor_cheio + '*\n\n'
-      + (pixCode ? '⚡ *PIX:* Código enviado na mensagem seguinte — é só copiar!\n\n' : '')
-      + cartaoWpp
-      + 'Por favor, regularize sua situação. 🙏'
+      + portalWpp
+      + 'Por favor, regularize sua situação pelo portal. 🙏'
   };
 
   // ── WhatsApp (suspenso no modo aquecimento — WAPP_SOMENTE_RESPOSTA=true)
   // Disparo de cobranca por WhatsApp fica 100% suspenso enquanto aquecemos o numero.
   // Excecao unica liberada: aniversario (notificarAniversario, abaixo) e o assistente virtual (lauro.js).
   if (membro.whatsapp && opts.canal !== 'email' && !WAPP_SOMENTE_RESPOSTA) {
-    let wppOk = false;
-
-    // Mensagem 1 — principal com instruções
-    const r1 = await enviarWhatsApp(membro.whatsapp, msgWppMap[tipo] || '');
-    if (r1.ok) wppOk = true;
-
-    // Mensagem 2 — só o código PIX (facilita copiar no celular)
-    if (pixCode) {
-      await new Promise(res => setTimeout(res, 2500));
-      await enviarWhatsApp(membro.whatsapp, pixCode);
+    // ANTI-BAN: nao reenviar a MESMA cobranca de atraso por WhatsApp todo dia ao mesmo
+    // numero (padrao de spam). Limita a 1 msg a cada 3 dias no WhatsApp. O EMAIL continua
+    // diario (abaixo), entao o atrasado segue sendo cobrado todo dia por email.
+    let podeWpp = true;
+    if (tipo === 'pos') {
+      const recente = await query(
+        "SELECT 1 FROM notificacoes_log WHERE cobranca_id=$1 AND canal='whatsapp' AND tipo='pos' AND status='ok' AND enviado_em >= NOW() - INTERVAL '3 days' LIMIT 1",
+        [cobranca.id]
+      );
+      if (recente.rows.length) podeWpp = false;
     }
 
-    await query(
-      'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
-      [membro.id, cobranca.id, tipo, 'whatsapp', wppOk ? 'ok' : 'erro']
-    );
+    if (podeWpp) {
+      // Uma unica mensagem (texto + PIX embutido)
+      const r1 = await enviarWhatsApp(membro.whatsapp, msgWppMap[tipo] || '');
+      await query(
+        'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
+        [membro.id, cobranca.id, tipo, 'whatsapp', r1.ok ? 'ok' : 'erro']
+      );
+    }
   }
 
   // ── Email

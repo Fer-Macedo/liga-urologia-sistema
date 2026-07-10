@@ -2478,17 +2478,31 @@ router.post('/usuarios/:id/excluir', requireAuth, requireAdmin, async (req, res)
 });
 
 // ─── WEBHOOK WHATSAPP — LAURO ─────────────────────────────────────────────────
+// Dedup de webhooks (a W-API reentrega em retry) — evita o bot responder duplicado.
+const webhookVistos = new Set();
 router.post('/webhook/whatsapp', async (req, res) => {
   try {
     const body = req.body;
     if (!body || typeof body !== 'object') return res.sendStatus(200);
+    // Auth opcional: se WAPP_WEBHOOK_SECRET estiver setado, exige ?secret= igual na URL do
+    // webhook (configure em https://painel.w-api.app -> Webhook -> URL com ?secret=SEGREDO).
+    // Sem o env setado, nao bloqueia nada (retrocompatibilidade).
+    if (process.env.WAPP_WEBHOOK_SECRET && req.query.secret !== process.env.WAPP_WEBHOOK_SECRET) return res.sendStatus(200);
     console.log('Webhook WA recebido:', JSON.stringify(body).substring(0, 200));
 
-    // Ignorar mensagens proprias e grupos
-    const fromMe = body.fromMe;
-    const isGroup = body.isGroup;
-    if (fromMe === true) return res.sendStatus(200);
-    if (isGroup === true) return res.sendStatus(200);
+    const rawId = String((body.sender && body.sender.id) || body.phone || body.senderPhone || '');
+    // Ignorar: mensagens proprias (fromMe), grupos, broadcast/status/newsletter.
+    // Checagem robusta (truthy + id bruto) — antes so pegava === true e vazava loop/broadcast.
+    if (body.fromMe || (body.key && body.key.fromMe)) return res.sendStatus(200);
+    if (body.isGroup || /@g\.us|@broadcast|status@broadcast|@newsletter/i.test(rawId)) return res.sendStatus(200);
+
+    // Dedup por messageId — mata respostas duplicadas em reentregas do webhook.
+    const msgId = String(body.messageId || (body.message && body.message.id) || (body.key && body.key.id) || body.id || '');
+    if (msgId) {
+      if (webhookVistos.has(msgId)) return res.sendStatus(200);
+      webhookVistos.add(msgId);
+      if (webhookVistos.size > 1000) webhookVistos.clear();
+    }
 
     // Extrair numero
     let numero = ((body.sender && body.sender.id ? body.sender.id : '') || (body.phone||'') || (body.senderPhone||'')).replace(/[^0-9]/g, '');
@@ -8508,8 +8522,9 @@ router.post('/atas/:id/status', requireAuth, requirePermissao('atas'), async (re
               const tipoAta = a.tipo === 'ordinaria' ? 'Ordinaria' : a.tipo === 'extraordinaria' ? 'Extraordinaria' : 'Especial';
               const numAta = a.numero || a.id;
               const msgWapp = '*LAURO — Assinatura de Ata*\n\nOla, ' + primeiroNome + '!\n\nA *Ata N ' + numAta + '* (Reuniao ' + tipoAta + ' — ' + dataFormatada + ') aguarda sua assinatura.\n\nLink de uso unico (expira em 30 dias):\n' + resultado.link + '\n\n_Liga Academica de Urologia — LAURO | UCP | CDE_';
-              await enviarWhatsApp(p.whatsapp, msgWapp, {urgente:true});
-              await new Promise(r=>setTimeout(r,15000));
+              // Enfileira (rate-limited). Antes era {urgente:true} em LOOP -> furava o
+              // anti-ban mandando direto a varios de uma vez. Fire-and-forget: a fila paga o ritmo.
+              enviarWhatsApp(p.whatsapp, msgWapp);
               await query("INSERT INTO notificacoes_log(tipo,canal,status,observacao,criado_em) VALUES('ata_assinatura','whatsapp','ok',$1,NOW())", ['ata_' + req.params.id + '_presente_' + p.id]);
             }
           } catch(e) { console.error('Wapp ata:', e.message); }
