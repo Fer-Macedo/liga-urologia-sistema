@@ -295,20 +295,16 @@ async function enviarAniversarios() {
   let count = 0;
   for (const pessoa of todos) {
     if (!podeMensagem()) break;
-    // Dedup: membro segue por membro_id (compat); ligante/diretivo por observacao (evita
-    // colisao de id entre tabelas). Chave estavel: aniv_<tipo>_<id>.
-    const dedupKey = 'aniv_' + pessoa._tipo + '_' + pessoa.id;
-    const j = pessoa._tipo === 'membro'
-      ? await query("SELECT id FROM notificacoes_log WHERE membro_id=$1 AND tipo='aniversario' AND enviado_em >= CURRENT_DATE", [pessoa.id])
-      : await query("SELECT id FROM notificacoes_log WHERE observacao=$1 AND tipo='aniversario' AND enviado_em >= CURRENT_DATE", [dedupKey]);
+    // Dedup por (membro_id + tipo): tipo='aniversario' p/ membro (compat) e
+    // 'aniversario_ligante'/'_diretivo' p/ os demais — evita colisao de id entre tabelas.
+    const logTipo = pessoa._tipo === 'membro' ? 'aniversario' : 'aniversario_' + pessoa._tipo;
+    const j = await query(
+      "SELECT id FROM notificacoes_log WHERE membro_id=$1 AND tipo=$2 AND enviado_em >= CURRENT_DATE",
+      [pessoa.id, logTipo]
+    );
     if (j.rows.length) continue;
 
-    await notificarAniversario({
-      membro: pessoa,
-      config,
-      membroId: pessoa._tipo === 'membro' ? pessoa.id : null,
-      observacao: dedupKey
-    });
+    await notificarAniversario({ membro: pessoa, config, membroId: pessoa.id, logTipo });
     incrementarContador();
     count++;
     await esperarIntervalo(count);

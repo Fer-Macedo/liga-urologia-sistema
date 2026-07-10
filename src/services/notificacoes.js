@@ -453,18 +453,19 @@ async function notificarAniversario(opts) {
   const orgLogo = config.org_logo || null;
   const tpl = config.msg_aniversario || 'Parabéns pelo seu aniversário, {nome}! 🎉';
   const msg = preencherTemplate(tpl, { nome: membro.nome.split(' ')[0] });
-  // Para membro: loga com membro_id (compat). Para ligante/diretivo: membro_id=null e
-  // dedup por observacao (evita colisao de id entre tabelas diferentes).
-  const membroId   = opts.membroId !== undefined ? opts.membroId : membro.id;
-  const observacao = opts.observacao || null;
+  // membro_id nao tem FK, entao guarda o id da pessoa (membro/ligante/diretivo). A dedup
+  // usa (membro_id + tipo): tipo='aniversario' p/ membro, 'aniversario_ligante'/'_diretivo'
+  // p/ os demais — evita colisao de id entre tabelas sem precisar de coluna nova.
+  const membroId = opts.membroId !== undefined ? opts.membroId : membro.id;
+  const logTipo  = opts.logTipo || 'aniversario';
 
   const msgWpp = '🎂 *' + orgNome + '*\n\nOlá, *' + membro.nome.split(' ')[0] + '*!\n\n' + msg + '\n\nCom carinho de toda a equipe! 💙';
 
   if (membro.whatsapp) {
     const r = await enviarWhatsApp(membro.whatsapp, msgWpp, { aniversario: true });
     await query(
-      'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status,observacao) VALUES ($1,$2,$3,$4,$5,$6)',
-      [membroId, null, 'aniversario', 'whatsapp', r.ok ? 'ok' : 'erro', observacao]
+      'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
+      [membroId, null, logTipo, 'whatsapp', r.ok ? 'ok' : 'erro']
     );
   }
 
@@ -483,8 +484,8 @@ async function notificarAniversario(opts) {
       texto:   msgWpp
     });
     await query(
-      'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status,observacao) VALUES ($1,$2,$3,$4,$5,$6)',
-      [membroId, null, 'aniversario', 'email', r.ok ? 'ok' : 'erro', observacao]
+      'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
+      [membroId, null, logTipo, 'email', r.ok ? 'ok' : 'erro']
     );
   }
 }
