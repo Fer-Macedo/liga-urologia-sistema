@@ -41,10 +41,25 @@ async function enviarLembreteAniversarioEquipe(momento) {
 
     // Usa a fila (nao "urgente") para respeitar o intervalo anti-banimento ja existente
     // entre cada envio, mesmo sendo poucos destinatarios (marketing/presidencia/admin).
-    const { enviarWhatsApp } = require('./notificacoes');
+    const { enviarWhatsApp, enviarEmail } = require('./notificacoes');
     for (const d of destinatarios.rows) {
       try { await enviarWhatsApp(d.telefone, mensagem, { aniversario: true }); }
       catch (e) { console.error('[LEMBRETE ANIVERSARIO] erro ao enviar:', e.message); }
+    }
+
+    // Email para a equipe tambem — garante o aviso mesmo com o WhatsApp indisponivel/banido.
+    // Destinatarios por email podem diferir dos de telefone (ex: quem nao tem telefone cadastrado).
+    const destEmail = await query(
+      `SELECT DISTINCT u.email FROM usuarios u
+       LEFT JOIN usuario_permissoes p ON p.usuario_id=u.id AND p.modulo='marketing'
+       WHERE u.ativo=1 AND u.email IS NOT NULL AND u.email <> ''
+         AND (u.perfil IN ('admin','presidencia','marketing') OR p.id IS NOT NULL)`
+    );
+    const htmlEmail = mensagem.replace(/\*(.*?)\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+    const assuntoEmail = momento === 'dia' ? `Aniversário hoje (${dataFormatada})` : `Aniversário amanhã (${dataFormatada})`;
+    for (const em of destEmail.rows) {
+      try { await enviarEmail({ para: em.email, assunto: assuntoEmail, html: htmlEmail, titulo: assuntoEmail, faixaLabel: 'ANIVERSÁRIO' }); }
+      catch (err) { console.error('[LEMBRETE ANIVERSARIO] erro email:', err.message); }
     }
 
     await query('INSERT INTO aniversario_lembretes_enviados (data, momento) VALUES ($1,$2) ON CONFLICT DO NOTHING', [dataStr, momento]);
