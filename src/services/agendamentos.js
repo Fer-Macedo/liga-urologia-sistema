@@ -323,7 +323,7 @@ async function avisarEquipeAniversario(tipoAviso) {
 
   // Busca contatos internos: marketing e presidência
   const contatos = await query(
-    "SELECT area, numero FROM lauro_contatos WHERE area IN ('marketing','presidencia') AND numero IS NOT NULL AND numero != ''"
+    "SELECT area, numero FROM lauro_contatos WHERE area IN ('marketing','presidencia','admin') AND numero IS NOT NULL AND numero != ''"
   );
   if (contatos.rows.length === 0) {
     console.log('[AVISO ANIVERSÁRIO] Nenhum contato de marketing/presidência cadastrado em lauro_contatos.');
