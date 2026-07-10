@@ -18,6 +18,8 @@
     .q-op.correta{background:#dcfce7;border-color:#16a34a;font-weight:700;}
     .tema-grupo{margin-bottom:20px;}
     .tema-titulo{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;font-weight:800;color:var(--texto);margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--borda);}
+    .tema-contador{font-size:11px;font-weight:700;padding:3px 10px;border-radius:var(--rad);background:var(--fundo);border:1px solid var(--borda);color:var(--texto2);white-space:nowrap;}
+    .tema-contador.tem-marcada{background:var(--cor-primaria);border-color:var(--cor-primaria);color:#fff;}
     .btn-xs{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:var(--rad);font-size:11px;font-weight:600;border:1px solid var(--borda);background:var(--fundo);color:var(--texto);cursor:pointer;text-decoration:none;transition:all .15s;font-family:inherit;}
     .btn-xs:hover{border-color:var(--cor-primaria);color:var(--cor-primaria);}
     .btn-xs.roxo{background:#7c3aed;color:white;border-color:transparent;}
@@ -80,7 +82,10 @@
           <div class="tema-grupo">
             <div class="tema-titulo">
               <span><%=tema%></span>
-              <button type="button" class="btn-xs" onclick="marcarTema(this)">Marcar todas</button>
+              <div style="display:flex;align-items:center;gap:10px">
+                <span class="tema-contador">0 / <%=questoes.filter(function(q){return q.tema===tema;}).length%> marcadas</span>
+                <button type="button" class="btn-xs" onclick="marcarTema(this)">Marcar todas</button>
+              </div>
             </div>
             <%questoes.filter(function(q){return q.tema===tema;}).forEach(function(q){%>
             <label class="q-select-card" data-tema="<%=tema%>">
@@ -109,17 +114,28 @@
   </main>
 </div>
 <script>
+function atualizarContadores(){
+  document.querySelectorAll('.tema-grupo').forEach(function(g){
+    var total = g.querySelectorAll('input[name="questoes_ids"]').length;
+    var marc = g.querySelectorAll('input[name="questoes_ids"]:checked').length;
+    var c = g.querySelector('.tema-contador');
+    if(c){ c.textContent = marc + ' / ' + total + ' marcadas'; c.classList.toggle('tem-marcada', marc>0); }
+  });
+  document.getElementById('contador').textContent = document.querySelectorAll('input[name="questoes_ids"]:checked').length;
+}
 function atualizarSel(cb){
   cb.closest('.q-select-card').classList.toggle('selecionada', cb.checked);
-  document.getElementById('contador').textContent = document.querySelectorAll('input[name="questoes_ids"]:checked').length;
+  atualizarContadores();
 }
 function marcarTema(btn){
   var grupo = btn.closest('.tema-grupo');
   var cbs = grupo.querySelectorAll('input[name="questoes_ids"]');
   var marcarTodas = Array.prototype.some.call(cbs, function(c){return !c.checked;});
-  cbs.forEach(function(c){ c.checked = marcarTodas; atualizarSel(c); });
+  cbs.forEach(function(c){ c.checked = marcarTodas; c.closest('.q-select-card').classList.toggle('selecionada', c.checked); });
+  atualizarContadores();
   btn.textContent = marcarTodas ? 'Desmarcar todas' : 'Marcar todas';
 }
+document.addEventListener('DOMContentLoaded', atualizarContadores);
 document.getElementById('form-prova') && document.getElementById('form-prova').addEventListener('submit', function(e){
   if(document.querySelectorAll('input[name="questoes_ids"]:checked').length === 0){
     e.preventDefault(); alert('Selecione ao menos uma questão para montar a prova.');
