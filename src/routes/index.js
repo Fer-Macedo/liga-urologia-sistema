@@ -4226,9 +4226,26 @@ router.get('/carta-cobranca/:id/imprimir', requireAuth, requirePermissao('carta-
     const r = await query('SELECT * FROM cartas_cobranca WHERE id=$1', [req.params.id]);
     if (!r.rows[0]) return res.status(404).send('Nao encontrado');
     const config = await prepararConfigCobranca(await getConfig());
-    let html = gerarHTMLCartaCobranca(await buscarPessoaCarta(r.rows[0]), config, r.rows[0]);
-    html = html.replace('</body>', '<script>window.onload=function(){window.print()}</script></body>');
-    res.send(html);
+    const html = gerarHTMLCartaCobranca(await buscarPessoaCarta(r.rows[0]), config, r.rows[0]);
+    // Gera o PDF no servidor (chromium) para o timbrado sangrar ate a borda do A4.
+    // Antes servia HTML + window.print(), e o navegador do usuario impunha suas
+    // proprias margens, deixando faixa branca lateral. O PDF ja sai sem margem.
+    const puppeteer = require('puppeteer-core');
+    const chromium = require('@sparticuz/chromium');
+    chromium.setHeadlessMode = true;
+    chromium.setGraphicsMode = false;
+    const browser = await puppeteer.launch({
+      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      executablePath: await chromium.executablePath(),
+      headless: 'new'
+    });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdf = await page.pdf({ format: 'A4', printBackground: true, preferCSSPageSize: true, margin: { top: '0', right: '0', bottom: '0', left: '0' } });
+    await browser.close();
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'inline; filename="carta-cobro.pdf"');
+    res.send(pdf);
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 
