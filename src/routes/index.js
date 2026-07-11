@@ -1891,6 +1891,38 @@ router.post('/processo-seletivo/candidato/:id/scan', requireAuth, requirePermiss
     res.json({ ok:true, prova_id:prova.id, fila:filaCorrecao, fila_candidato:filaCand, fila_lida:filaLida, total_questoes:totalQuestoes, gabarito:gab, respostas, acertos, percentual, nota_minima:parseFloat(cand.nota_minima)||60, numero_registro_lido:(r.leitura&&r.leitura.numero_registro)||null, incertas:(r.leitura&&r.leitura.incertas)||[], cartao_chave:cartaoChave, candidato:{id:cand.id,nome:cand.nome,numero_lista:cand.numero_lista,fila:filaCand} });
   } catch(e){ res.json({ok:false,erro:e.message}); }
 });
+// Ler cartao e IDENTIFICAR o candidato automaticamente pelo numero de registro (nao precisa selecionar)
+router.post('/processo-seletivo/:id/scan', requireAuth, requirePermissao('processo-seletivo'), require('../services/arquivos').upload.single('imagem'), async (req, res) => {
+  try {
+    if(!req.file) return res.json({ok:false,erro:'Nenhuma imagem recebida.'});
+    const procId=req.params.id;
+    const proc=(await query("SELECT nota_minima FROM ps_processos WHERE id=$1",[procId])).rows[0];
+    if(!proc) return res.json({ok:false,erro:'Processo não encontrado.'});
+    const provasR=await query("SELECT id,fila,gabarito_json FROM ps_provas WHERE processo_id=$1",[procId]);
+    if(!provasR.rows.length) return res.json({ok:false,erro:'Nenhuma prova montada neste processo.'});
+    const porFila={}; provasR.rows.forEach(p=>{ porFila[String(p.fila).toUpperCase()]={id:p.id,gab:p.gabarito_json||{}}; });
+    const nQ=Object.keys(provasR.rows[0].gabarito_json||{}).length;
+    const { lerCartaoResposta }=require('../services/cientifico-ia');
+    const r=await lerCartaoResposta(query,{ base64Img:req.file.buffer.toString('base64'), mediaType:req.file.mimetype, totalQuestoes:nQ });
+    if(!r.ok) return res.json({ok:false,erro:r.erro});
+    const numReg=(r.leitura&&r.leitura.numero_registro)?String(r.leitura.numero_registro).replace(/[^0-9]/g,''):null;
+    const filaLida=(r.leitura&&r.leitura.fila)?String(r.leitura.fila).trim().toUpperCase():null;
+    // identifica o candidato pelo numero de registro == numero_lista
+    let cand=null;
+    if(numReg){
+      const cr=await query("SELECT * FROM ps_candidatos WHERE processo_id=$1 AND (numero_lista::text=$2 OR numero_lista=$3) LIMIT 1",[procId,numReg,parseInt(numReg,10)||-1]);
+      cand=cr.rows[0]||null;
+    }
+    const filaCorrecao=(filaLida&&porFila[filaLida])?filaLida:(cand&&cand.fila_prova?String(cand.fila_prova).toUpperCase():String(provasR.rows[0].fila).toUpperCase());
+    const prova=porFila[filaCorrecao]||{id:provasR.rows[0].id,gab:provasR.rows[0].gabarito_json||{}};
+    const gab=prova.gab; const totalQuestoes=Object.keys(gab).length;
+    const respostas=(r.leitura&&r.leitura.respostas)||{};
+    let acertos=0; for(let i=1;i<=totalQuestoes;i++){ const m=respostas[i]?String(respostas[i]).toUpperCase():null; if(m&&gab[i]&&m===String(gab[i]).toUpperCase())acertos++; }
+    const percentual=totalQuestoes?Math.round(acertos/totalQuestoes*1000)/10:0;
+    let cartaoChave=null; try{ const {uploadArquivo}=require('../services/arquivos'); const up=await uploadArquivo(req.file.buffer,'cartao-proc'+procId+'-'+Date.now()+'.'+((req.file.mimetype.split('/')[1])||'jpg'),req.file.mimetype,'processo-seletivo-cartoes'); cartaoChave=up.chave; }catch(e){ console.error('[SCAN] foto:',e.message); }
+    res.json({ ok:true, candidato: cand?{id:cand.id,nome:cand.nome,numero_lista:cand.numero_lista,fila:String(cand.fila_prova||'A').toUpperCase()}:null, numero_registro_lido:numReg, fila_lida:filaLida, fila:filaCorrecao, prova_id:prova.id, total_questoes:totalQuestoes, gabarito:gab, respostas, acertos, percentual, nota_minima:parseFloat(proc.nota_minima)||60, incertas:(r.leitura&&r.leitura.incertas)||[], cartao_chave:cartaoChave });
+  } catch(e){ res.json({ok:false,erro:e.message}); }
+});
 // Visualizar/baixar a foto do cartao arquivado de um candidato (consulta/auditoria)
 router.get('/processo-seletivo/candidato/:id/cartao', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {

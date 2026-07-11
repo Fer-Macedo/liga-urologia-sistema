@@ -17,23 +17,26 @@
     select,input[type=file]{width:100%;padding:11px;border-radius:var(--rad);border:1px solid #475569;background:#0f172a;color:#e2e8f0;font-size:15px;}
     .btn{display:block;width:100%;padding:14px;border:none;border-radius:var(--rad);background:var(--cor);color:#fff;font-size:16px;font-weight:800;cursor:pointer;margin-top:10px;}
     .btn:disabled{opacity:.5;}
-    .btn.sec{background:#334155;}
-    .btn.ok{background:#16a34a;}
+    .btn.sec{background:#334155;} .btn.ok{background:#16a34a;}
     #preview{width:100%;border-radius:var(--rad);margin-top:10px;display:none;}
     .spin{text-align:center;padding:20px;color:#94a3b8;display:none;}
+    .ident{padding:12px;border-radius:var(--rad);margin-bottom:12px;font-weight:700;}
+    .ident.ok{background:#052e16;color:#bbf7d0;border:1px solid #16a34a;}
+    .ident.no{background:#450a0a;color:#fca5a5;border:1px solid #b91c1c;}
+    .ident .nome{font-size:18px;} .ident small{display:block;font-weight:500;opacity:.85;margin-top:3px;font-size:12px;}
     .resumo{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
     .big{font-size:30px;font-weight:900;}
     .badge{padding:5px 14px;border-radius:20px;font-weight:800;font-size:13px;}
     .badge.ap{background:#16a34a;color:#fff;} .badge.re{background:#dc2626;color:#fff;}
     .aviso{font-size:12px;color:#fbbf24;background:#422006;border:1px solid #a16207;border-radius:var(--rad);padding:8px 10px;margin-bottom:10px;}
+    #rFoto{width:100%;border-radius:6px;margin-bottom:12px;border:1px solid #334155;}
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}
     .q{background:#0f172a;border:1px solid #334155;border-radius:var(--rad);padding:8px;}
     .q .qn{font-weight:800;font-size:13px;margin-bottom:5px;}
     .opts{display:flex;gap:4px;}
     .opt{flex:1;padding:7px 0;text-align:center;border:1.5px solid #475569;border-radius:5px;font-weight:700;font-size:14px;cursor:pointer;background:#1e293b;color:#cbd5e1;}
     .opt.sel{background:var(--cor);border-color:var(--cor);color:#fff;}
-    .opt.sel.certo{background:#16a34a;border-color:#16a34a;}
-    .opt.sel.errado{background:#dc2626;border-color:#dc2626;}
+    .opt.sel.certo{background:#16a34a;border-color:#16a34a;} .opt.sel.errado{background:#dc2626;border-color:#dc2626;}
     .opt.gab{outline:2px dashed #16a34a;}
     .none{padding:7px 6px;font-size:12px;color:#94a3b8;cursor:pointer;border:1.5px solid #475569;border-radius:5px;}
     .none.sel{background:#475569;color:#fff;}
@@ -48,64 +51,75 @@
   <div class="wrap">
     <div id="msg"></div>
     <div class="card">
-      <label>Candidato</label>
-      <select id="cand">
-        <option value="">— selecione —</option>
-        <% candidatos.forEach(c=>{ %>
-          <option value="<%=c.id%>" data-fila="<%=c.fila_prova||'A'%>" data-nome="<%=c.nome%>"><%= (c.numero_lista?('#'+c.numero_lista+' · '):'') %><%=c.nome%> · Fila <%=c.fila_prova||'A'%><%= c.corrigido?' · ✔ corrigido':'' %></option>
-        <% }); %>
-      </select>
-      <label style="margin-top:12px">Foto do cartão preenchido</label>
+      <label>Foto do cartão preenchido</label>
       <input type="file" id="foto" accept="image/*" capture="environment">
       <img id="preview" alt="prévia">
-      <button class="btn" id="btnLer" disabled>📷 Ler cartão</button>
+      <button class="btn" id="btnLer" disabled>📷 Ler cartão e identificar candidato</button>
+      <p style="font-size:11px;color:#94a3b8;margin:8px 0 0">O candidato é identificado automaticamente pelo <b>Número de Registro</b> do cartão.</p>
     </div>
 
-    <div class="spin" id="spin">⏳ Lendo o cartão com a IA…</div>
+    <div class="spin" id="spin">⏳ Lendo o cartão…</div>
 
     <div class="card hide" id="resultado">
-      <div class="resumo">
+      <div class="ident" id="rIdent"></div>
+      <div class="hide" id="boxSelect">
+        <label>Selecionar candidato manualmente</label>
+        <select id="cand">
+          <option value="">— selecione —</option>
+          <% candidatos.forEach(c=>{ %>
+            <option value="<%=c.id%>" data-fila="<%=c.fila_prova||'A'%>" data-nome="<%=c.nome%>" data-num="<%=c.numero_lista||''%>"><%= (c.numero_lista?('#'+c.numero_lista+' · '):'') %><%=c.nome%> · Fila <%=c.fila_prova||'A'%></option>
+          <% }); %>
+        </select>
+      </div>
+      <div class="resumo" style="margin-top:12px">
         <span class="big" id="rNota"></span>
         <span id="rFrac" style="color:#94a3b8"></span>
         <span class="badge" id="rBadge"></span>
       </div>
       <div class="aviso" id="rAviso"></div>
-      <img id="rFoto" alt="foto do cartão" style="width:100%;border-radius:6px;margin-bottom:12px;border:1px solid #334155;">
+      <img id="rFoto" alt="foto do cartão">
       <div class="grid" id="rGrid"></div>
       <button class="btn ok" id="btnConfirmar">✅ Confirmar e lançar na classificação</button>
-      <button class="btn sec" id="btnRefazer">↻ Refazer</button>
+      <button class="btn sec" id="btnRefazer">↻ Nova leitura</button>
     </div>
   </div>
 
 <script>
+var PROCID=<%=processo.id%>;
 var GAB={}, RESP={}, TOTAL=0, NOTAMIN=60, PROVAID=null, CANDID=null, CARTAOCHAVE=null, INCERTAS=[];
-var cand=document.getElementById('cand'), foto=document.getElementById('foto'), btnLer=document.getElementById('btnLer');
-function checkLer(){ btnLer.disabled = !(cand.value && foto.files.length); }
-cand.addEventListener('change',checkLer);
+var foto=document.getElementById('foto'), btnLer=document.getElementById('btnLer'), cand=document.getElementById('cand');
 foto.addEventListener('change',function(){
-  if(foto.files[0]){ var u=URL.createObjectURL(foto.files[0]); var p=document.getElementById('preview'); p.src=u; p.style.display='block'; }
-  checkLer();
+  if(foto.files[0]){ var p=document.getElementById('preview'); p.src=URL.createObjectURL(foto.files[0]); p.style.display='block'; }
+  btnLer.disabled=!foto.files.length;
 });
-function msg(t,cls){ document.getElementById('msg').innerHTML = t?('<div class="msg '+cls+'">'+t+'</div>'):''; }
+function msg(t,cls){ document.getElementById('msg').innerHTML=t?('<div class="msg '+cls+'">'+t+'</div>'):''; }
 
 btnLer.addEventListener('click',function(){
-  msg(''); CANDID=cand.value;
-  document.getElementById('resultado').classList.add('hide');
+  msg(''); document.getElementById('resultado').classList.add('hide');
   document.getElementById('spin').style.display='block'; btnLer.disabled=true;
   var fd=new FormData(); fd.append('imagem',foto.files[0]);
-  fetch('/processo-seletivo/candidato/'+CANDID+'/scan',{method:'POST',body:fd,credentials:'same-origin'})
+  fetch('/processo-seletivo/'+PROCID+'/scan',{method:'POST',body:fd,credentials:'same-origin'})
     .then(function(r){return r.json();})
     .then(function(d){
       document.getElementById('spin').style.display='none'; btnLer.disabled=false;
       if(!d.ok){ msg(d.erro||'Falha ao ler o cartão.','err'); return; }
       GAB=d.gabarito||{}; RESP={}; TOTAL=d.total_questoes; NOTAMIN=d.nota_minima; PROVAID=d.prova_id; CARTAOCHAVE=d.cartao_chave||null; INCERTAS=d.incertas||[];
       for(var i=1;i<=TOTAL;i++){ RESP[i]=d.respostas[i]?String(d.respostas[i]).toUpperCase():null; }
-      var filaSel=cand.options[cand.selectedIndex].dataset.fila;
-      var alerta='⚠️ CONFIRA cada questão contra a foto abaixo antes de lançar.';
-      alerta+=' Fila usada na correção: '+d.fila+'.';
-      if(d.fila_lida && d.fila && d.fila_lida.toUpperCase()!==String(d.fila).toUpperCase()) alerta+=' (Fila lida no cartão: '+d.fila_lida+'.)';
-      if(d.numero_registro_lido) alerta+=' Nº de registro lido: '+d.numero_registro_lido+(cand.options[cand.selectedIndex].textContent.indexOf('#'+d.numero_registro_lido)<0?' — confira se bate com o candidato!':'')+'.';
-      if(INCERTAS && INCERTAS.length) alerta+=' Questões em dúvida (revise): '+INCERTAS.join(', ')+'.';
+      var id=document.getElementById('rIdent');
+      if(d.candidato){
+        CANDID=d.candidato.id;
+        id.className='ident ok';
+        id.innerHTML='✅ Candidato identificado<div class="nome">'+ (d.candidato.numero_lista?('#'+d.candidato.numero_lista+' · '):'') + d.candidato.nome +'</div><small>Fila '+d.candidato.fila+' · Nº registro lido: '+(d.numero_registro_lido||'?')+'. Confira se é a pessoa certa!</small>';
+        cand.value=d.candidato.id;
+        document.getElementById('boxSelect').classList.remove('hide');
+      } else {
+        CANDID=null;
+        id.className='ident no';
+        id.innerHTML='⚠️ Candidato NÃO identificado<small>Nº de registro lido: '+(d.numero_registro_lido||'não lido')+' — não bateu com nenhum candidato. Selecione manualmente abaixo.</small>';
+        document.getElementById('boxSelect').classList.remove('hide');
+      }
+      var alerta='CONFIRA cada questão contra a foto antes de lançar. Fila usada: '+d.fila+'.';
+      if(INCERTAS.length) alerta+=' Em dúvida (revise): '+INCERTAS.join(', ')+'.';
       document.getElementById('rAviso').textContent=alerta;
       try{ document.getElementById('rFoto').src=URL.createObjectURL(foto.files[0]); }catch(e){}
       render();
@@ -115,25 +129,33 @@ btnLer.addEventListener('click',function(){
     .catch(function(e){ document.getElementById('spin').style.display='none'; btnLer.disabled=false; msg('Erro de rede: '+e.message,'err'); });
 });
 
+// Troca manual de candidato -> recarrega o gabarito da fila desse candidato e recalcula
+cand.addEventListener('change',function(){
+  if(!cand.value){ CANDID=null; return; }
+  CANDID=cand.value;
+  var fila=cand.options[cand.selectedIndex].dataset.fila||'A';
+  fetch('/processo-seletivo/'+PROCID+'/gabarito/'+fila,{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(g){
+    GAB=g.gabarito||{}; PROVAID=g.prova_id; TOTAL=Object.keys(GAB).length||TOTAL; render();
+    var nome=cand.options[cand.selectedIndex].dataset.nome;
+    var id=document.getElementById('rIdent'); id.className='ident ok'; id.innerHTML='Candidato selecionado<div class="nome">'+nome+'</div><small>Fila '+fila+'</small>';
+  });
+});
+
 function setResp(q,letra){ RESP[q]=letra; render(); }
 function render(){
-  var grid=document.getElementById('rGrid'); grid.innerHTML='';
-  var acertos=0;
+  var grid=document.getElementById('rGrid'); grid.innerHTML=''; var acertos=0;
   for(var q=1;q<=TOTAL;q++){
-    var gab=GAB[q]?String(GAB[q]).toUpperCase():null;
-    var sel=RESP[q];
-    if(sel && gab && sel===gab) acertos++;
+    var gab=GAB[q]?String(GAB[q]).toUpperCase():null, sel=RESP[q];
+    if(sel&&gab&&sel===gab) acertos++;
     var opts='';
     ['A','B','C','D'].forEach(function(L){
-      var cls='opt'; if(sel===L){ cls+=' sel'; cls+= (L===gab?' certo':' errado'); } else if(L===gab){ cls+=' gab'; }
+      var cls='opt'; if(sel===L){ cls+=' sel'; cls+=(L===gab?' certo':' errado'); } else if(L===gab){ cls+=' gab'; }
       opts+='<div class="'+cls+'" onclick="setResp('+q+',\''+L+'\')">'+L+'</div>';
     });
-    var noneCls='none'+(sel===null?' sel':'');
     var inc=INCERTAS.indexOf(q)>=0;
-    grid.innerHTML += '<div class="q" style="'+(inc?'border-color:#fbbf24;box-shadow:0 0 0 1px #fbbf24':'')+'"><div class="qn">'+q+(inc?' <span style="color:#fbbf24">⚠ revisar</span>':'')+'</div><div class="opts">'+opts+'</div><div class="'+noneCls+'" style="margin-top:4px;text-align:center" onclick="setResp('+q+',null)">em branco</div></div>';
+    grid.innerHTML += '<div class="q" style="'+(inc?'border-color:#fbbf24;box-shadow:0 0 0 1px #fbbf24':'')+'"><div class="qn">'+q+(inc?' <span style="color:#fbbf24">⚠</span>':'')+'</div><div class="opts">'+opts+'</div><div class="none'+(sel===null?' sel':'')+'" style="margin-top:4px;text-align:center" onclick="setResp('+q+',null)">em branco</div></div>';
   }
-  var pct=TOTAL?Math.round(acertos/TOTAL*1000)/10:0;
-  var ap=pct>=NOTAMIN;
+  var pct=TOTAL?Math.round(acertos/TOTAL*1000)/10:0, ap=pct>=NOTAMIN;
   document.getElementById('rNota').textContent=pct+'%';
   document.getElementById('rFrac').textContent=acertos+' de '+TOTAL+' · mín. '+NOTAMIN+'%';
   var b=document.getElementById('rBadge'); b.textContent=ap?'CLASSIFICADO':'REPROVADO'; b.className='badge '+(ap?'ap':'re');
@@ -141,10 +163,11 @@ function render(){
 }
 
 document.getElementById('btnRefazer').addEventListener('click',function(){
-  document.getElementById('resultado').classList.add('hide'); foto.value=''; document.getElementById('preview').style.display='none'; checkLer(); msg('');
+  document.getElementById('resultado').classList.add('hide'); foto.value=''; document.getElementById('preview').style.display='none'; btnLer.disabled=true; msg(''); window.scrollTo({top:0,behavior:'smooth'});
 });
 
 document.getElementById('btnConfirmar').addEventListener('click',function(){
+  if(!CANDID){ msg('Selecione o candidato antes de lançar.','err'); return; }
   var btn=this; btn.disabled=true; msg('');
   fetch('/processo-seletivo/candidato/'+CANDID+'/correcao',{
     method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'},
@@ -152,10 +175,8 @@ document.getElementById('btnConfirmar').addEventListener('click',function(){
   }).then(function(r){return r.json();}).then(function(d){
     btn.disabled=false;
     if(!d.ok){ msg(d.erro||'Falha ao lançar.','err'); return; }
-    msg('✅ Lançado! '+(d.aprovado?'Candidato CLASSIFICADO':'Candidato REPROVADO')+' ('+d.percentual+'%).','suc');
-    // marca no select e limpa p/ proximo
-    var opt=cand.options[cand.selectedIndex]; if(opt && opt.textContent.indexOf('✔')<0) opt.textContent+=' · ✔ corrigido';
-    document.getElementById('resultado').classList.add('hide'); foto.value=''; document.getElementById('preview').style.display='none'; cand.value=''; checkLer();
+    msg('✅ Lançado! '+(d.aprovado?'CLASSIFICADO':'REPROVADO')+' ('+d.percentual+'%).','suc');
+    document.getElementById('resultado').classList.add('hide'); foto.value=''; document.getElementById('preview').style.display='none'; cand.value=''; btnLer.disabled=true;
     window.scrollTo({top:0,behavior:'smooth'});
   }).catch(function(e){ btn.disabled=false; msg('Erro de rede: '+e.message,'err'); });
 });
