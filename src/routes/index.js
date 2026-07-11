@@ -2109,11 +2109,12 @@ router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requireP
     const ids = pv.questoes_json||[];
     const qR = await query('SELECT * FROM ps_questoes WHERE id=ANY($1::int[])',[ids]);
     const qMap={}; qR.rows.forEach(q=>qMap[q.id]=q);
-    const temaOrder=[]; const temaMap={};
-    ids.forEach((id,i)=>{ const q=qMap[id]; if(!q) return; if(!temaMap[q.tema]){ temaMap[q.tema]=[]; temaOrder.push(q.tema); } temaMap[q.tema].push(i+1); });
     const bub = (l,on,omr)=>'<span class="bub'+(on?' on':'')+'"'+(omr?' data-omr="'+omr+'"':'')+'>'+l+'</span>';
     const qRow = (n)=>'<div class="qrow"><span class="qn">'+n+'</span><span class="bubs">'+['A','B','C','D'].map(l=>bub(l,false,'q'+n+'-'+l)).join('')+'</span></div>';
-    const secHtml = temaOrder.map(t=>'<div class="sec"><div class="sec-tit">'+t+'</div>'+temaMap[t].map(qRow).join('')+'</div>').join('') || '<div style="color:#999">Prova sem questões.</div>';
+    // Grade uniforme em 2 colunas (1..metade / resto), passo fixo -> espaçamento igual em toda a folha
+    const nums = ids.map((id,i)=>qMap[id]?i+1:null).filter(Boolean);
+    const half = Math.ceil(nums.length/2);
+    const secHtml = nums.length ? '<div class="qcol">'+nums.slice(0,half).map(qRow).join('')+'</div><div class="qcol">'+nums.slice(half).map(qRow).join('')+'</div>' : '<div style="color:#999">Prova sem questões.</div>';
     const digCol = (col)=>'<div class="digcol">'+[0,1,2,3,4,5,6,7,8,9].map(d=>'<span class="bub sm" data-omr="reg'+col+'-'+d+'">'+d+'</span>').join('')+'</div>';
     const marks = Array.from({length:11}).map(()=>'<div class="sq"></div>').join('');
     const _base=__dirname.replace('routes','').replace('src/','');
@@ -2135,9 +2136,8 @@ router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requireP
       +'.mini-t{font-weight:800;font-size:9pt;text-transform:uppercase;margin-bottom:7px;text-align:center;}'
       +'.mini-b{display:flex;gap:14px;justify-content:center;}'
       +'.digrid{display:flex;gap:18px;justify-content:center;}.digcol{display:flex;flex-direction:column;gap:4px;align-items:center;}'
-      +'.questoes{column-count:2;column-gap:26px;}.sec{margin-bottom:6px;}'
-      +'.sec-tit{font-weight:800;font-size:11pt;text-transform:uppercase;border-bottom:2px solid #000;margin:6px 0 10px;padding-bottom:3px;break-after:avoid;}'
-      +'.qrow{display:flex;align-items:center;margin-bottom:15px;break-inside:avoid;}'
+      +'.questoes{display:flex;gap:50px;justify-content:center;}.qcol{display:flex;flex-direction:column;gap:15px;}'
+      +'.qrow{display:flex;align-items:center;}'
       +'.qn{width:30px;font-weight:700;text-align:right;margin-right:12px;font-size:12pt;flex-shrink:0;}'
       +'.bubs{display:flex;}'
       +'.bub{display:inline-flex;width:26px;height:26px;border:1.5px solid #000;border-radius:50%;align-items:center;justify-content:center;font-size:11pt;margin:0 9px;font-weight:600;}'
