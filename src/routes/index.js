@@ -1844,6 +1844,39 @@ router.get('/processo-seletivo/:id/gabarito/:fila', requireAuth, requirePermissa
     res.json({gabarito:gab,prova_id:r.rows[0].id});
   } catch(e) { res.json({gabarito:{},erro:e.message}); }
 });
+// Pagina do scanner (correcao por camera) — mobile
+router.get('/processo-seletivo/:id/scanner', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
+  try {
+    const proc=(await query("SELECT * FROM ps_processos WHERE id=$1",[req.params.id])).rows[0];
+    if(!proc){ req.session.erro=['Processo não encontrado']; return res.redirect('/processo-seletivo'); }
+    const cands=(await query("SELECT c.id,c.nome,c.numero_lista,c.fila_prova,c.status, (r.id IS NOT NULL) as corrigido FROM ps_candidatos c LEFT JOIN ps_respostas r ON r.candidato_id=c.id WHERE c.processo_id=$1 ORDER BY c.numero_lista NULLS LAST, c.nome",[req.params.id])).rows;
+    const config=await getConfig();
+    res.render('pages/ps-scanner',{config,usuario:req.session.usuario,msg:req.session.msg||[],erro:req.session.erro||[],processo:proc,candidatos:cands});
+    req.session.msg=[];req.session.erro=[];
+  } catch(e){ req.session.erro=[e.message]; res.redirect('/processo-seletivo'); }
+});
+// Ler o cartao de um candidato por foto (IA de visao) — retorna as respostas lidas p/ revisao
+router.post('/processo-seletivo/candidato/:id/scan', requireAuth, requirePermissao('processo-seletivo'), require('../services/arquivos').upload.single('imagem'), async (req, res) => {
+  try {
+    if(!req.file) return res.json({ok:false,erro:'Nenhuma imagem recebida.'});
+    const cand=(await query("SELECT c.*, p.nota_minima FROM ps_candidatos c JOIN ps_processos p ON p.id=c.processo_id WHERE c.id=$1",[req.params.id])).rows[0];
+    if(!cand) return res.json({ok:false,erro:'Candidato não encontrado.'});
+    const fila=(cand.fila_prova||'A').toString().trim().toUpperCase();
+    const pvR=await query("SELECT id,gabarito_json FROM ps_provas WHERE processo_id=$1 AND fila=$2",[cand.processo_id,fila]);
+    if(!pvR.rows.length) return res.json({ok:false,erro:'Não há prova montada para a fila '+fila+' deste candidato. Monte a prova dessa fila primeiro.'});
+    const gab=pvR.rows[0].gabarito_json||{};
+    const totalQuestoes=Object.keys(gab).length;
+    if(!totalQuestoes) return res.json({ok:false,erro:'Gabarito da fila '+fila+' está vazio.'});
+    const { lerCartaoResposta }=require('../services/cientifico-ia');
+    const r=await lerCartaoResposta(query,{ base64Img:req.file.buffer.toString('base64'), mediaType:req.file.mimetype, totalQuestoes });
+    if(!r.ok) return res.json({ok:false,erro:r.erro});
+    const respostas=(r.leitura&&r.leitura.respostas)||{};
+    let acertos=0;
+    for(let i=1;i<=totalQuestoes;i++){ const m=respostas[i]?String(respostas[i]).toUpperCase():null; if(m && gab[i] && m===String(gab[i]).toUpperCase()) acertos++; }
+    const percentual=totalQuestoes? Math.round((acertos/totalQuestoes)*1000)/10 : 0;
+    res.json({ ok:true, prova_id:pvR.rows[0].id, fila, total_questoes:totalQuestoes, gabarito:gab, respostas, acertos, percentual, nota_minima:parseFloat(cand.nota_minima)||60, fila_lida:(r.leitura&&r.leitura.fila)||null, numero_lista_lido:(r.leitura&&r.leitura.numero_lista)||null, candidato:{id:cand.id,nome:cand.nome,fila} });
+  } catch(e){ res.json({ok:false,erro:e.message}); }
+});
 router.get('/processo-seletivo/:id/resultados', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const r=await query(`SELECT c.*, r.percentual, r.aprovado_prova, r.total_acertos, r.total_questoes,

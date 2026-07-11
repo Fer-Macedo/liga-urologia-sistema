@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Correção por Câmera — LAURO</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    :root{--cor:<%= config.org_cor||'#2b6803' %>;--rad:6px;}
+    *{box-sizing:border-box;}
+    body{margin:0;background:#0f172a;color:#e2e8f0;font-family:system-ui,Arial,sans-serif;}
+    .top{background:var(--cor);color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10;}
+    .top a{color:#fff;text-decoration:none;font-size:22px;line-height:1;}
+    .top h1{font-size:15px;margin:0;font-weight:700;}
+    .wrap{max-width:560px;margin:0 auto;padding:16px;}
+    .card{background:#1e293b;border:1px solid #334155;border-radius:var(--rad);padding:14px;margin-bottom:14px;}
+    label{display:block;font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;}
+    select,input[type=file]{width:100%;padding:11px;border-radius:var(--rad);border:1px solid #475569;background:#0f172a;color:#e2e8f0;font-size:15px;}
+    .btn{display:block;width:100%;padding:14px;border:none;border-radius:var(--rad);background:var(--cor);color:#fff;font-size:16px;font-weight:800;cursor:pointer;margin-top:10px;}
+    .btn:disabled{opacity:.5;}
+    .btn.sec{background:#334155;}
+    .btn.ok{background:#16a34a;}
+    #preview{width:100%;border-radius:var(--rad);margin-top:10px;display:none;}
+    .spin{text-align:center;padding:20px;color:#94a3b8;display:none;}
+    .resumo{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+    .big{font-size:30px;font-weight:900;}
+    .badge{padding:5px 14px;border-radius:20px;font-weight:800;font-size:13px;}
+    .badge.ap{background:#16a34a;color:#fff;} .badge.re{background:#dc2626;color:#fff;}
+    .aviso{font-size:12px;color:#fbbf24;background:#422006;border:1px solid #a16207;border-radius:var(--rad);padding:8px 10px;margin-bottom:10px;}
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;}
+    .q{background:#0f172a;border:1px solid #334155;border-radius:var(--rad);padding:8px;}
+    .q .qn{font-weight:800;font-size:13px;margin-bottom:5px;}
+    .opts{display:flex;gap:4px;}
+    .opt{flex:1;padding:7px 0;text-align:center;border:1.5px solid #475569;border-radius:5px;font-weight:700;font-size:14px;cursor:pointer;background:#1e293b;color:#cbd5e1;}
+    .opt.sel{background:var(--cor);border-color:var(--cor);color:#fff;}
+    .opt.sel.certo{background:#16a34a;border-color:#16a34a;}
+    .opt.sel.errado{background:#dc2626;border-color:#dc2626;}
+    .opt.gab{outline:2px dashed #16a34a;}
+    .none{padding:7px 6px;font-size:12px;color:#94a3b8;cursor:pointer;border:1.5px solid #475569;border-radius:5px;}
+    .none.sel{background:#475569;color:#fff;}
+    .msg{padding:10px;border-radius:var(--rad);margin-bottom:10px;font-weight:700;}
+    .msg.err{background:#450a0a;color:#fca5a5;border:1px solid #b91c1c;}
+    .msg.suc{background:#052e16;color:#86efac;border:1px solid #16a34a;}
+    .hide{display:none;}
+  </style>
+</head>
+<body>
+  <div class="top"><a href="/processo-seletivo">&#8592;</a><h1>Correção por Câmera — <%=processo.nome%></h1></div>
+  <div class="wrap">
+    <div id="msg"></div>
+    <div class="card">
+      <label>Candidato</label>
+      <select id="cand">
+        <option value="">— selecione —</option>
+        <% candidatos.forEach(c=>{ %>
+          <option value="<%=c.id%>" data-fila="<%=c.fila_prova||'A'%>" data-nome="<%=c.nome%>"><%= (c.numero_lista?('#'+c.numero_lista+' · '):'') %><%=c.nome%> · Fila <%=c.fila_prova||'A'%><%= c.corrigido?' · ✔ corrigido':'' %></option>
+        <% }); %>
+      </select>
+      <label style="margin-top:12px">Foto do cartão preenchido</label>
+      <input type="file" id="foto" accept="image/*" capture="environment">
+      <img id="preview" alt="prévia">
+      <button class="btn" id="btnLer" disabled>📷 Ler cartão</button>
+    </div>
+
+    <div class="spin" id="spin">⏳ Lendo o cartão com a IA…</div>
+
+    <div class="card hide" id="resultado">
+      <div class="resumo">
+        <span class="big" id="rNota"></span>
+        <span id="rFrac" style="color:#94a3b8"></span>
+        <span class="badge" id="rBadge"></span>
+      </div>
+      <div class="aviso" id="rAviso"></div>
+      <div class="grid" id="rGrid"></div>
+      <button class="btn ok" id="btnConfirmar">✅ Confirmar e lançar na classificação</button>
+      <button class="btn sec" id="btnRefazer">↻ Refazer</button>
+    </div>
+  </div>
+
+<script>
+var GAB={}, RESP={}, TOTAL=0, NOTAMIN=60, PROVAID=null, CANDID=null;
+var cand=document.getElementById('cand'), foto=document.getElementById('foto'), btnLer=document.getElementById('btnLer');
+function checkLer(){ btnLer.disabled = !(cand.value && foto.files.length); }
+cand.addEventListener('change',checkLer);
+foto.addEventListener('change',function(){
+  if(foto.files[0]){ var u=URL.createObjectURL(foto.files[0]); var p=document.getElementById('preview'); p.src=u; p.style.display='block'; }
+  checkLer();
+});
+function msg(t,cls){ document.getElementById('msg').innerHTML = t?('<div class="msg '+cls+'">'+t+'</div>'):''; }
+
+btnLer.addEventListener('click',function(){
+  msg(''); CANDID=cand.value;
+  document.getElementById('resultado').classList.add('hide');
+  document.getElementById('spin').style.display='block'; btnLer.disabled=true;
+  var fd=new FormData(); fd.append('imagem',foto.files[0]);
+  fetch('/processo-seletivo/candidato/'+CANDID+'/scan',{method:'POST',body:fd,credentials:'same-origin'})
+    .then(function(r){return r.json();})
+    .then(function(d){
+      document.getElementById('spin').style.display='none'; btnLer.disabled=false;
+      if(!d.ok){ msg(d.erro||'Falha ao ler o cartão.','err'); return; }
+      GAB=d.gabarito||{}; RESP={}; TOTAL=d.total_questoes; NOTAMIN=d.nota_minima; PROVAID=d.prova_id;
+      for(var i=1;i<=TOTAL;i++){ RESP[i]=d.respostas[i]?String(d.respostas[i]).toUpperCase():null; }
+      var filaSel=cand.options[cand.selectedIndex].dataset.fila;
+      var alerta='A IA leu — confira e ajuste se algo estiver errado.';
+      if(d.fila_lida && d.fila_lida.toUpperCase()!==String(filaSel).toUpperCase()) alerta+=' ⚠️ Fila lida no cartão ('+d.fila_lida+') difere da fila do candidato ('+filaSel+')!';
+      if(d.numero_lista_lido) alerta+=' Nº de lista lido: '+d.numero_lista_lido+'.';
+      document.getElementById('rAviso').textContent=alerta;
+      render();
+      document.getElementById('resultado').classList.remove('hide');
+      document.getElementById('resultado').scrollIntoView({behavior:'smooth'});
+    })
+    .catch(function(e){ document.getElementById('spin').style.display='none'; btnLer.disabled=false; msg('Erro de rede: '+e.message,'err'); });
+});
+
+function setResp(q,letra){ RESP[q]=letra; render(); }
+function render(){
+  var grid=document.getElementById('rGrid'); grid.innerHTML='';
+  var acertos=0;
+  for(var q=1;q<=TOTAL;q++){
+    var gab=GAB[q]?String(GAB[q]).toUpperCase():null;
+    var sel=RESP[q];
+    if(sel && gab && sel===gab) acertos++;
+    var opts='';
+    ['A','B','C','D'].forEach(function(L){
+      var cls='opt'; if(sel===L){ cls+=' sel'; cls+= (L===gab?' certo':' errado'); } else if(L===gab){ cls+=' gab'; }
+      opts+='<div class="'+cls+'" onclick="setResp('+q+',\''+L+'\')">'+L+'</div>';
+    });
+    var noneCls='none'+(sel===null?' sel':'');
+    grid.innerHTML += '<div class="q"><div class="qn">'+q+'</div><div class="opts">'+opts+'</div><div class="'+noneCls+'" style="margin-top:4px;text-align:center" onclick="setResp('+q+',null)">em branco</div></div>';
+  }
+  var pct=TOTAL?Math.round(acertos/TOTAL*1000)/10:0;
+  var ap=pct>=NOTAMIN;
+  document.getElementById('rNota').textContent=pct+'%';
+  document.getElementById('rFrac').textContent=acertos+' de '+TOTAL+' · mín. '+NOTAMIN+'%';
+  var b=document.getElementById('rBadge'); b.textContent=ap?'CLASSIFICADO':'REPROVADO'; b.className='badge '+(ap?'ap':'re');
+  window._acertos=acertos; window._pct=pct;
+}
+
+document.getElementById('btnRefazer').addEventListener('click',function(){
+  document.getElementById('resultado').classList.add('hide'); foto.value=''; document.getElementById('preview').style.display='none'; checkLer(); msg('');
+});
+
+document.getElementById('btnConfirmar').addEventListener('click',function(){
+  var btn=this; btn.disabled=true; msg('');
+  fetch('/processo-seletivo/candidato/'+CANDID+'/correcao',{
+    method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({ respostas_json:JSON.stringify(RESP), total_questoes:TOTAL, total_acertos:window._acertos, percentual:window._pct, prova_id:PROVAID })
+  }).then(function(r){return r.json();}).then(function(d){
+    btn.disabled=false;
+    if(!d.ok){ msg(d.erro||'Falha ao lançar.','err'); return; }
+    msg('✅ Lançado! '+(d.aprovado?'Candidato CLASSIFICADO':'Candidato REPROVADO')+' ('+d.percentual+'%).','suc');
+    // marca no select e limpa p/ proximo
+    var opt=cand.options[cand.selectedIndex]; if(opt && opt.textContent.indexOf('✔')<0) opt.textContent+=' · ✔ corrigido';
+    document.getElementById('resultado').classList.add('hide'); foto.value=''; document.getElementById('preview').style.display='none'; cand.value=''; checkLer();
+    window.scrollTo({top:0,behavior:'smooth'});
+  }).catch(function(e){ btn.disabled=false; msg('Erro de rede: '+e.message,'err'); });
+});
+</script>
+</body>
+</html>

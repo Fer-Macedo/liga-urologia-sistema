@@ -147,4 +147,34 @@ async function chamarClaudeTexto(query, { prompt, contexto, maxTokens }) {
   return await chamarClaude(query, { system: 'Voce e um assistente cientifico objetivo e honesto.', content: prompt, contexto, maxTokens });
 }
 
-module.exports = { revisarTrabalho, refinarPico, chamarClaudeTexto, apoioRevisor };
+// ── Leitura de cartao de resposta (OMR) por foto ────────────────────────────
+const SISTEMA_OMR = `Você lê CARTÕES DE RESPOSTA (hoja de respuestas / gabarito OMR) de provas de múltipla escolha a partir de uma FOTO. Cada questão está numerada e tem bolhas com as letras A, B, C, D. A bolha MARCADA é a que está preenchida/escurecida (coberta a caneta ou lápis).
+
+Sua tarefa: para cada questão de 1 até N, identificar qual letra foi marcada.
+Regras rígidas:
+- Retorne APENAS a letra da bolha realmente preenchida (A, B, C ou D).
+- Se NENHUMA bolha estiver preenchida na questão, retorne null.
+- Se houver MAIS DE UMA preenchida (rasura/dúbio), retorne null.
+- NUNCA invente: em qualquer dúvida, retorne null.
+- Ignore as letras impressas dentro das bolhas — o que importa é qual bolha está pintada por cima.
+
+Responda em JSON ESTRITO, sem nenhum texto fora do JSON, exatamente neste formato:
+{ "fila": "A|B|C ou null (o que estiver marcado em Conjunto de examen / escrito em PRUEBA FILA)", "numero_lista": "texto do Nº DE LISTA se estiver legível, ou null", "respostas": { "1": "A", "2": null, "3": "C" } }
+Inclua TODAS as questões de 1 até N no objeto respostas, mesmo as que forem null.`;
+
+async function lerCartaoResposta(query, { base64Img, mediaType, totalQuestoes }) {
+  const content = [
+    { type: 'image', source: { type: 'base64', media_type: mediaType || 'image/jpeg', data: base64Img } },
+    { type: 'text', text: 'Este cartão tem ' + totalQuestoes + ' questões (numeradas de 1 a ' + totalQuestoes + '). Leia as bolhas preenchidas e devolva o JSON.' }
+  ];
+  const r = await chamarClaude(query, { system: SISTEMA_OMR, content, contexto: 'ps-cartao-omr', maxTokens: 1500 });
+  if (!r.ok) return r;
+  try {
+    const parsed = JSON.parse(r.texto.replace(/```json|```/g, '').trim());
+    return { ok: true, leitura: parsed };
+  } catch(e) {
+    return { ok: false, erro: 'Não consegui interpretar o cartão. Tente uma foto mais nítida e reta.' };
+  }
+}
+
+module.exports = { revisarTrabalho, refinarPico, chamarClaudeTexto, apoioRevisor, lerCartaoResposta };
