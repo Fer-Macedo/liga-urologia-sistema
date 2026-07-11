@@ -2111,10 +2111,10 @@ router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requireP
     const qMap={}; qR.rows.forEach(q=>qMap[q.id]=q);
     const temaOrder=[]; const temaMap={};
     ids.forEach((id,i)=>{ const q=qMap[id]; if(!q) return; if(!temaMap[q.tema]){ temaMap[q.tema]=[]; temaOrder.push(q.tema); } temaMap[q.tema].push(i+1); });
-    const bub = (l,on)=>'<span class="bub'+(on?' on':'')+'">'+l+'</span>';
-    const qRow = (n)=>'<div class="qrow"><span class="qn">'+n+'</span><span class="bubs">'+['A','B','C','D'].map(l=>bub(l)).join('')+'</span></div>';
+    const bub = (l,on,omr)=>'<span class="bub'+(on?' on':'')+'"'+(omr?' data-omr="'+omr+'"':'')+'>'+l+'</span>';
+    const qRow = (n)=>'<div class="qrow"><span class="qn">'+n+'</span><span class="bubs">'+['A','B','C','D'].map(l=>bub(l,false,'q'+n+'-'+l)).join('')+'</span></div>';
     const secHtml = temaOrder.map(t=>'<div class="sec"><div class="sec-tit">'+t+'</div>'+temaMap[t].map(qRow).join('')+'</div>').join('') || '<div style="color:#999">Prova sem questões.</div>';
-    const digCol = ()=>'<div class="digcol">'+[0,1,2,3,4,5,6,7,8,9].map(d=>'<span class="bub sm">'+d+'</span>').join('')+'</div>';
+    const digCol = (col)=>'<div class="digcol">'+[0,1,2,3,4,5,6,7,8,9].map(d=>'<span class="bub sm" data-omr="reg'+col+'-'+d+'">'+d+'</span>').join('')+'</div>';
     const marks = Array.from({length:11}).map(()=>'<div class="sq"></div>').join('');
     const _base=__dirname.replace('routes','').replace('src/','');
     const _ftr='data:image/jpeg;base64,'+require('fs').readFileSync(_base+'public/img/fundo-prova-footer.jpg').toString('base64');
@@ -2156,8 +2156,8 @@ router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requireP
       +'</div>'
       +'<div class="titulo">GABARITO</div>'
       +'<div class="metatop">'
-      +'<div class="mini"><div class="mini-t">Conjunto de examen</div><div class="mini-b">'+bub('A',fila==='A')+bub('B',fila==='B')+bub('C',fila==='C')+'</div></div>'
-      +'<div class="mini"><div class="mini-t">Número de Registro</div><div class="digrid">'+digCol()+digCol()+digCol()+'</div></div>'
+      +'<div class="mini"><div class="mini-t">Conjunto de examen</div><div class="mini-b">'+bub('A',fila==='A','conj-A')+bub('B',fila==='B','conj-B')+bub('C',fila==='C','conj-C')+'</div></div>'
+      +'<div class="mini"><div class="mini-t">Número de Registro</div><div class="digrid">'+digCol(0)+digCol(1)+digCol(2)+'</div></div>'
       +'</div>'
       +'<div class="questoes">'+secHtml+'</div>'
       +'<div class="firma"><div class="l"></div><div class="t">Firma del Candidato (A)</div></div>'
@@ -2168,7 +2168,19 @@ router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requireP
     chromium.setHeadlessMode=true; chromium.setGraphicsMode=false;
     const browser=await puppeteer.launch({args:[...chromium.args,'--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu'],executablePath:await chromium.executablePath(),headless:'new'});
     const page=await browser.newPage();
+    await page.setViewport({width:794,height:1123,deviceScaleFactor:1}); // A4 @96dpi (canonico p/ OMR)
     await page.setContent(html,{waitUntil:'networkidle0'});
+    // ?coords=1 -> devolve o MAPA DE COORDENADAS (centro de cada bolha + marcadores), base do OMR deterministico
+    if(req.query.coords){
+      const mapa=await page.evaluate(()=>{
+        const c=el=>{const r=el.getBoundingClientRect();return {x:Math.round((r.left+r.width/2)*100)/100,y:Math.round((r.top+r.height/2)*100)/100,r:Math.round(Math.min(r.width,r.height)/2*100)/100};};
+        const bolhas={}; document.querySelectorAll('[data-omr]').forEach(el=>{bolhas[el.getAttribute('data-omr')]=c(el);});
+        const marcadores=[...document.querySelectorAll('.sq')].map(c).map(m=>({x:m.x,y:m.y}));
+        return { W:document.documentElement.scrollWidth, H:document.documentElement.scrollHeight, bolhas, marcadores };
+      });
+      await browser.close();
+      return res.json({ ok:true, fila, ...mapa });
+    }
     const pdf=await page.pdf({format:'A4',printBackground:true,margin:{top:'0',bottom:'0',left:'0',right:'0'}});
     await browser.close();
     res.setHeader('Content-Type','application/pdf');
