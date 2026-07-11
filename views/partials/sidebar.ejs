@@ -171,7 +171,7 @@ aside.sidebar .sidebar-logout:hover{color:#fff;border-color:#C0392B;background:r
     </div>
     <% } %>
 
-    <% if (temPerm('membros')||temPerm('cobrancas')||temPerm('carta-cobranca')||temPerm('financeiro-arquivos')||temPerm('fluxo-caixa')) { %>
+    <% if (temPerm('membros')||temPerm('cobrancas')||temPerm('carta-cobranca')||temPerm('financeiro-arquivos')||temPerm('fluxo-caixa')||temPerm('inscricoes-pss')) { %>
     <div class="nav-group">
       <div class="nav-group-title">Financeiro</div>
       <% if (temPerm('membros')) { %>
@@ -203,6 +203,12 @@ aside.sidebar .sidebar-logout:hover{color:#fff;border-color:#C0392B;background:r
       <a href="/fluxo-caixa" class="nav-item <%= pa==='fluxo-caixa'?'ativo':'' %>">
         <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>
         <span>Fluxo de Caixa</span>
+      </a>
+      <% } %>
+      <% if (temPerm('inscricoes-pss')) { %>
+      <a href="/inscricoes-pss" class="nav-item <%= pa==='inscricoes-pss'?'ativo':'' %>">
+        <span class="nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg></span>
+        <span>Inscrições PSS</span>
       </a>
       <% } %>
     </div>

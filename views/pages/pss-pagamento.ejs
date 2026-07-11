@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pago — <%= processoNome %></title>
+  <style>
+    :root{--cor:<%= (config && config.org_cor) || '#1a3d2b' %>;}
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:system-ui,-apple-system,Segoe UI,Arial,sans-serif;background:#0f172a;min-height:100vh;padding:20px;}
+    .wrap{max-width:520px;margin:0 auto;}
+    .card{background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.3);}
+    .head{background:var(--cor);color:#fff;padding:22px 24px;}
+    .head .k{font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;opacity:.8;}
+    .head h1{font-size:19px;margin-top:5px;}
+    .body{padding:24px;text-align:center;color:#0f172a;}
+    .valor{font-size:30px;font-weight:900;color:var(--cor);margin-bottom:4px;}
+    .qr{width:230px;height:230px;margin:16px auto;border-radius:10px;border:1px solid #e2e8f0;}
+    .cc{word-break:break-all;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:12px;font-size:12px;font-family:monospace;color:#475569;margin:12px 0;}
+    .btn{width:100%;padding:13px;border:none;border-radius:8px;background:var(--cor);color:#fff;font-size:15px;font-weight:800;cursor:pointer;margin-top:6px;}
+    .status{margin-top:16px;font-size:14px;font-weight:700;color:#64748b;}
+    .mut{font-size:12px;color:#94a3b8;margin-top:8px;}
+    .ok{display:none;}
+    .ok .num{font-size:52px;font-weight:900;color:var(--cor);letter-spacing:5px;margin:10px 0;}
+    .spin{display:inline-block;width:16px;height:16px;border:2px solid #cbd5e1;border-top-color:var(--cor);border-radius:50%;animation:s 1s linear infinite;vertical-align:middle;margin-right:6px;}
+    @keyframes s{to{transform:rotate(360deg)}}
+  </style>
+</head>
+<body>
+  <div class="wrap"><div class="card">
+    <div class="head"><div class="k">Proceso Selectivo · Pago</div><h1><%= processoNome %></h1></div>
+    <div class="body">
+      <div id="pend">
+        <div class="valor">R$ <%= (parseFloat(valor)||0).toFixed(2).replace('.',',') %></div>
+        <p class="mut" style="margin-top:0">Inscripción de <strong><%= candidato.nome %></strong></p>
+        <% if (pixData && (pixData.pix_qr_image || pixData.pix_copia_cola)) { %>
+          <p style="margin-top:16px;font-weight:700;color:#0f172a">Escaneá el QR con tu app de banco (PIX)</p>
+          <% if (pixData.pix_qr_image) { %><img class="qr" src="<%= pixData.pix_qr_image %>" alt="PIX QR"><% } %>
+          <% if (pixData.pix_copia_cola) { %>
+            <div class="cc" id="cc"><%= pixData.pix_copia_cola %></div>
+            <button class="btn" onclick="navigator.clipboard.writeText(document.getElementById('cc').textContent);this.textContent='✅ Copiado';">Copiar código PIX</button>
+          <% } %>
+        <% } else { %>
+          <p style="color:#b91c1c;margin-top:16px">No se pudo generar el pago. Contactá a la organización.</p>
+        <% } %>
+        <div class="status"><span class="spin"></span>Esperando confirmación del pago…</div>
+        <p class="mut">Después de pagar, esta página se actualiza sola. Podés cerrarla; la confirmación llega por correo.</p>
+      </div>
+      <div class="ok" id="ok">
+        <div style="font-size:38px">✅</div>
+        <h2 style="color:var(--cor);margin-top:8px">¡Pago confirmado!</h2>
+        <p class="mut" style="margin-top:10px">Su número de inscripción</p>
+        <div class="num" id="num">—</div>
+        <p style="font-size:13px;color:#475569">Guarde este número para el día del examen. Le enviamos la confirmación por correo.</p>
+      </div>
+    </div>
+  </div></div>
+<script>
+var CID=<%= candidato.id %>, jaConf=<%= candidato.pagamento_status==='confirmado' ? 'true':'false' %>;
+function mostrarOk(numero){ document.getElementById('pend').style.display='none'; var ok=document.getElementById('ok'); ok.style.display='block'; document.getElementById('num').textContent=numero?String(numero).padStart(3,'0'):'—'; }
+function checar(){ fetch('/pss/pagamento/'+CID+'/status',{credentials:'same-origin'}).then(r=>r.json()).then(d=>{ if(d.confirmado){ mostrarOk(d.numero); } else setTimeout(checar,4000); }).catch(()=>setTimeout(checar,6000)); }
+if(jaConf){ fetch('/pss/pagamento/'+CID+'/status').then(r=>r.json()).then(d=>mostrarOk(d.numero)); } else checar();
+</script>
+</body>
+</html>

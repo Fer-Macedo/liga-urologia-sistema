@@ -405,9 +405,36 @@ async function pagarComCartao({ referencia, valor, membro, encryptedCard, holder
 
 // ─── EXPORTS ──────────────────────────────────────────────────────────────────
 
+// PIX + checkout cartão para inscrição de Processo Seletivo (referência 'pss-cand-<id>')
+async function criarPixPss({ candidato, valor, processoNome }) {
+  if (!TOKEN) { console.warn('PagBank: PAGBANK_TOKEN não configurado'); return { ok: false }; }
+  const referencia = 'pss-cand-' + candidato.id;
+  const valorCents = centavos(valor);
+  const expDate = fmtExp(new Date(Date.now() + 3 * 24 * 60 * 60 * 1000));
+  const desc = ('Inscrição — ' + processoNome).substring(0, 100);
+  try {
+    const { data } = await axios.post(BASE_URL + '/orders', {
+      reference_id: referencia,
+      customer: { name: candidato.nome, email: candidato.email || 'inscrito@ligaurologia.com.br', tax_id: cpfValido(candidato.cpf) },
+      items: [{ name: desc, quantity: 1, unit_amount: valorCents }],
+      qr_codes: [{ amount: { value: valorCents }, expiration_date: expDate }],
+      notification_urls: [APP_URL + '/webhook/pagbank']
+    }, { headers: headers(), timeout: 15000 });
+    let pixText = null, pixQrImage = null;
+    if (data.qr_codes && data.qr_codes.length) { const qr = data.qr_codes[0]; pixText = qr.text || null; if (qr.links) { const png = qr.links.find(l => l.rel === 'QRCODE_PNG'); pixQrImage = png ? png.href : null; } }
+    const checkoutLink = await criarCheckoutLink({ nome: candidato.nome, email: candidato.email, cpf: candidato.cpf, valor, referencia, descricao: desc, expDate });
+    return { ok: true, order_id: data.id, pix_copia_cola: pixText, pix_qr_image: pixQrImage, checkout_link: checkoutLink };
+  } catch (err) {
+    const status = err.response ? err.response.status : 'sem resposta';
+    console.error('PagBank criarPixPss ERRO', status, JSON.stringify(err.response ? err.response.data : err.message).substring(0, 500));
+    return { ok: false };
+  }
+}
+
 module.exports = {
   criarCobranca,      // mensalidades — PIX + checkout cartão
   criarPixEvento,     // ingressos de eventos — PIX + checkout cartão
+  criarPixPss,        // inscrição de processo seletivo — PIX + checkout cartão
   criarCheckoutLink,  // checkout cartão avulso
   consultarPagamento, // consulta order
   consultarCobranca,  // alias

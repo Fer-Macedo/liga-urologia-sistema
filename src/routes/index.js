@@ -2291,6 +2291,18 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
       }
     }
 
+    // Pagamento de INSCRIÇÃO DE PROCESSO SELETIVO (pss-cand-<id>)
+    if (pago && referencia.startsWith('pss-cand-')) {
+      const candId = referencia.split('-')[2];
+      if (candId) {
+        const jc = await query("SELECT pagamento_status FROM ps_candidatos WHERE id=$1", [candId]);
+        if (jc.rows[0] && jc.rows[0].pagamento_status !== 'confirmado') {
+          await confirmarInscricaoPss(candId, { orderId, valorPago, metodo });
+          console.log('PagBank inscrição PSS confirmada via webhook — cand:', candId, orderId);
+        }
+      }
+    }
+
   } catch (e) { console.error('PagBank Webhook erro:', e.message); }
   res.sendStatus(200);
 });
@@ -5886,6 +5898,166 @@ async function enviarEmailConfirmacaoEvento(inscricaoId) {
     console.log('Email confirmacao enviado:', insc.email);
   } catch(e) { console.error('enviarEmailConfirmacaoEvento ERRO:', e.message); }
 }
+
+// ═══ INSCRIÇÕES DO PROCESSO SELETIVO (PSS) ═══════════════════════════════════
+// Próximo número de inscrição (1..999) do processo. ponytail: MAX+1 (sequencial, sem
+// reuso). Volume baixo -> corrida de concorrência ignorada; se virar problema, usar lock.
+async function _pssProximoNumero(processoId) {
+  const m = await query("SELECT COALESCE(MAX(numero_lista),0)+1 AS n FROM ps_candidatos WHERE processo_id=$1", [processoId]);
+  return m.rows[0].n;
+}
+// Confirma a inscrição (pago OU isento), atribui número, lança fluxo e envia e-mail. Idempotente.
+async function confirmarInscricaoPss(candidatoId, opts = {}) {
+  const c = (await query("SELECT * FROM ps_candidatos WHERE id=$1", [candidatoId])).rows[0];
+  if (!c) return;
+  if (c.pagamento_status === 'confirmado' && c.numero_lista) return; // já confirmado
+  let numero = c.numero_lista || await _pssProximoNumero(c.processo_id);
+  await query("UPDATE ps_candidatos SET pagamento_status='confirmado', status='confirmado', numero_lista=$2, valor_pago=COALESCE($3,valor_pago), confirmado_em=NOW() WHERE id=$1",
+    [candidatoId, numero, (opts.valorPago != null ? opts.valorPago : null)]);
+  if (opts.orderId || opts.metodo) {
+    await query("UPDATE ps_pagamentos SET status='pago', pago_em=NOW(), pagbank_order_id=COALESCE($2,pagbank_order_id), metodo=COALESCE($3,metodo) WHERE candidato_id=$1 AND status!='pago'",
+      [candidatoId, opts.orderId || null, opts.metodo || null]);
+  }
+  try {
+    const pg = await query("SELECT id FROM ps_pagamentos WHERE candidato_id=$1 AND status='pago' ORDER BY id DESC LIMIT 1", [candidatoId]);
+    if (pg.rows[0]) { const { lancarPssNoFluxo } = require('../services/fluxo-pss'); await lancarPssNoFluxo(query, pg.rows[0].id); }
+  } catch (e) { console.error('lancar fluxo pss:', e.message); }
+  await enviarEmailConfirmacaoPss(candidatoId);
+}
+async function enviarEmailConfirmacaoPss(candidatoId) {
+  try {
+    const c = (await query("SELECT c.*, p.nome AS processo_nome, p.data_prova, p.local_prova FROM ps_candidatos c JOIN ps_processos p ON p.id=c.processo_id WHERE c.id=$1", [candidatoId])).rows[0];
+    if (!c || !c.email) return;
+    const dataStr = c.data_prova ? new Date(c.data_prova).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
+    const num = String(c.numero_lista || '').padStart(3, '0');
+    const html = '<div style="border-left:3px solid #1a3d2b;padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:#1a3d2b;letter-spacing:1.5px;text-transform:uppercase">INSCRIPCIÓN CONFIRMADA</p><h2 style="margin:4px 0 0;font-size:20px;font-weight:700;color:#0f172a">' + c.processo_nome + '</h2></div>'
+      + '<p>Estimado/a <strong>' + (c.nome || '').split(' ')[0] + '</strong>,</p><p>Confirmamos su inscripción al proceso selectivo <strong>' + c.processo_nome + '</strong>.</p>'
+      + '<div style="text-align:center;margin:24px 0;padding:24px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">'
+      + '<p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">Su número de inscripción</p>'
+      + '<p style="margin:0;font-size:44px;font-weight:900;color:#1a3d2b;letter-spacing:4px">' + num + '</p>'
+      + '<p style="margin:8px 0 0;font-size:12px;color:#94a3b8">Guarde este número. Deberá completarlo en la hoja de respuestas el día del examen.</p></div>'
+      + (dataStr ? ('<p><strong>Fecha del examen:</strong> ' + dataStr + (c.local_prova ? (' — ' + c.local_prova) : '') + '</p>') : '')
+      + '<p style="margin-top:16px">Atentamente,<br>Comité Organizador<br>Liga Académica de Urología – LAURO</p>';
+    await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: c.email, subject: 'Inscripción confirmada — ' + c.processo_nome, html, faixaLabel: 'INSCRIPCIÓN CONFIRMADA' });
+    await query("UPDATE ps_candidatos SET email_confirmacao_enviado=true WHERE id=$1", [candidatoId]);
+  } catch (e) { console.error('enviarEmailConfirmacaoPss ERRO:', e.message); }
+}
+
+// ── Página pública de inscrição ──
+router.get('/pss/:id/inscricao', async (req, res) => {
+  try {
+    const p = (await query("SELECT * FROM ps_processos WHERE id=$1", [req.params.id])).rows[0];
+    if (!p) return res.status(404).send('Processo não encontrado.');
+    const config = await getConfig();
+    res.render('pages/pss-inscricao-publica', { processo: p, config, sucesso: false, numero: null, erro: null, cupomUrl: req.query.cupom ? req.query.cupom.toUpperCase() : '' });
+  } catch (e) { res.status(500).send('Erro: ' + e.message); }
+});
+router.post('/pss/:id/inscricao', async (req, res) => {
+  const renderErro = async (msg) => { const p = (await query("SELECT * FROM ps_processos WHERE id=$1", [req.params.id])).rows[0]; const config = await getConfig(); return res.status(400).render('pages/pss-inscricao-publica', { processo: p, config, sucesso: false, numero: null, erro: msg, cupomUrl: (req.body.cupom_codigo || '').toUpperCase() }); };
+  try {
+    const p = (await query("SELECT * FROM ps_processos WHERE id=$1", [req.params.id])).rows[0];
+    if (!p) return res.status(404).send('Processo não encontrado.');
+    if (!p.inscricoes_abertas) return renderErro('As inscrições para este processo estão encerradas.');
+    const nome = (req.body.nome || '').trim();
+    const email = (req.body.email || '').trim().toLowerCase();
+    const whatsapp = (req.body.whatsapp || '').trim();
+    const docTipo = (req.body.documento_tipo || 'CPF').trim().toUpperCase();
+    const documento = (req.body.documento || '').replace(/\s+/g, '').trim();
+    const curso = (req.body.curso || '').trim();
+    const semestre = parseInt(req.body.semestre_atual, 10) || null;
+    if (!nome || !email || !documento) return renderErro('Preencha nome, e-mail e documento.');
+    const dup = await query("SELECT id FROM ps_candidatos WHERE processo_id=$1 AND (LOWER(email)=$2 OR (documento IS NOT NULL AND documento=$3)) LIMIT 1", [p.id, email, documento]);
+    if (dup.rows.length) return renderErro('Ya existe una inscripción con este documento o correo en este proceso. / Já existe uma inscrição com este documento ou e-mail neste processo.');
+    const cupomCodigo = (req.body.cupom_codigo || '').toUpperCase().trim();
+    let valorBase = parseFloat(p.valor_inscricao) || 0, valorFinal = valorBase, isento = false, cupomValido = null;
+    if (cupomCodigo) {
+      const cr = await query("SELECT * FROM ps_cupons WHERE processo_id=$1 AND UPPER(codigo)=$2 AND ativo=true", [p.id, cupomCodigo]);
+      cupomValido = cr.rows[0];
+      if (cupomValido && cupomValido.usos_atual < cupomValido.usos_max) {
+        if (cupomValido.tipo === 'percentual') { if (parseFloat(cupomValido.valor) >= 100) { isento = true; valorFinal = 0; } else valorFinal = Math.max(0, Math.round(valorBase * (1 - parseFloat(cupomValido.valor) / 100) * 100) / 100); }
+        else { valorFinal = Math.max(0, Math.round((valorBase - parseFloat(cupomValido.valor)) * 100) / 100); if (valorFinal === 0) isento = true; }
+      } else { cupomValido = null; return renderErro('Cupom inválido ou esgotado.'); }
+    }
+    if (valorBase <= 0) isento = true;
+    const cpfField = docTipo === 'CPF' ? documento : null;
+    const ins = await query("INSERT INTO ps_candidatos (processo_id,nome,email,telefone,documento,documento_tipo,curso,semestre_atual,rg,status,pagamento_status,cupom_codigo,isento,valor_pago,criado_em) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW()) RETURNING id",
+      [p.id, nome, email, whatsapp || null, documento, docTipo, curso || null, semestre, documento, isento ? 'confirmado' : 'pendente', isento ? 'confirmado' : 'pendente', cupomCodigo || null, isento, isento ? 0 : valorFinal]);
+    const candId = ins.rows[0].id;
+    if (cupomValido) await query("UPDATE ps_cupons SET usos_atual=usos_atual+1, usado_por_candidato_id=$1 WHERE id=$2", [candId, cupomValido.id]);
+    if (isento) {
+      await confirmarInscricaoPss(candId, {});
+      const config = await getConfig();
+      const numero = (await query("SELECT numero_lista FROM ps_candidatos WHERE id=$1", [candId])).rows[0].numero_lista;
+      return res.render('pages/pss-inscricao-publica', { processo: p, config, sucesso: true, numero, erro: null, cupomUrl: '' });
+    }
+    const { criarPixPss } = require('../services/pagbank');
+    const pixData = await criarPixPss({ candidato: { id: candId, nome, email, cpf: cpfField }, valor: valorFinal, processoNome: p.nome });
+    await query("INSERT INTO ps_pagamentos (candidato_id,valor,metodo,status,pagbank_order_id,pix_copia_cola,pix_qr_image) VALUES ($1,$2,'pix','pendente',$3,$4,$5)",
+      [candId, valorFinal, pixData && pixData.order_id || null, pixData && pixData.pix_copia_cola || null, pixData && pixData.pix_qr_image || null]);
+    res.redirect('/pss/pagamento/' + candId);
+  } catch (e) { console.error('POST /pss/inscricao:', e.message); res.status(500).send('Erro ao processar inscrição: ' + e.message); }
+});
+// ── Página de pagamento (PIX) ──
+router.get('/pss/pagamento/:cid', async (req, res) => {
+  try {
+    const c = (await query("SELECT c.*, p.nome AS processo_nome FROM ps_candidatos c JOIN ps_processos p ON p.id=c.processo_id WHERE c.id=$1", [req.params.cid])).rows[0];
+    if (!c) return res.status(404).send('Inscrição não encontrada.');
+    const pg = (await query("SELECT * FROM ps_pagamentos WHERE candidato_id=$1 ORDER BY id DESC LIMIT 1", [c.id])).rows[0];
+    const config = await getConfig();
+    const pixData = pg ? { pix_copia_cola: pg.pix_copia_cola, pix_qr_image: pg.pix_qr_image, order_id: pg.pagbank_order_id, checkout_link: null } : null;
+    res.render('pages/pss-pagamento', { config, candidato: c, processoNome: c.processo_nome, valor: c.valor_pago, pixData });
+  } catch (e) { res.status(500).send('Erro: ' + e.message); }
+});
+router.get('/pss/pagamento/:cid/status', async (req, res) => {
+  try { const c = (await query("SELECT pagamento_status, numero_lista FROM ps_candidatos WHERE id=$1", [req.params.cid])).rows[0]; res.json({ confirmado: c && c.pagamento_status === 'confirmado', numero: c ? c.numero_lista : null }); }
+  catch (e) { res.json({ confirmado: false }); }
+});
+// ── Admin: Inscrições PSS (Financeiro/Presidência) ──
+router.get('/inscricoes-pss', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
+  try {
+    const config = await getConfig();
+    const procs = (await query("SELECT * FROM ps_processos ORDER BY id DESC")).rows;
+    const selId = req.query.processo ? parseInt(req.query.processo, 10) : (procs[0] && procs[0].id);
+    let processo = null, inscritos = [], cupons = [], resumo = { total: 0, confirmados: 0, pendentes: 0, arrecadado: 0 };
+    if (selId) {
+      processo = procs.find(p => p.id === selId) || null;
+      inscritos = (await query("SELECT * FROM ps_candidatos WHERE processo_id=$1 ORDER BY (pagamento_status='confirmado') DESC, numero_lista NULLS LAST, criado_em DESC", [selId])).rows;
+      cupons = (await query("SELECT ec.*, c.nome AS usado_nome FROM ps_cupons ec LEFT JOIN ps_candidatos c ON c.id=ec.usado_por_candidato_id WHERE ec.processo_id=$1 ORDER BY ec.criado_em DESC", [selId])).rows;
+      resumo.total = inscritos.length;
+      inscritos.forEach(i => { if (i.pagamento_status === 'confirmado') { resumo.confirmados++; resumo.arrecadado += parseFloat(i.valor_pago) || 0; } else resumo.pendentes++; });
+    }
+    res.render('pages/inscricoes-pss', { config, usuario: req.session.usuario, procs, processo, inscritos, cupons, resumo, msg: req.session.msg || [], erro: req.session.erro || [] });
+    req.session.msg = []; req.session.erro = [];
+  } catch (e) { res.status(500).send('Erro: ' + e.message); }
+});
+router.post('/inscricoes-pss/processo/:id/config', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
+  try {
+    await query("UPDATE ps_processos SET valor_inscricao=$2, inscricoes_abertas=$3 WHERE id=$1", [req.params.id, parseFloat(req.body.valor_inscricao) || 0, req.body.inscricoes_abertas === 'on' || req.body.inscricoes_abertas === 'true']);
+    req.session.msg = ['Configuração de inscrições salva.'];
+  } catch (e) { req.session.erro = [e.message]; }
+  res.redirect('/inscricoes-pss?processo=' + req.params.id);
+});
+router.post('/inscricoes-pss/processo/:id/cupom', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
+  try {
+    const codigo = (req.body.codigo || '').toUpperCase().trim();
+    if (codigo) await query("INSERT INTO ps_cupons (processo_id,codigo,tipo,valor,usos_max,ativo) VALUES ($1,$2,$3,$4,$5,true)", [req.params.id, codigo, req.body.tipo || 'percentual', parseFloat(req.body.valor) || 0, parseInt(req.body.usos_max, 10) || 1]);
+    req.session.msg = ['Cupom criado.'];
+  } catch (e) { req.session.erro = [e.message]; }
+  res.redirect('/inscricoes-pss?processo=' + req.params.id);
+});
+router.post('/inscricoes-pss/cupom/:cid/deletar', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
+  const pid = req.body.processo_id;
+  try { await query("DELETE FROM ps_cupons WHERE id=$1", [req.params.cid]); req.session.msg = ['Cupom removido.']; } catch (e) { req.session.erro = [e.message]; }
+  res.redirect('/inscricoes-pss?processo=' + pid);
+});
+router.post('/inscricoes-pss/candidato/:cid/confirmar-manual', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
+  try { await confirmarInscricaoPss(req.params.cid, { metodo: 'manual' }); req.session.msg = ['Inscrição confirmada manualmente.']; } catch (e) { req.session.erro = [e.message]; }
+  res.redirect('/inscricoes-pss?processo=' + (req.body.processo_id || ''));
+});
+router.post('/inscricoes-pss/candidato/:cid/reenviar-email', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
+  try { await enviarEmailConfirmacaoPss(req.params.cid); req.session.msg = ['E-mail reenviado.']; } catch (e) { req.session.erro = [e.message]; }
+  res.redirect('/inscricoes-pss?processo=' + (req.body.processo_id || ''));
+});
 
 function traduzirRecusaCartao(msg) {
   const m = (msg || '').toLowerCase();

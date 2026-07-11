@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><link rel="shortcut icon" href="/favicon.ico"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inscrições PSS — LAURO</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%= config.org_cor||'#2b6803' %>;--rad:6px;}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:18px;}
+    .kpi{background:var(--card);border:1px solid var(--borda);border-radius:var(--rad);padding:14px 16px;}
+    .kpi .n{font-size:26px;font-weight:800;color:var(--texto);} .kpi .l{font-size:11px;color:var(--texto2);text-transform:uppercase;letter-spacing:.04em;font-weight:700;}
+    .box{background:var(--card);border:1px solid var(--borda);border-radius:var(--rad);padding:16px;margin-bottom:16px;}
+    .box h3{font-size:13px;margin-bottom:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--texto2);}
+    table{width:100%;border-collapse:collapse;font-size:13px;}
+    th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--borda);}
+    th{font-size:11px;text-transform:uppercase;color:var(--texto2);letter-spacing:.03em;}
+    .badge{padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;}
+    .badge.ok{background:#dcfce7;color:#166534;} .badge.pd{background:#fef9c3;color:#854d0e;}
+    .num3{font-weight:800;font-family:monospace;font-size:15px;color:var(--cor-primaria);}
+    .flex{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
+    .flex .campo{flex:1;min-width:120px;}
+    .link-pub{background:#f0fdf4;border:1px dashed #86efac;border-radius:var(--rad);padding:10px 12px;font-size:12px;font-family:monospace;color:#166534;word-break:break-all;}
+    input,select{padding:9px;border:1px solid var(--borda);border-radius:var(--rad);font-size:13px;width:100%;background:var(--card);color:var(--texto);}
+    label.lb{font-size:11px;font-weight:700;color:var(--texto2);display:block;margin-bottom:4px;}
+  </style>
+</head>
+<body>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'inscricoes-pss' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Inscrições PSS</h1>
+      <% if (procs && procs.length) { %>
+      <div class="topbar-acoes">
+        <form method="GET" action="/inscricoes-pss"><select name="processo" onchange="this.form.submit()" style="min-width:220px">
+          <% procs.forEach(function(p){ %><option value="<%=p.id%>" <%= processo&&processo.id===p.id?'selected':'' %>><%=p.nome%></option><% }); %>
+        </select></form>
+      </div>
+      <% } %>
+    </div>
+    <div class="content">
+      <%if(msg&&msg.length>0){%><div class="alerta alerta-ok"><%=msg[0]%></div><%}%>
+      <%if(erro&&erro.length>0){%><div class="alerta alerta-erro"><%=erro[0]%></div><%}%>
+
+      <% if (!processo) { %>
+        <div class="box">Nenhum processo seletivo cadastrado. Crie um em <a href="/processo-seletivo">Processo Seletivo</a>.</div>
+      <% } else { %>
+        <div class="cards">
+          <div class="kpi"><div class="n"><%= resumo.total %></div><div class="l">Inscrições</div></div>
+          <div class="kpi"><div class="n" style="color:#16a34a"><%= resumo.confirmados %></div><div class="l">Confirmadas</div></div>
+          <div class="kpi"><div class="n" style="color:#d97706"><%= resumo.pendentes %></div><div class="l">Pendentes</div></div>
+          <div class="kpi"><div class="n">R$ <%= (resumo.arrecadado||0).toFixed(2).replace('.',',') %></div><div class="l">Arrecadado (líq.)</div></div>
+        </div>
+
+        <div class="box">
+          <h3>Configuração das inscrições</h3>
+          <form method="POST" action="/inscricoes-pss/processo/<%=processo.id%>/config" class="flex">
+            <div class="campo"><label class="lb">Valor da inscrição (R$)</label><input name="valor_inscricao" type="number" step="0.01" min="0" value="<%= parseFloat(processo.valor_inscricao)||0 %>"></div>
+            <div class="campo" style="flex:0 0 auto"><label class="lb">Inscrições abertas?</label>
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding-top:6px"><input type="checkbox" name="inscricoes_abertas" style="width:auto" <%= processo.inscricoes_abertas?'checked':'' %>> Abertas</label></div>
+            <button class="btn btn-primario btn-sm" type="submit">Salvar</button>
+          </form>
+          <div style="margin-top:12px"><label class="lb">Link público de inscrição</label>
+            <div class="link-pub">https://sistema.lauroucpcde.com/pss/<%=processo.id%>/inscricao</div></div>
+        </div>
+
+        <div class="box">
+          <h3>Cupons de desconto</h3>
+          <form method="POST" action="/inscricoes-pss/processo/<%=processo.id%>/cupom" class="flex" style="margin-bottom:12px">
+            <div class="campo"><label class="lb">Código</label><input name="codigo" placeholder="EX: LIGANTE2026" style="text-transform:uppercase" required></div>
+            <div class="campo" style="max-width:150px"><label class="lb">Tipo</label><select name="tipo"><option value="percentual">% desconto</option><option value="valor">R$ desconto</option></select></div>
+            <div class="campo" style="max-width:110px"><label class="lb">Valor</label><input name="valor" type="number" step="0.01" min="0" placeholder="100 = isento" required></div>
+            <div class="campo" style="max-width:90px"><label class="lb">Usos</label><input name="usos_max" type="number" min="1" value="1"></div>
+            <button class="btn btn-sm" type="submit">Criar</button>
+          </form>
+          <table><thead><tr><th>Código</th><th>Desconto</th><th>Usos</th><th>Usado por</th><th></th></tr></thead><tbody>
+            <% if(!cupons.length){ %><tr><td colspan="5" style="color:var(--texto2)">Nenhum cupom.</td></tr><% } %>
+            <% cupons.forEach(function(c){ %>
+              <tr><td style="font-family:monospace;font-weight:700"><%=c.codigo%></td>
+                <td><%= c.tipo==='percentual' ? (parseFloat(c.valor)+'%'+(parseFloat(c.valor)>=100?' (isento)':'')) : ('R$ '+parseFloat(c.valor).toFixed(2)) %></td>
+                <td><%=c.usos_atual%>/<%=c.usos_max%></td><td><%= c.usado_nome||'—' %></td>
+                <td><form method="POST" action="/inscricoes-pss/cupom/<%=c.id%>/deletar" onsubmit="return confirm('Remover cupom?')"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm" style="color:#b91c1c">Remover</button></form></td></tr>
+            <% }); %>
+          </tbody></table>
+        </div>
+
+        <div class="box">
+          <h3>Inscritos</h3>
+          <div style="overflow-x:auto"><table>
+            <thead><tr><th>Nº</th><th>Nome</th><th>Documento</th><th>E-mail</th><th>Status</th><th>Valor</th><th>Ações</th></tr></thead><tbody>
+              <% if(!inscritos.length){ %><tr><td colspan="7" style="color:var(--texto2)">Nenhuma inscrição ainda.</td></tr><% } %>
+              <% inscritos.forEach(function(i){ var conf=i.pagamento_status==='confirmado'; %>
+                <tr>
+                  <td><span class="num3"><%= i.numero_lista?String(i.numero_lista).padStart(3,'0'):'—' %></span></td>
+                  <td><%=i.nome%></td>
+                  <td><%= (i.documento_tipo||'')+' '+(i.documento||'') %></td>
+                  <td style="font-size:12px"><%=i.email%></td>
+                  <td><span class="badge <%=conf?'ok':'pd'%>"><%= conf?'Confirmado':'Pendente' %></span><%= i.isento?' <span class="badge" style="background:#e0e7ff;color:#3730a3">isento</span>':'' %></td>
+                  <td><%= i.valor_pago!=null ? ('R$ '+(parseFloat(i.valor_pago)||0).toFixed(2).replace('.',',')) : '—' %></td>
+                  <td style="white-space:nowrap">
+                    <% if(!conf){ %><form method="POST" action="/inscricoes-pss/candidato/<%=i.id%>/confirmar-manual" style="display:inline" onsubmit="return confirm('Confirmar manualmente (ex.: pagamento em dinheiro)?')"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm" style="background:#16a34a;color:#fff">Confirmar</button></form><% } else { %>
+                    <form method="POST" action="/inscricoes-pss/candidato/<%=i.id%>/reenviar-email" style="display:inline"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm">Reenviar e-mail</button></form><% } %>
+                  </td>
+                </tr>
+              <% }); %>
+            </tbody></table></div>
+        </div>
+      <% } %>
+    </div>
+  </main>
+</div>
+</body>
+</html>
