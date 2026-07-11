@@ -2120,7 +2120,7 @@ async function _cartaoHTML(pv) {
     const digCol = (col)=>'<div class="digcol">'+[0,1,2,3,4,5,6,7,8,9].map(d=>'<span class="bub sm" data-omr="reg'+col+'-'+d+'">'+d+'</span>').join('')+'</div>';
     const marks = Array.from({length:11}).map(()=>'<div class="sq"></div>').join('');
     const _base=__dirname.replace('routes','').replace('src/','');
-    const _ftr='data:image/jpeg;base64,'+require('fs').readFileSync(_base+'public/img/fundo-prova-footer.jpg').toString('base64');
+    const _ftr='data:image/jpeg;base64,'+require('fs').readFileSync(_base+'public/img/cartao-footer.jpg').toString('base64');
     const linha = (w)=>'<span class="line" style="min-width:'+w+'mm"></span>';
     const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><style>'
       +'*{margin:0;padding:0;box-sizing:border-box;}'
@@ -2146,7 +2146,7 @@ async function _cartaoHTML(pv) {
       +'.bub.sm{width:19px;height:19px;font-size:9pt;margin:0;}.bub.on{background:#000;color:#fff;}'
       +'.firma{text-align:center;margin-top:26mm;}.firma .l{border-top:1.3px solid #000;width:58%;margin:0 auto 5px;}'
       +'.firma .t{font-size:9.5pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;}'
-      +'.footer{position:absolute;left:0;right:0;bottom:4mm;padding:0 8mm;}.footer img{width:100%;display:block;}'
+      +'.footer{position:absolute;left:0;right:0;bottom:0;width:100%;}.footer img{width:100%;display:block;}'
       +'</style></head><body>'
       +'<div class="marks l">'+marks+'</div><div class="marks r">'+marks+'</div>'
       +'<div class="wrap">'
