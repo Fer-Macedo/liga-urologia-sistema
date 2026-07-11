@@ -1867,18 +1867,21 @@ router.post('/processo-seletivo/candidato/:id/scan', requireAuth, requirePermiss
     if(!provasR.rows.length) return res.json({ok:false,erro:'Nenhuma prova montada neste processo. Monte a prova (por fila) primeiro.'});
     const porFila={}; provasR.rows.forEach(p=>{ porFila[String(p.fila).toUpperCase()]={id:p.id,gab:p.gabarito_json||{}}; });
     const provaRef=porFila[filaCand]||provasR.rows[0]&&{id:provasR.rows[0].id,gab:provasR.rows[0].gabarito_json||{}};
-    const nQ=Object.keys(provaRef.gab).length;
-    // 1) IA le o cartao
-    const { lerCartaoResposta }=require('../services/cientifico-ia');
-    const r=await lerCartaoResposta(query,{ base64Img:req.file.buffer.toString('base64'), mediaType:req.file.mimetype, totalQuestoes:nQ });
-    if(!r.ok) return res.json({ok:false,erro:r.erro});
-    const filaLida=(r.leitura&&r.leitura.fila)?String(r.leitura.fila).trim().toUpperCase():null;
+    // 1) LEITURA DETERMINISTICA (OMR): mede o preenchimento de cada bolha (sem IA)
+    const omr=require('../services/omr');
+    let leitura;
+    try {
+      const pvFull=(await query("SELECT * FROM ps_provas WHERE id=$1",[provaRef.id])).rows[0];
+      const coords=await _cartaoCoords(pvFull);
+      leitura=await omr.readCard(req.file.buffer, coords);
+    } catch(e){ return res.json({ok:false,erro:'Não consegui ler o cartão: '+e.message}); }
+    const filaLida=leitura.fila?String(leitura.fila).trim().toUpperCase():null;
     // 2) fila usada para corrigir = a lida (se existir prova) senao a do candidato
     const filaCorrecao=(filaLida && porFila[filaLida])?filaLida:filaCand;
     const prova=porFila[filaCorrecao]||provaRef;
     const gab=prova.gab; const totalQuestoes=Object.keys(gab).length;
     if(!totalQuestoes) return res.json({ok:false,erro:'Gabarito da fila '+filaCorrecao+' está vazio.'});
-    const respostas=(r.leitura&&r.leitura.respostas)||{};
+    const respostas=leitura.respostas||{};
     let acertos=0;
     for(let i=1;i<=totalQuestoes;i++){ const m=respostas[i]?String(respostas[i]).toUpperCase():null; if(m && gab[i] && m===String(gab[i]).toUpperCase()) acertos++; }
     const percentual=totalQuestoes? Math.round((acertos/totalQuestoes)*1000)/10 : 0;
@@ -1888,7 +1891,7 @@ router.post('/processo-seletivo/candidato/:id/scan', requireAuth, requirePermiss
       const up=await uploadArquivo(req.file.buffer,'cartao-'+req.params.id+'-'+Date.now()+'.'+((req.file.mimetype.split('/')[1])||'jpg'),req.file.mimetype,'processo-seletivo-cartoes');
       cartaoChave=up.chave;
     } catch(e){ console.error('[SCAN] upload foto cartao:', e.message); }
-    res.json({ ok:true, prova_id:prova.id, fila:filaCorrecao, fila_candidato:filaCand, fila_lida:filaLida, total_questoes:totalQuestoes, gabarito:gab, respostas, acertos, percentual, nota_minima:parseFloat(cand.nota_minima)||60, numero_registro_lido:(r.leitura&&r.leitura.numero_registro)||null, incertas:(r.leitura&&r.leitura.incertas)||[], cartao_chave:cartaoChave, candidato:{id:cand.id,nome:cand.nome,numero_lista:cand.numero_lista,fila:filaCand} });
+    res.json({ ok:true, prova_id:prova.id, fila:filaCorrecao, fila_candidato:filaCand, fila_lida:filaLida, total_questoes:totalQuestoes, gabarito:gab, respostas, acertos, percentual, nota_minima:parseFloat(cand.nota_minima)||60, numero_registro_lido:leitura.registro||null, incertas:leitura.incertas||[], cartao_chave:cartaoChave, candidato:{id:cand.id,nome:cand.nome,numero_lista:cand.numero_lista,fila:filaCand} });
   } catch(e){ res.json({ok:false,erro:e.message}); }
 });
 // Ler cartao e IDENTIFICAR o candidato automaticamente pelo numero de registro (nao precisa selecionar)
@@ -1901,12 +1904,16 @@ router.post('/processo-seletivo/:id/scan', requireAuth, requirePermissao('proces
     const provasR=await query("SELECT id,fila,gabarito_json FROM ps_provas WHERE processo_id=$1",[procId]);
     if(!provasR.rows.length) return res.json({ok:false,erro:'Nenhuma prova montada neste processo.'});
     const porFila={}; provasR.rows.forEach(p=>{ porFila[String(p.fila).toUpperCase()]={id:p.id,gab:p.gabarito_json||{}}; });
-    const nQ=Object.keys(provasR.rows[0].gabarito_json||{}).length;
-    const { lerCartaoResposta }=require('../services/cientifico-ia');
-    const r=await lerCartaoResposta(query,{ base64Img:req.file.buffer.toString('base64'), mediaType:req.file.mimetype, totalQuestoes:nQ });
-    if(!r.ok) return res.json({ok:false,erro:r.erro});
-    const numReg=(r.leitura&&r.leitura.numero_registro)?String(r.leitura.numero_registro).replace(/[^0-9]/g,''):null;
-    const filaLida=(r.leitura&&r.leitura.fila)?String(r.leitura.fila).trim().toUpperCase():null;
+    // LEITURA DETERMINISTICA (OMR): identifica pelo numero de registro medido no cartao
+    const omr=require('../services/omr');
+    let leitura;
+    try {
+      const pvFull=(await query("SELECT * FROM ps_provas WHERE processo_id=$1 LIMIT 1",[procId])).rows[0];
+      const coords=await _cartaoCoords(pvFull);
+      leitura=await omr.readCard(req.file.buffer, coords);
+    } catch(e){ return res.json({ok:false,erro:'Não consegui ler o cartão: '+e.message}); }
+    const numReg=(leitura.registro && !leitura.registro.includes('?'))?leitura.registro.replace(/[^0-9]/g,''):null;
+    const filaLida=leitura.fila?String(leitura.fila).trim().toUpperCase():null;
     // identifica o candidato pelo numero de registro == numero_lista
     let cand=null;
     if(numReg){
@@ -1916,11 +1923,11 @@ router.post('/processo-seletivo/:id/scan', requireAuth, requirePermissao('proces
     const filaCorrecao=(filaLida&&porFila[filaLida])?filaLida:(cand&&cand.fila_prova?String(cand.fila_prova).toUpperCase():String(provasR.rows[0].fila).toUpperCase());
     const prova=porFila[filaCorrecao]||{id:provasR.rows[0].id,gab:provasR.rows[0].gabarito_json||{}};
     const gab=prova.gab; const totalQuestoes=Object.keys(gab).length;
-    const respostas=(r.leitura&&r.leitura.respostas)||{};
+    const respostas=leitura.respostas||{};
     let acertos=0; for(let i=1;i<=totalQuestoes;i++){ const m=respostas[i]?String(respostas[i]).toUpperCase():null; if(m&&gab[i]&&m===String(gab[i]).toUpperCase())acertos++; }
     const percentual=totalQuestoes?Math.round(acertos/totalQuestoes*1000)/10:0;
     let cartaoChave=null; try{ const {uploadArquivo}=require('../services/arquivos'); const up=await uploadArquivo(req.file.buffer,'cartao-proc'+procId+'-'+Date.now()+'.'+((req.file.mimetype.split('/')[1])||'jpg'),req.file.mimetype,'processo-seletivo-cartoes'); cartaoChave=up.chave; }catch(e){ console.error('[SCAN] foto:',e.message); }
-    res.json({ ok:true, candidato: cand?{id:cand.id,nome:cand.nome,numero_lista:cand.numero_lista,fila:String(cand.fila_prova||'A').toUpperCase()}:null, numero_registro_lido:numReg, fila_lida:filaLida, fila:filaCorrecao, prova_id:prova.id, total_questoes:totalQuestoes, gabarito:gab, respostas, acertos, percentual, nota_minima:parseFloat(proc.nota_minima)||60, incertas:(r.leitura&&r.leitura.incertas)||[], cartao_chave:cartaoChave });
+    res.json({ ok:true, candidato: cand?{id:cand.id,nome:cand.nome,numero_lista:cand.numero_lista,fila:String(cand.fila_prova||'A').toUpperCase()}:null, numero_registro_lido:numReg, fila_lida:filaLida, fila:filaCorrecao, prova_id:prova.id, total_questoes:totalQuestoes, gabarito:gab, respostas, acertos, percentual, nota_minima:parseFloat(proc.nota_minima)||60, incertas:leitura.incertas||[], cartao_chave:cartaoChave });
   } catch(e){ res.json({ok:false,erro:e.message}); }
 });
 // Visualizar/baixar a foto do cartao arquivado de um candidato (consulta/auditoria)
@@ -2098,20 +2105,15 @@ router.get('/processo-seletivo/prova/:id/gabarito', requireAuth, requirePermissa
   } catch(e) { res.status(500).send('Erro PDF gabarito: '+e.message); }
 });
 // ─── CARTAO DE RESPOSTA (hoja de respuestas / OMR) ───────────────────────────
-router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
-  try {
-    const pvR = await query("SELECT pv.*,p.nome as proc_nome,p.data_prova FROM ps_provas pv JOIN ps_processos p ON p.id=pv.processo_id WHERE pv.id=$1",[req.params.id]);
-    if(!pvR.rows.length) return res.status(404).send('Prova não encontrada');
-    const pv = pvR.rows[0];
+// Monta o HTML do cartao (reusado pela impressao E pela leitura OMR deterministica).
+async function _cartaoHTML(pv) {
     const fila = (pv.fila||'A').toString().trim().toUpperCase();
     const data = pv.data_prova ? new Date(pv.data_prova).toLocaleDateString('pt-BR') : '____/____/________';
-    // Questoes reais da prova, agrupadas pelos temas cadastrados (mesma numeracao/ordem da prova)
     const ids = pv.questoes_json||[];
     const qR = await query('SELECT * FROM ps_questoes WHERE id=ANY($1::int[])',[ids]);
     const qMap={}; qR.rows.forEach(q=>qMap[q.id]=q);
     const bub = (l,on,omr)=>'<span class="bub'+(on?' on':'')+'"'+(omr?' data-omr="'+omr+'"':'')+'>'+l+'</span>';
     const qRow = (n)=>'<div class="qrow"><span class="qn">'+n+'</span><span class="bubs">'+['A','B','C','D'].map(l=>bub(l,false,'q'+n+'-'+l)).join('')+'</span></div>';
-    // 2 colunas uniformes (metade/metade), passo fixo -> espacamento igual em toda a folha
     const nums = ids.map((id,i)=>qMap[id]?i+1:null).filter(Boolean);
     const half = Math.ceil(nums.length/2);
     const secHtml = nums.length ? '<div class="qcol">'+nums.slice(0,half).map(qRow).join('')+'</div><div class="qcol">'+nums.slice(half).map(qRow).join('')+'</div>' : '<div style="color:#999">Prova sem questões.</div>';
@@ -2164,6 +2166,33 @@ router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requireP
       +'</div>'
       +'<div class="footer"><img src="'+_ftr+'"></div>'
       +'</body></html>';
+    return { html, fila, data };
+}
+// Renderiza o cartao e extrai o MAPA DE COORDENADAS canonico (base do OMR). Layout e
+// identico p/ qualquer fila, entao serve p/ ler o cartao de qualquer prova do processo.
+async function _cartaoCoords(pv) {
+  const { html } = await _cartaoHTML(pv);
+  const puppeteer=require('puppeteer-core'); const chromium=require('@sparticuz/chromium');
+  chromium.setHeadlessMode=true; chromium.setGraphicsMode=false;
+  const browser=await puppeteer.launch({args:[...chromium.args,'--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu'],executablePath:await chromium.executablePath(),headless:'new'});
+  try {
+    const page=await browser.newPage();
+    await page.setViewport({width:794,height:1123,deviceScaleFactor:1});
+    await page.setContent(html,{waitUntil:'networkidle0'});
+    return await page.evaluate(()=>{
+      const c=el=>{const r=el.getBoundingClientRect();return {x:Math.round((r.left+r.width/2)*100)/100,y:Math.round((r.top+r.height/2)*100)/100,r:Math.round(Math.min(r.width,r.height)/2*100)/100};};
+      const bolhas={}; document.querySelectorAll('[data-omr]').forEach(el=>{bolhas[el.getAttribute('data-omr')]=c(el);});
+      const marcadores=[...document.querySelectorAll('.sq')].map(c).map(m=>({x:m.x,y:m.y}));
+      return { W:document.documentElement.scrollWidth, H:document.documentElement.scrollHeight, bolhas, marcadores };
+    });
+  } finally { await browser.close(); }
+}
+router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
+  try {
+    const pvR = await query("SELECT pv.*,p.nome as proc_nome,p.data_prova FROM ps_provas pv JOIN ps_processos p ON p.id=pv.processo_id WHERE pv.id=$1",[req.params.id]);
+    if(!pvR.rows.length) return res.status(404).send('Prova não encontrada');
+    const pv = pvR.rows[0];
+    const { html, fila } = await _cartaoHTML(pv);
     const puppeteer=require('puppeteer-core'); const chromium=require('@sparticuz/chromium');
     chromium.setHeadlessMode=true; chromium.setGraphicsMode=false;
     const browser=await puppeteer.launch({args:[...chromium.args,'--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu'],executablePath:await chromium.executablePath(),headless:'new'});
