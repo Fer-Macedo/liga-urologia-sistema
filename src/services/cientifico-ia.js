@@ -158,8 +158,13 @@ Regras rígidas:
 - NUNCA invente: em qualquer dúvida, retorne null.
 - Ignore as letras impressas dentro das bolhas — o que importa é qual bolha está pintada por cima.
 
+Além das questões, leia também:
+- FILA: no bloco "Conjunto de examen" há bolhas A, B, C — retorne a letra da que estiver PREENCHIDA. Se nada preenchido, use o valor escrito em "PRUEBA FILA".
+- NÚMERO DE REGISTRO: um bloco com 3 colunas de bolhas 0-9. Em cada coluna há UM dígito preenchido. Leia as 3 colunas da esquerda para a direita e forme o número de 3 dígitos (ex.: "047"). Se não der pra ler com certeza, retorne null.
+- INCERTAS: liste os números das questões em que você NÃO teve certeza absoluta da marcação (bolha fraca, rasura, dúvida) — para revisão humana.
+
 Responda em JSON ESTRITO, sem nenhum texto fora do JSON, exatamente neste formato:
-{ "fila": "A|B|C ou null (o que estiver marcado em Conjunto de examen / escrito em PRUEBA FILA)", "numero_lista": "texto do Nº DE LISTA se estiver legível, ou null", "respostas": { "1": "A", "2": null, "3": "C" } }
+{ "fila": "A|B|C ou null", "numero_registro": "3 dígitos como texto (ex: 047) ou null", "respostas": { "1": "A", "2": null, "3": "C" }, "incertas": [10, 14] }
 Inclua TODAS as questões de 1 até N no objeto respostas, mesmo as que forem null.`;
 
 async function lerCartaoResposta(query, { base64Img, mediaType, totalQuestoes }) {

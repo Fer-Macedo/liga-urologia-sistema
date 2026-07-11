@@ -260,6 +260,8 @@
                 <div style="display:flex;gap:4px;flex-wrap:wrap">
                   <button class="btn-xs verde" onclick="abrirCorrecao(<%=c.id%>,this.dataset.nome,<%=c.processo_id%>,'<%=c.fila_prova||'A'%>')" data-nome="<%=c.nome%>">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Corrigir</button>
+                  <a href="/processo-seletivo/candidato/<%=c.id%>/cartao" target="_blank" class="btn-xs roxo" title="Ver cartão arquivado">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Cartão</a>
                   <button class="btn-xs azul" onclick="abrirEntrevista(<%=c.id%>,this.dataset.nome,<%=c.processo_id%>)" data-nome="<%=c.nome%>">
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Entrevista</button>
                   <form method="POST" action="/processo-seletivo/candidato/<%=c.id%>/deletar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Remover?', function(){ f.submit(); }); return false;">

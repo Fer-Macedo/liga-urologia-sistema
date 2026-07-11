@@ -70,6 +70,7 @@
         <span class="badge" id="rBadge"></span>
       </div>
       <div class="aviso" id="rAviso"></div>
+      <img id="rFoto" alt="foto do cartão" style="width:100%;border-radius:6px;margin-bottom:12px;border:1px solid #334155;">
       <div class="grid" id="rGrid"></div>
       <button class="btn ok" id="btnConfirmar">✅ Confirmar e lançar na classificação</button>
       <button class="btn sec" id="btnRefazer">↻ Refazer</button>
@@ -77,7 +78,7 @@
   </div>
 
 <script>
-var GAB={}, RESP={}, TOTAL=0, NOTAMIN=60, PROVAID=null, CANDID=null;
+var GAB={}, RESP={}, TOTAL=0, NOTAMIN=60, PROVAID=null, CANDID=null, CARTAOCHAVE=null, INCERTAS=[];
 var cand=document.getElementById('cand'), foto=document.getElementById('foto'), btnLer=document.getElementById('btnLer');
 function checkLer(){ btnLer.disabled = !(cand.value && foto.files.length); }
 cand.addEventListener('change',checkLer);
@@ -97,13 +98,16 @@ btnLer.addEventListener('click',function(){
     .then(function(d){
       document.getElementById('spin').style.display='none'; btnLer.disabled=false;
       if(!d.ok){ msg(d.erro||'Falha ao ler o cartão.','err'); return; }
-      GAB=d.gabarito||{}; RESP={}; TOTAL=d.total_questoes; NOTAMIN=d.nota_minima; PROVAID=d.prova_id;
+      GAB=d.gabarito||{}; RESP={}; TOTAL=d.total_questoes; NOTAMIN=d.nota_minima; PROVAID=d.prova_id; CARTAOCHAVE=d.cartao_chave||null; INCERTAS=d.incertas||[];
       for(var i=1;i<=TOTAL;i++){ RESP[i]=d.respostas[i]?String(d.respostas[i]).toUpperCase():null; }
       var filaSel=cand.options[cand.selectedIndex].dataset.fila;
-      var alerta='A IA leu — confira e ajuste se algo estiver errado.';
-      if(d.fila_lida && d.fila_lida.toUpperCase()!==String(filaSel).toUpperCase()) alerta+=' ⚠️ Fila lida no cartão ('+d.fila_lida+') difere da fila do candidato ('+filaSel+')!';
-      if(d.numero_lista_lido) alerta+=' Nº de lista lido: '+d.numero_lista_lido+'.';
+      var alerta='⚠️ CONFIRA cada questão contra a foto abaixo antes de lançar.';
+      alerta+=' Fila usada na correção: '+d.fila+'.';
+      if(d.fila_lida && d.fila && d.fila_lida.toUpperCase()!==String(d.fila).toUpperCase()) alerta+=' (Fila lida no cartão: '+d.fila_lida+'.)';
+      if(d.numero_registro_lido) alerta+=' Nº de registro lido: '+d.numero_registro_lido+(cand.options[cand.selectedIndex].textContent.indexOf('#'+d.numero_registro_lido)<0?' — confira se bate com o candidato!':'')+'.';
+      if(INCERTAS && INCERTAS.length) alerta+=' Questões em dúvida (revise): '+INCERTAS.join(', ')+'.';
       document.getElementById('rAviso').textContent=alerta;
+      try{ document.getElementById('rFoto').src=URL.createObjectURL(foto.files[0]); }catch(e){}
       render();
       document.getElementById('resultado').classList.remove('hide');
       document.getElementById('resultado').scrollIntoView({behavior:'smooth'});
@@ -125,7 +129,8 @@ function render(){
       opts+='<div class="'+cls+'" onclick="setResp('+q+',\''+L+'\')">'+L+'</div>';
     });
     var noneCls='none'+(sel===null?' sel':'');
-    grid.innerHTML += '<div class="q"><div class="qn">'+q+'</div><div class="opts">'+opts+'</div><div class="'+noneCls+'" style="margin-top:4px;text-align:center" onclick="setResp('+q+',null)">em branco</div></div>';
+    var inc=INCERTAS.indexOf(q)>=0;
+    grid.innerHTML += '<div class="q" style="'+(inc?'border-color:#fbbf24;box-shadow:0 0 0 1px #fbbf24':'')+'"><div class="qn">'+q+(inc?' <span style="color:#fbbf24">⚠ revisar</span>':'')+'</div><div class="opts">'+opts+'</div><div class="'+noneCls+'" style="margin-top:4px;text-align:center" onclick="setResp('+q+',null)">em branco</div></div>';
   }
   var pct=TOTAL?Math.round(acertos/TOTAL*1000)/10:0;
   var ap=pct>=NOTAMIN;
@@ -143,7 +148,7 @@ document.getElementById('btnConfirmar').addEventListener('click',function(){
   var btn=this; btn.disabled=true; msg('');
   fetch('/processo-seletivo/candidato/'+CANDID+'/correcao',{
     method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({ respostas_json:JSON.stringify(RESP), total_questoes:TOTAL, total_acertos:window._acertos, percentual:window._pct, prova_id:PROVAID })
+    body:JSON.stringify({ respostas_json:JSON.stringify(RESP), total_questoes:TOTAL, total_acertos:window._acertos, percentual:window._pct, prova_id:PROVAID, cartao_chave:CARTAOCHAVE })
   }).then(function(r){return r.json();}).then(function(d){
     btn.disabled=false;
     if(!d.ok){ msg(d.erro||'Falha ao lançar.','err'); return; }

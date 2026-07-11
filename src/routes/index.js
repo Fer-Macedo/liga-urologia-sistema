@@ -1810,7 +1810,7 @@ router.post('/processo-seletivo/candidato/:id/correcao', requireAuth, requirePer
     const {respostas_json,total_questoes,total_acertos,percentual,prova_id}=req.body;
     const notaMin=(await query('SELECT nota_minima FROM ps_processos p JOIN ps_candidatos c ON c.processo_id=p.id WHERE c.id=$1',[req.params.id])).rows[0]?.nota_minima||60;
     const aprov=parseFloat(percentual)>=parseFloat(notaMin);
-    let cartaoChave=null;
+    let cartaoChave=req.body.cartao_chave||null;
     if(req.file){
       const {uploadArquivo}=require('../services/arquivos');
       const r=await uploadArquivo(req.file.buffer,'cartao-'+req.params.id+'.'+req.file.mimetype.split('/')[1],req.file.mimetype,'processo-seletivo');
@@ -1861,21 +1861,51 @@ router.post('/processo-seletivo/candidato/:id/scan', requireAuth, requirePermiss
     if(!req.file) return res.json({ok:false,erro:'Nenhuma imagem recebida.'});
     const cand=(await query("SELECT c.*, p.nota_minima FROM ps_candidatos c JOIN ps_processos p ON p.id=c.processo_id WHERE c.id=$1",[req.params.id])).rows[0];
     if(!cand) return res.json({ok:false,erro:'Candidato não encontrado.'});
-    const fila=(cand.fila_prova||'A').toString().trim().toUpperCase();
-    const pvR=await query("SELECT id,gabarito_json FROM ps_provas WHERE processo_id=$1 AND fila=$2",[cand.processo_id,fila]);
-    if(!pvR.rows.length) return res.json({ok:false,erro:'Não há prova montada para a fila '+fila+' deste candidato. Monte a prova dessa fila primeiro.'});
-    const gab=pvR.rows[0].gabarito_json||{};
-    const totalQuestoes=Object.keys(gab).length;
-    if(!totalQuestoes) return res.json({ok:false,erro:'Gabarito da fila '+fila+' está vazio.'});
+    const filaCand=(cand.fila_prova||'A').toString().trim().toUpperCase();
+    // Provas/gabaritos deste processo por fila
+    const provasR=await query("SELECT id,fila,gabarito_json FROM ps_provas WHERE processo_id=$1",[cand.processo_id]);
+    if(!provasR.rows.length) return res.json({ok:false,erro:'Nenhuma prova montada neste processo. Monte a prova (por fila) primeiro.'});
+    const porFila={}; provasR.rows.forEach(p=>{ porFila[String(p.fila).toUpperCase()]={id:p.id,gab:p.gabarito_json||{}}; });
+    const provaRef=porFila[filaCand]||provasR.rows[0]&&{id:provasR.rows[0].id,gab:provasR.rows[0].gabarito_json||{}};
+    const nQ=Object.keys(provaRef.gab).length;
+    // 1) IA le o cartao
     const { lerCartaoResposta }=require('../services/cientifico-ia');
-    const r=await lerCartaoResposta(query,{ base64Img:req.file.buffer.toString('base64'), mediaType:req.file.mimetype, totalQuestoes });
+    const r=await lerCartaoResposta(query,{ base64Img:req.file.buffer.toString('base64'), mediaType:req.file.mimetype, totalQuestoes:nQ });
     if(!r.ok) return res.json({ok:false,erro:r.erro});
+    const filaLida=(r.leitura&&r.leitura.fila)?String(r.leitura.fila).trim().toUpperCase():null;
+    // 2) fila usada para corrigir = a lida (se existir prova) senao a do candidato
+    const filaCorrecao=(filaLida && porFila[filaLida])?filaLida:filaCand;
+    const prova=porFila[filaCorrecao]||provaRef;
+    const gab=prova.gab; const totalQuestoes=Object.keys(gab).length;
+    if(!totalQuestoes) return res.json({ok:false,erro:'Gabarito da fila '+filaCorrecao+' está vazio.'});
     const respostas=(r.leitura&&r.leitura.respostas)||{};
     let acertos=0;
     for(let i=1;i<=totalQuestoes;i++){ const m=respostas[i]?String(respostas[i]).toUpperCase():null; if(m && gab[i] && m===String(gab[i]).toUpperCase()) acertos++; }
     const percentual=totalQuestoes? Math.round((acertos/totalQuestoes)*1000)/10 : 0;
-    res.json({ ok:true, prova_id:pvR.rows[0].id, fila, total_questoes:totalQuestoes, gabarito:gab, respostas, acertos, percentual, nota_minima:parseFloat(cand.nota_minima)||60, fila_lida:(r.leitura&&r.leitura.fila)||null, numero_lista_lido:(r.leitura&&r.leitura.numero_lista)||null, candidato:{id:cand.id,nome:cand.nome,fila} });
+    // 3) guarda a foto do cartao (para consulta/auditoria futura)
+    let cartaoChave=null;
+    try { const {uploadArquivo}=require('../services/arquivos');
+      const up=await uploadArquivo(req.file.buffer,'cartao-'+req.params.id+'-'+Date.now()+'.'+((req.file.mimetype.split('/')[1])||'jpg'),req.file.mimetype,'processo-seletivo-cartoes');
+      cartaoChave=up.chave;
+    } catch(e){ console.error('[SCAN] upload foto cartao:', e.message); }
+    res.json({ ok:true, prova_id:prova.id, fila:filaCorrecao, fila_candidato:filaCand, fila_lida:filaLida, total_questoes:totalQuestoes, gabarito:gab, respostas, acertos, percentual, nota_minima:parseFloat(cand.nota_minima)||60, numero_registro_lido:(r.leitura&&r.leitura.numero_registro)||null, incertas:(r.leitura&&r.leitura.incertas)||[], cartao_chave:cartaoChave, candidato:{id:cand.id,nome:cand.nome,numero_lista:cand.numero_lista,fila:filaCand} });
   } catch(e){ res.json({ok:false,erro:e.message}); }
+});
+// Visualizar/baixar a foto do cartao arquivado de um candidato (consulta/auditoria)
+router.get('/processo-seletivo/candidato/:id/cartao', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
+  try {
+    const r=await query("SELECT cartao_chave FROM ps_respostas WHERE candidato_id=$1 AND cartao_chave IS NOT NULL ORDER BY corrigido_em DESC LIMIT 1",[req.params.id]);
+    const chave=r.rows[0] && r.rows[0].cartao_chave;
+    if(!chave) return res.status(404).send('Nenhum cartão arquivado para este candidato.');
+    const { gerarUrlTemporaria }=require('../services/arquivos');
+    const url=await gerarUrlTemporaria(chave,120);
+    const axios=require('axios');
+    const resp=await axios.get(url,{responseType:'stream',timeout:30000});
+    res.setHeader('Content-Type',resp.headers['content-type']||'image/jpeg');
+    res.setHeader('Content-Disposition',(req.query.download?'attachment':'inline')+'; filename="cartao-candidato-'+req.params.id+'.jpg"');
+    res.setHeader('X-Frame-Options','SAMEORIGIN');
+    resp.data.pipe(res);
+  } catch(e){ res.status(500).send('Erro ao abrir cartão: '+e.message); }
 });
 router.get('/processo-seletivo/:id/resultados', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
