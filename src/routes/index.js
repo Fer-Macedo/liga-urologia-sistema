@@ -2111,13 +2111,10 @@ router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requireP
     const qMap={}; qR.rows.forEach(q=>qMap[q.id]=q);
     const bub = (l,on,omr)=>'<span class="bub'+(on?' on':'')+'"'+(omr?' data-omr="'+omr+'"':'')+'>'+l+'</span>';
     const qRow = (n)=>'<div class="qrow"><span class="qn">'+n+'</span><span class="bubs">'+['A','B','C','D'].map(l=>bub(l,false,'q'+n+'-'+l)).join('')+'</span></div>';
-    // 2 colunas uniformes (metade/metade) com o TITULO do tema antes da 1a questao de cada secao
+    // 2 colunas uniformes (metade/metade), passo fixo -> espacamento igual em toda a folha
     const nums = ids.map((id,i)=>qMap[id]?i+1:null).filter(Boolean);
-    const temaDe = {}; ids.forEach((id,i)=>{ if(qMap[id]) temaDe[i+1]=qMap[id].tema; });
     const half = Math.ceil(nums.length/2);
-    const col = (arr,ult)=>{ let h=''; for(const n of arr){ const t=temaDe[n]; if(t&&t!==ult){ h+='<div class="sec-tit">'+t+'</div>'; ult=t; } h+=qRow(n); } return {h,ult}; };
-    const cL=col(nums.slice(0,half),null); const cR=col(nums.slice(half),cL.ult);
-    const secHtml = nums.length ? '<div class="qcol">'+cL.h+'</div><div class="qcol">'+cR.h+'</div>' : '<div style="color:#999">Prova sem questões.</div>';
+    const secHtml = nums.length ? '<div class="qcol">'+nums.slice(0,half).map(qRow).join('')+'</div><div class="qcol">'+nums.slice(half).map(qRow).join('')+'</div>' : '<div style="color:#999">Prova sem questões.</div>';
     const digCol = (col)=>'<div class="digcol">'+[0,1,2,3,4,5,6,7,8,9].map(d=>'<span class="bub sm" data-omr="reg'+col+'-'+d+'">'+d+'</span>').join('')+'</div>';
     const marks = Array.from({length:11}).map(()=>'<div class="sq"></div>').join('');
     const _base=__dirname.replace('routes','').replace('src/','');
@@ -2139,8 +2136,7 @@ router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requireP
       +'.mini-t{font-weight:800;font-size:9pt;text-transform:uppercase;margin-bottom:7px;text-align:center;}'
       +'.mini-b{display:flex;gap:14px;justify-content:center;}'
       +'.digrid{display:flex;gap:18px;justify-content:center;}.digcol{display:flex;flex-direction:column;gap:4px;align-items:center;}'
-      +'.questoes{display:flex;gap:50px;justify-content:center;}.qcol{display:flex;flex-direction:column;gap:10px;}'
-      +'.sec-tit{font-weight:800;font-size:11pt;text-transform:uppercase;border-bottom:2px solid #000;padding-bottom:2px;margin-top:1px;}'
+      +'.questoes{display:flex;gap:50px;justify-content:center;}.qcol{display:flex;flex-direction:column;gap:15px;}'
       +'.qrow{display:flex;align-items:center;}'
       +'.qn{width:30px;font-weight:700;text-align:right;margin-right:12px;font-size:12pt;flex-shrink:0;}'
       +'.bubs{display:flex;}'
@@ -2148,7 +2144,7 @@ router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requireP
       +'.bub.sm{width:19px;height:19px;font-size:9pt;margin:0;}.bub.on{background:#000;color:#fff;}'
       +'.firma{text-align:center;margin-top:26mm;}.firma .l{border-top:1.3px solid #000;width:58%;margin:0 auto 5px;}'
       +'.firma .t{font-size:9.5pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;}'
-      +'.footer{position:absolute;left:0;right:0;bottom:0;width:100%;}.footer img{width:100%;display:block;}'
+      +'.footer{position:absolute;left:0;right:0;bottom:4mm;padding:0 8mm;}.footer img{width:100%;display:block;}'
       +'</style></head><body>'
       +'<div class="marks l">'+marks+'</div><div class="marks r">'+marks+'</div>'
       +'<div class="wrap">'
