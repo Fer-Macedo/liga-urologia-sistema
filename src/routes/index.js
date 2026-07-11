@@ -2001,6 +2001,82 @@ router.get('/processo-seletivo/prova/:id/gabarito', requireAuth, requirePermissa
     res.end(Buffer.from(pdf)); // idem: Buffer.from p/ nao corromper o PDF
   } catch(e) { res.status(500).send('Erro PDF gabarito: '+e.message); }
 });
+// ─── CARTAO DE RESPOSTA (hoja de respuestas / OMR) ───────────────────────────
+router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
+  try {
+    const pvR = await query("SELECT pv.*,p.nome as proc_nome,p.data_prova FROM ps_provas pv JOIN ps_processos p ON p.id=pv.processo_id WHERE pv.id=$1",[req.params.id]);
+    if(!pvR.rows.length) return res.status(404).send('Prova não encontrada');
+    const pv = pvR.rows[0];
+    const fila = (pv.fila||'A').toString().trim().toUpperCase();
+    const data = pv.data_prova ? new Date(pv.data_prova).toLocaleDateString('pt-BR') : '____/____/________';
+    const bub = (l,on)=>'<span class="bub'+(on?' on':'')+'">'+l+'</span>';
+    const qRow = (n)=>'<div class="qrow"><span class="qn">'+n+'</span>'+['A','B','C','D'].map(l=>bub(l)).join('')+'</div>';
+    const digCol = ()=>'<div class="digcol">'+[0,1,2,3,4,5,6,7,8,9].map(d=>'<span class="bub sm">'+d+'</span>').join('')+'</div>';
+    const marks = Array.from({length:11}).map(()=>'<div class="sq"></div>').join('');
+    const _base=__dirname.replace('routes','').replace('src/','');
+    const _ftr='data:image/jpeg;base64,'+require('fs').readFileSync(_base+'public/img/fundo-prova-footer.jpg').toString('base64');
+    const linha = (w)=>'<span class="line" style="min-width:'+w+'mm"></span>';
+    const html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"><style>'
+      +'*{margin:0;padding:0;box-sizing:border-box;}'
+      +'body{font-family:Arial,Helvetica,sans-serif;color:#000;font-size:10pt;position:relative;width:210mm;height:297mm;}'
+      +'.wrap{padding:9mm 15mm 30mm;}'
+      +'.marks{position:absolute;top:8mm;bottom:8mm;width:6mm;display:flex;flex-direction:column;justify-content:space-between;}'
+      +'.marks.l{left:3mm;}.marks.r{right:3mm;}.sq{width:6mm;height:6mm;background:#000;}'
+      +'.header{border:1.6px solid #000;padding:6px 10px;margin-bottom:8px;font-size:9pt;}'
+      +'.hrow{display:flex;gap:16px;margin:3px 0;flex-wrap:wrap;align-items:flex-end;}'
+      +'.fld{display:flex;align-items:flex-end;gap:4px;}.fld b{white-space:nowrap;}'
+      +'.line{border-bottom:1px solid #000;display:inline-block;height:12px;}'
+      +'.titulo{text-align:center;font-size:24pt;font-weight:900;letter-spacing:5px;margin:6px 0 12px;}'
+      +'.cols{display:flex;gap:22px;}.col{flex:1;}'
+      +'.mini{border:1.3px solid #000;padding:6px 8px;margin-bottom:10px;}'
+      +'.mini-t{font-weight:800;font-size:9pt;text-transform:uppercase;margin-bottom:6px;text-align:center;}'
+      +'.mini-b{display:flex;gap:10px;justify-content:center;}'
+      +'.digrid{display:flex;gap:16px;justify-content:center;}.digcol{display:flex;flex-direction:column;gap:3px;}'
+      +'.sec-tit{font-weight:800;font-size:11pt;text-transform:uppercase;border-bottom:2px solid #000;margin:10px 0 8px;padding-bottom:2px;}'
+      +'.qrow{display:flex;align-items:center;margin-bottom:8px;}'
+      +'.qn{width:26px;font-weight:700;text-align:right;margin-right:8px;font-size:10.5pt;}'
+      +'.bub{display:inline-flex;width:19px;height:19px;border:1.3px solid #000;border-radius:50%;align-items:center;justify-content:center;font-size:9pt;margin:0 5px;font-weight:600;}'
+      +'.bub.sm{width:15px;height:15px;font-size:8pt;margin:0;}.bub.on{background:#000;color:#fff;}'
+      +'.firma{text-align:center;margin-top:14px;}.firma .l{border-top:1.2px solid #000;width:55%;margin:26px auto 4px;}'
+      +'.firma .t{font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;}'
+      +'.footer{position:absolute;left:0;right:0;bottom:0;width:100%;}.footer img{width:100%;display:block;}'
+      +'</style></head><body>'
+      +'<div class="marks l">'+marks+'</div><div class="marks r">'+marks+'</div>'
+      +'<div class="wrap">'
+      +'<div class="header">'
+      +'<div class="hrow"><div class="fld" style="flex:1"><b>ALUMNO(A):</b> '+linha(120)+'</div></div>'
+      +'<div class="hrow"><div class="fld"><b>FECHA DE NASCIMENTO:</b> '+linha(30)+'</div><div class="fld"><b>CATRACA:</b> '+linha(22)+'</div><div class="fld"><b>RG:</b> '+linha(28)+'</div></div>'
+      +'<div class="hrow"><div class="fld"><b>NÚMERO DE LISTA:</b> '+linha(20)+'</div><div class="fld"><b>MOTIVO:</b> Evaluación</div><div class="fld"><b>VALOR:</b> '+linha(18)+'</div></div>'
+      +'<div class="hrow"><div class="fld"><b>PRUEBA FILA:</b> <span style="font-weight:900;font-size:12pt">'+fila+'</span></div><div class="fld"><b>FECHA:</b> '+data+'</div><div class="fld"><b>PUNTOS:</b> '+linha(18)+'</div></div>'
+      +'</div>'
+      +'<div class="titulo">GABARITO</div>'
+      +'<div class="cols">'
+      +'<div class="col">'
+      +'<div class="mini"><div class="mini-t">Conjunto de examen</div><div class="mini-b">'+bub('A',fila==='A')+bub('B',fila==='B')+'</div></div>'
+      +'<div class="mini"><div class="mini-t">Número de Registro</div><div class="digrid">'+digCol()+digCol()+'</div></div>'
+      +'<div class="sec-tit">Sinais Vitais</div>'+[1,2,3,4,5].map(qRow).join('')
+      +'</div>'
+      +'<div class="col">'
+      +'<div class="sec-tit">Generalidades Urología</div>'+[6,7,8,9,10,11,12,13,14,15].map(qRow).join('')
+      +'<div class="sec-tit">Preguntas 16 – 20</div>'+[16,17,18,19,20].map(qRow).join('')
+      +'</div>'
+      +'</div>'
+      +'<div class="firma"><div class="l"></div><div class="t">Firma del Candidato (A)</div></div>'
+      +'</div>'
+      +'<div class="footer"><img src="'+_ftr+'"></div>'
+      +'</body></html>';
+    const puppeteer=require('puppeteer-core'); const chromium=require('@sparticuz/chromium');
+    chromium.setHeadlessMode=true; chromium.setGraphicsMode=false;
+    const browser=await puppeteer.launch({args:[...chromium.args,'--no-sandbox','--disable-setuid-sandbox','--disable-dev-shm-usage','--disable-gpu'],executablePath:await chromium.executablePath(),headless:'new'});
+    const page=await browser.newPage();
+    await page.setContent(html,{waitUntil:'networkidle0'});
+    const pdf=await page.pdf({format:'A4',printBackground:true,margin:{top:'0',bottom:'0',left:'0',right:'0'}});
+    await browser.close();
+    res.setHeader('Content-Type','application/pdf');
+    res.setHeader('Content-Disposition',(req.query.download?'attachment':'inline')+'; filename="cartao-resposta-fila-'+fila+'.pdf"');
+    res.end(Buffer.from(pdf));
+  } catch(e) { res.status(500).send('Erro cartão-resposta: '+e.message); }
+});
 // ─────────────────────────────────────────────────────────────────────────────
 
 // ─── WEBHOOK PAGBANK ──────────────────────────────────────────────────────────
