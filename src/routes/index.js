@@ -1950,7 +1950,7 @@ router.get('/processo-seletivo/prova/:id/pdf', requireAuth, requirePermissao('pr
     const _ftr='data:image/jpeg;base64,'+require('fs').readFileSync(_base+'public/img/fundo-prova-footer.jpg').toString('base64');
     const headerTemplate='<div style="margin:0;padding:0;width:100%;-webkit-print-color-adjust:exact;"><img src="'+_hdr+'" style="width:100%;display:block;margin:0;padding:0;"></div>';
     const footerTemplate='<div style="margin:0;padding:0;width:100%;-webkit-print-color-adjust:exact;"><img src="'+_ftr+'" style="width:100%;display:block;margin:0;padding:0;"></div>';
-    const pdf=await page.pdf({format:'A4',printBackground:true,displayHeaderFooter:true,headerTemplate,footerTemplate,margin:{top:'30mm',bottom:'27mm',left:'0',right:'0'}});
+    const pdf=await page.pdf({format:'A4',printBackground:true,displayHeaderFooter:true,headerTemplate,footerTemplate,margin:{top:'30mm',bottom:'40mm',left:'0',right:'0'}});
     await browser.close();
     res.setHeader('Content-Type','application/pdf');
     res.setHeader('Content-Disposition',(req.query.download?'attachment':'inline')+'; filename="prova-fila-'+pv.fila+'.pdf"');
