@@ -1718,7 +1718,7 @@ router.post('/atendimentos/:id/transferir', requireAuth, requirePermissao('atend
 async function getPsData(req) {
   const [pR,qR,cR,prR] = await Promise.all([
     query('SELECT * FROM ps_processos ORDER BY criado_em DESC'),
-    query("SELECT * FROM ps_questoes WHERE ativo=TRUE ORDER BY tema,id"),
+    query("SELECT * FROM ps_questoes WHERE ativo=TRUE ORDER BY id"),
     query(`SELECT c.*, r.percentual, r.aprovado_prova, r.total_acertos, r.total_questoes,
             e.percentual_entrevista, e.resultado as resultado_entrevista
            FROM ps_candidatos c
@@ -1728,7 +1728,7 @@ async function getPsData(req) {
     query(`SELECT pv.*, p.nome as processo_nome FROM ps_provas pv 
            JOIN ps_processos p ON p.id=pv.processo_id ORDER BY pv.criado_em DESC`)
   ]);
-  const temas=[...new Set(qR.rows.map(q=>q.tema))].sort();
+  const temas=[...new Set(qR.rows.map(q=>q.tema))];
   return {processos:pR.rows, questoes:qR.rows, temas, candidatos:cR.rows, provas:prR.rows};
 }
 router.get('/processo-seletivo', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
@@ -1884,10 +1884,10 @@ router.get('/processo-seletivo/:id/prova/gerar', requireAuth, requirePermissao('
     const config=await getConfig();
     const [pR,qR,prvR]=await Promise.all([
       query('SELECT * FROM ps_processos WHERE id=$1',[req.params.id]),
-      query("SELECT * FROM ps_questoes WHERE ativo=TRUE ORDER BY tema,id"),
+      query("SELECT * FROM ps_questoes WHERE ativo=TRUE ORDER BY id"),
       query('SELECT * FROM ps_provas WHERE processo_id=$1',[req.params.id])
     ]);
-    const temas=[...new Set(qR.rows.map(q=>q.tema))].sort();
+    const temas=[...new Set(qR.rows.map(q=>q.tema))];
     res.render('pages/montar-prova',{config,usuario:req.session.usuario,msg:req.session.msg||[],erro:req.session.erro||[],processo:pR.rows[0],questoes:qR.rows,temas,provas:prvR.rows});
     req.session.msg=[];req.session.erro=[];
   } catch(e) { req.session.erro=[e.message]; res.redirect('/processo-seletivo'); }
