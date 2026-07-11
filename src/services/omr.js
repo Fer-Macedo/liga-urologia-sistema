@@ -38,8 +38,10 @@ const median = a => { const s = a.slice().sort((x, y) => x - y); return s[s.leng
 // --- 2) isola os 2 trilhos de marcadores (colineares, passo regular, span cheio) ---
 function trilhos(comps, H) {
   const e = Math.round(W / 297 * 6); // ~tamanho do marcador em px
-  const cand = comps.filter(c => c.bw >= e * 0.55 && c.bw <= e * 1.9 && c.bh >= e * 0.55 && c.bh <= e * 1.9 && Math.abs(c.bw - c.bh) <= e * 0.7 && c.solidity > 0.8);
-  const N = cand.length, tol = W * 0.016, lines = [];
+  // solidez 0.68: tolera inclinacao ate ~12 graus sem admitir bolhas cheias como marcador.
+  // Alem disso falha ALTO ("marcadores nao encontrados") em vez de ler errado em silencio.
+  const cand = comps.filter(c => c.bw >= e * 0.5 && c.bw <= e * 2.1 && c.bh >= e * 0.5 && c.bh <= e * 2.1 && Math.abs(c.bw - c.bh) <= e * 0.9 && c.solidity > 0.68);
+  const N = cand.length, tol = W * 0.02, lines = [];
   for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) {
     const a = cand[i], b = cand[j]; const dx = b.cx - a.cx, dy = b.cy - a.cy; const L = Math.hypot(dx, dy); if (L < H * 0.55) continue;
     const ux = dx / L, uy = dy / L, nx = -uy, ny = ux;
@@ -55,7 +57,10 @@ function trilhos(comps, H) {
   }
   lines.sort((p, q) => q.regular - p.regular || q.count - p.count || q.span - p.span);
   if (!lines.length) throw new Error('marcadores nao encontrados (foto ruim: enquadre a folha inteira, sem brilho, reta)');
-  const r1 = lines[0], r2 = lines.find(l => Math.abs(l.cx - r1.cx) > W * 0.4);
+  // Os 2 trilhos ficam nas BORDAS (esq/dir). Escolhe o melhor de cada banda -> nao
+  // confunde com as colunas de respostas (que sao regulares mas ficam no meio).
+  const r1 = lines.find(l => l.cx < W * 0.30) || lines[0];
+  const r2 = lines.find(l => l.cx > W * 0.70) || lines.find(l => Math.abs(l.cx - r1.cx) > W * 0.4);
   if (!r2) throw new Error('so um trilho de marcadores encontrado (aproxime e enquadre a folha inteira)');
   const order = r => r.inl.slice().sort((a, b) => a.cy - b.cy);
   let Lr = order(r1), Rr = order(r2); if (Lr[0].cx > Rr[0].cx)[Lr, Rr] = [Rr, Lr];
@@ -67,6 +72,22 @@ function homografia(src, dst) {
   const A = [], b = [];
   for (let k = 0; k < 4; k++) { const [X, Y] = src[k], [x, y] = dst[k]; A.push([X, Y, 1, 0, 0, 0, -X * x, -Y * x]); b.push(x); A.push([0, 0, 0, X, Y, 1, -X * y, -Y * y]); b.push(y); }
   const n = 8; for (let i = 0; i < n; i++) A[i].push(b[i]);
+  for (let col = 0; col < n; col++) { let piv = col; for (let r = col + 1; r < n; r++) if (Math.abs(A[r][col]) > Math.abs(A[piv][col])) piv = r;[A[col], A[piv]] = [A[piv], A[col]]; const d = A[col][col]; for (let c = col; c <= n; c++) A[col][c] /= d; for (let r = 0; r < n; r++) { if (r === col) continue; const f = A[r][col]; for (let c = col; c <= n; c++) A[r][c] -= f * A[col][c]; } }
+  const h = A.map(r => r[n]); h.push(1);
+  return (X, Y) => { const w = h[6] * X + h[7] * Y + h[8]; return [(h[0] * X + h[1] * Y + h[2]) / w, (h[3] * X + h[4] * Y + h[5]) / w]; };
+}
+
+// homografia por MINIMOS QUADRADOS (N>=4 correspondencias) canonico->foto.
+// Minimiza erro global -> bolhas caem no centro mesmo sob rotacao/perspectiva.
+function homografiaLS(src, dst) {
+  const ATA = Array.from({ length: 8 }, () => new Float64Array(8)), ATb = new Float64Array(8);
+  const acc = (row, r) => { for (let i = 0; i < 8; i++) { for (let j = 0; j < 8; j++) ATA[i][j] += row[i] * row[j]; ATb[i] += row[i] * r; } };
+  for (let k = 0; k < src.length; k++) {
+    const [X, Y] = src[k], [x, y] = dst[k];
+    acc([X, Y, 1, 0, 0, 0, -X * x, -Y * x], x);
+    acc([0, 0, 0, X, Y, 1, -X * y, -Y * y], y);
+  }
+  const A = ATA.map((r, i) => [...r, ATb[i]]), n = 8;
   for (let col = 0; col < n; col++) { let piv = col; for (let r = col + 1; r < n; r++) if (Math.abs(A[r][col]) > Math.abs(A[piv][col])) piv = r;[A[col], A[piv]] = [A[piv], A[col]]; const d = A[col][col]; for (let c = col; c <= n; c++) A[col][c] /= d; for (let r = 0; r < n; r++) { if (r === col) continue; const f = A[r][col]; for (let c = col; c <= n; c++) A[r][c] -= f * A[col][c]; } }
   const h = A.map(r => r[n]); h.push(1);
   return (X, Y) => { const w = h[6] * X + h[7] * Y + h[8]; return [(h[0] * X + h[1] * Y + h[2]) / w, (h[3] * X + h[4] * Y + h[5]) / w]; };
@@ -98,7 +119,12 @@ async function readCard(photo, coords) {
   const minX = Math.min(...M.map(m => m.x)), maxX = Math.max(...M.map(m => m.x)), minY = Math.min(...M.map(m => m.y)), maxY = Math.max(...M.map(m => m.y));
   const src = [[minX, minY], [maxX, minY], [minX, maxY], [maxX, maxY]];
   const dst = [[L[0].cx, L[0].cy], [R[0].cx, R[0].cy], [L[L.length - 1].cx, L[L.length - 1].cy], [R[R.length - 1].cx, R[R.length - 1].cy]];
-  const map = homografia(src, dst);
+  let map = homografia(src, dst); // inicial (4 cantos)
+  // REFINA: projeta os 22 marcadores canonicos, casa com os detectados, resolve LS
+  const det = [...L, ...R];
+  const cs = [], cd = [];
+  for (const m of M) { const [px, py] = map(m.x, m.y); let best = null, bd = 1e9; for (const d of det) { const dist = (d.cx - px) ** 2 + (d.cy - py) ** 2; if (dist < bd) { bd = dist; best = d; } } if (best && bd < (W * 0.03) ** 2) { cs.push([m.x, m.y]); cd.push([best.cx, best.cy]); } }
+  if (cs.length >= 6) map = homografiaLS(cs, cd);
   const scaleR = (dst[3][0] - dst[0][0]) / (maxX - minX); // canonico->foto (raio)
   const fill = (key) => { const c = coords.bolhas[key]; if (!c) return null; const [x, y] = map(c.x, c.y); return preenchimento(g, x, y, c.r * scaleR); };
 
@@ -109,10 +135,9 @@ async function readCard(photo, coords) {
   for (const n of nums) {
     const fs = ['A', 'B', 'C', 'D'].map(l => ({ l, f: (fill('q' + n + '-' + l) || { frac: 0 }).frac }));
     scores[n] = fs;
-    const marcadas = fs.filter(o => o.f >= THRESH).sort((a, b) => b.f - a.f);
-    if (marcadas.length === 1) respostas[n] = marcadas[0].l;
-    else if (marcadas.length === 0) { respostas[n] = null; incertas.push(n); }
-    else { respostas[n] = marcadas[0].l; incertas.push(n); } // multipla marcacao
+    const ord = fs.slice().sort((a, b) => b.f - a.f);
+    if (ord[0].f < THRESH) { respostas[n] = null; incertas.push(n); } // em branco
+    else { respostas[n] = ord[0].l; if (ord[1].f >= THRESH && ord[1].f >= 0.6 * ord[0].f) incertas.push(n); } // dupla marcacao real
   }
   // fila (conjunto A/B/C)
   const filaFs = ['A', 'B', 'C'].map(l => ({ l, f: (fill('conj-' + l) || { frac: 0 }).frac })).sort((a, b) => b.f - a.f);
