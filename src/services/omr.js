@@ -93,6 +93,32 @@ function homografiaLS(src, dst) {
   return (X, Y) => { const w = h[6] * X + h[7] * Y + h[8]; return [(h[0] * X + h[1] * Y + h[2]) / w, (h[3] * X + h[4] * Y + h[5]) / w]; };
 }
 
+// Detecta se ha um QUADRADO PRETO (marcador) centrado em (px,py): nucleo bem mais
+// escuro que o anel ao redor. Robusto a sombra (usa contraste local, nao brilho absoluto).
+function _temMarcadorEm(g, W, H, px, py, e) {
+  px = Math.round(px); py = Math.round(py);
+  let core = 0, cn = 0, ring = 0, rn = 0; const R = Math.round(e * 0.95);
+  for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+    const x = px + dx, y = py + dy; if (x < 0 || x >= W || y < 0 || y >= H) continue;
+    const v = g[y * W + x], d = Math.max(Math.abs(dx), Math.abs(dy));
+    if (d <= e * 0.35) { core += v; cn++; } else if (d >= e * 0.65) { ring += v; rn++; }
+  }
+  return cn && rn && (ring / rn - core / cn) > 30;
+}
+// Recupera marcadores perdidos nas PONTAS do trilho (extrapola 1 passo e confere pixel).
+// Sem isso, um marcador de ponta faltando ancora a homografia no lugar errado.
+function _recuperarRail(rail, g, W, H, e) {
+  if (rail.length < 2) return rail;
+  let r = rail.slice();
+  const a = r[0], b = r[r.length - 1], Ln = Math.hypot(b.cx - a.cx, b.cy - a.cy);
+  const ux = (b.cx - a.cx) / Ln, uy = (b.cy - a.cy) / Ln;
+  const gaps = []; for (let i = 1; i < r.length; i++) gaps.push(Math.hypot(r[i].cx - r[i - 1].cx, r[i].cy - r[i - 1].cy));
+  const p = median(gaps);
+  for (let k = 0; k < 3 && r.length < 11; k++) { const t = r[r.length - 1], nx = t.cx + ux * p, ny = t.cy + uy * p; if (nx < e || nx >= W - e || ny < e || ny >= H - e || !_temMarcadorEm(g, W, H, nx, ny, e)) break; r.push({ cx: nx, cy: ny, bw: e, bh: e }); }
+  for (let k = 0; k < 3 && r.length < 11; k++) { const t = r[0], nx = t.cx - ux * p, ny = t.cy - uy * p; if (nx < e || nx >= W - e || ny < e || ny >= H - e || !_temMarcadorEm(g, W, H, nx, ny, e)) break; r.unshift({ cx: nx, cy: ny, bw: e, bh: e }); }
+  return r;
+}
+
 // --- 4) mede preenchimento: fracao de tinta no disco interno da bolha ---
 function preenchimento(g, cx, cy, rr) {
   const r = Math.max(3, rr * 0.62); // disco interno (evita o anel impresso)
@@ -114,7 +140,9 @@ function preenchimento(g, cx, cy, rr) {
 // Retorna { fila, registro, respostas:{n:'A'..}, incertas:[n], scores }.
 async function readCard(photo, coords) {
   const { g, bin, H } = await analisarFoto(photo);
-  const { L, R } = trilhos(componentes(bin, H), H);
+  let { L, R } = trilhos(componentes(bin, H), H);
+  const eMk = Math.round(W / 297 * 6);
+  L = _recuperarRail(L, g, W, H, eMk); R = _recuperarRail(R, g, W, H, eMk); // recupera marcador de ponta perdido
   const M = coords.marcadores;
   const minX = Math.min(...M.map(m => m.x)), maxX = Math.max(...M.map(m => m.x)), minY = Math.min(...M.map(m => m.y)), maxY = Math.max(...M.map(m => m.y));
   const src = [[minX, minY], [maxX, minY], [minX, maxY], [maxX, maxY]];
@@ -153,4 +181,4 @@ async function readCard(photo, coords) {
   return { fila, registro, respostas, incertas, scores };
 }
 
-module.exports = { readCard, analisarFoto, componentes, trilhos, homografia, preenchimento, W };
+module.exports = { readCard, analisarFoto, componentes, trilhos, homografia, homografiaLS, preenchimento, W };

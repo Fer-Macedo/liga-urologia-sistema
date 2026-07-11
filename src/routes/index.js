@@ -2128,7 +2128,7 @@ async function _cartaoHTML(pv) {
       +'*{margin:0;padding:0;box-sizing:border-box;}'
       +'body{font-family:Arial,Helvetica,sans-serif;color:#000;font-size:10pt;position:relative;width:210mm;height:297mm;}'
       +'.wrap{padding:9mm 15mm 30mm;}'
-      +'.marks{position:absolute;top:8mm;bottom:8mm;width:6mm;display:flex;flex-direction:column;justify-content:space-between;}'
+      +'.marks{position:absolute;top:8mm;bottom:8mm;width:6mm;display:flex;flex-direction:column;justify-content:space-between;z-index:5;}'
       +'.marks.l{left:3mm;}.marks.r{right:3mm;}.sq{width:6mm;height:6mm;background:#000;}'
       +'.header{border:1.6px solid #000;padding:6px 10px;margin-bottom:8px;font-size:9pt;}'
       +'.hrow{display:flex;gap:16px;margin:3px 0;flex-wrap:wrap;align-items:flex-end;}'
