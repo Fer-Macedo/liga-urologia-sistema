@@ -2142,7 +2142,7 @@ router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requireP
       +'.bubs{display:flex;}'
       +'.bub{display:inline-flex;width:26px;height:26px;border:1.5px solid #000;border-radius:50%;align-items:center;justify-content:center;font-size:11pt;margin:0 9px;font-weight:600;}'
       +'.bub.sm{width:19px;height:19px;font-size:9pt;margin:0;}.bub.on{background:#000;color:#fff;}'
-      +'.firma{text-align:center;margin-top:30mm;}.firma .l{border-top:1.3px solid #000;width:58%;margin:0 auto 5px;}'
+      +'.firma{text-align:center;margin-top:12mm;}.firma .l{border-top:1.3px solid #000;width:58%;margin:0 auto 5px;}'
       +'.firma .t{font-size:9.5pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;}'
       +'.footer{position:absolute;left:0;right:0;bottom:0;width:100%;}.footer img{width:100%;display:block;}'
       +'</style></head><body>'
