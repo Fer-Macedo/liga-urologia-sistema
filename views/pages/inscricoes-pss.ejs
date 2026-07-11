@@ -80,26 +80,41 @@
               <tr><td style="font-family:monospace;font-weight:700"><%=c.codigo%></td>
                 <td><%= c.tipo==='percentual' ? (parseFloat(c.valor)+'%'+(parseFloat(c.valor)>=100?' (isento)':'')) : ('R$ '+parseFloat(c.valor).toFixed(2)) %></td>
                 <td><%=c.usos_atual%>/<%=c.usos_max%></td><td><%= c.usado_nome||'—' %></td>
-                <td><form method="POST" action="/inscricoes-pss/cupom/<%=c.id%>/deletar" onsubmit="return confirm('Remover cupom?')"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm" style="color:#b91c1c">Remover</button></form></td></tr>
+                <td><form method="POST" action="/inscricoes-pss/cupom/<%=c.id%>/deletar" onsubmit="var f=this; confirmarAcao('Remover este cupom?', function(){ f.submit(); }); return false;"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm" style="color:#b91c1c">Remover</button></form></td></tr>
             <% }); %>
           </tbody></table>
         </div>
 
         <div class="box">
-          <h3>Inscritos</h3>
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+            <h3 style="margin:0">Inscritos</h3>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <form method="POST" action="/inscricoes-pss/processo/<%=processo.id%>/lembrete-pendentes" style="display:inline" onsubmit="var f=this; confirmarAcao('Enviar e-mail de lembrete (oferecendo ajuda) a TODOS os inscritos pendentes deste processo?', function(){ f.submit(); }, {textoConfirmar:'Enviar', corConfirmar:'#d97706'}); return false;"><button class="btn btn-sm" style="background:#d97706;color:#fff">✉️ Lembrar pendentes</button></form>
+              <a href="/inscricoes-pss/relatorio?processo=<%=processo.id%>" target="_blank" class="btn btn-sm">🖨️ Gerar relatório</a>
+            </div>
+          </div>
+          <div class="flex" style="margin-bottom:12px">
+            <div class="campo"><input id="fbusca" placeholder="Buscar por nome, documento ou e-mail…" oninput="filtrarInsc()"></div>
+            <div class="campo" style="max-width:170px"><select id="fstatus" onchange="filtrarInsc()"><option value="">Todos os status</option><option value="confirmado">Confirmado</option><option value="pendente">Pendente</option></select></div>
+            <div class="campo" style="max-width:150px"><label class="lb">Inscrito de</label><input id="fde" type="date" onchange="filtrarInsc()"></div>
+            <div class="campo" style="max-width:150px"><label class="lb">até</label><input id="fate" type="date" onchange="filtrarInsc()"></div>
+          </div>
           <div style="overflow-x:auto"><table>
-            <thead><tr><th>Nº</th><th>Nome</th><th>Documento</th><th>E-mail</th><th>Status</th><th>Valor</th><th>Ações</th></tr></thead><tbody>
-              <% if(!inscritos.length){ %><tr><td colspan="7" style="color:var(--texto2)">Nenhuma inscrição ainda.</td></tr><% } %>
+            <thead><tr><th>Nº</th><th>Nome</th><th>Documento</th><th>E-mail</th><th>Inscrito em</th><th>Status</th><th>Valor</th><th>Ações</th></tr></thead><tbody>
+              <% if(!inscritos.length){ %><tr><td colspan="8" style="color:var(--texto2)">Nenhuma inscrição ainda.</td></tr><% } %>
+              <tr id="sem-resultado" style="display:none"><td colspan="8" style="color:var(--texto2)">Nenhum resultado para o filtro.</td></tr>
               <% inscritos.forEach(function(i){ var conf=i.pagamento_status==='confirmado'; %>
-                <tr>
+                <tr class="insc-row" data-status="<%=i.pagamento_status%>" data-data="<%= i.criado_em ? new Date(i.criado_em).toISOString().slice(0,10) : '' %>" data-busca="<%=(i.nome+' '+(i.documento||'')+' '+(i.email||'')).toLowerCase().replace(/"/g,'')%>">
                   <td><span class="num3"><%= i.numero_lista?String(i.numero_lista).padStart(3,'0'):'—' %></span></td>
                   <td><%=i.nome%></td>
                   <td><%= (i.documento_tipo||'')+' '+(i.documento||'') %></td>
                   <td style="font-size:12px"><%=i.email%></td>
+                  <td style="font-size:12px;white-space:nowrap"><%= i.criado_em ? new Date(i.criado_em).toLocaleDateString('pt-BR') : '—' %></td>
                   <td><span class="badge <%=conf?'ok':'pd'%>"><%= conf?'Confirmado':'Pendente' %></span><%= i.isento?' <span class="badge" style="background:#e0e7ff;color:#3730a3">isento</span>':'' %></td>
                   <td><%= i.valor_pago!=null ? ('R$ '+(parseFloat(i.valor_pago)||0).toFixed(2).replace('.',',')) : '—' %></td>
                   <td style="white-space:nowrap">
-                    <% if(!conf){ %><form method="POST" action="/inscricoes-pss/candidato/<%=i.id%>/confirmar-manual" style="display:inline" onsubmit="return confirm('Confirmar manualmente (ex.: pagamento em dinheiro)?')"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm" style="background:#16a34a;color:#fff">Confirmar</button></form><% } else { %>
+                    <% if(!conf){ %><form method="POST" action="/inscricoes-pss/candidato/<%=i.id%>/confirmar-manual" style="display:inline" onsubmit="var f=this; confirmarAcao('Confirmar esta inscrição manualmente (ex.: pagamento em dinheiro)? Será atribuído o número e lançado no fluxo de caixa.', function(){ f.submit(); }, {textoConfirmar:'Confirmar', corConfirmar:'#16a34a'}); return false;"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm" style="background:#16a34a;color:#fff">Confirmar</button></form>
+                    <form method="POST" action="/inscricoes-pss/candidato/<%=i.id%>/lembrete" style="display:inline" onsubmit="var f=this; confirmarAcao('Enviar e-mail de lembrete a <%= i.nome.replace(/'/g,\"\") %> oferecendo ajuda para concluir a inscrição?', function(){ f.submit(); }, {textoConfirmar:'Enviar', corConfirmar:'#d97706'}); return false;"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm" style="color:#d97706">Lembrete</button></form><% } else { %>
                     <form method="POST" action="/inscricoes-pss/candidato/<%=i.id%>/reenviar-email" style="display:inline"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm">Reenviar e-mail</button></form><% } %>
                   </td>
                 </tr>
@@ -110,5 +125,21 @@
     </div>
   </main>
 </div>
+<script src="/js/app.js"></script>
+<script>
+function filtrarInsc(){
+  var q=(document.getElementById('fbusca').value||'').toLowerCase().trim();
+  var st=document.getElementById('fstatus').value;
+  var de=document.getElementById('fde').value, ate=document.getElementById('fate').value, vis=0;
+  document.querySelectorAll('.insc-row').forEach(function(r){
+    var okQ=!q||(r.getAttribute('data-busca')||'').indexOf(q)>=0;
+    var okS=!st||r.getAttribute('data-status')===st;
+    var d=r.getAttribute('data-data')||'';
+    var okD=(!de||(d&&d>=de))&&(!ate||(d&&d<=ate));
+    var ok=okQ&&okS&&okD; r.style.display=ok?'':'none'; if(ok)vis++;
+  });
+  var sr=document.getElementById('sem-resultado'); if(sr) sr.style.display=(vis===0)?'':'none';
+}
+</script>
 </body>
 </html>

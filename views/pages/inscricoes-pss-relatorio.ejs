@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório de Inscrições — <%= processo.nome %></title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:Arial,Helvetica,sans-serif;color:#111;font-size:12px;padding:26px;}
+    .top{display:flex;align-items:center;gap:14px;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:14px;}
+    .top img{height:52px;}
+    .top h1{font-size:16px;} .top .sub{font-size:11px;color:#555;margin-top:2px;}
+    .meta{display:flex;gap:22px;flex-wrap:wrap;font-size:11px;margin-bottom:14px;}
+    .meta b{color:#000;}
+    table{width:100%;border-collapse:collapse;}
+    th,td{border:1px solid #999;padding:5px 7px;text-align:left;font-size:11px;}
+    th{background:#eee;text-transform:uppercase;font-size:10px;letter-spacing:.03em;}
+    .n{font-family:monospace;font-weight:700;text-align:center;}
+    .st{font-weight:700;} .st.c{color:#166534;} .st.p{color:#854d0e;}
+    tfoot td{font-weight:700;background:#f6f6f6;}
+    .noprint{margin-bottom:16px;}
+    .btn{padding:9px 18px;border:1px solid #111;background:#111;color:#fff;border-radius:4px;cursor:pointer;font-size:13px;font-weight:700;}
+    .rod{margin-top:18px;font-size:10px;color:#777;text-align:right;}
+    @media print{ .noprint{display:none;} body{padding:0;} }
+  </style>
+</head>
+<body>
+  <div class="noprint"><button class="btn" onclick="window.print()">🖨️ Imprimir</button></div>
+  <div class="top">
+    <% if (config && config.org_logo) { %><img src="<%= config.org_logo %>" alt=""><% } %>
+    <div>
+      <h1><%= (config && config.org_nome) || 'Liga Académica de Urología — LAURO' %></h1>
+      <div class="sub">Relatório de Inscrições — Processo Seletivo</div>
+    </div>
+  </div>
+  <div class="meta">
+    <div><b>Processo:</b> <%= processo.nome %></div>
+    <% if (processo.data_prova) { %><div><b>Data da prova:</b> <%= new Date(processo.data_prova).toLocaleDateString('pt-BR',{timeZone:'UTC'}) %></div><% } %>
+    <div><b>Total no relatório:</b> <%= inscritos.length %></div>
+    <div><b>Confirmadas:</b> <%= confirmados %></div>
+    <div><b>Arrecadado (líq.):</b> R$ <%= (arrecadado||0).toFixed(2).replace('.',',') %></div>
+    <% if (busca) { %><div><b>Busca:</b> "<%= busca %>"</div><% } %>
+    <% if (status) { %><div><b>Status:</b> <%= status %></div><% } %>
+  </div>
+  <table>
+    <thead><tr><th style="width:44px">Nº</th><th>Nome</th><th>Documento</th><th>E-mail</th><th>WhatsApp</th><th>Status</th><th>Valor pago</th></tr></thead>
+    <tbody>
+      <% if (!inscritos.length) { %><tr><td colspan="7" style="text-align:center;color:#777">Nenhuma inscrição.</td></tr><% } %>
+      <% inscritos.forEach(function(i){ var conf=i.pagamento_status==='confirmado'; %>
+        <tr>
+          <td class="n"><%= i.numero_lista ? String(i.numero_lista).padStart(3,'0') : '—' %></td>
+          <td><%= i.nome %><%= i.isento ? ' (isento)' : '' %></td>
+          <td><%= (i.documento_tipo||'') + ' ' + (i.documento||'') %></td>
+          <td><%= i.email || '' %></td>
+          <td><%= i.telefone || '' %></td>
+          <td class="st <%= conf?'c':'p' %>"><%= conf ? 'Confirmado' : 'Pendente' %></td>
+          <td><%= i.valor_pago!=null ? ('R$ '+(parseFloat(i.valor_pago)||0).toFixed(2).replace('.',',')) : '—' %></td>
+        </tr>
+      <% }); %>
+    </tbody>
+    <tfoot><tr><td colspan="6" style="text-align:right">Total arrecadado (líquido)</td><td>R$ <%= (arrecadado||0).toFixed(2).replace('.',',') %></td></tr></tfoot>
+  </table>
+  <div class="rod">Emitido em <%= new Date().toLocaleString('pt-BR') %> · Sistema LAURO</div>
+  <script>window.addEventListener('load',function(){setTimeout(function(){window.print();},400);});</script>
+</body>
+</html>

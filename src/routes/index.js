@@ -5930,17 +5930,29 @@ async function enviarEmailConfirmacaoPss(candidatoId) {
     if (!c || !c.email) return;
     const dataStr = c.data_prova ? new Date(c.data_prova).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
     const num = String(c.numero_lista || '').padStart(3, '0');
-    const html = '<div style="border-left:3px solid #1a3d2b;padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:#1a3d2b;letter-spacing:1.5px;text-transform:uppercase">INSCRIPCIÓN CONFIRMADA</p><h2 style="margin:4px 0 0;font-size:20px;font-weight:700;color:#0f172a">' + c.processo_nome + '</h2></div>'
-      + '<p>Estimado/a <strong>' + (c.nome || '').split(' ')[0] + '</strong>,</p><p>Confirmamos su inscripción al proceso selectivo <strong>' + c.processo_nome + '</strong>.</p>'
-      + '<div style="text-align:center;margin:24px 0;padding:24px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">'
-      + '<p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">Su número de inscripción</p>'
-      + '<p style="margin:0;font-size:44px;font-weight:900;color:#1a3d2b;letter-spacing:4px">' + num + '</p>'
-      + '<p style="margin:8px 0 0;font-size:12px;color:#94a3b8">Guarde este número. Deberá completarlo en la hoja de respuestas el día del examen.</p></div>'
+    const corpo = '<p>Estimado/a <strong>' + (c.nome || '').split(' ')[0] + '</strong>,</p><p>Confirmamos su inscripción al proceso selectivo <strong>' + c.processo_nome + '</strong>.</p>'
+      + '<div style="text-align:center;margin:20px 0;padding:20px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0"><p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">Su número de inscripción</p><p style="margin:0;font-size:44px;font-weight:900;color:#1a3d2b;letter-spacing:4px">' + num + '</p><p style="margin:8px 0 0;font-size:12px;color:#94a3b8">Guarde este número. Deberá completarlo en la hoja de respuestas el día del examen.</p></div>'
       + (dataStr ? ('<p><strong>Fecha del examen:</strong> ' + dataStr + (c.local_prova ? (' — ' + c.local_prova) : '') + '</p>') : '')
-      + '<p style="margin-top:16px">Atentamente,<br>Comité Organizador<br>Liga Académica de Urología – LAURO</p>';
-    await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: c.email, subject: 'Inscripción confirmada — ' + c.processo_nome, html, faixaLabel: 'INSCRIPCIÓN CONFIRMADA' });
+      + '<p style="margin-top:16px">Atentamente,<br><strong>Comité Organizador — LAURO</strong></p>';
+    await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: c.email, subject: 'Inscripción confirmada — ' + c.processo_nome, html: emailBonito('Inscripción confirmada', corpo), faixaLabel: 'INSCRIPCIÓN CONFIRMADA' });
     await query("UPDATE ps_candidatos SET email_confirmacao_enviado=true WHERE id=$1", [candidatoId]);
   } catch (e) { console.error('enviarEmailConfirmacaoPss ERRO:', e.message); }
+}
+// Lembrete a quem se inscreveu mas não concluiu o pagamento (oferece ajuda). Mesmo padrão de e-mail.
+async function enviarLembretePss(candidatoId) {
+  try {
+    const c = (await query("SELECT c.*, p.nome AS processo_nome FROM ps_candidatos c JOIN ps_processos p ON p.id=c.processo_id WHERE c.id=$1", [candidatoId])).rows[0];
+    if (!c || !c.email || c.pagamento_status === 'confirmado') return false;
+    const link = 'https://sistema.lauroucpcde.com/pss/pagamento/' + c.id;
+    const corpo = '<p>Estimado/a <strong>' + (c.nome || '').split(' ')[0] + '</strong>,</p>'
+      + '<p>Notamos que iniciaste tu inscripción al proceso selectivo <strong>' + c.processo_nome + '</strong>, pero el pago aún no fue confirmado.</p>'
+      + '<p>Podés concluir tu inscripción de forma rápida en el siguiente enlace:</p>'
+      + '<div style="text-align:center;margin:20px 0"><a href="' + link + '" style="display:inline-block;background:#1a3d2b;color:#fff;padding:13px 30px;border-radius:8px;text-decoration:none;font-weight:700">Concluir mi inscripción</a></div>'
+      + '<p>Si tuviste algún inconveniente con el pago o necesitás ayuda, respondé este correo y con gusto te asistimos.</p>'
+      + '<p style="margin-top:16px">Atentamente,<br><strong>Comité Organizador — LAURO</strong></p>';
+    await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: c.email, subject: 'Complete su inscripción — ' + c.processo_nome, html: emailBonito('¿Necesitás ayuda para concluir tu inscripción?', corpo), faixaLabel: 'INSCRIPCIÓN PENDIENTE' });
+    return true;
+  } catch (e) { console.error('enviarLembretePss ERRO:', e.message); return false; }
 }
 
 // ── Página pública de inscrição ──
@@ -6057,6 +6069,33 @@ router.post('/inscricoes-pss/candidato/:cid/confirmar-manual', requireAuth, requ
 router.post('/inscricoes-pss/candidato/:cid/reenviar-email', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
   try { await enviarEmailConfirmacaoPss(req.params.cid); req.session.msg = ['E-mail reenviado.']; } catch (e) { req.session.erro = [e.message]; }
   res.redirect('/inscricoes-pss?processo=' + (req.body.processo_id || ''));
+});
+router.post('/inscricoes-pss/candidato/:cid/lembrete', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
+  try { const ok = await enviarLembretePss(req.params.cid); req.session.msg = [ok ? 'Lembrete enviado.' : 'Candidato já confirmado ou sem e-mail.']; } catch (e) { req.session.erro = [e.message]; }
+  res.redirect('/inscricoes-pss?processo=' + (req.body.processo_id || ''));
+});
+router.post('/inscricoes-pss/processo/:id/lembrete-pendentes', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
+  try {
+    const pend = (await query("SELECT id FROM ps_candidatos WHERE processo_id=$1 AND pagamento_status!='confirmado' AND email IS NOT NULL", [req.params.id])).rows;
+    let n = 0; for (const c of pend) { if (await enviarLembretePss(c.id)) n++; }
+    req.session.msg = [n + ' lembrete(s) enviado(s) aos pendentes.'];
+  } catch (e) { req.session.erro = [e.message]; }
+  res.redirect('/inscricoes-pss?processo=' + req.params.id);
+});
+router.get('/inscricoes-pss/relatorio', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
+  try {
+    const pid = parseInt(req.query.processo, 10);
+    const processo = (await query("SELECT * FROM ps_processos WHERE id=$1", [pid])).rows[0];
+    if (!processo) return res.status(404).send('Processo não encontrado.');
+    let inscritos = (await query("SELECT * FROM ps_candidatos WHERE processo_id=$1 ORDER BY (pagamento_status='confirmado') DESC, numero_lista NULLS LAST, nome", [pid])).rows;
+    const busca = (req.query.busca || '').toLowerCase().trim(), status = req.query.status || '';
+    if (busca) inscritos = inscritos.filter(i => ((i.nome || '') + ' ' + (i.documento || '') + ' ' + (i.email || '')).toLowerCase().includes(busca));
+    if (status) inscritos = inscritos.filter(i => i.pagamento_status === status);
+    let arrecadado = 0, confirmados = 0;
+    inscritos.forEach(i => { if (i.pagamento_status === 'confirmado') { confirmados++; arrecadado += parseFloat(i.valor_pago) || 0; } });
+    const config = await getConfig();
+    res.render('pages/inscricoes-pss-relatorio', { config, processo, inscritos, arrecadado, confirmados, busca, status });
+  } catch (e) { res.status(500).send('Erro: ' + e.message); }
 });
 
 function traduzirRecusaCartao(msg) {
