@@ -2009,8 +2009,15 @@ router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requireP
     const pv = pvR.rows[0];
     const fila = (pv.fila||'A').toString().trim().toUpperCase();
     const data = pv.data_prova ? new Date(pv.data_prova).toLocaleDateString('pt-BR') : '____/____/________';
+    // Questoes reais da prova, agrupadas pelos temas cadastrados (mesma numeracao/ordem da prova)
+    const ids = pv.questoes_json||[];
+    const qR = await query('SELECT * FROM ps_questoes WHERE id=ANY($1::int[])',[ids]);
+    const qMap={}; qR.rows.forEach(q=>qMap[q.id]=q);
+    const temaOrder=[]; const temaMap={};
+    ids.forEach((id,i)=>{ const q=qMap[id]; if(!q) return; if(!temaMap[q.tema]){ temaMap[q.tema]=[]; temaOrder.push(q.tema); } temaMap[q.tema].push(i+1); });
     const bub = (l,on)=>'<span class="bub'+(on?' on':'')+'">'+l+'</span>';
-    const qRow = (n)=>'<div class="qrow"><span class="qn">'+n+'</span>'+['A','B','C','D'].map(l=>bub(l)).join('')+'</div>';
+    const qRow = (n)=>'<div class="qrow"><span class="qn">'+n+'</span><span class="bubs">'+['A','B','C','D'].map(l=>bub(l)).join('')+'</span></div>';
+    const secHtml = temaOrder.map(t=>'<div class="sec"><div class="sec-tit">'+t+'</div>'+temaMap[t].map(qRow).join('')+'</div>').join('') || '<div style="color:#999">Prova sem questões.</div>';
     const digCol = ()=>'<div class="digcol">'+[0,1,2,3,4,5,6,7,8,9].map(d=>'<span class="bub sm">'+d+'</span>').join('')+'</div>';
     const marks = Array.from({length:11}).map(()=>'<div class="sq"></div>').join('');
     const _base=__dirname.replace('routes','').replace('src/','');
@@ -2027,18 +2034,20 @@ router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requireP
       +'.fld{display:flex;align-items:flex-end;gap:4px;}.fld b{white-space:nowrap;}'
       +'.line{border-bottom:1px solid #000;display:inline-block;height:12px;}'
       +'.titulo{text-align:center;font-size:24pt;font-weight:900;letter-spacing:5px;margin:6px 0 12px;}'
-      +'.cols{display:flex;gap:22px;}.col{flex:1;}'
-      +'.mini{border:1.3px solid #000;padding:6px 8px;margin-bottom:10px;}'
-      +'.mini-t{font-weight:800;font-size:9pt;text-transform:uppercase;margin-bottom:6px;text-align:center;}'
-      +'.mini-b{display:flex;gap:10px;justify-content:center;}'
-      +'.digrid{display:flex;gap:16px;justify-content:center;}.digcol{display:flex;flex-direction:column;gap:3px;}'
-      +'.sec-tit{font-weight:800;font-size:11pt;text-transform:uppercase;border-bottom:2px solid #000;margin:10px 0 8px;padding-bottom:2px;}'
-      +'.qrow{display:flex;align-items:center;margin-bottom:8px;}'
-      +'.qn{width:26px;font-weight:700;text-align:right;margin-right:8px;font-size:10.5pt;}'
-      +'.bub{display:inline-flex;width:19px;height:19px;border:1.3px solid #000;border-radius:50%;align-items:center;justify-content:center;font-size:9pt;margin:0 5px;font-weight:600;}'
-      +'.bub.sm{width:15px;height:15px;font-size:8pt;margin:0;}.bub.on{background:#000;color:#fff;}'
-      +'.firma{text-align:center;margin-top:14px;}.firma .l{border-top:1.2px solid #000;width:55%;margin:26px auto 4px;}'
-      +'.firma .t{font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;}'
+      +'.metatop{display:flex;gap:16px;margin-bottom:12px;}'
+      +'.mini{border:1.3px solid #000;padding:7px 10px;}'
+      +'.mini-t{font-weight:800;font-size:9pt;text-transform:uppercase;margin-bottom:7px;text-align:center;}'
+      +'.mini-b{display:flex;gap:14px;justify-content:center;}'
+      +'.digrid{display:flex;gap:18px;justify-content:center;}.digcol{display:flex;flex-direction:column;gap:4px;align-items:center;}'
+      +'.questoes{column-count:2;column-gap:26px;}.sec{margin-bottom:6px;}'
+      +'.sec-tit{font-weight:800;font-size:11pt;text-transform:uppercase;border-bottom:2px solid #000;margin:6px 0 10px;padding-bottom:3px;break-after:avoid;}'
+      +'.qrow{display:flex;align-items:center;margin-bottom:11px;break-inside:avoid;}'
+      +'.qn{width:30px;font-weight:700;text-align:right;margin-right:12px;font-size:11pt;flex-shrink:0;}'
+      +'.bubs{display:flex;}'
+      +'.bub{display:inline-flex;width:22px;height:22px;border:1.4px solid #000;border-radius:50%;align-items:center;justify-content:center;font-size:10pt;margin:0 7px;font-weight:600;}'
+      +'.bub.sm{width:17px;height:17px;font-size:8.5pt;margin:0;}.bub.on{background:#000;color:#fff;}'
+      +'.firma{text-align:center;margin-top:30mm;}.firma .l{border-top:1.3px solid #000;width:58%;margin:0 auto 5px;}'
+      +'.firma .t{font-size:9.5pt;font-weight:700;text-transform:uppercase;letter-spacing:1px;}'
       +'.footer{position:absolute;left:0;right:0;bottom:0;width:100%;}.footer img{width:100%;display:block;}'
       +'</style></head><body>'
       +'<div class="marks l">'+marks+'</div><div class="marks r">'+marks+'</div>'
@@ -2050,17 +2059,11 @@ router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requireP
       +'<div class="hrow"><div class="fld"><b>PRUEBA FILA:</b> <span style="font-weight:900;font-size:12pt">'+fila+'</span></div><div class="fld"><b>FECHA:</b> '+data+'</div><div class="fld"><b>PUNTOS:</b> '+linha(18)+'</div></div>'
       +'</div>'
       +'<div class="titulo">GABARITO</div>'
-      +'<div class="cols">'
-      +'<div class="col">'
-      +'<div class="mini"><div class="mini-t">Conjunto de examen</div><div class="mini-b">'+bub('A',fila==='A')+bub('B',fila==='B')+'</div></div>'
-      +'<div class="mini"><div class="mini-t">Número de Registro</div><div class="digrid">'+digCol()+digCol()+'</div></div>'
-      +'<div class="sec-tit">Sinais Vitais</div>'+[1,2,3,4,5].map(qRow).join('')
+      +'<div class="metatop">'
+      +'<div class="mini"><div class="mini-t">Conjunto de examen</div><div class="mini-b">'+bub('A',fila==='A')+bub('B',fila==='B')+bub('C',fila==='C')+'</div></div>'
+      +'<div class="mini"><div class="mini-t">Número de Registro</div><div class="digrid">'+digCol()+digCol()+digCol()+'</div></div>'
       +'</div>'
-      +'<div class="col">'
-      +'<div class="sec-tit">Generalidades Urología</div>'+[6,7,8,9,10,11,12,13,14,15].map(qRow).join('')
-      +'<div class="sec-tit">Preguntas 16 – 20</div>'+[16,17,18,19,20].map(qRow).join('')
-      +'</div>'
-      +'</div>'
+      +'<div class="questoes">'+secHtml+'</div>'
       +'<div class="firma"><div class="l"></div><div class="t">Firma del Candidato (A)</div></div>'
       +'</div>'
       +'<div class="footer"><img src="'+_ftr+'"></div>'
