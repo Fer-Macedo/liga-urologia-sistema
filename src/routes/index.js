@@ -1912,6 +1912,8 @@ router.post('/processo-seletivo/:id/scan', requireAuth, requirePermissao('proces
       const coords=await _cartaoCoords(pvFull);
       leitura=await omr.readCard(req.file.buffer, coords);
     } catch(e){ return res.json({ok:false,erro:'Não consegui ler o cartão: '+e.message}); }
+    try { require('fs').writeFileSync('/tmp/last-scan.jpg', req.file.buffer); } catch(e){} // DEBUG temp
+    console.log('[SCAN OMR] proc'+procId+' -> fila='+leitura.fila+' registro='+leitura.registro+' incertas='+(leitura.incertas||[]).length+' respostas='+JSON.stringify(leitura.respostas));
     const numReg=(leitura.registro && !leitura.registro.includes('?'))?leitura.registro.replace(/[^0-9]/g,''):null;
     const filaLida=leitura.fila?String(leitura.fila).trim().toUpperCase():null;
     // identifica o candidato pelo numero de registro == numero_lista

@@ -51,11 +51,11 @@
   <div class="wrap">
     <div id="msg"></div>
     <div class="card">
-      <label>Foto do cartão preenchido</label>
-      <input type="file" id="foto" accept="image/*" capture="environment">
+      <label>Cartão preenchido</label>
+      <input type="file" id="foto" accept="image/*" capture="environment" style="display:none">
+      <button class="btn" id="btnAbrir">📷 Abrir câmera e ler cartão</button>
       <img id="preview" alt="prévia">
-      <button class="btn" id="btnLer" disabled>📷 Ler cartão e identificar candidato</button>
-      <p style="font-size:11px;color:#94a3b8;margin:8px 0 0">O candidato é identificado automaticamente pelo <b>Número de Registro</b> do cartão.</p>
+      <p style="font-size:11px;color:#94a3b8;margin:8px 0 0">Aponte para o cartão <b>inteiro</b> (com os quadradinhos pretos das laterais), reto e com boa luz. A leitura começa <b>automaticamente</b> após a foto. O candidato é identificado pelo <b>Número de Registro</b>.</p>
     </div>
 
     <div class="spin" id="spin">⏳ Lendo o cartão…</div>
@@ -87,21 +87,25 @@
 <script>
 var PROCID=<%=processo.id%>;
 var GAB={}, RESP={}, TOTAL=0, NOTAMIN=60, PROVAID=null, CANDID=null, CARTAOCHAVE=null, INCERTAS=[];
-var foto=document.getElementById('foto'), btnLer=document.getElementById('btnLer'), cand=document.getElementById('cand');
+var foto=document.getElementById('foto'), btnAbrir=document.getElementById('btnAbrir'), cand=document.getElementById('cand');
+// Botao abre a camera direto (input escondido com capture=environment)
+btnAbrir.addEventListener('click',function(){ foto.click(); });
+// Ao capturar a foto, JA lê automaticamente (sem passo extra)
 foto.addEventListener('change',function(){
-  if(foto.files[0]){ var p=document.getElementById('preview'); p.src=URL.createObjectURL(foto.files[0]); p.style.display='block'; }
-  btnLer.disabled=!foto.files.length;
+  if(!foto.files.length) return;
+  var p=document.getElementById('preview'); p.src=URL.createObjectURL(foto.files[0]); p.style.display='block';
+  lerCartao();
 });
 function msg(t,cls){ document.getElementById('msg').innerHTML=t?('<div class="msg '+cls+'">'+t+'</div>'):''; }
 
-btnLer.addEventListener('click',function(){
+function lerCartao(){
   msg(''); document.getElementById('resultado').classList.add('hide');
-  document.getElementById('spin').style.display='block'; btnLer.disabled=true;
+  document.getElementById('spin').style.display='block'; btnAbrir.disabled=true;
   var fd=new FormData(); fd.append('imagem',foto.files[0]);
   fetch('/processo-seletivo/'+PROCID+'/scan',{method:'POST',body:fd,credentials:'same-origin'})
     .then(function(r){return r.json();})
     .then(function(d){
-      document.getElementById('spin').style.display='none'; btnLer.disabled=false;
+      document.getElementById('spin').style.display='none'; btnAbrir.disabled=false;
       if(!d.ok){ msg(d.erro||'Falha ao ler o cartão.','err'); return; }
       GAB=d.gabarito||{}; RESP={}; TOTAL=d.total_questoes; NOTAMIN=d.nota_minima; PROVAID=d.prova_id; CARTAOCHAVE=d.cartao_chave||null; INCERTAS=d.incertas||[];
       for(var i=1;i<=TOTAL;i++){ RESP[i]=d.respostas[i]?String(d.respostas[i]).toUpperCase():null; }
@@ -126,8 +130,8 @@ btnLer.addEventListener('click',function(){
       document.getElementById('resultado').classList.remove('hide');
       document.getElementById('resultado').scrollIntoView({behavior:'smooth'});
     })
-    .catch(function(e){ document.getElementById('spin').style.display='none'; btnLer.disabled=false; msg('Erro de rede: '+e.message,'err'); });
-});
+    .catch(function(e){ document.getElementById('spin').style.display='none'; btnAbrir.disabled=false; msg('Erro de rede: '+e.message,'err'); });
+}
 
 // Troca manual de candidato -> recarrega o gabarito da fila desse candidato e recalcula
 cand.addEventListener('change',function(){
@@ -163,7 +167,7 @@ function render(){
 }
 
 document.getElementById('btnRefazer').addEventListener('click',function(){
-  document.getElementById('resultado').classList.add('hide'); foto.value=''; document.getElementById('preview').style.display='none'; btnLer.disabled=true; msg(''); window.scrollTo({top:0,behavior:'smooth'});
+  document.getElementById('resultado').classList.add('hide'); foto.value=''; document.getElementById('preview').style.display='none'; btnAbrir.disabled=false; msg(''); window.scrollTo({top:0,behavior:'smooth'});
 });
 
 document.getElementById('btnConfirmar').addEventListener('click',function(){
@@ -176,7 +180,7 @@ document.getElementById('btnConfirmar').addEventListener('click',function(){
     btn.disabled=false;
     if(!d.ok){ msg(d.erro||'Falha ao lançar.','err'); return; }
     msg('✅ Lançado! '+(d.aprovado?'CLASSIFICADO':'REPROVADO')+' ('+d.percentual+'%).','suc');
-    document.getElementById('resultado').classList.add('hide'); foto.value=''; document.getElementById('preview').style.display='none'; cand.value=''; btnLer.disabled=true;
+    document.getElementById('resultado').classList.add('hide'); foto.value=''; document.getElementById('preview').style.display='none'; cand.value=''; btnAbrir.disabled=false;
     window.scrollTo({top:0,behavior:'smooth'});
   }).catch(function(e){ btn.disabled=false; msg('Erro de rede: '+e.message,'err'); });
 });
