@@ -2040,8 +2040,9 @@ router.get('/processo-seletivo/prova/:id/gabarito', requireAuth, requirePermissa
       secoesGab+='<div class="gabarito-section"><div class="gabarito-section-title">'+tema+'</div>';
       secoesGab+='<div style="font-size:8pt;font-weight:700;display:flex;gap:4px;margin-bottom:4px;padding-left:22px"><span>A</span><span>B</span><span>C</span><span>D</span></div>';
       qs.forEach(q=>{
+        const corr=(q.resposta_correta||'').toString().trim().toUpperCase();
         secoesGab+='<div class="bubble-row"><span class="bubble-label">'+q.num+'</span>';
-        ['A','B','C','D'].forEach(l=>{secoesGab+='<div class="bubble">'+l+'</div>';});
+        ['A','B','C','D'].forEach(l=>{secoesGab+='<div class="bubble'+(l===corr?' marcada':'')+'">'+l+'</div>';});
         secoesGab+='</div>';
       });
       secoesGab+='</div>';
