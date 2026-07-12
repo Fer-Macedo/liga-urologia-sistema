@@ -1853,6 +1853,22 @@ router.post('/processo-seletivo/candidato/:id/entrevista', requireAuth, requireP
     res.json({ok:true,percentual_entrevista,resultado:aprovEntrev?'aprovado':'reprovado'});
   } catch(e) { res.json({ok:false,erro:e.message}); }
 });
+// Habilitar candidato <60% para a entrevista, por exceção justificada (auditável)
+router.post('/processo-seletivo/candidato/:id/excecao', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
+  try {
+    const motivo = (req.body.motivo || '').trim();
+    if (!motivo) return res.json({ ok: false, erro: 'Justificativa obrigatória.' });
+    await query("UPDATE ps_candidatos SET habilitado_excecao=true, excecao_motivo=$1, excecao_por=$2, excecao_em=NOW() WHERE id=$3",
+      [motivo, (req.session.usuario && req.session.usuario.nome) || null, req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, erro: e.message }); }
+});
+router.post('/processo-seletivo/candidato/:id/excecao/remover', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
+  try {
+    await query("UPDATE ps_candidatos SET habilitado_excecao=false, excecao_motivo=NULL, excecao_por=NULL, excecao_em=NULL WHERE id=$1", [req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, erro: e.message }); }
+});
 router.get('/processo-seletivo/:id/gabarito/:fila', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const r=await query("SELECT id,gabarito_json FROM ps_provas WHERE processo_id=$1 AND fila=$2",[req.params.id,req.params.fila]);

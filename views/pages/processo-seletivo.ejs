@@ -511,6 +511,23 @@
   </div>
 </div>
 
+<!-- Habilitar por Exceção -->
+<div class="modal-overlay" id="modal-excecao" style="display:none">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header"><span class="modal-titulo">Habilitar por exceção</span><button class="icon-btn" onclick="fecharModal('modal-excecao')">&#x2715;</button></div>
+    <div class="modal-body" style="padding:18px 20px">
+      <p style="font-size:12px;color:var(--texto2);margin-bottom:12px"><strong id="exc-nome"></strong> ficou <strong>abaixo de 60%</strong> na prova. Ao habilitar por exceção, ele poderá ser <strong>entrevistado</strong> (a entrevista continua sendo o filtro final). A nota real é mantida e fica registrado quem habilitou e quando.</p>
+      <label class="label">Justificativa <span style="color:#dc2626">*</span></label>
+      <textarea id="exc-motivo" class="input" rows="3" placeholder="Motivo da exceção (ex.: bom desempenho na aula magna, número de vagas, etc.)" style="font-size:12px"></textarea>
+      <div id="exc-erro" style="color:#dc2626;font-size:11px;margin-top:6px"></div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" onclick="fecharModal('modal-excecao')">Cancelar</button>
+      <button type="button" class="btn btn-primario" id="exc-btn" onclick="salvarExcecao()">Habilitar</button>
+    </div>
+  </div>
+</div>
+
 <script src="/js/app.js"></script>
 <script>
 const QUESTOES_DATA = <%- JSON.stringify(questoes).replace(/</g,"\u003c") %>;
@@ -654,8 +671,9 @@ async function carregarCandidatosEntrevista(procId){
   sel.innerHTML='<option value="">Selecione o candidato...</option>';
   CANDIDATOS_DATA.filter(c=>c.processo_id==procId).forEach(c=>{
     const o=document.createElement('option'); o.value=c.id;
-    o.textContent=c.nome+(c.percentual!=null?' | Prova: '+parseFloat(c.percentual).toFixed(1)+'%':'');
-    o.disabled=c.aprovado_prova===false;
+    const exc=(c.aprovado_prova===false && c.habilitado_excecao);
+    o.textContent=c.nome+(c.percentual!=null?' | Prova: '+parseFloat(c.percentual).toFixed(1)+'%':'')+(exc?' ⚠ Exceção':'');
+    o.disabled=c.aprovado_prova===false && !c.habilitado_excecao;
     sel.appendChild(o);
   });
   // Carregar perguntas configuradas
@@ -783,15 +801,58 @@ function renderResultados(data,procId){
   html+='</tbody></table></div>';
   if(reprovados.length){
     html+='<div style="font-size:12px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">Reprovados na Prova (<'+notaMin+'%)</div>';
-    html+='<div class="table-card"><table class="tabela"><thead><tr><th>Candidato</th><th>Fila</th><th>% Prova</th><th>Acertos</th></tr></thead><tbody>';
+    html+='<div class="table-card"><table class="tabela"><thead><tr><th>Candidato</th><th>Fila</th><th>% Prova</th><th>Acertos</th><th>Exceção (habilitar p/ entrevista)</th></tr></thead><tbody>';
     reprovados.forEach(c=>{
       html+='<tr><td style="font-weight:600">'+c.nome+'</td><td>'+( c.fila_prova||'—')+'</td>';
       html+='<td style="color:#dc2626;font-weight:700">'+parseFloat(c.percentual||0).toFixed(1)+'%</td>';
-      html+='<td>'+( c.total_acertos||0)+'/'+( c.total_questoes||0)+'</td></tr>';
+      html+='<td>'+( c.total_acertos||0)+'/'+( c.total_questoes||0)+'</td>';
+      if(c.habilitado_excecao){
+        const tip=((c.excecao_motivo||'')+(c.excecao_por?(' — por '+c.excecao_por):'')).replace(/"/g,'&quot;');
+        html+='<td><span class="status-badge" style="background:#fef3c7;color:#92400e" title="'+tip+'">⚠ Exceção habilitada</span> <a href="#" onclick="removerExcecao('+c.id+');return false;" style="font-size:11px;color:var(--texto2);margin-left:4px">remover</a></td>';
+      } else {
+        html+='<td><button class="btn-xs azul" onclick="abrirExcecao('+c.id+')">Habilitar (exceção)</button></td>';
+      }
+      html+='</tr>';
     });
     html+='</tbody></table></div>';
   }
   document.getElementById('painel-resultados').innerHTML=html;
+}
+let _excecaoCandId=null;
+function abrirExcecao(candId){
+  _excecaoCandId=candId;
+  const c=((window._resultadosData&&window._resultadosData.candidatos)||[]).find(x=>x.id==candId)||{};
+  document.getElementById('exc-nome').textContent=c.nome||'Candidato';
+  document.getElementById('exc-motivo').value='';
+  document.getElementById('exc-erro').textContent='';
+  abrirModal('modal-excecao');
+}
+function salvarExcecao(){
+  const motivo=document.getElementById('exc-motivo').value.trim();
+  if(!motivo){ document.getElementById('exc-erro').textContent='Informe a justificativa.'; return; }
+  const btn=document.getElementById('exc-btn'); btn.disabled=true; btn.textContent='Salvando…';
+  fetch('/processo-seletivo/candidato/'+_excecaoCandId+'/excecao',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({motivo:motivo})})
+    .then(r=>r.json()).then(d=>{
+      btn.disabled=false; btn.textContent='Habilitar';
+      if(d.ok){
+        const c=((window._resultadosData&&window._resultadosData.candidatos)||[]).find(x=>x.id==_excecaoCandId);
+        if(c){c.habilitado_excecao=true;c.excecao_motivo=motivo;}
+        const cd=CANDIDATOS_DATA.find(x=>x.id==_excecaoCandId); if(cd){cd.habilitado_excecao=true;}
+        fecharModal('modal-excecao'); carregarResultados(window._resultadosProcId);
+      } else { document.getElementById('exc-erro').textContent=d.erro||'Falha ao salvar.'; }
+    }).catch(()=>{ btn.disabled=false; btn.textContent='Habilitar'; document.getElementById('exc-erro').textContent='Erro de conexão.'; });
+}
+function removerExcecao(candId){
+  confirmarAcao('Remover a habilitação por exceção deste candidato?', function(){
+    fetch('/processo-seletivo/candidato/'+candId+'/excecao/remover',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})
+      .then(r=>r.json()).then(d=>{
+        if(d.ok){
+          const c=((window._resultadosData&&window._resultadosData.candidatos)||[]).find(x=>x.id==candId); if(c){c.habilitado_excecao=false;}
+          const cd=CANDIDATOS_DATA.find(x=>x.id==candId); if(cd){cd.habilitado_excecao=false;}
+          carregarResultados(window._resultadosProcId);
+        }
+      });
+  }, { titulo: 'Remover exceção', textoConfirmar: 'Remover' });
 }
 function enviarBoasVindas(){
   const ids=[...document.querySelectorAll('.bv-chk:checked')].map(x=>x.value);
