@@ -41,8 +41,9 @@ var busy=false, ultimo=null;
 navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}},audio:false})
  .then(function(s){ v.srcObject=s; v.play(); document.getElementById('hint').textContent='Alinhe o cartão inteiro no quadro (com os quadradinhos das laterais)'; loop(); })
  .catch(function(e){ document.getElementById('hint').textContent='Não consegui abrir a câmera: '+e.message; });
-function loop(){ setTimeout(tick, 700); }
+function loop(){ if(parado) return; setTimeout(tick, 700); }
 function tick(){
+  if(parado){ return; }
   if(busy){ loop(); return; }
   var vw=v.videoWidth, vh=v.videoHeight;
   if(!vw){ loop(); return; }
@@ -73,16 +74,30 @@ function render(d){
   res.innerHTML='<div class="big">'+d.acertos+'/'+d.total_questoes+' <span class="badge '+(ap?'ap':'re')+'">'+(ap?'CLASSIFICADO':'REPROVADO')+'</span></div><div style="font-size:12px;color:#cbd5e1">'+nome+' · Fila '+d.fila+'</div>';
   ultimo=d; btn.disabled=!d.candidato;
 }
+var parado=false;
 document.getElementById('btnConf').addEventListener('click',function(){
   if(!ultimo || !ultimo.candidato){ return; }
-  var btn=this; btn.disabled=true; btn.textContent='Lançando…';
-  var RESP={}; for(var i=1;i<=ultimo.total_questoes;i++){ RESP[i]=ultimo.respostas[i]?String(ultimo.respostas[i]).toUpperCase():null; }
-  fetch('/processo-seletivo/candidato/'+ultimo.candidato.id+'/correcao',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({respostas_json:JSON.stringify(RESP),total_questoes:ultimo.total_questoes,total_acertos:ultimo.acertos,percentual:ultimo.percentual,prova_id:ultimo.prova_id})})
-  .then(function(r){return r.json();}).then(function(x){
-    if(x.ok){ var m=document.getElementById('msg'); m.style.display='block'; m.textContent='✅ Lançado! '+(x.aprovado?'CLASSIFICADO':'REPROVADO')+' ('+x.percentual+'%)'; btn.textContent='✅ Lançado'; setTimeout(function(){ location.href='/processo-seletivo'; }, 1600); }
-    else { btn.textContent='Erro'; btn.disabled=false; }
-  }).catch(function(){ btn.textContent='Erro de rede'; btn.disabled=false; });
+  var btn=this; btn.disabled=true; parado=true; btn.textContent='Capturando…';
+  // Captura um quadro em boa resolucao e passa pelo MESMO fluxo da correcao por foto
+  // (guarda a foto do cartao + le + identifica), depois lanca. Assim os dois modos ficam iguais.
+  var vw=v.videoWidth, vh=v.videoHeight, w=Math.min(1500, vw), h=Math.round(vh*w/vw);
+  off.width=w; off.height=h; offc.drawImage(v,0,0,w,h);
+  off.toBlob(function(b){
+    if(!b){ btn.textContent='Erro na captura'; btn.disabled=false; parado=false; loop(); return; }
+    var fd=new FormData(); fd.append('imagem', b, 'cartao.jpg');
+    fetch('/processo-seletivo/'+PROCID+'/scan',{method:'POST',body:fd,credentials:'same-origin'})
+      .then(function(r){return r.json();}).then(function(d){
+        if(!d.ok || !d.candidato){ btn.textContent='Não identificou — ajuste e tente de novo'; btn.disabled=false; parado=false; loop(); return; }
+        var RESP={}; for(var i=1;i<=d.total_questoes;i++){ RESP[i]=d.respostas[i]?String(d.respostas[i]).toUpperCase():null; }
+        btn.textContent='Lançando…';
+        fetch('/processo-seletivo/candidato/'+d.candidato.id+'/correcao',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({respostas_json:JSON.stringify(RESP),total_questoes:d.total_questoes,total_acertos:d.acertos,percentual:d.percentual,prova_id:d.prova_id,cartao_chave:d.cartao_chave})})
+        .then(function(r){return r.json();}).then(function(x){
+          if(x.ok){ var m=document.getElementById('msg'); m.style.display='block'; m.textContent='✅ Lançado! '+(x.aprovado?'CLASSIFICADO':'REPROVADO')+' ('+x.percentual+'%) — foto do cartão salva.'; btn.textContent='✅ Lançado'; setTimeout(function(){ location.href='/processo-seletivo'; }, 1800); }
+          else { btn.textContent='Erro ao lançar'; btn.disabled=false; parado=false; loop(); }
+        }).catch(function(){ btn.textContent='Erro de rede'; btn.disabled=false; parado=false; loop(); });
+      }).catch(function(){ btn.textContent='Erro de rede'; btn.disabled=false; parado=false; loop(); });
+  },'image/jpeg',0.85);
 });
 </script>
 </body>
