@@ -91,8 +91,6 @@ async function initSchema() {
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS sexo TEXT;
     ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS edicao_liberada BOOLEAN DEFAULT false;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS edicao_liberada BOOLEAN DEFAULT false;
-    -- ponytail: IF EXISTS pq as tabelas ps_* vivem só no banco (não há CREATE no código)
-    ALTER TABLE IF EXISTS ps_processos ADD COLUMN IF NOT EXISTS edital_chave TEXT;
 
     CREATE TABLE IF NOT EXISTS cadastro_correcoes (
       id SERIAL PRIMARY KEY,
