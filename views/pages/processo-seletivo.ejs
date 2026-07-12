@@ -744,6 +744,28 @@ function renderResultados(data,procId){
   html+='<div class="stat-mini"><div class="stat-mini-num" style="color:#dc2626">'+reprovados.length+'</div><div class="stat-mini-lab">Reprovados</div></div>';
   html+='<div class="stat-mini"><div class="stat-mini-num">'+proc.vagas+'</div><div class="stat-mini-lab">Vagas</div></div>';
   html+='</div>';
+  // ── Selecionados: aprovados na entrevista → e-mail de boas-vindas ──
+  const selecionados=cands.filter(c=>c.resultado_entrevista==='aprovado');
+  html+='<div class="table-card" style="border:1.5px solid #16a34a;margin-bottom:18px">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;padding:12px 14px;background:#f0fdf4;border-bottom:1px solid #dcfce7">';
+  html+='<div style="font-size:12px;font-weight:800;color:#166534;text-transform:uppercase;letter-spacing:.5px">🎓 Selecionados — Aprovados na Entrevista ('+selecionados.length+')</div>';
+  html+='<div style="display:flex;align-items:center;gap:10px"><span id="bv-status" style="font-size:11px"></span><button class="btn btn-primario" id="bv-btn" style="font-size:12px;padding:7px 14px" onclick="enviarBoasVindas()"'+(selecionados.length?'':' disabled')+'>📧 Enviar e-mail de boas-vindas</button></div>';
+  html+='</div>';
+  if(!selecionados.length){
+    html+='<div style="padding:20px;text-align:center;color:var(--texto2);font-size:12px">Nenhum candidato aprovado na entrevista ainda. Aprove candidatos na aba <em>Entrevistas</em> (≥60%).</div>';
+  } else {
+    html+='<table class="tabela"><thead><tr><th style="width:34px"><input type="checkbox" id="bv-all" checked onclick="document.querySelectorAll(\'.bv-chk:not(:disabled)\').forEach(x=>x.checked=this.checked)"></th><th>Candidato</th><th>% Prova</th><th>% Entrevista</th><th>Boas-vindas</th></tr></thead><tbody>';
+    selecionados.forEach(c=>{
+      const env=c.boas_vindas_enviado?new Date(c.boas_vindas_enviado).toLocaleDateString('pt-BR'):'';
+      html+='<tr><td><input type="checkbox" class="bv-chk" value="'+c.id+'"'+(c.email?' checked':' disabled')+'></td>';
+      html+='<td><div style="font-weight:600;font-size:13px">'+c.nome+'</div><div style="font-size:11px;color:var(--texto2)">'+(c.email||'sem e-mail')+'</div></td>';
+      html+='<td style="font-weight:700;color:#166534">'+parseFloat(c.percentual||0).toFixed(1)+'%</td>';
+      html+='<td style="font-weight:600">'+(c.percentual_entrevista!=null?parseFloat(c.percentual_entrevista).toFixed(1)+'%':'—')+'</td>';
+      html+='<td>'+(env?('<span style="color:#166534;font-size:11px;font-weight:700">✓ '+env+'</span>'):'<span style="color:var(--texto2);font-size:11px">—</span>')+'</td></tr>';
+    });
+    html+='</tbody></table>';
+  }
+  html+='</div>';
   html+='<div style="font-size:12px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Aprovados na Prova (≥'+notaMin+'%)</div>';
   html+='<div class="table-card"><table class="tabela"><thead><tr><th>Rank</th><th>Candidato</th><th>Fila</th><th>% Prova</th><th>% Entrevista</th><th>Situação</th></tr></thead><tbody>';
   aprovados.forEach((c,i)=>{
@@ -770,6 +792,24 @@ function renderResultados(data,procId){
     html+='</tbody></table></div>';
   }
   document.getElementById('painel-resultados').innerHTML=html;
+}
+function enviarBoasVindas(){
+  const ids=[...document.querySelectorAll('.bv-chk:checked')].map(x=>x.value);
+  const st=document.getElementById('bv-status');
+  if(!ids.length){ st.innerHTML='<span style="color:#dc2626">Selecione ao menos um candidato.</span>'; return; }
+  confirmarAcao('Enviar e-mail de boas-vindas para '+ids.length+' selecionado(s)?', function(){
+    const btn=document.getElementById('bv-btn'); btn.disabled=true; btn.textContent='Enviando…'; st.textContent='';
+    fetch('/processo-seletivo/boas-vindas',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids:ids})})
+      .then(r=>r.json()).then(d=>{
+        if(d.ok){
+          st.innerHTML='<span style="color:#166534;font-weight:700">✓ '+d.enviados+' enviado(s)</span>'+(d.falhas&&d.falhas.length?(' <span style="color:#dc2626">· '+d.falhas.length+' falha(s)</span>'):'');
+          setTimeout(()=>carregarResultados(window._resultadosProcId),1200);
+        } else {
+          btn.disabled=false; btn.textContent='📧 Enviar e-mail de boas-vindas';
+          st.innerHTML='<span style="color:#dc2626">Erro: '+(d.erro||'falha')+'</span>';
+        }
+      }).catch(()=>{ btn.disabled=false; btn.textContent='📧 Enviar e-mail de boas-vindas'; st.innerHTML='<span style="color:#dc2626">Erro de conexão.</span>'; });
+  }, { titulo: 'E-mail de boas-vindas', textoConfirmar: 'Enviar' });
 }
 function exportarCSV(){
   const data=window._resultadosData;if(!data)return;

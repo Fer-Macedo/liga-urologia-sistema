@@ -1976,6 +1976,26 @@ router.get('/processo-seletivo/:id/resultados', requireAuth, requirePermissao('p
     res.json({candidatos:r.rows});
   } catch(e) { res.json({candidatos:[],erro:e.message}); }
 });
+// Envia e-mail de boas-vindas aos aprovados na entrevista (selecionados)
+router.post('/processo-seletivo/boas-vindas', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
+  try {
+    let ids = req.body.ids;
+    if (typeof ids === 'string') ids = ids.split(',');
+    ids = (ids || []).map(x => parseInt(x, 10)).filter(Boolean);
+    if (!ids.length) return res.json({ ok: false, erro: 'Nenhum candidato selecionado.' });
+    const r = await query(`SELECT c.id, c.nome, c.email, e.resultado AS resultado_entrevista
+      FROM ps_candidatos c LEFT JOIN ps_entrevistas e ON e.candidato_id=c.id
+      WHERE c.id = ANY($1::int[])`, [ids]);
+    let enviados = 0; const falhas = [];
+    for (const c of r.rows) {
+      if (c.resultado_entrevista !== 'aprovado') { falhas.push(c.nome + ' (no aprobado en la entrevista)'); continue; }
+      if (!c.email) { falhas.push(c.nome + ' (sin e-mail)'); continue; }
+      const ok = await enviarEmailBoasVindasPss(c.id);
+      if (ok) enviados++; else falhas.push(c.nome + ' (falha no envio)');
+    }
+    res.json({ ok: true, enviados, falhas });
+  } catch (e) { res.json({ ok: false, erro: e.message }); }
+});
 router.get('/processo-seletivo/:id/perguntas-entrevista', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
     const r=await query('SELECT * FROM ps_entrevista_perguntas WHERE (processo_id=$1 OR processo_id IS NULL) AND ativo=TRUE ORDER BY ordem',[req.params.id]);
@@ -5990,6 +6010,22 @@ async function enviarLembretePss(candidatoId) {
     await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: c.email, subject: 'Complete su inscripción — ' + c.processo_nome, html: emailBonito('¿Necesitás ayuda para concluir tu inscripción?', corpo), faixaLabel: 'INSCRIPCIÓN PENDIENTE' });
     return true;
   } catch (e) { console.error('enviarLembretePss ERRO:', e.message); return false; }
+}
+// E-mail de boas-vindas ao selecionado (aprovado na entrevista). Mesma arte unificada.
+async function enviarEmailBoasVindasPss(candidatoId) {
+  try {
+    const c = (await query("SELECT c.*, p.nome AS processo_nome FROM ps_candidatos c JOIN ps_processos p ON p.id=c.processo_id WHERE c.id=$1", [candidatoId])).rows[0];
+    if (!c || !c.email) return false;
+    const primeiro = (c.nome || '').split(' ')[0];
+    const corpo = '<p>Estimado/a <strong>' + primeiro + '</strong>,</p>'
+      + '<p>¡Felicitaciones! Nos complace informarte que fuiste <strong>seleccionado/a</strong> para integrar la <strong>Liga Académica de Urología — LAURO</strong>, tras aprobar todas las etapas del proceso selectivo, incluyendo la entrevista.</p>'
+      + '<p>A partir de ahora formás parte de nuestra comunidad académica. En breve te contactaremos con los detalles de la <strong>jornada de inducción</strong> y los próximos pasos para el inicio de tu trayectoria como ligante.</p>'
+      + '<p>¡Te damos la más cordial bienvenida!</p>'
+      + '<p style="margin-top:16px">Atentamente,<br><strong>Dirección — LAURO</strong></p>';
+    await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: c.email, subject: '¡Bienvenido/a a la LAURO! 🎉', html: emailBonito('¡Felicitaciones! Fuiste seleccionado/a', corpo), faixaLabel: 'BIENVENIDO A LA LAURO' });
+    await query("UPDATE ps_candidatos SET boas_vindas_enviado=NOW() WHERE id=$1", [candidatoId]);
+    return true;
+  } catch (e) { console.error('enviarEmailBoasVindasPss ERRO:', e.message); return false; }
 }
 
 // ── Página pública de inscrição ──
