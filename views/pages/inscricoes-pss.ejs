@@ -21,8 +21,20 @@
     .flex{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;}
     .flex .campo{flex:1;min-width:120px;}
     .link-pub{background:#f0fdf4;border:1px dashed #86efac;border-radius:var(--rad);padding:10px 12px;font-size:12px;font-family:monospace;color:#166534;word-break:break-all;}
-    input,select{padding:9px;border:1px solid var(--borda);border-radius:var(--rad);font-size:13px;width:100%;background:var(--card);color:var(--texto);}
+    input,select,textarea{padding:9px;border:1px solid var(--borda);border-radius:var(--rad);font-size:13px;width:100%;background:var(--card);color:var(--texto);font-family:inherit;}
     label.lb{font-size:11px;font-weight:700;color:var(--texto2);display:block;margin-bottom:4px;}
+    .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+    .pcard{background:var(--card);border:1px solid var(--borda);border-radius:var(--rad);overflow:hidden;transition:.16s;}
+    .pcard:hover{border-color:var(--cor-primaria);transform:translateY(-2px);box-shadow:0 8px 20px -10px rgba(0,0,0,.25);}
+    .pbanner{width:100%;height:130px;object-fit:cover;display:block;}
+    .pbanner-ph{width:100%;height:130px;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 14px;color:#fff;font-weight:800;font-size:15px;letter-spacing:.3px;}
+    .pbody{padding:14px 16px;}
+    .pnome{font-weight:800;font-size:15px;margin-bottom:6px;color:var(--texto);}
+    .pmeta{font-size:12px;color:var(--texto2);margin-bottom:3px;display:flex;gap:6px;align-items:center;}
+    .pstatus{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:800;margin-bottom:8px;}
+    .pstatus.aberta{background:#dcfce7;color:#166534;} .pstatus.fechada{background:#fee2e2;color:#b91c1c;}
+    .pacoes{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px;}
+    .pacoes .btn-sm{font-size:11.5px;padding:6px 10px;}
   </style>
 </head>
 <body>
@@ -30,22 +42,45 @@
   <%- include('../partials/sidebar', { paginaAtual: 'inscricoes-pss' }) %>
   <main class="main">
     <div class="topbar">
-      <h1 class="page-titulo">Inscrições PSS</h1>
-      <% if (procs && procs.length) { %>
-      <div class="topbar-acoes">
-        <form method="GET" action="/inscricoes-pss"><select name="processo" onchange="this.form.submit()" style="min-width:220px">
-          <% procs.forEach(function(p){ %><option value="<%=p.id%>" <%= processo&&processo.id===p.id?'selected':'' %>><%=p.nome%></option><% }); %>
-        </select></form>
-      </div>
+      <% if (vista==='detalhe' && processo) { %>
+        <a href="/inscricoes-pss" class="btn btn-sm" style="text-decoration:none">← Voltar</a>
+        <h1 class="page-titulo" style="margin:0;font-size:18px"><%= processo.nome %></h1>
+        <div class="topbar-acoes"><button class="btn btn-sm" onclick="abrirModal('modal-editar-proc')">✏️ Editar processo</button></div>
+      <% } else { %>
+        <h1 class="page-titulo">Inscrições PSS</h1>
+        <div class="topbar-acoes"><button class="btn btn-primario btn-sm" onclick="abrirModal('modal-novo-proc')">+ Novo Processo</button></div>
       <% } %>
     </div>
     <div class="content">
       <%if(msg&&msg.length>0){%><div class="alerta alerta-ok"><%=msg[0]%></div><%}%>
       <%if(erro&&erro.length>0){%><div class="alerta alerta-erro"><%=erro[0]%></div><%}%>
 
-      <% if (!processo) { %>
-        <div class="box">Nenhum processo seletivo cadastrado. Crie um em <a href="/processo-seletivo">Processo Seletivo</a>.</div>
-      <% } else { %>
+      <% if (vista==='lista') { %>
+        <% if (!procs.length) { %>
+          <div class="box">Nenhum processo cadastrado ainda. Clique em <b>+ Novo Processo</b> pra criar o primeiro (com banner, valor, WhatsApp).</div>
+        <% } %>
+        <div class="pgrid">
+          <% procs.forEach(function(p){ var cor=p.cor_tema||'#2b6803'; %>
+            <div class="pcard">
+              <% if (p.banner_chave) { %><img class="pbanner" src="/inscricoes-pss/processo/<%=p.id%>/banner" alt="<%=p.nome%>"><% } else { %><div class="pbanner-ph" style="background:linear-gradient(135deg,<%=cor%>,<%=cor%>cc)"><%= p.nome.substring(0,40) %></div><% } %>
+              <div class="pbody">
+                <span class="pstatus <%= p.inscricoes_abertas?'aberta':'fechada' %>"><%= p.inscricoes_abertas?'Inscrições abertas':'Inscrições fechadas' %></span>
+                <div class="pnome"><%= p.nome %></div>
+                <div class="pmeta"><%= p.semestre||'' %><%= p.data_prova?(' · Prova '+new Date(p.data_prova).toLocaleDateString('pt-BR',{timeZone:'UTC'})):'' %></div>
+                <div class="pmeta"><%= p.total_inscritos||0 %> inscritos · <%= p.confirmados||0 %> confirmados</div>
+                <div class="pmeta">Valor: <%= parseFloat(p.valor_inscricao)>0 ? ('R$ '+parseFloat(p.valor_inscricao).toFixed(2).replace('.',',')) : 'Gratuito' %></div>
+                <div class="pacoes">
+                  <a href="/inscricoes-pss?processo=<%=p.id%>" class="btn btn-primario btn-sm">Gerenciar</a>
+                  <a href="<%= inscricaoBase %>/pss/<%=p.id%>/inscricao" target="_blank" class="btn btn-sm">Página</a>
+                  <form method="POST" action="/inscricoes-pss/processo/<%=p.id%>/toggle" style="display:inline">
+                    <button class="btn btn-sm" style="<%= p.inscricoes_abertas?'color:#b91c1c':'color:#16a34a' %>"><%= p.inscricoes_abertas?'Desativar':'Ativar' %></button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          <% }); %>
+        </div>
+      <% } else if (processo) { %>
         <div class="cards">
           <div class="kpi"><div class="n"><%= resumo.total %></div><div class="l">Inscrições</div></div>
           <div class="kpi"><div class="n" style="color:#16a34a"><%= resumo.confirmados %></div><div class="l">Confirmadas</div></div>
@@ -167,6 +202,52 @@
 </div>
 <% } %>
 
+<div class="modal-overlay" id="modal-novo-proc" style="display:none">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header"><span class="modal-titulo">Novo Processo Seletivo</span><button class="icon-btn" onclick="fecharModal('modal-novo-proc')">&#x2715;</button></div>
+    <form method="POST" action="/inscricoes-pss/criar" enctype="multipart/form-data">
+      <div class="modal-body" style="padding:20px 24px;display:flex;flex-direction:column;gap:12px">
+        <div class="campo"><label class="lb">Nome do processo *</label><input name="nome" required placeholder="Ex: Processo Seletivo 2026.2"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="campo"><label class="lb">Semestre</label><input name="semestre" placeholder="2026.2"></div>
+          <div class="campo"><label class="lb">Data da prova</label><input type="date" name="data_prova"></div>
+        </div>
+        <div class="campo"><label class="lb">Local da prova</label><input name="local_prova"></div>
+        <div style="display:grid;grid-template-columns:1fr auto;gap:10px">
+          <div class="campo"><label class="lb">Valor da inscrição (R$)</label><input name="valor_inscricao" type="number" step="0.01" min="0" value="0"></div>
+          <div class="campo"><label class="lb">Cor</label><input name="cor_tema" type="color" value="#2b6803" style="height:38px;padding:3px;width:56px"></div>
+        </div>
+        <div class="campo"><label class="lb">Banner (imagem)</label><input type="file" name="banner" accept="image/*"></div>
+        <div class="campo"><label class="lb">Grupo de WhatsApp (link)</label><input name="wpp_grupo" placeholder="https://chat.whatsapp.com/..."></div>
+        <div class="campo"><label class="lb">Descrição (aparece na página pública)</label><textarea name="descricao" rows="3"></textarea></div>
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600"><input type="checkbox" name="inscricoes_abertas" style="width:auto"> Já abrir inscrições</label>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-novo-proc')">Cancelar</button><button type="submit" class="btn btn-primario">Criar Processo</button></div>
+    </form>
+  </div>
+</div>
+<% if (vista==='detalhe' && processo) { %>
+<div class="modal-overlay" id="modal-editar-proc" style="display:none">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-header"><span class="modal-titulo">Editar Processo</span><button class="icon-btn" onclick="fecharModal('modal-editar-proc')">&#x2715;</button></div>
+    <form method="POST" action="/inscricoes-pss/processo/<%=processo.id%>/editar-dados" enctype="multipart/form-data">
+      <div class="modal-body" style="padding:20px 24px;display:flex;flex-direction:column;gap:12px">
+        <div class="campo"><label class="lb">Nome *</label><input name="nome" value="<%=processo.nome%>" required></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="campo"><label class="lb">Semestre</label><input name="semestre" value="<%=processo.semestre||''%>"></div>
+          <div class="campo"><label class="lb">Data da prova</label><input type="date" name="data_prova" value="<%= processo.data_prova?new Date(processo.data_prova).toISOString().slice(0,10):'' %>"></div>
+        </div>
+        <div class="campo"><label class="lb">Local da prova</label><input name="local_prova" value="<%=processo.local_prova||''%>"></div>
+        <div class="campo"><label class="lb">Cor do tema</label><input name="cor_tema" type="color" value="<%=processo.cor_tema||'#2b6803'%>" style="height:38px;padding:3px;width:56px"></div>
+        <div class="campo"><label class="lb">Trocar banner (deixe vazio p/ manter)</label><input type="file" name="banner" accept="image/*"></div>
+        <div class="campo"><label class="lb">Grupo de WhatsApp (link)</label><input name="wpp_grupo" value="<%=processo.wpp_grupo||''%>"></div>
+        <div class="campo"><label class="lb">Descrição</label><textarea name="descricao" rows="3"><%=processo.descricao||''%></textarea></div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-editar-proc')">Cancelar</button><button type="submit" class="btn btn-primario">Salvar</button></div>
+    </form>
+  </div>
+</div>
+<% } %>
 <script src="/js/app.js"></script>
 <script>
 function filtrarInsc(){

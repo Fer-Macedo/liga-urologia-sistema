@@ -6048,8 +6048,12 @@ router.get('/pss/pagamento/:cid/status', async (req, res) => {
 router.get('/inscricoes-pss', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
   try {
     const config = await getConfig();
-    const procs = (await query("SELECT * FROM ps_processos ORDER BY id DESC")).rows;
-    const selId = req.query.processo ? parseInt(req.query.processo, 10) : (procs[0] && procs[0].id);
+    const procs = (await query(`SELECT p.*,
+        (SELECT COUNT(*) FROM ps_candidatos c WHERE c.processo_id=p.id) AS total_inscritos,
+        (SELECT COUNT(*) FROM ps_candidatos c WHERE c.processo_id=p.id AND c.pagamento_status='confirmado') AS confirmados
+      FROM ps_processos p ORDER BY p.id DESC`)).rows;
+    const selId = req.query.processo ? parseInt(req.query.processo, 10) : null;
+    const vista = selId ? 'detalhe' : 'lista';
     let processo = null, inscritos = [], cupons = [], resumo = { total: 0, confirmados: 0, pendentes: 0, arrecadado: 0 };
     if (selId) {
       processo = procs.find(p => p.id === selId) || null;
@@ -6058,7 +6062,7 @@ router.get('/inscricoes-pss', requireAuth, requirePermissao('inscricoes-pss'), a
       resumo.total = inscritos.length;
       inscritos.forEach(i => { if (i.pagamento_status === 'confirmado') { resumo.confirmados++; resumo.arrecadado += parseFloat(i.valor_pago) || 0; } else resumo.pendentes++; });
     }
-    res.render('pages/inscricoes-pss', { config, usuario: req.session.usuario, procs, processo, inscritos, cupons, resumo, inscricaoBase: process.env.INSCRICAO_URL || 'https://inscricao.lauroucpcde.com', msg: req.session.msg || [], erro: req.session.erro || [] });
+    res.render('pages/inscricoes-pss', { config, usuario: req.session.usuario, procs, vista, processo, inscritos, cupons, resumo, inscricaoBase: process.env.INSCRICAO_URL || 'https://inscricao.lauroucpcde.com', msg: req.session.msg || [], erro: req.session.erro || [] });
     req.session.msg = []; req.session.erro = [];
   } catch (e) { res.status(500).send('Erro: ' + e.message); }
 });
@@ -6068,6 +6072,56 @@ router.post('/inscricoes-pss/processo/:id/config', requireAuth, requirePermissao
     req.session.msg = ['Configuração de inscrições salva.'];
   } catch (e) { req.session.erro = [e.message]; }
   res.redirect('/inscricoes-pss?processo=' + req.params.id);
+});
+// Servir o banner do processo (redirect p/ URL assinada — igual eventos)
+router.get('/inscricoes-pss/processo/:id/banner', async (req, res) => {
+  try {
+    const r = await query('SELECT banner_chave FROM ps_processos WHERE id=$1', [req.params.id]);
+    if (!r.rows[0] || !r.rows[0].banner_chave) return res.status(404).send('');
+    const { getUrlAssinada } = require('../services/desligamento');
+    res.redirect(await getUrlAssinada(r.rows[0].banner_chave));
+  } catch (e) { res.status(404).send(''); }
+});
+// Criar processo (com banner + dados de inscrição) — igual eventos
+router.post('/inscricoes-pss/criar', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.single('banner')(req, res, async () => {
+      try {
+        const b = req.body; let bannerChave = null;
+        if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'processo-seletivo'); bannerChave = r.chave; }
+        const ins = await query("INSERT INTO ps_processos (nome,semestre,data_prova,local_prova,endereco,vagas,nota_minima,valor_inscricao,inscricoes_abertas,banner_chave,cor_tema,descricao,wpp_grupo) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id",
+          [b.nome, b.semestre || null, b.data_prova || null, b.local_prova || null, b.endereco || null, parseInt(b.vagas) || null, parseFloat(b.nota_minima) || 60, parseFloat(b.valor_inscricao) || 0, b.inscricoes_abertas === 'on' || b.inscricoes_abertas === 'true', bannerChave, b.cor_tema || '#2b6803', b.descricao || null, b.wpp_grupo || null]);
+        req.session.msg = ['Processo criado!'];
+        res.redirect('/inscricoes-pss?processo=' + ins.rows[0].id);
+      } catch (e2) { req.session.erro = [e2.message]; res.redirect('/inscricoes-pss'); }
+    });
+  } catch (e) { req.session.erro = [e.message]; res.redirect('/inscricoes-pss'); }
+});
+// Editar dados públicos do processo (banner + campos)
+router.post('/inscricoes-pss/processo/:id/editar-dados', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
+  try {
+    const { upload, uploadArquivo } = require('../services/arquivos');
+    upload.single('banner')(req, res, async () => {
+      try {
+        const b = req.body; let bannerChave = null;
+        if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'processo-seletivo'); bannerChave = r.chave; }
+        const params = [b.nome, b.semestre || null, b.data_prova || null, b.local_prova || null, b.cor_tema || '#2b6803', b.wpp_grupo || null, b.descricao || null];
+        const setB = bannerChave ? ', banner_chave=$8' : '';
+        if (bannerChave) params.push(bannerChave);
+        params.push(req.params.id);
+        await query(`UPDATE ps_processos SET nome=$1,semestre=$2,data_prova=$3,local_prova=$4,cor_tema=$5,wpp_grupo=$6,descricao=$7${setB} WHERE id=$${params.length}`, params);
+        req.session.msg = ['Processo atualizado!'];
+        res.redirect('/inscricoes-pss?processo=' + req.params.id);
+      } catch (e2) { req.session.erro = [e2.message]; res.redirect('/inscricoes-pss?processo=' + req.params.id); }
+    });
+  } catch (e) { req.session.erro = [e.message]; res.redirect('/inscricoes-pss'); }
+});
+// Ativar / desativar inscrições (abre/fecha)
+router.post('/inscricoes-pss/processo/:id/toggle', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
+  try { await query("UPDATE ps_processos SET inscricoes_abertas = NOT COALESCE(inscricoes_abertas,false) WHERE id=$1", [req.params.id]); }
+  catch (e) { req.session.erro = [e.message]; }
+  res.redirect('/inscricoes-pss' + (req.body.voltar_detalhe ? ('?processo=' + req.params.id) : ''));
 });
 router.post('/inscricoes-pss/processo/:id/cupom', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
   try {
