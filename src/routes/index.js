@@ -9911,7 +9911,7 @@ router.post('/portal/login', limiterLogin, async (req, res) => {
     const rD = await query('SELECT id, nome, email FROM diretivos WHERE LOWER(email)=LOWER($1) AND ativo=1 AND pendente=false', [email]);
     if (rD.rows.length) { membro = rD.rows[0]; tipo = 'diretivo'; }
   }
-  if (!membro) { req.session.erro=['Email nao encontrado ou acesso nao permitido.']; return res.redirect('/portal/login'); }
+  if (!membro) { req.session.erro=['Este e-mail não condiz com o cadastro oficial de ligantes/diretivos da liga. Em caso de dúvida, entre em contato com a secretaria.']; return res.redirect('/portal/login'); }
   const senhaR = await query('SELECT * FROM portal_cientifico_senhas WHERE origem_tipo=$1 AND origem_id=$2', [tipo, membro.id]);
   if (!senhaR.rows.length) { req.session.erro=['Acesso nao configurado. Aguarde ser adicionado a um grupo.']; return res.redirect('/portal/login'); }
   const senhaOk = await bcryptPortal.compare(senha, senhaR.rows[0].senha_hash);
