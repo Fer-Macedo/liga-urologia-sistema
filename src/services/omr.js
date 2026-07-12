@@ -154,21 +154,18 @@ async function readCard(photo, coords) {
   for (const m of M) { const [px, py] = map(m.x, m.y); let best = null, bd = 1e9; for (const d of det) { const dist = (d.cx - px) ** 2 + (d.cy - py) ** 2; if (dist < bd) { bd = dist; best = d; } } if (best && bd < (W * 0.03) ** 2) { cs.push([m.x, m.y]); cd.push([best.cx, best.cy]); } }
   if (cs.length >= 6) map = homografiaLS(cs, cd);
   const scaleR = (dst[3][0] - dst[0][0]) / (maxX - minX); // canonico->foto (raio)
-  const fill = (key) => { const c = coords.bolhas[key]; if (!c) return null; const [x, y] = map(c.x, c.y); const rr = c.r * scaleR; const p = preenchimento(g, x, y, rr); return { frac: p.frac, mean: p.mean, x, y, r: rr }; };
+  const fill = (key) => { const c = coords.bolhas[key]; if (!c) return null; const [x, y] = map(c.x, c.y); return preenchimento(g, x, y, c.r * scaleR); };
 
   const THRESH = 0.40; // fracao de tinta p/ considerar marcada (calibrar com foto real)
   // questoes
   const nums = Object.keys(coords.bolhas).filter(k => /^q\d+-A$/.test(k)).map(k => +k.match(/\d+/)[0]).sort((a, b) => a - b);
-  const respostas = {}, incertas = [], scores = {}, pos = {};
+  const respostas = {}, incertas = [], scores = {};
   for (const n of nums) {
-    const raw = ['A', 'B', 'C', 'D'].map(l => ({ l, o: fill('q' + n + '-' + l) }));
-    const fs = raw.map(o => ({ l: o.l, f: (o.o || { frac: 0 }).frac }));
+    const fs = ['A', 'B', 'C', 'D'].map(l => ({ l, f: (fill('q' + n + '-' + l) || { frac: 0 }).frac }));
     scores[n] = fs;
     const ord = fs.slice().sort((a, b) => b.f - a.f);
     if (ord[0].f < THRESH) { respostas[n] = null; incertas.push(n); } // em branco
     else { respostas[n] = ord[0].l; if (ord[1].f >= THRESH && ord[1].f >= 0.6 * ord[0].f) incertas.push(n); } // dupla marcacao real
-    const marcada = raw.find(o => o.l === respostas[n]); // posicao projetada da bolha marcada (overlay ao vivo)
-    if (marcada && marcada.o) pos[n] = { x: Math.round(marcada.o.x), y: Math.round(marcada.o.y), r: Math.round(marcada.o.r), letra: respostas[n] };
   }
   // fila (conjunto A/B/C)
   const filaFs = ['A', 'B', 'C'].map(l => ({ l, f: (fill('conj-' + l) || { frac: 0 }).frac })).sort((a, b) => b.f - a.f);
@@ -181,7 +178,7 @@ async function readCard(photo, coords) {
     ds.sort((a, b) => b.f - a.f);
     registro += (ds[0] && ds[0].f >= THRESH) ? ds[0].d : '?';
   }
-  return { fila, registro, respostas, incertas, scores, pos, W, H, markers: L.length + R.length };
+  return { fila, registro, respostas, incertas, scores };
 }
 
 module.exports = { readCard, analisarFoto, componentes, trilhos, homografia, homografiaLS, preenchimento, W };
