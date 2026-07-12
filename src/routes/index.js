@@ -6159,16 +6159,30 @@ async function _servirBannerProcesso(req, res) {
 }
 router.get('/inscricoes-pss/processo/:id/banner', _servirBannerProcesso);
 router.get('/pss/:id/banner', _servirBannerProcesso);
+// Edital (PDF) do processo — consulta pública
+async function _servirEditalProcesso(req, res) {
+  try {
+    const r = await query('SELECT edital_chave FROM ps_processos WHERE id=$1', [req.params.id]);
+    if (!r.rows[0] || !r.rows[0].edital_chave) return res.status(404).send('Edital não disponível.');
+    const { getUrlAssinada } = require('../services/desligamento');
+    res.redirect(await getUrlAssinada(r.rows[0].edital_chave));
+  } catch (e) { res.status(404).send('Edital não disponível.'); }
+}
+router.get('/inscricoes-pss/processo/:id/edital', _servirEditalProcesso);
+router.get('/pss/:id/edital', _servirEditalProcesso);
 // Criar processo (com banner + dados de inscrição) — igual eventos
 router.post('/inscricoes-pss/criar', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
-    upload.single('banner')(req, res, async () => {
+    upload.fields([{ name: 'banner', maxCount: 1 }, { name: 'edital', maxCount: 1 }])(req, res, async () => {
       try {
-        const b = req.body; let bannerChave = null;
-        if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'processo-seletivo'); bannerChave = r.chave; }
-        const ins = await query("INSERT INTO ps_processos (nome,semestre,data_prova,local_prova,endereco,vagas,nota_minima,valor_inscricao,inscricoes_abertas,banner_chave,cor_tema,descricao,wpp_grupo) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id",
-          [b.nome, b.semestre || null, b.data_prova || null, b.local_prova || null, b.endereco || null, parseInt(b.vagas) || null, parseFloat(b.nota_minima) || 60, parseFloat(b.valor_inscricao) || 0, b.inscricoes_abertas === 'on' || b.inscricoes_abertas === 'true', bannerChave, b.cor_tema || '#2b6803', b.descricao || null, b.wpp_grupo || null]);
+        const b = req.body; let bannerChave = null, editalChave = null;
+        const fBanner = req.files && req.files.banner && req.files.banner[0];
+        const fEdital = req.files && req.files.edital && req.files.edital[0];
+        if (fBanner) { const r = await uploadArquivo(fBanner.buffer, fBanner.originalname, fBanner.mimetype, 'processo-seletivo'); bannerChave = r.chave; }
+        if (fEdital) { const r = await uploadArquivo(fEdital.buffer, fEdital.originalname, fEdital.mimetype, 'processo-seletivo-editais'); editalChave = r.chave; }
+        const ins = await query("INSERT INTO ps_processos (nome,semestre,data_prova,local_prova,endereco,vagas,nota_minima,valor_inscricao,inscricoes_abertas,banner_chave,cor_tema,descricao,wpp_grupo,edital_chave) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id",
+          [b.nome, b.semestre || null, b.data_prova || null, b.local_prova || null, b.endereco || null, parseInt(b.vagas) || null, parseFloat(b.nota_minima) || 60, parseFloat(b.valor_inscricao) || 0, b.inscricoes_abertas === 'on' || b.inscricoes_abertas === 'true', bannerChave, b.cor_tema || '#2b6803', b.descricao || null, b.wpp_grupo || null, editalChave]);
         req.session.msg = ['Processo criado!'];
         res.redirect('/inscricoes-pss?processo=' + ins.rows[0].id);
       } catch (e2) { req.session.erro = [e2.message]; res.redirect('/inscricoes-pss'); }
@@ -6179,15 +6193,19 @@ router.post('/inscricoes-pss/criar', requireAuth, requirePermissao('inscricoes-p
 router.post('/inscricoes-pss/processo/:id/editar-dados', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
   try {
     const { upload, uploadArquivo } = require('../services/arquivos');
-    upload.single('banner')(req, res, async () => {
+    upload.fields([{ name: 'banner', maxCount: 1 }, { name: 'edital', maxCount: 1 }])(req, res, async () => {
       try {
-        const b = req.body; let bannerChave = null;
-        if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'processo-seletivo'); bannerChave = r.chave; }
+        const b = req.body; let bannerChave = null, editalChave = null;
+        const fBanner = req.files && req.files.banner && req.files.banner[0];
+        const fEdital = req.files && req.files.edital && req.files.edital[0];
+        if (fBanner) { const r = await uploadArquivo(fBanner.buffer, fBanner.originalname, fBanner.mimetype, 'processo-seletivo'); bannerChave = r.chave; }
+        if (fEdital) { const r = await uploadArquivo(fEdital.buffer, fEdital.originalname, fEdital.mimetype, 'processo-seletivo-editais'); editalChave = r.chave; }
         const params = [b.nome, b.semestre || null, b.data_prova || null, b.local_prova || null, b.cor_tema || '#2b6803', b.wpp_grupo || null, b.descricao || null];
-        const setB = bannerChave ? ', banner_chave=$8' : '';
-        if (bannerChave) params.push(bannerChave);
+        let setExtra = '';
+        if (bannerChave) { params.push(bannerChave); setExtra += ', banner_chave=$' + params.length; }
+        if (editalChave) { params.push(editalChave); setExtra += ', edital_chave=$' + params.length; }
         params.push(req.params.id);
-        await query(`UPDATE ps_processos SET nome=$1,semestre=$2,data_prova=$3,local_prova=$4,cor_tema=$5,wpp_grupo=$6,descricao=$7${setB} WHERE id=$${params.length}`, params);
+        await query(`UPDATE ps_processos SET nome=$1,semestre=$2,data_prova=$3,local_prova=$4,cor_tema=$5,wpp_grupo=$6,descricao=$7${setExtra} WHERE id=$${params.length}`, params);
         req.session.msg = ['Processo atualizado!'];
         res.redirect('/inscricoes-pss?processo=' + req.params.id);
       } catch (e2) { req.session.erro = [e2.message]; res.redirect('/inscricoes-pss?processo=' + req.params.id); }
