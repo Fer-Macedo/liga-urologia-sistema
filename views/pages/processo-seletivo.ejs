@@ -41,6 +41,26 @@
     .stat-mini{background:var(--fundo);border:1px solid var(--borda);border-radius:var(--rad);padding:10px 14px;text-align:center;flex:1;min-width:80px;}
     .stat-mini-num{font-size:20px;font-weight:800;color:var(--cor-primaria);}
     .stat-mini-lab{font-size:10px;color:var(--texto2);font-weight:600;}
+    .res-sec{background:var(--card);border:1px solid var(--borda);border-radius:var(--rad);overflow:hidden;margin-bottom:16px;}
+    .res-hd{display:flex;align-items:center;justify-content:space-between;padding:11px 16px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;}
+    .res-hd.ap{background:#f0fdf4;color:#166534;border-bottom:1px solid #dcfce7;}
+    .res-hd.rep{background:#fef2f2;color:#b91c1c;border-bottom:1px solid #fee2e2;}
+    .res-hd .cnt{font-size:11px;font-weight:800;background:rgba(0,0,0,.07);padding:2px 9px;border-radius:20px;}
+    .res-row{display:flex;align-items:center;gap:12px;padding:11px 16px;border-bottom:1px solid var(--borda);}
+    .res-row:last-child{border-bottom:none;}
+    .res-row:hover{background:var(--fundo);}
+    .res-rank{width:26px;height:26px;border-radius:50%;background:var(--texto2);color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;}
+    .res-rank.ouro{background:#f59e0b;}.res-rank.prata{background:#9ca3af;}.res-rank.bronze{background:#b45309;}
+    .res-info{flex:1;min-width:0;}
+    .res-nome{font-size:13px;font-weight:700;color:var(--texto);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .res-sub{font-size:11px;color:var(--texto2);margin-top:1px;}
+    .res-prova{width:140px;flex-shrink:0;}
+    .res-prova-top{display:flex;justify-content:space-between;font-size:11px;font-weight:700;margin-bottom:3px;}
+    .res-bar{height:6px;background:var(--fundo);border:1px solid var(--borda);border-radius:20px;overflow:hidden;}
+    .res-bar>i{display:block;height:100%;border-radius:20px;}
+    .res-right{flex-shrink:0;min-width:130px;text-align:right;}
+    .res-empty{padding:20px;text-align:center;color:var(--texto2);font-size:12px;}
+    @media(max-width:640px){.res-prova{width:96px;}.res-right{min-width:0;}.res-sub{white-space:normal;}}
     .gabarito-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;}
     .gabarito-item{display:flex;align-items:center;gap:8px;background:var(--fundo);border:1px solid var(--borda);border-radius:var(--rad);padding:6px 10px;}
     .gabarito-num{font-size:12px;font-weight:700;width:24px;flex-shrink:0;}
@@ -790,37 +810,41 @@ function renderResultados(data,procId){
     html+='</tbody></table>';
   }
   html+='</div>';
-  html+='<div style="font-size:12px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Aprovados na Prova (≥'+notaMin+'%)</div>';
-  html+='<div class="table-card"><table class="tabela"><thead><tr><th>Rank</th><th>Candidato</th><th>Fila</th><th>% Prova</th><th>% Entrevista</th><th>Situação</th></tr></thead><tbody>';
+  // ── Aprovados na prova ──
+  html+='<div class="res-sec"><div class="res-hd ap"><span>Aprovados na Prova (≥'+notaMin+'%)</span><span class="cnt">'+aprovados.length+'</span></div>';
+  if(!aprovados.length){ html+='<div class="res-empty">Nenhum aprovado na prova ainda</div>'; }
   aprovados.forEach((c,i)=>{
     const cls=i===0?'ouro':i===1?'prata':i===2?'bronze':'';
-    const pctProva=parseFloat(c.percentual||0).toFixed(1);
-    const pctEntrev=c.percentual_entrevista!=null?parseFloat(c.percentual_entrevista).toFixed(1)+'%':'—';
-    html+='<tr><td><div class="rank-num '+cls+'">'+(i+1)+'</div></td>';
-    html+='<td><div style="font-weight:600;font-size:13px">'+c.nome+'</div><div style="font-size:11px;color:var(--texto2)">'+( c.curso||'')+'</div></td>';
-    html+='<td style="font-weight:700">'+( c.fila_prova||'—')+'</td>';
-    html+='<td><div style="font-weight:700;color:#166534">'+pctProva+'%</div><div style="font-size:10px;color:var(--texto2)">'+( c.total_acertos||0)+'/'+( c.total_questoes||0)+'</div></td>';
-    html+='<td style="font-weight:600">'+pctEntrev+'</td>';
-    html+='<td><span class="status-badge st-'+( c.resultado_entrevista==='aprovado'?'aberto':c.resultado_entrevista==='reprovado'?'encerrado':'correcao')+'">'+( c.resultado_entrevista||'pendente')+'</span></td></tr>';
+    const pct=parseFloat(c.percentual||0);
+    let ent;
+    if(c.resultado_entrevista==='aprovado') ent='<span class="status-badge st-aberto">Entrevista ✓ aprovado</span>';
+    else if(c.resultado_entrevista==='reprovado') ent='<span class="status-badge st-encerrado">Entrevista ✗ reprovado</span>';
+    else if(c.percentual_entrevista!=null) ent='<span class="status-badge st-entrevista">Entrevista '+parseFloat(c.percentual_entrevista).toFixed(0)+'%</span>';
+    else ent='<span class="status-badge st-correcao">Entrevista pendente</span>';
+    html+='<div class="res-row"><div class="res-rank '+cls+'">'+(i+1)+'</div>';
+    html+='<div class="res-info"><div class="res-nome">'+c.nome+'</div><div class="res-sub">Fila '+(c.fila_prova||'—')+' · '+(c.total_acertos||0)+'/'+(c.total_questoes||0)+' acertos</div></div>';
+    html+='<div class="res-prova"><div class="res-prova-top"><span style="color:var(--texto2)">Prova</span><span style="color:#166534">'+pct.toFixed(1)+'%</span></div><div class="res-bar"><i style="width:'+Math.min(100,pct)+'%;background:#16a34a"></i></div></div>';
+    html+='<div class="res-right">'+ent+'</div></div>';
   });
-  if(!aprovados.length) html+='<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--texto2)">Nenhum aprovado ainda</td></tr>';
-  html+='</tbody></table></div>';
+  html+='</div>';
+  // ── Reprovados na prova ──
   if(reprovados.length){
-    html+='<div style="font-size:12px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px">Reprovados na Prova (<'+notaMin+'%)</div>';
-    html+='<div class="table-card"><table class="tabela"><thead><tr><th>Candidato</th><th>Fila</th><th>% Prova</th><th>Acertos</th><th>Exceção (habilitar p/ entrevista)</th></tr></thead><tbody>';
+    html+='<div class="res-sec"><div class="res-hd rep"><span>Reprovados na Prova (<'+notaMin+'%)</span><span class="cnt">'+reprovados.length+'</span></div>';
     reprovados.forEach(c=>{
-      html+='<tr><td style="font-weight:600">'+c.nome+'</td><td>'+( c.fila_prova||'—')+'</td>';
-      html+='<td style="color:#dc2626;font-weight:700">'+parseFloat(c.percentual||0).toFixed(1)+'%</td>';
-      html+='<td>'+( c.total_acertos||0)+'/'+( c.total_questoes||0)+'</td>';
+      const pct=parseFloat(c.percentual||0);
+      let acao;
       if(c.habilitado_excecao){
         const tip=((c.excecao_motivo||'')+(c.excecao_por?(' — por '+c.excecao_por):'')).replace(/"/g,'&quot;');
-        html+='<td><span class="status-badge" style="background:#fef3c7;color:#92400e" title="'+tip+'">⚠ Exceção habilitada</span> <a href="#" onclick="removerExcecao('+c.id+');return false;" style="font-size:11px;color:var(--texto2);margin-left:4px">remover</a></td>';
+        acao='<span class="status-badge st-correcao" title="'+tip+'">⚠ Exceção</span> <a href="#" onclick="removerExcecao('+c.id+');return false;" style="font-size:11px;color:var(--texto2)">remover</a>';
       } else {
-        html+='<td><button class="btn-xs azul" onclick="abrirExcecao('+c.id+')">Habilitar (exceção)</button></td>';
+        acao='<button class="btn-xs azul" onclick="abrirExcecao('+c.id+')">Habilitar p/ entrevista</button>';
       }
-      html+='</tr>';
+      html+='<div class="res-row"><div class="res-rank" style="background:#fecaca;color:#b91c1c">✗</div>';
+      html+='<div class="res-info"><div class="res-nome">'+c.nome+'</div><div class="res-sub">Fila '+(c.fila_prova||'—')+' · '+(c.total_acertos||0)+'/'+(c.total_questoes||0)+' acertos</div></div>';
+      html+='<div class="res-prova"><div class="res-prova-top"><span style="color:var(--texto2)">Prova</span><span style="color:#dc2626">'+pct.toFixed(1)+'%</span></div><div class="res-bar"><i style="width:'+Math.min(100,pct)+'%;background:#dc2626"></i></div></div>';
+      html+='<div class="res-right">'+acao+'</div></div>';
     });
-    html+='</tbody></table></div>';
+    html+='</div>';
   }
   document.getElementById('painel-resultados').innerHTML=html;
 }
