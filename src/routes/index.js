@@ -3699,7 +3699,13 @@ router.post('/correcoes-cadastro/:id/aprovar', requireAuth, requireSecretaria, a
   const campos = CAMPOS_MEUS_DADOS[c.origem_tipo];
   const sets = campos.map((campo, i) => `${campo}=$${i+1}`).join(',');
   const valores = campos.map(campo => c.dados[campo]);
+  const _oldC = (await query(`SELECT email FROM ${tabela} WHERE id=$1`, [c.origem_id])).rows[0];
   await query(`UPDATE ${tabela} SET ${sets} WHERE id=$${campos.length+1}`, [...valores, c.origem_id]);
+  // Propaga a atualizacao cadastral (feita pelo membro no portal e aprovada) p/ o financeiro (membros).
+  if (_oldC && _oldC.email) {
+    const _n = (await query(`SELECT nome,email,cpf,whatsapp,data_nascimento FROM ${tabela} WHERE id=$1`, [c.origem_id])).rows[0];
+    if (_n) await query("UPDATE membros SET nome=$1, email=COALESCE(NULLIF($2,''),email), cpf=$3, whatsapp=$4, data_nascimento=$5 WHERE LOWER(email)=LOWER($6)", [_n.nome, _n.email, _n.cpf||null, _n.whatsapp||null, _n.data_nascimento||null, _oldC.email]).catch(()=>{});
+  }
   await query("UPDATE cadastro_correcoes SET status='aprovado', avaliado_por=$1, avaliado_em=NOW() WHERE id=$2", [req.session.usuario.id, req.params.id]);
   await logAtividade(req.session.usuario.id, 'CORRECAO_CADASTRO_APROVADA', c.origem_tipo + ' ID ' + c.origem_id, req);
   req.session.msg = ['Correção aplicada ao cadastro com sucesso!'];
