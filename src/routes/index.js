@@ -5992,12 +5992,17 @@ router.post('/pss/:id/inscricao', async (req, res) => {
     if (!p.inscricoes_abertas) return renderErro('As inscrições para este processo estão encerradas.');
     const nome = (req.body.nome || '').trim();
     const email = (req.body.email || '').trim().toLowerCase();
-    const whatsapp = (req.body.whatsapp || '').trim();
+    const whatsappPais = (req.body.whatsapp_pais || '').trim();
+    const whatsappNum = (req.body.whatsapp || '').trim();
+    const whatsapp = whatsappNum ? (whatsappPais ? whatsappPais + ' ' + whatsappNum : whatsappNum) : '';
+    const dataNascimento = (req.body.data_nascimento || '').trim();
+    const catraca = (req.body.catraca || '').trim();
     const docTipo = (req.body.documento_tipo || 'CPF').trim().toUpperCase();
     const documento = (req.body.documento || '').replace(/\s+/g, '').trim();
-    const curso = (req.body.curso || '').trim();
     const semestre = parseInt(req.body.semestre_atual, 10) || null;
-    if (!nome || !email || !documento) return renderErro('Preencha nome, e-mail e documento.');
+    const turma = (req.body.turma || '').trim().toUpperCase();
+    if (!nome || !email || !whatsappNum || !dataNascimento || !catraca || !documento || !semestre || !turma)
+      return renderErro('Todos los campos son obligatorios. / Preencha todos os campos.');
     const dup = await query("SELECT id FROM ps_candidatos WHERE processo_id=$1 AND (LOWER(email)=$2 OR (documento IS NOT NULL AND documento=$3)) LIMIT 1", [p.id, email, documento]);
     if (dup.rows.length) return renderErro('Ya existe una inscripción con este documento o correo en este proceso. / Já existe uma inscrição com este documento ou e-mail neste processo.');
     const cupomCodigo = (req.body.cupom_codigo || '').toUpperCase().trim();
@@ -6012,8 +6017,8 @@ router.post('/pss/:id/inscricao', async (req, res) => {
     }
     if (valorBase <= 0) isento = true;
     const cpfField = docTipo === 'CPF' ? documento : null;
-    const ins = await query("INSERT INTO ps_candidatos (processo_id,nome,email,telefone,documento,documento_tipo,curso,semestre_atual,rg,status,pagamento_status,cupom_codigo,isento,valor_pago,criado_em) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,NOW()) RETURNING id",
-      [p.id, nome, email, whatsapp || null, documento, docTipo, curso || null, semestre, documento, isento ? 'confirmado' : 'pendente', isento ? 'confirmado' : 'pendente', cupomCodigo || null, isento, isento ? 0 : valorFinal]);
+    const ins = await query("INSERT INTO ps_candidatos (processo_id,nome,email,telefone,documento,documento_tipo,data_nascimento,catraca,turma,semestre_atual,rg,status,pagamento_status,cupom_codigo,isento,valor_pago,criado_em) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,NOW()) RETURNING id",
+      [p.id, nome, email, whatsapp || null, documento, docTipo, dataNascimento || null, catraca || null, turma || null, semestre, documento, isento ? 'confirmado' : 'pendente', isento ? 'confirmado' : 'pendente', cupomCodigo || null, isento, isento ? 0 : valorFinal]);
     const candId = ins.rows[0].id;
     if (cupomValido) await query("UPDATE ps_cupons SET usos_atual=usos_atual+1, usado_por_candidato_id=$1 WHERE id=$2", [candId, cupomValido.id]);
     if (isento) {

@@ -194,14 +194,27 @@
           <div class="campo"><label>Nombre completo / Nome completo <span class="req">*</span></label><input name="nome" class="inp" required maxlength="120" autocomplete="name"></div>
           <div class="grid2">
             <div class="campo"><label>Correo electrónico / E-mail <span class="req">*</span></label><input name="email" type="email" class="inp" required autocomplete="email"></div>
-            <div class="campo"><label>WhatsApp</label><input name="whatsapp" class="inp" inputmode="tel" placeholder="+595 ..."></div>
+            <div class="campo"><label>WhatsApp <span class="req">*</span></label>
+              <div class="doc-row">
+                <select name="whatsapp_pais" class="inp" required><option value="+595">🇵🇾 +595</option><option value="+55">🇧🇷 +55</option><option value="+54">🇦🇷 +54</option><option value="+598">🇺🇾 +598</option><option value="+1">🇺🇸 +1</option></select>
+                <input name="whatsapp" class="inp" inputmode="tel" required placeholder="99 999 9999" autocomplete="tel">
+              </div>
+            </div>
+          </div>
+          <div class="grid2">
+            <div class="campo"><label>Fecha de nacimiento / Nascimento <span class="req">*</span></label><input name="data_nascimento" type="date" class="inp" required></div>
+            <div class="campo"><label>Catraca UCP <span class="req">*</span></label><input name="catraca" class="inp" inputmode="numeric" required placeholder="Número de catraca"></div>
           </div>
           <div class="campo"><label>Documento <span class="req">*</span></label>
             <div class="doc-row"><select name="documento_tipo" class="inp"><option value="CPF">CPF</option><option value="CI">C.I.</option><option value="DNI">DNI</option></select><input name="documento" class="inp" required placeholder="Número del documento"></div>
           </div>
           <div class="grid2">
-            <div class="campo"><label>Curso / Facultad</label><input name="curso" class="inp" placeholder="Medicina"></div>
-            <div class="campo"><label>Semestre</label><input name="semestre_atual" class="inp" inputmode="numeric" placeholder="Ej: 5"></div>
+            <div class="campo"><label>Semestre <span class="req">*</span></label>
+              <select name="semestre_atual" class="inp" required><option value="">Seleccione…</option><% for(let s=1;s<=12;s++){ %><option value="<%= s %>"><%= s %>º Semestre</option><% } %></select>
+            </div>
+            <div class="campo"><label>Turma <span class="req">*</span></label>
+              <select name="turma" class="inp" required><option value="">Seleccione…</option><% 'ABCDEFGHIJ'.split('').forEach(function(t){ %><option value="<%= t %>">Turma <%= t %></option><% }) %></select>
+            </div>
           </div>
           <div class="campo"><label>Cupón de descuento (opcional)</label><input name="cupom_codigo" class="inp cupom-in" value="<%= typeof cupomUrl!=='undefined'?cupomUrl:'' %>" placeholder="CÓDIGO"></div>
           <button class="btn-sub" id="bt" type="submit"><%= _v>0 ? 'Continuar al pago' : 'Confirmar inscripción' %></button>
