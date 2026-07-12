@@ -322,6 +322,7 @@
           <button class="btn btn-sm" onclick="abrirModal('modal-config-perguntas')">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
             Config. Perguntas</button>
+          <span id="entrev-restantes" style="font-size:11px;color:var(--texto2)"></span>
         </div>
         <div id="painel-entrevista" style="display:none">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
@@ -669,13 +670,18 @@ async function salvarCorrecao(){
 async function carregarCandidatosEntrevista(procId){
   const sel=document.getElementById('sel-cand-entrev');
   sel.innerHTML='<option value="">Selecione o candidato...</option>';
+  let pendentes=0, jaEntrev=0;
   CANDIDATOS_DATA.filter(c=>c.processo_id==procId).forEach(c=>{
+    if(c.resultado_entrevista){ jaEntrev++; return; } // já entrevistado → sai da lista (segue para Resultados)
     const o=document.createElement('option'); o.value=c.id;
     const exc=(c.aprovado_prova===false && c.habilitado_excecao);
     o.textContent=c.nome+(c.percentual!=null?' | Prova: '+parseFloat(c.percentual).toFixed(1)+'%':'')+(exc?' ⚠ Exceção':'');
     o.disabled=c.aprovado_prova===false && !c.habilitado_excecao;
+    if(!o.disabled) pendentes++;
     sel.appendChild(o);
   });
+  const _info=document.getElementById('entrev-restantes');
+  if(_info) _info.innerHTML = procId ? (pendentes+' pendente(s) para entrevistar'+(jaEntrev?(' · <strong>'+jaEntrev+'</strong> já entrevistado(s) → em Resultados'):'')) : '';
   // Carregar perguntas configuradas
   const r=await fetch('/processo-seletivo/'+procId+'/perguntas-entrevista');
   const data=await r.json();
