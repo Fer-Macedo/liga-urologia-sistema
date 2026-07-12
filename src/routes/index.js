@@ -1932,6 +1932,48 @@ router.post('/processo-seletivo/:id/scan', requireAuth, requirePermissao('proces
     res.json({ ok:true, candidato: cand?{id:cand.id,nome:cand.nome,numero_lista:cand.numero_lista,fila:String(cand.fila_prova||'A').toUpperCase()}:null, numero_registro_lido:numReg, fila_lida:filaLida, fila:filaCorrecao, prova_id:prova.id, total_questoes:totalQuestoes, gabarito:gab, respostas, acertos, percentual, nota_minima:parseFloat(proc.nota_minima)||60, incertas:leitura.incertas||[], cartao_chave:cartaoChave });
   } catch(e){ res.json({ok:false,erro:e.message}); }
 });
+// ── MODO AO VIVO (isolado): le um quadro da camera e devolve overlay verde/vermelho + resultado.
+// Coords em CACHE (nao renderiza puppeteer por quadro) e NAO grava a imagem. Nao altera nada do fluxo por foto.
+router.post('/processo-seletivo/:id/scan-vivo', requireAuth, requirePermissao('processo-seletivo'), require('../services/arquivos').upload.single('imagem'), async (req, res) => {
+  try {
+    if(!req.file) return res.json({ok:false});
+    const procId=req.params.id;
+    const proc=(await query("SELECT nota_minima FROM ps_processos WHERE id=$1",[procId])).rows[0];
+    if(!proc) return res.json({ok:false,erro:'Processo não encontrado.'});
+    const provasR=await query("SELECT id,fila,gabarito_json FROM ps_provas WHERE processo_id=$1",[procId]);
+    if(!provasR.rows.length) return res.json({ok:false,erro:'Nenhuma prova montada.'});
+    const porFila={}; provasR.rows.forEach(p=>{ porFila[String(p.fila).toUpperCase()]={id:p.id,gab:p.gabarito_json||{}}; });
+    const omr=require('../services/omr');
+    let leitura;
+    try {
+      const pvFull=(await query("SELECT * FROM ps_provas WHERE processo_id=$1 LIMIT 1",[procId])).rows[0];
+      const coords=await _cartaoCoordsCache(pvFull);
+      leitura=await omr.readCard(req.file.buffer, coords);
+    } catch(e){ return res.json({ok:true, detectado:false, motivo:'Alinhe o cartão (mostre a folha inteira e os quadradinhos das laterais).'}); }
+    const numReg=(leitura.registro && !leitura.registro.includes('?'))?leitura.registro.replace(/[^0-9]/g,''):null;
+    const filaLida=leitura.fila?String(leitura.fila).trim().toUpperCase():null;
+    let cand=null;
+    if(numReg){ const cr=await query("SELECT id,nome,numero_lista,fila_prova FROM ps_candidatos WHERE processo_id=$1 AND (numero_lista::text=$2 OR numero_lista=$3) LIMIT 1",[procId,numReg,parseInt(numReg,10)||-1]); cand=cr.rows[0]||null; }
+    const filaCorrecao=(filaLida&&porFila[filaLida])?filaLida:(cand&&cand.fila_prova?String(cand.fila_prova).toUpperCase():String(provasR.rows[0].fila).toUpperCase());
+    const prova=porFila[filaCorrecao]||{id:provasR.rows[0].id,gab:provasR.rows[0].gabarito_json||{}};
+    const gab=prova.gab; const totalQuestoes=Object.keys(gab).length;
+    const respostas=leitura.respostas||{};
+    let acertos=0; for(let i=1;i<=totalQuestoes;i++){ const m=respostas[i]?String(respostas[i]).toUpperCase():null; if(m&&gab[i]&&m===String(gab[i]).toUpperCase())acertos++; }
+    const itens=[];
+    for(const n of Object.keys(leitura.pos||{})){ const p=leitura.pos[n]; const gg=gab[n]?String(gab[n]).toUpperCase():null; itens.push({n:+n,x:p.x,y:p.y,r:p.r,letra:p.letra,status:(gg&&p.letra===gg)?'correta':'errada'}); }
+    res.json({ ok:true, detectado:true, W:leitura.W, H:leitura.H, markers:leitura.markers, fila:filaCorrecao, numero_registro_lido:numReg,
+      candidato: cand?{id:cand.id,nome:cand.nome,numero_lista:cand.numero_lista,fila:String(cand.fila_prova||'A').toUpperCase()}:null,
+      prova_id:prova.id, total_questoes:totalQuestoes, gabarito:gab, respostas, acertos,
+      percentual: totalQuestoes?Math.round(acertos/totalQuestoes*1000)/10:0, nota_minima:parseFloat(proc.nota_minima)||60, incertas:leitura.incertas||[], itens });
+  } catch(e){ res.json({ok:false,erro:e.message}); }
+});
+router.get('/processo-seletivo/:id/scanner-vivo', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
+  try {
+    const proc=(await query("SELECT * FROM ps_processos WHERE id=$1",[req.params.id])).rows[0];
+    if(!proc) return res.status(404).send('Processo não encontrado');
+    res.render('pages/ps-scanner-vivo',{ config:await getConfig(), usuario:req.session.usuario, processo:proc });
+  } catch(e){ res.status(500).send('Erro: '+e.message); }
+});
 // Visualizar/baixar a foto do cartao arquivado de um candidato (consulta/auditoria)
 router.get('/processo-seletivo/candidato/:id/cartao', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
@@ -2188,6 +2230,14 @@ async function _cartaoCoords(pv) {
       return { W:document.documentElement.scrollWidth, H:document.documentElement.scrollHeight, bolhas, marcadores };
     });
   } finally { await browser.close(); }
+}
+// Cache do mapa de coordenadas por prova (layout fixo) — evita renderizar (puppeteer) a cada quadro no modo ao vivo.
+const _coordsCache = new Map();
+async function _cartaoCoordsCache(pv) {
+  if (_coordsCache.has(pv.id)) return _coordsCache.get(pv.id);
+  const c = await _cartaoCoords(pv);
+  _coordsCache.set(pv.id, c);
+  return c;
 }
 router.get('/processo-seletivo/prova/:id/cartao-resposta', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
   try {
