@@ -6073,15 +6073,18 @@ router.post('/inscricoes-pss/processo/:id/config', requireAuth, requirePermissao
   } catch (e) { req.session.erro = [e.message]; }
   res.redirect('/inscricoes-pss?processo=' + req.params.id);
 });
-// Servir o banner do processo (redirect p/ URL assinada — igual eventos)
-router.get('/inscricoes-pss/processo/:id/banner', async (req, res) => {
+// Servir o banner do processo (redirect p/ URL assinada — igual eventos). Duas rotas:
+// /inscricoes-pss/... p/ o admin (sistema.) e /pss/... p/ a pagina publica (inscricao. so libera /pss).
+async function _servirBannerProcesso(req, res) {
   try {
     const r = await query('SELECT banner_chave FROM ps_processos WHERE id=$1', [req.params.id]);
     if (!r.rows[0] || !r.rows[0].banner_chave) return res.status(404).send('');
     const { getUrlAssinada } = require('../services/desligamento');
     res.redirect(await getUrlAssinada(r.rows[0].banner_chave));
   } catch (e) { res.status(404).send(''); }
-});
+}
+router.get('/inscricoes-pss/processo/:id/banner', _servirBannerProcesso);
+router.get('/pss/:id/banner', _servirBannerProcesso);
 // Criar processo (com banner + dados de inscrição) — igual eventos
 router.post('/inscricoes-pss/criar', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
   try {
