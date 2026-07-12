@@ -2953,10 +2953,11 @@ router.post('/diretivos/:id/editar', requireAuth, requireSecretaria, (req, res) 
          transporte_proprio=$18,tipo_transporte=$19` + setFoto + ` WHERE id=$` + params.length,
         params
       );
-      // Sincroniza o e-mail no cadastro FINANCEIRO (membros) — troca de e-mail no cadastro
-      // oficial propaga p/ a mensalidade nao "sumir".
-      if(email && _oldEmailD && _oldEmailD.email && _oldEmailD.email.toLowerCase()!==email.toLowerCase()){
-        await query("UPDATE membros SET email=$1 WHERE LOWER(email)=LOWER($2)",[email,_oldEmailD.email]).catch(()=>{});
+      // Propaga os dados compartilhados p/ o cadastro FINANCEIRO (membros), casando pelo e-mail
+      // anterior. Tudo que a secretaria altera reflete na mensalidade automaticamente.
+      if(_oldEmailD && _oldEmailD.email){
+        await query("UPDATE membros SET nome=$1, email=COALESCE(NULLIF($2,''),email), cpf=$3, whatsapp=$4, data_nascimento=$5 WHERE LOWER(email)=LOWER($6)",
+          [nome, email, cpf||null, whatsapp||null, data_nascimento||null, _oldEmailD.email]).catch(()=>{});
       }
       req.session.msg = ['Diretivo atualizado com sucesso!'];
       res.redirect('/diretivos');
@@ -3908,10 +3909,11 @@ router.post('/ligantes/:id/editar', requireAuth, requirePermissao('ligantes'), a
       const p=[b.nome,b.data_nascimento||null,b.sexo,b.email,b.email_alternativo||null,b.whatsapp,b.rg,b.cpf||null,b.semestre,b.turma,b.catraca||null,b.orcid||null,b.tem_formacao||null,b.qual_formacao||null,b.habilidades||null,b.aceita_cargo||null,b.qual_cargo||null,b.contribuicao_grupo||null,b.ideia_inovadora||null,b.tema_interesse||null,b.porque_lauro,b.apresentacao,req.params.id];
       if(fk)p.push(fk);
       await query('UPDATE ligantes SET nome=$1,data_nascimento=$2,sexo=$3,email=$4,email_alternativo=$5,whatsapp=$6,rg=$7,cpf=$8,semestre=$9,turma=$10,catraca=$11,orcid=$12,tem_formacao=$13,qual_formacao=$14,habilidades=$15,aceita_cargo=$16,qual_cargo=$17,contribuicao_grupo=$18,ideia_inovadora=$19,tema_interesse=$20,porque_lauro=$21,apresentacao=$22'+fu+' WHERE id=$23',p);
-      // Sincroniza o e-mail no cadastro FINANCEIRO (membros): troca de e-mail no cadastro oficial
-      // propaga p/ a mensalidade nao "sumir" (evita o problema de e-mail desalinhado).
-      if(b.email && _oldEmail && _oldEmail.email && _oldEmail.email.toLowerCase()!==b.email.toLowerCase()){
-        await query("UPDATE membros SET email=$1 WHERE LOWER(email)=LOWER($2)",[b.email,_oldEmail.email]).catch(()=>{});
+      // Propaga os dados compartilhados p/ o cadastro FINANCEIRO (membros), casando pelo e-mail
+      // anterior. Assim tudo que a secretaria altera reflete na mensalidade automaticamente.
+      if(_oldEmail && _oldEmail.email){
+        await query("UPDATE membros SET nome=$1, email=COALESCE(NULLIF($2,''),email), cpf=$3, whatsapp=$4, data_nascimento=$5 WHERE LOWER(email)=LOWER($6)",
+          [b.nome, b.email, b.cpf||null, b.whatsapp||null, b.data_nascimento||null, _oldEmail.email]).catch(()=>{});
       }
       await logAtividade(req.session.usuario.id,'LIGANTE_EDITADO','Ligante editado: '+b.nome,req);
       req.session.msg=['Ligante atualizado!']; res.redirect('/ligantes');
