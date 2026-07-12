@@ -6070,6 +6070,26 @@ router.post('/inscricoes-pss/candidato/:cid/reenviar-email', requireAuth, requir
   try { await enviarEmailConfirmacaoPss(req.params.cid); req.session.msg = ['E-mail reenviado.']; } catch (e) { req.session.erro = [e.message]; }
   res.redirect('/inscricoes-pss?processo=' + (req.body.processo_id || ''));
 });
+router.post('/inscricoes-pss/candidato/:cid/editar', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
+  try {
+    const b = req.body;
+    const num = (b.numero_lista !== '' && b.numero_lista != null) ? (parseInt(b.numero_lista, 10) || null) : null;
+    const sem = (b.semestre_atual !== '' && b.semestre_atual != null) ? (parseInt(b.semestre_atual, 10) || null) : null;
+    const doc = (b.documento || '').trim() || null;
+    await query("UPDATE ps_candidatos SET nome=$2,email=$3,telefone=$4,documento_tipo=$5,documento=$6,curso=$7,semestre_atual=$8,numero_lista=$9,fila_prova=$10 WHERE id=$1",
+      [req.params.cid, (b.nome || '').trim(), (b.email || '').trim().toLowerCase(), b.telefone || null, b.documento_tipo || null, doc, b.curso || null, sem, num, (b.fila_prova || '').trim() || null]);
+    req.session.msg = ['Inscrição atualizada.'];
+  } catch (e) { req.session.erro = [e.message]; }
+  res.redirect('/inscricoes-pss?processo=' + (req.body.processo_id || ''));
+});
+router.post('/inscricoes-pss/candidato/:cid/excluir', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
+  try {
+    await query("DELETE FROM ps_pagamentos WHERE candidato_id=$1", [req.params.cid]);
+    await query("DELETE FROM ps_candidatos WHERE id=$1", [req.params.cid]);
+    req.session.msg = ['Inscrição excluída.'];
+  } catch (e) { req.session.erro = [e.message]; }
+  res.redirect('/inscricoes-pss?processo=' + (req.body.processo_id || ''));
+});
 router.post('/inscricoes-pss/candidato/:cid/lembrete', requireAuth, requirePermissao('inscricoes-pss'), async (req, res) => {
   try { const ok = await enviarLembretePss(req.params.cid); req.session.msg = [ok ? 'Lembrete enviado.' : 'Candidato já confirmado ou sem e-mail.']; } catch (e) { req.session.erro = [e.message]; }
   res.redirect('/inscricoes-pss?processo=' + (req.body.processo_id || ''));

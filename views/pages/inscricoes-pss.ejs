@@ -116,6 +116,8 @@
                     <% if(!conf){ %><form method="POST" action="/inscricoes-pss/candidato/<%=i.id%>/confirmar-manual" style="display:inline" onsubmit="var f=this; confirmarAcao('Confirmar esta inscrição manualmente (ex.: pagamento em dinheiro)? Será atribuído o número e lançado no fluxo de caixa.', function(){ f.submit(); }, {textoConfirmar:'Confirmar', corConfirmar:'#16a34a'}); return false;"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm" style="background:#16a34a;color:#fff">Confirmar</button></form>
                     <form method="POST" action="/inscricoes-pss/candidato/<%=i.id%>/lembrete" style="display:inline" onsubmit="var f=this; confirmarAcao('Enviar e-mail de lembrete a este candidato, oferecendo ajuda para concluir a inscrição?', function(){ f.submit(); }, {textoConfirmar:'Enviar', corConfirmar:'#d97706'}); return false;"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm" style="color:#d97706">Lembrete</button></form><% } else { %>
                     <form method="POST" action="/inscricoes-pss/candidato/<%=i.id%>/reenviar-email" style="display:inline"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm">Reenviar e-mail</button></form><% } %>
+                    <button type="button" class="btn btn-sm" onclick="editarInsc(<%=i.id%>)">Editar</button>
+                    <form method="POST" action="/inscricoes-pss/candidato/<%=i.id%>/excluir" style="display:inline" onsubmit="var f=this; confirmarAcao('Excluir DEFINITIVAMENTE esta inscrição? Esta ação não pode ser desfeita.', function(){ f.submit(); }); return false;"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm" style="color:#b91c1c">Excluir</button></form>
                   </td>
                 </tr>
               <% }); %>
@@ -125,6 +127,41 @@
     </div>
   </main>
 </div>
+
+<% if (processo) { %>
+<div class="modal-overlay" id="modal-editar-insc" style="display:none">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header"><span class="modal-titulo">Editar Inscrição</span><button class="icon-btn" onclick="fecharModal('modal-editar-insc')">&#x2715;</button></div>
+    <form id="form-editar-insc" method="POST">
+      <input type="hidden" name="processo_id" value="<%=processo.id%>">
+      <div class="modal-body" style="padding:20px 24px;display:flex;flex-direction:column;gap:12px">
+        <div class="campo"><label class="label">Nome *</label><input name="nome" id="ei-nome" class="input" required></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="campo"><label class="label">E-mail *</label><input name="email" id="ei-email" type="email" class="input" required></div>
+          <div class="campo"><label class="label">WhatsApp</label><input name="telefone" id="ei-telefone" class="input"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:130px 1fr;gap:10px">
+          <div class="campo"><label class="label">Tipo doc.</label><select name="documento_tipo" id="ei-doctipo" class="input"><option>CPF</option><option>CI</option><option>DNI</option></select></div>
+          <div class="campo"><label class="label">Documento</label><input name="documento" id="ei-documento" class="input"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="campo"><label class="label">Curso</label><input name="curso" id="ei-curso" class="input"></div>
+          <div class="campo"><label class="label">Semestre</label><input name="semestre_atual" id="ei-semestre" class="input" inputmode="numeric"></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div class="campo"><label class="label">Número (até 3 díg)</label><input name="numero_lista" id="ei-numero" class="input" inputmode="numeric" placeholder="ex: 12"></div>
+          <div class="campo"><label class="label">Fila da prova</label><select name="fila_prova" id="ei-fila" class="input"><option value="">—</option><option>A</option><option>B</option><option>C</option></select></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" onclick="fecharModal('modal-editar-insc')">Cancelar</button>
+        <button type="submit" class="btn btn-primario">Salvar Alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+<% } %>
+
 <script src="/js/app.js"></script>
 <script>
 function filtrarInsc(){
@@ -139,6 +176,21 @@ function filtrarInsc(){
     var ok=okQ&&okS&&okD; r.style.display=ok?'':'none'; if(ok)vis++;
   });
   var sr=document.getElementById('sem-resultado'); if(sr) sr.style.display=(vis===0)?'':'none';
+}
+var INSCRITOS=<%- JSON.stringify(inscritos.map(function(i){return {id:i.id,nome:i.nome,email:i.email,telefone:i.telefone,documento_tipo:i.documento_tipo,documento:i.documento,curso:i.curso,semestre_atual:i.semestre_atual,numero_lista:i.numero_lista,fila_prova:i.fila_prova};})).replace(/</g,'\\u003c') %>;
+function editarInsc(id){
+  var i=INSCRITOS.find(function(x){return x.id===id;}); if(!i)return;
+  document.getElementById('form-editar-insc').action='/inscricoes-pss/candidato/'+id+'/editar';
+  document.getElementById('ei-nome').value=i.nome||'';
+  document.getElementById('ei-email').value=i.email||'';
+  document.getElementById('ei-telefone').value=i.telefone||'';
+  document.getElementById('ei-doctipo').value=i.documento_tipo||'CPF';
+  document.getElementById('ei-documento').value=i.documento||'';
+  document.getElementById('ei-curso').value=i.curso||'';
+  document.getElementById('ei-semestre').value=i.semestre_atual||'';
+  document.getElementById('ei-numero').value=i.numero_lista||'';
+  document.getElementById('ei-fila').value=i.fila_prova||'';
+  abrirModal('modal-editar-insc');
 }
 </script>
 </body>
