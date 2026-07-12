@@ -960,6 +960,23 @@ router.get('/api/eventos-publicos', corsPublico, limiterApiPublica, async (req, 
   } catch(e) { console.error('[API-PUBLIC] eventos:', e.message); res.json([]); }
 });
 
+// Processo Seletivo ATIVO para a home pública (lauroucpcde.com)
+router.get('/api/pss-publico', corsPublico, limiterApiPublica, async (req, res) => {
+  try {
+    const { gerarUrlInline } = require('../services/arquivos');
+    const r = await query("SELECT id, nome, semestre, data_prova, local_prova, valor_inscricao, banner_chave, descricao FROM ps_processos WHERE inscricoes_abertas=true ORDER BY data_prova ASC NULLS LAST, id DESC LIMIT 1");
+    if (!r.rows.length) return res.json({ ativo: false });
+    const p = r.rows[0];
+    let banner_url = null;
+    if (p.banner_chave) { try { banner_url = await gerarUrlInline(p.banner_chave); } catch(e) {} }
+    res.json({ ativo: true, processo: {
+      id: p.id, nome: p.nome, semestre: p.semestre, data_prova: p.data_prova, local_prova: p.local_prova,
+      valor: p.valor_inscricao, banner_url, descricao: p.descricao,
+      inscricao_url: `https://inscricao.lauroucpcde.com/pss/${p.id}/inscricao`
+    } });
+  } catch(e) { console.error('[API-PUBLIC] pss:', e.message); res.json({ ativo: false }); }
+});
+
 router.get('/api/equipe-publica', corsPublico, limiterApiPublica, async (req, res) => {
   try {
     const { gerarUrlInline } = require('../services/arquivos');
