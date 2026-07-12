@@ -217,7 +217,7 @@
           <div class="campo"><label class="lb">Valor da inscrição (R$)</label><input name="valor_inscricao" type="number" step="0.01" min="0" value="0"></div>
           <div class="campo"><label class="lb">Cor</label><input name="cor_tema" type="color" value="#2b6803" style="height:38px;padding:3px;width:56px"></div>
         </div>
-        <div class="campo"><label class="lb">Banner (imagem)</label><input type="file" name="banner" accept="image/*"></div>
+        <div class="campo"><label class="lb">Banner (imagem)</label><input type="file" name="banner" accept="image/*"><small style="display:block;margin-top:4px;color:#6b7280;font-size:11px">📐 Tamanho recomendado: <b>1200 × 400 px</b> (proporção 3:1, horizontal). Formatos JPG ou PNG. A imagem ocupa toda a largura do topo da página.</small></div>
         <div class="campo"><label class="lb">Grupo de WhatsApp (link)</label><input name="wpp_grupo" placeholder="https://chat.whatsapp.com/..."></div>
         <div class="campo"><label class="lb">Descrição (aparece na página pública)</label><textarea name="descricao" rows="3"></textarea></div>
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600"><input type="checkbox" name="inscricoes_abertas" style="width:auto"> Já abrir inscrições</label>
@@ -239,7 +239,7 @@
         </div>
         <div class="campo"><label class="lb">Local da prova</label><input name="local_prova" value="<%=processo.local_prova||''%>"></div>
         <div class="campo"><label class="lb">Cor do tema</label><input name="cor_tema" type="color" value="<%=processo.cor_tema||'#2b6803'%>" style="height:38px;padding:3px;width:56px"></div>
-        <div class="campo"><label class="lb">Trocar banner (deixe vazio p/ manter)</label><input type="file" name="banner" accept="image/*"></div>
+        <div class="campo"><label class="lb">Trocar banner (deixe vazio p/ manter)</label><input type="file" name="banner" accept="image/*"><small style="display:block;margin-top:4px;color:#6b7280;font-size:11px">📐 Tamanho recomendado: <b>1200 × 400 px</b> (proporção 3:1, horizontal). Formatos JPG ou PNG. A imagem ocupa toda a largura do topo da página.</small></div>
         <div class="campo"><label class="lb">Grupo de WhatsApp (link)</label><input name="wpp_grupo" value="<%=processo.wpp_grupo||''%>"></div>
         <div class="campo"><label class="lb">Descrição</label><textarea name="descricao" rows="3"><%=processo.descricao||''%></textarea></div>
       </div>
