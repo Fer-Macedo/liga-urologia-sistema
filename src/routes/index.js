@@ -5943,7 +5943,7 @@ async function enviarLembretePss(candidatoId) {
   try {
     const c = (await query("SELECT c.*, p.nome AS processo_nome FROM ps_candidatos c JOIN ps_processos p ON p.id=c.processo_id WHERE c.id=$1", [candidatoId])).rows[0];
     if (!c || !c.email || c.pagamento_status === 'confirmado') return false;
-    const link = 'https://sistema.lauroucpcde.com/pss/pagamento/' + c.id;
+    const link = (process.env.INSCRICAO_URL || 'https://inscricao.lauroucpcde.com') + '/pss/pagamento/' + c.id;
     const corpo = '<p>Estimado/a <strong>' + (c.nome || '').split(' ')[0] + '</strong>,</p>'
       + '<p>Notamos que iniciaste tu inscripción al proceso selectivo <strong>' + c.processo_nome + '</strong>, pero el pago aún no fue confirmado.</p>'
       + '<p>Podés concluir tu inscripción de forma rápida en el siguiente enlace:</p>'
@@ -6038,7 +6038,7 @@ router.get('/inscricoes-pss', requireAuth, requirePermissao('inscricoes-pss'), a
       resumo.total = inscritos.length;
       inscritos.forEach(i => { if (i.pagamento_status === 'confirmado') { resumo.confirmados++; resumo.arrecadado += parseFloat(i.valor_pago) || 0; } else resumo.pendentes++; });
     }
-    res.render('pages/inscricoes-pss', { config, usuario: req.session.usuario, procs, processo, inscritos, cupons, resumo, msg: req.session.msg || [], erro: req.session.erro || [] });
+    res.render('pages/inscricoes-pss', { config, usuario: req.session.usuario, procs, processo, inscritos, cupons, resumo, inscricaoBase: process.env.INSCRICAO_URL || 'https://inscricao.lauroucpcde.com', msg: req.session.msg || [], erro: req.session.erro || [] });
     req.session.msg = []; req.session.erro = [];
   } catch (e) { res.status(500).send('Erro: ' + e.message); }
 });

@@ -62,7 +62,12 @@
             <button class="btn btn-primario btn-sm" type="submit">Salvar</button>
           </form>
           <div style="margin-top:12px"><label class="lb">Link público de inscrição</label>
-            <div class="link-pub">https://sistema.lauroucpcde.com/pss/<%=processo.id%>/inscricao</div></div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <div class="link-pub" id="link-pub" style="flex:1;min-width:220px"><%= inscricaoBase %>/pss/<%=processo.id%>/inscricao</div>
+              <button type="button" class="btn btn-sm" onclick="copiarLink(this)">📋 Copiar link</button>
+              <a href="<%= inscricaoBase %>/pss/<%=processo.id%>/inscricao" target="_blank" rel="noopener" class="btn btn-sm">🔗 Abrir link</a>
+            </div>
+          </div>
         </div>
 
         <div class="box">
@@ -191,6 +196,12 @@ function editarInsc(id){
   document.getElementById('ei-numero').value=i.numero_lista||'';
   document.getElementById('ei-fila').value=i.fila_prova||'';
   abrirModal('modal-editar-insc');
+}
+function copiarLink(btn){
+  var t=(document.getElementById('link-pub').textContent||'').trim();
+  function ok(){ var o=btn.textContent; btn.textContent='✅ Copiado'; setTimeout(function(){btn.textContent=o;},1500); }
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(ok).catch(function(){prompt('Copie o link:',t);}); }
+  else { prompt('Copie o link:',t); }
 }
 </script>
 </body>
