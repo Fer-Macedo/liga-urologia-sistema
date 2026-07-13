@@ -7926,15 +7926,11 @@ async function getAtividades(apenasPublicas = false, incluirAniversarios = false
 router.get('/calendario', requireAuth, requirePermissao('calendario'), async (req, res) => {
   try {
     const atividades = await getAtividades(false, true);
-    const icalUrl = (process.env.RAILWAY_PUBLIC_DOMAIN
-      ? 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN
-      : 'https://liga-urologia-production.up.railway.app') + '/calendario.ics';
     res.render('pages/calendario', {
       config: await getConfig(),
       usuario: req.session.usuario,
       paginaAtual: 'calendario',
       atividades: atividades,
-      icalUrl,
       msg: req.flash('msg'),
       erro: req.flash('erro')
     });
@@ -8077,79 +8073,6 @@ router.post('/assistente-virtual/conhecimento/:id/toggle', requireAuth, async (r
 router.post('/assistente-virtual/conhecimento/:id/deletar', requireAuth, async (req,res) => {
   try { await query('DELETE FROM lauro_conhecimento WHERE id=$1',[req.params.id]); res.json({ok:true}); }
   catch(e) { res.json({ok:false}); }
-});
-
-router.get('/agenda', async (req, res) => {
-  try {
-    const atividades = await getAtividades(true);
-    res.render('pages/agenda-publica', {
-      config: await getConfig(),
-      atividades: atividades
-    });
-  } catch(e) { res.status(500).send('Erro ao carregar agenda.'); }
-});
-
-// FEED iCAL — compatível com iPhone/Android/Google Calendar
-router.get('/calendario.ics', async (req, res) => {
-  try {
-    const atividades = await getAtividades(true);
-    const config = await getConfig();
-
-    const formatDate = (d, diaInteiro) => {
-      const dt = new Date(d);
-      if (diaInteiro) {
-        return dt.toISOString().replace(/-/g,'').slice(0,8);
-      }
-      return dt.toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
-    };
-
-    const escIcal = s => (s||'').replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\n/g,'\\n');
-
-    let ical = [
-      'BEGIN:VCALENDAR',
-      'VERSION:2.0',
-      `PRODID:-//Liga Urologia//Calendario//PT`,
-      `X-WR-CALNAME:${escIcal(config.org_nome)} - Agenda`,
-      'X-WR-TIMEZONE:America/Sao_Paulo',
-      'CALSCALE:GREGORIAN',
-      'METHOD:PUBLISH',
-    ];
-
-    atividades.forEach(ev => {
-      const uid = `${ev.id}-liga-urologia@railway.app`;
-      const dtstart = ev.dia_inteiro
-        ? `DTSTART;VALUE=DATE:${formatDate(ev.data_inicio, true)}`
-        : `DTSTART:${formatDate(ev.data_inicio, false)}`;
-      const dtend = ev.data_fim
-        ? (ev.dia_inteiro
-          ? `DTEND;VALUE=DATE:${formatDate(ev.data_fim, true)}`
-          : `DTEND:${formatDate(ev.data_fim, false)}`)
-        : (ev.dia_inteiro
-          ? `DTEND;VALUE=DATE:${formatDate(ev.data_inicio, true)}`
-          : `DTEND:${formatDate(new Date(new Date(ev.data_inicio).getTime() + 60*60*1000), false)}`);
-
-      const criado = new Date(ev.criado_em).toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
-
-      ical.push('BEGIN:VEVENT');
-      ical.push(`UID:${uid}`);
-      ical.push(`DTSTAMP:${criado}`);
-      ical.push(dtstart);
-      ical.push(dtend);
-      ical.push(`SUMMARY:${escIcal(ev.titulo)}`);
-      if (ev.descricao) ical.push(`DESCRIPTION:${escIcal(ev.descricao)}`);
-      if (ev.local)     ical.push(`LOCATION:${escIcal(ev.local)}`);
-      if (ev.link_externo) ical.push(`URL:${ev.link_externo}`);
-      ical.push(`CATEGORIES:${escIcal(ev.categoria)}`);
-      ical.push('END:VEVENT');
-    });
-
-    ical.push('END:VCALENDAR');
-
-    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
-    res.setHeader('Content-Disposition', 'inline; filename="liga-urologia.ics"');
-    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.send(ical.join('\r\n'));
-  } catch(e) { res.status(500).send('Erro ao gerar calendário.'); }
 });
 
 // CRIAR ATIVIDADE
