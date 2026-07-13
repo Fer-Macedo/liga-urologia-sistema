@@ -111,8 +111,14 @@ app.use((req, res) => {
 async function start() {
   try {
     await initSchema();
-    iniciarAgendamentos();
-    agendarBackup();
+    // Staging roda com AGENDAMENTOS_OFF=true: sem cron de cobrança/lembrete e sem backup,
+    // que são tarefas da produção e não devem rodar em duplicidade.
+    if (process.env.AGENDAMENTOS_OFF === 'true') {
+      console.log('⏸  Agendamentos e backup DESLIGADOS (AGENDAMENTOS_OFF=true)');
+    } else {
+      iniciarAgendamentos();
+      agendarBackup();
+    }
     httpServer.listen(PORT, () => {
       console.log('\n🏥 Liga Urologia — Sistema de Cobranças');
       console.log('🌐 Porta: ' + PORT + '\n');
