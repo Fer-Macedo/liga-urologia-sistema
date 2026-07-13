@@ -128,6 +128,19 @@ test('as telas principais do painel carregam', async () => {
   }
 });
 
+// ─── a sidebar precisa vir INTEIRA em toda tela do painel ─────────────────────
+// Se a rota esquecer de passar `usuario`, o partial cai p/ perfil 'visualizador':
+// some metade do menu e o rodapé (nome/sair). Foi o que aconteceu em /comunicados.
+test('a sidebar vem completa (menu de admin + rodapé) em todas as telas', async () => {
+  const s = criarSessao();
+  await s.post('/login', ADMIN);
+  for (const tela of ['/comunicados', '/dashboard', '/ligantes', '/cobrancas']) {
+    const html = await (await s.get(tela)).text();
+    assert.ok(html.includes('sidebar-user'), tela + ': o rodapé da sidebar (nome/sair) sumiu');
+    assert.ok(html.includes('/usuarios'), tela + ': os itens de admin do menu sumiram');
+  }
+});
+
 // ─── proteções ────────────────────────────────────────────────────────────────
 test('sem login, o painel redireciona para o login', async () => {
   const r = await req('/ligantes', { redirect: 'manual' });
