@@ -280,6 +280,8 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
 .prof-field{display:flex;flex-direction:column;gap:4px}
 .prof-label{font-size:11px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.05em}
 .prof-val{font-size:14px;font-weight:500;color:var(--t)}
+.prof-req{color:#ef4444;margin-left:2px}
+.prof-opt{color:var(--ti);font-weight:400;text-transform:none;letter-spacing:0}
 .prof-input{border:1.5px solid var(--brd);padding:8px 12px;font-family:var(--ff);font-size:14px;color:var(--t);background:var(--card);width:100%;outline:none}
 .prof-input:focus{border-color:var(--vm)}
 .prof-input:disabled{background:var(--bg);color:var(--ts);cursor:not-allowed}
@@ -1422,10 +1424,13 @@ function campo(label, val){ return '<div class="prof-field"><div class="prof-lab
 function secao(titulo){ return '<div style="grid-column:1/-1;font-size:11px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-top:8px;padding-bottom:6px;border-bottom:1px solid var(--brd)">'+titulo+'</div>'; }
 
 // perfEdit: quando a edicao esta liberada o campo vira input; senao continua so leitura.
+// Todo campo editavel e obrigatorio (asterisco vermelho), menos os condicionais
+// (opts.seAplicavel), que so passam a ser exigidos conforme a resposta anterior.
 var perfEditavel = false;
 function pf(label, name, val, opts){
   opts = opts || {};
   if(!perfEditavel || !name) return campo(label, opts.view || val);
+  label += opts.seAplicavel ? ' <span class="prof-opt">(se aplicável)</span>' : ' <span class="prof-req">*</span>';
   var full = opts.full ? ' style="grid-column:1/-1"' : '';
   var input;
   if(opts.tipo === 'select'){
@@ -1478,11 +1483,11 @@ function loadPerfil() {
         pf('Turma', 'turma', d.turma) +
         campo('Semestre de ingresso', d.semestre_ingresso) +
         pf('Tem formacao anterior?', 'tem_formacao', d.tem_formacao, {tipo:'select', opcoes:['Sim','Não']}) +
-        pf('Qual formacao?', 'qual_formacao', d.qual_formacao) +
+        pf('Qual formacao?', 'qual_formacao', d.qual_formacao, {seAplicavel:true}) +
         secao('Perfil na Liga') +
         pf('Habilidades', 'habilidades', d.habilidades, {tipo:'textarea', full:true}) +
         pf('Aceita cargo?', 'aceita_cargo', d.aceita_cargo, {tipo:'select', opcoes:['Sim','Não','Talvez']}) +
-        pf('Qual cargo?', 'qual_cargo', d.qual_cargo) +
+        pf('Qual cargo?', 'qual_cargo', d.qual_cargo, {seAplicavel:true}) +
         pf('Contribuicao para o grupo', 'contribuicao_grupo', d.contribuicao_grupo, {full:true}) +
         pf('Ideia inovadora', 'ideia_inovadora', d.ideia_inovadora, {tipo:'textarea', full:true}) +
         pf('Tema de interesse', 'tema_interesse', d.tema_interesse, {full:true}) +
@@ -1509,7 +1514,7 @@ function loadPerfil() {
         secao('Disponibilidade') +
         pf('Disponibilidade', 'disponibilidade', d.disponibilidade, {full:true}) +
         pf('Transporte proprio', 'transporte_proprio', d.transporte_proprio, {tipo:'select', opcoes:['Sim','Não']}) +
-        pf('Tipo de transporte', 'tipo_transporte', d.tipo_transporte) +
+        pf('Tipo de transporte', 'tipo_transporte', d.tipo_transporte, {seAplicavel:true}) +
         pf('Experiencia em Urologia', 'experiencia_urologia', d.experiencia_urologia, {tipo:'textarea', full:true});
 
       var campos = d.tipo === 'ligante' ? camposLigante : camposDiretivo;
@@ -1522,7 +1527,7 @@ function loadPerfil() {
       } else if(perfEditavel) {
         aviso = '<div class="card" style="padding:14px 16px;margin-bottom:14px;background:#ecfdf5;border-left:3px solid var(--ok)">' +
           '<div style="font-weight:700;font-size:13px;color:#065f46;margin-bottom:2px">Seu cadastro esta liberado para edicao</div>' +
-          '<div style="font-size:12px;color:var(--ts)">Corrija o que precisar e clique em salvar. As alteracoes passam por aprovacao da diretoria antes de valer.</div></div>';
+          '<div style="font-size:12px;color:var(--ts)">Corrija o que precisar e clique em salvar. Os campos com <span class="prof-req">*</span> sao obrigatorios. As alteracoes passam por aprovacao da diretoria antes de valer.</div></div>';
       }
 
       wrap.innerHTML =

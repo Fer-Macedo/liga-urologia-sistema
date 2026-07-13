@@ -146,7 +146,7 @@
             <label class="radio-option"><input type="radio" name="tem_formacao" value="Não" required onchange="toggleFormacao(false)" <%= form.tem_formacao==='Não'?'checked':'' %>> Não</label>
           </div>
           <div class="campos-formacao" id="campos-formacao">
-            <label style="margin-top:8px">Qual a formação?</label>
+            <label style="margin-top:8px">Qual a formação? <span>*</span></label>
             <input name="qual_formacao" placeholder="Ex: Técnico em Enfermagem, Bacharel em..." value="<%= form.qual_formacao || '' %>">
           </div>
         </div>
@@ -169,7 +169,7 @@
             <label class="radio-option"><input type="radio" name="aceita_cargo" value="Talvez" required onchange="toggleCargo(false)" <%= form.aceita_cargo==='Talvez'?'checked':'' %>> Talvez</label>
           </div>
           <div class="campos-cargo" id="campos-cargo">
-            <label style="margin-top:8px">Qual cargo estaria disposto(a) a ocupar?</label>
+            <label style="margin-top:8px">Qual cargo estaria disposto(a) a ocupar? <span>*</span></label>
             <input name="qual_cargo" placeholder="Ex: Secretaria, Tesouraria, Ensino, Extensão..." value="<%= form.qual_cargo || '' %>">
           </div>
         </div>
@@ -198,7 +198,7 @@
 
     <!-- FOTO -->
     <div class="card">
-      <div class="card-titulo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto</div>
+      <div class="card-titulo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Foto <span style="color:#ef4444">*</span></div>
       <p style="font-size:13px;color:#6b7280;margin-bottom:16px">
         Anexe uma foto sua onde destaque bem o seu rosto. De preferência com jaleco ou chomba azul da universidade. 
         Esta foto poderá ser utilizada em publicações da liga nas redes sociais.
