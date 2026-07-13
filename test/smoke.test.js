@@ -96,10 +96,12 @@ test('login do admin funciona (e senha errada é recusada)', async () => {
   const errada = criarSessao();
   const r1 = await errada.post('/login', { email: ADMIN.email, senha: 'nao-e-essa' });
   const dest1 = r1.headers.get('location') || '';
-  assert.ok(dest1.includes('/login'), 'senha errada deveria voltar p/ o login');
+  // 429 = o rate limit do login barrou antes; também é uma recusa válida.
+  assert.ok(dest1.includes('/login') || r1.status === 429, 'senha errada deveria ser recusada (deu ' + r1.status + ' -> ' + dest1 + ')');
 
   const s = criarSessao();
   const r2 = await s.post('/login', ADMIN);
+  assert.notEqual(r2.status, 429, 'rate limit do login estourou — reinicie o staging antes de testar');
   const dest2 = r2.headers.get('location') || '';
   assert.ok(!dest2.includes('/login'), 'login correto não deveria voltar p/ o login (foi p/ ' + dest2 + ')');
 });
@@ -145,6 +147,7 @@ test('correção de cadastro: membro envia → admin aprova → aplica e refecha
   // 1. o membro entra no portal e vê que pode editar
   const m = criarSessao();
   const login = await m.post('/membro/login', { email: ligante.email, senha: MEMBRO_SENHA }, '/membro/login');
+  assert.notEqual(login.status, 429, 'rate limit do login estourou — reinicie o staging antes de testar');
   assert.ok(!(login.headers.get('location') || '').includes('/membro/login'), 'membro não conseguiu logar');
 
   const dados = await (await m.get('/membro/perfil/dados')).json();
