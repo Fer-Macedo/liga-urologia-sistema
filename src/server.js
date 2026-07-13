@@ -6,7 +6,7 @@ const flash = require('connect-flash');
 const methodOverride = require('method-override');
 const path = require('path');
 
-const { initSchema } = require('./models/database');
+const { initSchema, query } = require('./models/database');
 const routes = require('./routes/index');
 const { iniciarAgendamentos } = require('./services/agendamentos');
 const { agendarBackup } = require('./services/backup');
@@ -84,9 +84,17 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
   res.locals.usuarioLogado = req.session.usuario || null;
   res.locals.permissoesAtivas = req.session.permissoesAtivas || [];
+  // Badge de correções de cadastro pendentes na sidebar (só p/ quem está logado no painel)
+  res.locals.correcoesPendentesCount = 0;
+  if (req.session.usuario) {
+    try {
+      const r = await query("SELECT COUNT(*) n FROM cadastro_correcoes WHERE status='pendente'");
+      res.locals.correcoesPendentesCount = parseInt(r.rows[0].n) || 0;
+    } catch (e) { /* badge é cosmético: nunca derruba a request */ }
+  }
   next();
 });
 

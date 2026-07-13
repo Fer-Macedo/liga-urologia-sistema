@@ -1417,8 +1417,29 @@ function renderPdfSection(wrapId, url, msg) {
 }
 
 function fv(v){ return v||'—'; }
+function esc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 function campo(label, val){ return '<div class="prof-field"><div class="prof-label">'+label+'</div><div class="prof-val">'+fv(val)+'</div></div>'; }
 function secao(titulo){ return '<div style="grid-column:1/-1;font-size:11px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-top:8px;padding-bottom:6px;border-bottom:1px solid var(--brd)">'+titulo+'</div>'; }
+
+// perfEdit: quando a edicao esta liberada o campo vira input; senao continua so leitura.
+var perfEditavel = false;
+function pf(label, name, val, opts){
+  opts = opts || {};
+  if(!perfEditavel || !name) return campo(label, opts.view || val);
+  var full = opts.full ? ' style="grid-column:1/-1"' : '';
+  var input;
+  if(opts.tipo === 'select'){
+    input = '<select class="prof-input" name="'+name+'"><option value="">—</option>' +
+      opts.opcoes.map(function(o){ return '<option value="'+esc(o)+'"'+(String(val||'')===o?' selected':'')+'>'+esc(o)+'</option>'; }).join('') +
+      '</select>';
+  } else if(opts.tipo === 'textarea'){
+    input = '<textarea class="prof-input" name="'+name+'" rows="3">'+esc(val)+'</textarea>';
+  } else {
+    input = '<input class="prof-input" name="'+name+'" type="'+(opts.tipo||'text')+'" value="'+esc(val)+'"'+(opts.ph?' placeholder="'+esc(opts.ph)+'"':'')+'>';
+  }
+  return '<div class="prof-field"'+full+'><div class="prof-label">'+label+'</div>'+input+'</div>';
+}
+var SIM_NAO = ['Sim','Nao'];
 
 function loadPerfil() {
   if(perfilLoaded) return;
@@ -1432,91 +1453,111 @@ function loadPerfil() {
       if(!d) { wrap.innerHTML = '<div style="padding:20px;color:var(--er)">Erro ao carregar perfil.</div>'; return; }
       var ini = d.nome.trim().split(' ').filter(function(x){return x;}).join(' ').split(' ').map(function(x){return x[0];}).join('').substring(0,2).toUpperCase();
       var fotoUrl = '/membro/foto/' + d.tipo + '/' + d.id;
-      var locked = !data.edicaoLiberada;
+      var pendente = data.correcaoPendente;
+      // Com correcao em analise o cadastro trava ate a equipe avaliar (uma pendencia por vez).
+      perfEditavel = !!data.podeEditar && !pendente;
       var nascFormatado = d.data_nascimento ? new Date(d.data_nascimento).toLocaleDateString('pt-BR') : '—';
       if(nascFormatado === 'Invalid Date') nascFormatado = '—';
+      var nascISO = d.data_nascimento ? String(d.data_nascimento).substring(0,10) : '';
+      var CARGOS = ['Presidente(a)','Vice-presidente(a)','Secretário(a)','Diretor(a) Financeiro(a)','Diretor(a) Científico','Vice Diretor(a) Científico','Diretor(a) de Extensão','Vice Diretor(a) de Extensão','Diretor(a) de Ensino','Vice Diretor(a) de Ensino','Diretor(a) de Marketing','Vice Diretor(a) de Marketing'];
+      var SEXOS = ['Masculino','Feminino','Prefiro não informar'];
 
       var camposLigante = secao('Dados Pessoais') +
-        campo('Nome completo', d.nome) +
-        campo('Data de nascimento', nascFormatado) +
-        campo('Sexo', d.sexo) +
-        campo('RG', d.rg) +
-        campo('CPF', d.cpf) +
-        campo('Catraca UCP', d.catraca) +
-        '<div class="prof-field"><div class="prof-label">WhatsApp</div>' +
-          (locked ? '<div class="prof-val">'+fv(d.whatsapp)+'</div>' :
-           '<input class="prof-input" id="perfil-wapp" value="'+(d.whatsapp||'')+'" placeholder="+595 9...">') +
-        '</div>' +
-        campo('Email', d.email) +
-        campo('Email alternativo', d.email_alternativo) +
-        campo('ORCID', d.orcid) +
+        pf('Nome completo', 'nome', d.nome, {full:true}) +
+        pf('Data de nascimento', 'data_nascimento', nascISO, {tipo:'date', view:nascFormatado}) +
+        pf('Sexo', 'sexo', d.sexo, {tipo:'select', opcoes:SEXOS}) +
+        pf('RG', 'rg', d.rg) +
+        pf('CPF', 'cpf', d.cpf) +
+        pf('Catraca UCP', 'catraca', d.catraca) +
+        pf('WhatsApp', 'whatsapp', d.whatsapp, {ph:'+595 9...'}) +
+        pf('Email', 'email', d.email, {tipo:'email'}) +
+        pf('Email alternativo', 'email_alternativo', d.email_alternativo, {tipo:'email'}) +
+        pf('ORCID', 'orcid', d.orcid) +
         secao('Dados Academicos') +
-        campo('Semestre atual', d.semestre) +
-        campo('Turma', d.turma) +
+        pf('Semestre atual', 'semestre', d.semestre) +
+        pf('Turma', 'turma', d.turma) +
         campo('Semestre de ingresso', d.semestre_ingresso) +
-        campo('Tem formacao anterior?', d.tem_formacao) +
-        campo('Qual formacao?', d.qual_formacao) +
+        pf('Tem formacao anterior?', 'tem_formacao', d.tem_formacao, {tipo:'select', opcoes:['Sim','Não']}) +
+        pf('Qual formacao?', 'qual_formacao', d.qual_formacao) +
         secao('Perfil na Liga') +
-        campo('Habilidades', d.habilidades) +
-        campo('Aceita cargo?', d.aceita_cargo) +
-        campo('Qual cargo?', d.qual_cargo) +
-        campo('Contribuicao para o grupo', d.contribuicao_grupo) +
-        campo('Ideia inovadora', d.ideia_inovadora) +
-        campo('Tema de interesse', d.tema_interesse) +
-        campo('Por que a LAURO?', d.porque_lauro) +
-        campo('Apresentacao', d.apresentacao);
+        pf('Habilidades', 'habilidades', d.habilidades, {tipo:'textarea', full:true}) +
+        pf('Aceita cargo?', 'aceita_cargo', d.aceita_cargo, {tipo:'select', opcoes:['Sim','Não','Talvez']}) +
+        pf('Qual cargo?', 'qual_cargo', d.qual_cargo) +
+        pf('Contribuicao para o grupo', 'contribuicao_grupo', d.contribuicao_grupo, {full:true}) +
+        pf('Ideia inovadora', 'ideia_inovadora', d.ideia_inovadora, {tipo:'textarea', full:true}) +
+        pf('Tema de interesse', 'tema_interesse', d.tema_interesse, {full:true}) +
+        pf('Por que a LAURO?', 'porque_lauro', d.porque_lauro, {tipo:'textarea', full:true}) +
+        pf('Apresentacao', 'apresentacao', d.apresentacao, {tipo:'textarea', full:true});
 
       var camposDiretivo = secao('Dados Pessoais') +
-        campo('Nome completo', d.nome) +
-        campo('Data de nascimento', nascFormatado) +
-        campo('RG', d.rg) +
-        campo('CPF', d.cpf) +
-        campo('Catraca UCP', d.catraca) +
-        '<div class="prof-field"><div class="prof-label">WhatsApp</div>' +
-          (locked ? '<div class="prof-val">'+fv(d.whatsapp)+'</div>' :
-           '<input class="prof-input" id="perfil-wapp" value="'+(d.whatsapp||'')+'" placeholder="+595 9...">') +
-        '</div>' +
-        campo('Email', d.email) +
-        campo('Instagram', d.instagram) +
-        campo('ORCID', d.orcid) +
-        campo('Onde reside', d.onde_reside) +
+        pf('Nome completo', 'nome', d.nome, {full:true}) +
+        pf('Data de nascimento', 'data_nascimento', nascISO, {tipo:'date', view:nascFormatado}) +
+        pf('Sexo', 'sexo', d.sexo, {tipo:'select', opcoes:SEXOS}) +
+        pf('RG', 'rg', d.rg) +
+        pf('CPF', 'cpf', d.cpf) +
+        pf('Catraca UCP', 'catraca', d.catraca) +
+        pf('WhatsApp', 'whatsapp', d.whatsapp, {ph:'+595 9...'}) +
+        pf('Email', 'email', d.email, {tipo:'email'}) +
+        pf('Instagram', 'instagram', d.instagram) +
+        pf('ORCID', 'orcid', d.orcid) +
+        pf('Onde reside', 'onde_reside', d.onde_reside) +
         secao('Dados na Liga') +
-        campo('Cargo', d.cargo) +
-        campo('Semestre / Turma', d.semestre_turma) +
-        campo('Ano de ingresso', d.ano_ingresso) +
-        campo('Graduacao', d.graduacao) +
+        pf('Cargo', 'cargo', d.cargo, {tipo:'select', opcoes:CARGOS, full:true}) +
+        pf('Semestre / Turma', 'semestre_turma', d.semestre_turma) +
+        pf('Ano de ingresso', 'ano_ingresso', d.ano_ingresso) +
+        pf('Graduacao', 'graduacao', d.graduacao) +
         secao('Disponibilidade') +
-        campo('Disponibilidade', d.disponibilidade) +
-        campo('Transporte proprio', d.transporte_proprio) +
-        campo('Tipo de transporte', d.tipo_transporte) +
-        campo('Experiencia em Urologia', d.experiencia_urologia);
+        pf('Disponibilidade', 'disponibilidade', d.disponibilidade, {full:true}) +
+        pf('Transporte proprio', 'transporte_proprio', d.transporte_proprio, {tipo:'select', opcoes:['Sim','Não']}) +
+        pf('Tipo de transporte', 'tipo_transporte', d.tipo_transporte) +
+        pf('Experiencia em Urologia', 'experiencia_urologia', d.experiencia_urologia, {tipo:'textarea', full:true});
 
       var campos = d.tipo === 'ligante' ? camposLigante : camposDiretivo;
+
+      var aviso = '';
+      if(pendente) {
+        aviso = '<div class="card" style="padding:14px 16px;margin-bottom:14px;background:#fff7ed;border-left:3px solid #f59e0b">' +
+          '<div style="font-weight:700;font-size:13px;color:#9a3412;margin-bottom:2px">Sua atualizacao esta em analise</div>' +
+          '<div style="font-size:12px;color:var(--ts)">Voce enviou uma correcao de cadastro em ' + new Date(pendente.criado_em).toLocaleDateString('pt-BR') + '. Assim que a equipe aprovar, os dados novos aparecem aqui.</div></div>';
+      } else if(perfEditavel) {
+        aviso = '<div class="card" style="padding:14px 16px;margin-bottom:14px;background:#ecfdf5;border-left:3px solid var(--ok)">' +
+          '<div style="font-weight:700;font-size:13px;color:#065f46;margin-bottom:2px">Seu cadastro esta liberado para edicao</div>' +
+          '<div style="font-size:12px;color:var(--ts)">Corrija o que precisar e clique em salvar. As alteracoes passam por aprovacao da diretoria antes de valer.</div></div>';
+      }
 
       wrap.innerHTML =
         '<div class="prof-header">' +
           '<div class="prof-photo"><img src="' + fotoUrl + '" alt="' + ini + '" onerror="this.style.display=&quot;none&quot;"></div>' +
           '<div><div class="prof-nome">' + d.nome + '</div>' +
           '<div class="prof-tipo">' + (d.tipo==='ligante'?'Ligante':'Diretivo') + (d.cargo?' · '+d.cargo:'') + (d.semestre?' · '+d.semestre:'') + '</div>' +
-          (locked ? '<div style="font-size:11px;color:var(--ti);margin-top:4px">Visualizacao somente · editar? Contate a secretaria</div>' :
-                    '<div style="font-size:11px;color:var(--ok);margin-top:4px">Edicao liberada</div>') +
+          (perfEditavel ? '<div style="font-size:11px;color:var(--ok);margin-top:4px">Edicao liberada</div>'
+                        : '<div style="font-size:11px;color:var(--ti);margin-top:4px">Visualizacao somente · editar? Contate a secretaria</div>') +
           '</div></div>' +
-        '<div class="card" style="padding:20px">' +
+        aviso +
+        '<form id="perfil-form" class="card" style="padding:20px">' +
           '<div class="prof-grid">' + campos + '</div>' +
-          (!locked ? '<button class="btn btn-p" style="margin-top:16px" id="salvarPerfil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="20 6 9 17 4 12"/></svg> Salvar alteracoes</button>' : '') +
-        '</div>';
+          (perfEditavel ? '<div id="perfil-erro" style="display:none;font-size:12px;color:var(--er);margin-top:12px"></div>' +
+            '<button type="submit" class="btn btn-p" style="margin-top:16px" id="salvarPerfil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="20 6 9 17 4 12"/></svg> Enviar para aprovacao</button>' : '') +
+        '</form>';
 
-      if(!locked) {
+      if(perfEditavel) {
+        var form = document.getElementById('perfil-form');
         var btn = document.getElementById('salvarPerfil');
-        if(btn) btn.addEventListener('click', function(){
-          var wapp = document.getElementById('perfil-wapp');
-          if(!wapp) return;
+        var err = document.getElementById('perfil-erro');
+        form.addEventListener('submit', function(ev){
+          ev.preventDefault();
+          err.style.display = 'none';
+          btn.disabled = true;
           fetch('/membro/perfil/atualizar', {
             method: 'POST',
+            credentials: 'same-origin',
             headers: {'Content-Type':'application/x-www-form-urlencoded'},
-            body: 'whatsapp=' + encodeURIComponent(wapp.value)
+            body: new URLSearchParams(new FormData(form)).toString()
           }).then(function(r){ return r.json(); }).then(function(res){
-            if(res.ok) { btn.textContent = 'Salvo!'; setTimeout(function(){ btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="20 6 9 17 4 12"/></svg> Salvar alteracoes'; }, 2000); }
+            if(res.ok) { perfilLoaded = false; loadPerfil(); }   // recarrega: agora cai no aviso "em analise"
+            else { err.textContent = res.erro || 'Nao foi possivel enviar.'; err.style.display = 'block'; btn.disabled = false; }
+          }).catch(function(){
+            err.textContent = 'Falha de conexao. Tente de novo.'; err.style.display = 'block'; btn.disabled = false;
           });
         });
       }

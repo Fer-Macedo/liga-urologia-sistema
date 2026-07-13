@@ -198,7 +198,7 @@
             <button class="btn btn-sm" onclick="abrirEditar(<%= d.id %>)">Editar</button>
             <% if(['admin','secretaria','presidencia'].includes(usuario.perfil)){ %>
             <form action="/diretivos/<%= d.id %>/liberar-edicao" method="POST" style="display:inline;margin:0">
-              <button type="submit" class="btn btn-sm" style="<%=d.edicao_liberada?'background:#f59e0b;color:#fff;border-color:#f59e0b':''%>" title="Permite que o próprio diretivo edite os dados no Portal Científico"><%=d.edicao_liberada?'Bloquear Edição':'Liberar Edição'%></button>
+              <button type="submit" class="btn btn-sm" style="<%=d.edicao_liberada?'background:#f59e0b;color:#fff;border-color:#f59e0b':''%>" title="Permite que o próprio diretivo edite os dados no Portal do Membro"><%=d.edicao_liberada?'Bloquear Edição':'Liberar Edição'%></button>
             </form>
             <% } %>
             <% } %>

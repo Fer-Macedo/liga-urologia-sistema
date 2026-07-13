@@ -2924,10 +2924,8 @@ router.get('/diretivos', requireAuth, requireSecretaria, async (req, res) => {
   const r = await query('SELECT * FROM diretivos WHERE ' + whereAtivo + ' ORDER BY cargo, nome');
   const pcR = await query('SELECT COUNT(*) n FROM diretivos WHERE pendente=true');
   const pendentesCount = parseInt(pcR.rows[0].n);
-  const ccR = await query("SELECT COUNT(*) n FROM cadastro_correcoes WHERE status='pendente'");
-  const correcoesPendentesCount = parseInt(ccR.rows[0].n);
   res.render('pages/diretivos', {
-    config, msg, erro, diretivos: r.rows, usuario: req.session.usuario, correcoesPendentesCount,
+    config, msg, erro, diretivos: r.rows, usuario: req.session.usuario,
     appUrl: process.env.APP_URL || 'https://liga-urologia.onrender.com',
     statusFiltro, pendentesCount
   });
@@ -3637,9 +3635,7 @@ router.get('/ligantes', requireAuth, requirePermissao('ligantes'), async (req, r
   const ativos = parseInt(atvR.rows[0].t);
   const inativos = total - ativos;
   const pendentesCount = parseInt(pcR.rows[0].n);
-  const ccR = await query("SELECT COUNT(*) n FROM cadastro_correcoes WHERE status='pendente'");
-  const correcoesPendentesCount = parseInt(ccR.rows[0].n);
-  res.render('pages/ligantes', { config, usuario: req.session.usuario, ligantes, msg, erro, total, ativos, inativos, statusFiltro: sfL, pendentesCount, correcoesPendentesCount });
+  res.render('pages/ligantes', { config, usuario: req.session.usuario, ligantes, msg, erro, total, ativos, inativos, statusFiltro: sfL, pendentesCount });
 });
 
 router.get('/ligantes/:id/aprovar', requireAuth, requirePermissao('ligantes'), async (req, res) => {
@@ -9876,8 +9872,7 @@ router.get('/portal', requirePortal, async (req, res) => {
   const materiais = (await query(
     "SELECT id, titulo, descricao, arquivo_nome FROM materiais_estudo WHERE ativo=true AND categoria='PRODUÇÃO CIENTÍFICA' ORDER BY ordem ASC, criado_em DESC"
   )).rows;
-  const podeEditar = !!(membroCompletoEdicao(config, membro, tipo));
-  res.render('pages/portal/dashboard', { config, membro, grupos, gruposEncerrados, msg, saudacao, dataHoje, tipoLabel: tipo === 'ligante' ? 'Ligante' : 'Diretivo', materiais, podeEditarCadastro: podeEditar });
+  res.render('pages/portal/dashboard', { config, membro, grupos, gruposEncerrados, msg, saudacao, dataHoje, tipoLabel: tipo === 'ligante' ? 'Ligante' : 'Diretivo', materiais });
 });
 
 function membroCompletoEdicao(config, membro, tipo) {
@@ -9889,52 +9884,8 @@ const CAMPOS_MEUS_DADOS = {
   diretivo: ['nome','rg','cpf','email','catraca','cargo','semestre_turma','orcid','data_nascimento','sexo','whatsapp','instagram','graduacao','ano_ingresso','onde_reside','transporte_proprio','tipo_transporte','disponibilidade','experiencia_urologia']
 };
 
-router.get('/portal/meus-dados', requirePortal, async (req, res) => {
-  const config = await getConfig();
-  const msg = req.session.msg||[]; req.session.msg=[];
-  const erro = req.session.erro||[]; req.session.erro=[];
-  const { tipo, id } = req.session.portalMembro;
-  const r = await query(`SELECT * FROM ${tipo === 'ligante' ? 'ligantes' : 'diretivos'} WHERE id=$1`, [id]);
-  const membro = r.rows[0];
-  if (!membro) { req.session.portalMembro = null; return res.redirect('/portal/login'); }
-  const podeEditar = membroCompletoEdicao(config, membro, tipo);
-  const pendR = await query("SELECT id, criado_em FROM cadastro_correcoes WHERE origem_tipo=$1 AND origem_id=$2 AND status='pendente'", [tipo, id]);
-  const CAMPOS_VIEW = {
-    ligante: [{name:'nome',label:'Nome',full:true},{name:'data_nascimento',label:'Nascimento'},{name:'sexo',label:'Sexo'},{name:'email',label:'E-mail'},{name:'email_alternativo',label:'E-mail alternativo'},{name:'whatsapp',label:'WhatsApp'},{name:'rg',label:'RG/CI'},{name:'cpf',label:'CPF'},{name:'semestre',label:'Semestre'},{name:'turma',label:'Turma'},{name:'catraca',label:'Catraca'},{name:'orcid',label:'ORCID'}],
-    diretivo: [{name:'nome',label:'Nome',full:true},{name:'rg',label:'RG/CI'},{name:'cpf',label:'CPF'},{name:'data_nascimento',label:'Nascimento'},{name:'sexo',label:'Sexo'},{name:'email',label:'E-mail'},{name:'whatsapp',label:'WhatsApp'},{name:'instagram',label:'Instagram'},{name:'onde_reside',label:'Onde reside'},{name:'catraca',label:'Catraca'},{name:'cargo',label:'Cargo',full:true}]
-  };
-  res.render('pages/portal/meus-dados', { config, membro, tipo, tipoLabel: tipo === 'ligante' ? 'Ligante' : 'Diretivo', podeEditar, correcaoPendente: pendR.rows[0]||null, msg, erro, CAMPOS_VIEW: CAMPOS_VIEW[tipo] });
-});
-
-router.post('/portal/meus-dados', requirePortal, async (req, res) => {
-  const config = await getConfig();
-  const { tipo, id } = req.session.portalMembro;
-  const r = await query(`SELECT * FROM ${tipo === 'ligante' ? 'ligantes' : 'diretivos'} WHERE id=$1`, [id]);
-  const membro = r.rows[0];
-  if (!membro) { req.session.portalMembro = null; return res.redirect('/portal/login'); }
-  if (!membroCompletoEdicao(config, membro, tipo)) { req.session.erro = ['A edição de cadastro não está liberada para você no momento.']; return res.redirect('/portal/meus-dados'); }
-  const pendR = await query("SELECT id FROM cadastro_correcoes WHERE origem_tipo=$1 AND origem_id=$2 AND status='pendente'", [tipo, id]);
-  if (pendR.rows.length) { req.session.erro = ['Você já tem uma atualização de cadastro em análise. Aguarde a avaliação da equipe.']; return res.redirect('/portal/meus-dados'); }
-  const campos = CAMPOS_MEUS_DADOS[tipo];
-  const dados = {};
-  const faltando = [];
-  campos.forEach(c => {
-    let v = req.body[c];
-    if (c === 'disponibilidade') v = [].concat(req.body.disponibilidade||[]).join(', ');
-    dados[c] = v;
-    if (!v || !String(v).trim()) faltando.push(c);
-  });
-  if (tipo === 'ligante') {
-    if (dados.tem_formacao === 'Sim' && (!dados.qual_formacao || !dados.qual_formacao.trim())) faltando.push('qual_formacao');
-    if (dados.aceita_cargo === 'Sim' && (!dados.qual_cargo || !dados.qual_cargo.trim())) faltando.push('qual_cargo');
-  } else {
-    if (dados.transporte_proprio === 'Sim' && (!dados.tipo_transporte || !dados.tipo_transporte.trim())) faltando.push('tipo_transporte');
-  }
-  if (faltando.length) { req.session.erro = ['Preencha todos os campos obrigatórios para enviar a atualização.']; return res.redirect('/portal/meus-dados'); }
-  await query('INSERT INTO cadastro_correcoes (origem_tipo, origem_id, dados) VALUES ($1,$2,$3)', [tipo, id, JSON.stringify(dados)]);
-  req.session.msg = ['Atualização enviada! A equipe vai revisar e aplicar as mudanças em breve.'];
-  res.redirect('/portal/meus-dados');
-});
+// A edição de cadastro saiu do Portal Científico (que é só trabalhos científicos) e vive
+// no Portal do Membro: GET/POST /membro/perfil/*.
 
 
 // ─── MATERIAIS DE ESTUDO (ADMIN) ─────────────────────────────────────────────
@@ -11093,25 +11044,63 @@ router.get('/membro/comunicados', requireMembro, async (req, res) => {
 router.get('/membro/perfil/dados', requireMembro, async (req, res) => {
   const { tipo, id } = req.session.membroPortal;
   try {
+    const config = await getConfig();
     let dados = null;
-    const editR = await query("SELECT valor FROM configuracoes WHERE chave='portal_membro_edicao_liberada'");
-    const edicaoLiberada = editR.rows[0]?.valor === '1';
     if (tipo === 'ligante') {
       const r = await query(`SELECT id, nome, email, email_alternativo, whatsapp, data_nascimento, sexo, rg, cpf,
-        semestre, turma, semestre_ingresso, catraca, orcid, foto_chave,
+        semestre, turma, semestre_ingresso, catraca, orcid, foto_chave, edicao_liberada,
         tem_formacao, qual_formacao, habilidades, aceita_cargo, qual_cargo,
         contribuicao_grupo, ideia_inovadora, tema_interesse, porque_lauro, apresentacao
         FROM ligantes WHERE id=$1`, [id]);
       dados = r.rows[0] ? { ...r.rows[0], tipo: 'ligante' } : null;
     } else {
-      const r = await query(`SELECT id, nome, email, whatsapp, data_nascimento, rg, cpf, catraca, cargo,
-        semestre_turma, orcid, instagram, graduacao, ano_ingresso, onde_reside,
+      const r = await query(`SELECT id, nome, email, whatsapp, data_nascimento, sexo, rg, cpf, catraca, cargo,
+        semestre_turma, orcid, instagram, graduacao, ano_ingresso, onde_reside, edicao_liberada,
         transporte_proprio, tipo_transporte, disponibilidade, experiencia_urologia, foto_chave
         FROM diretivos WHERE id=$1`, [id]);
       dados = r.rows[0] ? { ...r.rows[0], tipo: 'diretivo' } : null;
     }
-    res.json({ dados, edicaoLiberada });
-  } catch(e) { res.json({ dados: null, edicaoLiberada: false, error: e.message }); }
+    if (!dados) return res.json({ dados: null, podeEditar: false, correcaoPendente: null });
+    const pendR = await query("SELECT id, criado_em FROM cadastro_correcoes WHERE origem_tipo=$1 AND origem_id=$2 AND status='pendente'", [tipo, id]);
+    res.json({
+      dados,
+      podeEditar: !!membroCompletoEdicao(config, dados, tipo),
+      correcaoPendente: pendR.rows[0] || null
+    });
+  } catch(e) { res.json({ dados: null, podeEditar: false, correcaoPendente: null, error: e.message }); }
+});
+
+// Envio de correção de cadastro pelo Portal do Membro → vira pendência em /correcoes-cadastro
+router.post('/membro/perfil/atualizar', requireMembro, async (req, res) => {
+  const { tipo, id } = req.session.membroPortal;
+  try {
+    const config = await getConfig();
+    const r = await query(`SELECT * FROM ${tipo === 'ligante' ? 'ligantes' : 'diretivos'} WHERE id=$1`, [id]);
+    const membro = r.rows[0];
+    if (!membro) return res.status(401).json({ ok: false, erro: 'Sessão expirada. Entre novamente.' });
+    if (!membroCompletoEdicao(config, membro, tipo)) return res.json({ ok: false, erro: 'A edição de cadastro não está liberada para você no momento.' });
+    const pendR = await query("SELECT id FROM cadastro_correcoes WHERE origem_tipo=$1 AND origem_id=$2 AND status='pendente'", [tipo, id]);
+    if (pendR.rows.length) return res.json({ ok: false, erro: 'Você já tem uma atualização em análise. Aguarde a avaliação da equipe.' });
+
+    // Só exigidos quando a resposta anterior os torna aplicáveis (ex.: "qual formação?" só se tem formação)
+    const CONDICIONAIS = ['qual_formacao', 'qual_cargo', 'tipo_transporte'];
+    const dados = {}, faltando = [];
+    CAMPOS_MEUS_DADOS[tipo].forEach(c => {
+      let v = req.body[c];
+      if (c === 'disponibilidade') v = [].concat(req.body.disponibilidade || []).join(', ');
+      dados[c] = v;
+      if (!CONDICIONAIS.includes(c) && (!v || !String(v).trim())) faltando.push(c);
+    });
+    const vazio = c => !dados[c] || !String(dados[c]).trim();
+    if (tipo === 'ligante') {
+      if (dados.tem_formacao === 'Sim' && vazio('qual_formacao')) faltando.push('qual_formacao');
+      if (dados.aceita_cargo === 'Sim' && vazio('qual_cargo')) faltando.push('qual_cargo');
+    } else if (dados.transporte_proprio === 'Sim' && vazio('tipo_transporte')) faltando.push('tipo_transporte');
+    if (faltando.length) return res.json({ ok: false, erro: 'Preencha todos os campos obrigatórios antes de enviar.' });
+
+    await query('INSERT INTO cadastro_correcoes (origem_tipo, origem_id, dados) VALUES ($1,$2,$3)', [tipo, id, JSON.stringify(dados)]);
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ ok: false, erro: e.message }); }
 });
 
 // GET /membro/estatuto/dados
@@ -11194,12 +11183,6 @@ router.post('/admin/portal/regulamento', requireAuth, require('../services/arqui
   await query("INSERT INTO configuracoes (chave, valor) VALUES ('regulamento_pdf_chave', $1) ON CONFLICT (chave) DO UPDATE SET valor=$1", [chave]);
   res.json({ ok: true, chave });
 });
-router.post('/admin/portal/edicao-perfil', requireAuth, async (req, res) => {
-  const { liberada } = req.body;
-  await query("INSERT INTO configuracoes (chave, valor) VALUES ('portal_membro_edicao_liberada', $1) ON CONFLICT (chave) DO UPDATE SET valor=$1", [liberada ? '1' : '0']);
-  res.json({ ok: true, liberada: !!liberada });
-});
-
 // GET /membro/chat/mensagens
 router.get('/membro/chat/mensagens', requireMembro, async (req, res) => {
   const { tipo, id } = req.session.membroPortal;
