@@ -1,25 +1,33 @@
 // Testes de fumaça: sobem os fluxos que doem se quebrarem.
 // Rodam SEMPRE contra o staging, NUNCA contra a produção (trava abaixo).
 //
-//   npm test                 -> usa http://localhost:3001 (staging no servidor)
+//   npm test                 -> usa https://sistema-teste.lauroucpcde.com
 //   BASE_URL=... npm test
 //
-// Precisam de banco: o seed cria um admin e um ligante de teste no banco alvo.
+// Precisam de banco (o seed cria um admin e um ligante de teste no banco alvo) e,
+// como o staging fica atrás de senha no nginx, de STAGING_AUTH no .env dele.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert');
 const bcrypt = require('bcryptjs');
 require('dotenv').config();
 const { query } = require('../src/models/database');
 
-const BASE = process.env.BASE_URL || 'http://localhost:3001';
+// Por HTTPS de propósito: o cookie de sessão é `secure` (server.js), então por HTTP
+// ele nem é aceito — não haveria sessão e todo POST cairia no CSRF (403).
+const BASE = process.env.BASE_URL || 'https://sistema-teste.lauroucpcde.com';
 
 // ─── TRAVA: nunca rodar contra produção ───────────────────────────────────────
 // Um teste que apaga/aprova coisas no banco real seria catastrófico.
-const ALVO_PROIBIDO = /:3000|sistema\.lauroucpcde\.com/;
+const ALVO_PROIBIDO = /:3000|\/\/sistema\.lauroucpcde\.com/;
 if (ALVO_PROIBIDO.test(BASE)) {
-  console.error('\n  ABORTADO: ' + BASE + ' parece ser a PRODUÇÃO.\n  Os testes escrevem no banco. Use o staging (porta 3001).\n');
+  console.error('\n  ABORTADO: ' + BASE + ' parece ser a PRODUÇÃO.\n  Os testes escrevem no banco. Use o staging.\n');
   process.exit(1);
 }
+
+// O staging fica atrás de senha no nginx (STAGING_AUTH="usuario:senha" no .env dele).
+const AUTH = process.env.STAGING_AUTH
+  ? { Authorization: 'Basic ' + Buffer.from(process.env.STAGING_AUTH).toString('base64') }
+  : {};
 
 const ADMIN = { email: 'smoke-admin@staging.local', senha: 'smoke-' + Math.random().toString(36).slice(2) };
 const MEMBRO_SENHA = 'smoke-' + Math.random().toString(36).slice(2);
@@ -35,7 +43,7 @@ function criarSessao() {
   return {
     get cookie() { return cookie; },
     async get(path) {
-      const res = await fetch(BASE + path, { headers: { cookie }, redirect: 'manual' });
+      const res = await fetch(BASE + path, { headers: { ...AUTH, cookie }, redirect: 'manual' });
       guardaCookie(res);
       return res;
     },
@@ -44,14 +52,14 @@ function criarSessao() {
       const res = await this.get(path);
       const html = await res.text();
       const m = html.match(/var CSRF_TOKEN="([^"]+)"/);
-      assert.ok(m, 'não achei o token CSRF em ' + path);
+      assert.ok(m, 'não achei o token CSRF em ' + path + ' (HTTP ' + res.status + ')');
       return m[1];
     },
     async post(path, dados, origem = '/login') {
       const csrf = await this.token(origem);
       const res = await fetch(BASE + path, {
         method: 'POST', redirect: 'manual',
-        headers: { cookie, 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': csrf },
+        headers: { ...AUTH, cookie, 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRF-Token': csrf },
         body: new URLSearchParams(dados).toString()
       });
       guardaCookie(res);
@@ -59,6 +67,7 @@ function criarSessao() {
     }
   };
 }
+const req = (path, opts = {}) => fetch(BASE + path, { ...opts, headers: { ...AUTH, ...(opts.headers || {}) } });
 
 before(async () => {
   const db = (await query('SELECT current_database() AS d')).rows[0].d;
@@ -87,7 +96,7 @@ after(async () => {
 
 // ─── o app está de pé ─────────────────────────────────────────────────────────
 test('o sistema responde', async () => {
-  const r = await fetch(BASE + '/health');
+  const r = await req('/health');
   assert.equal(r.status, 200);
 });
 
@@ -113,20 +122,20 @@ test('as telas principais do painel carregam', async () => {
   const telas = ['/dashboard', '/ligantes', '/diretivos', '/cobrancas', '/calendario', '/correcoes-cadastro', '/eventos'];
   for (const t of telas) {
     const r = await s.get(t);
-    assert.ok(r.status === 200 || r.status === 302, t + ' devolveu ' + r.status);
-    assert.notEqual(r.status, 500, t + ' quebrou (500)');
+    // 200 exigido: aceitar 302 faria este teste passar mesmo com o login quebrado.
+    assert.equal(r.status, 200, t + ' devolveu ' + r.status + ' (esperado 200, já logado)');
   }
 });
 
 // ─── proteções ────────────────────────────────────────────────────────────────
 test('sem login, o painel redireciona para o login', async () => {
-  const r = await fetch(BASE + '/ligantes', { redirect: 'manual' });
+  const r = await req('/ligantes', { redirect: 'manual' });
   assert.equal(r.status, 302);
   assert.ok((r.headers.get('location') || '').includes('/login'));
 });
 
 test('CSRF bloqueia POST sem token', async () => {
-  const r = await fetch(BASE + '/login', {
+  const r = await req('/login', {
     method: 'POST', redirect: 'manual',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: 'email=x@x.com&senha=x'
@@ -137,7 +146,7 @@ test('CSRF bloqueia POST sem token', async () => {
 // ─── o que foi removido continua removido ─────────────────────────────────────
 test('rotas removidas respondem 404', async () => {
   for (const rota of ['/agenda', '/calendario.ics', '/portal/meus-dados']) {
-    const r = await fetch(BASE + rota, { redirect: 'manual' });
+    const r = await req(rota, { redirect: 'manual' });
     assert.equal(r.status, 404, rota + ' deveria estar removida (deu ' + r.status + ')');
   }
 });
