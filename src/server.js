@@ -86,6 +86,10 @@ app.use((req, res, next) => {
 
 app.use(async (req, res, next) => {
   res.locals.usuarioLogado = req.session.usuario || null;
+  // O partial da sidebar depende de `usuario`: sem ele, cai p/ perfil 'visualizador' e some
+  // metade do menu + o rodapé (nome/sair). Injetar aqui evita que uma rota esqueça de passar
+  // (era o caso de /comunicados). Rotas que passam `usuario` no render sobrescrevem — mesmo valor.
+  res.locals.usuario = req.session.usuario || null;
   res.locals.permissoesAtivas = req.session.permissoesAtivas || [];
   // Badge de correções de cadastro pendentes na sidebar (só p/ quem está logado no painel)
   res.locals.correcoesPendentesCount = 0;
