@@ -364,6 +364,52 @@ aside.sidebar {
 }
 .topbar-acoes form { display: inline-flex !important; align-items: center !important; }
 
+/* O botão de "ação principal" foi batizado de um jeito diferente em cada tela, cada uma
+   com o seu verde: .btn.primary (#2FA873, eventos), .btn-novo (#2b6803, calendário),
+   .btn-pri (#1C5A41, ensino/extensão), .btn-nova (atas). Todas passam a usar o verde da
+   LAURO, com a mesma altura dos demais botões do topo. */
+.btn-primario,
+.btn.primary,
+.btn-primary,
+.btn-novo,
+.btn-novo-sorteio,
+.btn-pri,
+.btn-nova {
+  background: linear-gradient(135deg, #1a3410, #253d18) !important;
+  color: #fff !important;
+  border: 1px solid #253d18 !important;
+}
+.btn-primario:hover,
+.btn.primary:hover,
+.btn-primary:hover,
+.btn-novo:hover,
+.btn-novo-sorteio:hover,
+.btn-pri:hover,
+.btn-nova:hover {
+  background: linear-gradient(135deg, #24471a, #2f4d20) !important;
+  color: #fff !important;
+}
+.btn.primary .ic { stroke: #fff !important; }
+
+.btn-novo,
+.btn-novo-sorteio,
+.btn-pri,
+.btn-nova,
+.btn.primary,
+.btn-primary {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  height: 34px !important;
+  padding: 0 14px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
+  white-space: nowrap !important;
+}
+
 .filtro-btn {
   border-radius: 9px !important;
   font-weight: 600 !important;
