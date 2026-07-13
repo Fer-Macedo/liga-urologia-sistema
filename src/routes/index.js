@@ -3746,7 +3746,9 @@ router.post('/correcoes-cadastro/:id/aprovar', requireAuth, requireSecretaria, a
   if (!c) { req.session.erro = ['Correção não encontrada ou já avaliada.']; return res.redirect('/correcoes-cadastro'); }
   const tabela = c.origem_tipo === 'ligante' ? 'ligantes' : 'diretivos';
   const campos = CAMPOS_MEUS_DADOS[c.origem_tipo];
-  const sets = campos.map((campo, i) => `${campo}=$${i+1}`).join(',');
+  // Aprovou = cadastro já corrigido: refecha a liberação individual, que senão fica aberta p/ sempre.
+  // (Não mexe na liberação em grupo: essa é global e a diretoria desliga quando a campanha acaba.)
+  const sets = campos.map((campo, i) => `${campo}=$${i+1}`).join(',') + ', edicao_liberada=false';
   const valores = campos.map(campo => c.dados[campo]);
   const _oldC = (await query(`SELECT email FROM ${tabela} WHERE id=$1`, [c.origem_id])).rows[0];
   await query(`UPDATE ${tabela} SET ${sets} WHERE id=$${campos.length+1}`, [...valores, c.origem_id]);
