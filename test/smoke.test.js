@@ -119,7 +119,8 @@ test('login do admin funciona (e senha errada é recusada)', async () => {
 test('as telas principais do painel carregam', async () => {
   const s = criarSessao();
   await s.post('/login', ADMIN);
-  const telas = ['/dashboard', '/ligantes', '/diretivos', '/cobrancas', '/calendario', '/correcoes-cadastro', '/eventos'];
+  const telas = ['/dashboard', '/ligantes', '/diretivos', '/cobrancas', '/calendario', '/correcoes-cadastro', '/eventos',
+                 '/processo-seletivo', '/inscricoes-pss'];
   for (const t of telas) {
     const r = await s.get(t);
     // 200 exigido: aceitar 302 faria este teste passar mesmo com o login quebrado.
@@ -141,6 +142,16 @@ test('CSRF bloqueia POST sem token', async () => {
     body: 'email=x@x.com&senha=x'
   });
   assert.equal(r.status, 403, 'POST sem CSRF deveria dar 403');
+});
+
+// ─── processo seletivo (domínio extraído p/ routes/processo-seletivo.js) ──────
+test('processo seletivo: a página pública de inscrição abre', async () => {
+  const p = await query("SELECT id FROM ps_processos ORDER BY id DESC LIMIT 1");
+  if (!p.rows.length) return; // sem processo cadastrado, nada a testar
+  const r = await req('/pss/' + p.rows[0].id + '/inscricao', { redirect: 'manual' });
+  assert.equal(r.status, 200, 'a inscrição pública devolveu ' + r.status);
+  const html = await r.text();
+  assert.ok(html.includes('nome'), 'o formulário de inscrição não veio na página');
 });
 
 // ─── o que foi removido continua removido ─────────────────────────────────────
