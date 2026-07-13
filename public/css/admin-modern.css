@@ -332,15 +332,37 @@ aside.sidebar {
   font-weight: 600 !important;
   transition: all .15s ease !important;
 }
+/* Verde da LAURO — padrão de TODO o sistema. Era azul aqui, e algumas telas corrigiam
+   por conta própria no <style> local: por isso umas ficavam azuis e outras verdes.
+   Modelo: a tela de Palestrantes. */
 .btn-primario {
-  background: linear-gradient(135deg, #1a56db, #1e3a8a) !important;
+  background: linear-gradient(135deg, #1a3410, #253d18) !important;
   color: white !important;
-  box-shadow: 0 4px 12px rgba(30, 58, 138, .22) !important;
+  box-shadow: 0 4px 12px rgba(37, 61, 24, .22) !important;
   border: none !important;
 }
 .btn-primario:hover {
-  box-shadow: 0 6px 18px rgba(30, 58, 138, .32) !important;
+  box-shadow: 0 6px 18px rgba(37, 61, 24, .32) !important;
 }
+
+/* Botões do topo (topbar): mesma altura e mesma tipografia em todas as telas — a largura
+   acompanha o texto de cada um. Escopo só da topbar: não mexe em botões de tabela/card. */
+.topbar-acoes .btn,
+.topbar-acoes .btn-sm,
+.topbar-acoes .btn-primario {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  height: 34px !important;
+  padding: 0 14px !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  box-sizing: border-box !important;
+  white-space: nowrap !important;
+}
+.topbar-acoes form { display: inline-flex !important; align-items: center !important; }
 
 .filtro-btn {
   border-radius: 9px !important;

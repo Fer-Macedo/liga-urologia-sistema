@@ -38,7 +38,7 @@ body{
 }
 .btn:hover,.btn-sm:hover{ border-color:var(--lauro-accent) !important; color:var(--lauro-green-600) !important; }
 .btn-primario,.btn.btn-primario{
-  background:var(--lauro-accent) !important; color:var(--lauro-green-900) !important; border:1px solid var(--lauro-accent) !important;
+  background:linear-gradient(135deg,#1a3410,#253d18) !important; color:#fff !important; border:1px solid #253d18 !important;
 }
 .btn-primario:hover,.btn.btn-primario:hover{ background:var(--lauro-accent-br) !important; color:var(--lauro-green-900) !important; box-shadow:0 8px 20px -8px rgba(47,168,115,.6) !important; }
 
