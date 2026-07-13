@@ -17,6 +17,10 @@
     .tag-ligantes{background:#ecfdf5;color:#047857}
     .tag-diretivos{background:#fff7ed;color:#c2410c}
     .tag-inativo{background:#f3f4f6;color:#6b7280}
+    .com-card summary{list-style:none;cursor:pointer}
+    .com-card summary::-webkit-details-marker{display:none}
+    .com-card summary::after{content:'▾';margin-left:auto;color:var(--texto3);font-size:11px;transition:transform .15s}
+    .com-card details[open] summary::after{transform:rotate(180deg)}
     .modal-overlay{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:1000;align-items:center;justify-content:center;padding:20px}
     .modal-box{background:var(--card);width:100%;max-width:560px;border-radius:var(--rad);overflow:hidden}
     .modal-header{padding:16px 20px;border-bottom:1px solid var(--borda);display:flex;align-items:center;justify-content:space-between}
@@ -50,15 +54,15 @@
 
       <% comunicados.forEach(function(c){ %>
       <div class="com-card">
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
+        <details style="flex:1;min-width:0">
+          <summary style="display:flex;align-items:center;gap:8px;margin-bottom:5px;flex-wrap:wrap">
             <span class="com-titulo"><%=c.titulo%></span>
             <span class="tag-dest tag-<%=c.destinatarios%>"><%=c.destinatarios==='todos'?'Todos':c.destinatarios==='ligantes'?'Ligantes':'Diretivos'%></span>
             <% if(!c.ativo){ %><span class="tag-dest tag-inativo">Inativo</span><% } %>
-          </div>
+          </summary>
           <div class="com-texto" style="white-space:pre-wrap"><%=c.texto%></div>
           <div class="com-data"><%=new Date(c.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%><% if(c.autor_nome){ %> · <%=c.autor_nome%><% } %></div>
-        </div>
+        </details>
         <div style="display:flex;gap:6px;flex-shrink:0;margin-top:2px">
           <form method="POST" action="/comunicados/<%=c.id%>/toggle" style="margin:0">
             <button type="submit" class="btn-sm"><%=c.ativo?'Desativar':'Ativar'%></button>
