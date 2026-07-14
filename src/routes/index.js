@@ -10098,7 +10098,7 @@ router.get('/membro/agenda/dados', requireMembro, async (req, res) => {
   try {
     const mes = parseInt(req.query.mes) || (new Date().getMonth()+1);
     const ano = parseInt(req.query.ano) || new Date().getFullYear();
-    const evR = await query(`SELECT id, nome as titulo, data_inicio, local FROM eventos WHERE data_inicio >= NOW() - INTERVAL '7 days' ORDER BY data_inicio ASC LIMIT 20`);
+    const evR = await query(`SELECT id, titulo, data_inicio, data_fim, local FROM calendario_atividades WHERE publico = TRUE ORDER BY data_inicio ASC`);
     const anivR = await query(`SELECT id, nome, tipo, foto_chave, TO_CHAR(data_nascimento::date,'YYYY-MM-DD') as data_nascimento FROM (SELECT id, nome, data_nascimento, foto_chave, 'ligante' as tipo FROM ligantes WHERE ativo=1 AND data_nascimento IS NOT NULL UNION ALL SELECT id, nome, data_nascimento, foto_chave, 'diretivo' as tipo FROM diretivos WHERE ativo=1 AND data_nascimento IS NOT NULL) t WHERE EXTRACT(MONTH FROM data_nascimento::date)=$1 ORDER BY EXTRACT(DAY FROM data_nascimento::date)`, [mes]);
     res.json({ eventos: evR.rows, aniversariantes: anivR.rows });
   } catch(e) { res.json({ eventos: [], aniversariantes: [], error: e.message }); }

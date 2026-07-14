@@ -1018,8 +1018,17 @@ function renderCalendar() {
   var evMap = {};
   if(calAgData && calAgData.eventos) {
     calAgData.eventos.forEach(function(ev){
-      var dk = ev.data_inicio ? ev.data_inicio.substring(0,10) : '';
-      if(dk) { if(!evMap[dk]) evMap[dk]=[]; evMap[dk].push(ev); }
+      if(!ev.data_inicio) return;
+      var ini = new Date(ev.data_inicio);
+      var fim = ev.data_fim ? new Date(ev.data_fim) : ini;
+      var cursor = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate());
+      var fimDia = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
+      while(cursor <= fimDia){
+        var dk = cursor.getFullYear()+'-'+pad2(cursor.getMonth()+1)+'-'+pad2(cursor.getDate());
+        if(!evMap[dk]) evMap[dk]=[];
+        evMap[dk].push(ev);
+        cursor.setDate(cursor.getDate()+1);
+      }
     });
   }
   for(var i=0;i<firstDay;i++){
