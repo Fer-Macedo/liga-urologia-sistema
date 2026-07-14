@@ -543,7 +543,7 @@ async function logNotificacao({ membro_id, cobranca_id, tipo, canal, status }) {
 function iniciarAgendamentos() {
   console.log('Agendamentos PagBank iniciados...');
 
-  // Notificação atrasados — às 9h (máx 5 por dia, intervalo 3 dias entre reenvios)
+  // Notificação atrasados — às 9h (e-mail diário sem limite; WhatsApp com intervalo de 3 dias, anti-ban)
   cron.schedule('0 9 * * *', async () => {
     console.log('[CRON] Notificando atrasados diariamente...');
     await notificarAtrasadosDiario();
