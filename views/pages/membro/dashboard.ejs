@@ -178,9 +178,7 @@ body{font-family:var(--ff);background:var(--bg);color:var(--t);display:flex;font
 .cal-cell.today .cal-num{background:var(--vm);color:#fff;border-radius:50%;font-weight:700}
 .cal-cell.off .cal-num{color:var(--ti)}
 .cal-chips{display:flex;flex-direction:column;gap:2px;flex:1;overflow:hidden;min-height:0}
-.cc-ev{font-size:9.5px;font-weight:600;padding:2px 5px;background:#DBEAFE;color:#1D4ED8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
-.cc-ev.green{background:var(--vl);color:var(--vm)}
-.cc-ev.dark{background:#D1FAE5;color:#065F46}
+.cc-ev{font-size:9.5px;font-weight:600;padding:2px 5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
 .cc-bd{font-size:9.5px;font-weight:600;padding:2px 5px;background:#FEF9C3;color:#92400E;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0}
 .cc-mais{font-size:9.5px;font-weight:600;color:var(--ti);padding:2px 5px;flex-shrink:0}
 .ag-card{background:var(--card);border:1px solid var(--brd);padding:14px;margin-bottom:14px}
@@ -1041,7 +1039,10 @@ function renderCalendar() {
     var dk=calY+'-'+pad2(calM+1)+'-'+pad2(day);
     var isToday=(calY===TODAY_CAL.getFullYear()&&calM===TODAY_CAL.getMonth()&&day===TODAY_CAL.getDate());
     d.className='cal-cell'+(isToday?' today':'');
-    var chipsDia = (evMap[dk]||[]).map(function(ev){ return '<div class="cc-ev green">'+ev.titulo+'</div>'; })
+    var chipsDia = (evMap[dk]||[]).map(function(ev){
+      var cor = ev.cor || '#2b6803';
+      return '<div class="cc-ev" style="background:'+cor+'22;color:'+cor+'">'+ev.titulo+'</div>';
+    })
       .concat(bdays.filter(function(b){ return b.data_nascimento && parseInt(b.data_nascimento.substring(8,10))===day; })
         .map(function(b){ return '<div class="cc-bd">'+b.nome.split(' ')[0]+'</div>'; }));
     var maxChips = 2;
@@ -1063,13 +1064,17 @@ function renderAgSide() {
   var evDiv = document.getElementById('agNextEvs');
   var bdDiv = document.getElementById('agBdays');
   if(!calAgData) return;
-  var eventos = calAgData.eventos||[];
+  var agora = new Date();
+  var eventos = (calAgData.eventos||[]).filter(function(ev){
+    var fimRef = new Date(ev.data_fim || ev.data_inicio);
+    return fimRef >= agora;
+  }).sort(function(a,b){ return new Date(a.data_inicio) - new Date(b.data_inicio); });
   var bdays = calAgData.aniversariantes||[];
   if(evDiv) {
     if(!eventos.length) { evDiv.innerHTML='<div style="font-size:12px;color:var(--ti)">Nenhum evento futuro</div>'; }
     else { evDiv.innerHTML = eventos.slice(0,5).map(function(ev){
       var dt = new Date(ev.data_inicio);
-      return '<div class="ag-ev"><div class="ag-ev-dot" style="background:var(--vm)"></div><div><div class="ag-ev-n">'+ev.titulo+'</div><div class="ag-ev-d">'+dt.getDate()+' de '+MONTHS_CAL[dt.getMonth()]+'</div></div></div>';
+      return '<div class="ag-ev"><div class="ag-ev-dot" style="background:'+(ev.cor||'var(--vm)')+'"></div><div><div class="ag-ev-n">'+ev.titulo+'</div><div class="ag-ev-d">'+dt.getDate()+' de '+MONTHS_CAL[dt.getMonth()]+'</div></div></div>';
     }).join(''); }
   }
   if(bdDiv) {
