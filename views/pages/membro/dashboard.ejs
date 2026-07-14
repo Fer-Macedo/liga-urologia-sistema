@@ -729,6 +729,23 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
 
   </div><!-- ct -->
 
+  <div id="modalVerAtiv" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;padding:20px">
+    <div style="background:var(--card);width:100%;max-width:440px;border:1px solid var(--brd);max-height:88vh;overflow-y:auto">
+      <div style="padding:20px;background:var(--v)">
+        <div id="mvTitulo" style="color:#fff;font-size:17px;font-weight:800;line-height:1.3"></div>
+      </div>
+      <div style="padding:20px">
+        <div id="mvData" style="font-size:13px;color:var(--t);font-weight:600;margin-bottom:12px"></div>
+        <div id="mvLocalWrap" style="font-size:13px;color:var(--t);margin-bottom:12px;display:none"><strong>Local:</strong> <span id="mvLocal"></span></div>
+        <div id="mvLinkWrap" style="font-size:13px;margin-bottom:12px;display:none"><a id="mvLink" href="#" target="_blank" style="color:var(--vm);font-weight:700;text-decoration:none"></a></div>
+        <div id="mvDescWrap" style="font-size:13px;color:var(--ts);white-space:pre-wrap;line-height:1.5;display:none"><span id="mvDesc"></span></div>
+      </div>
+      <div style="padding:14px 20px;border-top:1px solid var(--brd);text-align:right">
+        <button class="btn" onclick="fecharModalAtiv()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
   <footer>
     <div style="display:flex;align-items:center;gap:8px">
       <img src="/img/logo-lauro.png" alt="LAURO" class="pf-logo-f" style="border-radius:50%;object-fit:contain" onerror="this.style.display='none'">
@@ -1000,6 +1017,7 @@ var MONTHS_CAL = ['Janeiro','Fevereiro','Marco','Abril','Maio','Junho','Julho','
 var TODAY_CAL = new Date();
 var calY = TODAY_CAL.getFullYear(), calM = TODAY_CAL.getMonth();
 var calAgData = null;
+var eventosPorId = {};
 
 function pad2(n){ return String(n).padStart(2,'0'); }
 
@@ -1015,8 +1033,10 @@ function renderCalendar() {
   var mk = pad2(calM+1);
   var bdays = calAgData ? (calAgData.aniversariantes||[]) : [];
   var evMap = {};
+  eventosPorId = {};
   if(calAgData && calAgData.eventos) {
     calAgData.eventos.forEach(function(ev){
+      eventosPorId[ev.id] = ev;
       if(!ev.data_inicio) return;
       var ini = new Date(ev.data_inicio);
       var fim = ev.data_fim ? new Date(ev.data_fim) : ini;
@@ -1041,7 +1061,7 @@ function renderCalendar() {
     d.className='cal-cell'+(isToday?' today':'');
     var chipsDia = (evMap[dk]||[]).map(function(ev){
       var cor = ev.cor || '#2b6803';
-      return '<div class="cc-ev" style="background:'+cor+'22;color:'+cor+'">'+ev.titulo+'</div>';
+      return '<div class="cc-ev" data-id="'+ev.id+'" style="cursor:pointer;background:'+cor+'22;color:'+cor+'">'+ev.titulo+'</div>';
     })
       .concat(bdays.filter(function(b){ return b.data_nascimento && parseInt(b.data_nascimento.substring(8,10))===day; })
         .map(function(b){ return '<div class="cc-bd">'+b.nome.split(' ')[0]+'</div>'; }));
@@ -1107,6 +1127,30 @@ function loadAgenda() {
     .then(function(data){ calAgData=data; renderCalendar(); })
     .catch(function(){ calAgData={eventos:[],aniversariantes:[]}; renderCalendar(); });
 }
+
+function abrirModalAtiv(ev){
+  document.getElementById('mvTitulo').textContent = ev.titulo;
+  var ini = new Date(ev.data_inicio);
+  var txt = ini.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  if(!ev.dia_inteiro) txt += ' as ' + ini.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  if(ev.data_fim) txt += ' - ' + new Date(ev.data_fim).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  document.getElementById('mvData').textContent = txt;
+  var lw = document.getElementById('mvLocalWrap');
+  if(ev.local){ lw.style.display='block'; document.getElementById('mvLocal').textContent = ev.local; } else lw.style.display='none';
+  var lkw = document.getElementById('mvLinkWrap');
+  if(ev.link_externo){ lkw.style.display='block'; var a=document.getElementById('mvLink'); a.href=ev.link_externo; a.textContent=ev.link_externo; } else lkw.style.display='none';
+  var dw = document.getElementById('mvDescWrap');
+  if(ev.descricao){ dw.style.display='block'; document.getElementById('mvDesc').textContent = ev.descricao; } else dw.style.display='none';
+  document.getElementById('modalVerAtiv').style.display='flex';
+}
+function fecharModalAtiv(){ document.getElementById('modalVerAtiv').style.display='none'; }
+document.getElementById('modalVerAtiv').addEventListener('click', function(e){ if(e.target===e.currentTarget) fecharModalAtiv(); });
+document.getElementById('calGrid').addEventListener('click', function(e){
+  var chip = e.target.closest('.cc-ev[data-id]');
+  if(!chip) return;
+  var ev = eventosPorId[chip.dataset.id];
+  if(ev) abrirModalAtiv(ev);
+});
 
 document.getElementById('calPrev') && document.getElementById('calPrev').addEventListener('click', function(){
   calM--; if(calM<0){calM=11;calY--;} calAgData=null;
