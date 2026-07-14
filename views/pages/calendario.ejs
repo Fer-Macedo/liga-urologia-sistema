@@ -551,10 +551,15 @@ function renderMes(){
     else{ dia=i-primeiroDia+1; }
 
     const isHoje = !outroMes && dia===hoje.getDate() && mesAtual===hoje.getMonth() && anoAtual===hoje.getFullYear();
+    const diaCell = new Date(ano, mes, dia);
     const evsDia = eventos.filter(e => {
-      const d = new Date(e.data_inicio);
-      d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
-      return d.getFullYear()===ano && d.getMonth()===mes && d.getDate()===dia;
+      const ini = new Date(e.data_inicio);
+      ini.setMinutes(ini.getMinutes() + ini.getTimezoneOffset());
+      const fim = e.data_fim ? new Date(e.data_fim) : ini;
+      if(e.data_fim) fim.setMinutes(fim.getMinutes() + fim.getTimezoneOffset());
+      const diaIni = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate());
+      const diaFim = new Date(fim.getFullYear(), fim.getMonth(), fim.getDate());
+      return diaCell >= diaIni && diaCell <= diaFim;
     });
 
     const el = document.createElement('div');
