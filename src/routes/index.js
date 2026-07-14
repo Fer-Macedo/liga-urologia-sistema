@@ -7212,6 +7212,14 @@ router.post('/assistente-virtual/conhecimento/:id/deletar', requireAuth, async (
   catch(e) { res.json({ok:false}); }
 });
 
+// Mantém o mês/ano que o usuário estava vendo ao criar/editar/excluir uma atividade
+function calendarioRedirect(req) {
+  const mes = parseInt(req.query.mes, 10);
+  const ano = parseInt(req.query.ano, 10);
+  if (Number.isInteger(mes) && Number.isInteger(ano)) return `/calendario?mes=${mes}&ano=${ano}`;
+  return '/calendario';
+}
+
 // CRIAR ATIVIDADE
 router.post('/calendario/novo', requireAuth, requirePermissao('calendario'), async (req, res) => {
   try {
@@ -7226,8 +7234,8 @@ router.post('/calendario/novo', requireAuth, requirePermissao('calendario'), asy
        link_externo||null, publico, req.session.usuario.id]
     );
     req.flash('msg', ['Atividade criada com sucesso!']);
-    res.redirect('/calendario');
-  } catch(e) { req.flash('erro', [e.message]); res.redirect('/calendario'); }
+    res.redirect(calendarioRedirect(req));
+  } catch(e) { req.flash('erro', [e.message]); res.redirect(calendarioRedirect(req)); }
 });
 
 // EDITAR ATIVIDADE
@@ -7243,8 +7251,8 @@ router.post('/calendario/:id/editar', requireAuth, requirePermissao('calendario'
        link_externo||null, publico, req.params.id]
     );
     req.flash('msg', ['Atividade atualizada!']);
-    res.redirect('/calendario');
-  } catch(e) { req.flash('erro', [e.message]); res.redirect('/calendario'); }
+    res.redirect(calendarioRedirect(req));
+  } catch(e) { req.flash('erro', [e.message]); res.redirect(calendarioRedirect(req)); }
 });
 
 // EXCLUIR ATIVIDADE
@@ -7252,8 +7260,8 @@ router.post('/calendario/:id/excluir', requireAuth, requirePermissao('calendario
   try {
     await query('DELETE FROM calendario_atividades WHERE id=$1', [req.params.id]);
     req.flash('msg', ['Atividade excluída.']);
-    res.redirect('/calendario');
-  } catch(e) { req.flash('erro', [e.message]); res.redirect('/calendario'); }
+    res.redirect(calendarioRedirect(req));
+  } catch(e) { req.flash('erro', [e.message]); res.redirect(calendarioRedirect(req)); }
 });
 
 

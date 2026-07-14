@@ -478,6 +478,14 @@ let viewAtual = 'mes';
 let eventoSelecionado = null;
 let categoriasFiltro = new Set();
 
+// Se veio de um salvar/editar/excluir, volta pro mês que o usuário estava vendo
+const paramsUrl = new URLSearchParams(location.search);
+if(paramsUrl.has('mes') && paramsUrl.has('ano')){
+  const m = parseInt(paramsUrl.get('mes'), 10), a = parseInt(paramsUrl.get('ano'), 10);
+  if(!isNaN(m) && !isNaN(a) && m>=0 && m<=11){ mesAtual = m; anoAtual = a; }
+  history.replaceState(null, '', location.pathname);
+}
+
 // INIT
 function init(){
   renderLegendas();
@@ -651,7 +659,7 @@ function renderLista(){
 }
 
 function abrirModalNovo(){
-  document.getElementById('formEvento').action = '/calendario/novo';
+  document.getElementById('formEvento').action = '/calendario/novo?mes='+mesAtual+'&ano='+anoAtual;
   document.getElementById('fId').value = '';
   document.getElementById('formEvento').reset();
   document.getElementById('fPublico').checked = true;
@@ -705,7 +713,7 @@ function editarEvento(){
 }
 
 function editarEv(ev){
-  document.getElementById('formEvento').action = '/calendario/'+ev.id+'/editar';
+  document.getElementById('formEvento').action = '/calendario/'+ev.id+'/editar?mes='+mesAtual+'&ano='+anoAtual;
   document.getElementById('fId').value = ev.id;
   document.getElementById('fTitulo').value = ev.titulo;
   document.getElementById('fCategoria').value = ev.categoria;
@@ -729,7 +737,7 @@ function excluirEvento(){
 
 function excluirEv(id, titulo){
   confirmarAcao('Excluir "'+titulo+'"?\nEsta ação não pode ser desfeita.', function(){
-    const f=document.createElement('form'); f.method='POST'; f.action='/calendario/'+id+'/excluir'; document.body.appendChild(f); f.submit();
+    const f=document.createElement('form'); f.method='POST'; f.action='/calendario/'+id+'/excluir?mes='+mesAtual+'&ano='+anoAtual; document.body.appendChild(f); f.submit();
   });
 }
 
