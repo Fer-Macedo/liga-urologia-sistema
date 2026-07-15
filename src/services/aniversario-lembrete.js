@@ -1,6 +1,7 @@
-// Lembrete via WhatsApp para a equipe (marketing, presidencia, admin) sobre aniversarios
+// Lembrete por email para a equipe (marketing, presidencia, admin) sobre aniversarios
 // de ligantes/diretivos: 1 dia antes (19h) e no dia (06h), lembrando de postar no grupo
-// dos Ligantes e no grupo de Avisos.
+// dos Ligantes e no grupo de Avisos. WhatsApp suspenso aqui (aviso interno, nao e a
+// excecao de "assistente virtual"/"parabens ao aniversariante") ate segunda ordem.
 const { query } = require('../models/database');
 const dayjs = require('dayjs');
 
@@ -22,14 +23,6 @@ async function enviarLembreteAniversarioEquipe(momento) {
     if (!aniversariantes.rows.length) return;
     const semFoto = aniversariantes.rows.filter(a => !a.foto_chave);
 
-    const destinatarios = await query(
-      `SELECT DISTINCT u.telefone FROM usuarios u
-       LEFT JOIN usuario_permissoes p ON p.usuario_id=u.id AND p.modulo='marketing'
-       WHERE u.ativo=1 AND u.telefone IS NOT NULL AND u.telefone <> ''
-         AND (u.perfil IN ('admin','presidencia','marketing') OR p.id IS NOT NULL)`
-    );
-    if (!destinatarios.rows.length) return;
-
     const nomes = aniversariantes.rows.map(a => `• ${a.nome} (${a.tipo})`).join('\n');
     const dataFormatada = alvo.format('DD/MM');
     const avisoFoto = semFoto.length
@@ -39,16 +32,12 @@ async function enviarLembreteAniversarioEquipe(momento) {
       ? `🎂 *Aniversário hoje (${dataFormatada})*\n\n${nomes}\n\nNão esqueça de fazer o post de aniversário no grupo dos Ligantes e no grupo de Avisos!`
       : `🎂 *Aniversário amanhã (${dataFormatada})*\n\n${nomes}\n\nJá deixe preparado o post de aniversário para amanhã, no grupo dos Ligantes e no grupo de Avisos!${avisoFoto}`;
 
-    // Usa a fila (nao "urgente") para respeitar o intervalo anti-banimento ja existente
-    // entre cada envio, mesmo sendo poucos destinatarios (marketing/presidencia/admin).
-    const { enviarWhatsApp, enviarEmail } = require('./notificacoes');
-    for (const d of destinatarios.rows) {
-      try { await enviarWhatsApp(d.telefone, mensagem, { aniversario: true }); }
-      catch (e) { console.error('[LEMBRETE ANIVERSARIO] erro ao enviar:', e.message); }
-    }
+    // Aviso interno a equipe suspenso no WhatsApp (nao e o "assistente virtual" nem
+    // "parabens ao aniversariante" — e aviso de operacao, fora da unica excecao liberada
+    // durante o aquecimento do numero). Vai só por email ate segunda ordem.
+    const { enviarEmail } = require('./notificacoes');
 
-    // Email para a equipe tambem — garante o aviso mesmo com o WhatsApp indisponivel/banido.
-    // Destinatarios por email podem diferir dos de telefone (ex: quem nao tem telefone cadastrado).
+    // Email para a equipe. Destinatarios por email podem diferir dos de telefone (ex: quem nao tem telefone cadastrado).
     const destEmail = await query(
       `SELECT DISTINCT u.email FROM usuarios u
        LEFT JOIN usuario_permissoes p ON p.usuario_id=u.id AND p.modulo='marketing'

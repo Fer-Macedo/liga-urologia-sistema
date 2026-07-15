@@ -301,21 +301,24 @@ async function postarStoriesAniversarioDoDia() {
 // Avisa a equipe de marketing/presidencia/admin quando um aniversariante do dia
 // nao teve o Story gerado por falta de foto cadastrada - sem isso, o story
 // dessa pessoa simplesmente nao sai e ninguem fica sabendo.
+// WhatsApp suspenso aqui (aviso interno, nao e a excecao de "assistente virtual"/
+// "parabens ao aniversariante") ate segunda ordem — vai só por email.
 async function alertarAniversariantesSemFoto(pessoas) {
   const destinatarios = await query(
-    `SELECT DISTINCT u.telefone FROM usuarios u
+    `SELECT DISTINCT u.email FROM usuarios u
      LEFT JOIN usuario_permissoes p ON p.usuario_id=u.id AND p.modulo='marketing'
-     WHERE u.ativo=1 AND u.telefone IS NOT NULL AND u.telefone <> ''
+     WHERE u.ativo=1 AND u.email IS NOT NULL AND u.email <> ''
        AND (u.perfil IN ('admin','presidencia','marketing') OR p.id IS NOT NULL)`
   );
   if (!destinatarios.rows.length) return;
 
   const nomes = pessoas.map(p => `• ${p.nome} (${p.tipo === 'diretivo' ? 'Diretivo' : 'Ligante'})`).join('\n');
-  const mensagem = `⚠️ *Story de aniversário nao publicado*\n\n${nomes}\n\nEssa(s) pessoa(s) faz(em) aniversário hoje, mas não têm foto cadastrada no perfil - o Story automático não foi gerado. Cadastre a foto e publique manualmente hoje; a automação não tenta novamente depois.`;
+  const assunto = 'Story de aniversário não publicado';
+  const html = `<p>Essa(s) pessoa(s) faz(em) aniversário hoje, mas não têm foto cadastrada no perfil — o Story automático não foi gerado:</p><p>${nomes.replace(/\n/g, '<br>')}</p><p>Cadastre a foto e publique manualmente hoje; a automação não tenta novamente depois.</p>`;
 
-  const { enviarWhatsApp } = require('./notificacoes');
+  const { enviarEmail } = require('./notificacoes');
   for (const d of destinatarios.rows) {
-    try { await enviarWhatsApp(d.telefone, mensagem, { aniversario: true }); }
+    try { await enviarEmail({ para: d.email, assunto, html, titulo: assunto, faixaLabel: 'ANIVERSÁRIO' }); }
     catch (e) { console.error('[INSTAGRAM] Erro ao enviar alerta de foto faltando:', e.message); }
   }
 }
