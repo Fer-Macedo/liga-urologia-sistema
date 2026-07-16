@@ -1292,7 +1292,8 @@ router.get('/cobrancas', requireAuth, requirePermissao('cobrancas'), async (req,
 
 router.post('/cobrancas/:id/confirmar', requireAuth, requireFinanceiro, async (req, res) => {
   try {
-    await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW(), metodo_pagamento=COALESCE(metodo_pagamento,'pix'), valor_pago=COALESCE(valor_pago, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE id=$1 AND status!='pago'", [req.params.id]);
+    const metodo = ['pix','cartao','dinheiro'].includes(req.body.metodo) ? req.body.metodo : 'pix';
+    await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW(), metodo_pagamento=COALESCE(metodo_pagamento,$2), valor_pago=COALESCE(valor_pago, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE id=$1 AND status!='pago'", [req.params.id, metodo]);
     try { const { lancarMensalidadeNoFluxo } = require('../services/fluxo-mensalidade'); await lancarMensalidadeNoFluxo(query, req.params.id); } catch(e) { console.error('lancar fluxo (baixa manual):', e.message); }
     req.session.msg = ['Pagamento confirmado manualmente!'];
   } catch(e) { req.session.erro = ['Erro ao confirmar: '+e.message]; }

@@ -7,11 +7,13 @@
 const TAXA_PIX = 0.019;     // 1,90% (conforme extrato PagBank)
 const TAXA_CARTAO = 0.04;   // 4%
 const TAXA_BOLETO = 0.019;  // trata como pix por padrão
+const TAXA_DINHEIRO = 0;    // pago em espécie, direto pra Liga: sem taxa de gateway
 
 function calcularLiquido(valorBruto, metodo) {
   let taxa = TAXA_PIX; // padrão pix (maioria)
   if (metodo === 'cartao') taxa = TAXA_CARTAO;
   else if (metodo === 'boleto') taxa = TAXA_BOLETO;
+  else if (metodo === 'dinheiro') taxa = TAXA_DINHEIRO;
   const liquido = valorBruto * (1 - taxa);
   return Math.round(liquido * 100) / 100;
 }
@@ -68,7 +70,7 @@ async function lancarMensalidadeNoFluxo(query, cobrancaId) {
 
     // mês de referência da mensalidade (pode ser diferente do mês de pagamento)
     const mesRef = mesReferencia(c.referencia);
-    const metodoLabel = metodo === 'cartao' ? 'Cartão' : (metodo === 'boleto' ? 'Boleto' : 'PIX');
+    const metodoLabel = metodo === 'cartao' ? 'Cartão' : (metodo === 'boleto' ? 'Boleto' : (metodo === 'dinheiro' ? 'Dinheiro' : 'PIX'));
 
     const descricao = 'Mensalidade ' + (c.ligante_nome || 'Ligante') + ' — ref. ' + mesRef;
     const obs = 'Pago em ' + dataLanc + ' via ' + metodoLabel +
