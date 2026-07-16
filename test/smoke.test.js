@@ -120,7 +120,7 @@ test('as telas principais do painel carregam', async () => {
   const s = criarSessao();
   await s.post('/login', ADMIN);
   const telas = ['/dashboard', '/ligantes', '/diretivos', '/cobrancas', '/calendario', '/correcoes-cadastro', '/eventos',
-                 '/processo-seletivo', '/inscricoes-pss', '/sorteios', '/lista-assinaturas', '/fluxo-caixa', '/desvinculacoes', '/contratos', '/comunicados', '/carta-cobranca', '/carta-notificacao', '/palestrantes', '/assistente-virtual', '/desligamentos', '/atas', '/frequencia', '/frequencia-diretivos'];
+                 '/processo-seletivo', '/inscricoes-pss', '/sorteios', '/lista-assinaturas', '/fluxo-caixa', '/desvinculacoes', '/contratos', '/comunicados', '/carta-cobranca', '/carta-notificacao', '/palestrantes', '/assistente-virtual', '/desligamentos', '/atas', '/frequencia', '/frequencia-diretivos', '/contratos-diretivos'];
   for (const t of telas) {
     const r = await s.get(t);
     // 200 exigido: aceitar 302 faria este teste passar mesmo com o login quebrado.
