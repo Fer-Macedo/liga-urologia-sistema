@@ -14,6 +14,7 @@ const tokens = new Tokens();
 const ROTAS_ISENTAS = [
   '/webhook/pagbank',
   '/webhook/whatsapp',
+  '/webhook/whatsapp-oficial',
   '/api/contato-site',
 ];
 
