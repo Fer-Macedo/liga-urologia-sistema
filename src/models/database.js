@@ -84,8 +84,9 @@ async function initSchema() {
     );
     ALTER TABLE cobrancas ADD COLUMN IF NOT EXISTS valor_pago REAL;
     DO $$ BEGIN
-      ALTER TABLE cobrancas ADD CONSTRAINT cobrancas_referencia_key UNIQUE (referencia);
-    EXCEPTION WHEN duplicate_object THEN NULL;
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'cobrancas_referencia_key') THEN
+        ALTER TABLE cobrancas ADD CONSTRAINT cobrancas_referencia_key UNIQUE (referencia);
+      END IF;
     END $$;
     ALTER TABLE membros ALTER COLUMN dia_vencimento SET DEFAULT 15;
     ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS telefone TEXT;
