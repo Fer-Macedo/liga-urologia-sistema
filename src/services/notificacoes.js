@@ -1,213 +1,14 @@
-const axios = require('axios');
 const nodemailer = require('nodemailer');
 const { query } = require('../models/database');
 require('dotenv').config();
 
-// ─── FILA DE ENVIO WHATSAPP ───────────────────────────────────────────────────
-// Evita banimento enviando em lotes com intervalos seguros
-// Configurações: WAPP_LOTE_TAM (padrão 5), WAPP_INTERVALO_MSG (padrão 30s), WAPP_INTERVALO_LOTE (padrão 120s)
-
-const filaEnvio = [];
-let filaProcessando = false;
-
-// MODO AQUECIMENTO: suspende disparos proativos de WhatsApp (cobrança, frequência, etc)
-// Manter true até o número estar aquecido (~10 dias). Só o assistente virtual funciona.
-const WAPP_SOMENTE_RESPOSTA = process.env.WAPP_SOMENTE_RESPOSTA === 'true';
-
-const LOTE_TAM         = parseInt(process.env.WAPP_LOTE_TAM)        || 3;   // msgs por lote (padrao conservador)
-const INTERVALO_MSG    = parseInt(process.env.WAPP_INTERVALO_MSG)    || 60;  // segundos-base entre mensagens
-const INTERVALO_LOTE   = parseInt(process.env.WAPP_INTERVALO_LOTE)  || 300; // segundos-base entre lotes
-
-function sleep(segundos) {
-  return new Promise(r => setTimeout(r, segundos * 1000));
+// Envio de WhatsApp 100% pela API Oficial da Meta (Cloud API) — ver whatsapp-oficial.js.
+// A W-API (gateway não-oficial, causa raiz de banimentos recorrentes) foi removida e a
+// assinatura cancelada em 2026-07-15. Ver memória "project_whatsapp_ban_causa_raiz".
+async function enviarWhatsApp(numero, mensagem) {
+  const { enviarTexto } = require('./whatsapp-oficial');
+  return await enviarTexto(numero, mensagem);
 }
-
-const LIMITE_DIARIO = parseInt(process.env.WAPP_LIMITE_DIARIO) || 50;
-const HORA_INICIO   = parseInt(process.env.WAPP_HORA_INICIO)   || 8;
-const HORA_FIM      = parseInt(process.env.WAPP_HORA_FIM)      || 20;
-let enviosHoje = 0;
-let ultimoResetDia = new Date().toDateString();
-// DISJUNTOR ANTI-BAN: se a W-API falhar em sequencia (sessao caida/banida), para de
-// enviar por um tempo em vez de martelar os mesmos numeros — martelar sessao morta
-// e acelerador de banimento. Retoma sozinho apos a pausa.
-const FALHAS_LIMITE = parseInt(process.env.WAPP_FALHAS_LIMITE) || 5;
-const PAUSA_FALHAS_MIN = parseInt(process.env.WAPP_PAUSA_FALHAS_MIN) || 60;
-let falhasSeguidas = 0;
-let envioPausadoAte = 0;
-function resetarContadorDiario() {
-  const hoje = new Date().toDateString();
-  if (hoje !== ultimoResetDia) { enviosHoje = 0; ultimoResetDia = hoje; console.log('[FILA WAPP] Contador diário resetado'); }
-}
-function dentroHorarioPermitido() {
-  const hora = parseInt(new Date().toLocaleString('pt-BR', { timeZone: 'America/Asuncion', hour: 'numeric', hour12: false }));
-  return hora >= HORA_INICIO && hora < HORA_FIM;
-}
-async function processarFila() {
-  if (filaProcessando || filaEnvio.length === 0) return;
-  filaProcessando = true;
-  resetarContadorDiario();
-  if (Date.now() < envioPausadoAte) {
-    const faltamMin = Math.ceil((envioPausadoAte - Date.now()) / 60000);
-    console.warn(`[FILA WAPP] DISJUNTOR ativo (muitas falhas seguidas). Enviando de novo em ~${faltamMin}min. ${filaEnvio.length} na fila.`);
-    filaProcessando = false;
-    setTimeout(processarFila, Math.min(envioPausadoAte - Date.now(), 30 * 60 * 1000) + 1000);
-    return;
-  }
-  if (!dentroHorarioPermitido()) {
-    console.log(`[FILA WAPP] Fora do horário (${HORA_INICIO}h-${HORA_FIM}h). Tentando em 30min...`);
-    filaProcessando = false;
-    setTimeout(processarFila, 30 * 60 * 1000);
-    return;
-  }
-  // PROTECAO ANTI-SPAM: nunca processar mais de LOTE_TAM msgs sem pausa
-  if (filaEnvio.length > LOTE_TAM) {
-    console.log(`[FILA WAPP] Fila grande (${filaEnvio.length} msgs) - processando em lotes com pausa obrigatoria`);
-  }
-  console.log(`[FILA WAPP] Iniciando ${filaEnvio.length} msg(s) | lote=${LOTE_TAM} | hoje=${enviosHoje}/${LIMITE_DIARIO}`);
-  let enviados = 0, erros = 0;
-  while (filaEnvio.length > 0) {
-    resetarContadorDiario();
-    if (enviosHoje >= LIMITE_DIARIO) { console.warn(`[FILA WAPP] Limite diário ${LIMITE_DIARIO} atingido. ${filaEnvio.length} msg(s) pendentes.`); break; }
-    if (!dentroHorarioPermitido()) { console.log('[FILA WAPP] Saiu do horário. Pausando.'); break; }
-    const lote = filaEnvio.splice(0, LOTE_TAM);
-    for (let i = 0; i < lote.length; i++) {
-      const { numero, mensagem, resolve } = lote[i];
-      if (enviosHoje >= LIMITE_DIARIO) { filaEnvio.unshift(...lote.slice(i)); resolve({ ok: false }); break; }
-      try {
-        const result = await _enviarWhatsAppDireto(numero, mensagem);
-        resolve(result);
-        if (result.ok) { enviados++; enviosHoje++; falhasSeguidas = 0; }
-        else { erros++; falhasSeguidas++; }
-      } catch(e) { resolve({ ok: false }); erros++; falhasSeguidas++; }
-      // DISJUNTOR: falhas seguidas = sessao provavelmente caida/banida — pausa e para de martelar
-      if (falhasSeguidas >= FALHAS_LIMITE) {
-        envioPausadoAte = Date.now() + PAUSA_FALHAS_MIN * 60 * 1000;
-        falhasSeguidas = 0;
-        console.error(`[FILA WAPP] DISJUNTOR DISPARADO: ${FALHAS_LIMITE} falhas seguidas. Pausando envios por ${PAUSA_FALHAS_MIN}min. Verifique se o numero foi banido/desconectado. ${filaEnvio.length + lote.length - i - 1} msg(s) pendentes.`);
-        filaEnvio.unshift(...lote.slice(i + 1));
-        filaProcessando = false;
-        setTimeout(processarFila, PAUSA_FALHAS_MIN * 60 * 1000 + 1000);
-        return;
-      }
-      if (i < lote.length - 1) {
-        // Intervalo com jitter amplo (ate +60%) — espacamento fixo parece robo e e detectado.
-        const intervalo = INTERVALO_MSG + Math.floor(Math.random() * Math.max(20, INTERVALO_MSG * 0.6));
-        console.log(`[FILA WAPP] Aguardando ${intervalo}s... (${enviosHoje}/${LIMITE_DIARIO} hoje)`);
-        await sleep(intervalo);
-      }
-    }
-    if (filaEnvio.length > 0 && enviosHoje < LIMITE_DIARIO && dentroHorarioPermitido()) {
-      // Pausa entre lotes com jitter (ate +40%) — evita cadencia previsivel.
-      const intervaloLote = INTERVALO_LOTE + Math.floor(Math.random() * Math.max(60, INTERVALO_LOTE * 0.4));
-      console.log(`[FILA WAPP] Lote ok. Aguardando ${intervaloLote}s... (${filaEnvio.length} restantes)`);
-      await sleep(intervaloLote);
-    }
-  }
-  console.log(`[FILA WAPP] Sessão ok — ${enviados} enviados, ${erros} erros, ${enviosHoje}/${LIMITE_DIARIO} hoje`);
-  filaProcessando = false;
-}
-
-function formatarNumero(numero) {
-  // Remove tudo que nao for numero
-  let n = (numero || '').replace(/[^0-9]/g, '');
-  // Remove espacos e caracteres especiais
-  if (!n) return '';
-  return n;
-}
-
-// Verifica se a instancia W-API esta CONECTADA ao WhatsApp. A W-API aceita o send-text
-// (HTTP 200) mesmo desconectada, mas nada e entregue — entao sem esta checagem o sistema
-// registra "enviado" e ninguem recebe. Cacheia 60s pra nao consultar a cada mensagem.
-let _connCache = { ts: 0, connected: null };
-async function instanciaConectada() {
-  const agora = Date.now();
-  if (_connCache.connected !== null && agora - _connCache.ts < 60000) return _connCache.connected;
-  try {
-    const r = await axios.get(
-      'https://api.w-api.app/v1/instance/status-instance?instanceId=' + process.env.WAPI_INSTANCE_ID,
-      { headers: { 'Authorization': 'Bearer ' + process.env.WAPI_TOKEN }, timeout: 10000 }
-    );
-    _connCache = { ts: agora, connected: !!(r.data && r.data.connected) };
-  } catch (e) { _connCache = { ts: agora, connected: false }; }
-  return _connCache.connected;
-}
-
-// Envia direto para a W-API (sem fila)
-async function _enviarWhatsAppDireto(numero, mensagem) {
-  // KILL SWITCH: pausa TOTAL de envio de WhatsApp. Enquanto a conta estiver sendo banida
-  // a cada mensagem (gateway nao-oficial), qualquer envio so queima a conta. Ligar com
-  // WAPP_KILL=true no .env. Desligar so quando houver canal seguro (API oficial/novo numero).
-  if (process.env.WAPP_KILL === 'true') { console.warn('[W-API] Envio PAUSADO (WAPP_KILL). Nada enviado.'); return { ok: false, killed: true }; }
-  const instanceId = process.env.WAPI_INSTANCE_ID;
-  const token = process.env.WAPI_TOKEN;
-  if (!token || !instanceId) { console.warn('W-API nao configurada'); return { ok: false }; }
-  const fone = formatarNumero(numero);
-  // PREFLIGHT: se a instancia esta desconectada, NAO envia e reporta erro honesto
-  // (antes retornava ok:true no 200 da W-API mesmo sem WhatsApp conectado).
-  if (!(await instanciaConectada())) {
-    console.error('[W-API] DESCONECTADA do WhatsApp — mensagem NAO entregue a ' + fone + '. Reconecte a instancia (QR) no painel da W-API.');
-    return { ok: false, disconnected: true };
-  }
-  try {
-    const url = 'https://api.w-api.app/v1/message/send-text?instanceId=' + instanceId;
-    const { data, status } = await axios.post(
-      url,
-      { phone: fone, message: mensagem },
-      { headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }, timeout: 20000 }
-    );
-    console.log('WhatsApp W-API OK ' + fone + ' — ' + status);
-    return { ok: true, data };
-  } catch (err) {
-    console.error('W-API ERRO ' + fone + ': ' + (err.response ? err.response.status : err.message));
-    return { ok: false };
-  }
-}
-
-// Adiciona à fila (para disparos em massa — cobranças, eventos, etc)
-async function enviarWhatsAppFila(numero, mensagem) {
-  return new Promise(resolve => {
-    filaEnvio.push({ numero, mensagem, resolve });
-    // Inicia processamento se ainda não está rodando
-    setTimeout(processarFila, 100);
-  });
-}
-
-// Envio imediato SEM fila (para mensagens urgentes/individuais)
-async function enviarWhatsApp(numero, mensagem, opts = {}) {
-  // PROTECAO ANTI-BAN: enquanto aquecemos o numero, so o assistente virtual (lauro.js, fora
-  // desta funcao) e o aniversario (notificarAniversario, com opts.aniversario=true) ficam liberados.
-  // Todo o resto (cobranca, eventos, certificados, avisos em massa etc) fica suspenso aqui, na raiz,
-  // para nao depender de cada chamador lembrar de checar a flag.
-  if (WAPP_SOMENTE_RESPOSTA && !opts.aniversario) {
-    return { ok: false, blocked: true, motivo: 'whatsapp em modo aquecimento — somente assistente e aniversario liberados' };
-  }
-  // PROTECAO: verificar se envio externo esta permitido
-  try {
-    const cfg = await query('SELECT valor FROM configuracoes WHERE chave=$1',['wapp_somente_cron']);
-    if (cfg.rows.length && cfg.rows[0].valor === '1' && opts.externo) {
-      console.warn('[WAPP BLOQUEADO] Envio externo bloqueado - use apenas o cron automatico');
-      return { ok: false, blocked: true };
-    }
-  } catch(e) {}
-  if (opts.urgente) {
-    // Urgente = direto, sem esperar fila (ex: confirmação de inscrição individual)
-    return await _enviarWhatsAppDireto(numero, mensagem);
-  }
-  // Padrão: passa pela fila para segurança
-  return await enviarWhatsAppFila(numero, mensagem);
-}
-
-// Info da fila (para exibir no painel admin)
-function statusFila() {
-  return {
-    na_fila: filaEnvio.length,
-    processando: filaProcessando,
-    config: { lote_tam: LOTE_TAM, intervalo_msg: INTERVALO_MSG, intervalo_lote: INTERVALO_LOTE }
-  };
-}
-
-
-// [função enviarWhatsApp substituída pela versão com fila acima]
 
 async function enviarEmail(opts) {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return { ok: false };
@@ -252,7 +53,7 @@ async function getConfig() {
 
 // Icones sociais do rodape (Instagram + WhatsApp), usados em TODOS os emails.
 // PNGs servidos pelo proprio sistema; URL absoluta para funcionar no cliente de email.
-const RODAPE_SOCIAL = '<a href="https://instagram.com/lauroucp.cde" title="Instagram" style="text-decoration:none;display:inline-block;margin-left:14px"><img src="https://sistema.lauroucpcde.com/img/email-instagram.png" alt="Instagram" width="22" height="22" style="display:inline-block;vertical-align:middle;border:0"></a><a href="https://wa.me/595994868368" title="WhatsApp" style="text-decoration:none;display:inline-block;margin-left:14px"><img src="https://sistema.lauroucpcde.com/img/email-whatsapp.png" alt="WhatsApp" width="22" height="22" style="display:inline-block;vertical-align:middle;border:0"></a>';
+const RODAPE_SOCIAL = '<a href="https://instagram.com/lauroucp.cde" title="Instagram" style="text-decoration:none;display:inline-block;margin-left:14px"><img src="https://sistema.lauroucpcde.com/img/email-instagram.png" alt="Instagram" width="22" height="22" style="display:inline-block;vertical-align:middle;border:0"></a><a href="https://wa.me/595992010423" title="WhatsApp" style="text-decoration:none;display:inline-block;margin-left:14px"><img src="https://sistema.lauroucpcde.com/img/email-whatsapp.png" alt="WhatsApp" width="22" height="22" style="display:inline-block;vertical-align:middle;border:0"></a>';
 
 // ─── HTML DE COBRANÇA ─────────────────────────────────────────────────────────
 // Suporta PIX copia-e-cola (PagBank) e link de checkout para cartão
@@ -416,30 +217,15 @@ async function notificarCobranca(opts) {
       + 'Por favor, regularize sua situação pelo portal. 🙏'
   };
 
-  // ── WhatsApp (suspenso no modo aquecimento — WAPP_SOMENTE_RESPOSTA=true)
-  // Disparo de cobranca por WhatsApp fica 100% suspenso enquanto aquecemos o numero.
-  // Excecao unica liberada: aniversario (notificarAniversario, abaixo) e o assistente virtual (lauro.js).
-  if (membro.whatsapp && opts.canal !== 'email' && !WAPP_SOMENTE_RESPOSTA) {
-    // ANTI-BAN: nao reenviar a MESMA cobranca de atraso por WhatsApp todo dia ao mesmo
-    // numero (padrao de spam). Limita a 1 msg a cada 3 dias no WhatsApp. O EMAIL continua
-    // diario (abaixo), entao o atrasado segue sendo cobrado todo dia por email.
-    let podeWpp = true;
-    if (tipo === 'pos') {
-      const recente = await query(
-        "SELECT 1 FROM notificacoes_log WHERE cobranca_id=$1 AND canal='whatsapp' AND tipo='pos' AND status='ok' AND enviado_em >= NOW() - INTERVAL '3 days' LIMIT 1",
-        [cobranca.id]
-      );
-      if (recente.rows.length) podeWpp = false;
-    }
-
-    if (podeWpp) {
-      // Uma unica mensagem (texto + PIX embutido)
-      const r1 = await enviarWhatsApp(membro.whatsapp, msgWppMap[tipo] || '');
-      await query(
-        'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
-        [membro.id, cobranca.id, tipo, 'whatsapp', r1.ok ? 'ok' : 'erro']
-      );
-    }
+  // ── WhatsApp (API Oficial da Meta). Texto livre só entrega dentro da janela de 24h
+  // aberta pelo membro; fora dela, precisa de modelo aprovado (pendente de aprovação
+  // da Meta) — até lá, o e-mail abaixo é o canal garantido pra essa notificação.
+  if (membro.whatsapp && opts.canal !== 'email') {
+    const r1 = await enviarWhatsApp(membro.whatsapp, msgWppMap[tipo] || '');
+    await query(
+      'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
+      [membro.id, cobranca.id, tipo, 'whatsapp', r1.ok ? 'ok' : 'erro']
+    );
   }
 
   // ── Email
@@ -489,7 +275,7 @@ async function notificarAniversario(opts) {
   const msgWpp = '🎂 *' + orgNome + '*\n\nOlá, *' + membro.nome.split(' ')[0] + '*!\n\n' + msg + '\n\nCom carinho de toda a equipe! 💙';
 
   if (membro.whatsapp) {
-    const r = await enviarWhatsApp(membro.whatsapp, msgWpp, { aniversario: true });
+    const r = await enviarWhatsApp(membro.whatsapp, msgWpp);
     await query(
       'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
       [membroId, null, logTipo, 'whatsapp', r.ok ? 'ok' : 'erro']
@@ -517,4 +303,4 @@ async function notificarAniversario(opts) {
   }
 }
 
-module.exports = { enviarWhatsApp, enviarWhatsAppFila, enviarEmail, notificarCobranca, notificarAniversario, statusFila, htmlCobranca, htmlSimples };
+module.exports = { enviarWhatsApp, enviarEmail, notificarCobranca, notificarAniversario, htmlCobranca, htmlSimples };

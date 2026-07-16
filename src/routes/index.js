@@ -1601,8 +1601,8 @@ router.post('/atendimentos/:id/responder', requireAuth, requirePermissao('atendi
       return res.json({ok:true, enviado: mensagem.trim(), area: nomeArea});
     }
     const lauro = require('../services/lauro');
-    await lauro.enviarMensagemDiretaOficial(numero_membro, mensagem.trim());
-    if (numero_area) await lauro.enviarMensagemDiretaOficial(numero_area, mensagem.trim()).catch(()=>{});
+    await lauro.enviarMensagemDireta(numero_membro, mensagem.trim());
+    if (numero_area) await lauro.enviarMensagemDireta(numero_area, mensagem.trim()).catch(()=>{});
     await query('INSERT INTO lauro_conversas (numero,papel,mensagem) VALUES ($1,$2,$3)', [numero_membro, 'area', mensagem.trim()]).catch(()=>{});
     res.json({ok:true, enviado: mensagem.trim(), area: nomeArea});
   } catch(e) { res.json({ok:false, erro: e.message}); }
@@ -1623,11 +1623,11 @@ router.post('/atendimentos/:id/responder-arquivo', requireAuth, requirePermissao
       const lauro = require('../services/lauro');
       const dataUri = 'data:' + req.file.mimetype + ';base64,' + req.file.buffer.toString('base64');
       let tipo;
-      if (req.file.mimetype.indexOf('image/') === 0) { tipo = 'image'; await lauro.enviarImagemOficial(numero_membro, dataUri, ''); }
-      else { tipo = 'document'; await lauro.enviarDocumentoOficial(numero_membro, dataUri, req.file.originalname); }
+      if (req.file.mimetype.indexOf('image/') === 0) { tipo = 'image'; await lauro.enviarImagem(numero_membro, dataUri, ''); }
+      else { tipo = 'document'; await lauro.enviarDocumento(numero_membro, dataUri, req.file.originalname); }
       if (numero_area) {
-        if (tipo === 'image') await lauro.enviarImagemOficial(numero_area, dataUri, '').catch(()=>{});
-        else await lauro.enviarDocumentoOficial(numero_area, dataUri, req.file.originalname).catch(()=>{});
+        if (tipo === 'image') await lauro.enviarImagem(numero_area, dataUri, '').catch(()=>{});
+        else await lauro.enviarDocumento(numero_area, dataUri, req.file.originalname).catch(()=>{});
       }
       await query('INSERT INTO lauro_conversas (numero, papel, mensagem) VALUES ($1,$2,$3)', [numero_membro, 'area', '[[MIDIA]]'+tipo+'|||'+r.chave+'|||'+req.file.originalname]);
       res.json({ok:true, tipo, chave: r.chave, nome: req.file.originalname});
@@ -1689,7 +1689,7 @@ router.post('/atendimentos/:id/encerrar', requireAuth, requirePermissao('atendim
         if (io) io.to('membro_' + _tipo + '_' + _idMembro).emit('chat_msg_ok', { id: r.rows[0].id, texto: m, criado_em: r.rows[0].criado_em, autor: 'admin' });
       } else {
         const lauro = require('../services/lauro');
-        await lauro.enviarMensagemDiretaOficial(numero_membro, m).catch(()=>{});
+        await lauro.enviarMensagemDireta(numero_membro, m).catch(()=>{});
       }
     }
     req.session.msg = ['Atendimento encerrado!'];
@@ -1718,7 +1718,7 @@ router.post('/atendimentos/:id/transferir', requireAuth, requirePermissao('atend
       } else {
         await query("UPDATE lauro_atendimentos SET status='transferido', encerrado_em=NOW() WHERE id=$1", [req.params.id]);
         const lauro = require('../services/lauro');
-        await lauro.redirecionarAreaOficial(numero_membro, area_destino, idioma||'pt');
+        await lauro.redirecionarArea(numero_membro, area_destino, idioma||'pt');
       }
     }
     req.session.msg = ['Transferido para ' + area_destino + '!'];
@@ -2115,7 +2115,7 @@ router.post('/frequencia/turma/:id/enviar', requireAuth, requireSecretaria, asyn
     const pct = m.total_atividades > 0 ? Math.round((m.presencas / m.total_atividades) * 100) : 0;
     const status = pct >= 75 ? 'APTO ✅' : pct >= 50 ? 'EM RISCO ⚠️' : 'NÃO APTO ❌';
     const msgWpp = `*${orgNome}* 📊\n\nOlá, *${m.nome.split(' ')[0]}*!\n\nSeu relatório de frequência da turma *${turma.nome}*:\n\n📅 Atividades realizadas: *${m.total_atividades}*\n✅ Suas presenças: *${m.presencas}*\n📊 Frequência: *${pct}%*\n🎓 Status: *${status}*\n\n${pct >= 75 ? 'Parabéns! Você está apto para o certificado! 🎉' : pct >= 50 ? 'Atenção! Você está em risco. Não falte às próximas atividades! ⚠️' : 'Atenção! Você está abaixo do mínimo exigido (75%). Participe mais! ❌'}\n\nQualquer dúvida, entre em contato com a secretaria.`;
-    if (m.whatsapp && process.env.WAPP_SOMENTE_RESPOSTA !== 'true') { try { await enviarWhatsApp(m.whatsapp, msgWpp); enviados++; } catch(e) {} }
+    if (m.whatsapp) { try { await enviarWhatsApp(m.whatsapp, msgWpp); enviados++; } catch(e) {} }
     if (m.email) {
       const orgCor = config.org_cor || '#2b6803';
       const pn = m.nome.split(' ')[0];
@@ -2232,83 +2232,8 @@ router.post('/usuarios/:id/excluir', requireAuth, requireAdmin, async (req, res)
   res.redirect('/usuarios');
 });
 
-// ─── WEBHOOK WHATSAPP — LAURO ─────────────────────────────────────────────────
-// Dedup de webhooks (a W-API reentrega em retry) — evita o bot responder duplicado.
-const webhookVistos = new Set();
-// Freio ANTI-LOOP (nao anti-pessoa): o assistente atende TODOS os numeros. Isto so
-// corta rajada robotica do MESMO numero em 1 min (dois bots conversando, reentrega em
-// rajada, flood forjado) — conversa humana normal nunca chega perto do limite.
-const webhookRate = new Map();
-function webhookThrottle(numero) {
-  const agora = Date.now();
-  const arr = (webhookRate.get(numero) || []).filter(t => agora - t < 60000);
-  arr.push(agora);
-  webhookRate.set(numero, arr);
-  if (webhookRate.size > 3000) webhookRate.clear();
-  return arr.length <= 20; // >20 msgs/min do mesmo numero = loop, nao pessoa
-}
-router.post('/webhook/whatsapp', async (req, res) => {
-  try {
-    const body = req.body;
-    if (!body || typeof body !== 'object') return res.sendStatus(200);
-    // Auth opcional: se WAPP_WEBHOOK_SECRET estiver setado, exige ?secret= igual na URL do
-    // webhook (configure em https://painel.w-api.app -> Webhook -> URL com ?secret=SEGREDO).
-    // Sem o env setado, nao bloqueia nada (retrocompatibilidade).
-    if (process.env.WAPP_WEBHOOK_SECRET && req.query.secret !== process.env.WAPP_WEBHOOK_SECRET) return res.sendStatus(200);
-    console.log('Webhook WA recebido:', JSON.stringify(body).substring(0, 200));
-
-    const rawId = String((body.sender && body.sender.id) || body.phone || body.senderPhone || '');
-    // Ignorar: mensagens proprias (fromMe), grupos, broadcast/status/newsletter.
-    // Checagem robusta (truthy + id bruto) — antes so pegava === true e vazava loop/broadcast.
-    if (body.fromMe || (body.key && body.key.fromMe)) return res.sendStatus(200);
-    if (body.isGroup || /@g\.us|@broadcast|status@broadcast|@newsletter/i.test(rawId)) return res.sendStatus(200);
-
-    // Dedup por messageId — mata respostas duplicadas em reentregas do webhook.
-    const msgId = String(body.messageId || (body.message && body.message.id) || (body.key && body.key.id) || body.id || '');
-    if (msgId) {
-      if (webhookVistos.has(msgId)) return res.sendStatus(200);
-      webhookVistos.add(msgId);
-      if (webhookVistos.size > 1000) webhookVistos.clear();
-    }
-
-    // Extrair numero
-    let numero = ((body.sender && body.sender.id ? body.sender.id : '') || (body.phone||'') || (body.senderPhone||'')).replace(/[^0-9]/g, '');
-
-    // Extrair texto
-    let texto = ((body.msgContent && body.msgContent.conversation) || (body.msgContent && body.msgContent.extendedTextMessage && body.msgContent.extendedTextMessage.text) || (body.text && body.text.message) || (body.body||'')).toString().trim();
-
-    // Extrair midia
-    let midia = null;
-    try {
-      if (body.image && (body.image.imageUrl || body.image.url)) midia = { tipo:'image', url: body.image.imageUrl || body.image.url, caption: body.image.caption || '' };
-      else if (body.document && (body.document.documentUrl || body.document.url)) midia = { tipo:'document', url: body.document.documentUrl || body.document.url, fileName: body.document.fileName || body.document.title || 'arquivo', caption: body.document.caption || '' };
-      else if (body.video && (body.video.videoUrl || body.video.url)) midia = { tipo:'video', url: body.video.videoUrl || body.video.url, caption: body.video.caption || '' };
-      else if (body.audio && (body.audio.audioUrl || body.audio.url)) midia = { tipo:'audio', url: body.audio.audioUrl || body.audio.url, caption: '' };
-    } catch(e) {}
-    if (numero.length < 5 || (texto.length < 1 && !midia)) return res.sendStatus(200);
-    // Atende todos os numeros; so barra rajada robotica do mesmo numero (loop).
-    if (!webhookThrottle(numero)) { console.warn('[LAURO] Freio anti-loop (msgs demais do mesmo numero):', numero); return res.sendStatus(200); }
-    console.log('Lauro processando:', numero, '-', texto || ('['+(midia && midia.tipo)+']'));
-    // R2 persist: baixa midia temporaria Z-API e salva permanentemente
-    if (midia && typeof midia.url === 'string' && midia.url.startsWith('http')) {
-      try {
-        const _axR2 = require('axios');
-        const { uploadArquivo: _upR2 } = require('../services/arquivos');
-        const _resp = await _axR2.get(midia.url, { responseType: 'arraybuffer', timeout: 15000 });
-        const _mime = ((_resp.headers['content-type'] || 'application/octet-stream').split(';')[0]).trim();
-        const _ext = midia.fileName
-          ? (midia.fileName.split('.').pop() || 'bin')
-          : (_mime.split('/')[1] || 'bin').replace('jpeg','jpg');
-        const _r = await _upR2(Buffer.from(_resp.data), 'wapp-'+Date.now()+'.'+_ext, _mime, 'wapp-midias');
-        midia.url = _r.chave;
-        console.log('Lauro R2 midia salva:', _r.chave);
-      } catch(_e) { console.error('Lauro R2 midia ERRO (url temp mantida):', _e.message); }
-    }
-    const { processarMensagem } = require('../services/lauro');
-    processarMensagem(numero, texto, midia);
-  } catch(e) { console.error('Webhook WA erro:', e.message); }
-  res.sendStatus(200);
-});
+// Webhook antigo da W-API (/webhook/whatsapp) removido em 2026-07-15 — assinatura
+// cancelada, canal substituído pelo webhook oficial em routes/whatsapp-oficial.js.
 
 // ─── DIRETIVOS ────────────────────────────────────────────────────────────────
 
@@ -2784,7 +2709,7 @@ router.post('/eventos/:id/enviar-link-live', requireAuth, requirePermissao('even
       else { await query('INSERT INTO evento_presencas_online (inscricao_id,evento_id,token) VALUES ($1,$2,$3)',[insc.id,ev.id,token]); }
       const link = appUrl+'/live/'+token;
       const msg = (config.org_nome||'LAURO')+'\n\nOla, '+insc.nome.split(' ')[0]+'!\n\nSeu link de acesso ao evento '+ev.nome+':\n\n'+link+'\n\nAcesse para assistir e registrar sua presenca automaticamente.';
-      if (insc.whatsapp && process.env.WAPP_SOMENTE_RESPOSTA !== 'true') { try { await enviarWhatsApp(insc.whatsapp,msg); enviados++; } catch(e){} }
+      if (insc.whatsapp) { try { await enviarWhatsApp(insc.whatsapp,msg); enviados++; } catch(e){} }
       if (insc.email) {
         const html = '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:20px"><h2>'+ev.nome+'</h2><p>Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p><p>Clique para assistir e ter sua presenca registrada:</p><div style="text-align:center;margin:24px 0"><a href="'+link+'" style="background:#1a56db;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700">Assistir ao evento</a></div><p style="font-size:12px;color:#6b7280">Link exclusivo — nao compartilhe.</p></div>';
         try { await enviarEmail({para:insc.email,assunto:'Seu link de acesso — '+ev.nome,html,texto:msg}); } catch(e){}
@@ -2919,7 +2844,7 @@ router.post('/eventos/:id/enviar-avaliacao', requireAuth, requirePermissao('even
       await query('INSERT INTO evento_avaliacoes (evento_id,inscricao_id,token) VALUES ($1,$2,$3) ON CONFLICT (token) DO NOTHING',[ev.id,insc.id,token]);
       const link = appUrl+'/avaliacao/'+token;
       const msg = (config.org_nome||'LAURO')+'\n\nOla, *'+insc.nome.split(' ')[0]+'*!\n\nObrigado por participar de *'+ev.nome+'*!\n\nResponda nossa pesquisa rapida:\n'+link+'\n\nLeva menos de 2 minutos!';
-      if (insc.whatsapp && process.env.WAPP_SOMENTE_RESPOSTA !== 'true') { try { await enviarWhatsApp(insc.whatsapp,msg); enviados++; } catch(e){} }
+      if (insc.whatsapp) { try { await enviarWhatsApp(insc.whatsapp,msg); enviados++; } catch(e){} }
     }
     res.json({ok:true,msg:enviados+' pesquisas enviadas!'});
   } catch(e) { res.json({ok:false,msg:e.message}); }

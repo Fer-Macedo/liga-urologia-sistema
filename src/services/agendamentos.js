@@ -11,43 +11,6 @@ async function getConfig() {
   return cfg;
 }
 
-// ─── CONTADOR GLOBAL DIÁRIO DE MENSAGENS WHATSAPP ────────────────────────────
-let _msgCount = 0;
-let _msgDate = '';
-const LIMITE_DIARIO = 20; // Max seguro para nao ser banido
-
-function resetarContadorSeNovoDia() {
-  const hoje = dayjs().format('YYYY-MM-DD');
-  if (_msgDate !== hoje) { _msgCount = 0; _msgDate = hoje; }
-}
-
-function podeMensagem() {
-  resetarContadorSeNovoDia();
-  if (_msgCount >= LIMITE_DIARIO) {
-    console.log(`[WAPP] LIMITE DIÁRIO ATINGIDO (${LIMITE_DIARIO}). Bloqueando envio.`);
-    return false;
-  }
-  return true;
-}
-
-function incrementarContador() {
-  resetarContadorSeNovoDia();
-  _msgCount++;
-  console.log(`[WAPP] Mensagens enviadas hoje: ${_msgCount}/${LIMITE_DIARIO}`);
-}
-
-// ─── INTERVALO SEGURO ENTRE MENSAGENS ────────────────────────────────────────
-const INTERV_MSG = (parseInt(process.env.WAPP_INTERVALO_MSG) || 120) * 1000;
-const INTERV_LOTE = (parseInt(process.env.WAPP_INTERVALO_LOTE) || 900) * 1000;
-const LOTE_TAM = parseInt(process.env.WAPP_LOTE_TAM) || 2;
-
-async function esperarIntervalo(count) {
-  await new Promise(r => setTimeout(r, INTERV_MSG));
-  if (count % LOTE_TAM === 0) {
-    console.log('[WAPP] Pausa entre lotes...');
-    await new Promise(r => setTimeout(r, INTERV_LOTE));
-  }
-}
 
 // ─── GERAR COBRANÇAS DO MÊS ──────────────────────────────────────────────────
 async function gerarCobrancasMes() {
@@ -173,13 +136,10 @@ async function enviarNotificacoes() {
       [em3]
     );
     for (const cob of r.rows) {
-      if (!podeMensagem()) break;
       const j = await query("SELECT id FROM notificacoes_log WHERE cobranca_id=$1 AND tipo='pre'", [cob.id]);
       if (j.rows.length === 0) {
         await notificarCobranca({ membro: {...cob, id: cob.membro_id}, cobranca: cob, tipo: 'pre', config });
-        incrementarContador();
         count++;
-        await esperarIntervalo(count);
       }
     }
   }
@@ -192,13 +152,10 @@ async function enviarNotificacoes() {
       [hj]
     );
     for (const cob of r.rows) {
-      if (!podeMensagem()) break;
       const j = await query("SELECT id FROM notificacoes_log WHERE cobranca_id=$1 AND tipo='dia'", [cob.id]);
       if (j.rows.length === 0) {
         await notificarCobranca({ membro: {...cob, id: cob.membro_id}, cobranca: cob, tipo: 'dia', config });
-        incrementarContador();
         count++;
-        await esperarIntervalo(count);
       }
     }
   }
@@ -303,7 +260,6 @@ async function enviarAniversarios() {
 
   let count = 0;
   for (const pessoa of todos) {
-    if (!podeMensagem()) break;
     // Dedup por (membro_id + tipo): tipo='aniversario' p/ membro (compat) e
     // 'aniversario_ligante'/'_diretivo' p/ os demais — evita colisao de id entre tabelas.
     const logTipo = pessoa._tipo === 'membro' ? 'aniversario' : 'aniversario_' + pessoa._tipo;
@@ -314,9 +270,7 @@ async function enviarAniversarios() {
     if (j.rows.length) continue;
 
     await notificarAniversario({ membro: pessoa, config, membroId: pessoa.id, logTipo });
-    incrementarContador();
     count++;
-    await esperarIntervalo(count);
     console.log('Parabéns enviado:', pessoa.nome, '(' + pessoa._tipo + ')');
   }
 }
@@ -342,8 +296,6 @@ async function enviarFrequenciaMensal() {
     );
 
     for (const m of membros.rows) {
-      if (!podeMensagem()) { console.log('[FREQ] Limite diário atingido, pausando.'); break; }
-
       const pct = m.total_atividades > 0 ? Math.round((m.presencas / m.total_atividades) * 100) : 0;
       const faltas = m.total_atividades - m.presencas;
       const status = pct >= 75 ? 'APTO ✅' : pct >= 50 ? 'EM RISCO ⚠️' : 'NÃO APTO ❌';
@@ -370,10 +322,8 @@ async function enviarFrequenciaMensal() {
       if (m.whatsapp) {
         try {
           await enviarWhatsApp(m.whatsapp, msg);
-          incrementarContador();
           count++;
           await logNotificacao({ membro_id: m.id, cobranca_id: null, tipo: 'frequencia', canal: 'whatsapp', status: 'ok' });
-          await esperarIntervalo(count);
         } catch(e) { console.error('Erro freq wpp:', e.message); }
       }
 
@@ -405,8 +355,6 @@ async function enviarFrequenciaMensal() {
     );
 
     for (const d of diretivos.rows) {
-      if (!podeMensagem()) break;
-
       const pct = d.total_atividades > 0 ? Math.round((d.presencas / d.total_atividades) * 100) : 0;
       const faltas = d.total_atividades - d.presencas;
       const status = pct >= 75 ? 'APTO ✅' : pct >= 50 ? 'EM RISCO ⚠️' : 'NÃO APTO ❌';
@@ -433,10 +381,8 @@ async function enviarFrequenciaMensal() {
       if (d.whatsapp) {
         try {
           await enviarWhatsApp(d.whatsapp, msg);
-          incrementarContador();
           count++;
           await logNotificacao({ membro_id: d.id, cobranca_id: null, tipo: 'frequencia', canal: 'whatsapp', status: 'ok' });
-          await esperarIntervalo(count);
         } catch(e) { console.error('Erro freq diretivo wpp:', e.message); }
       }
 
@@ -498,8 +444,6 @@ async function lembrarInscricoesPendentes() {
 
   let count = 0;
   for (const ei of r.rows) {
-    if (!podeMensagem()) break;
-
     const linkPag = `${inscUrl}/pagamento/${ei.id}`;
     const msg = `*${orgNome}*\n\nHola, *${ei.nome.split(' ')[0]}*! 👋\n\nNotamos que tu inscripción en el evento:\n*${ei.evento_nome}*\n\n...aún está pendiente de pago.\n\n💳 Completa tu inscripción aquí:\n${linkPag}\n\n_¡No pierdas tu lugar!_`;
 
@@ -508,10 +452,8 @@ async function lembrarInscricoesPendentes() {
     if (ei.whatsapp) {
       try {
         await enviarWhatsApp(ei.whatsapp, msg);
-        incrementarContador();
         count++;
         wppOk = true;
-        await esperarIntervalo(count);
       } catch(e) {}
     }
 

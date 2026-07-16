@@ -2,6 +2,7 @@
 // (gateway não-oficial que causava banimento estrutural). Ver memória do projeto
 // "project_whatsapp_ban_causa_raiz" pro histórico completo.
 const axios = require('axios');
+const FormData = require('form-data');
 
 const GRAPH_BASE = 'https://graph.facebook.com/v21.0';
 
@@ -36,7 +37,8 @@ async function _enviarComFallbackBR(numero, montarPayload) {
   let ultimoErro;
   for (const fone of variantes) {
     try {
-      const data = await _post(montarPayload(fone));
+      const payload = await montarPayload(fone);
+      const data = await _post(payload);
       return { ok: true, data };
     } catch (e) {
       ultimoErro = e.response ? e.response.data : e.message;
@@ -44,6 +46,29 @@ async function _enviarComFallbackBR(numero, montarPayload) {
   }
   console.error('[WHATSAPP OFICIAL] erro envio:', JSON.stringify(ultimoErro));
   return { ok: false, erro: ultimoErro };
+}
+
+// Extrai bytes de uma data URI (data:mime;base64,....), ou baixa de uma URL http(s).
+async function _prepararMidia(entrada, mimeTypePadrao) {
+  const m = /^data:([^;]+);base64,(.+)$/.exec(entrada || '');
+  if (m) return { buffer: Buffer.from(m[2], 'base64'), mimeType: m[1] };
+  const resp = await axios.get(entrada, { responseType: 'arraybuffer', timeout: 20000 });
+  const mimeType = (resp.headers['content-type'] || mimeTypePadrao || 'application/octet-stream').split(';')[0];
+  return { buffer: Buffer.from(resp.data), mimeType };
+}
+
+// Sobe a mídia pro servidor da Meta (obrigatório antes de referenciar num envio) e
+// retorna o media id gerado.
+async function _uploadMidia(buffer, mimeType) {
+  const form = new FormData();
+  form.append('messaging_product', 'whatsapp');
+  form.append('file', buffer, { filename: 'arquivo', contentType: mimeType });
+  const { data } = await axios.post(
+    `${GRAPH_BASE}/${process.env.WHATSAPP_PHONE_NUMBER_ID}/media`,
+    form,
+    { headers: { Authorization: 'Bearer ' + process.env.WHATSAPP_OFICIAL_TOKEN, ...form.getHeaders() }, timeout: 30000 }
+  );
+  return data.id;
 }
 
 // Mensagem de modelo aprovado (proativa — cobrança, aniversário). Não depende de janela de 24h.
@@ -71,4 +96,21 @@ async function enviarTexto(numero, mensagem) {
   }));
 }
 
-module.exports = { enviarTemplate, enviarTexto };
+// Imagem/documento — aceita data URI (data:mime;base64,...) ou uma URL http(s) direta.
+async function enviarImagem(numero, imagemOuUrl, legenda) {
+  return _enviarComFallbackBR(numero, async (fone) => {
+    const { buffer, mimeType } = await _prepararMidia(imagemOuUrl, 'image/jpeg');
+    const mediaId = await _uploadMidia(buffer, mimeType);
+    return { messaging_product: 'whatsapp', to: fone, type: 'image', image: { id: mediaId, caption: legenda || '' } };
+  });
+}
+
+async function enviarDocumento(numero, documentoOuUrl, fileName) {
+  return _enviarComFallbackBR(numero, async (fone) => {
+    const { buffer, mimeType } = await _prepararMidia(documentoOuUrl, 'application/pdf');
+    const mediaId = await _uploadMidia(buffer, mimeType);
+    return { messaging_product: 'whatsapp', to: fone, type: 'document', document: { id: mediaId, filename: fileName || 'arquivo' } };
+  });
+}
+
+module.exports = { enviarTemplate, enviarTexto, enviarImagem, enviarDocumento };

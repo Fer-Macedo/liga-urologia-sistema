@@ -50,8 +50,8 @@ module.exports = function (router) {
           return res.sendStatus(200);
         }
         if (mensagem.type === 'text') {
-          const { processarMensagemOficial } = require('../services/lauro');
-          processarMensagemOficial(numero, texto, null);
+          const { processarMensagem } = require('../services/lauro');
+          processarMensagem(numero, texto, null);
         } else {
           console.warn('[WHATSAPP OFICIAL] Tipo de mensagem ainda não suportado neste canal:', mensagem.type);
         }

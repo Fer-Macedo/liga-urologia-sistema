@@ -1,12 +1,6 @@
 // ─── LAURO — Atendente Virtual com IA (Claude) ───────────────────────────────
 const axios = require('axios');
-const { AsyncLocalStorage } = require('async_hooks');
 const { query } = require('../models/database');
-
-// Contexto do canal de envio (W-API antiga vs API Oficial da Meta) por chamada de
-// processarMensagem — evita ter que passar o canal manualmente pelos ~40 pontos que
-// chamam enviarMensagem/enviarImagem/enviarDocumento dentro da conversa do Lauro.
-const canalEnvioCtx = new AsyncLocalStorage();
 
 let CONTATOS = {
   secretaria:  '595973738431',
@@ -370,58 +364,21 @@ REGLAS IMPORTANTES:
   }
 }
 
-// Integração única de WhatsApp: W-API (api.w-api.app)
-const WAPI_BASE = 'https://api.w-api.app/v1/message';
-
-// O assistente tem trava PROPRIA (WAPP_ASSISTENTE_OFF), separada do WAPP_KILL que
-// desliga so os disparos PROATIVOS (cobranca/aniversario/marketing por _enviarWhatsAppDireto).
-// Assim o proativo pode ficar 100% no e-mail enquanto o LAURO segue atendendo no WhatsApp.
-function _wappPausado() { return process.env.WAPP_ASSISTENTE_OFF === 'true'; }
-
+// Integração única de WhatsApp: API Oficial da Meta (whatsapp-oficial.js).
 async function enviarMensagem(numero, mensagem) {
-  // WAPP_ASSISTENTE_OFF so pausa o canal antigo (W-API, com risco de ban) — o canal
-  // oficial nao tem esse risco, entao segue liberado mesmo com a pausa ligada.
-  if (canalEnvioCtx.getStore() === 'oficial') {
-    const { enviarTexto } = require('./whatsapp-oficial');
-    const r = await enviarTexto(numero, mensagem);
-    if (!r.ok) console.error('Lauro erro envio (oficial):', JSON.stringify(r.erro));
-    return;
-  }
-  if (_wappPausado()) { console.warn('[LAURO] Envio PAUSADO (WAPP_KILL).'); return; }
-  try {
-    const delay = Math.min(Math.max(mensagem.length * 25, 1500), 4000);
-    await new Promise(r => setTimeout(r, delay));
-    await axios.post(
-      WAPI_BASE + '/send-text?instanceId=' + process.env.WAPI_INSTANCE_ID,
-      { phone: numero, message: mensagem },
-      { headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env.WAPI_TOKEN }, timeout: 20000 }
-    );
-    console.log('W-API OK', numero);
-  } catch(e) { console.error('Lauro erro envio:', e.response ? JSON.stringify(e.response.data) : e.message); }
+  const { enviarTexto } = require('./whatsapp-oficial');
+  const r = await enviarTexto(numero, mensagem);
+  if (!r.ok) console.error('Lauro erro envio:', JSON.stringify(r.erro));
 }
 async function enviarImagem(numero, imagem, legenda) {
-  if (_wappPausado()) { console.warn('[LAURO] Envio de imagem PAUSADO (WAPP_KILL).'); return; }
-  if (canalEnvioCtx.getStore() === 'oficial') { console.warn('[LAURO] Envio de imagem pelo canal oficial ainda não implementado.'); return; }
-  try {
-    await axios.post(
-      WAPI_BASE + '/send-image?instanceId=' + process.env.WAPI_INSTANCE_ID,
-      { phone: numero, image: imagem, caption: legenda || '' },
-      { headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env.WAPI_TOKEN }, timeout: 30000 }
-    );
-    console.log('Lauro enviou imagem para', numero);
-  } catch(e) { console.error('Lauro erro envio imagem:', e.response ? JSON.stringify(e.response.data) : e.message); }
+  const { enviarImagem: enviarImagemOficial } = require('./whatsapp-oficial');
+  const r = await enviarImagemOficial(numero, imagem, legenda);
+  if (!r.ok) console.error('Lauro erro envio imagem:', JSON.stringify(r.erro));
 }
 async function enviarDocumento(numero, documento, fileName) {
-  if (_wappPausado()) { console.warn('[LAURO] Envio de documento PAUSADO (WAPP_KILL).'); return; }
-  if (canalEnvioCtx.getStore() === 'oficial') { console.warn('[LAURO] Envio de documento pelo canal oficial ainda não implementado.'); return; }
-  try {
-    await axios.post(
-      WAPI_BASE + '/send-document?instanceId=' + process.env.WAPI_INSTANCE_ID,
-      { phone: numero, document: documento, fileName: fileName || 'arquivo.pdf' },
-      { headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + process.env.WAPI_TOKEN }, timeout: 30000 }
-    );
-    console.log('Lauro enviou documento para', numero);
-  } catch(e) { console.error('Lauro erro envio documento:', e.response ? JSON.stringify(e.response.data) : e.message); }
+  const { enviarDocumento: enviarDocumentoOficial } = require('./whatsapp-oficial');
+  const r = await enviarDocumentoOficial(numero, documento, fileName);
+  if (!r.ok) console.error('Lauro erro envio documento:', JSON.stringify(r.erro));
 }
 
 async function redirecionarArea(numero, area, idioma) {
@@ -885,32 +842,7 @@ async function recarregarContatos() {
 }
 recarregarContatos();
 
-// Igual a processarMensagem, mas roteia as respostas pela API Oficial da Meta
-// (whatsapp-oficial.js) em vez da W-API — usado pelo webhook novo (routes/whatsapp-oficial.js).
-function processarMensagemOficial(numero, texto, midia) {
-  return canalEnvioCtx.run('oficial', () => processarMensagem(numero, texto, midia));
-}
-
-// Variantes "oficial" de enviarMensagemDireta/redirecionarArea — usadas pelas rotas de
-// Atendimentos (index.js), que hoje só falam com números que chegaram pelo canal oficial.
-function enviarMensagemDiretaOficial(numero, mensagem) {
-  return canalEnvioCtx.run('oficial', () => enviarMensagemDireta(numero, mensagem));
-}
-function redirecionarAreaOficial(numero, area, idioma) {
-  return canalEnvioCtx.run('oficial', () => redirecionarArea(numero, area, idioma));
-}
-function enviarImagemOficial(numero, imagem, legenda) {
-  return canalEnvioCtx.run('oficial', () => enviarImagem(numero, imagem, legenda));
-}
-function enviarDocumentoOficial(numero, documento, fileName) {
-  return canalEnvioCtx.run('oficial', () => enviarDocumento(numero, documento, fileName));
-}
-
 module.exports = {
-  processarMensagem, processarMensagemOficial,
-  enviarMensagemDireta, enviarMensagemDiretaOficial,
-  redirecionarArea, redirecionarAreaOficial,
-  recarregarContatos,
-  enviarImagem, enviarImagemOficial,
-  enviarDocumento, enviarDocumentoOficial
+  processarMensagem, enviarMensagemDireta, redirecionarArea,
+  recarregarContatos, enviarImagem, enviarDocumento
 };

@@ -13,7 +13,6 @@ const tokens = new Tokens();
 // e a API publica com CORS liberado (protegida por rate limit, nao por sessao/cookie).
 const ROTAS_ISENTAS = [
   '/webhook/pagbank',
-  '/webhook/whatsapp',
   '/webhook/whatsapp-oficial',
   '/api/contato-site',
 ];
