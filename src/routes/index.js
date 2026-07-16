@@ -1100,12 +1100,12 @@ router.get('/dashboard', requireAuth, async (req, res) => {
   ];
   if (verFinanceiro) {
     consultas.push(
-      query("SELECT COUNT(*) n FROM cobrancas WHERE status='pago' AND referencia LIKE $1", [mesStr]),
-      query("SELECT COUNT(*) n FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='pendente' AND c.referencia LIKE $1 AND m.ativo=1", [mesStr]),
-      query("SELECT COUNT(*) n FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE (c.status='atrasado' OR (c.status='pendente' AND c.data_vencimento::date < CURRENT_DATE)) AND m.ativo=1"),
+      query("SELECT COUNT(*) n FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='pago' AND c.referencia LIKE $1 AND m.ativo=1", [mesStr]),
+      query("SELECT COUNT(*) n FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='pendente' AND c.referencia LIKE $1 AND m.ativo=1 AND c.data_vencimento::date >= CURRENT_DATE", [mesStr]),
+      query("SELECT COUNT(*) n FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE (c.status='atrasado' OR (c.status='pendente' AND c.data_vencimento::date < CURRENT_DATE)) AND c.referencia LIKE $1 AND m.ativo=1", [mesStr]),
       query("SELECT COALESCE(SUM(COALESCE(valor_pago,valor_desconto)),0) v FROM cobrancas WHERE status='pago' AND referencia LIKE $1", [mesStr]),
-      query("SELECT COALESCE(SUM(valor_cheio),0) v FROM cobrancas WHERE status='pendente' AND referencia LIKE $1", [mesStr]),
-      query("SELECT COALESCE(SUM(valor_cheio),0) v FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE (c.status='atrasado' OR (c.status='pendente' AND c.data_vencimento::date < CURRENT_DATE)) AND m.ativo=1"),
+      query("SELECT COALESCE(SUM(c.valor_cheio),0) v FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='pendente' AND c.referencia LIKE $1 AND m.ativo=1 AND c.data_vencimento::date >= CURRENT_DATE", [mesStr]),
+      query("SELECT COALESCE(SUM(c.valor_cheio),0) v FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE (c.status='atrasado' OR (c.status='pendente' AND c.data_vencimento::date < CURRENT_DATE)) AND c.referencia LIKE $1 AND m.ativo=1", [mesStr]),
       query("SELECT c.*, m.nome FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.status='pago' ORDER BY c.data_pagamento DESC LIMIT 8")
     );
   } else {
