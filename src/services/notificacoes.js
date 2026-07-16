@@ -217,11 +217,19 @@ async function notificarCobranca(opts) {
       + 'Por favor, regularize sua situação pelo portal. 🙏'
   };
 
-  // ── WhatsApp (API Oficial da Meta). Texto livre só entrega dentro da janela de 24h
-  // aberta pelo membro; fora dela, precisa de modelo aprovado (pendente de aprovação
-  // da Meta) — até lá, o e-mail abaixo é o canal garantido pra essa notificação.
+  // ── WhatsApp (API Oficial da Meta). Cobrança é mensagem iniciada pela empresa —
+  // precisa de modelo aprovado (submetido em 2026-07-15, status pendente de aprovação
+  // da Meta). Até aprovar, isso falha e o e-mail acima/abaixo segue como canal garantido.
   if (membro.whatsapp && opts.canal !== 'email') {
-    const r1 = await enviarWhatsApp(membro.whatsapp, msgWppMap[tipo] || '');
+    const { enviarTemplate } = require('./whatsapp-oficial');
+    const TEMPLATE_COBRANCA = { pre: 'cobranca_pre_vencimento', dia: 'cobranca_vencimento_hoje', pos: 'cobranca_atraso' };
+    const paramsPorTipo = {
+      pre: [dados.nome, orgNome, String(dados.dias), dados.data, dados.valor_desc, dados.valor_cheio],
+      dia: [dados.nome, orgNome, dados.valor_desc, dados.valor_cheio],
+      pos: [dados.nome, orgNome, dados.data, dados.valor_cheio]
+    };
+    const componentes = [{ type: 'body', parameters: paramsPorTipo[tipo].map(text => ({ type: 'text', text })) }];
+    const r1 = await enviarTemplate(membro.whatsapp, TEMPLATE_COBRANCA[tipo], 'pt_BR', componentes);
     await query(
       'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
       [membro.id, cobranca.id, tipo, 'whatsapp', r1.ok ? 'ok' : 'erro']
@@ -275,7 +283,14 @@ async function notificarAniversario(opts) {
   const msgWpp = '🎂 *' + orgNome + '*\n\nOlá, *' + membro.nome.split(' ')[0] + '*!\n\n' + msg + '\n\nCom carinho de toda a equipe! 💙';
 
   if (membro.whatsapp) {
-    const r = await enviarWhatsApp(membro.whatsapp, msgWpp);
+    // Aniversário também é mensagem iniciada pela empresa — modelo aprovado
+    // (submetido em 2026-07-15, aguardando aprovação da Meta).
+    const { enviarTemplate } = require('./whatsapp-oficial');
+    const componentes = [{ type: 'body', parameters: [
+      { type: 'text', text: membro.nome.split(' ')[0] },
+      { type: 'text', text: orgNome }
+    ] }];
+    const r = await enviarTemplate(membro.whatsapp, 'aniversario_parabens', 'pt_BR', componentes);
     await query(
       'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
       [membroId, null, logTipo, 'whatsapp', r.ok ? 'ok' : 'erro']
