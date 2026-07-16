@@ -33,7 +33,32 @@ module.exports = function (router) {
   router.post('/webhook/whatsapp-oficial', (req, res) => {
     try {
       const entrada = req.body.entry && req.body.entry[0];
-      const valor = entrada && entrada.changes && entrada.changes[0] && entrada.changes[0].value;
+      const change = entrada && entrada.changes && entrada.changes[0];
+      const valor = change && change.value;
+
+      // Aprovação/rejeição de modelo de mensagem — avisa a equipe por e-mail,
+      // pra não precisar ficar checando o painel manualmente.
+      if (change && change.field === 'message_template_status_update' && valor) {
+        console.log('[WHATSAPP OFICIAL] status de modelo:', valor.message_template_name, '->', valor.event);
+        const { enviarEmail } = require('../services/notificacoes');
+        const { query } = require('../models/database');
+        (async () => {
+          try {
+            const dest = await query("SELECT DISTINCT email FROM usuarios WHERE ativo=1 AND email IS NOT NULL AND email <> '' AND perfil IN ('admin','presidencia')");
+            const aprovado = valor.event === 'APPROVED';
+            const assunto = (aprovado ? '✅ Modelo aprovado' : '⚠️ Modelo ' + valor.event) + ' — ' + valor.message_template_name;
+            const html = '<p>O modelo de WhatsApp <strong>' + valor.message_template_name + '</strong> (' + (valor.message_template_language || '') + ') mudou de status:</p>'
+              + '<p style="font-size:18px"><strong>' + valor.event + '</strong></p>'
+              + (valor.reason ? '<p>Motivo: ' + valor.reason + '</p>' : '')
+              + (aprovado ? '<p>Já pode ser usado — o sistema já está configurado pra usá-lo automaticamente.</p>' : '<p>Verifique o texto do modelo no WhatsApp Manager e ajuste se necessário.</p>');
+            for (const d of dest.rows) {
+              await enviarEmail({ para: d.email, assunto, html, faixaLabel: 'WHATSAPP — MODELO DE MENSAGEM' });
+            }
+          } catch (e) { console.error('[WHATSAPP OFICIAL] erro ao notificar status de modelo:', e.message); }
+        })();
+        return res.sendStatus(200);
+      }
+
       const mensagem = valor && valor.messages && valor.messages[0];
       if (mensagem) {
         const numero = mensagem.from;
