@@ -21,7 +21,11 @@ async function gerarCobrancasMes() {
 
   for (const membro of membros.rows) {
     const ref = membro.id + '-' + mes;
-    const existe = await query('SELECT id FROM cobrancas WHERE referencia=$1', [ref]);
+    // Checa por membro_id + mes (nao so pela string da referencia): se o membro teve o
+    // cadastro duplicado corrigido no passado, cobrancas antigas ficaram com a referencia
+    // no formato do ID anterior (ex: "38-2026-07" para o membro que hoje e o ID 61) e um
+    // match exato em referencia=$1 nunca as encontra, gerando cobranca nova todo mes.
+    const existe = await query("SELECT id FROM cobrancas WHERE membro_id=$1 AND referencia LIKE $2", [membro.id, '%-' + mes]);
     if (existe.rows.length > 0) continue;
 
     const diaVenc = membro.dia_vencimento || parseInt(config.dia_vencimento_padrao) || 15;
