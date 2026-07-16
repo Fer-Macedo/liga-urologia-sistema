@@ -1333,6 +1333,8 @@ router.post('/cobrancas/nova', requireAuth, requireFinanceiro, async (req, res) 
   const mr = await query('SELECT * FROM membros WHERE id=$1', [membro_id]);
   const membro = mr.rows[0];
   if (!membro) { req.flash('erro', 'Membro não encontrado'); return res.redirect('/cobrancas'); }
+  const existe = await query('SELECT id FROM cobrancas WHERE referencia=$1', [referencia]);
+  if (existe.rows.length > 0) { req.flash('erro', 'Já existe uma cobrança com essa referência ("' + referencia + '")'); return res.redirect('/cobrancas'); }
   const pag = await criarCobranca({ membro, valor: parseFloat(valor_desconto), vencimento: data_vencimento, referencia });
   await query(
     'INSERT INTO cobrancas (membro_id,referencia,valor_cheio,valor_desconto,data_vencimento,pagbank_charge_id,pagbank_link) VALUES ($1,$2,$3,$4,$5,$6,$7)',
