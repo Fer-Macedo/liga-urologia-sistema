@@ -379,13 +379,15 @@ const WAPI_BASE = 'https://api.w-api.app/v1/message';
 function _wappPausado() { return process.env.WAPP_ASSISTENTE_OFF === 'true'; }
 
 async function enviarMensagem(numero, mensagem) {
-  if (_wappPausado()) { console.warn('[LAURO] Envio PAUSADO (WAPP_KILL).'); return; }
+  // WAPP_ASSISTENTE_OFF so pausa o canal antigo (W-API, com risco de ban) — o canal
+  // oficial nao tem esse risco, entao segue liberado mesmo com a pausa ligada.
   if (canalEnvioCtx.getStore() === 'oficial') {
     const { enviarTexto } = require('./whatsapp-oficial');
     const r = await enviarTexto(numero, mensagem);
     if (!r.ok) console.error('Lauro erro envio (oficial):', JSON.stringify(r.erro));
     return;
   }
+  if (_wappPausado()) { console.warn('[LAURO] Envio PAUSADO (WAPP_KILL).'); return; }
   try {
     const delay = Math.min(Math.max(mensagem.length * 25, 1500), 4000);
     await new Promise(r => setTimeout(r, delay));
