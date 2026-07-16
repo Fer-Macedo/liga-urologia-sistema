@@ -35,8 +35,15 @@ async function gerarCobrancasMes() {
     const descPct = parseFloat(membro.desconto_pontualidade) || parseFloat(config.desconto_padrao) || 20;
     const valorDesc = +(valorCheio * (1 - descPct / 100)).toFixed(2);
 
-    const dataVencPix = hoje.add(179, 'day').format('YYYY-MM-DD'); // PIX valido ~6 meses (180 exato e rejeitado pelo PagBank)
-    const pag = await criarCobranca({ membro, valor: valorDesc, vencimento: dataVencPix, referencia: ref });
+    // O PIX de desconto DEVE expirar no vencimento — o PagBank nao deixa cancelar um PIX
+    // ja emitido, so expirar. Se o PIX de desconto tivesse validade longa, a pessoa pagaria
+    // o valor com desconto mesmo depois do dia do vencimento (perda de receita). Se a
+    // cobranca ja nasce vencida (ex: membro cadastrado depois do dia de vencimento), ela ja
+    // sai com o valor cheio e PIX de validade longa.
+    const jaVenceu = hoje.isAfter(dayjs(dataVenc).endOf('day'));
+    const valorPix = jaVenceu ? valorCheio : valorDesc;
+    const expPix = jaVenceu ? hoje.add(179, 'day').format('YYYY-MM-DD') : dataVenc; // 180 exato e rejeitado pelo PagBank
+    const pag = await criarCobranca({ membro, valor: valorPix, vencimento: expPix, referencia: ref });
 
     await query(
       `INSERT INTO cobrancas
@@ -120,11 +127,15 @@ async function verificarPagamentos() {
 // ─── ATUALIZAR ATRASADOS ──────────────────────────────────────────────────────
 async function atualizarAtrasados() {
   const hoje = dayjs().format('YYYY-MM-DD');
+  // Ao vencer, zera os dados do PIX de desconto (ja expirado no PagBank): isso (1) some com
+  // o QR/copia-e-cola velho no portal, evitando o membro tentar pagar um PIX morto, e (2)
+  // dispara o atualizarPixAtrasados a gerar um PIX NOVO com valor cheio. Mantem o
+  // pagbank_charge_id ate a regeneracao, pra nao cegar o verificarPagamentos no intervalo.
   const r = await query(
-    "UPDATE cobrancas SET status='atrasado' WHERE status='pendente' AND data_vencimento::date < $1::date",
+    "UPDATE cobrancas SET status='atrasado', pix_copia_cola=NULL, pix_qr_code_base64=NULL, pix_qr_image=NULL WHERE status='pendente' AND data_vencimento::date < $1::date",
     [hoje]
   );
-  if (r.rowCount > 0) console.log(r.rowCount + ' cobranças marcadas como atrasadas');
+  if (r.rowCount > 0) console.log(r.rowCount + ' cobranças marcadas como atrasadas (PIX de desconto invalidado)');
 }
 
 // ─── NOTIFICAÇÕES DE COBRANÇA ─────────────────────────────────────────────────
@@ -498,17 +509,17 @@ function iniciarAgendamentos() {
 
   // Rotina diária às 8h
   cron.schedule('0 8 * * *', async () => {
-    try { await atualizarPixAtrasados(); } catch(e) { console.error('[PIX-UPDATE] erro cron:', e.message); }
-    try { await auditarFluxoCaixa(); } catch(e) { console.error('[AUDITORIA] erro cron:', e.message); }
-    try { await auditarFluxoCaixaEventos(); } catch(e) { console.error('[AUDITORIA] erro cron eventos:', e.message); }
     console.log('Rotina diária iniciando...');
     try {
       await gerarCobrancasMes();
-      await atualizarAtrasados();
+      await atualizarAtrasados();     // marca atrasado + invalida o PIX de desconto vencido
+      await atualizarPixAtrasados();  // gera PIX novo com valor CHEIO p/ as que venceram (ordem importa: depois do atualizarAtrasados)
       await verificarPagamentos();
       await enviarNotificacoes();
       await enviarAniversarios();
     } catch(e) { console.error('Rotina diária erro:', e.message); }
+    try { await auditarFluxoCaixa(); } catch(e) { console.error('[AUDITORIA] erro cron:', e.message); }
+    try { await auditarFluxoCaixaEventos(); } catch(e) { console.error('[AUDITORIA] erro cron eventos:', e.message); }
   }, { timezone: 'America/Asuncion' });
 
   // A cada 3min — verificar pagamentos (sem WhatsApp)
