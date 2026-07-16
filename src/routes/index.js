@@ -3090,12 +3090,6 @@ router.get('/portal', requirePortal, async (req, res) => {
   res.render('pages/portal/dashboard', { config, membro, grupos, gruposEncerrados, msg, saudacao, dataHoje, tipoLabel: tipo === 'ligante' ? 'Ligante' : 'Diretivo', materiais });
 });
 
-function membroCompletoEdicao(config, membro, tipo) {
-  return membro.edicao_liberada || config[`edicao_${tipo}s_grupo`] === '1';
-}
-
-const { CAMPOS_MEUS_DADOS } = require('../services/campos-meus-dados');
-
 // A edição de cadastro saiu do Portal Científico (que é só trabalhos científicos) e vive
 // no Portal do Membro: GET/POST /membro/perfil/*.
 

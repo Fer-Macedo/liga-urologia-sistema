@@ -19,6 +19,11 @@ router.get('/membro/foto/:tipo/:id', requireMembro, async (req, res) => {
 
 // ─── PORTAL DO MEMBRO ────────────────────────────────────────────────────────
 const bcryptMembro = require('bcrypt');
+const { CAMPOS_MEUS_DADOS } = require('../services/campos-meus-dados');
+
+function membroCompletoEdicao(config, membro, tipo) {
+  return membro.edicao_liberada || config[`edicao_${tipo}s_grupo`] === '1';
+}
 
 async function getMembroPortal(tipo, id) {
   if (tipo === 'ligante') {
