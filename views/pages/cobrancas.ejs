@@ -45,8 +45,6 @@
     .acoes { display:flex; gap:3px; flex-wrap:wrap; align-items:center; }
     .btn-acao { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid var(--borda); background:var(--card); color:var(--texto2); cursor:pointer; transition:all .12s; text-decoration:none; }
     .btn-acao:hover { border-color:var(--cor-primaria); color:var(--cor-primaria); background:var(--fundo); }
-    .btn-acao.confirmar { color:#16a34a; border-color:#bbf7d0; background:#f0fdf4; }
-    .btn-acao.confirmar:hover { background:#dcfce7; border-color:#16a34a; }
     .btn-acao.pix { color:#1d4ed8; border-color:#bfdbfe; background:#eff6ff; }
     .btn-acao.pix:hover { background:#dbeafe; }
     .btn-acao.cartao { color:#7e22ce; border-color:#e9d5ff; background:#fdf4ff; }
@@ -286,18 +284,12 @@
               <td>
                 <div class="acoes">
                   <% if (c.status !== 'pago') { %>
-                  <form method="POST" action="/cobrancas/<%= c.id %>/confirmar" id="form-confirmar-<%= c.id %>" style="display:none">
-                    <input type="hidden" name="metodo" id="metodo-<%= c.id %>" value="pix">
+                  <form method="POST" action="/cobrancas/<%= c.id %>/confirmar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Confirmar que recebeu esse pagamento em dinheiro?', function(){ f.submit(); }); return false;">
+                    <input type="hidden" name="metodo" value="dinheiro">
+                    <button type="submit" class="btn-acao dinheiro" title="Confirmar pagamento em dinheiro (PIX e cartão são confirmados automaticamente pelo sistema)">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2" ry="2"/><circle cx="12" cy="12" r="2.5"/></svg>
+                    </button>
                   </form>
-                  <button type="button" class="btn-acao pix" title="Confirmar pagamento em PIX" onclick="confirmarPagamento('<%= c.id %>','pix','PIX')">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/></svg>
-                  </button>
-                  <button type="button" class="btn-acao cartao" title="Confirmar pagamento em Cartão" onclick="confirmarPagamento('<%= c.id %>','cartao','Cartão')">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                  </button>
-                  <button type="button" class="btn-acao dinheiro" title="Confirmar pagamento em Dinheiro" onclick="confirmarPagamento('<%= c.id %>','dinheiro','Dinheiro')">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2" ry="2"/><circle cx="12" cy="12" r="2.5"/></svg>
-                  </button>
                   <% if (c.pix_qr_code || c.pix_qr_code_base64) { %>
                   <button class="btn-acao pix" title="Ver QR Code PIX"
                     onclick="abrirPix('<%= c.id %>')">
@@ -405,13 +397,6 @@ const pixData = {};
   };
   <% } %>
 <% }) %>
-
-function confirmarPagamento(id, metodo, label) {
-  confirmarAcao('Confirmar pagamento manual em ' + label + '?', function(){
-    document.getElementById('metodo-'+id).value = metodo;
-    document.getElementById('form-confirmar-'+id).submit();
-  });
-}
 
 function abrirPix(id) {
   const d = pixData[id];
