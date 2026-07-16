@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const dayjs = require('dayjs');
 const { query } = require('../models/database');
-const { criarCobranca, consultarPagamento } = require('./pagbank');
+const { criarCobranca, consultarPagamento, detectarMetodo } = require('./pagbank');
 const { notificarCobranca, notificarAniversario } = require('./notificacoes');
 
 async function getConfig() {
@@ -102,9 +102,10 @@ async function verificarPagamentos() {
         const charges = result.data.charges || (result.data.status ? [result.data] : []);
         const paga = charges.find(c => c.status === 'PAID');
         const valorPago = (paga && paga.amount && typeof paga.amount.value === 'number') ? paga.amount.value / 100 : null;
+        const metodo = detectarMetodo(charges);
         await query(
-          "UPDATE cobrancas SET status='pago', data_pagamento=NOW(), valor_pago=COALESCE($2, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE id=$1",
-          [cob.id, valorPago]
+          "UPDATE cobrancas SET status='pago', data_pagamento=NOW(), metodo_pagamento=COALESCE($3,metodo_pagamento,'pix'), valor_pago=COALESCE($2, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE id=$1",
+          [cob.id, valorPago, metodo]
         );
         console.log('PagBank pagamento confirmado via cron:', cob.referencia);
         try {

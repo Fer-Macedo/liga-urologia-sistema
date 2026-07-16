@@ -440,5 +440,6 @@ module.exports = {
   consultarCobranca,  // alias
   processarWebhook,   // interpreta body do webhook
   obterChavePublica,  // chave pública p/ criptografar cartão no navegador
-  pagarComCartao      // pagamento com cartão embutido no portal (sem redirecionar)
+  pagarComCartao,     // pagamento com cartão embutido no portal (sem redirecionar)
+  detectarMetodo      // pix/cartao/boleto a partir das charges de uma order
 };
