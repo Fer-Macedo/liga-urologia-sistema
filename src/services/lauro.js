@@ -1,6 +1,12 @@
 // ─── LAURO — Atendente Virtual com IA (Claude) ───────────────────────────────
 const axios = require('axios');
+const { AsyncLocalStorage } = require('async_hooks');
 const { query } = require('../models/database');
+
+// Contexto do canal de envio (W-API antiga vs API Oficial da Meta) por chamada de
+// processarMensagem — evita ter que passar o canal manualmente pelos ~40 pontos que
+// chamam enviarMensagem/enviarImagem/enviarDocumento dentro da conversa do Lauro.
+const canalEnvioCtx = new AsyncLocalStorage();
 
 let CONTATOS = {
   secretaria:  '595973738431',
@@ -374,6 +380,12 @@ function _wappPausado() { return process.env.WAPP_ASSISTENTE_OFF === 'true'; }
 
 async function enviarMensagem(numero, mensagem) {
   if (_wappPausado()) { console.warn('[LAURO] Envio PAUSADO (WAPP_KILL).'); return; }
+  if (canalEnvioCtx.getStore() === 'oficial') {
+    const { enviarTexto } = require('./whatsapp-oficial');
+    const r = await enviarTexto(numero, mensagem);
+    if (!r.ok) console.error('Lauro erro envio (oficial):', JSON.stringify(r.erro));
+    return;
+  }
   try {
     const delay = Math.min(Math.max(mensagem.length * 25, 1500), 4000);
     await new Promise(r => setTimeout(r, delay));
@@ -387,6 +399,7 @@ async function enviarMensagem(numero, mensagem) {
 }
 async function enviarImagem(numero, imagem, legenda) {
   if (_wappPausado()) { console.warn('[LAURO] Envio de imagem PAUSADO (WAPP_KILL).'); return; }
+  if (canalEnvioCtx.getStore() === 'oficial') { console.warn('[LAURO] Envio de imagem pelo canal oficial ainda não implementado.'); return; }
   try {
     await axios.post(
       WAPI_BASE + '/send-image?instanceId=' + process.env.WAPI_INSTANCE_ID,
@@ -398,6 +411,7 @@ async function enviarImagem(numero, imagem, legenda) {
 }
 async function enviarDocumento(numero, documento, fileName) {
   if (_wappPausado()) { console.warn('[LAURO] Envio de documento PAUSADO (WAPP_KILL).'); return; }
+  if (canalEnvioCtx.getStore() === 'oficial') { console.warn('[LAURO] Envio de documento pelo canal oficial ainda não implementado.'); return; }
   try {
     await axios.post(
       WAPI_BASE + '/send-document?instanceId=' + process.env.WAPI_INSTANCE_ID,
@@ -869,4 +883,10 @@ async function recarregarContatos() {
 }
 recarregarContatos();
 
-module.exports = { processarMensagem, enviarMensagemDireta, redirecionarArea, recarregarContatos, enviarImagem, enviarDocumento };
+// Igual a processarMensagem, mas roteia as respostas pela API Oficial da Meta
+// (whatsapp-oficial.js) em vez da W-API — usado pelo webhook novo (routes/whatsapp-oficial.js).
+function processarMensagemOficial(numero, texto, midia) {
+  return canalEnvioCtx.run('oficial', () => processarMensagem(numero, texto, midia));
+}
+
+module.exports = { processarMensagem, processarMensagemOficial, enviarMensagemDireta, redirecionarArea, recarregarContatos, enviarImagem, enviarDocumento };
