@@ -4,6 +4,27 @@ const { query } = require('../models/database');
 const { requireAuth, requireAdmin, requirePermissao } = require('../middleware/auth');
 const { getConfig } = require('../services/config');
 
+function extrairModulosDaSidebar() {
+  const fs = require('fs');
+  const path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, '../../views/partials/sidebar.ejs'), 'utf8');
+  const re = /<% if \(temPerm\('([a-z0-9-]+)'\)\) \{ %>[\s\S]*?<a href="[^"]*" class="nav-item[^"]*"[^>]*>\s*<span class="nav-icon">[\s\S]*?<\/span>\s*<span[^>]*>([^<]+)<\/span>/g;
+  const vistos = new Set();
+  const modulos = [];
+  let m;
+  while ((m = re.exec(src))) {
+    if (vistos.has(m[1])) continue;
+    vistos.add(m[1]);
+    modulos.push({ id: m[1], label: m[2].trim() });
+  }
+  // Itens de admin da Sidebar nao usam temPerm (sao liberados so por isAdmin), mas ainda
+  // fazem sentido como permissao assinavel para outros perfis, entao entram manualmente.
+  ['usuarios', 'auditoria', 'configuracoes'].forEach(id => {
+    if (!vistos.has(id)) modulos.push({ id, label: id.charAt(0).toUpperCase() + id.slice(1) });
+  });
+  return modulos;
+}
+
 module.exports = function (router) {
 
 // ─── USUÁRIOS ──────────────────────────────────────────────────────────────────
