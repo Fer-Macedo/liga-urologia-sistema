@@ -167,6 +167,18 @@ test('processo seletivo: a página pública de inscrição abre', async () => {
   assert.ok(html.includes('nome'), 'o formulário de inscrição não veio na página');
 });
 
+// ─── APIs públicas (domínio extraído p/ routes/api-publica.js) ────────────────
+test('APIs públicas do site respondem sem exigir login', async () => {
+  const r1 = await req('/api/stats-publicas');
+  assert.equal(r1.status, 200, '/api/stats-publicas devolveu ' + r1.status);
+  const j1 = await r1.json();
+  assert.ok(typeof j1.ligantes === 'number', '/api/stats-publicas não veio no formato esperado');
+
+  const r2 = await req('/api/eventos-publicos');
+  assert.equal(r2.status, 200, '/api/eventos-publicos devolveu ' + r2.status);
+  assert.ok(Array.isArray(await r2.json()), '/api/eventos-publicos deveria devolver uma lista');
+});
+
 // ─── o que foi removido continua removido ─────────────────────────────────────
 test('rotas removidas respondem 404', async () => {
   for (const rota of ['/agenda', '/calendario.ics', '/portal/meus-dados']) {
