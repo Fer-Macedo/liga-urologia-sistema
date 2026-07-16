@@ -7985,6 +7985,7 @@ router.get('/inventario/:id/dados', requireAuth, requirePermissao('inventario'),
 require('./processo-seletivo')(router);
 require('./projetos-academicos')(router);
 require('./projeto-fluxo')(router);
+require('./whatsapp-oficial')(router);
 
 
 // ─── POLÍTICA DE PRIVACIDADE PÚBLICA ─────────────────────────────────────────
