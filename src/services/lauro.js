@@ -891,4 +891,26 @@ function processarMensagemOficial(numero, texto, midia) {
   return canalEnvioCtx.run('oficial', () => processarMensagem(numero, texto, midia));
 }
 
-module.exports = { processarMensagem, processarMensagemOficial, enviarMensagemDireta, redirecionarArea, recarregarContatos, enviarImagem, enviarDocumento };
+// Variantes "oficial" de enviarMensagemDireta/redirecionarArea — usadas pelas rotas de
+// Atendimentos (index.js), que hoje só falam com números que chegaram pelo canal oficial.
+function enviarMensagemDiretaOficial(numero, mensagem) {
+  return canalEnvioCtx.run('oficial', () => enviarMensagemDireta(numero, mensagem));
+}
+function redirecionarAreaOficial(numero, area, idioma) {
+  return canalEnvioCtx.run('oficial', () => redirecionarArea(numero, area, idioma));
+}
+function enviarImagemOficial(numero, imagem, legenda) {
+  return canalEnvioCtx.run('oficial', () => enviarImagem(numero, imagem, legenda));
+}
+function enviarDocumentoOficial(numero, documento, fileName) {
+  return canalEnvioCtx.run('oficial', () => enviarDocumento(numero, documento, fileName));
+}
+
+module.exports = {
+  processarMensagem, processarMensagemOficial,
+  enviarMensagemDireta, enviarMensagemDiretaOficial,
+  redirecionarArea, redirecionarAreaOficial,
+  recarregarContatos,
+  enviarImagem, enviarImagemOficial,
+  enviarDocumento, enviarDocumentoOficial
+};

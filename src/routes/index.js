@@ -1601,8 +1601,8 @@ router.post('/atendimentos/:id/responder', requireAuth, requirePermissao('atendi
       return res.json({ok:true, enviado: mensagem.trim(), area: nomeArea});
     }
     const lauro = require('../services/lauro');
-    await lauro.enviarMensagemDireta(numero_membro, mensagem.trim());
-    if (numero_area) await lauro.enviarMensagemDireta(numero_area, mensagem.trim()).catch(()=>{});
+    await lauro.enviarMensagemDiretaOficial(numero_membro, mensagem.trim());
+    if (numero_area) await lauro.enviarMensagemDiretaOficial(numero_area, mensagem.trim()).catch(()=>{});
     await query('INSERT INTO lauro_conversas (numero,papel,mensagem) VALUES ($1,$2,$3)', [numero_membro, 'area', mensagem.trim()]).catch(()=>{});
     res.json({ok:true, enviado: mensagem.trim(), area: nomeArea});
   } catch(e) { res.json({ok:false, erro: e.message}); }
@@ -1623,11 +1623,11 @@ router.post('/atendimentos/:id/responder-arquivo', requireAuth, requirePermissao
       const lauro = require('../services/lauro');
       const dataUri = 'data:' + req.file.mimetype + ';base64,' + req.file.buffer.toString('base64');
       let tipo;
-      if (req.file.mimetype.indexOf('image/') === 0) { tipo = 'image'; await lauro.enviarImagem(numero_membro, dataUri, ''); }
-      else { tipo = 'document'; await lauro.enviarDocumento(numero_membro, dataUri, req.file.originalname); }
+      if (req.file.mimetype.indexOf('image/') === 0) { tipo = 'image'; await lauro.enviarImagemOficial(numero_membro, dataUri, ''); }
+      else { tipo = 'document'; await lauro.enviarDocumentoOficial(numero_membro, dataUri, req.file.originalname); }
       if (numero_area) {
-        if (tipo === 'image') await lauro.enviarImagem(numero_area, dataUri, '').catch(()=>{});
-        else await lauro.enviarDocumento(numero_area, dataUri, req.file.originalname).catch(()=>{});
+        if (tipo === 'image') await lauro.enviarImagemOficial(numero_area, dataUri, '').catch(()=>{});
+        else await lauro.enviarDocumentoOficial(numero_area, dataUri, req.file.originalname).catch(()=>{});
       }
       await query('INSERT INTO lauro_conversas (numero, papel, mensagem) VALUES ($1,$2,$3)', [numero_membro, 'area', '[[MIDIA]]'+tipo+'|||'+r.chave+'|||'+req.file.originalname]);
       res.json({ok:true, tipo, chave: r.chave, nome: req.file.originalname});
@@ -1689,7 +1689,7 @@ router.post('/atendimentos/:id/encerrar', requireAuth, requirePermissao('atendim
         if (io) io.to('membro_' + _tipo + '_' + _idMembro).emit('chat_msg_ok', { id: r.rows[0].id, texto: m, criado_em: r.rows[0].criado_em, autor: 'admin' });
       } else {
         const lauro = require('../services/lauro');
-        await lauro.enviarMensagemDireta(numero_membro, m).catch(()=>{});
+        await lauro.enviarMensagemDiretaOficial(numero_membro, m).catch(()=>{});
       }
     }
     req.session.msg = ['Atendimento encerrado!'];
@@ -1718,7 +1718,7 @@ router.post('/atendimentos/:id/transferir', requireAuth, requirePermissao('atend
       } else {
         await query("UPDATE lauro_atendimentos SET status='transferido', encerrado_em=NOW() WHERE id=$1", [req.params.id]);
         const lauro = require('../services/lauro');
-        await lauro.redirecionarArea(numero_membro, area_destino, idioma||'pt');
+        await lauro.redirecionarAreaOficial(numero_membro, area_destino, idioma||'pt');
       }
     }
     req.session.msg = ['Transferido para ' + area_destino + '!'];
