@@ -158,6 +158,11 @@ test('CSRF bloqueia POST sem token', async () => {
 });
 
 // ─── processo seletivo (domínio extraído p/ routes/processo-seletivo.js) ──────
+test('portal do membro: a página de login pública abre', async () => {
+  const r = await req('/membro/login', { redirect: 'manual' });
+  assert.equal(r.status, 200, '/membro/login devolveu ' + r.status);
+});
+
 test('processo seletivo: a página pública de inscrição abre', async () => {
   const p = await query("SELECT id FROM ps_processos ORDER BY id DESC LIMIT 1");
   if (!p.rows.length) return; // sem processo cadastrado, nada a testar

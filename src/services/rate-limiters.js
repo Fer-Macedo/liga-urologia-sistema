@@ -18,4 +18,32 @@ const limiterContato = rateLimit({
   legacyHeaders: false,
 });
 
-module.exports = { limiterApiPublica, limiterContato };
+// Rate limit para login
+const limiterLogin = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'Muitas tentativas de login. Aguarde 15 minutos.'
+});
+
+// Rate limit para codigo de recuperacao de senha (brute-force do codigo de 6 digitos)
+const limiterCodigoRecuperacao = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: 'Muitas tentativas. Aguarde 15 minutos.'
+});
+
+// Rate limit para solicitar recuperacao de senha (evita spam de emails)
+const limiterEsqueciSenha = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: 'Muitas solicitacoes. Aguarde 1 hora.'
+});
+
+// Rate limit para pagamento com cartao embutido (evita card testing/carding)
+const limiterPagamentoCartao = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  message: { ok: false, erro: 'Muitas tentativas de pagamento. Aguarde 15 minutos.' }
+});
+
+module.exports = { limiterApiPublica, limiterContato, limiterLogin, limiterCodigoRecuperacao, limiterEsqueciSenha, limiterPagamentoCartao };
