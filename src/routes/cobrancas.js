@@ -4,7 +4,7 @@ const dayjs = require('dayjs');
 const { query } = require('../models/database');
 const { requireAuth, requireAdmin, requireFinanceiro, requirePermissao } = require('../middleware/auth');
 const { getConfig } = require('../services/config');
-const { criarCobranca, processarWebhook } = require('../services/pagbank');
+const { criarCobranca, processarWebhook, consultarPagamento } = require('../services/pagbank');
 const { confirmarInscricaoPss } = require('../services/pss');
 
 module.exports = function (router) {
@@ -144,8 +144,24 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
 
     if (!referencia) return res.sendStatus(200);
 
+    // SEGURANCA: o corpo do webhook e publico e forjavel — qualquer um poderia enviar um
+    // POST com status=PAID e dar baixa numa cobranca sem ter pago. Antes de confiar, a gente
+    // reconfirma o pagamento direto na API do PagBank (autenticada com o nosso token). Uma
+    // order forjada nao existe la, ou nao esta paga, entao a reconsulta derruba a fraude.
+    // Fail-closed: sem orderId ou sem confirmacao, NAO da baixa.
+    let pagoConfirmado = false;
+    if (pago) {
+      if (!orderId) {
+        console.warn('PagBank webhook: pago=true sem orderId — baixa ignorada (nao da pra reconfirmar).');
+      } else {
+        const conf = await consultarPagamento(orderId);
+        pagoConfirmado = conf.ok && conf.status === 'PAID';
+        if (!pagoConfirmado) console.warn('PagBank webhook: reconfirmacao NAO retornou PAID para', orderId, '— baixa ignorada (possivel forja).');
+      }
+    }
+
     // Pagamento de MENSALIDADE
-    if (pago && referencia.startsWith('mensalidade-')) {
+    if (pagoConfirmado && referencia.startsWith('mensalidade-')) {
       const r = await query(
         "UPDATE cobrancas SET status='pago', data_pagamento=NOW(), pagbank_charge_id=$1, metodo_pagamento=COALESCE($3,metodo_pagamento), valor_pago=COALESCE($4, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE referencia=$2 AND status!='pago' RETURNING id",
         [orderId, referencia, metodo, valorPago]
@@ -160,7 +176,7 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
     }
 
     // Pagamento de MENSALIDADE (formato {membro_id}-{ano}-{mes}, ex: 56-2026-05)
-    if (pago && /^\d+-\d{4}-\d{2}$/.test(referencia)) {
+    if (pagoConfirmado && /^\d+-\d{4}-\d{2}$/.test(referencia)) {
       const r = await query(
         "UPDATE cobrancas SET status='pago', data_pagamento=NOW(), metodo_pagamento=COALESCE($2,metodo_pagamento), valor_pago=COALESCE($3, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE referencia=$1 AND status!='pago' RETURNING id",
         [referencia, metodo, valorPago]
@@ -175,7 +191,7 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
     }
 
     // Pagamento de INGRESSO DE EVENTO
-    if (pago && referencia.startsWith('evento-insc-')) {
+    if (pagoConfirmado && referencia.startsWith('evento-insc-')) {
       const partes = referencia.split('-');
       const inscricaoId = partes[2];
       if (inscricaoId) {
@@ -201,7 +217,7 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
     }
 
     // Pagamento de INSCRIÇÃO DE PROCESSO SELETIVO (pss-cand-<id>)
-    if (pago && referencia.startsWith('pss-cand-')) {
+    if (pagoConfirmado && referencia.startsWith('pss-cand-')) {
       const candId = referencia.split('-')[2];
       if (candId) {
         const jc = await query("SELECT pagamento_status FROM ps_candidatos WHERE id=$1", [candId]);
