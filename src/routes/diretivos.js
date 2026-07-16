@@ -204,4 +204,34 @@ router.post('/diretivos/:id/toggle', requireAuth, requireAdmin, async (req, res)
   res.redirect('/diretivos' + (req.query.status ? '?status=' + req.query.status : ''));
 });
 
+router.post('/diretivos/grupo/liberar-edicao', requireAuth, requireSecretaria, async (req, res) => {
+  const r = await query("SELECT valor FROM configuracoes WHERE chave='edicao_diretivos_grupo'");
+  const novo = (r.rows[0]?.valor === '1') ? '0' : '1';
+  await query("INSERT INTO configuracoes (chave,valor) VALUES ('edicao_diretivos_grupo',$1) ON CONFLICT (chave) DO UPDATE SET valor=$1", [novo]);
+  req.session.msg = [novo === '1' ? 'Edição de cadastro liberada para todos os diretivos.' : 'Edição de cadastro em grupo bloqueada para os diretivos.'];
+  res.redirect('/diretivos');
+});
+
+router.get('/diretivos/relatorio', requireAuth, requireSecretaria, async (req, res) => {
+  const config = await getConfig();
+  const q = req.query;
+  const filtros = { status: q.status||'todos', cargo: q.cargo||'todos', semestre_turma: q.semestre_turma||'todos', ordem: q.ordem||'nome', colunas: q.colunas ? (Array.isArray(q.colunas) ? q.colunas : [q.colunas]) : ['nome','email','cargo','semestre_turma','whatsapp','status'] };
+  let where = [];
+  if (filtros.status === 'ativo') where.push("ativo = 1");
+  if (filtros.status === 'inativo') where.push("ativo = 0");
+  if (filtros.cargo !== 'todos') where.push(`cargo = '${filtros.cargo.replace(/'/g,"''")}'`);
+  if (filtros.semestre_turma !== 'todos') where.push(`semestre_turma = '${filtros.semestre_turma.replace(/'/g,"''")}'`);
+  const ordens = { nome:'nome ASC', nome_desc:'nome DESC', cargo:'cargo ASC', semestre_turma:'semestre_turma ASC', cadastrado_em:'cadastrado_em DESC' };
+  const orderBy = ordens[filtros.ordem] || 'nome ASC';
+  const sql = `SELECT * FROM diretivos ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY ${orderBy}`;
+  const [r, cargosR, semestresR] = await Promise.all([
+    query(sql),
+    query("SELECT DISTINCT cargo FROM diretivos WHERE cargo IS NOT NULL AND cargo <> '' ORDER BY cargo"),
+    query("SELECT DISTINCT semestre_turma FROM diretivos WHERE semestre_turma IS NOT NULL AND semestre_turma <> '' ORDER BY semestre_turma")
+  ]);
+  const labelColuna = (col) => ({nome:'Nome',email:'E-mail',whatsapp:'WhatsApp',instagram:'Instagram',cargo:'Cargo',semestre_turma:'Semestre/Turma',catraca:'Catraca',rg:'RG/CI',cpf:'CPF',data_nascimento:'Nascimento',ano_ingresso:'Ano ingresso',orcid:'ORCID',status:'Status',cadastrado_em:'Cadastro'}[col] || col);
+  res.render('pages/diretivos-relatorio', { config, usuario: req.session.usuario, diretivos: r.rows, filtros, cargos: cargosR.rows.map(x=>x.cargo).filter(Boolean), semestresTurmas: semestresR.rows.map(x=>x.semestre_turma).filter(Boolean), colunasVisiveis: filtros.colunas, labelColuna, msg: req.session.msg||[], erro: req.session.erro||[] });
+  req.session.msg = []; req.session.erro = [];
+});
+
 };
