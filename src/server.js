@@ -17,7 +17,21 @@ const PORT = process.env.PORT || 3000;
 const http = require('http');
 const { Server: SocketServer } = require('socket.io');
 const httpServer = http.createServer(app);
-const io = new SocketServer(httpServer, { cors: { origin: '*' } });
+// CORS do Socket.io restrito aos dominios do sistema (painel + portal do membro).
+// Origens extras podem ser adicionadas via SOCKET_ORIGINS no .env (separadas por virgula).
+const origensPermitidas = [
+  'https://sistema.lauroucpcde.com',
+  'https://membro.lauroucpcde.com',
+  'https://sistema-teste.lauroucpcde.com',
+  ...(process.env.SOCKET_ORIGINS ? process.env.SOCKET_ORIGINS.split(',').map(s => s.trim()) : []),
+  ...(process.env.APP_URL ? [process.env.APP_URL.replace(/\/$/, '')] : [])
+];
+const io = new SocketServer(httpServer, {
+  cors: {
+    origin: process.env.NODE_ENV === 'production' ? origensPermitidas : true,
+    credentials: true
+  }
+});
 app._io = io;
 io.on('connection', (socket) => {
   // Identidade vem SEMPRE da sessao do servidor (cookie), nunca de dados enviados
@@ -43,8 +57,10 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
 
 app.use(express.static(path.join(__dirname, '../public')));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-app.use(express.json({ limit: '50mb' }));
+// Limite de 15mb: cobre anexos base64 do assistente virtual (imagem/PDF), mas corta
+// payloads gigantes usados em DoS. Uploads de arquivo usam multer (multipart), com limite proprio.
+app.use(express.urlencoded({ extended: true, limit: '15mb' }));
+app.use(express.json({ limit: '15mb' }));
 app.use(methodOverride('_method'));
 if (!process.env.SESSION_SECRET) {
   console.warn('AVISO: SESSION_SECRET nao definido no .env — usando segredo temporario gerado neste boot (sessoes serao invalidadas a cada restart). Configure SESSION_SECRET em producao.');

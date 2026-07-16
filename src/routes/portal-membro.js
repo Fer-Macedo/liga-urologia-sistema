@@ -97,7 +97,7 @@ router.get('/membro/trocar-senha', requireMembro, (req, res) => {
 // POST /membro/trocar-senha
 router.post('/membro/trocar-senha', requireMembro, limiterLogin, async (req, res) => {
   const { senha_atual, nova_senha, confirmar_senha } = req.body;
-  if (!nova_senha || nova_senha.length < 6) return res.render('pages/portal/trocar-senha', { erro: ['Senha deve ter pelo menos 6 caracteres.'], baseUrl: '/membro' });
+  if (!nova_senha || nova_senha.length < 8) return res.render('pages/portal/trocar-senha', { erro: ['Senha deve ter pelo menos 8 caracteres.'], baseUrl: '/membro' });
   if (nova_senha !== confirmar_senha) return res.render('pages/portal/trocar-senha', { erro: ['Senhas não conferem.'], baseUrl: '/membro' });
   const { tipo, id } = req.session.membroPortal;
   const bcryptMembro = require('bcryptjs');
@@ -611,7 +611,7 @@ router.post('/membro/verificar-codigo', limiterCodigoRecuperacao, async (req, re
   const { email, codigo, nova_senha, confirmar_senha } = req.body;
   if (!codigo || !nova_senha || !confirmar_senha) return res.render('pages/membro/verificar-codigo', { email, erro: 'Preencha todos os campos.' });
   if (nova_senha !== confirmar_senha) return res.render('pages/membro/verificar-codigo', { email, erro: 'As senhas nao conferem.' });
-  if (nova_senha.length < 6) return res.render('pages/membro/verificar-codigo', { email, erro: 'A senha deve ter pelo menos 6 caracteres.' });
+  if (nova_senha.length < 8) return res.render('pages/membro/verificar-codigo', { email, erro: 'A senha deve ter pelo menos 8 caracteres.' });
   // Verificar codigo
   const r = await query('SELECT * FROM recuperacao_senha_portal WHERE LOWER(email)=LOWER($1) AND codigo=$2 AND usado=false AND expira_em > NOW() ORDER BY criado_em DESC LIMIT 1', [email, codigo.trim()]);
   if (!r.rows.length) return res.render('pages/membro/verificar-codigo', { email, erro: 'Codigo invalido ou expirado. Solicite um novo codigo.' });

@@ -753,7 +753,7 @@ router.get('/portal/trocar-senha', requirePortal, async (req, res) => {
 // POST /portal/trocar-senha
 router.post('/portal/trocar-senha', requirePortal, limiterLogin, async (req, res) => {
   const { senha_atual, nova_senha, confirmar_senha } = req.body;
-  if (!nova_senha || nova_senha.length < 6) { req.session.erro=['Senha deve ter no minimo 6 caracteres.']; return res.redirect('/portal/trocar-senha'); }
+  if (!nova_senha || nova_senha.length < 8) { req.session.erro=['Senha deve ter no minimo 8 caracteres.']; return res.redirect('/portal/trocar-senha'); }
   if (nova_senha !== confirmar_senha) { req.session.erro=['As senhas nao conferem.']; return res.redirect('/portal/trocar-senha'); }
   const { tipo, id } = req.session.portalMembro;
   const senhaAtualR = await query('SELECT senha_hash FROM portal_cientifico_senhas WHERE origem_tipo=$1 AND origem_id=$2', [tipo, id]);
