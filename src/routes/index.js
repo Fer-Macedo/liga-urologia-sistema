@@ -64,8 +64,11 @@ router.use((req, res, next) => {
   next();
 });
 // ─── MÓDULOS DE DOMÍNIO ───────────────────────────────────────────────────────
-require('./auth')(router);
+// desafio-azul ANTES de auth: o middleware que detecta o host desafiorunazul e serve a
+// landing precisa registrar antes da rota GET '/' do auth (que redireciona p/ o dashboard).
+// Ordem de registro no Express manda — inverter isso faz a landing cair no login.
 require('./desafio-azul')(router);
+require('./auth')(router);
 require('./dashboard')(router);
 require('./membros')(router);
 require('./cobrancas')(router);
