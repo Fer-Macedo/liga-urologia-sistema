@@ -45,23 +45,14 @@
     .acoes { display:flex; gap:3px; flex-wrap:wrap; align-items:center; }
     .btn-acao { display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border:1px solid var(--borda); background:var(--card); color:var(--texto2); cursor:pointer; transition:all .12s; text-decoration:none; }
     .btn-acao:hover { border-color:var(--cor-primaria); color:var(--cor-primaria); background:var(--fundo); }
-    .btn-acao.pix { color:#1d4ed8; border-color:#bfdbfe; background:#eff6ff; }
-    .btn-acao.pix:hover { background:#dbeafe; }
-    .btn-acao.cartao { color:#7e22ce; border-color:#e9d5ff; background:#fdf4ff; }
     .btn-acao.dinheiro { color:#b45309; border-color:#fde68a; background:#fffbeb; }
     .metodo-pagamento-icon { display:inline-flex; margin-left:5px; vertical-align:middle; }
     .btn-acao.notif { color:#c2410c; border-color:#fed7aa; background:#fff7ed; }
     .search-bar { display:flex; align-items:center; gap:8px; background:var(--fundo); border:1px solid var(--borda); padding:0 12px; height:32px; }
     .search-bar svg { width:13px; height:13px; fill:var(--texto2); flex-shrink:0; }
     .search-bar input { border:none; background:transparent; font-size:13px; color:var(--texto); outline:none; width:160px; font-family:inherit; }
-    .qr-box { text-align:center; padding:4px 0; }
-    .qr-box img { width:200px; height:200px; border:1px solid var(--borda); display:block; margin:0 auto 12px; }
-    .pix-copia { background:var(--fundo); border:1px solid var(--borda); padding:10px 14px; font-size:11px; word-break:break-all; font-family:monospace; margin:10px 0; cursor:pointer; text-align:left; transition:background .15s; }
-    .pix-copia:hover { background:#eff6ff; }
     .btn-acao { transition:transform .12s ease, background .12s ease, color .12s ease, border-color .12s ease; }
     .btn-acao:hover { transform:translateY(-2px) scale(1.06); }
-    .btn-acao.notif-email:hover { background:#eff6ff; border-color:#1a56db; color:#1a56db; }
-    .btn-acao.notif-wpp:hover { background:#ecfdf5; border-color:#16a34a; color:#16a34a; }
     @media(max-width:768px) { .stats-row { grid-template-columns:repeat(2,1fr); } .filtros { flex-wrap:wrap; border:none; gap:4px; } .filtro-pill { border:1px solid var(--borda); } }
 
       /* === Modais (estilo dashboard) === */
@@ -290,22 +281,6 @@
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2" ry="2"/><circle cx="12" cy="12" r="2.5"/></svg>
                     </button>
                   </form>
-                  <% if (c.pix_qr_code || c.pix_qr_code_base64) { %>
-                  <button class="btn-acao pix" title="Ver QR Code PIX"
-                    onclick="abrirPix('<%= c.id %>')">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/></svg>
-                  </button>
-                  <% } %>
-                  <% if (c.pagbank_link) { %>
-                  <a href="<%= c.pagbank_link %>" target="_blank" class="btn-acao cartao" title="Link cartão crédito">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-                  </a>
-                  <% } %>
-                  <form action="/cobrancas/<%= c.id %>/notificar" method="POST" style="display:inline;margin:0">
-                    <button class="btn-acao notif-email" title="Cobrar por e-mail" name="canal" value="email">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></button><button class="btn-acao notif-wpp" title="Cobrar por WhatsApp" name="canal" value="whatsapp"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.3h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9a16 16 0 0 0 6.09 6.09l1.07-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-                    </button>
-                  </form>
                   <% } %>
                 </div>
               </td>
@@ -316,30 +291,6 @@
       </div>
     </div>
   </main>
-</div>
-
-<!-- Modal QR Code PIX -->
-<div class="modal-overlay" id="modal-pix" style="display:none">
-  <div class="modal" style="max-width:420px">
-    <div class="modal-header">
-      <span class="modal-titulo" id="pix-titulo">QR Code PIX</span>
-      <button class="icon-btn" onclick="fecharModal('modal-pix')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-    </div>
-    <div class="qr-box">
-      <p style="font-size:13px;color:var(--texto2);margin-bottom:12px">Escaneie ou copie o código Pix abaixo</p>
-      <img id="pix-qr-img" src="" alt="QR Code PIX">
-      <div style="background:var(--fundo);border-radius:10px;padding:14px;margin-bottom:12px">
-        <div style="font-size:11px;color:var(--texto2);font-weight:600;margin-bottom:4px">Valor a pagar</div>
-        <div id="pix-valor" style="font-size:22px;font-weight:800;color:var(--cor-primaria);font-family:'Outfit',sans-serif"></div>
-      </div>
-      <div style="font-size:11px;color:var(--texto2);font-weight:600;margin-bottom:4px;text-align:left">Pix Copia e Cola:</div>
-      <div class="pix-copia" id="pix-codigo" onclick="copiarPix()"></div>
-      <button class="btn btn-primario" style="width:100%;margin-top:4px" onclick="copiarPix()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-        Copiar código PIX
-      </button>
-    </div>
-  </div>
 </div>
 
 <!-- Modal nova cobrança -->
@@ -386,45 +337,6 @@
 
 <script src="/js/app.js"></script>
 <script>
-const pixData = {};
-<% cobrancas.forEach(c => { %>
-  <% if (c.pix_qr_code || c.pix_qr_code_base64) { %>
-  pixData['<%= c.id %>'] = {
-    qr_code: `<%= c.pix_qr_code || '' %>`,
-    qr_code_base64: '<%= c.pix_qr_code_base64 || "" %>',
-    valor: 'R$ <%= Number(c.valor_desconto).toFixed(2).replace(".",",") %>',
-    nome: '<%= c.nome.split(" ")[0] %>'
-  };
-  <% } %>
-<% }) %>
-
-function abrirPix(id) {
-  const d = pixData[id];
-  if (!d) return;
-  document.getElementById('pix-titulo').textContent = 'PIX — ' + d.nome;
-  document.getElementById('pix-valor').textContent = d.valor;
-  document.getElementById('pix-codigo').textContent = d.qr_code;
-  const img = document.getElementById('pix-qr-img');
-  if (d.qr_code_base64) {
-    img.src = 'data:image/png;base64,' + d.qr_code_base64;
-    img.style.display = 'block';
-  } else {
-    img.style.display = 'none';
-  }
-  abrirModal('modal-pix');
-}
-
-function copiarPix() {
-  const codigo = document.getElementById('pix-codigo').textContent;
-  navigator.clipboard.writeText(codigo).then(() => {
-    const btn = document.querySelector('#modal-pix .btn-primario');
-    const orig = btn.innerHTML;
-    btn.innerHTML = 'Copiado!';
-    btn.style.background = '#10b981';
-    setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; }, 2000);
-  });
-}
-
 function gerarRelatorioPDF() {
   fecharModal('modal-relatorio');
   const w = window.open('', '_blank');

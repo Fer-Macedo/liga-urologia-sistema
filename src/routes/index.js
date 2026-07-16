@@ -677,7 +677,6 @@ const dayjs = require('dayjs');
 const { query } = require('../models/database');
 const { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria, requirePermissao } = require('../middleware/auth');
 const { criarCobranca, consultarPagamento, criarPixEvento, processarWebhook } = require('../services/pagbank');
-const { notificarCobranca } = require('../services/notificacoes');
 const { confirmarInscricaoPss } = require('../services/pss');
 
 // ─── LOG DE ATIVIDADES ───────────────────────────────────────────────────────
@@ -1305,20 +1304,6 @@ router.post('/cobrancas/:id/pago', requireAuth, requireFinanceiro, async (req, r
   await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW(), metodo_pagamento=COALESCE(metodo_pagamento,'pix'), valor_pago=COALESCE(valor_pago, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE id=$1", [req.params.id]);
   try { const { lancarMensalidadeNoFluxo } = require('../services/fluxo-mensalidade'); await lancarMensalidadeNoFluxo(query, req.params.id); } catch(e) { console.error('lancar fluxo (baixa manual 2):', e.message); }
   req.flash('msg', 'Pagamento registrado!');
-  res.redirect('/cobrancas');
-});
-
-router.post('/cobrancas/:id/notificar', requireAuth, requireFinanceiro, async (req, res) => {
-  const config = await getConfig();
-  const r = await query('SELECT c.*, m.* FROM cobrancas c JOIN membros m ON m.id=c.membro_id WHERE c.id=$1', [req.params.id]);
-  const cob = r.rows[0];
-  if (!cob) return res.redirect('/cobrancas');
-  const vencDate = dayjs(cob.data_vencimento).startOf('day');
-  const hojeDate = dayjs().startOf('day');
-  const diffDias = vencDate.diff(hojeDate, 'day');
-  const tipo = diffDias < 0 ? 'pos' : diffDias === 0 ? 'dia' : 'pre';
-  await notificarCobranca({ membro: cob, cobranca: cob, tipo, config, canal: req.body.canal });
-  req.flash('msg', req.body.canal === 'whatsapp' ? 'Cobrança enviada por WhatsApp!' : (req.body.canal === 'email' ? 'Cobrança enviada por e-mail!' : 'Notificação enviada!'));
   res.redirect('/cobrancas');
 });
 
