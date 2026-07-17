@@ -11,6 +11,17 @@ async function getMktConfig() {
   const cfg = {}; r.rows.forEach(row => cfg[row.chave] = row.valor); return cfg;
 }
 
+// Análise de desempenho da conta do Instagram (dados reais da API da Meta) — alimenta o
+// painel "Desempenho da conta" na aba Analytics.
+router.get('/marketing/instagram/analise', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { analiseConta } = require('../services/instagram-analise');
+    res.json({ ok: true, ...(await analiseConta()) });
+  } catch (e) {
+    res.json({ ok: false, erro: e.message });
+  }
+});
+
 router.get('/marketing/canva/conectar', requireAuth, requireAdmin, async (req, res) => {
   const { gerarPkce, montarUrlAutorizacao } = require('../services/canva');
   const { verifier, challenge } = gerarPkce();

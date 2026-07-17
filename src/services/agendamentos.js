@@ -605,6 +605,14 @@ function iniciarAgendamentos() {
     } catch(e) { console.error('[LEMBRETE ANIVERSARIO] erro (dia):', e.message); }
   }, { timezone: 'America/Asuncion' });
 
+  // Instagram — relatório semanal de desempenho da conta, segunda às 8h (marketing/presidência/admin)
+  cron.schedule('0 8 * * 1', async () => {
+    try {
+      const { enviarRelatorioSemanal } = require('./instagram-analise');
+      await enviarRelatorioSemanal();
+    } catch(e) { console.error('[IG ANALISE] relatório semanal erro:', e.message); }
+  }, { timezone: 'America/Asuncion' });
+
   // Encerramento automático de eventos — a cada hora
   cron.schedule('0 * * * *', async () => {
     try {

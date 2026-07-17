@@ -1118,6 +1118,14 @@
         </div>
       </div>
       <div class="mkt-section" id="tab-analytics">
+        <!-- Desempenho REAL da conta do Instagram (dados da API oficial da Meta) -->
+        <div class="card" style="margin-bottom:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+            <div class="card-titulo">📊 Desempenho da conta no Instagram</div>
+            <button class="btn btn-sm" onclick="carregarAnaliseIG()">Atualizar</button>
+          </div>
+          <div id="ig-analise"><p style="color:var(--texto2);font-size:13px">Carregando dados da conta…</p></div>
+        </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">
           <div class="card"><div class="card-titulo" style="margin-bottom:14px">Por Rede</div>
             <div style="display:flex;flex-direction:column;gap:10px">
@@ -1735,6 +1743,62 @@ function canvaImportar(designId,titulo,btn){
       setTimeout(function(){location.reload();},1200);
     }).catch(function(){mostrarAviso('Erro ao importar design.','erro'); btn.disabled=false; btn.textContent='Importar';});
 }
+
+// ─── ANÁLISE DE DESEMPENHO DO INSTAGRAM (dados reais da API da Meta) ───────────
+function _igBarras(itens,cor){
+  var max=Math.max.apply(null,itens.map(function(i){return i.valor||0}).concat([1]));
+  return itens.map(function(i){
+    var pct=Math.round(((i.valor||0)/max)*100);
+    return '<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:2px"><span>'+i.chave+'</span><strong>'+(i.valor||0)+'</strong></div>'
+      +'<div style="height:7px;background:var(--fundo);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+cor+'"></div></div></div>';
+  }).join('');
+}
+function _igKpi(valor,label,extra){
+  return '<div style="background:var(--fundo);border-radius:var(--rad);padding:14px;text-align:center"><div style="font-size:24px;font-weight:800;color:var(--cor-primaria)">'+valor+'</div><div style="font-size:11px;color:var(--texto2)">'+label+'</div>'+(extra||'')+'</div>';
+}
+function carregarAnaliseIG(){
+  var box=document.getElementById('ig-analise'); if(!box) return;
+  box.innerHTML='<p style="color:var(--texto2);font-size:13px">Carregando dados da conta…</p>';
+  fetch('/marketing/instagram/analise').then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){ box.innerHTML='<p style="color:#dc2626;font-size:13px">Não foi possível carregar: '+(d.erro||'erro')+'</p>'; return; }
+    var s7=d.resumo7d,c=d.conta,sinal=function(n){return (n>=0?'+':'')+n;};
+    var corD=s7.novosSeguidores>=0?'#059669':'#dc2626';
+    var kpis='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px">'
+      +_igKpi(c.seguidores,'Seguidores','<div style="font-size:11px;font-weight:700;color:'+corD+'">'+sinal(s7.novosSeguidores)+' na semana</div>')
+      +_igKpi(sinal(d.resumo28d.novosSeguidores),'Novos (28 dias)','')
+      +_igKpi(s7.alcance,'Alcance (7 dias)','')
+      +_igKpi(s7.visitas,'Visitas ao perfil (7d)','')+'</div>';
+    var serie=(d.serieSeguidores||[]).slice(-14);
+    var maxG=Math.max.apply(null,serie.map(function(x){return x.valor||0}).concat([1]));
+    var barsG=serie.map(function(x){
+      var h=Math.round(((x.valor||0)/maxG)*46)+2;
+      return '<div title="'+x.data+': '+(x.valor||0)+'" style="flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:3px"><div style="width:70%;height:'+h+'px;background:var(--cor-primaria);border-radius:3px 3px 0 0"></div><div style="font-size:8px;color:var(--texto2)">'+String(x.data).slice(8)+'</div></div>';
+    }).join('');
+    var grow='<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:600;margin-bottom:6px">Novos seguidores (últimos 14 dias)</div><div style="display:flex;align-items:flex-end;gap:3px;height:64px">'+barsG+'</div></div>';
+    var pub='<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px">'
+      +'<div><div style="font-size:12px;font-weight:600;margin-bottom:8px">Idade</div>'+_igBarras(d.publico.idade,'#8b5cf6')+'</div>'
+      +'<div><div style="font-size:12px;font-weight:600;margin-bottom:8px">Gênero</div>'+_igBarras(d.publico.genero,'#ec4899')+'</div>'
+      +'<div><div style="font-size:12px;font-weight:600;margin-bottom:8px">Principais cidades</div>'+_igBarras(d.publico.cidades,'#0891b2')+'</div></div>';
+    var tops=(d.topPosts||[]).map(function(p){
+      return '<a href="'+(p.permalink||'#')+'" target="_blank" rel="noopener" style="display:flex;gap:10px;align-items:center;padding:8px;border:1px solid var(--borda);border-radius:var(--rad);text-decoration:none;color:inherit;margin-bottom:6px">'
+        +(p.thumb?'<img src="'+p.thumb+'" style="width:42px;height:42px;border-radius:6px;object-fit:cover">':'')
+        +'<div style="flex:1;min-width:0"><div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(p.legenda||'(sem legenda)')+'</div><div style="font-size:11px;color:var(--texto2)">'+p.tipo+' · ❤ '+p.likes+' · 💬 '+p.comentarios+'</div></div>'
+        +'<div style="font-weight:700;color:var(--cor-primaria)">'+p.engaj+'</div></a>';
+    }).join('');
+    var topBox='<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:600;margin-bottom:8px">Posts com mais engajamento</div>'+tops+'</div>';
+    var recs='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:var(--rad);padding:12px"><div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:6px">💡 Recomendações</div><ul style="margin:0;padding-left:18px;font-size:12px;color:#78350f;line-height:1.6">'+(d.recomendacoes||[]).map(function(r){return '<li>'+r+'</li>';}).join('')+'</ul></div>';
+    box.innerHTML=kpis+grow+pub+topBox+recs;
+  }).catch(function(){ box.innerHTML='<p style="color:#dc2626;font-size:13px">Erro ao carregar a análise.</p>'; });
+}
+// Lazy: só busca quando a aba Analytics é aberta (evita ~10 chamadas à API a cada page load).
+(function(){
+  var carregado=false, carregar=function(){ if(carregado) return; carregado=true; carregarAnaliseIG(); };
+  document.addEventListener('DOMContentLoaded',function(){
+    var b=document.querySelector('.mkt-tab[onclick*="analytics"]');
+    if(b) b.addEventListener('click',carregar);
+    if(new URLSearchParams(location.search).get('tab')==='analytics') carregar();
+  });
+})();
 </script>
 </body>
 </html>
