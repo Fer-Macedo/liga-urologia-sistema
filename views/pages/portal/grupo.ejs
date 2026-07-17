@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="shortcut icon" href="/favicon.ico">
-  <title><%=grupo.nome%> — Portal Cientifico</title>
+  <title><%=grupo.nome%> — Portal Científico</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Archivo:wght@700;800&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -100,36 +100,36 @@
 <div class="topbar">
   <div class="topbar-brand">
     <div class="topbar-logo"><%if(config.org_logo){%><img src="<%=config.org_logo%>" alt=""><%}else{%><span style="font-family:'Archivo';font-weight:800;color:#0F6E56;font-size:13px">LU</span><%}%></div>
-    <div><div class="topbar-nome"><%=config.org_nome||'LAURO'%></div><div class="topbar-sub">Portal Cientifico</div></div>
+    <div><div class="topbar-nome"><%=config.org_nome||'LAURO'%></div><div class="topbar-sub">Portal Científico</div></div>
   </div>
   <div class="topbar-right">
     <div class="topbar-menu">
       <span><%=membro.nome%></span>
       <div class="topbar-menu-drop">
-        <a href="/portal/trocar-senha">Alterar senha</a>
+        <a href="/portal/trocar-senha">Cambiar contraseña</a>
       </div>
     </div>
-    <a href="/portal/logout" class="topbar-logout">Sair</a>
+    <a href="/portal/logout" class="topbar-logout">Salir</a>
   </div>
 </div>
 <div class="main">
   <%if(msg&&msg.length){%><div class="alert-ok"><%=msg[0]%></div><%}%>
   <%if(erro&&erro.length){%><div class="alert-err"><%=erro[0]%></div><%}%>
   <div class="pg-header">
-    <a href="/portal" class="pg-back"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Meus grupos</a>
-    <div style="flex:1"><div class="pg-title"><%=grupo.nome%><%if(grupo.status==='encerrado'){%> <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;vertical-align:middle">Encerrado</span><%}%></div><div class="pg-proj"><%=projeto.titulo%></div></div>
+    <a href="/portal" class="pg-back"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>Mis grupos</a>
+    <div style="flex:1"><div class="pg-title"><%=grupo.nome%><%if(grupo.status==='encerrado'){%> <span style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:3px 8px;background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb;vertical-align:middle">Cerrado</span><%}%></div><div class="pg-proj"><%=projeto.titulo%></div></div>
   </div>
   <%if(grupo.status==='encerrado'){%>
   <div style="background:#f3f4f6;border-left:4px solid #6b7280;padding:12px 16px;margin-bottom:20px;font-size:13px;color:#374151">
-    <b>Este grupo foi encerrado.</b> O trabalho ja foi finalizado e nao aceita mais alteracoes — mas continua disponivel aqui para consulta e download a qualquer momento.
+    <b>Este grupo fue cerrado.</b> El trabajo ya fue finalizado y no acepta más cambios — pero sigue disponible aquí para consulta y descarga en cualquier momento.
   </div>
   <%}%>
   <div class="tabs">
-    <button class="tab ativo" onclick="tab(this,'trabalho')">Trabalho</button>
-    <button class="tab" onclick="tab(this,'pesquisa')">Pesquisa</button>
+    <button class="tab ativo" onclick="tab(this,'trabalho')">Trabajo</button>
+    <button class="tab" onclick="tab(this,'pesquisa')">Investigación</button>
     <button class="tab" onclick="tab(this,'avisos')">Avisos</button>
     <button class="tab" onclick="tab(this,'chat')">Chat</button>
-    <button class="tab" onclick="tab(this,'timeline')">Linha do Tempo</button>
+    <button class="tab" onclick="tab(this,'timeline')">Línea de Tiempo</button>
   </div>
 
   <!-- TRABALHO -->
@@ -141,40 +141,40 @@
           <details>
             <summary style="cursor:pointer;font-size:12.5px;color:#6B7A72;list-style:none;display:flex;align-items:center;gap:6px">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9AB0A6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              Ja tem o arquivo pronto? Anexe aqui pra avaliacao
+              ¿Ya tiene el archivo listo? Adjúntelo aquí para evaluación
             </summary>
             <form method="POST" action="/portal/grupo/<%=grupo.id%>/upload" enctype="multipart/form-data" style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
               <input type="file" id="arq-upload" name="arquivo" accept=".pdf,.doc,.docx" style="font-size:12px" onchange="document.getElementById('nome-arq').textContent=this.files[0]?this.files[0].name:''">
-              <button type="submit" class="btn btn-sm">Enviar versao</button>
+              <button type="submit" class="btn btn-sm">Enviar versión</button>
               <span id="nome-arq" style="font-size:12px;color:#0F6E56"></span>
             </form>
           </details>
         </div>
         <%}%>
         <div class="card">
-          <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>Historico de versoes</h3>
-          <%if(versoes.length===0){%><div class="empty-small">Nenhuma versao enviada ainda.</div><%}%>
+          <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>Historial de versiones</h3>
+          <%if(versoes.length===0){%><div class="empty-small">Ninguna versión enviada todavía.</div><%}%>
           <%versoes.forEach(function(v,i){%>
           <div class="versao-item">
-            <div class="versao-nome">v<%=versoes.length-i%> — <%=v.arquivo_nome%> <a href="/portal/grupo/<%=grupo.id%>/versao/<%=v.id%>/download" target="_blank" style="font-size:11px;font-weight:600;color:#0F6E56;margin-left:6px">Baixar</a></div>
-            <div class="versao-meta">Enviado em <%=new Date(v.enviado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%><%if(v.enviado_por_tipo!==meuTipo||v.enviado_por_id!==meuId){%> por colega do grupo<%}%></div>
+            <div class="versao-nome">v<%=versoes.length-i%> — <%=v.arquivo_nome%> <a href="/portal/grupo/<%=grupo.id%>/versao/<%=v.id%>/download" target="_blank" style="font-size:11px;font-weight:600;color:#0F6E56;margin-left:6px">Descargar</a></div>
+            <div class="versao-meta">Enviado el <%=new Date(v.enviado_em).toLocaleDateString('es-PY',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%><%if(v.enviado_por_tipo!==meuTipo||v.enviado_por_id!==meuId){%> por colega del grupo<%}%></div>
             <div><span class="vstatus vstatus-<%=v.status%>"><%=v.status.replace('_',' ')%></span></div>
             <%if(v.comentario_revisor){%>
             <div class="comentario-box <%=v.status%>">
-              <strong><%=v.status==='devolvido'?'⚠ Pontos para corrigir:':(v.status==='aprovado'?'Observacao do revisor:':'Comentario do revisor:')%></strong>
+              <strong><%=v.status==='devolvido'?'⚠ Puntos para corregir:':(v.status==='aprovado'?'Observación del revisor:':'Comentario del revisor:')%></strong>
               <%=v.comentario_revisor%>
             </div>
             <%}%>
             <%if(v.status==='aprovado' && v.enviado_por_tipo===meuTipo && v.enviado_por_id===meuId && grupo.status!=='encerrado'){%>
             <div style="margin-top:10px;padding:12px;background:#f0fdf4;border:1px solid #bbf7d0">
               <%if(v.finalizado_em){%>
-              <div style="font-size:11.5px;color:#15803d;margin-bottom:8px">✓ Trabalho final ja enviado em <%=new Date(v.finalizado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%> — pode reenviar abaixo se precisar substituir.</div>
+              <div style="font-size:11.5px;color:#15803d;margin-bottom:8px">✓ Trabajo final ya enviado el <%=new Date(v.finalizado_em).toLocaleDateString('es-PY',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%> — puede reenviarlo abajo si necesita reemplazarlo.</div>
               <%}else{%>
-              <div style="font-size:11.5px;color:#15803d;margin-bottom:8px">Trabalho aprovado! Cada evento/congresso tem seu proprio modelo (as vezes com logomarca e capa proprias). Adapte o seu trabalho para esse modelo e suba o arquivo final aqui — ele fica salvo no portal pra voce acompanhar ou baixar depois.</div>
+              <div style="font-size:11.5px;color:#15803d;margin-bottom:8px">¡Trabajo aprobado! Cada evento/congreso tiene su propio modelo (a veces con logo y portada propios). Adapte su trabajo a ese modelo y suba el archivo final aquí — queda guardado en el portal para que usted lo acompañe o descargue después.</div>
               <%}%>
               <form method="POST" action="/portal/grupo/<%=grupo.id%>/versao/<%=v.id%>/final" enctype="multipart/form-data" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
                 <input type="file" name="arquivo_final" accept=".pdf,.doc,.docx" style="font-size:12px" required>
-                <button type="submit" class="btn pri btn-sm" style="font-size:11.5px"><%=v.finalizado_em?'Substituir trabalho final':'Enviar trabalho final'%></button>
+                <button type="submit" class="btn pri btn-sm" style="font-size:11.5px"><%=v.finalizado_em?'Reemplazar trabajo final':'Enviar trabajo final'%></button>
               </form>
             </div>
             <%}%>
@@ -182,7 +182,7 @@
             <div style="margin-top:10px">
               <button type="button" class="btn btn-sm" id="btn-ia-<%=v.id%>" onclick="revisarComIA(<%=v.id%>)" style="font-size:11.5px">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>
-                Revisar com IA (pre-check antes de submeter)
+                Revisar con IA (pre-chequeo antes de enviar)
               </button>
               <div class="ia-revisao-box" id="ia-revisao-<%=v.id%>" style="display:none;margin-top:10px;background:#F0F4F2;border:1px solid #DDE3DF;padding:12px 14px;font-size:12.5px"></div>
               <%if(v.ia_revisao){%>
@@ -196,14 +196,14 @@
       </div>
       <div>
         <div class="card">
-          <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Pergunta PICO</h3>
+          <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Pregunta PICO</h3>
           <div style="background:#F0F4F2;border-left:3px solid #0F6E56;padding:10px 12px;margin-bottom:12px;font-size:11.5px;color:#3F5349;line-height:1.5">
-            <b style="color:#0C231B">O que e PICO?</b> E um jeito padronizado de estruturar a pergunta de uma pesquisa cientifica, dividido em 4 partes:
+            <b style="color:#0C231B">¿Qué es PICO?</b> Es una forma estandarizada de estructurar la pregunta de una investigación científica, dividida en 4 partes:
             <div style="margin-top:6px;display:flex;flex-direction:column;gap:2px">
-              <span><b style="color:#0F6E56">P</b> — Populacao/Paciente: quem esta sendo estudado (ex: idosos com fratura de tibia)</span>
-              <span><b style="color:#0F6E56">I</b> — Intervencao: o que sera avaliado/aplicado (ex: um exame, tratamento ou procedimento)</span>
-              <span><b style="color:#0F6E56">C</b> — Comparacao: com o que a intervencao sera comparada (ex: outro tratamento, ou nenhum)</span>
-              <span><b style="color:#0F6E56">O</b> — Outcome/Desfecho: o resultado que se quer medir (ex: reducao do tempo de recuperacao)</span>
+              <span><b style="color:#0F6E56">P</b> — Población/Paciente: quién está siendo estudiado (ej: adultos mayores con fractura de tibia)</span>
+              <span><b style="color:#0F6E56">I</b> — Intervención: qué será evaluado/aplicado (ej: un examen, tratamiento o procedimiento)</span>
+              <span><b style="color:#0F6E56">C</b> — Comparación: con qué será comparada la intervención (ej: otro tratamiento, o ninguno)</span>
+              <span><b style="color:#0F6E56">O</b> — Outcome/Desenlace: el resultado que se quiere medir (ej: reducción del tiempo de recuperación)</span>
             </div>
           </div>
           <%
@@ -220,25 +220,25 @@
               <span><b>O:</b> <%=picoAtual.desfecho%></span>
             </div>
             <%}else{%>
-            <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Descreva sua ideia de estudo em linguagem livre e a IA ajuda a estruturar no formato PICO.</p>
+            <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Describa su idea de estudio en lenguaje libre y la IA ayuda a estructurarla en el formato PICO.</p>
             <%}%>
           </div>
-          <textarea id="pico-ideia" placeholder="Ex: queremos avaliar se o uso de tal exame reduz o tempo de diagnostico em recem-nascidos..." style="width:100%;min-height:60px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;margin-top:8px;box-sizing:border-box"></textarea>
-          <button type="button" class="btn btn-sm" id="btn-pico" onclick="gerarPico()" style="margin-top:8px;font-size:11.5px"><%=picoAtual?'Gerar novamente':'Estruturar com IA'%></button>
+          <textarea id="pico-ideia" placeholder="Ej: queremos evaluar si el uso de tal examen reduce el tiempo de diagnóstico en recién nacidos..." style="width:100%;min-height:60px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;margin-top:8px;box-sizing:border-box"></textarea>
+          <button type="button" class="btn btn-sm" id="btn-pico" onclick="gerarPico()" style="margin-top:8px;font-size:11.5px"><%=picoAtual?'Generar nuevamente':'Estructurar con IA'%></button>
         </div>
         <div class="card">
           <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Documentos</h3>
           <div class="doc-btns">
-            <%if(projeto.edital_chave){%><a href="/portal/arquivo/<%=projeto.id%>/edital" class="btn" target="_blank"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Baixar Edital</a><%}%>
-            <%if(projeto.modelo_chave){%><a href="/portal/arquivo/<%=projeto.id%>/modelo" class="btn" target="_blank"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Baixar Modelo</a><%}%>
-            <%if(!projeto.edital_chave&&!projeto.modelo_chave){%><p style="font-size:12.5px;color:#6B7A72">Nenhum documento disponivel ainda.</p><%}%>
+            <%if(projeto.edital_chave){%><a href="/portal/arquivo/<%=projeto.id%>/edital" class="btn" target="_blank"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Descargar Convocatoria</a><%}%>
+            <%if(projeto.modelo_chave){%><a href="/portal/arquivo/<%=projeto.id%>/modelo" class="btn" target="_blank"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Descargar Modelo</a><%}%>
+            <%if(!projeto.edital_chave&&!projeto.modelo_chave){%><p style="font-size:12.5px;color:#6B7A72">Ningún documento disponible todavía.</p><%}%>
           </div>
         </div>
         <%if(grupo.prazo||projeto.prazo){%>
         <div class="card">
-          <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="0"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Prazo</h3>
-          <p style="font-size:14px;font-weight:700;color:#0C231B"><%=new Date(grupo.prazo||projeto.prazo).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'})%></p>
-          <%if(grupo.prazo){%><p style="font-size:11px;color:#6B7A72;margin-top:4px">Prazo especifico deste trabalho</p><%}%>
+          <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="0"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Plazo</h3>
+          <p style="font-size:14px;font-weight:700;color:#0C231B"><%=new Date(grupo.prazo||projeto.prazo).toLocaleDateString('es-PY',{day:'2-digit',month:'long',year:'numeric'})%></p>
+          <%if(grupo.prazo){%><p style="font-size:11px;color:#6B7A72;margin-top:4px">Plazo específico de este trabajo</p><%}%>
         </div>
         <%}%>
       </div>
@@ -250,69 +250,69 @@
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
       <div class="card">
         <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Buscar Literatura (PubMed)</h3>
-        <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Busca real em artigos publicados, com sintese por IA.</p>
-        <textarea id="pesq-termo" placeholder="Ex: cateter duplo J e infeccao urinaria" style="width:100%;min-height:50px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"></textarea>
+        <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Búsqueda real en artículos publicados, con síntesis por IA.</p>
+        <textarea id="pesq-termo" placeholder="Ej: catéter doble J e infección urinaria" style="width:100%;min-height:50px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"></textarea>
         <button type="button" class="btn btn-sm" id="btn-pesq" onclick="buscarLiteratura()" style="margin-top:8px;font-size:11.5px">Buscar</button>
         <div id="pesq-resultado" style="margin-top:12px;font-size:12.5px"></div>
       </div>
       <div class="card">
-        <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/><rect x="3" y="3" width="18" height="18"/></svg>Artigos Relacionados (Semantic Scholar)</h3>
-        <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Cole o titulo do seu artigo base para encontrar trabalhos relacionados.</p>
-        <textarea id="relac-termo" placeholder="Cole o titulo ou tema do artigo" style="width:100%;min-height:50px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"></textarea>
+        <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/><rect x="3" y="3" width="18" height="18"/></svg>Artículos Relacionados (Semantic Scholar)</h3>
+        <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Pegue el título de su artículo base para encontrar trabajos relacionados.</p>
+        <textarea id="relac-termo" placeholder="Pegue el título o tema del artículo" style="width:100%;min-height:50px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"></textarea>
         <button type="button" class="btn btn-sm" id="btn-relac" onclick="buscarRelacionados()" style="margin-top:8px;font-size:11.5px">Buscar relacionados</button>
         <div id="relac-resultado" style="margin-top:12px;font-size:12.5px"></div>
       </div>
     </div>
     <div class="card">
-      <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>Polir Texto Cientifico</h3>
-      <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Cole um trecho (ou o trabalho todo) para deixar em tom cientifico formal e receber sugestoes de titulo. Depois, copie o resultado e cole no Editor de Documento abaixo — e de la que o trabalho final e gerado.</p>
-      <textarea id="polir-texto" placeholder="Cole seu texto aqui..." style="width:100%;min-height:140px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"></textarea>
-      <button type="button" class="btn btn-sm" id="btn-polir" onclick="polirTexto()" style="margin-top:8px;font-size:11.5px">Polir texto</button>
+      <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8"/></svg>Pulir Texto Científico</h3>
+      <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Pegue un fragmento (o el trabajo completo) para darle un tono científico formal y recibir sugerencias de título. Luego, copie el resultado y péguelo en el Editor de Documento abajo — es allí donde se genera el trabajo final.</p>
+      <textarea id="polir-texto" placeholder="Pegue su texto aquí..." style="width:100%;min-height:140px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box"></textarea>
+      <button type="button" class="btn btn-sm" id="btn-polir" onclick="polirTexto()" style="margin-top:8px;font-size:11.5px">Pulir texto</button>
       <div id="polir-resultado" style="margin-top:12px;font-size:12.5px"></div>
     </div>
     <div class="card" style="margin-top:20px">
       <h3><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg>Editor de Documento</h3>
       <%if(!souDonoRascunho){%>
       <div style="background:#fff7ed;border-left:3px solid #c2410c;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#7c2d12">
-        <b>Este trabalho pertence a <%=donoNomeRascunho%>.</b> Voce pode visualizar e copiar o conteudo abaixo, mas somente <%=donoNomeRascunho%> (ou a equipe do Cientifico) pode editar ou enviar para avaliacao.
+        <b>Este trabajo pertenece a <%=donoNomeRascunho%>.</b> Usted puede visualizar y copiar el contenido abajo, pero solo <%=donoNomeRascunho%> (o el equipo del Científico) puede editar o enviar para evaluación.
       </div>
       <%}else if(grupo.status==='encerrado'){%>
       <div style="background:#f3f4f6;border-left:3px solid #6b7280;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#374151">
-        Este grupo foi encerrado — o conteudo abaixo e so para consulta, nao aceita mais edicoes.
+        Este grupo fue cerrado — el contenido abajo es solo para consulta, no acepta más ediciones.
       </div>
       <%}%>
-      <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Escreva ou cole o trabalho final aqui (pode colar o texto ja polido acima). O rascunho fica salvo no sistema — pode continuar de qualquer lugar depois, sem perder nada. Escolha a norma, edite direto no Google Docs se quiser, e so envie para avaliacao quando estiver pronto.</p>
-      <input type="text" id="editor-titulo" placeholder="Titulo do trabalho" value="<%=rascunho&&rascunho.titulo?rascunho.titulo:''%>" <%=podeEditarRascunho?'':'readonly'%> style="width:100%;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box;margin-bottom:8px<%=podeEditarRascunho?'':';background:#F8FAF9'%>">
-      <textarea id="editor-documento" placeholder="Escreva o trabalho aqui... (separe secoes/paragrafos com uma linha em branco)" <%=podeEditarRascunho?'':'readonly'%> style="width:100%;min-height:220px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box<%=podeEditarRascunho?'':';background:#F8FAF9'%>"><%=rascunho&&rascunho.texto?rascunho.texto:''%></textarea>
+      <p style="font-size:12px;color:#6B7A72;margin-bottom:10px">Escriba o pegue el trabajo final aquí (puede pegar el texto ya pulido arriba). El borrador queda guardado en el sistema — puede continuar desde cualquier lugar después, sin perder nada. Elija la norma, edite directo en Google Docs si quiere, y solo envíe para evaluación cuando esté listo.</p>
+      <input type="text" id="editor-titulo" placeholder="Título del trabajo" value="<%=rascunho&&rascunho.titulo?rascunho.titulo:''%>" <%=podeEditarRascunho?'':'readonly'%> style="width:100%;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box;margin-bottom:8px<%=podeEditarRascunho?'':';background:#F8FAF9'%>">
+      <textarea id="editor-documento" placeholder="Escriba el trabajo aquí... (separe secciones/párrafos con una línea en blanco)" <%=podeEditarRascunho?'':'readonly'%> style="width:100%;min-height:220px;font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF;box-sizing:border-box<%=podeEditarRascunho?'':';background:#F8FAF9'%>"><%=rascunho&&rascunho.texto?rascunho.texto:''%></textarea>
       <%if(podeEditarRascunho){%>
       <div style="display:flex;gap:10px;align-items:center;margin-top:8px;flex-wrap:wrap">
         <select id="editor-norma" style="font-size:12.5px;font-family:inherit;padding:8px;border:1px solid #DDE3DF">
           <option value="abnt" <%=(!rascunho||rascunho.norma==='abnt')?'selected':''%>>Norma ABNT</option>
           <option value="vancouver" <%=(rascunho&&rascunho.norma==='vancouver')?'selected':''%>>Norma Vancouver</option>
         </select>
-        <button type="button" class="btn btn-sm" id="btn-rascunho-salvar" onclick="salvarRascunho()" style="font-size:11.5px">Salvar rascunho</button>
-        <button type="button" class="btn btn-sm" id="btn-rascunho-google" onclick="editarNoGoogle()" style="font-size:11.5px">Editar no Google Docs</button>
-        <button type="button" class="btn btn-sm" id="btn-rascunho-baixar" onclick="baixarRascunho()" style="font-size:11.5px">Baixar Word</button>
+        <button type="button" class="btn btn-sm" id="btn-rascunho-salvar" onclick="salvarRascunho()" style="font-size:11.5px">Guardar borrador</button>
+        <button type="button" class="btn btn-sm" id="btn-rascunho-google" onclick="editarNoGoogle()" style="font-size:11.5px">Editar en Google Docs</button>
+        <button type="button" class="btn btn-sm" id="btn-rascunho-baixar" onclick="baixarRascunho()" style="font-size:11.5px">Descargar Word</button>
       </div>
       <%}%>
       <div id="editor-resultado" style="margin-top:12px;font-size:12.5px"></div>
       <div id="google-doc-area" style="margin-top:14px;<%=rascunho&&rascunho.google_embed_url?'':'display:none'%>">
         <div style="display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-          <a id="link-google-abrir" href="<%=rascunho&&rascunho.google_doc_url?rascunho.google_doc_url:'#'%>" target="_blank" class="btn btn-sm" style="font-size:11.5px">Abrir em nova aba</a>
-          <a id="link-google-baixar" href="<%=rascunho&&rascunho.google_file_id?('https://docs.google.com/document/d/'+rascunho.google_file_id+'/export?format=docx'):'#'%>" class="btn btn-sm" style="font-size:11.5px">Baixar Word (Google)</a>
+          <a id="link-google-abrir" href="<%=rascunho&&rascunho.google_doc_url?rascunho.google_doc_url:'#'%>" target="_blank" class="btn btn-sm" style="font-size:11.5px">Abrir en nueva pestaña</a>
+          <a id="link-google-baixar" href="<%=rascunho&&rascunho.google_file_id?('https://docs.google.com/document/d/'+rascunho.google_file_id+'/export?format=docx'):'#'%>" class="btn btn-sm" style="font-size:11.5px">Descargar Word (Google)</a>
           <a id="link-google-imprimir" href="<%=rascunho&&rascunho.google_file_id?('https://docs.google.com/document/d/'+rascunho.google_file_id+'/export?format=pdf'):'#'%>" target="_blank" class="btn btn-sm" style="font-size:11.5px">Imprimir / PDF</a>
         </div>
         <iframe id="google-doc-iframe" src="<%=rascunho&&rascunho.google_embed_url?rascunho.google_embed_url:''%>" style="width:100%;min-height:520px;border:1px solid #DDE3DF"></iframe>
       </div>
       <%if(souDonoRascunho){%>
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid #DDE3DF">
-        <p style="font-size:12px;color:#6B7A72;margin-bottom:8px">Antes de enviar, peça uma última conferência da IA — ela aponta pontos fortes, pontos de atenção e se a estrutura do trabalho parece completa. Não substitui a avaliação da equipe do Científico, é só um pré-check.</p>
-        <button type="button" class="btn btn-sm" id="btn-rascunho-ia" onclick="revisarRascunhoComIA()" style="font-size:11.5px">Revisar com IA antes de enviar</button>
+        <p style="font-size:12px;color:#6B7A72;margin-bottom:8px">Antes de enviar, pida una última revisión de la IA — señala puntos fuertes, puntos de atención y si la estructura del trabajo parece completa. No sustituye la evaluación del equipo del Científico, es solo un pre-chequeo.</p>
+        <button type="button" class="btn btn-sm" id="btn-rascunho-ia" onclick="revisarRascunhoComIA()" style="font-size:11.5px">Revisar con IA antes de enviar</button>
         <div id="ia-revisao-rascunho" style="margin-top:10px;background:#F0F4F2;border:1px solid #DDE3DF;padding:12px 14px;font-size:12.5px;display:none"></div>
       </div>
       <div style="margin-top:16px;padding-top:14px;border-top:1px solid #DDE3DF">
-        <p style="font-size:12px;color:#6B7A72;margin-bottom:8px">Quando o trabalho estiver pronto (revisado, sem o bloco de orientacoes), envie para avaliacao da equipe do Cientifico. Voce pode fazer isso a qualquer momento, de qualquer lugar.</p>
-        <button type="button" class="btn pri btn-sm" id="btn-rascunho-enviar" onclick="enviarRascunhoParaAvaliacao()" style="font-size:11.5px">Enviar para avaliacao</button>
+        <p style="font-size:12px;color:#6B7A72;margin-bottom:8px">Cuando el trabajo esté listo (revisado, sin el bloque de orientaciones), envíelo para evaluación del equipo del Científico. Usted puede hacerlo en cualquier momento, desde cualquier lugar.</p>
+        <button type="button" class="btn pri btn-sm" id="btn-rascunho-enviar" onclick="enviarRascunhoParaAvaliacao()" style="font-size:11.5px">Enviar para evaluación</button>
         <div id="rascunho-envio-status" style="margin-top:8px;font-size:12.5px"></div>
       </div>
       <%}%>
@@ -321,10 +321,10 @@
 
   <!-- AVISOS -->
   <div id="tab-avisos" class="tab-content">
-    <%if(avisos.length===0){%><div class="empty-small">Nenhum aviso publicado ainda.</div><%}%>
+    <%if(avisos.length===0){%><div class="empty-small">Ningún aviso publicado todavía.</div><%}%>
     <%avisos.forEach(function(a){%>
     <div class="aviso-item">
-      <div class="aviso-meta"><%=new Date(a.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%></div>
+      <div class="aviso-meta"><%=new Date(a.criado_em).toLocaleDateString('es-PY',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%></div>
       <div class="aviso-texto"><%=a.texto%></div>
     </div>
     <%})%>
@@ -334,19 +334,19 @@
   <div id="tab-chat" class="tab-content">
     <div style="max-width:680px">
       <div class="chat-msgs" id="chat-msgs">
-        <%if(chat.length===0){%><div style="text-align:center;color:#6B7A72;font-size:13px;margin:auto">Nenhuma mensagem ainda.</div><%}%>
+        <%if(chat.length===0){%><div style="text-align:center;color:#6B7A72;font-size:13px;margin:auto">Ningún mensaje todavía.</div><%}%>
         <%chat.forEach(function(c){%>
         <div class="chat-msg <%=c.autor_tipo%>">
           <div class="chat-autor"><%=c.autor_nome%></div>
           <%if(c.texto){%><div class="chat-texto"><%=c.texto%></div><%}%>
         <%if(c.arquivo_nome){%><div style="margin-top:5px"><a href="/portal/chat-arquivo/<%=c.id%>" target="_blank" style="font-size:12px;display:inline-flex;align-items:center;gap:5px;padding:4px 8px;background:rgba(0,0,0,.07);text-decoration:none;color:inherit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg><%=c.arquivo_nome%></a></div><%}%>
-          <div class="chat-hora"><%=new Date(c.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})%></div>
+          <div class="chat-hora"><%=new Date(c.criado_em).toLocaleDateString('es-PY',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})%></div>
         </div>
         <%})%>
       </div>
       <form method="POST" action="/portal/grupo/<%=grupo.id%>/chat" enctype="multipart/form-data" class="chat-input-wrap" style="flex-direction:column;gap:8px">
         <div style="display:flex;gap:8px">
-          <textarea name="texto" placeholder="Mensagem para o grupo..." onkeydown="if(event.ctrlKey&&event.key==='Enter'){this.form.submit()}" style="flex:1;padding:9px 12px;border:1px solid #DDE3DF;background:#fff;color:#0C231B;font-size:13px;resize:none;height:48px;font-family:inherit;border-radius:0;outline:none"></textarea>
+          <textarea name="texto" placeholder="Mensaje para el grupo..." onkeydown="if(event.ctrlKey&&event.key==='Enter'){this.form.submit()}" style="flex:1;padding:9px 12px;border:1px solid #DDE3DF;background:#fff;color:#0C231B;font-size:13px;resize:none;height:48px;font-family:inherit;border-radius:0;outline:none"></textarea>
           <button type="submit" class="btn pri" style="height:48px;padding:0 16px">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           </button>
@@ -354,7 +354,7 @@
         <div style="display:flex;align-items:center;gap:8px">
           <label style="cursor:pointer;font-size:12px;color:#6B7A72;display:inline-flex;align-items:center;gap:5px;border:1px solid #DDE3DF;padding:5px 10px;background:#F8FAF9">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
-            Anexar arquivo
+            Adjuntar archivo
             <input type="file" name="arquivo_chat" style="display:none" accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.png,.jpg,.jpeg,.gif" onchange="document.getElementById('nc-portal').textContent=this.files[0]?this.files[0].name:''">
           </label>
           <span id="nc-portal" style="font-size:11px;color:#0F6E56"></span>
@@ -367,14 +367,14 @@
   <!-- TIMELINE -->
   <div id="tab-timeline" class="tab-content">
     <div style="max-width:520px">
-      <%if(timeline.length===0){%><div class="empty-small">Nenhum evento registrado ainda.</div><%}%>
+      <%if(timeline.length===0){%><div class="empty-small">Ningún evento registrado todavía.</div><%}%>
       <%timeline.forEach(function(t){%>
       <div class="tl-item">
         <div class="tl-dot"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#9AB0A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/></svg></div>
         <div style="flex:1;padding-top:3px">
           <div class="tl-evento"><%=t.evento%></div>
           <%if(t.descricao){%><div class="tl-desc"><%=t.descricao%></div><%}%>
-          <div class="tl-hora"><%=new Date(t.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%></div>
+          <div class="tl-hora"><%=new Date(t.criado_em).toLocaleDateString('es-PY',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})%></div>
         </div>
       </div>
       <%})%>
@@ -389,7 +389,7 @@
       <div class="prazo-titulo" id="prazo-titulo"></div>
       <div class="prazo-texto" id="prazo-texto"></div>
       <div class="prazo-btns">
-        <button class="btn" onclick="fecharPrazoModal()">Ja vi, obrigado</button>
+        <button class="btn" onclick="fecharPrazoModal()">Ya lo vi, gracias</button>
       </div>
     </div>
   </div>
@@ -405,12 +405,12 @@
   var texto = document.getElementById('prazo-texto');
   var card = document.getElementById('prazo-card');
   if (dias === 0) {
-    titulo.textContent = 'Hoje e o ultimo dia do prazo!';
-    texto.textContent = 'O prazo para enviar este trabalho termina hoje. Envie o quanto antes pela aba Trabalho.';
+    titulo.textContent = '¡Hoy es el último día del plazo!';
+    texto.textContent = 'El plazo para enviar este trabajo termina hoy. Envíelo lo antes posible desde la pestaña Trabajo.';
     card.classList.add('urgente');
   } else {
-    titulo.textContent = 'Faltam '+dias+(dias===1?' dia':' dias')+' para o prazo!';
-    texto.textContent = 'O prazo para enviar este trabalho esta chegando. Nao deixe para a ultima hora.';
+    titulo.textContent = '¡Faltan '+dias+(dias===1?' día':' días')+' para el plazo!';
+    texto.textContent = 'El plazo para enviar este trabajo se acerca. No lo deje para último momento.';
     if (dias<=1) card.classList.add('urgente');
   }
   document.getElementById('prazo-modal').classList.add('open');
@@ -434,13 +434,13 @@ document.addEventListener('DOMContentLoaded',function(){
 
 var GRUPO_ID = <%=grupo.id%>;
 var PROJETO_ID = <%=projeto.id%>;
-var statusLbl = {ok:{txt:'OK',cor:'#15803d',bg:'#f0fdf4'},atencao:{txt:'Atencao',cor:'#c2410c',bg:'#fff7ed'},ausente:{txt:'Ausente',cor:'#b91c1c',bg:'#fef2f2'}};
+var statusLbl = {ok:{txt:'OK',cor:'#15803d',bg:'#f0fdf4'},atencao:{txt:'Atención',cor:'#c2410c',bg:'#fff7ed'},ausente:{txt:'Ausente',cor:'#b91c1c',bg:'#fef2f2'}};
 
 function renderRevisaoIA(versaoId, revisao) {
   var box = document.getElementById('ia-revisao-'+versaoId);
   if(!box) return;
   var html = '';
-  if(revisao.resumo) html += '<div style="margin-bottom:10px"><b>Resumo:</b> '+revisao.resumo+'</div>';
+  if(revisao.resumo) html += '<div style="margin-bottom:10px"><b>Resumen:</b> '+revisao.resumo+'</div>';
   if(revisao.estrutura_imrad){
     html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">';
     ['introducao','metodos','resultados','discussao'].forEach(function(k){
@@ -451,17 +451,17 @@ function renderRevisaoIA(versaoId, revisao) {
     html += '</div>';
   }
   if(revisao.pontos_fortes && revisao.pontos_fortes.length){
-    html += '<div style="margin-bottom:8px"><b style="color:#15803d">Pontos fortes:</b><ul style="margin:4px 0 0 18px">';
+    html += '<div style="margin-bottom:8px"><b style="color:#15803d">Puntos fuertes:</b><ul style="margin:4px 0 0 18px">';
     revisao.pontos_fortes.forEach(function(p){ html += '<li>'+p+'</li>'; });
     html += '</ul></div>';
   }
   if(revisao.pontos_atencao && revisao.pontos_atencao.length){
-    html += '<div style="margin-bottom:8px"><b style="color:#c2410c">Pontos de atencao:</b><ul style="margin:4px 0 0 18px">';
+    html += '<div style="margin-bottom:8px"><b style="color:#c2410c">Puntos de atención:</b><ul style="margin:4px 0 0 18px">';
     revisao.pontos_atencao.forEach(function(p){ html += '<li>'+p+'</li>'; });
     html += '</ul></div>';
   }
   if(revisao.sugestao_periodicos && revisao.sugestao_periodicos.length){
-    html += '<div><b>Periodicos sugeridos:</b> '+revisao.sugestao_periodicos.join(', ')+'</div>';
+    html += '<div><b>Revistas sugeridas:</b> '+revisao.sugestao_periodicos.join(', ')+'</div>';
   }
   box.innerHTML = html;
   box.style.display = 'block';
@@ -472,24 +472,24 @@ function revisarComIA(versaoId) {
   var box = document.getElementById('ia-revisao-'+versaoId);
   btn.disabled = true;
   var orig = btn.innerHTML;
-  btn.innerHTML = 'Analisando... (pode levar ate 30s)';
+  btn.innerHTML = 'Analizando... (puede tardar hasta 30s)';
   fetch('/portal/grupo/'+GRUPO_ID+'/versao/'+versaoId+'/revisar-ia', { method: 'POST', credentials: 'same-origin' })
     .then(function(r){ return r.json(); })
     .then(function(data){
       btn.disabled = false; btn.innerHTML = orig;
-      if(!data.ok){ box.style.display='block'; box.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro ao revisar.')+'</span>'; return; }
+      if(!data.ok){ box.style.display='block'; box.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Error al revisar.')+'</span>'; return; }
       renderRevisaoIA(versaoId, data.revisao);
     })
-    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; box.style.display='block'; box.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; box.style.display='block'; box.innerHTML='<span style="color:#b91c1c">Error de conexión.</span>'; });
 }
 
 function gerarPico() {
   var ideia = document.getElementById('pico-ideia').value.trim();
-  if(!ideia){ alert('Descreva a ideia do estudo primeiro.'); return; }
+  if(!ideia){ alert('Describa la idea del estudio primero.'); return; }
   var btn = document.getElementById('btn-pico');
   btn.disabled = true;
   var orig = btn.innerHTML;
-  btn.innerHTML = 'Gerando...';
+  btn.innerHTML = 'Generando...';
   fetch('/portal/projeto/'+PROJETO_ID+'/pico', {
     method: 'POST', credentials: 'same-origin',
     headers: {'Content-Type':'application/x-www-form-urlencoded'},
@@ -497,8 +497,8 @@ function gerarPico() {
   })
     .then(function(r){ return r.json(); })
     .then(function(data){
-      btn.disabled = false; btn.innerHTML = 'Gerar novamente';
-      if(!data.ok){ alert(data.erro || 'Erro ao gerar PICO.'); return; }
+      btn.disabled = false; btn.innerHTML = 'Generar nuevamente';
+      if(!data.ok){ alert(data.erro || 'Error al generar PICO.'); return; }
       var p = data.pico;
       document.getElementById('pico-conteudo').innerHTML =
         '<div style="font-size:12.5px;color:#0C231B;margin-bottom:10px;line-height:1.5">'+p.pergunta_formatada+'</div>'
@@ -508,11 +508,11 @@ function gerarPico() {
         + '<span><b>C:</b> '+p.comparacao+'</span>'
         + '<span><b>O:</b> '+p.desfecho+'</span></div>';
     })
-    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; alert('Erro de conexao.'); });
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; alert('Error de conexión.'); });
 }
 
 function listaArtigosHtml(artigos) {
-  if(!artigos || !artigos.length) return '<p style="color:#6B7A72">Nenhum artigo encontrado.</p>';
+  if(!artigos || !artigos.length) return '<p style="color:#6B7A72">Ningún artículo encontrado.</p>';
   return '<div style="display:flex;flex-direction:column;gap:8px">' + artigos.map(function(a){
     return '<a href="'+a.link+'" target="_blank" style="display:block;text-decoration:none;color:inherit;border:1px solid #DDE3DF;padding:10px 12px">'
       + '<div style="font-weight:700;color:#0C231B;font-size:12.5px">'+a.titulo+'</div>'
@@ -523,7 +523,7 @@ function listaArtigosHtml(artigos) {
 
 function buscarLiteratura() {
   var termo = document.getElementById('pesq-termo').value.trim();
-  if(!termo){ alert('Descreva o tema da busca.'); return; }
+  if(!termo){ alert('Describa el tema de la búsqueda.'); return; }
   var btn = document.getElementById('btn-pesq');
   var out = document.getElementById('pesq-resultado');
   btn.disabled = true; var orig = btn.innerHTML; btn.innerHTML = 'Buscando...';
@@ -536,18 +536,18 @@ function buscarLiteratura() {
     .then(function(r){ return r.json(); })
     .then(function(data){
       btn.disabled = false; btn.innerHTML = orig;
-      if(!data.ok){ out.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro na busca.')+'</span>'; return; }
+      if(!data.ok){ out.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Error en la búsqueda.')+'</span>'; return; }
       var html = '';
-      if(data.sintese) html += '<div style="background:#F0F4F2;padding:10px 12px;margin-bottom:10px;border:1px solid #DDE3DF"><b>Sintese:</b> '+data.sintese+'</div>';
+      if(data.sintese) html += '<div style="background:#F0F4F2;padding:10px 12px;margin-bottom:10px;border:1px solid #DDE3DF"><b>Síntesis:</b> '+data.sintese+'</div>';
       html += listaArtigosHtml(data.artigos);
       out.innerHTML = html;
     })
-    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Error de conexión.</span>'; });
 }
 
 function buscarRelacionados() {
   var termo = document.getElementById('relac-termo').value.trim();
-  if(!termo){ alert('Cole um titulo ou tema.'); return; }
+  if(!termo){ alert('Pegue un título o tema.'); return; }
   var btn = document.getElementById('btn-relac');
   var out = document.getElementById('relac-resultado');
   btn.disabled = true; var orig = btn.innerHTML; btn.innerHTML = 'Buscando...';
@@ -560,18 +560,18 @@ function buscarRelacionados() {
     .then(function(r){ return r.json(); })
     .then(function(data){
       btn.disabled = false; btn.innerHTML = orig;
-      if(!data.ok){ out.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro na busca.')+'</span>'; return; }
+      if(!data.ok){ out.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Error en la búsqueda.')+'</span>'; return; }
       out.innerHTML = listaArtigosHtml(data.artigos);
     })
-    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Error de conexión.</span>'; });
 }
 
 function polirTexto() {
   var texto = document.getElementById('polir-texto').value.trim();
-  if(!texto){ alert('Cole o texto primeiro.'); return; }
+  if(!texto){ alert('Pegue el texto primero.'); return; }
   var btn = document.getElementById('btn-polir');
   var out = document.getElementById('polir-resultado');
-  btn.disabled = true; var orig = btn.innerHTML; btn.innerHTML = 'Analisando...';
+  btn.disabled = true; var orig = btn.innerHTML; btn.innerHTML = 'Analizando...';
   out.innerHTML = '';
   fetch('/portal/grupo/'+GRUPO_ID+'/polir-texto', {
     method: 'POST', credentials: 'same-origin',
@@ -581,16 +581,16 @@ function polirTexto() {
     .then(function(r){ return r.json(); })
     .then(function(data){
       btn.disabled = false; btn.innerHTML = orig;
-      if(!data.ok){ out.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro ao polir texto.')+'</span>'; return; }
+      if(!data.ok){ out.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Error al pulir el texto.')+'</span>'; return; }
       var r = data.resultado;
       var html = '<div style="background:#F0F4F2;padding:10px 12px;border:1px solid #DDE3DF;margin-bottom:8px">'+r.texto_polido+'</div>';
       if(r.sugestoes_titulo && r.sugestoes_titulo.length){
-        html += '<div><b>Sugestoes de titulo:</b><ul style="margin:4px 0 0 18px">' + r.sugestoes_titulo.map(function(t){return '<li>'+t+'</li>';}).join('') + '</ul></div>';
+        html += '<div><b>Sugerencias de título:</b><ul style="margin:4px 0 0 18px">' + r.sugestoes_titulo.map(function(t){return '<li>'+t+'</li>';}).join('') + '</ul></div>';
       }
-      html += '<p style="margin-top:8px;color:#6B7A72">Copie o texto acima e cole no Editor de Documento, mais abaixo.</p>';
+      html += '<p style="margin-top:8px;color:#6B7A72">Copie el texto de arriba y péguelo en el Editor de Documento, más abajo.</p>';
       out.innerHTML = html;
     })
-    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Error de conexión.</span>'; });
 }
 
 function _editorCampos() {
@@ -606,7 +606,7 @@ function salvarRascunho() {
   var btn = document.getElementById('btn-rascunho-salvar');
   var out = document.getElementById('editor-resultado');
   var orig = btn.innerHTML;
-  btn.disabled = true; btn.innerHTML = 'Salvando...';
+  btn.disabled = true; btn.innerHTML = 'Guardando...';
   fetch('/portal/grupo/'+GRUPO_ID+'/rascunho/salvar', {
     method: 'POST', credentials: 'same-origin',
     headers: {'Content-Type':'application/x-www-form-urlencoded'},
@@ -615,25 +615,25 @@ function salvarRascunho() {
     .then(function(r){ return r.json(); })
     .then(function(data){
       btn.disabled = false; btn.innerHTML = orig;
-      out.innerHTML = data.ok ? '<span style="color:#0F6E56">Rascunho salvo! Pode continuar de onde parou a qualquer momento.</span>' : '<span style="color:#b91c1c">'+(data.erro||'Erro ao salvar.')+'</span>';
+      out.innerHTML = data.ok ? '<span style="color:#0F6E56">¡Borrador guardado! Puede continuar desde donde quedó en cualquier momento.</span>' : '<span style="color:#b91c1c">'+(data.erro||'Error al guardar.')+'</span>';
     })
-    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Error de conexión.</span>'; });
 }
 
 function baixarRascunho() {
   var c = _editorCampos();
   var btn = document.getElementById('btn-rascunho-baixar');
   var out = document.getElementById('editor-resultado');
-  if(!c.texto){ out.innerHTML = '<span style="color:#b91c1c">Escreva ou cole o trabalho primeiro.</span>'; return; }
+  if(!c.texto){ out.innerHTML = '<span style="color:#b91c1c">Escriba o pegue el trabajo primero.</span>'; return; }
   var orig = btn.innerHTML;
-  btn.disabled = true; btn.innerHTML = 'Gerando...';
+  btn.disabled = true; btn.innerHTML = 'Generando...';
   fetch('/portal/grupo/'+GRUPO_ID+'/rascunho/baixar', {
     method: 'POST', credentials: 'same-origin',
     headers: {'Content-Type':'application/x-www-form-urlencoded'},
     body: 'texto=' + encodeURIComponent(c.texto) + '&titulo=' + encodeURIComponent(c.titulo) + '&norma=' + encodeURIComponent(c.norma)
   })
     .then(function(r){
-      if(!r.ok) return r.text().then(function(t){ throw new Error(t || 'Erro ao gerar o documento.'); });
+      if(!r.ok) return r.text().then(function(t){ throw new Error(t || 'Error al generar el documento.'); });
       return r.blob();
     })
     .then(function(blob){
@@ -641,21 +641,21 @@ function baixarRascunho() {
       var url = URL.createObjectURL(blob);
       var a = document.createElement('a');
       a.href = url;
-      a.download = (c.titulo || 'Trabalho Cientifico').replace(/[^a-zA-Z0-9 ]+/g,'').trim() + '.docx';
+      a.download = (c.titulo || 'Trabajo Científico').replace(/[^a-zA-Z0-9 ]+/g,'').trim() + '.docx';
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      out.innerHTML = '<span style="color:#0F6E56">Documento baixado.</span>';
+      out.innerHTML = '<span style="color:#0F6E56">Documento descargado.</span>';
     })
-    .catch(function(e){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">'+(e.message||'Erro de conexao.')+'</span>'; });
+    .catch(function(e){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">'+(e.message||'Error de conexión.')+'</span>'; });
 }
 
 function editarNoGoogle() {
   var c = _editorCampos();
   var btn = document.getElementById('btn-rascunho-google');
   var out = document.getElementById('editor-resultado');
-  if(!c.texto){ out.innerHTML = '<span style="color:#b91c1c">Escreva ou cole o trabalho primeiro.</span>'; return; }
+  if(!c.texto){ out.innerHTML = '<span style="color:#b91c1c">Escriba o pegue el trabajo primero.</span>'; return; }
   var orig = btn.innerHTML;
-  btn.disabled = true; btn.innerHTML = 'Abrindo no Google Docs...';
+  btn.disabled = true; btn.innerHTML = 'Abriendo en Google Docs...';
   fetch('/portal/grupo/'+GRUPO_ID+'/rascunho/editar-google', {
     method: 'POST', credentials: 'same-origin',
     headers: {'Content-Type':'application/x-www-form-urlencoded'},
@@ -664,15 +664,15 @@ function editarNoGoogle() {
     .then(function(r){ return r.json(); })
     .then(function(data){
       btn.disabled = false; btn.innerHTML = orig;
-      if(!data.ok){ out.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro ao abrir no Google Docs.')+'</span>'; return; }
+      if(!data.ok){ out.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Error al abrir en Google Docs.')+'</span>'; return; }
       document.getElementById('google-doc-area').style.display = '';
       document.getElementById('google-doc-iframe').src = data.embedUrl;
       document.getElementById('link-google-abrir').href = data.docUrl;
       document.getElementById('link-google-baixar').href = 'https://docs.google.com/document/d/'+data.fileId+'/export?format=docx';
       document.getElementById('link-google-imprimir').href = 'https://docs.google.com/document/d/'+data.fileId+'/export?format=pdf';
-      out.innerHTML = '<span style="color:#0F6E56">Documento aberto no Google Docs abaixo. Edite direto ali — e salvo automaticamente pelo Google. So quem tiver acesso a esta pagina do grupo consegue editar; apos enviar para avaliacao, o documento e travado automaticamente (fica so-leitura).</span>';
+      out.innerHTML = '<span style="color:#0F6E56">Documento abierto en Google Docs abajo. Edite directo ahí — se guarda automáticamente por Google. Solo quien tenga acceso a esta página del grupo puede editar; después de enviar para evaluación, el documento se bloquea automáticamente (queda de solo lectura).</span>';
     })
-    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; out.innerHTML='<span style="color:#b91c1c">Error de conexión.</span>'; });
 }
 
 function revisarRascunhoComIA() {
@@ -680,16 +680,16 @@ function revisarRascunhoComIA() {
   var box = document.getElementById('ia-revisao-rascunho');
   btn.disabled = true;
   var orig = btn.innerHTML;
-  btn.innerHTML = 'Analisando... (pode levar ate 30s)';
+  btn.innerHTML = 'Analizando... (puede tardar hasta 30s)';
   box.style.display = 'none';
   fetch('/portal/grupo/'+GRUPO_ID+'/rascunho/revisar-ia', { method: 'POST', credentials: 'same-origin' })
     .then(function(r){ return r.json(); })
     .then(function(data){
       btn.disabled = false; btn.innerHTML = orig;
-      if(!data.ok){ box.style.display='block'; box.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro ao revisar.')+'</span>'; return; }
+      if(!data.ok){ box.style.display='block'; box.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Error al revisar.')+'</span>'; return; }
       renderRevisaoIA('rascunho', data.revisao);
     })
-    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; box.style.display='block'; box.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; box.style.display='block'; box.innerHTML='<span style="color:#b91c1c">Error de conexión.</span>'; });
 }
 
 function enviarRascunhoParaAvaliacao() {
@@ -702,11 +702,11 @@ function enviarRascunhoParaAvaliacao() {
     .then(function(r){ return r.json(); })
     .then(function(data){
       btn.disabled = false; btn.innerHTML = orig;
-      if(!data.ok){ statusEl.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Erro ao enviar.')+'</span>'; return; }
-      statusEl.innerHTML = '<span style="color:#0F6E56">Enviado para avaliacao! O documento foi travado (so-leitura) para ninguem editar por acidente ate a correcao. Atualizando pagina...</span>';
+      if(!data.ok){ statusEl.innerHTML = '<span style="color:#b91c1c">'+(data.erro||'Error al enviar.')+'</span>'; return; }
+      statusEl.innerHTML = '<span style="color:#0F6E56">¡Enviado para evaluación! El documento fue bloqueado (solo lectura) para que nadie lo edite por accidente hasta la corrección. Actualizando página...</span>';
       setTimeout(function(){ location.reload(); }, 1200);
     })
-    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; statusEl.innerHTML='<span style="color:#b91c1c">Erro de conexao.</span>'; });
+    .catch(function(){ btn.disabled=false; btn.innerHTML=orig; statusEl.innerHTML='<span style="color:#b91c1c">Error de conexión.</span>'; });
 }
 </script>
 </body></html>

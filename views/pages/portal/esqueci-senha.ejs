@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Recuperar senha — Portal Cientifico</title>
+  <title>Recuperar contraseña — Portal Científico</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Archivo:wght@700;800&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -24,20 +24,20 @@
 </head>
 <body>
 <div class="wrap">
-  <div class="brand">Portal Cientifico</div>
+  <div class="brand">Portal Científico</div>
   <div class="card">
-    <h2>Recuperar senha</h2>
-    <p>Informe seu email cadastrado. Enviaremos uma senha temporaria para voce entrar e trocar.</p>
+    <h2>Recuperar contraseña</h2>
+    <p>Ingrese su correo electrónico registrado. Le enviaremos una contraseña temporal para que inicie sesión y la cambie.</p>
     <%if(msg&&msg.length){%><div class="alert-ok"><%=msg[0]%></div><%}%>
     <%if(erro&&erro.length){%><div class="alert-err"><%=erro[0]%></div><%}%>
     <form method="POST" action="/portal/esqueci-senha">
       <div class="form-group">
-        <label>Email</label>
-        <input type="email" name="email" required placeholder="seu@email.com">
+        <label>Correo electrónico</label>
+        <input type="email" name="email" required placeholder="su@correo.com">
       </div>
-      <button type="submit" class="btn">Enviar senha temporaria</button>
+      <button type="submit" class="btn">Enviar contraseña temporal</button>
     </form>
-    <a href="/portal/login" class="back">Voltar ao login</a>
+    <a href="/portal/login" class="back">Volver al inicio de sesión</a>
   </div>
 </div>
 </body></html>

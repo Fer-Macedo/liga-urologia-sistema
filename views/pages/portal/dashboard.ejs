@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
   <link rel="shortcut icon" href="/favicon.ico">
-  <title>Meus Grupos — Portal Cientifico</title>
+  <title>Mis Grupos — Portal Científico</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -94,36 +94,36 @@
 <div class="topbar">
   <div class="topbar-brand">
     <div class="topbar-logo"><%if(config.org_logo){%><img src="<%=config.org_logo%>" alt=""><%}else{%><span style="font-family:'Archivo';font-weight:800;color:#0F6E56;font-size:13px">LU</span><%}%></div>
-    <div><div class="topbar-nome"><%=config.org_nome||'LAURO'%></div><div class="topbar-sub">Portal Cientifico</div></div>
+    <div><div class="topbar-nome"><%=config.org_nome||'LAURO'%></div><div class="topbar-sub">Portal Científico</div></div>
   </div>
   <div class="topbar-user">
     <div class="topbar-menu">
       <span><%=membro.nome%></span>
       <div class="topbar-menu-drop">
-        <a href="/portal/trocar-senha">Alterar senha</a>
+        <a href="/portal/trocar-senha">Cambiar contraseña</a>
       </div>
     </div>
-    <a href="/portal/logout" class="topbar-logout">Sair</a>
+    <a href="/portal/logout" class="topbar-logout">Salir</a>
   </div>
 </div>
 <div class="main">
   <%if(msg&&msg.length){%><div class="alert-ok"><%=msg[0]%></div><%}%>
 
   <div class="hero">
-    <div class="hero-tag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>Portal Cientifico</div>
+    <div class="hero-tag"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>Portal Científico</div>
     <h1><%=saudacao%>, <span><%=membro.nome.split(' ')[0]%></span>!</h1>
-    <p><%=dataHoje%> &middot; <%=tipoLabel%> da LAURO</p>
+    <p><%=dataHoje%> &middot; <%=tipoLabel%> de la LAURO</p>
   </div>
 
-  <div class="pg-title">Meus Grupos</div>
-  <div class="pg-sub">Projetos cientificos nos quais voce esta participando</div>
+  <div class="pg-title">Mis Grupos</div>
+  <div class="pg-sub">Proyectos científicos en los que usted está participando</div>
   <%if(grupos.length===0){%>
   <div class="empty">
     <div class="empty-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
-    <h3>Voce ainda nao esta em nenhum grupo</h3>
-    <p>Assim que a coordenacao do Cientifico te adicionar a um grupo de trabalho, ele vai aparecer bem aqui, com prazo e status da submissao.</p>
+    <h3>Usted todavía no está en ningún grupo</h3>
+    <p>Apenas la coordinación del Científico lo agregue a un grupo de trabajo, aparecerá aquí mismo, con plazo y estado del envío.</p>
     <div class="empty-card">
-      <span class="empty-badge">Logado</span>
+      <span class="empty-badge">Conectado</span>
       <span>como <b><%=membro.nome%></b></span>
     </div>
   </div>
@@ -134,10 +134,10 @@
       <div class="grupo-proj"><%=g.projeto_titulo%></div>
       <div class="grupo-nome"><%=g.grupo_nome%></div>
       <div class="grupo-meta">
-        <%if(g.prazo){%><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><%=new Date(g.prazo).toLocaleDateString('pt-BR')%></span><%}%>
+        <%if(g.prazo){%><span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><%=new Date(g.prazo).toLocaleDateString('es-PY')%></span><%}%>
         <%if(g.ultimo_status){%><span class="vstatus vstatus-<%=g.ultimo_status%>"><%=g.ultimo_status.replace('_',' ')%></span><%}%>
       </div>
-      <div class="grupo-cta">Acessar grupo <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+      <div class="grupo-cta">Acceder al grupo <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
     </a>
     <%})%>
   </div>
@@ -145,15 +145,15 @@
 
   <%if(gruposEncerrados && gruposEncerrados.length){%>
   <div class="sec">
-    <div class="pg-title">Grupos encerrados</div>
-    <div class="pg-sub">Trabalhos ja finalizados — continuam disponiveis so para consulta e download.</div>
+    <div class="pg-title">Grupos cerrados</div>
+    <div class="pg-sub">Trabajos ya finalizados — siguen disponibles solo para consulta y descarga.</div>
     <div class="grupos-grid">
       <%gruposEncerrados.forEach(function(g){%>
       <a href="/portal/grupo/<%=g.grupo_id%>" class="grupo-card" style="opacity:.75">
         <div class="grupo-proj"><%=g.projeto_titulo%></div>
         <div class="grupo-nome"><%=g.grupo_nome%></div>
         <div class="grupo-meta">
-          <span style="background:#f3f4f6;color:#6b7280;font-weight:700;padding:2px 8px;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;border:1px solid #e5e7eb">Encerrado</span>
+          <span style="background:#f3f4f6;color:#6b7280;font-weight:700;padding:2px 8px;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;border:1px solid #e5e7eb">Cerrado</span>
         </div>
         <div class="grupo-cta">Consultar <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
       </a>
@@ -164,8 +164,8 @@
 
   <%if(materiais && materiais.length){%>
   <div class="sec">
-    <div class="pg-title">Materiais de Apoio</div>
-    <div class="pg-sub">Conteudo para te ajudar a produzir seu trabalho cientifico</div>
+    <div class="pg-title">Materiales de Apoyo</div>
+    <div class="pg-sub">Contenido para ayudarle a producir su trabajo científico</div>
     <%materiais.forEach(function(m){%>
     <a href="/portal/materiais/<%=m.id%>/arquivo" target="_blank" class="mat-card">
       <div class="mat-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0F6E56" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
@@ -180,47 +180,47 @@
   <%}%>
 
   <div class="sec">
-    <div class="pg-title">Ferramentas Recomendadas</div>
-    <div class="pg-sub">Bases de busca e IA para pesquisa e escrita cientifica</div>
+    <div class="pg-title">Herramientas Recomendadas</div>
+    <div class="pg-sub">Bases de búsqueda e IA para investigación y escritura científica</div>
     <div class="tools-grid">
-      <a href="https://pubmed.ncbi.nlm.nih.gov" target="_blank" class="tool-item"><div class="tool-nome">PubMed / MEDLINE</div><div class="tool-uso">Busca de artigos e literatura</div></a>
-      <a href="https://www.scopus.com" target="_blank" class="tool-item"><div class="tool-nome">Scopus</div><div class="tool-uso">Base multidisciplinar</div></a>
-      <a href="https://scispace.com" target="_blank" class="tool-item"><div class="tool-nome">SciSpace</div><div class="tool-uso">IA para leitura de artigos</div></a>
-      <a href="https://elicit.com" target="_blank" class="tool-item"><div class="tool-nome">Elicit</div><div class="tool-uso">IA para revisao de literatura</div></a>
+      <a href="https://pubmed.ncbi.nlm.nih.gov" target="_blank" class="tool-item"><div class="tool-nome">PubMed / MEDLINE</div><div class="tool-uso">Búsqueda de artículos y literatura</div></a>
+      <a href="https://www.scopus.com" target="_blank" class="tool-item"><div class="tool-nome">Scopus</div><div class="tool-uso">Base multidisciplinaria</div></a>
+      <a href="https://scispace.com" target="_blank" class="tool-item"><div class="tool-nome">SciSpace</div><div class="tool-uso">IA para lectura de artículos</div></a>
+      <a href="https://elicit.com" target="_blank" class="tool-item"><div class="tool-nome">Elicit</div><div class="tool-uso">IA para revisión de literatura</div></a>
       <a href="https://www.researchrabbitapp.com" target="_blank" class="tool-item"><div class="tool-nome">ResearchRabbit</div><div class="tool-uso">Mapa de referencias relacionadas</div></a>
-      <a href="https://www.zotero.org" target="_blank" class="tool-item"><div class="tool-nome">Zotero</div><div class="tool-uso">Gestao de referencias</div></a>
-      <a href="https://www.grammarly.com" target="_blank" class="tool-item"><div class="tool-nome">Grammarly</div><div class="tool-uso">Revisao de texto em ingles</div></a>
-      <a href="https://www.writefull.com" target="_blank" class="tool-item"><div class="tool-nome">Writefull</div><div class="tool-uso">IA para escrita academica</div></a>
+      <a href="https://www.zotero.org" target="_blank" class="tool-item"><div class="tool-nome">Zotero</div><div class="tool-uso">Gestión de referencias</div></a>
+      <a href="https://www.grammarly.com" target="_blank" class="tool-item"><div class="tool-nome">Grammarly</div><div class="tool-uso">Revisión de texto en inglés</div></a>
+      <a href="https://www.writefull.com" target="_blank" class="tool-item"><div class="tool-nome">Writefull</div><div class="tool-uso">IA para escritura académica</div></a>
     </div>
   </div>
 
   <div class="sec">
-    <div class="pg-title">Erros que Reprovam Manuscritos</div>
-    <div class="pg-sub">Confira antes de submeter seu trabalho</div>
+    <div class="pg-title">Errores que Reprueban Manuscritos</div>
+    <div class="pg-sub">Revise antes de enviar su trabajo</div>
     <div class="check-card">
       <div class="check-grid">
         <div class="check-col">
-          <div class="check-col-titulo">Metodologia</div>
+          <div class="check-col-titulo">Metodología</div>
           <ul>
-            <li>Calculo amostral ausente</li>
-            <li>Sem aprovacao do CEP</li>
-            <li>Criterios de elegibilidade vagos</li>
+            <li>Cálculo muestral ausente</li>
+            <li>Sin aprobación del CEP</li>
+            <li>Criterios de elegibilidad vagos</li>
           </ul>
         </div>
         <div class="check-col">
-          <div class="check-col-titulo">Escrita</div>
+          <div class="check-col-titulo">Escritura</div>
           <ul>
-            <li>Discussao repete os resultados</li>
-            <li>Introducao sem lacuna clara</li>
-            <li>Valor-p sem IC95%</li>
+            <li>La discusión repite los resultados</li>
+            <li>Introducción sin brecha clara</li>
+            <li>Valor-p sin IC95%</li>
           </ul>
         </div>
         <div class="check-col">
-          <div class="check-col-titulo">Submissao</div>
+          <div class="check-col-titulo">Envío</div>
           <ul>
-            <li>Periodico inadequado ao escopo</li>
-            <li>Cover letter generica</li>
-            <li>Formatacao fora das normas</li>
+            <li>Revista inadecuada al alcance</li>
+            <li>Cover letter genérica</li>
+            <li>Formato fuera de las normas</li>
           </ul>
         </div>
       </div>
@@ -232,7 +232,7 @@
     <img src="/img/logo-lauro.png" alt="LAURO" class="pf-logo-f" style="border-radius:50%;object-fit:contain" onerror="this.style.display='none'">
     <span class="pf-n">LAURO</span>
     <span class="pf-sep">&middot;</span>
-    <span class="pf-inf">Liga Academica de Urologia &middot; Portal Cientifico</span>
+    <span class="pf-inf">Liga Académica de Urología &middot; Portal Científico</span>
   </div>
   <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
     <div class="pf-socials">

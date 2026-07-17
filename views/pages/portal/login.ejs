@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Portal Científico — Acesso</title>
+<title>Portal Científico — Acceso</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -87,19 +87,19 @@ body{display:flex;min-height:100vh;background:var(--v)}
       </div>
     </div>
     <h1 class="left-title">Portal<br><em>Científico</em></h1>
-    <p class="left-sub">Acompanhe projetos, grupos e prazos de submissão — tudo em um só lugar.</p>
+    <p class="left-sub">Siga proyectos, grupos y plazos de presentación — todo en un solo lugar.</p>
     <div class="left-features">
       <div class="feat">
         <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>
-        <div class="feat-text"><strong>Projetos e editais</strong>Veja prazos de submissão e documentos do projeto</div>
+        <div class="feat-text"><strong>Proyectos y convocatorias</strong>Consulte plazos de presentación y documentos del proyecto</div>
       </div>
       <div class="feat">
         <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>
-        <div class="feat-text"><strong>Grupos de trabalho</strong>Acompanhe seu grupo e o status da submissão</div>
+        <div class="feat-text"><strong>Grupos de trabajo</strong>Siga su grupo y el estado de la presentación</div>
       </div>
       <div class="feat">
         <div class="feat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
-        <div class="feat-text"><strong>Avisos da diretoria</strong>Comunicados e orientações direto para o grupo</div>
+        <div class="feat-text"><strong>Avisos de la dirección</strong>Comunicados y orientaciones directo para el grupo</div>
       </div>
     </div>
   </div>
@@ -107,14 +107,14 @@ body{display:flex;min-height:100vh;background:var(--v)}
     <a href="https://central.edu.py/" target="_blank" rel="noopener" class="left-footer-logo">
       <img src="/img/logo-ucp-mark.png" alt="UCP">
     </a>
-    <span class="left-footer-text">Liga Académica de Urologia — LAURO · © <%= new Date().getFullYear() %></span>
+    <span class="left-footer-text">Liga Académica de Urología — LAURO · © <%= new Date().getFullYear() %></span>
   </div>
 </div>
 
 <div class="right">
   <div class="form-wrap">
-    <div class="form-title">Entrar</div>
-    <div class="form-sub">Use o email cadastrado no sistema para entrar</div>
+    <div class="form-title">Iniciar sesión</div>
+    <div class="form-sub">Use el correo electrónico registrado en el sistema para iniciar sesión</div>
 
     <% if(locals.erro && erro.length){ %>
     <div class="login-error">
@@ -125,39 +125,39 @@ body{display:flex;min-height:100vh;background:var(--v)}
 
     <form method="POST" action="/portal/login">
       <div class="form-group">
-        <label class="form-label">Email</label>
-        <input class="form-input" type="email" name="email" placeholder="seu@email.com" autocomplete="username" required autofocus>
+        <label class="form-label">Correo electrónico</label>
+        <input class="form-input" type="email" name="email" placeholder="su@correo.com" autocomplete="username" required autofocus>
       </div>
       <div class="form-group">
-        <label class="form-label">Senha</label>
+        <label class="form-label">Contraseña</label>
         <div class="form-pw-wrap">
-          <input class="form-input" type="password" name="senha" placeholder="Sua senha" autocomplete="current-password" required id="senhaInp">
+          <input class="form-input" type="password" name="senha" placeholder="Su contraseña" autocomplete="current-password" required id="senhaInp">
           <button type="button" class="pw-toggle" id="pwToggle">
             <svg id="pwEye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
           </button>
         </div>
       </div>
       <div class="form-footer">
-        <a href="/portal/esqueci-senha" class="form-link">Esqueci minha senha</a>
+        <a href="/portal/esqueci-senha" class="form-link">Olvidé mi contraseña</a>
       </div>
       <button type="submit" class="btn-login" id="loginBtn">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
-        Entrar no portal
+        Iniciar sesión en el portal
       </button>
     </form>
 
-    <div class="divider"><span>ou acesse pelo</span></div>
+    <div class="divider"><span>o acceda por el</span></div>
     <a href="/membro/login" class="btn-cientifico">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-      Portal do Membro
+      Portal del Miembro
     </a>
 
     <p class="form-help">
-      Problemas para acessar? Fale com a gente pelo<br>
-      <a href="https://wa.me/595992010423" target="_blank">WhatsApp</a> ou pelo <a href="mailto:lauroucpcde@lauroucpcde.com">e-mail</a>
+      ¿Problemas para acceder? Contáctenos por<br>
+      <a href="https://wa.me/595992010423" target="_blank">WhatsApp</a> o por <a href="mailto:lauroucpcde@lauroucpcde.com">correo electrónico</a>
     </p>
   </div>
-  <div class="right-footer">Liga Académica de Urologia — LAURO · © <%= new Date().getFullYear() %></div>
+  <div class="right-footer">Liga Académica de Urología — LAURO · © <%= new Date().getFullYear() %></div>
 </div>
 
 <script>

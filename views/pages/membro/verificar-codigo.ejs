@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Verificar Codigo — LAURO</title>
+<title>Verificar Código — LAURO</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',sans-serif;background:#0C231B;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -24,20 +24,20 @@ input:focus{border-color:#0F6E56}
 </head>
 <body>
 <div class="box">
-  <h1>Verificar Codigo</h1>
-  <div class="info">Enviamos um codigo de 6 digitos para <strong><%=email%></strong>. Verifique sua caixa de entrada e spam.</div>
+  <h1>Verificar Código</h1>
+  <div class="info">Enviamos un código de 6 dígitos a <strong><%=email%></strong>. Revisá tu bandeja de entrada y el spam.</div>
   <%if(locals.erro){%><div class="erro"><%=erro%></div><%}%>
   <form method="POST" action="/membro/verificar-codigo">
     <input type="hidden" name="email" value="<%=email%>">
-    <label>Codigo de verificacao</label>
+    <label>Código de verificación</label>
     <input type="text" name="codigo" class="codigo-input" placeholder="000000" maxlength="6" required autofocus autocomplete="off">
-    <label>Nova senha (minimo 6 caracteres)</label>
-    <input type="password" name="nova_senha" placeholder="Nova senha" required minlength="6">
-    <label>Confirmar nova senha</label>
-    <input type="password" name="confirmar_senha" placeholder="Confirmar senha" required minlength="6">
-    <button type="submit" class="btn">Redefinir senha</button>
+    <label>Nueva contraseña (mínimo 6 caracteres)</label>
+    <input type="password" name="nova_senha" placeholder="Nueva contraseña" required minlength="6">
+    <label>Confirmar nueva contraseña</label>
+    <input type="password" name="confirmar_senha" placeholder="Confirmar contraseña" required minlength="6">
+    <button type="submit" class="btn">Restablecer contraseña</button>
   </form>
-  <div class="voltar"><a href="/membro/esqueci-senha">Reenviar codigo</a> &nbsp;|&nbsp; <a href="/membro/login">Voltar ao login</a></div>
+  <div class="voltar"><a href="/membro/esqueci-senha">Reenviar código</a> &nbsp;|&nbsp; <a href="/membro/login">Volver al inicio de sesión</a></div>
 </div>
 </body>
 </html>

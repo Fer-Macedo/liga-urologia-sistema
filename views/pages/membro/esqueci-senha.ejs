@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Recuperar Senha — LAURO</title>
+<title>Recuperar Contraseña — LAURO</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',sans-serif;background:#0C231B;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
@@ -22,16 +22,16 @@ input:focus{border-color:#0F6E56}
 </head>
 <body>
 <div class="box">
-  <h1>Recuperar Senha</h1>
-  <p>Informe seu email cadastrado. Enviaremos um codigo de verificacao para voce criar uma nova senha.</p>
+  <h1>Recuperar Contraseña</h1>
+  <p>Ingresá tu correo electrónico registrado. Te enviaremos un código de verificación para que crees una nueva contraseña.</p>
   <%if(locals.erro){%><div class="erro"><%=erro%></div><%}%>
   <%if(locals.ok){%><div class="ok"><%=ok%></div><%}%>
   <form method="POST" action="/membro/esqueci-senha" onsubmit="this.querySelector('button').textContent='Enviando...';">
-    <label>Email</label>
-    <input type="email" name="email" placeholder="seu@email.com" required autofocus>
-    <button type="submit" class="btn">Enviar codigo</button>
+    <label>Correo electrónico</label>
+    <input type="email" name="email" placeholder="tu@correo.com" required autofocus>
+    <button type="submit" class="btn">Enviar código</button>
   </form>
-  <div class="voltar"><a href="/membro/login">Voltar ao login</a></div>
+  <div class="voltar"><a href="/membro/login">Volver al inicio de sesión</a></div>
 </div>
 </body>
 </html>

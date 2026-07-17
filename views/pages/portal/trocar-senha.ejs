@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Definir nova senha — Portal Cientifico</title>
+  <title>Definir nueva contraseña — Portal Científico</title>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Archivo:wght@700;800&display=swap" rel="stylesheet">
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
@@ -26,28 +26,28 @@
 <body>
 <div class="wrap">
   <img src="/img/logo-lauro.png" alt="LAURO" class="brand-logo" onerror="this.style.display='none'">
-  <div class="brand">Portal Cientifico</div>
+  <div class="brand">Portal Científico</div>
   <div class="card">
     <div class="card-icon">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     </div>
-    <h2>Defina sua senha</h2>
-    <p>Este e seu primeiro acesso. Por seguranca, crie uma senha pessoal para continuar.</p>
+    <h2>Defina su contraseña</h2>
+    <p>Este es su primer acceso. Por seguridad, cree una contraseña personal para continuar.</p>
     <%if(erro&&erro.length){%><div class="alert-err"><%=erro[0]%></div><%}%>
     <form method="POST" action="<%= typeof baseUrl !== 'undefined' ? baseUrl : '/portal' %>/trocar-senha">
       <div class="form-group">
-        <label>Senha atual</label>
-        <input type="password" name="senha_atual" required placeholder="Senha atual">
+        <label>Contraseña actual</label>
+        <input type="password" name="senha_atual" required placeholder="Contraseña actual">
       </div>
       <div class="form-group">
-        <label>Nova senha</label>
-        <input type="password" name="nova_senha" required minlength="6" placeholder="Minimo 6 caracteres">
+        <label>Nueva contraseña</label>
+        <input type="password" name="nova_senha" required minlength="6" placeholder="Mínimo 6 caracteres">
       </div>
       <div class="form-group">
-        <label>Confirmar senha</label>
-        <input type="password" name="confirmar_senha" required minlength="6" placeholder="Repita a senha">
+        <label>Confirmar contraseña</label>
+        <input type="password" name="confirmar_senha" required minlength="6" placeholder="Repita la contraseña">
       </div>
-      <button type="submit" class="btn">Salvar e entrar</button>
+      <button type="submit" class="btn">Guardar e iniciar sesión</button>
     </form>
   </div>
 </div>
