@@ -59,29 +59,50 @@ async function salvarTokens(dados) {
   }
 }
 
+// Guarda a renovação em andamento. O Canva rotaciona o refresh_token a cada uso e revoga a
+// "lineage" INTEIRA se o mesmo refresh_token for usado 2x — então NUNCA renovar em paralelo.
+// Se já há uma renovação rodando, todos os chamadores esperam a MESMA (sem disparar outra).
+let _refreshCanvaEmAndamento = null;
+
 async function getTokenValido() {
   const r = await query("SELECT chave,valor FROM marketing_config WHERE chave LIKE 'canva_%'");
   const cfg = {}; r.rows.forEach(row => cfg[row.chave] = row.valor);
   if (!cfg.canva_access_token) return null;
   const expira = cfg.canva_token_expira ? new Date(cfg.canva_token_expira) : null;
   if (expira && expira.getTime() - Date.now() < 60000 && cfg.canva_refresh_token) {
-    // Token perto de expirar - renova usando o refresh token
-    try {
-      const resp = await axios.post(TOKEN_URL, new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: cfg.canva_refresh_token
-      }), {
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: 'Basic ' + Buffer.from(process.env.CANVA_CLIENT_ID + ':' + process.env.CANVA_CLIENT_SECRET).toString('base64')
+    // Serializa: só a primeira chamada renova; as outras aguardam o mesmo resultado.
+    // (A checagem e a atribuição abaixo são síncronas — sem await entre elas — então no
+    // event loop do Node não há como dois chamadores dispararem duas renovações.)
+    if (!_refreshCanvaEmAndamento) {
+      const refreshToken = cfg.canva_refresh_token;
+      _refreshCanvaEmAndamento = (async () => {
+        try {
+          const resp = await axios.post(TOKEN_URL, new URLSearchParams({
+            grant_type: 'refresh_token',
+            refresh_token: refreshToken
+          }), {
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              Authorization: 'Basic ' + Buffer.from(process.env.CANVA_CLIENT_ID + ':' + process.env.CANVA_CLIENT_SECRET).toString('base64')
+            }
+          });
+          await salvarTokens(resp.data);
+          return resp.data.access_token;
+        } catch(e) {
+          const dados = e.response && e.response.data;
+          console.error('Canva refresh token erro:', dados ? JSON.stringify(dados).substring(0,300) : e.message);
+          // Token revogado/inválido: apaga os tokens mortos pra parar de tentar renovar e a
+          // tela mostrar "desconectado" (pedindo reconexão), em vez de erro repetido.
+          if (dados && dados.error === 'invalid_grant') {
+            try { await query("DELETE FROM marketing_config WHERE chave IN ('canva_access_token','canva_refresh_token','canva_token_expira')"); } catch(_) {}
+          }
+          return null;
+        } finally {
+          _refreshCanvaEmAndamento = null;
         }
-      });
-      await salvarTokens(resp.data);
-      return resp.data.access_token;
-    } catch(e) {
-      console.error('Canva refresh token erro:', e.response ? JSON.stringify(e.response.data).substring(0,300) : e.message);
-      return null;
+      })();
     }
+    return _refreshCanvaEmAndamento;
   }
   return cfg.canva_access_token;
 }
