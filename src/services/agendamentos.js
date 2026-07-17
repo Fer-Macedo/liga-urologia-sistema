@@ -64,6 +64,7 @@ async function atualizarPixAtrasados() {
   // Busca cobranças atrasadas sem PIX ou com vencimento_pix passado
   const { rows } = await query(`
     SELECT c.id, c.referencia, c.valor_cheio, c.valor_desconto, c.data_vencimento, c.membro_id,
+           to_char(c.data_vencimento,'YYYY-MM-DD') as venc_ymd,
            m.nome, m.email, m.cpf
     FROM cobrancas c
     JOIN membros m ON m.id = c.membro_id
@@ -78,13 +79,17 @@ async function atualizarPixAtrasados() {
   const dataVencPix = hoje.add(179, 'day').format('YYYY-MM-DD'); // 180 exato e rejeitado pelo PagBank
   for (const c of rows) {
     try {
-      // Ate o vencimento cobra o valor com desconto de pontualidade; depois, valor cheio
+      // Ate o vencimento cobra o valor com desconto de pontualidade; depois, valor cheio.
+      // O PIX de desconto DEVE expirar no vencimento (senao a pessoa paga o desconto depois
+      // do prazo — mesmo vazamento corrigido na geracao). So o PIX cheio (ja vencido) tem
+      // validade longa. Usa venc_ymd (string YYYY-MM-DD do banco, sem drift de fuso).
       const jaVenceu = require('dayjs')(c.data_vencimento).endOf('day').isBefore(hoje);
       const valorPix = (!jaVenceu && c.valor_desconto != null) ? c.valor_desconto : c.valor_cheio;
+      const expPix = jaVenceu ? dataVencPix : (c.venc_ymd || dataVencPix);
       const pag = await criarCobranca({
         membro: { nome: c.nome, email: c.email, cpf: c.cpf },
         valor: valorPix,
-        vencimento: dataVencPix,
+        vencimento: expPix,
         referencia: c.referencia
       });
       if (pag.ok) {

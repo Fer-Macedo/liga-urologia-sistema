@@ -57,10 +57,12 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, '../views'));
 
 app.use(express.static(path.join(__dirname, '../public')));
-// Limite de 15mb: cobre anexos base64 do assistente virtual (imagem/PDF), mas corta
-// payloads gigantes usados em DoS. Uploads de arquivo usam multer (multipart), com limite proprio.
-app.use(express.urlencoded({ extended: true, limit: '15mb' }));
-app.use(express.json({ limit: '15mb' }));
+// Limite de 25mb: cobre anexos base64 que sobem pelo corpo JSON (assistente virtual,
+// materiais cientificos, contratos assinados, midia de atendimento) — base64 infla ~33%,
+// entao 25mb comporta arquivos de ~18mb. Ainda corta payloads gigantes usados em DoS.
+// Uploads de arquivo comuns usam multer (multipart), com limite proprio (500mb).
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
+app.use(express.json({ limit: '25mb' }));
 app.use(methodOverride('_method'));
 if (!process.env.SESSION_SECRET) {
   console.warn('AVISO: SESSION_SECRET nao definido no .env — usando segredo temporario gerado neste boot (sessoes serao invalidadas a cada restart). Configure SESSION_SECRET em producao.');
