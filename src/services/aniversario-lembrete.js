@@ -1,7 +1,8 @@
-// Lembrete por email para a equipe (marketing, presidencia, admin) sobre aniversarios
-// de ligantes/diretivos: 1 dia antes (19h) e no dia (06h), lembrando de postar no grupo
-// dos Ligantes e no grupo de Avisos. WhatsApp suspenso aqui (aviso interno, nao e a
-// excecao de "assistente virtual"/"parabens ao aniversariante") ate segunda ordem.
+// Lembrete para a equipe (marketing, presidencia, admin) sobre aniversarios de
+// ligantes/diretivos: 1 dia antes (19h) e no dia (06h), lembrando de postar no grupo
+// dos Ligantes e no grupo de Avisos. Vai por EMAIL + WhatsApp (API oficial da Meta,
+// modelos aviso_aniversario_equipe_amanha/_hoje). Baixo volume (so telefones internos),
+// sem risco de banimento.
 const { query } = require('../models/database');
 const dayjs = require('dayjs');
 
@@ -32,9 +33,6 @@ async function enviarLembreteAniversarioEquipe(momento) {
       ? `🎂 *Aniversário hoje (${dataFormatada})*\n\n${nomes}\n\nNão esqueça de fazer o post de aniversário no grupo dos Ligantes e no grupo de Avisos!`
       : `🎂 *Aniversário amanhã (${dataFormatada})*\n\n${nomes}\n\nJá deixe preparado o post de aniversário para amanhã, no grupo dos Ligantes e no grupo de Avisos!${avisoFoto}`;
 
-    // Aviso interno a equipe suspenso no WhatsApp (nao e o "assistente virtual" nem
-    // "parabens ao aniversariante" — e aviso de operacao, fora da unica excecao liberada
-    // durante o aquecimento do numero). Vai só por email ate segunda ordem.
     const { enviarEmail } = require('./notificacoes');
 
     // Email para a equipe. Destinatarios por email podem diferir dos de telefone (ex: quem nao tem telefone cadastrado).
@@ -78,6 +76,31 @@ async function enviarLembreteAniversarioEquipe(momento) {
       try { await enviarEmail({ para: em.email, assunto: assuntoEmail, html: htmlEmail, titulo: assuntoEmail, faixaLabel: 'ANIVERSÁRIO', anexos }); }
       catch (err) { console.error('[LEMBRETE ANIVERSARIO] erro email:', err.message); }
     }
+
+    // WhatsApp para a equipe (API oficial, modelo aprovado pela Meta). Baixo volume — só os
+    // telefones internos (admin/presidência/marketing), 1x por dia no máximo, então sem risco
+    // de banimento. Se o modelo ainda não foi aprovado, o envio falha e o e-mail acima segue
+    // como canal garantido. Modelos: aviso_aniversario_equipe_amanha / _hoje (2 variáveis:
+    // {{1}}=data DD/MM, {{2}}=lista de aniversariantes em linha única).
+    try {
+      const { enviarTemplate } = require('./whatsapp-oficial');
+      const templateNome = momento === 'dia' ? 'aviso_aniversario_equipe_hoje' : 'aviso_aniversario_equipe_amanha';
+      const nomesInline = aniversariantes.rows.map(a => `${a.nome} (${a.tipo})`).join(', ');
+      const componentes = [{ type: 'body', parameters: [
+        { type: 'text', text: dataFormatada },
+        { type: 'text', text: nomesInline }
+      ] }];
+      const destTel = await query(
+        `SELECT DISTINCT u.telefone FROM usuarios u
+         LEFT JOIN usuario_permissoes p ON p.usuario_id=u.id AND p.modulo='marketing'
+         WHERE u.ativo=1 AND u.telefone IS NOT NULL AND u.telefone <> ''
+           AND (u.perfil IN ('admin','presidencia','marketing') OR p.id IS NOT NULL)`
+      );
+      for (const t of destTel.rows) {
+        try { await enviarTemplate(t.telefone, templateNome, 'pt_BR', componentes); }
+        catch (err) { console.error('[LEMBRETE ANIVERSARIO] erro whatsapp:', err.message); }
+      }
+    } catch (e) { console.error('[LEMBRETE ANIVERSARIO] erro preparar whatsapp:', e.message); }
 
     await query('INSERT INTO aniversario_lembretes_enviados (data, momento) VALUES ($1,$2) ON CONFLICT DO NOTHING', [dataStr, momento]);
   } catch (e) {
