@@ -59,6 +59,28 @@ module.exports = function (router) {
         return res.sendStatus(200);
       }
 
+      // Recibos de status das mensagens que ENVIAMOS (sent -> delivered -> read, ou failed).
+      // Atualiza a coluna 'entrega' do notificacoes_log casando pelo wamid. Só avança pra frente
+      // (um 'delivered' atrasado não sobrescreve um 'read' que já chegou).
+      const statuses = valor && valor.statuses;
+      if (statuses && statuses.length) {
+        const { query } = require('../models/database');
+        const rank = { sent: 1, delivered: 2, read: 3, failed: 2 };
+        (async () => {
+          for (const st of statuses) {
+            try {
+              await query(
+                `UPDATE notificacoes_log SET entrega=$1, entrega_em=to_timestamp($2)
+                 WHERE wamid=$3
+                   AND (CASE entrega WHEN 'read' THEN 3 WHEN 'delivered' THEN 2 WHEN 'failed' THEN 2 WHEN 'sent' THEN 1 ELSE 0 END) < $4`,
+                [st.status, Number(st.timestamp) || null, st.id, rank[st.status] || 0]
+              );
+            } catch (e) { console.error('[WHATSAPP OFICIAL] erro status de entrega:', e.message); }
+          }
+        })();
+        return res.sendStatus(200);
+      }
+
       const mensagem = valor && valor.messages && valor.messages[0];
       if (mensagem) {
         const numero = mensagem.from;

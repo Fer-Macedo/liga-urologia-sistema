@@ -96,6 +96,11 @@ async function initSchema() {
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS sexo TEXT;
     ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS edicao_liberada BOOLEAN DEFAULT false;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS edicao_liberada BOOLEAN DEFAULT false;
+    -- rastreio de entrega do WhatsApp: id da mensagem na Meta (wamid) + status de entrega
+    -- (sent/delivered/read/failed) atualizado pelos recibos do webhook /webhook/whatsapp-oficial
+    ALTER TABLE notificacoes_log ADD COLUMN IF NOT EXISTS wamid TEXT;
+    ALTER TABLE notificacoes_log ADD COLUMN IF NOT EXISTS entrega TEXT;
+    ALTER TABLE notificacoes_log ADD COLUMN IF NOT EXISTS entrega_em TIMESTAMP;
     -- carta de cobranca: snapshot dos meses em atraso no momento da geracao (JSON: [{mes,venc,ymd}])
     ALTER TABLE cartas_cobranca ADD COLUMN IF NOT EXISTS meses_json TEXT;
     -- ponytail: IF EXISTS pq as tabelas ps_* vivem só no banco (não há CREATE no código)

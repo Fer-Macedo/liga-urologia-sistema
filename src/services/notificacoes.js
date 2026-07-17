@@ -230,9 +230,10 @@ async function notificarCobranca(opts) {
     };
     const componentes = [{ type: 'body', parameters: paramsPorTipo[tipo].map(text => ({ type: 'text', text })) }];
     const r1 = await enviarTemplate(membro.whatsapp, TEMPLATE_COBRANCA[tipo], 'pt_BR', componentes);
+    const wamid1 = r1.ok && r1.data && r1.data.messages && r1.data.messages[0] ? r1.data.messages[0].id : null;
     await query(
-      'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
-      [membro.id, cobranca.id, tipo, 'whatsapp', r1.ok ? 'ok' : 'erro']
+      'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status,wamid,entrega) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+      [membro.id, cobranca.id, tipo, 'whatsapp', r1.ok ? 'ok' : 'erro', wamid1, r1.ok ? 'sent' : null]
     );
   }
 
@@ -291,9 +292,10 @@ async function notificarAniversario(opts) {
       { type: 'text', text: orgNome }
     ] }];
     const r = await enviarTemplate(membro.whatsapp, 'aniversario_parabens', 'pt_BR', componentes);
+    const wamidAniv = r.ok && r.data && r.data.messages && r.data.messages[0] ? r.data.messages[0].id : null;
     await query(
-      'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES ($1,$2,$3,$4,$5)',
-      [membroId, null, logTipo, 'whatsapp', r.ok ? 'ok' : 'erro']
+      'INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status,wamid,entrega) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+      [membroId, null, logTipo, 'whatsapp', r.ok ? 'ok' : 'erro', wamidAniv, r.ok ? 'sent' : null]
     );
   }
 
