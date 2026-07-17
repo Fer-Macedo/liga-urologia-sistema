@@ -123,6 +123,14 @@ async function initSchema() {
       criado_em TIMESTAMP DEFAULT NOW()
     );
 
+    CREATE TABLE IF NOT EXISTS instagram_estrategias (
+      id SERIAL PRIMARY KEY,
+      gerado_em TIMESTAMP DEFAULT NOW(),
+      dados_json TEXT,
+      analise_html TEXT,
+      criado_por TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS marketing_notas (
       id SERIAL PRIMARY KEY,
       texto TEXT NOT NULL,

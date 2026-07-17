@@ -182,4 +182,4 @@ async function lerCartaoResposta(query, { base64Img, mediaType, totalQuestoes })
   }
 }
 
-module.exports = { revisarTrabalho, refinarPico, chamarClaudeTexto, apoioRevisor, lerCartaoResposta };
+module.exports = { revisarTrabalho, refinarPico, chamarClaudeTexto, apoioRevisor, lerCartaoResposta, chamarClaude };

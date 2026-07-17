@@ -123,50 +123,9 @@ async function analiseConta() {
   };
 }
 
-function relatorioHTML(a) {
-  const listaPub = (arr, tit) => `<strong>${tit}:</strong> ` + (arr.slice(0, 3).map(x => `${x.chave} (${x.valor})`).join(', ') || '—');
-  const sinal = n => (n >= 0 ? '+' : '') + n;
-  return `
-    <p>Resumo da semana da conta <strong>@${a.conta.username}</strong>:</p>
-    <ul style="line-height:1.9">
-      <li><strong>Seguidores:</strong> ${a.conta.seguidores} <span style="color:${a.resumo7d.novosSeguidores >= 0 ? '#059669' : '#dc2626'}">(${sinal(a.resumo7d.novosSeguidores)} na semana)</span></li>
-      <li><strong>Alcance (7 dias):</strong> ${a.resumo7d.alcance} contas</li>
-      <li><strong>Visitas ao perfil (7 dias):</strong> ${a.resumo7d.visitas}</li>
-      <li><strong>Interações (7 dias):</strong> ${a.resumo7d.interacoes}</li>
-    </ul>
-    <p>${listaPub(a.publico.idade, 'Idade do público')}<br>${listaPub(a.publico.cidades, 'Principais cidades')}</p>
-    <p style="margin-top:14px"><strong>Recomendações da semana:</strong></p>
-    <ul style="line-height:1.7">${a.recomendacoes.map(r => `<li>${r}</li>`).join('')}</ul>
-    <p style="color:#6b7280;font-size:12px;margin-top:16px">Relatório automático de desempenho do Instagram. Veja o painel completo na aba Marketing → Analytics.</p>
-  `;
-}
-
-async function enviarRelatorioSemanal() {
-  const a = await analiseConta();
-  if (!a.conta.username) { console.warn('[IG ANALISE] sem dados da conta — relatório não enviado.'); return; }
-  const { query } = require('../models/database');
-  const { enviarEmail } = require('./notificacoes');
-  const dest = await query(
-    `SELECT DISTINCT u.email FROM usuarios u
-     LEFT JOIN usuario_permissoes p ON p.usuario_id=u.id AND p.modulo='marketing'
-     WHERE u.ativo=1 AND u.email IS NOT NULL AND u.email <> ''
-       AND (u.perfil IN ('admin','presidencia','marketing') OR p.id IS NOT NULL)`
-  );
-  const emails = dest.rows.map(r => r.email).join(', ');
-  if (!emails) { console.warn('[IG ANALISE] nenhum destinatário para o relatório.'); return; }
-  await enviarEmail({
-    para: emails,
-    assunto: `📊 Instagram @${a.conta.username} — resumo da semana`,
-    titulo: 'Desempenho do Instagram',
-    faixaLabel: 'INSTAGRAM',
-    html: relatorioHTML(a)
-  });
-  console.log('[IG ANALISE] Relatório semanal enviado para', emails);
-}
-
 // CLI: `node src/services/instagram-analise.js` roda a análise e imprime (útil pra testar).
 if (require.main === module) {
   analiseConta().then(a => { console.log(JSON.stringify(a, null, 2)); process.exit(0); }).catch(e => { console.error(e.message); process.exit(1); });
 }
 
-module.exports = { analiseConta, enviarRelatorioSemanal };
+module.exports = { analiseConta };

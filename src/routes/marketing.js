@@ -22,6 +22,26 @@ router.get('/marketing/instagram/analise', requireAuth, requirePermissao('market
   }
 });
 
+// Análise estratégica por IA: última análise salva + gerar uma nova sob demanda.
+router.get('/marketing/instagram/estrategia', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { ultimaEstrategia } = require('../services/instagram-estrategia');
+    res.json({ ok: true, estrategia: await ultimaEstrategia() });
+  } catch (e) {
+    res.json({ ok: false, erro: e.message });
+  }
+});
+
+router.post('/marketing/instagram/estrategia/gerar', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { gerarEstrategia } = require('../services/instagram-estrategia');
+    const nome = req.session.usuario && req.session.usuario.nome;
+    res.json(await gerarEstrategia(nome));
+  } catch (e) {
+    res.json({ ok: false, erro: e.message });
+  }
+});
+
 router.get('/marketing/canva/conectar', requireAuth, requireAdmin, async (req, res) => {
   const { gerarPkce, montarUrlAutorizacao } = require('../services/canva');
   const { verifier, challenge } = gerarPkce();

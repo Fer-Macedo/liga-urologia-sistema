@@ -605,12 +605,12 @@ function iniciarAgendamentos() {
     } catch(e) { console.error('[LEMBRETE ANIVERSARIO] erro (dia):', e.message); }
   }, { timezone: 'America/Asuncion' });
 
-  // Instagram — relatório semanal de desempenho da conta, segunda às 8h (marketing/presidência/admin)
+  // Instagram — plano de ação estratégico (IA) da conta, segunda às 8h (marketing/presidência/admin)
   cron.schedule('0 8 * * 1', async () => {
     try {
-      const { enviarRelatorioSemanal } = require('./instagram-analise');
-      await enviarRelatorioSemanal();
-    } catch(e) { console.error('[IG ANALISE] relatório semanal erro:', e.message); }
+      const { enviarRelatorioEstrategico } = require('./instagram-estrategia');
+      await enviarRelatorioEstrategico();
+    } catch(e) { console.error('[IG ESTRATEGIA] relatório semanal erro:', e.message); }
   }, { timezone: 'America/Asuncion' });
 
   // Encerramento automático de eventos — a cada hora

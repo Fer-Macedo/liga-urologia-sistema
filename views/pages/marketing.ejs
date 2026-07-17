@@ -211,6 +211,9 @@
         <button class="mkt-tab" onclick="showTab('analytics',this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Analytics</button>
+        <button class="mkt-tab" onclick="showTab('estrategia',this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.5.4.8 1 .9 1.6h6.2c.1-.6.4-1.2.9-1.6A7 7 0 0 0 12 2z"/></svg>
+          Estratégia</button>
         <button class="mkt-tab" onclick="showTab('interno',this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 3H8a2 2 0 0 0-2 2v16l6-3 6 3V5a2 2 0 0 0-2-2z"/></svg>
           Espaço da Equipe</button>
@@ -403,6 +406,20 @@
           </div>
         </div>
         <%});%>
+      </div>
+      <div class="mkt-section" id="tab-estrategia">
+        <style>.estrat-body h4{margin:18px 0 6px;font-size:14px;color:var(--texto)}.estrat-body h4:first-child{margin-top:0}.estrat-body ul{margin:0 0 10px;padding-left:20px}.estrat-body li{margin-bottom:5px;font-size:13px;line-height:1.5}.estrat-body p{font-size:13px;margin:0 0 10px;color:var(--texto2);line-height:1.5}</style>
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+            <div>
+              <div class="card-titulo">🧠 Análise estratégica (IA)</div>
+              <div id="estrat-meta" style="font-size:12px;color:var(--texto2)"></div>
+            </div>
+            <button class="btn btn-primario btn-sm" id="btn-estrat" onclick="gerarEstrategiaIG()">Gerar nova análise</button>
+          </div>
+          <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">O Claude analisa os dados reais da conta e monta um plano de ação para a equipe engajar melhor e crescer. Gerado toda segunda automaticamente — e você pode gerar na hora quando quiser.</p>
+          <div id="estrat-conteudo"><p style="color:var(--texto2);font-size:13px">Carregando…</p></div>
+        </div>
       </div>
       <div class="mkt-section" id="tab-interno">
         <div class="interno-banner">
@@ -1797,6 +1814,41 @@ function carregarAnaliseIG(){
     var b=document.querySelector('.mkt-tab[onclick*="analytics"]');
     if(b) b.addEventListener('click',carregar);
     if(new URLSearchParams(location.search).get('tab')==='analytics') carregar();
+  });
+})();
+
+// ─── ANÁLISE ESTRATÉGICA POR IA ───────────────────────────────────────────────
+function _estratRender(e){
+  var box=document.getElementById('estrat-conteudo'), meta=document.getElementById('estrat-meta');
+  if(!box) return;
+  if(!e || !e.analise_html){ box.innerHTML='<p style="color:var(--texto2);font-size:13px">Nenhuma análise ainda. Clique em <strong>Gerar nova análise</strong> para o Claude montar o plano de ação da equipe.</p>'; if(meta) meta.textContent=''; return; }
+  box.innerHTML='<div class="estrat-body">'+e.analise_html+'</div>';
+  if(meta) meta.textContent='Gerada em '+new Date(e.gerado_em).toLocaleString('pt-BR')+(e.criado_por?(' · por '+e.criado_por):'');
+}
+function carregarEstrategiaIG(){
+  var box=document.getElementById('estrat-conteudo'); if(!box) return;
+  fetch('/marketing/instagram/estrategia').then(function(r){return r.json();}).then(function(d){
+    if(d.ok) _estratRender(d.estrategia);
+    else box.innerHTML='<p style="color:#dc2626;font-size:13px">'+(d.erro||'erro')+'</p>';
+  }).catch(function(){ box.innerHTML='<p style="color:#dc2626;font-size:13px">Erro ao carregar.</p>'; });
+}
+function gerarEstrategiaIG(){
+  var btn=document.getElementById('btn-estrat'), box=document.getElementById('estrat-conteudo');
+  var t=btn.textContent; btn.disabled=true; btn.textContent='Analisando…';
+  box.innerHTML='<p style="color:var(--texto2);font-size:13px">O Claude está lendo os dados da conta e montando o plano de ação… (pode levar ~20s)</p>';
+  fetch('/marketing/instagram/estrategia/gerar',{method:'POST'}).then(function(r){return r.json();}).then(function(d){
+    btn.disabled=false; btn.textContent=t;
+    if(!d.ok){ box.innerHTML='<p style="color:#dc2626;font-size:13px">'+(d.erro||'Não foi possível gerar.')+'</p>'; return; }
+    _estratRender({ analise_html:d.html, gerado_em:d.geradoEm, criado_por:null });
+    mostrarAviso('Análise estratégica gerada!','sucesso');
+  }).catch(function(){ btn.disabled=false; btn.textContent=t; box.innerHTML='<p style="color:#dc2626;font-size:13px">Erro ao gerar a análise.</p>'; });
+}
+(function(){
+  var carregado=false, carregar=function(){ if(carregado) return; carregado=true; carregarEstrategiaIG(); };
+  document.addEventListener('DOMContentLoaded',function(){
+    var b=document.querySelector('.mkt-tab[onclick*="estrategia"]');
+    if(b) b.addEventListener('click',carregar);
+    if(new URLSearchParams(location.search).get('tab')==='estrategia') carregar();
   });
 })();
 </script>
