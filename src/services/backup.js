@@ -10,7 +10,6 @@ const { spawn } = require('child_process');
 const zlib = require('zlib');
 const fs = require('fs');
 const path = require('path');
-const os = require('os');
 const { query } = require('../models/database');
 const { enviarEmail } = require('./notificacoes');
 
@@ -161,30 +160,9 @@ function agendarBackup() {
   }, msAte3h);
 }
 
-// Rotas manuais para o admin: forçar um backup agora e baixar um dump na hora.
-function rotaBackupManual(router, requireAdmin) {
-  router.post('/admin/backup', requireAdmin, (req, res) => {
-    res.json({ ok: true, msg: 'Backup iniciado — você receberá um e-mail em instantes.' });
-    executarBackup();
-  });
-
-  router.get('/admin/backup/download', requireAdmin, async (req, res) => {
-    const tmp = path.join(os.tmpdir(), `backup-lauro-${Date.now()}.sql.gz`);
-    try {
-      await dumpParaArquivo(tmp);
-      res.setHeader('Content-Type', 'application/gzip');
-      res.setHeader('Content-Disposition', `attachment; filename="backup-lauro-${new Date().toISOString().slice(0, 10)}.sql.gz"`);
-      fs.createReadStream(tmp).pipe(res).on('close', () => fs.unlink(tmp, () => {}));
-    } catch (e) {
-      fs.unlink(tmp, () => {});
-      res.status(500).send('Erro ao gerar backup: ' + e.message);
-    }
-  });
-}
-
 // Permite rodar um backup manual pela linha de comando: `node src/services/backup.js`
 if (require.main === module) {
   executarBackup().then(() => process.exit(0)).catch(() => process.exit(1));
 }
 
-module.exports = { agendarBackup, executarBackup, rotaBackupManual };
+module.exports = { agendarBackup, executarBackup, dumpParaArquivo };

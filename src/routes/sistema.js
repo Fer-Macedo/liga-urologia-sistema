@@ -2,39 +2,32 @@
 const { query } = require('../models/database');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const { getConfig } = require('../services/config');
+const { executarBackup, dumpParaArquivo } = require('../services/backup');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
 
 module.exports = function (router) {
 
-// BACKUP MANUAL
+// BACKUP MANUAL — usa o mesmo pg_dump do backup automático (ver services/backup.js):
+// dump completo (todas as tabelas) comprimido em .sql.gz. POST força um backup agora
+// (salva em disco + e-mail); download gera um dump fresco na hora e envia pro navegador.
+router.post('/admin/backup', requireAuth, requireAdmin, (req, res) => {
+  res.json({ ok: true, msg: 'Backup iniciado — você receberá um e-mail em instantes.' });
+  executarBackup();
+});
+
 router.get('/admin/backup/download', requireAuth, requireAdmin, async (req, res) => {
+  const tmp = path.join(os.tmpdir(), 'backup-lauro-' + Date.now() + '.sql.gz');
   try {
-    const tabelas = ['usuarios','configuracoes','membros','diretivos', 'cientifico','cobrancas','fluxo_caixa','eventos','evento_lotes','evento_inscricoes','evento_pagamentos','evento_certificados','evento_campos','evento_cupons','evento_programacao','evento_palestrantes','evento_patrocinadores','listas_assinaturas','desvinculacoes','cartas_cobranca','calendario_atividades','calendario_categorias','sorteios','sorteio_participantes','palestrantes','marketing_posts','marketing_midias','marketing_config','contratos_diretivos'];
-    const linhas = ['-- BACKUP LAURO ' + new Date().toISOString(), 'BEGIN;'];
-    for (const t of tabelas) {
-      try {
-        const ex = await query('SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)', [t]);
-        if (!ex.rows[0].exists) continue;
-        const r = await query('SELECT * FROM ' + t + ' ORDER BY 1');
-        linhas.push('-- ' + t + ' (' + r.rows.length + ' registros)');
-        for (const row of r.rows) {
-          const cols = Object.keys(row).map(c => '"' + c + '"').join(', ');
-          const vals = Object.values(row).map(v => {
-            if (v === null) return 'NULL';
-            if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
-            if (typeof v === 'number') return String(v);
-            if (v instanceof Date) return "'" + v.toISOString() + "'";
-            return "'" + String(v).replace(/'/g, "''") + "'";
-          }).join(', ');
-          linhas.push('INSERT INTO ' + t + ' (' + cols + ') VALUES (' + vals + ') ON CONFLICT DO NOTHING;');
-        }
-      } catch(e) { linhas.push('-- ERRO ' + t + ': ' + e.message); }
-    }
-    linhas.push('COMMIT;');
-    const dataStr = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="backup-lauro-' + dataStr + '.sql"');
-    res.send(linhas.join('\n'));
-  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+    await dumpParaArquivo(tmp);
+    res.setHeader('Content-Type', 'application/gzip');
+    res.setHeader('Content-Disposition', 'attachment; filename="backup-lauro-' + new Date().toISOString().slice(0, 10) + '.sql.gz"');
+    fs.createReadStream(tmp).pipe(res).on('close', () => fs.unlink(tmp, () => {}));
+  } catch (e) {
+    fs.unlink(tmp, () => {});
+    res.status(500).send('Erro ao gerar backup: ' + e.message);
+  }
 });
 
 
