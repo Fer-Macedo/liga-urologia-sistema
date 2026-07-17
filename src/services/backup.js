@@ -59,6 +59,16 @@ async function rotacionar() {
   return { mantidos: arquivos.length - excedentes.length, removidos: excedentes.length };
 }
 
+// Para onde vai a cópia off-site: e-mail configurado (email_sistema), ou — o padrão —
+// os e-mails dos admins/presidência (mesmo destino dos alertas de template do WhatsApp).
+// Assim nunca fica vazio: sempre há pelo menos um admin ativo com e-mail.
+async function destinatarios() {
+  const cfgR = await query(`SELECT valor FROM configuracoes WHERE chave='email_sistema' AND valor <> ''`);
+  if (cfgR.rows.length && cfgR.rows[0].valor) return cfgR.rows[0].valor;
+  const r = await query(`SELECT DISTINCT email FROM usuarios WHERE ativo=1 AND email IS NOT NULL AND email <> '' AND perfil IN ('admin','presidencia')`);
+  return r.rows.map(x => x.email).join(', ');
+}
+
 // Resumo de quantos registros há por tabela (estimativa do próprio Postgres, sem varrer tudo).
 async function resumoTabelas() {
   try {
@@ -74,9 +84,7 @@ async function executarBackup() {
   console.log('[BACKUP] Iniciando backup diário — ' + new Date().toISOString());
   let emailDestino;
   try {
-    const cfgR = await query(`SELECT chave, valor FROM configuracoes WHERE chave IN ('email_sistema','email_contato')`);
-    const cfg = {}; cfgR.rows.forEach(r => cfg[r.chave] = r.valor);
-    emailDestino = cfg.email_sistema || cfg.email_contato;
+    emailDestino = await destinatarios();
 
     await fs.promises.mkdir(BACKUP_DIR, { recursive: true });
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-'); // 2026-07-17-03-00-00
