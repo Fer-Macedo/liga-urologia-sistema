@@ -210,9 +210,18 @@ async function notificarAtrasadosDiario() {
       continue;
     }
 
-    await notificarCobranca({ membro: {...cob, id: cob.membro_id}, cobranca: cob, tipo: 'pos', config });
+    // E-mail de atraso é diário; WhatsApp vai no MÁXIMO 1x por semana por cobrança.
+    // Disparo diário de WhatsApp em massa é o que derruba o número (banimento) — o e-mail
+    // não tem esse risco, então cobra todo dia; o WhatsApp cobra semanalmente. Se já mandou
+    // WhatsApp com sucesso nos últimos 7 dias, hoje sai só o e-mail (canal='email').
+    const wppRecente = await query(
+      "SELECT id FROM notificacoes_log WHERE cobranca_id=$1 AND canal='whatsapp' AND tipo='pos' AND status='ok' AND enviado_em > NOW() - INTERVAL '7 days' LIMIT 1",
+      [cob.id]
+    );
+    const canalAtraso = wppRecente.rows.length ? 'email' : undefined; // undefined = email + whatsapp
+    await notificarCobranca({ membro: {...cob, id: cob.membro_id}, cobranca: cob, tipo: 'pos', config, canal: canalAtraso });
     count++;
-    console.log('[ATRASADOS] Notificação enviada:', cob.nome, cob.referencia);
+    console.log('[ATRASADOS] Notificação enviada:', cob.nome, cob.referencia, canalAtraso === 'email' ? '(só email)' : '(email + whatsapp semanal)');
   }
 
   console.log('[ATRASADOS] Job concluído —', count, 'notificações enviadas de', r.rows.length, 'atrasados verificados');
