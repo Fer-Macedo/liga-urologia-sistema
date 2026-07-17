@@ -5,6 +5,20 @@ const { getConfig } = require('../services/config');
 const { enviarEmail, emailBonito } = require('../services/email');
 const { gerarPDFBuffer, ordinalEspanhol, calcularOrdinalPessoa } = require('../services/cartas');
 
+const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+// 'YYYY-MM-DD' -> 'Mayo 2026' (sem new Date, pra nao ter drift de fuso)
+function mesLabelES(ymd) { const p = String(ymd).slice(0,10).split('-'); return (MESES_ES[parseInt(p[1],10)-1] || '?') + ' ' + p[0]; }
+// 'YYYY-MM-DD' -> 'DD/MM/YYYY'
+function vencBR(ymd) { const p = String(ymd).slice(0,10).split('-'); return `${p[2]}/${p[1]}/${p[0]}`; }
+// Monta a frase da divida: 1 mes = texto original; 2+ = lista com "y" antes do ultimo.
+function fraseDeudaMeses(pares) {
+  if (!pares || !pares.length) return null;
+  if (pares.length === 1) return `no hemos recibido el pago de la cuota mensual correspondiente al mes de <strong>${pares[0].mes}</strong>, cuyo vencimiento fue el <strong>${pares[0].venc}</strong>`;
+  const itens = pares.map(p => `<strong>${p.mes}</strong> (venc. ${p.venc})`);
+  const ultimo = itens.pop();
+  return `no hemos recibido el pago de las cuotas correspondientes a los meses de ${itens.join(', ')} y ${ultimo}`;
+}
+
 function gerarHTMLCartaCobranca(pessoa, config, carta) {
   const timbrado = config.timbrado_b64 || null;
   const financeiroSrc = config.assinatura_financeiro_b64 || null;
@@ -12,9 +26,16 @@ function gerarHTMLCartaCobranca(pessoa, config, carta) {
   const d = new Date(carta.data || new Date());
   const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   const dataStr = d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
-  const mesRef = carta.mes_referencia || '___________';
-  const venc = carta.vencimento ? new Date(carta.vencimento).toLocaleDateString('es-PY') : '___________';
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',serif;font-size:11pt;color:#000}.pagina{width:210mm;height:297mm;position:relative;overflow:hidden}.bg{position:absolute;top:0;left:0;width:210mm;height:297mm;z-index:0}.bg img{width:210mm;height:297mm;display:block}.texto{position:absolute;top:52mm;left:22mm;width:166mm;height:203mm;z-index:1;display:flex;flex-direction:column}.titulo{font-size:13pt;font-weight:bold;text-align:center;margin-bottom:6px;text-transform:uppercase}.subtitulo{font-size:11pt;font-weight:bold;text-align:center;margin-bottom:14px;text-transform:uppercase}.corpo{text-align:justify;line-height:1.55;flex:1}.corpo p{margin-bottom:8px}.assinaturas{display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:10px}.assinatura-bloco{text-align:center;width:70%}.assinatura-img-wrap{height:50px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:3px}.assinatura-img{max-height:50px;max-width:130px;object-fit:contain}.linha{border-top:1.5px solid #000;width:90%;margin:0 auto 3px}.assinatura-nome{font-weight:bold;font-size:8.5pt;text-transform:uppercase}.assinatura-cargo{font-size:8pt;margin-top:2px}@page{size:A4;margin:0}@media print{html,body{width:100vw;min-height:100vh;margin:0!important;padding:0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.pagina{position:absolute;top:0;left:0;margin:0;padding:0;width:100vw;height:100vh;box-shadow:none;overflow:hidden}.bg{top:0;left:0;width:100vw;height:100vh}.bg img{width:100vw;height:100vh;display:block;object-fit:cover}}</style></head><body><div class="pagina"><div class="bg">${timbrado?`<img src="${timbrado}">`:''}</div><div class="texto"><div class="titulo">Carta de Cobro — LAURO</div><div class="subtitulo">Pago Mensual Vencido</div><div style="text-align:right;font-size:9pt;color:#555;margin-bottom:8px">N° ${carta.numero_carta ? String(carta.numero_carta).padStart(4,'0') : '----'}</div><div class="corpo"><p>Ciudad del Este/PY, ${dataStr}.</p><p>Estimado/a señor/a <strong>${pessoa.nome||'___________'}</strong>,</p><p>Esperamos que este mensaje le encuentre bien.</p><p>Nos ponemos en contacto con usted en nombre de LAURO – Liga Académica de Urología para recordarle que su cuota de membresía está vencida. Como ya le informamos, las cuotas de membresía vencen el día 15 de cada mes.</p><p>Hasta la fecha, no hemos recibido el pago de la cuota mensual correspondiente al mes de <strong>${mesRef}</strong>, cuyo vencimiento fue el <strong>${venc}</strong>. Solicitamos amablemente que se abone la deuda lo antes posible para evitar cualquier restricción en la participación en las actividades de la Liga.</p><p>Si ya ha realizado el pago, ignore este mensaje o, si es posible, envíenos el comprobante de pago para su verificación.</p><p>Estamos a su disposición para responder cualquier pregunta o proporcionar aclaraciones.</p><p style='margin-top:10px;font-style:italic;font-size:10pt'><strong>Esta es su ${ordinalEspanhol(carta.numero_ordinal||1)} notificacion oficial</strong> emitida por LAURO – Liga Academica de Urologia.</p><p>Atentamente,</p></div><div class="assinaturas"><div class="assinatura-bloco"><div class="assinatura-img-wrap">${financeiroSrc?`<img src="${financeiroSrc}" class="assinatura-img">`:''}</div><div class="linha"></div><div class="assinatura-nome">${nomeFinanceiro}</div><div class="assinatura-cargo">Director(a) Financiero(a)<br>LAURO – Liga Académica de Urología</div></div></div></div></div></body></html>`;
+  // Preferir o snapshot de meses (meses_json); cartas antigas caem no mes_referencia/vencimento unico.
+  let paresDeuda = [];
+  try { paresDeuda = carta.meses_json ? JSON.parse(carta.meses_json) : []; } catch(e) { paresDeuda = []; }
+  let fraseDeuda = fraseDeudaMeses(paresDeuda);
+  if (!fraseDeuda) {
+    const mesRef = carta.mes_referencia || '___________';
+    const venc = carta.vencimento ? new Date(carta.vencimento).toLocaleDateString('es-PY') : '___________';
+    fraseDeuda = `no hemos recibido el pago de la cuota mensual correspondiente al mes de <strong>${mesRef}</strong>, cuyo vencimiento fue el <strong>${venc}</strong>`;
+  }
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:'Times New Roman',serif;font-size:11pt;color:#000}.pagina{width:210mm;height:297mm;position:relative;overflow:hidden}.bg{position:absolute;top:0;left:0;width:210mm;height:297mm;z-index:0}.bg img{width:210mm;height:297mm;display:block}.texto{position:absolute;top:52mm;left:22mm;width:166mm;height:203mm;z-index:1;display:flex;flex-direction:column}.titulo{font-size:13pt;font-weight:bold;text-align:center;margin-bottom:6px;text-transform:uppercase}.subtitulo{font-size:11pt;font-weight:bold;text-align:center;margin-bottom:14px;text-transform:uppercase}.corpo{text-align:justify;line-height:1.55;flex:1}.corpo p{margin-bottom:8px}.assinaturas{display:flex;flex-direction:column;gap:10px;align-items:center;margin-top:10px}.assinatura-bloco{text-align:center;width:70%}.assinatura-img-wrap{height:50px;display:flex;align-items:flex-end;justify-content:center;margin-bottom:3px}.assinatura-img{max-height:50px;max-width:130px;object-fit:contain}.linha{border-top:1.5px solid #000;width:90%;margin:0 auto 3px}.assinatura-nome{font-weight:bold;font-size:8.5pt;text-transform:uppercase}.assinatura-cargo{font-size:8pt;margin-top:2px}@page{size:A4;margin:0}@media print{html,body{width:100vw;min-height:100vh;margin:0!important;padding:0!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}.pagina{position:absolute;top:0;left:0;margin:0;padding:0;width:100vw;height:100vh;box-shadow:none;overflow:hidden}.bg{top:0;left:0;width:100vw;height:100vh}.bg img{width:100vw;height:100vh;display:block;object-fit:cover}}</style></head><body><div class="pagina"><div class="bg">${timbrado?`<img src="${timbrado}">`:''}</div><div class="texto"><div class="titulo">Carta de Cobro — LAURO</div><div class="subtitulo">Pago Mensual Vencido</div><div style="text-align:right;font-size:9pt;color:#555;margin-bottom:8px">N° ${carta.numero_carta ? String(carta.numero_carta).padStart(4,'0') : '----'}</div><div class="corpo"><p>Ciudad del Este/PY, ${dataStr}.</p><p>Estimado/a señor/a <strong>${pessoa.nome||'___________'}</strong>,</p><p>Esperamos que este mensaje le encuentre bien.</p><p>Nos ponemos en contacto con usted en nombre de LAURO – Liga Académica de Urología para recordarle que su cuota de membresía está vencida. Como ya le informamos, las cuotas de membresía vencen el día 15 de cada mes.</p><p>Hasta la fecha, ${fraseDeuda}. Solicitamos amablemente que se abone la deuda lo antes posible para evitar cualquier restricción en la participación en las actividades de la Liga.</p><p>Si ya ha realizado el pago, ignore este mensaje o, si es posible, envíenos el comprobante de pago para su verificación.</p><p>Estamos a su disposición para responder cualquier pregunta o proporcionar aclaraciones.</p><p style='margin-top:10px;font-style:italic;font-size:10pt'><strong>Esta es su ${ordinalEspanhol(carta.numero_ordinal||1)} notificacion oficial</strong> emitida por LAURO – Liga Academica de Urologia.</p><p>Atentamente,</p></div><div class="assinaturas"><div class="assinatura-bloco"><div class="assinatura-img-wrap">${financeiroSrc?`<img src="${financeiroSrc}" class="assinatura-img">`:''}</div><div class="linha"></div><div class="assinatura-nome">${nomeFinanceiro}</div><div class="assinatura-cargo">Director(a) Financiero(a)<br>LAURO – Liga Académica de Urología</div></div></div></div></div></body></html>`;
 }
 
 async function prepararConfigCobranca(config) {
@@ -29,6 +50,23 @@ async function buscarPessoaCarta(carta) {
   if (carta.membro_id) { const r = await query('SELECT * FROM membros WHERE id=$1',[carta.membro_id]); pessoa=r.rows[0]||{}; }
   else if (carta.ligante_id) { const r = await query('SELECT * FROM ligantes WHERE id=$1',[carta.ligante_id]); pessoa=r.rows[0]||{}; }
   return pessoa;
+}
+
+// Busca as mensalidades VENCIDAS (nao pagas, com vencimento antes de hoje) da pessoa.
+// Cobrancas so existem por membro; se a carta e de um ligante, acha o membro pelo email.
+// Retorna [{ymd, mes, venc}] ordenado do mais antigo pro mais novo.
+async function buscarAtrasosPessoa(membroId, liganteId) {
+  let mid = membroId || null;
+  if (!mid && liganteId) {
+    const r = await query('SELECT m.id FROM ligantes l JOIN membros m ON LOWER(m.email)=LOWER(l.email) WHERE l.id=$1 LIMIT 1', [liganteId]);
+    mid = r.rows[0] ? r.rows[0].id : null;
+  }
+  if (!mid) return [];
+  const r = await query(
+    "SELECT data_vencimento FROM cobrancas WHERE membro_id=$1 AND status IN ('pendente','atrasado') AND data_vencimento < to_char(CURRENT_DATE,'YYYY-MM-DD') AND referencia NOT LIKE '%-test' ORDER BY data_vencimento",
+    [mid]
+  );
+  return r.rows.map(x => { const ymd = String(x.data_vencimento).slice(0,10); return { ymd, mes: mesLabelES(ymd), venc: vencBR(ymd) }; });
 }
 
 module.exports = function (router) {
@@ -57,17 +95,27 @@ router.get('/carta-cobranca', requireAuth, requirePermissao('carta-cobranca'), a
     query('SELECT id,nome,email FROM membros WHERE ativo=1 ORDER BY nome'),
     query('SELECT id,nome,email FROM ligantes WHERE ativo=1 ORDER BY nome')
   ]);
-  res.render('pages/carta-cobranca', { config, usuario: req.session.usuario, msg, erro, cartas: cartasR.rows, membros: membrosR.rows, ligantes: ligantesR.rows });
+  // Mapa de meses em atraso por pessoa (pro preview no formulario, antes de gerar).
+  const atrasosView = { membro: {}, ligante: {} };
+  const atrR = await query("SELECT membro_id, data_vencimento FROM cobrancas WHERE status IN ('pendente','atrasado') AND data_vencimento < to_char(CURRENT_DATE,'YYYY-MM-DD') AND referencia NOT LIKE '%-test' ORDER BY data_vencimento");
+  atrR.rows.forEach(r => { const ymd = String(r.data_vencimento).slice(0,10); (atrasosView.membro[r.membro_id] = atrasosView.membro[r.membro_id] || []).push({ mes: mesLabelES(ymd), venc: vencBR(ymd) }); });
+  const lmR = await query('SELECT l.id AS lid, m.id AS mid FROM ligantes l JOIN membros m ON LOWER(m.email)=LOWER(l.email) WHERE l.ativo=1');
+  lmR.rows.forEach(r => { if (atrasosView.membro[r.mid]) atrasosView.ligante[r.lid] = atrasosView.membro[r.mid]; });
+  res.render('pages/carta-cobranca', { config, usuario: req.session.usuario, msg, erro, cartas: cartasR.rows, membros: membrosR.rows, ligantes: ligantesR.rows, atrasosView });
 });
 
 router.post('/carta-cobranca', requireAuth, requirePermissao('carta-cobranca'), async (req, res) => {
-  const { membro_id, ligante_id, mes_referencia, vencimento } = req.body;
+  const { membro_id, ligante_id } = req.body;
   const mid = membro_id && membro_id !== '' ? parseInt(membro_id) : null;
   const lid = ligante_id && ligante_id !== '' ? parseInt(ligante_id) : null;
+  if (!mid && !lid) { req.session.erro = ['Selecione o destinatário.']; return res.redirect('/carta-cobranca'); }
+  // Puxa automaticamente os meses em atraso da pessoa e congela como snapshot na carta.
+  const pares = await buscarAtrasosPessoa(mid, lid);
+  if (!pares.length) { req.session.erro = ['Esta pessoa não tem mensalidades vencidas — nada para cobrar.']; return res.redirect('/carta-cobranca'); }
   const numCob = (await query("SELECT nextval('seq_numero_carta') n")).rows[0].n;
   const ordCob = await calcularOrdinalPessoa(mid,lid,null);
-  await query('INSERT INTO cartas_cobranca (membro_id,ligante_id,mes_referencia,vencimento,criado_por,numero_carta,numero_ordinal) VALUES ($1,$2,$3,$4,$5,$6,$7)', [mid,lid,mes_referencia,vencimento||null,req.session.usuario.id,numCob,ordCob]);
-  req.session.msg = ['Carta criada!']; res.redirect('/carta-cobranca');
+  await query('INSERT INTO cartas_cobranca (membro_id,ligante_id,mes_referencia,vencimento,meses_json,criado_por,numero_carta,numero_ordinal) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [mid,lid,pares[0].mes,pares[0].ymd,JSON.stringify(pares),req.session.usuario.id,numCob,ordCob]);
+  req.session.msg = ['Carta criada com ' + pares.length + (pares.length === 1 ? ' mês em atraso!' : ' meses em atraso!')]; res.redirect('/carta-cobranca');
 });
 
 router.get('/carta-cobranca/:id/visualizar', requireAuth, requirePermissao('carta-cobranca'), async (req, res) => {

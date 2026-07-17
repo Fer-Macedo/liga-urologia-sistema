@@ -96,6 +96,8 @@ async function initSchema() {
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS sexo TEXT;
     ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS edicao_liberada BOOLEAN DEFAULT false;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS edicao_liberada BOOLEAN DEFAULT false;
+    -- carta de cobranca: snapshot dos meses em atraso no momento da geracao (JSON: [{mes,venc,ymd}])
+    ALTER TABLE cartas_cobranca ADD COLUMN IF NOT EXISTS meses_json TEXT;
     -- ponytail: IF EXISTS pq as tabelas ps_* vivem só no banco (não há CREATE no código)
     ALTER TABLE IF EXISTS ps_processos ADD COLUMN IF NOT EXISTS edital_chave TEXT;
 
