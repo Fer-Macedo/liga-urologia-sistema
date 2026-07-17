@@ -2,7 +2,7 @@
 const pa = typeof paginaAtual !== 'undefined' ? paginaAtual : '';
 const usuarioPerfil = (typeof usuario !== 'undefined' && usuario && usuario.perfil) ? usuario.perfil : 'visualizador';
 const orgLogo = (typeof config !== 'undefined' && config && config.org_logo) ? config.org_logo : '/img/logo-lauro.png';
-const orgNome = (typeof config !== 'undefined' && config && config.org_nome) ? config.org_nome : 'LAURO';
+const orgNome = (typeof config !== 'undefined' && config && config.org_nome) ? config.org_nome : 'LAURO - Liga Acadêmica de Urologia';
 const perms = (typeof permissoesAtivas !== 'undefined' && Array.isArray(permissoesAtivas)) ? permissoesAtivas : [];
 const isAdmin = usuarioPerfil === 'admin';
 const temPerm = (modulo) => isAdmin || perms.includes(modulo);
@@ -14,7 +14,8 @@ aside.sidebar a{text-decoration:none;}
 aside.sidebar .sidebar-brand{display:flex;align-items:center;gap:12px;padding:18px 18px;border-bottom:1px solid rgba(255,255,255,.07);}
 aside.sidebar .sidebar-brand-logo{width:44px;height:44px;flex:0 0 44px;background:#fff;border:1px solid rgba(255,255,255,.14);border-radius:50%;display:grid;place-items:center;overflow:hidden;font-family:'Archivo';font-weight:800;color:#15402F;font-size:15px;}
 aside.sidebar .sidebar-brand-logo img{width:100%;height:100%;object-fit:cover;display:block;border-radius:50% !important;}
-aside.sidebar .sidebar-brand-text strong{display:block;font-family:'Archivo';font-weight:800;font-size:14px;letter-spacing:.3px;color:#fff;line-height:1.15;}
+aside.sidebar .sidebar-brand-text{min-width:0;flex:1;}
+aside.sidebar .sidebar-brand-text strong{display:block;font-family:'Archivo';font-weight:800;font-size:14px;letter-spacing:.3px;color:#fff;line-height:1.15;white-space:normal !important;overflow:visible !important;text-overflow:clip !important;overflow-wrap:anywhere;}
 aside.sidebar .sidebar-brand-text span{display:block;font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:2px;color:#2FA873;margin-top:3px;text-transform:uppercase;}
 aside.sidebar .sidebar-nav{flex:1;overflow-y:auto;padding:12px 10px;}
 aside.sidebar .sidebar-nav::-webkit-scrollbar{width:5px;}
