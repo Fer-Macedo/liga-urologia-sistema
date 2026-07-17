@@ -605,8 +605,8 @@ function iniciarAgendamentos() {
     } catch(e) { console.error('[LEMBRETE ANIVERSARIO] erro (dia):', e.message); }
   }, { timezone: 'America/Asuncion' });
 
-  // Instagram — plano de ação estratégico (IA) da conta, segunda às 8h (marketing/presidência/admin)
-  cron.schedule('0 8 * * 1', async () => {
+  // Instagram — plano de ação estratégico (IA) da conta, segunda e quinta às 8h (marketing/presidência/admin)
+  cron.schedule('0 8 * * 1,4', async () => {
     try {
       const { enviarRelatorioEstrategico } = require('./instagram-estrategia');
       await enviarRelatorioEstrategico();
