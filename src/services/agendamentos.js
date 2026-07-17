@@ -187,6 +187,7 @@ async function enviarNotificacoes() {
 
 // ─── NOTIFICAÇÃO DIÁRIA DE ATRASADOS ─────────────────────────────────────────
 async function notificarAtrasadosDiario() {
+  console.log('[ATRASADOS]', new Date().toISOString(), 'função iniciada');
   const config = await getConfig();
   if (config.notif_atrasados_diario !== '1') return;
 
@@ -198,6 +199,7 @@ async function notificarAtrasadosDiario() {
 
   let count = 0;
   const hoje = dayjs().format('YYYY-MM-DD');
+  console.log('[ATRASADOS]', new Date().toISOString(), 'iniciando loop —', r.rows.length, 'atrasados a verificar');
 
   for (const cob of r.rows) {
     // Verificar se já foi notificado hoje (evita duplicar se o cron rodar 2x no mesmo dia)
@@ -224,7 +226,7 @@ async function notificarAtrasadosDiario() {
     console.log('[ATRASADOS] Notificação enviada:', cob.nome, cob.referencia, canalAtraso === 'email' ? '(só email)' : '(email + whatsapp semanal)');
   }
 
-  console.log('[ATRASADOS] Job concluído —', count, 'notificações enviadas de', r.rows.length, 'atrasados verificados');
+  console.log('[ATRASADOS]', new Date().toISOString(), 'Job concluído —', count, 'notificações enviadas de', r.rows.length, 'atrasados verificados');
 }
 
 // ─── AUDITORIA FLUXO CAIXA ────────────────────────────────────────────────────
@@ -517,7 +519,7 @@ function iniciarAgendamentos() {
 
   // Notificação atrasados — às 9h (e-mail diário sem limite; WhatsApp com intervalo de 3 dias, anti-ban)
   cron.schedule('0 9 * * *', async () => {
-    console.log('[CRON] Notificando atrasados diariamente...');
+    console.log('[CRON]', new Date().toISOString(), 'Atrasados: cron disparado');
     await notificarAtrasadosDiario();
   }, { timezone: 'America/Asuncion' });
 
