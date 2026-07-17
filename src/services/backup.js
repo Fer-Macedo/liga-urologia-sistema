@@ -5,6 +5,7 @@
 // e apaga os mais antigos) e envia o arquivo por e-mail como ANEXO real (cópia off-site).
 // Se o backup falhar, manda um e-mail de ALERTA — pra falha nunca passar em silêncio.
 
+require('dotenv').config(); // garante DATABASE_URL/EMAIL ao rodar via CLI (`node src/services/backup.js`)
 const { spawn } = require('child_process');
 const zlib = require('zlib');
 const fs = require('fs');
