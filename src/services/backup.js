@@ -1,183 +1,181 @@
 // src/services/backup.js
-// Backup automático diário do banco PostgreSQL
-// Exporta todas as tabelas em formato SQL e envia por e-mail
+// Backup automático diário do banco PostgreSQL às 3h da manhã.
+// Usa pg_dump (pega TODAS as tabelas sozinho, com estrutura + dados, escape correto),
+// comprime com gzip, guarda em disco no servidor com ROTAÇÃO (mantém os últimos N dias
+// e apaga os mais antigos) e envia o arquivo por e-mail como ANEXO real (cópia off-site).
+// Se o backup falhar, manda um e-mail de ALERTA — pra falha nunca passar em silêncio.
 
+const { spawn } = require('child_process');
+const zlib = require('zlib');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 const { query } = require('../models/database');
 const { enviarEmail } = require('./notificacoes');
 
-// Lista de tabelas para backup
-const TABELAS = [
-  'usuarios', 'configuracoes',
-  'membros', 'diretivos',
-  'cobrancas', 'fluxo_caixa',
-  'eventos', 'evento_lotes', 'evento_inscricoes', 'evento_pagamentos',
-  'evento_certificados', 'evento_campos', 'evento_cupons',
-  'evento_programacao', 'evento_palestrantes', 'evento_patrocinadores',
-  'listas_assinaturas', 'desvinculacoes', 'cartas_cobranca',
-  'calendario_atividades', 'calendario_categorias',
-  'sorteios', 'sorteio_participantes',
-  'palestrantes',
-  'marketing_posts', 'marketing_midias', 'marketing_config',
-  'contratos_diretivos'
-];
+// Onde guardar os backups no servidor e quantos manter. Ajuste MANTER se quiser mais/menos
+// histórico — cada arquivo é pequeno (poucos MB comprimidos). Manter só 1 é arriscado: se o
+// dump da noite pegar o banco num estado ruim, você perde a única cópia boa. 7 = uma semana.
+const BACKUP_DIR = process.env.BACKUP_DIR || '/var/backups/liga-urologia';
+const MANTER = 7;
+const MAX_ANEXO_MB = 20; // acima disso não anexa no e-mail (limite do Gmail ~25MB), só avisa o caminho
 
-async function gerarBackupSQL() {
-  const linhas = [];
-  const agora = new Date().toISOString();
+// Gera o dump comprimido no caminho indicado. Roda pg_dump com a mesma conexão do app
+// (DATABASE_URL) e canaliza a saída por gzip direto pro arquivo, sem passar por shell
+// (evita problema de escape na connection string).
+function dumpParaArquivo(caminho) {
+  return new Promise((resolve, reject) => {
+    if (!process.env.DATABASE_URL) return reject(new Error('DATABASE_URL não definida.'));
+    const dump = spawn('pg_dump', ['--no-owner', '--no-privileges', '--dbname', process.env.DATABASE_URL]);
+    const out = fs.createWriteStream(caminho);
+    let stderr = '';
+    let codigo = null;
+    dump.stderr.on('data', d => { stderr += d.toString(); });
+    dump.on('error', e => reject(new Error('Não foi possível iniciar o pg_dump (instalado?): ' + e.message)));
+    dump.on('close', c => { codigo = c; });
+    out.on('error', reject);
+    out.on('finish', () => {
+      if (codigo !== 0) return reject(new Error('pg_dump falhou (código ' + codigo + '): ' + stderr.slice(0, 300)));
+      // Sanidade: um dump válido nunca é minúsculo. gz de dump vazio/quebrado fica ~20 bytes.
+      const tam = fs.statSync(caminho).size;
+      if (tam < 200) return reject(new Error('Backup gerado suspeito de vazio (' + tam + ' bytes).'));
+      resolve(tam);
+    });
+    dump.stdout.pipe(zlib.createGzip()).pipe(out);
+  });
+}
 
-  linhas.push(`-- ================================================`);
-  linhas.push(`-- BACKUP SISTEMA LAURO — ${agora}`);
-  linhas.push(`-- Gerado automaticamente pelo sistema`);
-  linhas.push(`-- ================================================`);
-  linhas.push('');
-  linhas.push('SET client_encoding = \'UTF8\';');
-  linhas.push('BEGIN;');
-  linhas.push('');
-
-  for (const tabela of TABELAS) {
-    try {
-      // Verificar se tabela existe
-      const existe = await query(
-        `SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = $1)`,
-        [tabela]
-      );
-      if (!existe.rows[0].exists) continue;
-
-      // Buscar dados
-      const r = await query(`SELECT * FROM ${tabela} ORDER BY 1`);
-      if (r.rows.length === 0) {
-        linhas.push(`-- Tabela ${tabela}: vazia`);
-        continue;
-      }
-
-      linhas.push(`-- ---- ${tabela} (${r.rows.length} registros) ----`);
-
-      // Gerar INSERTs
-      for (const row of r.rows) {
-        const cols = Object.keys(row).map(c => `"${c}"`).join(', ');
-        const vals = Object.values(row).map(v => {
-          if (v === null) return 'NULL';
-          if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE';
-          if (typeof v === 'number') return v;
-          if (v instanceof Date) return `'${v.toISOString()}'`;
-          // Escapar strings
-          const str = String(v).replace(/'/g, "''").replace(/\\/g, '\\\\');
-          return `'${str}'`;
-        }).join(', ');
-        linhas.push(`INSERT INTO ${tabela} (${cols}) VALUES (${vals}) ON CONFLICT DO NOTHING;`);
-      }
-      linhas.push('');
-    } catch (e) {
-      linhas.push(`-- ERRO ao exportar ${tabela}: ${e.message}`);
-    }
+// Apaga os backups mais antigos, mantendo os MANTER mais recentes. Os nomes começam com
+// timestamp ISO, então ordenar alfabeticamente já é ordenar por data.
+async function rotacionar() {
+  const arquivos = (await fs.promises.readdir(BACKUP_DIR))
+    .filter(f => /^backup-lauro-.*\.sql\.gz$/.test(f))
+    .sort();
+  const excedentes = arquivos.slice(0, Math.max(0, arquivos.length - MANTER));
+  for (const f of excedentes) {
+    try { await fs.promises.unlink(path.join(BACKUP_DIR, f)); } catch (_) {}
   }
+  return { mantidos: arquivos.length - excedentes.length, removidos: excedentes.length };
+}
 
-  linhas.push('COMMIT;');
-  linhas.push('');
-  linhas.push(`-- FIM DO BACKUP — ${agora}`);
-
-  return linhas.join('\n');
+// Resumo de quantos registros há por tabela (estimativa do próprio Postgres, sem varrer tudo).
+async function resumoTabelas() {
+  try {
+    const r = await query(
+      `SELECT relname AS tabela, n_live_tup AS registros
+       FROM pg_stat_user_tables ORDER BY relname`
+    );
+    return r.rows.map(t => `${t.tabela}: ${t.registros} registros`).join('\n');
+  } catch (e) { return '(não foi possível gerar o resumo)'; }
 }
 
 async function executarBackup() {
   console.log('[BACKUP] Iniciando backup diário — ' + new Date().toISOString());
-
+  let emailDestino;
   try {
-    // Buscar config para email
-    const cfgR = await query(`SELECT chave, valor FROM configuracoes`);
-    const cfg = {};
-    cfgR.rows.forEach(r => cfg[r.chave] = r.valor);
+    const cfgR = await query(`SELECT chave, valor FROM configuracoes WHERE chave IN ('email_sistema','email_contato')`);
+    const cfg = {}; cfgR.rows.forEach(r => cfg[r.chave] = r.valor);
+    emailDestino = cfg.email_sistema || cfg.email_contato;
 
-    const emailDestino = cfg.email_sistema || cfg.email_contato;
+    await fs.promises.mkdir(BACKUP_DIR, { recursive: true });
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-'); // 2026-07-17-03-00-00
+    const nomeArquivo = `backup-lauro-${stamp}.sql.gz`;
+    const caminho = path.join(BACKUP_DIR, nomeArquivo);
+
+    const tamBytes = await dumpParaArquivo(caminho);
+    const tamKB = Math.round(tamBytes / 1024);
+    const rot = await rotacionar();
+    const resumo = await resumoTabelas();
+
+    console.log(`[BACKUP] ✅ ${nomeArquivo} — ${tamKB}KB — guardados ${rot.mantidos}, removidos ${rot.removidos} antigo(s)`);
+
     if (!emailDestino) {
-      console.warn('[BACKUP] Nenhum e-mail configurado para envio do backup.');
+      console.warn('[BACKUP] Backup salvo em disco, mas nenhum e-mail configurado para a cópia off-site.');
       return;
     }
 
-    const sql = await gerarBackupSQL();
-    const dataStr = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-    const nomeArquivo = `backup-lauro-${dataStr}.sql`;
-    const tamanhoKB = Math.round(Buffer.byteLength(sql, 'utf8') / 1024);
+    const anexos = tamBytes <= MAX_ANEXO_MB * 1024 * 1024
+      ? [{ filename: nomeArquivo, path: caminho }]
+      : undefined;
+    const avisoTamanho = anexos ? '' :
+      `<p style="color:#b45309"><strong>Obs.:</strong> o arquivo (${tamKB}KB) passou de ${MAX_ANEXO_MB}MB e não foi anexado. Ele está no servidor em <code>${caminho}</code>.</p>`;
 
-    // Contar registros por tabela para o relatório
-    const resumo = [];
-    for (const tabela of TABELAS) {
-      try {
-        const r = await query(`SELECT COUNT(*) n FROM ${tabela}`);
-        resumo.push(`${tabela}: ${r.rows[0].n} registros`);
-      } catch (e) {}
-    }
-
-    // Enviar por email com o SQL como anexo no corpo
     await enviarEmail({
       para: emailDestino,
-      assunto: `🗄️ Backup LAURO — ${dataStr} (${tamanhoKB}KB)`,
-      texto: `Backup automático do banco de dados — ${dataStr}\n\nResumo:\n${resumo.join('\n')}\n\nO arquivo SQL está no corpo abaixo.`,
+      assunto: `🗄️ Backup LAURO — ${stamp.slice(0, 10)} (${tamKB}KB)`,
+      titulo: 'Backup automático do banco de dados',
+      faixaLabel: 'BACKUP',
+      texto: `Backup automático do banco — ${stamp}. Arquivo: ${nomeArquivo} (${tamKB}KB). No servidor mantemos os últimos ${MANTER} dias.`,
       html: `
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-          <div style="background:#2b6803;padding:20px 24px;border-radius:8px 8px 0 0;">
-            <h2 style="color:#fff;margin:0;font-size:18px;">🗄️ Backup Automático — LAURO</h2>
-          </div>
-          <div style="background:#fff;padding:24px;border:1px solid #e2e8f0;border-radius:0 0 8px 8px;">
-            <p style="color:#374151;margin:0 0 16px"><strong>Data:</strong> ${dataStr}</p>
-            <p style="color:#374151;margin:0 0 16px"><strong>Tamanho:</strong> ${tamanhoKB} KB</p>
-            <p style="color:#374151;margin:0 0 16px"><strong>Tabelas exportadas:</strong></p>
-            <pre style="background:#f8fafc;padding:16px;border-radius:8px;font-size:12px;color:#374151;overflow:auto">${resumo.join('\n')}</pre>
-            <hr style="border:none;border-top:1px solid #e2e8f0;margin:20px 0">
-            <p style="color:#6b7280;font-size:12px">Este backup é gerado automaticamente todo dia às 3h. Guarde em local seguro.</p>
-          </div>
-        </div>
-        <pre style="font-size:10px;color:#374151;margin-top:24px;background:#f8fafc;padding:16px;border-radius:8px;overflow:auto;white-space:pre-wrap">${sql.substring(0, 50000)}${sql.length > 50000 ? '\n\n... (truncado — arquivo muito grande para email)' : ''}</pre>
-      `
+        <p>Backup automático do banco de dados concluído.</p>
+        <p><strong>Arquivo:</strong> ${nomeArquivo}<br>
+           <strong>Tamanho:</strong> ${tamKB} KB<br>
+           <strong>No servidor:</strong> mantendo os últimos ${MANTER} dias (${rot.mantidos} em disco).</p>
+        ${avisoTamanho}
+        <p style="margin-top:16px"><strong>Registros por tabela:</strong></p>
+        <pre style="background:#f8fafc;padding:12px;border-radius:8px;font-size:12px;white-space:pre-wrap">${resumo}</pre>
+        <p style="color:#6b7280;font-size:12px;margin-top:16px">O arquivo em anexo está comprimido (.sql.gz). Para restaurar: <code>gunzip -c ${nomeArquivo} | psql "$DATABASE_URL"</code></p>
+      `,
+      anexos
     });
-
-    console.log(`[BACKUP] ✅ Backup enviado para ${emailDestino} — ${tamanhoKB}KB — ${resumo.length} tabelas`);
-
+    console.log(`[BACKUP] Cópia off-site enviada para ${emailDestino}.`);
   } catch (e) {
     console.error('[BACKUP] ❌ Erro no backup:', e.message);
+    // Falha de backup não pode passar em silêncio — avisa por e-mail (se der).
+    if (emailDestino) {
+      try {
+        await enviarEmail({
+          para: emailDestino,
+          assunto: '⚠️ FALHA no backup do banco — LAURO',
+          titulo: 'Falha no backup automático',
+          faixaLabel: 'ALERTA',
+          html: `<p>O backup automático do banco <strong>falhou</strong> em ${new Date().toLocaleString('pt-BR')}.</p>
+                 <p><strong>Erro:</strong> ${e.message}</p>
+                 <p>Verifique o servidor assim que possível — o banco pode estar sem backup do dia.</p>`
+        });
+      } catch (_) {}
+    }
   }
 }
 
-// Agendar backup diário às 3h da manhã
+// Agenda o backup diário às 3h da manhã.
 function agendarBackup() {
   const agora = new Date();
   const proxima3h = new Date();
   proxima3h.setHours(3, 0, 0, 0);
   if (proxima3h <= agora) proxima3h.setDate(proxima3h.getDate() + 1);
-
   const msAte3h = proxima3h - agora;
-
   console.log(`[BACKUP] Próximo backup agendado para: ${proxima3h.toLocaleString('pt-BR')}`);
-
   setTimeout(() => {
     executarBackup();
-    // Repetir a cada 24 horas
     setInterval(executarBackup, 24 * 60 * 60 * 1000);
   }, msAte3h);
 }
 
-// Rota manual para admin forçar backup
+// Rotas manuais para o admin: forçar um backup agora e baixar um dump na hora.
 function rotaBackupManual(router, requireAdmin) {
-  router.post('/admin/backup', requireAdmin, async (req, res) => {
-    try {
-      res.json({ ok: true, msg: 'Backup iniciado — você receberá um e-mail em instantes.' });
-      executarBackup(); // executa em background
-    } catch (e) {
-      res.json({ ok: false, msg: e.message });
-    }
+  router.post('/admin/backup', requireAdmin, (req, res) => {
+    res.json({ ok: true, msg: 'Backup iniciado — você receberá um e-mail em instantes.' });
+    executarBackup();
   });
 
   router.get('/admin/backup/download', requireAdmin, async (req, res) => {
+    const tmp = path.join(os.tmpdir(), `backup-lauro-${Date.now()}.sql.gz`);
     try {
-      const sql = await gerarBackupSQL();
-      const dataStr = new Date().toLocaleDateString('pt-BR').replace(/\//g, '-');
-      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-      res.setHeader('Content-Disposition', `attachment; filename="backup-lauro-${dataStr}.sql"`);
-      res.send(sql);
+      await dumpParaArquivo(tmp);
+      res.setHeader('Content-Type', 'application/gzip');
+      res.setHeader('Content-Disposition', `attachment; filename="backup-lauro-${new Date().toISOString().slice(0, 10)}.sql.gz"`);
+      fs.createReadStream(tmp).pipe(res).on('close', () => fs.unlink(tmp, () => {}));
     } catch (e) {
-      res.status(500).send('Erro: ' + e.message);
+      fs.unlink(tmp, () => {});
+      res.status(500).send('Erro ao gerar backup: ' + e.message);
     }
   });
+}
+
+// Permite rodar um backup manual pela linha de comando: `node src/services/backup.js`
+if (require.main === module) {
+  executarBackup().then(() => process.exit(0)).catch(() => process.exit(1));
 }
 
 module.exports = { agendarBackup, executarBackup, rotaBackupManual };
