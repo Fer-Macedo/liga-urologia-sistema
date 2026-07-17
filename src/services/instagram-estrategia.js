@@ -28,7 +28,10 @@ Não escreva nada fora dessas seções nem fora do HTML.`;
 function resumoParaPrompt(a) {
   const lista = arr => arr.slice(0, 4).map(x => `${x.chave}: ${x.valor}`).join(', ');
   const tops = a.topPosts.map(p => `${p.tipo} (${p.engaj} interações)`).join('; ');
-  return `DADOS DA CONTA @${a.conta.username}:
+  const hoje = new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' });
+  return `Hoje é ${hoje}. Ao citar prazos (ex: "até domingo"), use esta data como referência.
+
+DADOS DA CONTA @${a.conta.username}:
 - Seguidores: ${a.conta.seguidores} | Seguindo: ${a.conta.seguindo} | Total de posts: ${a.conta.posts}
 - Novos seguidores: ${a.resumo7d.novosSeguidores} nos últimos 7 dias, ${a.resumo28d.novosSeguidores} nos últimos 28 dias
 - Alcance: ${a.resumo7d.alcance} contas (7 dias), ${a.resumo28d.alcance} (28 dias)
