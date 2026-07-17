@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es" id="htmlRoot">
+<html lang="pt-BR" id="htmlRoot">
 <head>
   <meta charset="UTF-8">
   <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Datos del Disertante — <%= config.org_nome %></title>
+  <title>Datos del Ponente / Dados do Palestrante — <%= config.org_nome %></title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
@@ -108,7 +108,7 @@
   <% if(config.org_logo){ %><img src="<%= config.org_logo %>" alt="Logo"><% } %>
   <div class="header-info">
     <h1><%= config.org_nome %></h1>
-    <p id="headerSub">Formulario de Datos del Disertante</p>
+    <p id="headerSub">Formulário de Dados do Palestrante</p>
   </div>
 </div>
 
@@ -132,14 +132,14 @@
   <!-- TELA DE SELEÇÃO DE PAÍS -->
   <div class="pais-screen" id="paisScreen">
     <div class="pais-screen-titulo" id="telaTitle">¿En qué país ejerce la medicina?</div>
-    <div class="pais-screen-sub" id="telaSub">¿En qué país ejerce la medicina?</div>
-    <div class="pais-screen-sub2" id="telaHint">Seleccione su país</div>
+    <div class="pais-screen-sub" id="telaSub">Em qual país você exerce a medicina?</div>
+    <div class="pais-screen-sub2" id="telaHint">Selecione seu país / Seleccione su país</div>
 
     <div class="paises-grid">
       <div class="pais-card" onclick="selecionarPais('Brasil')">
         <span class="pais-flag"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">BR</span></span>
         <div class="pais-label">Brasil</div>
-        <div class="pais-idioma">Portugués</div>
+        <div class="pais-idioma">Português</div>
       </div>
       <div class="pais-card" onclick="selecionarPais('Paraguay')">
         <span class="pais-flag"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">PY</span></span>
@@ -161,18 +161,18 @@
       <!-- BOTÃO VOLTAR / MUDAR PAÍS -->
       <div class="lang-bar" onclick="voltarPais()">
         <span id="bandeira">🇧🇷</span>
-        <span id="trocarTexto">Cambiar país / idioma</span>
+        <span id="trocarTexto">Trocar país / idioma</span>
       </div>
 
       <% if(palestrante.preenchido_em){ %>
       <div class="preench-banner" id="preenchBanner">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <span id="preenchTxt">Usted ya completó el <%= new Date(palestrante.preenchido_em).toLocaleDateString('pt-BR') %>. Puede actualizar abajo.</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> <span id="preenchTxt">Você já preencheu em <%= new Date(palestrante.preenchido_em).toLocaleDateString('pt-BR') %>. Pode atualizar abaixo.</span>
       </div>
       <% } %>
 
       <div class="form-intro">
-        <h2 id="introTitulo">¡Hola, Dr(a)! </h2>
-        <p id="introTxt">Por favor, complete los datos a continuación para que podamos procesar los documentos para su participación como disertante. Los campos con <strong style="color:#dc2626">*</strong> son obligatorios.</p>
+        <h2 id="introTitulo">Olá, Dr(a)! </h2>
+        <p id="introTxt">Por favor, preencha os dados abaixo para que possamos processar os documentos para sua participação como palestrante. Campos com <strong style="color:#dc2626">*</strong> são obrigatórios.</p>
       </div>
 
       <form method="POST" action="/palestrante/form/<%= palestrante.token_form %>" id="formPalestrante">
@@ -182,18 +182,18 @@
         <div class="form-card">
           <div class="form-card-titulo">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-            <span id="tDadosPessoais">Datos Personales</span>
+            <span id="tDadosPessoais">Dados Pessoais</span>
           </div>
           <div class="form-row full">
             <div class="form-group">
-              <label id="lNome">Nombre Completo <span class="req">*</span></label>
-              <input type="text" name="nome_completo" value="<%= palestrante.nome_completo||'' %>" required id="iNome" placeholder="Dr. Juan García">
+              <label id="lNome">Nome Completo <span class="req">*</span></label>
+              <input type="text" name="nome_completo" value="<%= palestrante.nome_completo||'' %>" required id="iNome" placeholder="Dr. João Silva">
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label id="lEmail">Correo electrónico <span class="req">*</span></label>
-              <input type="email" name="email" value="<%= palestrante.email||'' %>" required placeholder="su@correo.com">
+              <label id="lEmail">E-mail <span class="req">*</span></label>
+              <input type="email" name="email" value="<%= palestrante.email||'' %>" required placeholder="seu@email.com">
             </div>
             <div class="form-group">
               <label id="lWhatsapp">WhatsApp</label>
@@ -211,7 +211,7 @@
                   <option value="+1">🇺🇸 +1</option>
                   <option value="+34">🇪🇸 +34</option>
                   <option value="+351">🇵🇹 +351</option>
-                  <option value="+other">Otro</option>
+                  <option value="+other">Outro</option>
                 </select>
                 <input type="text" name="whatsapp" id="whatsappNum" value="<%= palestrante.whatsapp||'' %>" placeholder="99999-9999" style="flex:1">
               </div>
@@ -221,22 +221,22 @@
             <div class="form-group">
               <label id="lCpf">CPF <span class="req">*</span></label>
               <input type="text" name="cpf" value="<%= palestrante.cpf||'' %>" id="iCpf" placeholder="000.000.000-00" maxlength="18" required>
-              <span class="hint" id="hCpf">CPF (para brasileños)</span>
+              <span class="hint" id="hCpf">CPF (para brasileiros)</span>
             </div>
             <div class="form-group">
-              <label id="lRgCi">C.I. / Documento <span class="req">*</span></label>
+              <label id="lRgCi">RG / C.I. <span class="req">*</span></label>
               <input type="text" name="rg_ci" value="<%= palestrante.rg_ci||'' %>" required id="iRgCi">
-              <span class="hint" id="hRgCi">Cédula de Identidad o documento oficial</span>
+              <span class="hint" id="hRgCi">RG (brasileiros) ou Cédula de Identidad</span>
             </div>
             <div class="form-group">
-              <label id="lEspec">Especialidad</label>
-              <input type="text" name="especialidade" value="<%= palestrante.especialidade||'' %>" id="iEspec" placeholder="Ej: Urología, Andrología...">
+              <label id="lEspec">Especialidade</label>
+              <input type="text" name="especialidade" value="<%= palestrante.especialidade||'' %>" id="iEspec" placeholder="Ex: Urologia, Andrologia...">
             </div>
           </div>
           <div class="form-row full">
             <div class="form-group">
               <label id="lInstit">Institución / Hospital</label>
-              <input type="text" name="instituicao" value="<%= palestrante.instituicao||'' %>" placeholder="Ej: Hospital das Clínicas - USP">
+              <input type="text" name="instituicao" value="<%= palestrante.instituicao||'' %>" placeholder="Ex: Hospital das Clínicas - USP">
             </div>
           </div>
         </div>
@@ -245,22 +245,22 @@
         <div class="form-card" id="cardEndereco" style="display:none;">
           <div class="form-card-titulo">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-            <span id="tEndereco">Dirección Completa</span>
+            <span id="tEndereco">Endereço Completo</span>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label id="lCep">Código Postal</label>
+              <label id="lCep">CEP</label>
               <input type="text" name="endereco_cep" id="cep" value="<%= palestrante.endereco_cep||'' %>" placeholder="00000-000" oninput="buscarCep(this.value)">
-              <span class="hint" id="hCep">Ingrese el código postal</span>
+              <span class="hint" id="hCep">Digite o CEP para preencher automaticamente</span>
             </div>
             <div class="form-group">
-              <label id="lEstado">Estado / Departamento</label>
+              <label id="lEstado">Estado</label>
               <input type="text" name="endereco_estado" id="estado" value="<%= palestrante.endereco_estado||'' %>">
             </div>
           </div>
           <div class="form-row full">
             <div class="form-group">
-              <label id="lRua">Calle / Avenida <span class="req">*</span></label>
+              <label id="lRua">Rua / Avenida <span class="req">*</span></label>
               <input type="text" name="endereco_rua" id="rua" value="<%= palestrante.endereco_rua||'' %>">
             </div>
           </div>
@@ -271,16 +271,16 @@
             </div>
             <div class="form-group">
               <label id="lComp">Complemento</label>
-              <input type="text" name="endereco_complemento" value="<%= palestrante.endereco_complemento||'' %>" placeholder="Apto, Bloque...">
+              <input type="text" name="endereco_complemento" value="<%= palestrante.endereco_complemento||'' %>" placeholder="Apto, Bloco...">
             </div>
             <div class="form-group">
-              <label id="lBairro">Barrio</label>
+              <label id="lBairro">Bairro</label>
               <input type="text" name="endereco_bairro" id="bairro" value="<%= palestrante.endereco_bairro||'' %>">
             </div>
           </div>
           <div class="form-row full">
             <div class="form-group">
-              <label id="lCidade">Ciudad <span class="req">*</span></label>
+              <label id="lCidade">Cidade <span class="req">*</span></label>
               <input type="text" name="endereco_cidade" id="cidade" value="<%= palestrante.endereco_cidade||'' %>">
             </div>
           </div>
@@ -288,7 +288,7 @@
 
         <button type="submit" class="btn-enviar" id="btnEnviar">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-          <span id="btnTxt">Enviar Datos</span>
+          <span id="btnTxt">Enviar Dados</span>
         </button>
 
       </form>
@@ -301,38 +301,38 @@
 // TEXTOS POR IDIOMA
 const T = {
   pt: {
-    headerSub: 'Formulario de Datos del Disertante',
-    introTitulo: '¡Hola, Dr(a)! ',
-    introTxt: 'Por favor, complete los datos a continuación para que podamos procesar los documentos para su participación como disertante. Los campos con <strong style="color:#dc2626">*</strong> son obligatorios.',
-    trocarTexto: 'Cambiar país / idioma',
-    tDadosPessoais: 'Datos Personales',
-    tEndereco: 'Dirección Completa',
-    lNome: 'Nombre Completo <span class="req">*</span>',
-    iNomePH: 'Dr. Juan García',
-    lEmail: 'Correo electrónico <span class="req">*</span>',
+    headerSub: 'Formulário de Dados do Palestrante',
+    introTitulo: 'Olá, Dr(a)! ',
+    introTxt: 'Por favor, preencha os dados abaixo para que possamos processar os documentos para sua participação como palestrante. Campos com <strong style="color:#dc2626">*</strong> são obrigatórios.',
+    trocarTexto: 'Trocar país / idioma',
+    tDadosPessoais: 'Dados Pessoais',
+    tEndereco: 'Endereço Completo',
+    lNome: 'Nome Completo <span class="req">*</span>',
+    iNomePH: 'Dr. João Silva',
+    lEmail: 'E-mail <span class="req">*</span>',
     lWhatsapp: 'WhatsApp',
-    lRgCi: 'C.I. / Documento <span class="req">*</span>',
-    hRgCi: 'Cédula de Identidad o documento oficial',
-    lEspec: 'Especialidad',
-    iEspecPH: 'Ej: Urología, Andrología...',
-    lInstit: 'Institución / Hospital',
-    lCep: 'Código Postal',
-    hCep: 'Ingrese el código postal',
-    lEstado: 'Estado / Departamento',
-    lRua: 'Calle / Avenida <span class="req">*</span>',
+    lRgCi: 'RG / C.I. <span class="req">*</span>',
+    hRgCi: 'RG (brasileiros) ou Cédula de Identidad',
+    lEspec: 'Especialidade',
+    iEspecPH: 'Ex: Urologia, Andrologia...',
+    lInstit: 'Instituição / Hospital',
+    lCep: 'CEP',
+    hCep: 'Digite o CEP para preencher automaticamente',
+    lEstado: 'Estado',
+    lRua: 'Rua / Avenida <span class="req">*</span>',
     lNum: 'Número',
     lComp: 'Complemento',
-    lBairro: 'Barrio',
-    lCidade: 'Ciudad <span class="req">*</span>',
-    btnTxt: 'Enviar Datos',
-    preenchTxt: 'Ya completó este formulario. Puede actualizar abajo.',
-    sucessoTitulo: '¡Datos enviados!',
-    sucessoTxt: '¡Gracias! Sus datos fueron recibidos.'
+    lBairro: 'Bairro',
+    lCidade: 'Cidade <span class="req">*</span>',
+    btnTxt: 'Enviar Dados',
+    preenchTxt: 'Você já preencheu este formulário. Pode atualizar abaixo.',
+    sucessoTitulo: 'Dados enviados!',
+    sucessoTxt: 'Obrigado! Seus dados foram recebidos.'
   },
   es: {
-    headerSub: 'Formulario de Datos del Disertante',
+    headerSub: 'Formulario de Datos del Ponente',
     introTitulo: '¡Hola, Dr(a)! ',
-    introTxt: 'Por favor, complete los datos a continuación para que podamos procesar los documentos para su participación como disertante. Los campos con <strong style="color:#dc2626">*</strong> son obligatorios.',
+    introTxt: 'Por favor, complete los datos a continuación para que podamos procesar los documentos para su participación como ponente. Los campos con <strong style="color:#dc2626">*</strong> son obligatorios.',
     trocarTexto: 'Cambiar país / idioma',
     tDadosPessoais: 'Datos Personales',
     tEndereco: 'Dirección Completa',
@@ -382,7 +382,7 @@ async function selecionarPais(pais){
     document.getElementById('cidade') && (document.getElementById('cidade').required = false);
   } else {
     // Outro — perguntar idioma
-    idiomaAtual = (await pedirTexto('Seleccione idioma:\n1 - Español\n2 - Portugués')) === '2' ? 'pt' : 'es';
+    idiomaAtual = (await pedirTexto('Seleccione idioma / Selecione idioma:\n1 - Español\n2 - Português')) === '2' ? 'pt' : 'es';
     document.getElementById('bandeira').textContent = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>';
     document.getElementById('cardEndereco').style.display = 'none';
     document.getElementById('rua') && (document.getElementById('rua').required = false);
