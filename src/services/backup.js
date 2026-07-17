@@ -58,13 +58,10 @@ async function rotacionar() {
   return { mantidos: arquivos.length - excedentes.length, removidos: excedentes.length };
 }
 
-// Para onde vai a cópia off-site: e-mail configurado (email_sistema), ou — o padrão —
-// os e-mails dos admins/presidência (mesmo destino dos alertas de template do WhatsApp).
-// Assim nunca fica vazio: sempre há pelo menos um admin ativo com e-mail.
+// Para onde vai a cópia off-site: SOMENTE o(s) e-mail(s) do administrador (perfil 'admin').
+// Decisão fixa do usuário (2026-07-17): backup não vai pra presidência, só pro admin.
 async function destinatarios() {
-  const cfgR = await query(`SELECT valor FROM configuracoes WHERE chave='email_sistema' AND valor <> ''`);
-  if (cfgR.rows.length && cfgR.rows[0].valor) return cfgR.rows[0].valor;
-  const r = await query(`SELECT DISTINCT email FROM usuarios WHERE ativo=1 AND email IS NOT NULL AND email <> '' AND perfil IN ('admin','presidencia')`);
+  const r = await query(`SELECT DISTINCT email FROM usuarios WHERE ativo=1 AND email IS NOT NULL AND email <> '' AND perfil = 'admin'`);
   return r.rows.map(x => x.email).join(', ');
 }
 
