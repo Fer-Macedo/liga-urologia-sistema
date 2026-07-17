@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Financeiro — Portal do Membro</title>
+<title>Financiero — Portal del Miembro</title>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -52,14 +52,14 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
   </div>
   <% } else { %>
 
-  <div class="pg-t">Financeiro</div>
-  <div class="pg-s">Historico de cobrancas e pagamentos</div>
+  <div class="pg-t">Financiero</div>
+  <div class="pg-s">Historial de cobros y pagos</div>
 
   <% if(!cobrancas || cobrancas.length === 0){ %>
   <div class="empty">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40" style="margin:0 auto 12px;display:block;opacity:.3"><rect x="2" y="5" width="20" height="14"/><path d="M2 10h20"/></svg>
-    <p style="font-weight:600;margin-bottom:4px">Nenhuma cobranca encontrada</p>
-    <p style="font-size:12px">Entre em contato com a secretaria para mais informacoes</p>
+    <p style="font-weight:600;margin-bottom:4px">No se encontró ningún cobro</p>
+    <p style="font-size:12px">Contáctese con la secretaría para más información</p>
   </div>
   <% } else { %>
   <% cobrancas.forEach(function(c, idx){ %>
@@ -77,10 +77,10 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
     <div class="mes-header">
       <div>
         <div class="mes-titulo"><%=c.referencia%></div>
-        <div class="mes-sub">Vencimento: <%=vencDispC%></div>
+        <div class="mes-sub">Vencimiento: <%=vencDispC%></div>
       </div>
       <div style="display:flex;align-items:center;gap:10px">
-        <span class="chip <%=statusCls%>"><%=c.status==='pago'?'Pago':c.status==='atrasado'?'Atrasado':'Pendente'%></span>
+        <span class="chip <%=statusCls%>"><%=c.status==='pago'?'Pagado':c.status==='atrasado'?'Atrasado':'Pendiente'%></span>
         <% if(c.status !== 'pago'){ %>
         <button class="btn" style="font-size:11px;padding:5px 10px" id="toggle-<%=idx%>">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><polyline points="6 9 12 15 18 9"/></svg>
@@ -92,21 +92,21 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
 
     <div class="valores" style="margin-top:12px">
       <div class="valor-item">
-        <div class="label"><%=dentroDescontoC?'Com desconto (ate dia 15)':'Valor a pagar'%></div>
+        <div class="label"><%=dentroDescontoC?'Con descuento (hasta el día 15)':'Valor a pagar'%></div>
         <div class="val" style="color:var(--ok)">R$ <%=Number(valorPagarC).toFixed(2).replace('.',',')%></div>
       </div>
       <% if(dentroDescontoC){ %>
       </div>
       <div class="valor-item">
       <div class="valor-item">
-        <div class="label">Sem desconto</div>
+        <div class="label">Sin descuento</div>
         <div class="val" style="color:var(--ts);font-size:14px;text-decoration:line-through">R$ <%=Number(c.valor_cheio).toFixed(2).replace('.',',')%></div>
       </div>
       <% } %>
       </div>
       <% if(c.data_pagamento){ %>
       <div class="valor-item">
-        <div class="label">Pago em</div>
+        <div class="label">Pagado el</div>
         <div class="val" style="font-size:13px;color:var(--ok)"><%=c.data_pagamento%></div>
       </div>
       <% } %>
@@ -114,7 +114,7 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
 
     <% if(c.status !== 'pago' && c.pix_copia_cola){ %>
     <div class="mes-body" id="body-<%=idx%>">
-      <div style="font-size:12px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Pagamento via PIX</div>
+      <div style="font-size:12px;font-weight:700;color:var(--ts);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Pago vía PIX</div>
       <div style="display:flex;gap:12px;align-items:flex-start">
         <div class="qr-pix" id="qrwrap-<%=idx%>" data-pix="<%=c.pix_copia_cola%>" style="flex-shrink:0;width:84px;height:84px;background:#fff;padding:4px"></div>
         <div class="pix-code" id="pixcode-<%=idx%>" style="flex:1;min-width:0;margin:0"><%=c.pix_copia_cola%></div>
@@ -122,26 +122,26 @@ footer{background:var(--v);padding:12px 20px;display:flex;align-items:center;jus
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
         <button class="btn btn-p" id="copybtn-<%=idx%>" style="font-size:12px">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-          Copiar codigo PIX
+          Copiar código PIX
         </button>
         <% if(c.pagbank_link){ %>
         <button class="btn" style="font-size:12px" onclick="toggleCardForm(<%=c.id%>)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
-          Pagar com cartao
+          Pagar con tarjeta
         </button>
         <% } %>
       </div>
       <% if(c.pagbank_link){ %>
       <div id="cardform-<%=c.id%>" style="display:none;margin-top:10px;padding:12px;background:var(--bg);border:1px solid var(--brd)">
         <div style="display:flex;flex-direction:column;gap:8px">
-          <input type="text" id="cc-name-<%=c.id%>" placeholder="Nome impresso no cartao" class="prof-input" style="font-size:12px;padding:8px 10px">
-          <input type="text" id="cc-number-<%=c.id%>" placeholder="Numero do cartao" class="prof-input" style="font-size:12px;padding:8px 10px" maxlength="19" inputmode="numeric">
+          <input type="text" id="cc-name-<%=c.id%>" placeholder="Nombre impreso en la tarjeta" class="prof-input" style="font-size:12px;padding:8px 10px">
+          <input type="text" id="cc-number-<%=c.id%>" placeholder="Número de la tarjeta" class="prof-input" style="font-size:12px;padding:8px 10px" maxlength="19" inputmode="numeric">
           <div style="display:flex;gap:8px">
             <input type="text" id="cc-exp-mm-<%=c.id%>" placeholder="MM" class="prof-input" style="font-size:12px;padding:8px 10px;width:60px" maxlength="2" inputmode="numeric">
             <input type="text" id="cc-exp-yy-<%=c.id%>" placeholder="AAAA" class="prof-input" style="font-size:12px;padding:8px 10px;width:80px" maxlength="4" inputmode="numeric">
             <input type="text" id="cc-cvv-<%=c.id%>" placeholder="CVV" class="prof-input" style="font-size:12px;padding:8px 10px;width:70px" maxlength="4" inputmode="numeric">
           </div>
-          <button class="btn btn-p" id="cc-btn-<%=c.id%>" style="font-size:12px" onclick="pagarComCartaoInline(<%=c.id%>,<%=c.id%>)">Confirmar pagamento</button>
+          <button class="btn btn-p" id="cc-btn-<%=c.id%>" style="font-size:12px" onclick="pagarComCartaoInline(<%=c.id%>,<%=c.id%>)">Confirmar pago</button>
           <div id="cc-msg-<%=c.id%>" style="font-size:11px"></div>
         </div>
       </div>
@@ -176,7 +176,7 @@ document.querySelectorAll('[id^="copybtn-"]').forEach(function(btn){
       btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><polyline points="20 6 9 17 4 12"/></svg> Copiado!';
       btn.style.background = '#047857';
       setTimeout(function(){ 
-        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copiar codigo PIX';
+        btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13"><rect x="9" y="9" width="13" height="13"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copiar código PIX';
         btn.style.background = '';
       }, 2500);
     });
@@ -201,28 +201,28 @@ async function pagarComCartaoInline(cobrancaId, containerId) {
   var yyyy = document.getElementById('cc-exp-yy-' + containerId).value.trim();
   var cvv = document.getElementById('cc-cvv-' + containerId).value.trim();
   if (!nome || !numero || !mm || !yyyy || !cvv) {
-    msgEl.style.color = '#B91C1C'; msgEl.textContent = 'Preencha todos os campos.'; return;
+    msgEl.style.color = '#B91C1C'; msgEl.textContent = 'Complete todos los campos.'; return;
   }
-  btnEl.disabled = true; btnEl.textContent = 'Processando...';
+  btnEl.disabled = true; btnEl.textContent = 'Procesando...';
   msgEl.style.color = 'var(--ts)'; msgEl.textContent = '';
   try {
     var kr = await fetch('/membro/pagbank/chave-publica').then(function(r){ return r.json(); });
-    if (!kr.ok) throw new Error('Nao foi possivel iniciar o pagamento. Tente novamente.');
+    if (!kr.ok) throw new Error('No fue posible iniciar el pago. Inténtelo nuevamente.');
     var card = PagSeguro.encryptCard({
       publicKey: kr.publicKey, holder: nome, number: numero,
       expMonth: mm, expYear: yyyy, securityCode: cvv
     });
-    if (card.hasErrors) throw new Error('Dados do cartao invalidos. Confira numero, validade e CVV.');
+    if (card.hasErrors) throw new Error('Datos de la tarjeta inválidos. Verifique número, validez y CVV.');
     var pr = await fetch('/membro/pagar-cartao', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({ cobranca_id: cobrancaId, encryptedCard: card.encryptedCard, holder_name: nome })
     }).then(function(r){ return r.json(); });
-    if (!pr.ok) throw new Error(pr.erro || 'Pagamento nao aprovado.');
-    msgEl.style.color = '#047857'; msgEl.textContent = 'Pagamento aprovado!';
+    if (!pr.ok) throw new Error(pr.erro || 'Pago no aprobado.');
+    msgEl.style.color = '#047857'; msgEl.textContent = 'Pago aprobado!';
     setTimeout(function(){ location.reload(); }, 1200);
   } catch(e) {
     msgEl.style.color = '#B91C1C'; msgEl.textContent = e.message;
-    btnEl.disabled = false; btnEl.textContent = 'Confirmar pagamento';
+    btnEl.disabled = false; btnEl.textContent = 'Confirmar pago';
   }
 }
 </script>

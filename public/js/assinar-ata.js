@@ -45,7 +45,7 @@
   });
 
   document.getElementById('btn-salvar').addEventListener('click', function() {
-    if (!hasDrawn) { alert('Por favor, realize sua assinatura antes de confirmar.'); return; }
+    if (!hasDrawn) { alert('Por favor, realice su firma antes de confirmar.'); return; }
     var btn = this;
     btn.disabled = true;
     btn.textContent = 'Salvando...';
@@ -62,20 +62,20 @@
           '<div style="background:linear-gradient(160deg,#1a3d2b 0%,#0a1f1a 100%);padding:28px 32px;text-align:center;color:white">'+logo+'<p style="font-size:12px;opacity:.7;margin:0">Liga Academica de Urologia — LAURO</p></div>' +
           '<div style="padding:60px 32px;text-align:center">' +
           '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#1a3d2b" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>' +
-          '<h2 style="color:#1a3d2b;margin:16px 0 8px;font-family:Arial">Assinatura confirmada!</h2>' +
-          '<p style="color:#475569;font-family:Arial;font-size:14px">Obrigado, '+window.MEMBRO_NOME+'! Sua assinatura foi registrada com sucesso.</p>' +
+          '<h2 style="color:#1a3d2b;margin:16px 0 8px;font-family:Arial">¡Firma confirmada!</h2>' +
+          '<p style="color:#475569;font-family:Arial;font-size:14px">¡Gracias, '+window.MEMBRO_NOME+'! Su firma fue registrada con éxito.</p>' +
           '</div>' +
           '<div style="padding:16px 32px;background:#f8fafc;text-align:center;font-size:11px;color:#94a3b8">Liga Academica de Urologia — LAURO | UCP | Ciudad del Este</div>';
       } else {
-        alert(d.erro || 'Erro ao salvar.');
+        alert(d.erro || 'Error al guardar.');
         btn.disabled = false;
-        btn.textContent = 'Confirmar Assinatura';
+        btn.textContent = 'Confirmar Firma';
       }
     })
     .catch(function() {
       alert('Erro de conexao. Tente novamente.');
       btn.disabled = false;
-      btn.textContent = 'Confirmar Assinatura';
+      btn.textContent = 'Confirmar Firma';
     });
   });
 })();

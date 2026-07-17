@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Assinar Ata <%=numAta%> — LAURO</title>
+<title>Firmar Acta <%=numAta%> — LAURO</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#f1f5f9;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
@@ -28,23 +28,23 @@ body{font-family:Arial,sans-serif;background:#f1f5f9;min-height:100vh;display:fl
 <div class="card">
   <div class="header">
     <%if(orgLogo){%><img src="<%=orgLogo%>" alt="<%=orgNome%>"><%}%>
-    <h1>Assinatura de Ata</h1>
+    <h1>Firma de Acta</h1>
     <p><%=orgNome%></p>
   </div>
   <div class="body">
-    <div class="info-row"><span>Ata</span><span>N <%=numAta%></span></div>
-    <div class="info-row"><span>Tipo</span><span>Reuniao <%=tipoAta%></span></div>
-    <div class="info-row"><span>Data</span><span><%=dataFormatada%></span></div>
-    <div class="info-row"><span>Assinante</span><span><%=membroNome%></span></div>
+    <div class="info-row"><span>Acta</span><span>Nº <%=numAta%></span></div>
+    <div class="info-row"><span>Tipo</span><span>Reunión <%=tipoAta%></span></div>
+    <div class="info-row"><span>Fecha</span><span><%=dataFormatada%></span></div>
+    <div class="info-row"><span>Firmante</span><span><%=membroNome%></span></div>
     <div class="info-row" style="border:none"><span>Cargo</span><span><%=membroCargo%></span></div>
     <div class="canvas-wrap">
-      <span class="canvas-label">Assine com o dedo ou mouse</span>
+      <span class="canvas-label">Firme con el dedo o el mouse</span>
       <canvas id="canvas" width="800" height="300"></canvas>
     </div>
-    <button class="btn" id="btn-salvar">Confirmar Assinatura</button>
-    <button class="btn btn-sec" id="btn-limpar">Limpar</button>
+    <button class="btn" id="btn-salvar">Confirmar Firma</button>
+    <button class="btn btn-sec" id="btn-limpar">Limpiar</button>
   </div>
-  <div class="footer">Liga Academica de Urologia — LAURO | UCP | Ciudad del Este</div>
+  <div class="footer">Liga Académica de Urología — LAURO | UCP | Ciudad del Este</div>
 </div>
 <script src="/js/assinar-ata.js"></script>
 <script>

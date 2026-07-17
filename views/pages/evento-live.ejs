@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= presenca.evento_nome %> — Ao Vivo</title>
+  <title><%= presenca.evento_nome %> — En Vivo</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     :root { --cor: #1a56db; --fundo: #0f172a; --card: #1e293b; --borda: #334155; --texto: #f1f5f9; --texto2: #94a3b8; }
@@ -100,10 +100,10 @@
       <% } else { %>L<% } %>
     </div>
     <div class="login-titulo"><%= presenca.evento_nome %></div>
-    <div class="login-sub">Para acessar a transmissão, confirme sua identidade com o email cadastrado na inscrição.</div>
-    <input type="email" class="login-input" id="login-email" placeholder="Seu email de inscrição" autocomplete="email">
-    <button class="login-btn" onclick="validarAcesso()">Entrar na transmissão</button>
-    <div class="login-erro" id="login-erro">Email não encontrado. Verifique e tente novamente.</div>
+    <div class="login-sub">Para acceder a la transmisión, confirme su identidad con el correo registrado en la inscripción.</div>
+    <input type="email" class="login-input" id="login-email" placeholder="Su correo de inscripción" autocomplete="email">
+    <button class="login-btn" onclick="validarAcesso()">Ingresar a la transmisión</button>
+    <div class="login-erro" id="login-erro">Correo no encontrado. Verifique e intente nuevamente.</div>
   </div>
 </div>
 
@@ -117,11 +117,11 @@
     </div>
     <div>
       <div class="header-evento"><%= presenca.evento_nome %></div>
-      <div class="header-nome">Olá, <strong id="nome-exibido"></strong></div>
+      <div class="header-nome">Hola, <strong id="nome-exibido"></strong></div>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
-    <div class="live-badge"><div class="live-dot"></div>Ao vivo</div>
+    <div class="live-badge"><div class="live-dot"></div>En vivo</div>
     <div class="status-badge on" id="status-badge">Conectado</div>
   </div>
 </div>
@@ -143,16 +143,16 @@
       <% } else { %>
         <div class="video-placeholder">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-          <p>Transmissão não configurada</p>
+          <p>Transmisión no configurada</p>
         </div>
       <% } %>
     </div>
 
     <!-- INFO -->
     <div class="info-strip">
-      <div class="info-item"><div class="info-label">Tempo nesta sessão</div><div class="info-valor" id="tempo-sessao">00:00:00</div></div>
+      <div class="info-item"><div class="info-label">Tiempo en esta sesión</div><div class="info-valor" id="tempo-sessao">00:00:00</div></div>
       <div class="info-item"><div class="info-label">Total acumulado</div><div class="info-valor" id="tempo-total">00:00:00</div></div>
-      <div class="info-item"><div class="info-label">Último acesso</div><div class="info-valor" style="font-size:13px" id="primeiro-acesso">—</div></div>
+      <div class="info-item"><div class="info-label">Último acceso</div><div class="info-valor" style="font-size:13px" id="primeiro-acesso">—</div></div>
     </div>
 
     <!-- PATROCINADORES -->
@@ -175,7 +175,7 @@
       <div style="display:flex;gap:8px;flex-wrap:wrap">
         <button onclick="abrirContato()" class="btn-contato email">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          Fale conosco
+          Contáctenos
         </button>
         <a href="https://wa.me/55<%= config.wapi_numero || '' %>" target="_blank" class="btn-contato wpp">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 5.49 5.49l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16.92z"/></svg>
@@ -197,12 +197,12 @@
   <div class="chat-section">
     <div class="chat-header">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      Chat ao vivo
+      Chat en vivo
     </div>
     <% if (ytId) { %>
       <iframe class="chat-iframe" src="https://www.youtube.com/live_chat?v=<%= ytId %>&embed_domain=liga-urologia.onrender.com" allow="accelerometer; autoplay; clipboard-write; encrypted-media"></iframe>
     <% } else { %>
-      <div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--texto2);font-size:13px;padding:20px;text-align:center">Chat indisponível</div>
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--texto2);font-size:13px;padding:20px;text-align:center">Chat no disponible</div>
     <% } %>
   </div>
 
@@ -211,10 +211,10 @@
 <!-- MODAL CONTATO -->
 <div class="modal-bg" id="modal-contato">
   <div class="modal-box">
-    <h3>Fale conosco</h3>
-    <input type="text" class="modal-input" id="cont-nome" placeholder="Seu nome">
-    <input type="email" class="modal-input" id="cont-email" placeholder="Seu email">
-    <textarea class="modal-input" id="cont-msg" rows="4" placeholder="Sua mensagem..." style="resize:vertical"></textarea>
+    <h3>Contáctenos</h3>
+    <input type="text" class="modal-input" id="cont-nome" placeholder="Su nombre">
+    <input type="email" class="modal-input" id="cont-email" placeholder="Su correo">
+    <textarea class="modal-input" id="cont-msg" rows="4" placeholder="Su mensaje..." style="resize:vertical"></textarea>
     <div class="modal-footer">
       <button class="modal-btn" onclick="fecharContato()">Cancelar</button>
       <button class="modal-btn primario" onclick="enviarContato()">Enviar</button>
@@ -248,7 +248,7 @@ function atualizarUI() {
 function validarAcesso() {
   const email = document.getElementById('login-email').value.toLowerCase().trim();
   const erro = document.getElementById('login-erro');
-  if (!email) { erro.style.display='block'; erro.textContent='Digite seu email.'; return; }
+  if (!email) { erro.style.display='block'; erro.textContent='Ingrese su correo.'; return; }
   if (email !== emailInscrito) { erro.style.display='block'; return; }
 
   document.getElementById('login-overlay').style.display = 'none';
@@ -303,8 +303,8 @@ function abrirContato() {
 function fecharContato() { document.getElementById('modal-contato').classList.remove('aberto'); }
 function enviarContato() {
   const msg = document.getElementById('cont-msg').value;
-  if (!msg.trim()) { alert('Digite sua mensagem.'); return; }
-  const txt = 'Contato via Live — *'+document.getElementById('cont-nome').value+'* ('+document.getElementById('cont-email').value+'): '+msg;
+  if (!msg.trim()) { alert('Ingrese su mensaje.'); return; }
+  const txt = 'Contacto vía Live — *'+document.getElementById('cont-nome').value+'* ('+document.getElementById('cont-email').value+'): '+msg;
   window.open('https://wa.me/55'+wapiNum+'?text='+encodeURIComponent(txt),'_blank');
   fecharContato();
 }

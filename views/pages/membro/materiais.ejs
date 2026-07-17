@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
 <meta charset="UTF-8">
 <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Materiais de Estudo — Portal do Membro</title>
+<title>Materiales de Estudio — Portal del Miembro</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{font-family:'Segoe UI',sans-serif;background:#F4F6F5;color:#0C231B;min-height:100vh}
@@ -37,20 +37,20 @@ body{font-family:'Segoe UI',sans-serif;background:#F4F6F5;color:#0C231B;min-heig
 <%- include('../../partials/membro-nav', {membro, paginaAtiva:'materiais', comunicadosNaoLidos: locals.comunicadosNaoLidos||0, grupos: locals.grupos||[]}) %>
 <div class="container">
 
-  <div class="page-titulo">Materiais de Estudo</div>
-  <div class="page-sub">Acesse os materiais disponibilizados pela Liga Academica de Urologia</div>
+  <div class="page-titulo">Materiales de Estudio</div>
+  <div class="page-sub">Acceda a los materiales facilitados por la Liga Académica de Urología</div>
 
   <% if(materiais.length === 0){ %>
   <div class="empty">
     <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin:0 auto 12px;display:block;opacity:.3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-    <p style="font-weight:600;margin-bottom:4px">Nenhum material disponivel no momento</p>
-    <p style="font-size:12px">Em breve novos materiais serao adicionados pela equipe da Liga</p>
+    <p style="font-weight:600;margin-bottom:4px">No hay materiales disponibles por el momento</p>
+    <p style="font-size:12px">Pronto el equipo de la Liga agregará nuevos materiales</p>
   </div>
   <% } else { %>
   <%
     var categorias = {};
     materiais.forEach(function(m){
-      var cat = m.categoria || 'Geral';
+      var cat = m.categoria || 'General';
       if(!categorias[cat]) categorias[cat] = [];
       categorias[cat].push(m);
     });
@@ -96,18 +96,18 @@ body{font-family:'Segoe UI',sans-serif;background:#F4F6F5;color:#0C231B;min-heig
           <% if(m.arquivo_chave){ %>
           <a href="/materiais/<%=m.id%>/arquivo" target="_blank" class="btn-ver">
             <% if(isVideo){ %>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Assistir
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg> Ver
             <% } else { %>
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Visualizar
             <% } %>
           </a>
           <% if(m.permite_download){ %>
           <a href="/materiais/<%=m.id%>/arquivo" download class="btn-baixar">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Descargar
           </a>
           <% } %>
           <% } else { %>
-          <span style="font-size:12px;color:#94a3b8;font-style:italic">Arquivo nao disponivel</span>
+          <span style="font-size:12px;color:#94a3b8;font-style:italic">Archivo no disponible</span>
           <% } %>
         </div>
       </div>
