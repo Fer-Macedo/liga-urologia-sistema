@@ -153,7 +153,7 @@
     <% if(processo.wpp_grupo){ %><a href="<%= processo.wpp_grupo %>" target="_blank" class="suc-btn suc-btn-wpp"><%- WPP %> Entrar en el grupo de WhatsApp</a><% } %>
   </div></div>
 <% } else if (!processo.inscricoes_abertas) { %>
-  <div class="fechado-card"><h2>Inscripciones cerradas</h2><p>Las inscripciones para <strong><%= processo.nome %></strong> no están abiertas en este momento.<br><span style="color:var(--ink4)">As inscrições para este processo estão encerradas.</span></p></div>
+  <div class="fechado-card"><h2>Inscripciones cerradas</h2><p>Las inscripciones para <strong><%= processo.nome %></strong> no están abiertas en este momento.<br><span style="color:var(--ink4)">Las inscripciones para este proceso están cerradas.</span></p></div>
 <% } else { %>
 
 <div class="banner-wrap">
