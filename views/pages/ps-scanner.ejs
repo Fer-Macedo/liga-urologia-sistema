@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Correção por Câmera — LAURO</title>
+  <title>Corrección por Cámara — LAURO</title>
   <link rel="stylesheet" href="/css/style.css">
   <style>
     :root{--cor:<%= config.org_cor||'#2b6803' %>;--rad:6px;}
@@ -47,25 +47,25 @@
   </style>
 </head>
 <body>
-  <div class="top"><a href="/processo-seletivo">&#8592;</a><h1>Correção por Câmera — <%=processo.nome%></h1></div>
+  <div class="top"><a href="/processo-seletivo">&#8592;</a><h1>Corrección por Cámara — <%=processo.nome%></h1></div>
   <div class="wrap">
     <div id="msg"></div>
     <div class="card">
-      <label>Cartão preenchido</label>
+      <label>Cartón completado</label>
       <input type="file" id="foto" accept="image/*" capture="environment" style="display:none">
-      <button class="btn" id="btnAbrir">📷 Abrir câmera e ler cartão</button>
-      <img id="preview" alt="prévia">
-      <p style="font-size:11px;color:#94a3b8;margin:8px 0 0">Aponte para o cartão <b>inteiro</b> (com os quadradinhos pretos das laterais), reto e com boa luz. A leitura começa <b>automaticamente</b> após a foto. O candidato é identificado pelo <b>Número de Registro</b>.</p>
+      <button class="btn" id="btnAbrir">📷 Abrir cámara y leer cartón</button>
+      <img id="preview" alt="vista previa">
+      <p style="font-size:11px;color:#94a3b8;margin:8px 0 0">Apunte al cartón <b>entero</b> (con los cuadraditos negros de los laterales), recto y con buena luz. La lectura comienza <b>automáticamente</b> después de la foto. El candidato se identifica por el <b>Número de Registro</b>.</p>
     </div>
 
-    <div class="spin" id="spin">⏳ Lendo o cartão…</div>
+    <div class="spin" id="spin">⏳ Leyendo el cartón…</div>
 
     <div class="card hide" id="resultado">
       <div class="ident" id="rIdent"></div>
       <div class="hide" id="boxSelect">
-        <label>Selecionar candidato manualmente</label>
+        <label>Seleccionar candidato manualmente</label>
         <select id="cand">
-          <option value="">— selecione —</option>
+          <option value="">— seleccione —</option>
           <% candidatos.forEach(c=>{ %>
             <option value="<%=c.id%>" data-fila="<%=c.fila_prova||'A'%>" data-nome="<%=c.nome%>" data-num="<%=c.numero_lista||''%>"><%= (c.numero_lista?('#'+c.numero_lista+' · '):'') %><%=c.nome%> · Fila <%=c.fila_prova||'A'%></option>
           <% }); %>
@@ -77,10 +77,10 @@
         <span class="badge" id="rBadge"></span>
       </div>
       <div class="aviso" id="rAviso"></div>
-      <img id="rFoto" alt="foto do cartão">
+      <img id="rFoto" alt="foto del cartón">
       <div class="grid" id="rGrid"></div>
-      <button class="btn ok" id="btnConfirmar">✅ Confirmar e lançar na classificação</button>
-      <button class="btn sec" id="btnRefazer">↻ Nova leitura</button>
+      <button class="btn ok" id="btnConfirmar">✅ Confirmar y cargar en la clasificación</button>
+      <button class="btn sec" id="btnRefazer">↻ Nueva lectura</button>
     </div>
   </div>
 
@@ -106,31 +106,31 @@ function lerCartao(){
     .then(function(r){return r.json();})
     .then(function(d){
       document.getElementById('spin').style.display='none'; btnAbrir.disabled=false;
-      if(!d.ok){ msg(d.erro||'Falha ao ler o cartão.','err'); return; }
+      if(!d.ok){ msg(d.erro||'Falla al leer el cartón.','err'); return; }
       GAB=d.gabarito||{}; RESP={}; TOTAL=d.total_questoes; NOTAMIN=d.nota_minima; PROVAID=d.prova_id; CARTAOCHAVE=d.cartao_chave||null; INCERTAS=d.incertas||[];
       for(var i=1;i<=TOTAL;i++){ RESP[i]=d.respostas[i]?String(d.respostas[i]).toUpperCase():null; }
       var id=document.getElementById('rIdent');
       if(d.candidato){
         CANDID=d.candidato.id;
         id.className='ident ok';
-        id.innerHTML='✅ Candidato identificado<div class="nome">'+ (d.candidato.numero_lista?('#'+d.candidato.numero_lista+' · '):'') + d.candidato.nome +'</div><small>Fila '+d.candidato.fila+' · Nº registro lido: '+(d.numero_registro_lido||'?')+'. Confira se é a pessoa certa!</small>';
+        id.innerHTML='✅ Candidato identificado<div class="nome">'+ (d.candidato.numero_lista?('#'+d.candidato.numero_lista+' · '):'') + d.candidato.nome +'</div><small>Fila '+d.candidato.fila+' · Nº registro leído: '+(d.numero_registro_lido||'?')+'. ¡Verifique si es la persona correcta!</small>';
         cand.value=d.candidato.id;
         document.getElementById('boxSelect').classList.remove('hide');
       } else {
         CANDID=null;
         id.className='ident no';
-        id.innerHTML='⚠️ Candidato NÃO identificado<small>Nº de registro lido: '+(d.numero_registro_lido||'não lido')+' — não bateu com nenhum candidato. Selecione manualmente abaixo.</small>';
+        id.innerHTML='⚠️ Candidato NO identificado<small>Nº de registro leído: '+(d.numero_registro_lido||'no leído')+' — no coincidió con ningún candidato. Seleccione manualmente abajo.</small>';
         document.getElementById('boxSelect').classList.remove('hide');
       }
-      var alerta='CONFIRA cada questão contra a foto antes de lançar. Fila usada: '+d.fila+'.';
-      if(INCERTAS.length) alerta+=' Em dúvida (revise): '+INCERTAS.join(', ')+'.';
+      var alerta='VERIFIQUE cada pregunta contra la foto antes de cargar. Fila usada: '+d.fila+'.';
+      if(INCERTAS.length) alerta+=' En duda (revise): '+INCERTAS.join(', ')+'.';
       document.getElementById('rAviso').textContent=alerta;
       try{ document.getElementById('rFoto').src=URL.createObjectURL(foto.files[0]); }catch(e){}
       render();
       document.getElementById('resultado').classList.remove('hide');
       document.getElementById('resultado').scrollIntoView({behavior:'smooth'});
     })
-    .catch(function(e){ document.getElementById('spin').style.display='none'; btnAbrir.disabled=false; msg('Erro de rede: '+e.message,'err'); });
+    .catch(function(e){ document.getElementById('spin').style.display='none'; btnAbrir.disabled=false; msg('Error de red: '+e.message,'err'); });
 }
 
 // Troca manual de candidato -> recarrega o gabarito da fila desse candidato e recalcula
@@ -141,7 +141,7 @@ cand.addEventListener('change',function(){
   fetch('/processo-seletivo/'+PROCID+'/gabarito/'+fila,{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(g){
     GAB=g.gabarito||{}; PROVAID=g.prova_id; TOTAL=Object.keys(GAB).length||TOTAL; render();
     var nome=cand.options[cand.selectedIndex].dataset.nome;
-    var id=document.getElementById('rIdent'); id.className='ident ok'; id.innerHTML='Candidato selecionado<div class="nome">'+nome+'</div><small>Fila '+fila+'</small>';
+    var id=document.getElementById('rIdent'); id.className='ident ok'; id.innerHTML='Candidato seleccionado<div class="nome">'+nome+'</div><small>Fila '+fila+'</small>';
   });
 });
 
@@ -157,12 +157,12 @@ function render(){
       opts+='<div class="'+cls+'" onclick="setResp('+q+',\''+L+'\')">'+L+'</div>';
     });
     var inc=INCERTAS.indexOf(q)>=0;
-    grid.innerHTML += '<div class="q" style="'+(inc?'border-color:#fbbf24;box-shadow:0 0 0 1px #fbbf24':'')+'"><div class="qn">'+q+(inc?' <span style="color:#fbbf24">⚠</span>':'')+'</div><div class="opts">'+opts+'</div><div class="none'+(sel===null?' sel':'')+'" style="margin-top:4px;text-align:center" onclick="setResp('+q+',null)">em branco</div></div>';
+    grid.innerHTML += '<div class="q" style="'+(inc?'border-color:#fbbf24;box-shadow:0 0 0 1px #fbbf24':'')+'"><div class="qn">'+q+(inc?' <span style="color:#fbbf24">⚠</span>':'')+'</div><div class="opts">'+opts+'</div><div class="none'+(sel===null?' sel':'')+'" style="margin-top:4px;text-align:center" onclick="setResp('+q+',null)">en blanco</div></div>';
   }
   var pct=TOTAL?Math.round(acertos/TOTAL*1000)/10:0, ap=pct>=NOTAMIN;
   document.getElementById('rNota').textContent=pct+'%';
   document.getElementById('rFrac').textContent=acertos+' de '+TOTAL+' · mín. '+NOTAMIN+'%';
-  var b=document.getElementById('rBadge'); b.textContent=ap?'CLASSIFICADO':'REPROVADO'; b.className='badge '+(ap?'ap':'re');
+  var b=document.getElementById('rBadge'); b.textContent=ap?'CLASIFICADO':'REPROBADO'; b.className='badge '+(ap?'ap':'re');
   window._acertos=acertos; window._pct=pct;
 }
 
@@ -171,18 +171,18 @@ document.getElementById('btnRefazer').addEventListener('click',function(){
 });
 
 document.getElementById('btnConfirmar').addEventListener('click',function(){
-  if(!CANDID){ msg('Selecione o candidato antes de lançar.','err'); return; }
+  if(!CANDID){ msg('Seleccione el candidato antes de cargar.','err'); return; }
   var btn=this; btn.disabled=true; msg('');
   fetch('/processo-seletivo/candidato/'+CANDID+'/correcao',{
     method:'POST', credentials:'same-origin', headers:{'Content-Type':'application/json'},
     body:JSON.stringify({ respostas_json:JSON.stringify(RESP), total_questoes:TOTAL, total_acertos:window._acertos, percentual:window._pct, prova_id:PROVAID, cartao_chave:CARTAOCHAVE })
   }).then(function(r){return r.json();}).then(function(d){
     btn.disabled=false;
-    if(!d.ok){ msg(d.erro||'Falha ao lançar.','err'); return; }
-    msg('✅ Lançado! '+(d.aprovado?'CLASSIFICADO':'REPROVADO')+' ('+d.percentual+'%).','suc');
+    if(!d.ok){ msg(d.erro||'Falla al cargar.','err'); return; }
+    msg('✅ ¡Cargado! '+(d.aprovado?'CLASIFICADO':'REPROBADO')+' ('+d.percentual+'%).','suc');
     document.getElementById('resultado').classList.add('hide'); foto.value=''; document.getElementById('preview').style.display='none'; cand.value=''; btnAbrir.disabled=false;
     window.scrollTo({top:0,behavior:'smooth'});
-  }).catch(function(e){ btn.disabled=false; msg('Erro de rede: '+e.message,'err'); });
+  }).catch(function(e){ btn.disabled=false; msg('Error de red: '+e.message,'err'); });
 });
 </script>
 </body>

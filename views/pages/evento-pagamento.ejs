@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pagamento — <%= evento.nome %></title>
+  <title>Pago — <%= evento.nome %></title>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
@@ -390,15 +390,15 @@
 <div class="header">
   <div class="header-logo"><img src="https://sistema.lauroucpcde.com/img/logo-lauro.png" width="36" height="36" style="border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.3)" onerror="this.parentElement.innerHTML='<svg style=width:20px;height:20px;fill:white viewBox=0 0 24 24><path d=M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z/></svg>'"></div>
   <div class="header-info">
-    <h1><%= config.org_nome || 'Liga Acadêmica de Urologia' %></h1>
-    <p>Pagamento seguro</p>
+    <h1><%= config.org_nome || 'Liga Académica de Urología' %></h1>
+    <p>Pago seguro</p>
   </div>
 </div>
 
 <!-- LOADING -->
 <div class="loading-overlay" id="loading">
   <div class="spinner"></div>
-  <p id="loading-txt">Processando pagamento…</p>
+  <p id="loading-txt">Procesando pago…</p>
 </div>
 
 <div class="container">
@@ -408,17 +408,17 @@
     <div class="steps" style="margin-bottom:24px">
       <div class="step done">
         <div class="step-num"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg></div>
-        <span>Dados</span>
+        <span>Datos</span>
       </div>
       <div class="step-line done"></div>
       <div class="step active" id="step2">
         <div class="step-num">2</div>
-        <span>Pagamento</span>
+        <span>Pago</span>
       </div>
       <div class="step-line" id="line3"></div>
       <div class="step" id="step3">
         <div class="step-num">3</div>
-        <span>Confirmação</span>
+        <span>Confirmación</span>
       </div>
     </div>
 
@@ -426,7 +426,7 @@
     <div class="card" id="payment-card">
       <div class="card-header">
         <svg style="width:20px;height:20px;fill:var(--card-pay)" viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg>
-        <h2>Escolha a forma de pagamento</h2>
+        <h2>Elija la forma de pago</h2>
       </div>
       <div class="card-body">
 
@@ -435,12 +435,12 @@
           <div class="method-tab" id="tab-pix" onclick="selectMethod('pix')">
             <div class="icon"><svg style="width:28px;height:28px;fill:#32bcad" viewBox="0 0 24 24"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg></div>
             <div class="label">PIX</div>
-            <div class="sublabel">Aprovação imediata</div>
+            <div class="sublabel">Aprobación inmediata</div>
           </div>
           <div class="method-tab" id="tab-card" onclick="selectMethod('card')">
             <div class="icon"><svg style="width:28px;height:28px;fill:#5a67d8" viewBox="0 0 24 24"><path d="M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z"/></svg></div>
-            <div class="label">Cartão de Crédito</div>
-            <div class="sublabel">Até 12x</div>
+            <div class="label">Tarjeta de crédito</div>
+            <div class="sublabel">Hasta 12x</div>
           </div>
         </div>
 
@@ -449,7 +449,7 @@
           <% if (pixData && pixData.pix_copia_cola) { %>
             <!-- Timer -->
             <div class="pix-timer">
-              <div class="pix-timer-left"><svg style="width:15px;height:15px;fill:#065f46;flex-shrink:0" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg> Expira em</div>
+              <div class="pix-timer-left"><svg style="width:15px;height:15px;fill:#065f46;flex-shrink:0" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg> Expira en</div>
               <div class="pix-timer-count" id="timer">15:00</div>
             </div>
 
@@ -466,7 +466,7 @@
             </div>
 
             <!-- Copia e cola -->
-            <div class="pix-copy-label">Código PIX copia e cola</div>
+            <div class="pix-copy-label">Código PIX copiar y pegar</div>
             <div class="pix-copy-wrap">
               <input class="pix-copy-input" id="pix-code" value="<%= pixData.pix_copia_cola %>" readonly onclick="this.select()">
               <button class="btn-copy" id="btn-copy" onclick="copiarPix()">Copiar</button>
@@ -475,7 +475,7 @@
             <!-- Status aguardando -->
             <div class="pix-status" id="pix-status-box">
               <div class="dot"></div>
-              <span>Aguardando pagamento… verificando automaticamente</span>
+              <span>Esperando el pago… verificando automáticamente</span>
             </div>
 
           <% } else { %>
@@ -483,7 +483,7 @@
               <div style="display:flex;align-items:center;justify-content:center;margin-bottom:12px">
                 <svg style="width:40px;height:40px;fill:#d97706" viewBox="0 0 24 24"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
               </div>
-              <p style="font-size:14px">Não foi possível gerar o PIX.<br>Tente o cartão de crédito ou entre em contato.</p>
+              <p style="font-size:14px">No fue posible generar el PIX.<br>Intente con la tarjeta de crédito o póngase en contacto.</p>
             </div>
           <% } %>
         </div>
@@ -496,10 +496,10 @@
             <div class="card-preview-row">
               <div>
                 <div class="card-preview-label">Titular</div>
-                <div class="card-preview-val" id="prev-nome">SEU NOME</div>
+                <div class="card-preview-val" id="prev-nome">SU NOMBRE</div>
               </div>
               <div>
-                <div class="card-preview-label">Validade</div>
+                <div class="card-preview-label">Vencimiento</div>
                 <div class="card-preview-val" id="prev-exp">MM/AA</div>
               </div>
             </div>
@@ -507,16 +507,16 @@
 
           <div class="card-form-grid">
             <div class="field">
-              <label>Número do Cartão</label>
+              <label>Número de la tarjeta</label>
               <input type="text" id="cc-num" class="mono" maxlength="19" placeholder="0000 0000 0000 0000" oninput="fmtCartao(this)" autocomplete="cc-number">
             </div>
             <div class="field">
-              <label>Titular do Cartão</label>
-              <input type="text" id="cc-nome" placeholder="NOME COMO NO CARTÃO" oninput="fmtNome(this)" autocomplete="cc-name" style="text-transform:uppercase">
+              <label>Titular de la tarjeta</label>
+              <input type="text" id="cc-nome" placeholder="NOMBRE COMO EN LA TARJETA" oninput="fmtNome(this)" autocomplete="cc-name" style="text-transform:uppercase">
             </div>
             <div class="field-group">
               <div class="field">
-                <label>Validade</label>
+                <label>Vencimiento</label>
                 <input type="text" id="cc-exp" class="mono" maxlength="5" placeholder="MM/AA" oninput="fmtExp(this)" autocomplete="cc-exp">
               </div>
               <div class="field">
@@ -525,13 +525,13 @@
               </div>
             </div>
             <div class="field">
-              <label>CPF do Titular</label>
+              <label>CPF del titular</label>
               <input type="text" id="cc-cpf" class="mono" maxlength="14" placeholder="000.000.000-00" oninput="fmtCpf(this)">
             </div>
             <div class="field">
-              <label>Parcelas</label>
+              <label>Cuotas</label>
               <select id="cc-parcelas">
-                <option value="1">1x de R$ <%= parseFloat(lote.preco).toFixed(2).replace('.',',') %> (sem juros)</option>
+                <option value="1">1x de R$ <%= parseFloat(lote.preco).toFixed(2).replace('.',',') %> (sin intereses)</option>
               </select>
             </div>
           </div>
@@ -553,26 +553,26 @@
         <div class="sucesso-icon">
           <svg style="width:38px;height:38px;fill:#16a34a" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
         </div>
-        <h2>Pagamento confirmado!</h2>
-        <p>Sua inscrição em <strong><%= evento.nome %></strong> está confirmada.<br>Enviamos o e-mail de confirmação para você.</p>
+        <h2>¡Pago confirmado!</h2>
+        <p>Su inscripción en <strong><%= evento.nome %></strong> está confirmada.<br>Le enviamos el correo electrónico de confirmación.</p>
         <div class="sucesso-codigo" id="sucesso-codigo"><%= qrcode %></div>
-        <p style="font-size:12px;color:var(--muted);margin-bottom:24px">Guarde seu código de inscrição para o check-in no evento.</p>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:24px">Guarde su código de inscripción para el check-in en el evento.</p>
 
         <% if(evento.wpp_grupo){ %>
         <a href="<%= evento.wpp_grupo %>" target="_blank" style="display:inline-flex;align-items:center;gap:10px;background:#25d366;color:white;padding:13px 24px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:10px;width:100%;justify-content:center">
           <svg style="width:18px;height:18px;fill:white;flex-shrink:0" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-          Entrar no Grupo do Evento
+          Entrar al grupo del evento
         </a>
         <% } %>
 
         <a href="/inscricao/<%= evento.id %>" style="display:inline-flex;align-items:center;gap:10px;background:var(--cor);color:white;padding:13px 24px;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;margin-bottom:10px;width:100%;justify-content:center">
           <svg style="width:18px;height:18px;fill:white;flex-shrink:0" viewBox="0 0 24 24"><path d="M20 12c0-1.1.9-2 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v4c1.1 0 2 .9 2 2s-.9 2-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-4c-1.1 0-2-.9-2-2z"/></svg>
-          Realizar Nova Inscrição
+          Realizar nueva inscripción
         </a>
 
         <a href="/inscricao/<%= evento.id %>" style="display:inline-flex;align-items:center;gap:10px;background:var(--border);color:var(--text);padding:13px 24px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;width:100%;justify-content:center">
           <svg style="width:18px;height:18px;fill:var(--text);flex-shrink:0" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
-          Voltar à Página do Evento
+          Volver a la página del evento
         </a>
       </div>
     </div>
@@ -595,7 +595,7 @@
           <% if (evento.data_inicio) { %>
             <span style="display:inline-flex;align-items:center;gap:4px">
               <svg style="width:12px;height:12px;fill:var(--muted);flex-shrink:0" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg>
-              <%= new Date(evento.data_inicio).toLocaleDateString('pt-BR', {day:'2-digit',month:'long',year:'numeric',timeZone:'UTC'}) %>
+              <%= new Date(evento.data_inicio).toLocaleDateString('es-PY', {day:'2-digit',month:'long',year:'numeric',timeZone:'UTC'}) %>
             </span>
           <% } %>
           <% if (evento.local) { %>
@@ -622,7 +622,7 @@
 
         <div class="seguro-badge">
           <svg style="width:14px;height:14px;fill:#16a34a;flex-shrink:0" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
-          Pagamento seguro via PagBank
+          Pago seguro vía PagBank
         </div>
       </div>
     </div>
@@ -695,7 +695,7 @@
     const input = document.getElementById('pix-code');
     navigator.clipboard.writeText(input.value).then(function() {
       const btn = document.getElementById('btn-copy');
-      btn.textContent = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg> Copiado!';
+      btn.textContent = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg> ¡Copiado!';
       btn.classList.add('copied');
       setTimeout(function() { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
     }).catch(function() {
@@ -769,18 +769,18 @@
     const erro = document.getElementById('card-erro');
     erro.className = 'erro-msg';
 
-    if (num.length < 13) return mostrarErro('Número do cartão inválido.');
-    if (nome.length < 3) return mostrarErro('Digite o nome como está no cartão.');
-    if (exp.length < 5) return mostrarErro('Validade inválida.');
+    if (num.length < 13) return mostrarErro('Número de la tarjeta inválido.');
+    if (nome.length < 3) return mostrarErro('Ingrese el nombre como está en la tarjeta.');
+    if (exp.length < 5) return mostrarErro('Vencimiento inválido.');
     if (cvv.length < 3) return mostrarErro('CVV inválido.');
-    if (cpf.length < 11) return mostrarErro('CPF do titular inválido.');
+    if (cpf.length < 11) return mostrarErro('CPF del titular inválido.');
 
     const [mesStr, anoStr] = exp.split('/');
     const mes = parseInt(mesStr);
     const ano = 2000 + parseInt(anoStr);
 
     document.getElementById('loading').classList.add('show');
-    document.getElementById('loading-txt').textContent = 'Processando cartão…';
+    document.getElementById('loading-txt').textContent = 'Procesando tarjeta…';
     document.getElementById('btn-pagar').disabled = true;
 
     try {
@@ -796,12 +796,12 @@
         mostrarSucesso();
       } else {
         document.getElementById('btn-pagar').disabled = false;
-        mostrarErro(data.erro || 'Pagamento recusado. Verifique os dados e tente novamente.');
+        mostrarErro(data.erro || 'Pago rechazado. Verifique los datos e intente nuevamente.');
       }
     } catch(e) {
       document.getElementById('loading').classList.remove('show');
       document.getElementById('btn-pagar').disabled = false;
-      mostrarErro('Erro de conexão. Tente novamente.');
+      mostrarErro('Error de conexión. Intente nuevamente.');
     }
   }
 

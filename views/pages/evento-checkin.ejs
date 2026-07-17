@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -226,7 +226,7 @@
     <div class="topbar">
       <h1 class="page-titulo">Check-in — <%= evento.nome %></h1>
       <div class="topbar-acoes">
-        <a href="/eventos/<%= evento.id %>" class="btn btn-sm">Voltar</a>
+        <a href="/eventos/<%= evento.id %>" class="btn btn-sm">Volver</a>
       </div>
     </div>
 
@@ -239,7 +239,7 @@
       <div class="stats-row">
         <div class="stat-card azul">
           <div class="stat-num"><%= stats.total %></div>
-          <div class="stat-lab">Inscritos</div>
+          <div class="stat-lab">Inscriptos</div>
         </div>
         <div class="stat-card verde">
           <div class="stat-num"><%= stats.checkins %></div>
@@ -247,11 +247,11 @@
           <div class="progress-bar">
             <div class="progress-fill" style="width:<%= pct %>%"></div>
           </div>
-          <div style="font-size:11px;color:var(--texto2);margin-top:4px"><%= pct %>% de presença</div>
+          <div style="font-size:11px;color:var(--texto2);margin-top:4px"><%= pct %>% de asistencia</div>
         </div>
         <div class="stat-card amr">
           <div class="stat-num"><%= stats.total - stats.checkins %></div>
-          <div class="stat-lab">Aguardando</div>
+          <div class="stat-lab">En espera</div>
         </div>
       </div>
 
@@ -274,13 +274,13 @@
 
           <div class="checkin-input-wrap">
             <input type="text" class="checkin-input" id="busca-checkin"
-              placeholder="Digite o nome ou cole o código QR..."
+              placeholder="Escriba el nombre o pegue el código QR..."
               autofocus autocomplete="off">
             <button class="btn btn-primario" onclick="fazerCheckin()" style="white-space:nowrap">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               Check-in
             </button>
-            <button class="btn" id="btn-camera" onclick="toggleCamera()" title="Usar câmera" style="padding:10px 14px">
+            <button class="btn" id="btn-camera" onclick="toggleCamera()" title="Usar cámara" style="padding:10px 14px">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
             </button>
           </div>
@@ -291,7 +291,7 @@
           </div>
 
           <div style="font-size:12px;color:var(--texto2);margin-top:12px">
-            Digite o nome do participante ou o código do ingresso (ex: LAURO-1-1234567) e pressione Enter ou clique em Check-in. Use a câmera para ler o QR Code diretamente.
+            Escriba el nombre del participante o el código de la entrada (ej: LAURO-1-1234567) y presione Enter o haga clic en Check-in. Use la cámara para leer el QR Code directamente.
           </div>
         </div>
       </div>
@@ -299,18 +299,18 @@
       <!-- LISTA DE PRESENÇA -->
       <div class="table-moderna">
         <div style="padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-          <span style="font-size:14px;font-weight:700;font-family:'Outfit',sans-serif">Lista de presença</span>
+          <span style="font-size:14px;font-weight:700;font-family:'Outfit',sans-serif">Lista de asistencia</span>
           <input type="text" class="busca-input" placeholder="Buscar participante..."
             oninput="buscarLista(this.value)">
         </div>
         <table>
           <thead>
             <tr>
-              <th>Nome</th>
-              <th>Email</th>
+              <th>Nombre</th>
+              <th>Correo electrónico</th>
               <th>Lote</th>
               <th>Check-in</th>
-              <th>Ação</th>
+              <th>Acción</th>
             </tr>
           </thead>
           <tbody id="tbody-lista">
@@ -326,7 +326,7 @@
                     <%= new Date(i.checkin_em).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) %>
                   </span>
                 <% } else { %>
-                  <span class="badge-checkin wait">Aguardando</span>
+                  <span class="badge-checkin wait">En espera</span>
                 <% } %>
               </td>
               <td>
@@ -374,7 +374,7 @@ function fazerCheckin(codigo) {
       setTimeout(() => location.reload(), 2500);
     }
   })
-  .catch(() => mostrarResultado(false, 'Erro de conexão.'));
+  .catch(() => mostrarResultado(false, 'Error de conexión.'));
 }
 
 function mostrarResultado(ok, msg, tipo) {
@@ -428,7 +428,7 @@ async function toggleCamera() {
       cameraAtiva = true;
       iniciarScan();
     } catch(e) {
-      alert('Não foi possível acessar a câmera. Verifique as permissões do navegador.');
+      alert('No fue posible acceder a la cámara. Verifique los permisos del navegador.');
     }
   } else {
     pararCamera();

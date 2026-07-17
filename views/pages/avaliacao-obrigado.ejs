@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Obrigado!</title>
+  <title>¡Gracias!</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #f0fdf4; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -20,10 +20,10 @@
   <div class="card">
     <% if (config.org_logo) { %><img src="<%= config.org_logo %>" alt="<%= config.org_nome %>"><% } %>
     <div class="icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
-    <h1>Obrigado pela avaliação!</h1>
-    <p>Sua opinião foi registrada com sucesso e será muito útil para aprimorarmos nossos próximos eventos.</p>
-    <p>Continuem acompanhando os eventos da <strong><%= config.org_nome || 'LAURO' %></strong>!</p>
-    <div class="org"><%= config.org_nome || 'LAURO' %> — Liga Acadêmica de Urologia</div>
+    <h1>¡Gracias por su evaluación!</h1>
+    <p>Su opinión fue registrada con éxito y será muy útil para mejorar nuestros próximos eventos.</p>
+    <p>¡Sigan acompañando los eventos de <strong><%= config.org_nome || 'LAURO' %></strong>!</p>
+    <div class="org"><%= config.org_nome || 'LAURO' %> — Liga Académica de Urología</div>
   </div>
 </body>
 </html>

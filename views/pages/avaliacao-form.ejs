@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Avaliação — <%= aval.evento_nome %></title>
+  <title>Evaluación — <%= aval.evento_nome %></title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Segoe UI', Arial, sans-serif; background: #f8fafc; color: #374151; min-height: 100vh; }
@@ -135,22 +135,22 @@
   <% if (config.org_logo) { %>
   <img src="<%= config.org_logo %>" alt="<%= config.org_nome %>">
   <% } %>
-  <h1>Pesquisa de satisfação</h1>
+  <h1>Encuesta de satisfacción</h1>
   <p><%= aval.evento_nome %></p>
 </div>
 
 <div class="container">
   <div class="intro-box">
-    Olá, <strong><%= aval.participante ? aval.participante.split(' ')[0] : 'participante' %></strong>!
-    Sua opinião é muito importante para continuarmos melhorando nossos eventos.
-    Responda as perguntas abaixo — leva menos de 2 minutos!
+    ¡Hola, <strong><%= aval.participante ? aval.participante.split(' ')[0] : 'participante' %></strong>!
+    Su opinión es muy importante para seguir mejorando nuestros eventos.
+    Responda las preguntas a continuación — ¡toma menos de 2 minutos!
   </div>
 
   <form action="/avaliacao/<%= token %>" method="POST">
 
     <!-- NOTA GERAL -->
     <div class="card">
-      <div class="card-titulo"><span>1</span> Nota geral do evento</div>
+      <div class="card-titulo"><span>1</span> Calificación general del evento</div>
       <div class="estrelas">
         <% for (let i = 1; i <= 5; i++) { %>
         <label class="estrela-btn">
@@ -164,7 +164,7 @@
 
     <!-- NOTA CONTEUDO -->
     <div class="card">
-      <div class="card-titulo"><span>2</span> Qualidade do conteúdo</div>
+      <div class="card-titulo"><span>2</span> Calidad del contenido</div>
       <div class="estrelas">
         <% for (let i = 1; i <= 5; i++) { %>
         <label class="estrela-btn">
@@ -178,7 +178,7 @@
 
     <!-- NOTA ORGANIZACAO -->
     <div class="card">
-      <div class="card-titulo"><span>3</span> Organização do evento</div>
+      <div class="card-titulo"><span>3</span> Organización del evento</div>
       <div class="estrelas">
         <% for (let i = 1; i <= 5; i++) { %>
         <label class="estrela-btn">
@@ -192,7 +192,7 @@
 
     <!-- NOTA PALESTRANTES -->
     <div class="card">
-      <div class="card-titulo"><span>4</span> Palestrantes / apresentadores</div>
+      <div class="card-titulo"><span>4</span> Disertantes / presentadores</div>
       <div class="estrelas">
         <% for (let i = 1; i <= 5; i++) { %>
         <label class="estrela-btn">
@@ -206,47 +206,47 @@
 
     <!-- INDICARIA -->
     <div class="card">
-      <div class="card-titulo"><span>5</span> Indicaria este evento para um amigo?</div>
+      <div class="card-titulo"><span>5</span> ¿Recomendaría este evento a un amigo?</div>
       <div class="radio-group">
         <div class="radio-btn">
           <input type="radio" name="indicaria" id="ind-sim" value="sim" required>
-          <label for="ind-sim">Sim</label>
+          <label for="ind-sim">Sí</label>
         </div>
         <div class="radio-btn">
           <input type="radio" name="indicaria" id="ind-nao" value="nao">
-          <label for="ind-nao">Não</label>
+          <label for="ind-nao">No</label>
         </div>
         <div class="radio-btn">
           <input type="radio" name="indicaria" id="ind-talvez" value="talvez">
-          <label for="ind-talvez">Talvez</label>
+          <label for="ind-talvez">Tal vez</label>
         </div>
       </div>
     </div>
 
     <!-- GOSTOU -->
     <div class="card">
-      <div class="card-titulo"><span>6</span> O que você mais gostou?</div>
-      <textarea name="gostou" rows="4" placeholder="Conte o que foi mais positivo no evento..."></textarea>
+      <div class="card-titulo"><span>6</span> ¿Qué fue lo que más le gustó?</div>
+      <textarea name="gostou" rows="4" placeholder="Cuéntenos qué fue lo más positivo del evento..."></textarea>
     </div>
 
     <!-- MELHORAR -->
     <div class="card">
-      <div class="card-titulo"><span>7</span> O que pode melhorar?</div>
-      <textarea name="melhorar" rows="4" placeholder="Suas críticas construtivas nos ajudam a melhorar..."></textarea>
+      <div class="card-titulo"><span>7</span> ¿Qué se puede mejorar?</div>
+      <textarea name="melhorar" rows="4" placeholder="Sus críticas constructivas nos ayudan a mejorar..."></textarea>
     </div>
 
     <!-- SUGESTOES -->
     <div class="card">
-      <div class="card-titulo"><span>8</span> Sugestões para próximos eventos</div>
-      <textarea name="sugestoes" rows="4" placeholder="Temas, formatos, palestrantes que gostaria de ver..."></textarea>
+      <div class="card-titulo"><span>8</span> Sugerencias para próximos eventos</div>
+      <textarea name="sugestoes" rows="4" placeholder="Temas, formatos, disertantes que le gustaría ver..."></textarea>
     </div>
 
-    <button type="submit" class="btn-enviar">Enviar avaliação</button>
+    <button type="submit" class="btn-enviar">Enviar evaluación</button>
   </form>
 </div>
 
 <script>
-// Efeito visual nas estrelas
+// Efecto visual en las estrellas
 document.querySelectorAll('.estrelas').forEach(grupo => {
   const btns = grupo.querySelectorAll('.estrela-btn');
   btns.forEach((btn, idx) => {

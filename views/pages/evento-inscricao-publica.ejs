@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
@@ -404,8 +404,8 @@
     </a>
     <div class="nav-links">
       <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" class="nav-a">Instagram</a>
-      <a href="#contato" class="nav-a">Contato</a>
-      <a href="#inscricao" class="nav-cta" onclick="abrirForm()">Inscrever-se</a>
+      <a href="#contato" class="nav-a">Contacto</a>
+      <a href="#inscricao" class="nav-cta" onclick="abrirForm()">Inscribirse</a>
     </div>
   </div>
 </nav>
@@ -416,11 +416,11 @@
     <div class="alerta-dup-icon" style="background:#dcfce7">
       <svg viewBox="0 0 24 24" style="fill:#15803d"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
     </div>
-    <h2 style="color:#15803d">Você já está inscrito(a)!</h2>
-    <p style="color:#374151">Já existe uma inscrição confirmada neste evento com seu e-mail ou documento. <strong>Não é necessário fazer nada mais.</strong><br><br>Caso não tenha recebido o e-mail de confirmação, verifique sua caixa de spam ou entre em contato conosco.</p>
+    <h2 style="color:#15803d">¡Usted ya está inscrito/a!</h2>
+    <p style="color:#374151">Ya existe una inscripción confirmada en este evento con su correo electrónico o documento. <strong>No es necesario hacer nada más.</strong><br><br>Si no ha recibido el correo de confirmación, verifique su carpeta de spam o póngase en contacto con nosotros.</p>
     <div class="alerta-dup-btns">
-      <a href="/inscricao/<%= evento.id %>" class="alerta-btn-s">Voltar ao evento</a>
-      <a href="mailto:lauroucpcde@lauroucpcde.com" class="alerta-btn-p">Entrar em contato</a>
+      <a href="/inscricao/<%= evento.id %>" class="alerta-btn-s">Volver al evento</a>
+      <a href="mailto:lauroucpcde@lauroucpcde.com" class="alerta-btn-p">Ponerse en contacto</a>
     </div>
   </div>
 </div>
@@ -430,17 +430,17 @@
 <div class="suc-wrap">
   <div class="suc-box">
     <div class="suc-icon"><svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg></div>
-    <div class="suc-title">Inscrição Realizada!</div>
-    <p class="suc-sub">Sua inscrição em <strong><%= evento.nome %></strong> foi confirmada com sucesso. Você receberá os detalhes por e-mail.</p>
+    <div class="suc-title">¡Inscripción Realizada!</div>
+    <p class="suc-sub">Su inscripción en <strong><%= evento.nome %></strong> fue confirmada con éxito. Usted recibirá los detalles por correo electrónico.</p>
     <div class="suc-cod"><%= codigoInscricao %></div>
-    <p class="suc-cod-lbl">Código de inscrição — apresente no check-in</p>
+    <p class="suc-cod-lbl">Código de inscripción — preséntelo en el check-in</p>
     <% if(evento.wpp_grupo){ %>
     <a href="<%= evento.wpp_grupo %>" target="_blank" class="suc-btn suc-btn-wpp">
       <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-      Entrar no Grupo do Evento
+      Entrar al Grupo del Evento
     </a>
     <% } %>
-    <a href="/inscricao/<%= evento.id %>" class="suc-btn suc-btn-p">Nova Inscrição</a>
+    <a href="/inscricao/<%= evento.id %>" class="suc-btn suc-btn-p">Nueva Inscripción</a>
   </div>
 </div>
 <% } else { %>
@@ -455,7 +455,7 @@
         <div style="width:72px;height:72px;border-radius:18px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;margin:0 auto 12px">
           <svg style="width:36px;height:36px;fill:rgba(255,255,255,.45)" viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 002 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10z"/></svg>
         </div>
-        <div style="color:rgba(255,255,255,.35);font-size:13px">Banner do evento</div>
+        <div style="color:rgba(255,255,255,.35);font-size:13px">Banner del evento</div>
       </div>
     </div>
   <% } %>
@@ -474,7 +474,7 @@
       <% if(evento.data_inicio){ %>
       <div class="t-chip">
         <div class="t-chip-icon"><svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg></div>
-        <span><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}) %></span>
+        <span><%= new Date(evento.data_inicio).toLocaleDateString('es-PY',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}) %></span>
       </div>
       <% } %>
       <% if(evento.local&&evento.tipo_evento!=='online'){ %>
@@ -497,11 +497,11 @@
   <div class="wpp-in">
     <div class="wpp-txt">
       <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-      Participe do grupo oficial do evento no WhatsApp
+      Participe del grupo oficial del evento en WhatsApp
     </div>
     <a href="<%= evento.wpp_grupo %>" target="_blank" class="wpp-join">
       <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-      Entrar no Grupo
+      Entrar al Grupo
     </a>
   </div>
 </div>
@@ -512,9 +512,9 @@
 <div style="background:var(--sur);border-bottom:1px solid var(--bdr);padding:10px 0">
   <div style="max-width:1160px;margin:0 auto;padding:0 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
     <div style="display:flex;align-items:center;gap:14px">
-      <span style="font-size:10px;font-weight:700;color:var(--ink4);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap">Encerra em</span>
+      <span style="font-size:10px;font-weight:700;color:var(--ink4);text-transform:uppercase;letter-spacing:.5px;white-space:nowrap">Cierra en</span>
       <div style="display:flex;align-items:center;gap:8px">
-        <div style="text-align:center"><span id="cd-d" style="font-size:20px;font-weight:800;color:var(--ink);line-height:1;display:block;font-variant-numeric:tabular-nums">--</span><span style="font-size:9px;color:var(--ink4);font-weight:600;text-transform:uppercase;letter-spacing:.4px">dias</span></div>
+        <div style="text-align:center"><span id="cd-d" style="font-size:20px;font-weight:800;color:var(--ink);line-height:1;display:block;font-variant-numeric:tabular-nums">--</span><span style="font-size:9px;color:var(--ink4);font-weight:600;text-transform:uppercase;letter-spacing:.4px">días</span></div>
         <span style="font-size:16px;font-weight:300;color:var(--bdr2);line-height:1.2">:</span>
         <div style="text-align:center"><span id="cd-h" style="font-size:20px;font-weight:800;color:var(--ink);line-height:1;display:block;font-variant-numeric:tabular-nums">--</span><span style="font-size:9px;color:var(--ink4);font-weight:600;text-transform:uppercase;letter-spacing:.4px">horas</span></div>
         <span style="font-size:16px;font-weight:300;color:var(--bdr2);line-height:1.2">:</span>
@@ -524,7 +524,7 @@
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      <span style="font-size:11px;color:var(--ink3);font-weight:500">Vagas preenchidas</span>
+      <span style="font-size:11px;color:var(--ink3);font-weight:500">Cupos ocupados</span>
       <% const pct = evento.vagas_total>0 ? Math.round((evento.total_inscritos||0)/evento.vagas_total*100) : 0; %>
       <div style="width:90px;height:5px;background:var(--sur3);border-radius:3px;overflow:hidden"><div style="height:100%;border-radius:3px;background:linear-gradient(90deg,#22c55e,#16a34a);width:<%= pct %>%"></div></div>
       <span style="font-size:11px;font-weight:700;color:#16a34a"><%= pct %>%</span>
@@ -541,7 +541,7 @@
         <div class="card-hd">
           <div class="card-hd-l">
             <div class="card-hd-ic"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 7V3.5L18.5 9H13z"/></svg></div>
-            <h2>Sobre o Evento</h2>
+            <h2>Sobre el Evento</h2>
           </div>
         </div>
         <div class="card-bd" style="font-size:14px;line-height:1.85;color:var(--ink2);text-align:justify"><%- evento.descricao %></div>
@@ -561,7 +561,7 @@
         <div class="card-hd">
           <div class="card-hd-l">
             <div class="card-hd-ic"><svg viewBox="0 0 24 24"><path d="M20 12c0-1.1.9-2 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v4c1.1 0 2 .9 2 2s-.9 2-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-4c-1.1 0-2-.9-2-2z"/></svg></div>
-            <div><h2>Ingressos</h2><p>Selecione o ingresso desejado</p></div>
+            <div><h2>Entradas</h2><p>Seleccione la entrada deseada</p></div>
           </div>
         </div>
         <div class="card-bd">
@@ -569,15 +569,15 @@
           <div class="lote <%= i===0?'sel':'' %>" id="lote-<%= l.id %>" onclick="selLote(<%= l.id %>,this)">
             <div class="lote-top">
               <div style="flex:1">
-                <% if(i===0){ %><span class="lote-badge lote-badge-pop">Mais Popular</span><% } %>
+                <% if(i===0){ %><span class="lote-badge lote-badge-pop">Más Popular</span><% } %>
                 <% if(l.vagas_restantes&&l.vagas_restantes<=10){ %>
                 <span class="lote-badge lote-badge-hot">
                   <svg style="width:10px;height:10px;fill:#c2410c" viewBox="0 0 24 24"><path d="M13.5.67s.74 2.65.74 4.8c0 2.06-1.35 3.73-3.41 3.73-2.07 0-3.63-1.67-3.63-3.73l.03-.36C5.21 7.51 4 10.62 4 14c0 4.42 3.58 8 8 8s8-3.58 8-8C20 8.61 17.41 3.8 13.5.67z"/></svg>
-                  Últimas vagas
+                  Últimos cupos
                 </span>
                 <% } %>
                 <div class="lote-nome"><%= l.nome %></div>
-                <% if(l.data_fim){ %><div class="lote-info">Disponível até <%= new Date(l.data_fim).toLocaleDateString('pt-BR') %></div><% } %>
+                <% if(l.data_fim){ %><div class="lote-info">Disponible hasta <%= new Date(l.data_fim).toLocaleDateString('es-PY') %></div><% } %>
               </div>
               <div style="display:flex;align-items:flex-start;gap:10px">
                 <% if(parseFloat(l.preco)===0){ %>
@@ -593,7 +593,7 @@
             </div>
             <!-- SELETOR DE QUANTIDADE -->
             <div class="lote-qty" id="qty-row-<%= l.id %>" style="display:none" onclick="event.stopPropagation()">
-              <span class="lote-qty-label">Quantidade de ingressos</span>
+              <span class="lote-qty-label">Cantidad de entradas</span>
               <div class="qty-ctrl">
                 <button class="qty-btn" onclick="mudaQty(<%= l.id %>,-1)" id="qty-minus-<%= l.id %>" disabled>−</button>
                 <input class="qty-num" id="qty-<%= l.id %>" value="1" readonly>
@@ -603,9 +603,9 @@
           </div>
           <% }) %>
           <div class="cupom-sec">
-            <div class="cupom-lbl">Cupom de desconto</div>
+            <div class="cupom-lbl">Cupón de descuento</div>
             <div class="cupom-row">
-              <input id="cupom-in" class="cupom-in" placeholder="CÓDIGO DO CUPOM" oninput="this.value=this.value.toUpperCase()" value="<%= typeof cupomUrl !== 'undefined' && cupomUrl ? cupomUrl : '' %>">
+              <input id="cupom-in" class="cupom-in" placeholder="CÓDIGO DEL CUPÓN" oninput="this.value=this.value.toUpperCase()" value="<%= typeof cupomUrl !== 'undefined' && cupomUrl ? cupomUrl : '' %>">
               <% if(typeof cupomUrl !== 'undefined' && cupomUrl){ %>
               <script>window._autoCupom=true;</script>
               <% } %>
@@ -616,14 +616,14 @@
           <% const totalInscritos2 = evento.total_inscritos || 0; %>
           <% const lotado = evento.vagas_total > 0 && totalInscritos2 >= evento.vagas_total; %>
           <% if (lotado) { %>
-          <button class="btn-prox" style="background:#f59e0b" onclick="abrirEspera()">Entrar na lista de espera</button>
-          <div style="font-size:12px;color:var(--ink3);margin-top:8px;text-align:center">Evento lotado — cadastre-se para ser avisado quando uma vaga abrir</div>
+          <button class="btn-prox" style="background:#f59e0b" onclick="abrirEspera()">Entrar a la lista de espera</button>
+          <div style="font-size:12px;color:var(--ink3);margin-top:8px;text-align:center">Evento agotado — regístrese para ser avisado cuando se libere un cupo</div>
           <% } else { %>
-          <button class="btn-prox" onclick="abrirForm()">Garantir minha vaga →</button>
+          <button class="btn-prox" onclick="abrirForm()">Asegurar mi cupo →</button>
           <% } %>
           <div style="display:flex;align-items:center;gap:7px;background:var(--sur3);border-radius:8px;padding:9px 12px;margin-top:8px">
             <svg style="width:13px;height:13px;fill:var(--ink4);flex-shrink:0" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>
-            <span style="font-size:11px;color:var(--ink3)">Pagamento 100% seguro via PIX ou Cartão · PagBank</span>
+            <span style="font-size:11px;color:var(--ink3)">Pago 100% seguro vía PIX o Tarjeta · PagBank</span>
           </div>
         </div>
       </div>
@@ -634,7 +634,7 @@
           <div class="card-hd">
             <div class="card-hd-l">
               <div class="card-hd-ic"><svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></div>
-              <div><h2>Dados do Participante</h2><p>Todos os campos são obrigatórios</p></div>
+              <div><h2>Datos del Participante</h2><p>Todos los campos son obligatorios</p></div>
             </div>
           </div>
           <div class="card-bd">
@@ -648,44 +648,44 @@
                 <div class="tipo-participante">
                   <div class="tipo-opt sel" id="opt-ucp" onclick="selectTipo('ucp')">
                     <div class="tipo-ic"><svg viewBox="0 0 24 24"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg></div>
-                    <div class="tipo-lbl">Aluno UCP</div>
+                    <div class="tipo-lbl">Alumno UCP</div>
                     <div class="tipo-sub">Universidad Central del Paraguay</div>
                   </div>
                   <div class="tipo-opt" id="opt-externo" onclick="selectTipo('externo')">
                     <div class="tipo-ic"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></div>
                     <div class="tipo-lbl">Externo</div>
-                    <div class="tipo-sub">Outra instituição</div>
+                    <div class="tipo-sub">Otra institución</div>
                   </div>
                 </div>
               </div>
-              <div class="sec-title">Informações pessoais</div>
+              <div class="sec-title">Información personal</div>
               <div class="grid2" style="margin-bottom:14px">
-                <div class="campo" style="grid-column:1/-1"><label>Nome Completo <span class="req">*</span></label><input name="nome" class="inp" required placeholder="Seu nome completo"></div>
-                <div class="campo"><label>E-mail <span class="req">*</span></label><input name="email" class="inp" type="email" required placeholder="email@exemplo.com"></div>
+                <div class="campo" style="grid-column:1/-1"><label>Nombre Completo <span class="req">*</span></label><input name="nome" class="inp" required placeholder="Su nombre completo"></div>
+                <div class="campo"><label>Correo electrónico <span class="req">*</span></label><input name="email" class="inp" type="email" required placeholder="correo@ejemplo.com"></div>
                 <div class="campo"><label>WhatsApp <span class="req">*</span></label>
                   <div class="inp-group">
                     <select name="whatsapp_pais" class="inp" style="max-width:86px;flex-shrink:0"><option value="+595"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">PY</span> +595</option><option value="+55"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">BR</span> +55</option><option value="+54"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">AR</span> +54</option><option value="+598"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">UY</span> +598</option><option value="+1"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">US</span> +1</option></select>
                     <input name="whatsapp" class="inp" placeholder="99 999 9999" required>
                   </div>
                 </div>
-                <div class="campo"><label>Data de Nascimento <span class="req">*</span></label><input type="date" name="data_nascimento" class="inp" required></div>
-                <div class="campo"><label>RG / CI <span class="req">*</span></label><input name="rg" class="inp" required placeholder="Número do documento"></div>
-                <div class="campo" id="campo-catraca"><label>Catraca UCP <span class="req">*</span></label><input name="catraca" id="inp-catraca" class="inp" required placeholder="Número da catraca"></div>
-                <div class="campo" id="campo-instituicao" style="display:none"><label>Instituição <span class="req">*</span></label><input name="instituicao" id="inp-instituicao" class="inp" placeholder="Nome da sua universidade"></div>
+                <div class="campo"><label>Fecha de Nacimiento <span class="req">*</span></label><input type="date" name="data_nascimento" class="inp" required></div>
+                <div class="campo"><label>RG / CI <span class="req">*</span></label><input name="rg" class="inp" required placeholder="Número del documento"></div>
+                <div class="campo" id="campo-catraca"><label>Catraca UCP <span class="req">*</span></label><input name="catraca" id="inp-catraca" class="inp" required placeholder="Número de la catraca"></div>
+                <div class="campo" id="campo-instituicao" style="display:none"><label>Institución <span class="req">*</span></label><input name="instituicao" id="inp-instituicao" class="inp" placeholder="Nombre de su universidad"></div>
                 <div class="campo"><label>Semestre <span class="req">*</span></label>
-                  <select name="semestre" class="inp" required><option value="">Selecione...</option><% for(let s=1;s<=12;s++){ %><option value="<%= s %>º"><%= s %>º Semestre</option><% } %></select>
+                  <select name="semestre" class="inp" required><option value="">Seleccione...</option><% for(let s=1;s<=12;s++){ %><option value="<%= s %>º"><%= s %>º Semestre</option><% } %></select>
                 </div>
-                <div class="campo"><label>Turma <span class="req">*</span></label>
-                  <select name="turma" class="inp" required><option value="">Selecione...</option><% 'ABCDEFGHIJKLMNOP'.split('').forEach(t=>{ %><option value="<%= t %>">Turma <%= t %></option><% }) %></select>
+                <div class="campo"><label>Sección <span class="req">*</span></label>
+                  <select name="turma" class="inp" required><option value="">Seleccione...</option><% 'ABCDEFGHIJKLMNOP'.split('').forEach(t=>{ %><option value="<%= t %>">Sección <%= t %></option><% }) %></select>
                 </div>
               </div>
               <% if(campos&&campos.length>0){ %>
-              <div class="sec-title" style="margin-top:8px">Informações adicionais</div>
+              <div class="sec-title" style="margin-top:8px">Información adicional</div>
               <div class="grid2" style="margin-bottom:14px">
                 <% campos.forEach(campo=>{ %>
                 <div class="campo" style="<%= campo.tipo==='textarea'?'grid-column:1/-1':'' %>">
                   <label><%= campo.label %><% if(campo.obrigatorio){ %><span class="req"> *</span><% } %></label>
-                  <% if(campo.tipo==='select'){ %><select name="campo_<%= campo.id %>" class="inp" <%= campo.obrigatorio?'required':'' %>><option value="">Selecione...</option><% (campo.opcoes||'').split('\n').filter(o=>o.trim()).forEach(op=>{ %><option value="<%= op.trim() %>"><%= op.trim() %></option><% }) %></select>
+                  <% if(campo.tipo==='select'){ %><select name="campo_<%= campo.id %>" class="inp" <%= campo.obrigatorio?'required':'' %>><option value="">Seleccione...</option><% (campo.opcoes||'').split('\n').filter(o=>o.trim()).forEach(op=>{ %><option value="<%= op.trim() %>"><%= op.trim() %></option><% }) %></select>
                   <% } else if(campo.tipo==='textarea'){ %><textarea name="campo_<%= campo.id %>" class="inp" rows="3" <%= campo.obrigatorio?'required':'' %>></textarea>
                   <% } else { %><input type="<%= campo.tipo==='email'?'email':campo.tipo==='number'?'number':campo.tipo==='date'?'date':'text' %>" name="campo_<%= campo.id %>" class="inp" <%= campo.obrigatorio?'required':'' %>><% } %>
                 </div>
@@ -693,11 +693,11 @@
               </div>
               <% } %>
               <div class="termos-box">
-                <% if(evento.termos_texto){ %><div class="termo-check"><input type="checkbox" name="aceite_termos" required><span>Li e concordo com os <span class="termo-link" onclick="abrirModal('modal-termos')">Termos de Participação</span> <span class="req">*</span></span></div><% } %>
-                <div class="termo-check"><input type="checkbox" name="aceite_lgpd" required><span>Li e aceito a <span class="termo-link" onclick="abrirModal('modal-lgpd')">Política de Privacidade</span> <span class="req">*</span></span></div>
+                <% if(evento.termos_texto){ %><div class="termo-check"><input type="checkbox" name="aceite_termos" required><span>He leído y acepto los <span class="termo-link" onclick="abrirModal('modal-termos')">Términos de Participación</span> <span class="req">*</span></span></div><% } %>
+                <div class="termo-check"><input type="checkbox" name="aceite_lgpd" required><span>He leído y acepto la <span class="termo-link" onclick="abrirModal('modal-lgpd')">Política de Privacidad</span> <span class="req">*</span></span></div>
               </div>
-              <button type="submit" class="btn-sub">Confirmar Inscrição</button>
-              <div class="secure-note"><svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>Seus dados estão protegidos com segurança</div>
+              <button type="submit" class="btn-sub">Confirmar Inscripción</button>
+              <div class="secure-note"><svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>Sus datos están protegidos con seguridad</div>
             </form>
           </div>
         </div>
@@ -705,7 +705,7 @@
 
       <% if(programacao&&programacao.length>0){ %>
       <div class="card">
-        <div class="card-hd"><div class="card-hd-l"><div class="card-hd-ic"><svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg></div><h2>Programação</h2></div></div>
+        <div class="card-hd"><div class="card-hd-l"><div class="card-hd-ic"><svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg></div><h2>Programa</h2></div></div>
         <div class="card-bd">
           <% programacao.forEach((p,i)=>{ %>
           <div class="prog-item" id="prog-item-<%= i %>" onclick="togProg(<%= i %>)">
@@ -722,7 +722,7 @@
 
       <% if(palestrantes&&palestrantes.length>0){ %>
       <div class="card">
-        <div class="card-hd"><div class="card-hd-l"><div class="card-hd-ic"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></div><div><h2>Palestrantes</h2><p>Clique para ver a biografia completa</p></div></div></div>
+        <div class="card-hd"><div class="card-hd-l"><div class="card-hd-ic"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg></div><div><h2>Disertantes</h2><p>Haga clic para ver la biografía completa</p></div></div></div>
         <div class="card-bd">
           <div class="pales-grid">
             <% palestrantes.forEach((p,i)=>{ %>
@@ -741,24 +741,24 @@
       <% } %>
 
       <div class="card" id="contato">
-        <div class="card-hd"><div class="card-hd-l"><div class="card-hd-ic"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div><h2>Contato</h2></div></div>
+        <div class="card-hd"><div class="card-hd-l"><div class="card-hd-ic"><svg viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div><h2>Contacto</h2></div></div>
         <div class="card-bd">
           <div class="contact-grid">
-            <a href="mailto:lauroucpcde@lauroucpcde.com" class="contact-btn"><div class="contact-ic" style="background:#fee2e2"><svg style="fill:#dc2626" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div><div><div class="contact-lbl">E-mail</div><div class="contact-val" style="font-size:12px">lauroucpcde@lauroucpcde.com</div></div></a>
+            <a href="mailto:lauroucpcde@lauroucpcde.com" class="contact-btn"><div class="contact-ic" style="background:#fee2e2"><svg style="fill:#dc2626" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></div><div><div class="contact-lbl">Correo electrónico</div><div class="contact-val" style="font-size:12px">lauroucpcde@lauroucpcde.com</div></div></a>
             <a href="https://wa.me/595992010423" target="_blank" class="contact-btn"><div class="contact-ic" style="background:#dcfce7"><svg style="fill:#16a34a" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div><div><div class="contact-lbl">WhatsApp</div><div class="contact-val">+595 992 010 423</div></div></a>
           </div>
           <div style="margin-top:10px">
             <div class="contact-btn" onclick="togForm()" style="width:100%">
               <div class="contact-ic" style="background:var(--sur3)"><svg style="fill:var(--ink3)" viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg></div>
-              <div style="flex:1"><div class="contact-lbl">Mensagem</div><div class="contact-val">Enviar mensagem para a equipe</div></div>
+              <div style="flex:1"><div class="contact-lbl">Mensaje</div><div class="contact-val">Enviar mensaje al equipo</div></div>
               <span id="form-arrow" style="color:var(--ink4);font-size:11px;transition:transform .25s"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg></span>
             </div>
             <div class="c-form" id="c-form">
               <form action="/contato-evento/<%= evento.id %>" method="POST" style="margin-top:12px">
-                <input name="nome" class="c-inp" placeholder="Seu nome" required>
-                <input name="email" type="email" class="c-inp" placeholder="Seu e-mail" required>
-                <textarea name="mensagem" class="c-inp" rows="3" placeholder="Sua mensagem..." style="resize:vertical" required></textarea>
-                <button type="submit" class="c-send">Enviar mensagem</button>
+                <input name="nome" class="c-inp" placeholder="Su nombre" required>
+                <input name="email" type="email" class="c-inp" placeholder="Su correo electrónico" required>
+                <textarea name="mensagem" class="c-inp" rows="3" placeholder="Su mensaje..." style="resize:vertical" required></textarea>
+                <button type="submit" class="c-send">Enviar mensaje</button>
               </form>
             </div>
           </div>
@@ -770,39 +770,39 @@
     <div class="sidebar">
       <% if(lotes.length>0){ %>
       <div class="resumo-card">
-        <div class="resumo-eyebrow">Ingresso selecionado</div>
+        <div class="resumo-eyebrow">Entrada seleccionada</div>
         <div class="resumo-nome" id="res-nome"><%= lotes[0]?.nome %></div>
         <div id="res-qty" style="font-size:11px;color:rgba(255,255,255,.5);margin-top:3px;position:relative;z-index:1"></div>
         <div class="resumo-preco" id="res-preco"><%= parseFloat(lotes[0]?.preco||0)===0?'Gratuito':'R$ '+Number(lotes[0]?.preco||0).toFixed(2).replace('.',',') %></div>
         <div style="height:1px;background:rgba(255,255,255,.12);margin:14px 0;position:relative;z-index:1"></div>
         <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px;position:relative;z-index:1">
-          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="width:15px;height:15px;border-radius:50%;background:rgba(74,222,128,.2);display:flex;align-items:center;justify-content:center;font-size:9px;color:#4ade80;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg></span>Acesso completo ao evento</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="width:15px;height:15px;border-radius:50%;background:rgba(74,222,128,.2);display:flex;align-items:center;justify-content:center;font-size:9px;color:#4ade80;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg></span>Acceso completo al evento</div>
           <% if(evento.carga_horaria){ %><div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="width:15px;height:15px;border-radius:50%;background:rgba(74,222,128,.2);display:flex;align-items:center;justify-content:center;font-size:9px;color:#4ade80;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg></span>Certificado digital <%= evento.carga_horaria %>h</div><% } %>
-          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="width:15px;height:15px;border-radius:50%;background:rgba(74,222,128,.2);display:flex;align-items:center;justify-content:center;font-size:9px;color:#4ade80;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg></span>Confirmação por e-mail</div>
+          <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:rgba(255,255,255,.7)"><span style="width:15px;height:15px;border-radius:50%;background:rgba(74,222,128,.2);display:flex;align-items:center;justify-content:center;font-size:9px;color:#4ade80;flex-shrink:0"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg></span>Confirmación por correo electrónico</div>
         </div>
         <button class="resumo-btn" onclick="abrirForm()">
           <svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg>
-          Garantir minha vaga
+          Asegurar mi cupo
         </button>
         <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:9px;font-size:11px;color:rgba(255,255,255,.4);position:relative;z-index:1">
           <span style="width:6px;height:6px;border-radius:50%;background:#f87171;animation:blink 2s infinite;display:inline-block"></span>
-          Inscrições se encerram em breve
+          Las inscripciones cierran pronto
         </div>
       </div>
       <% } %>
 
       <div class="s-card">
-        <div class="s-title">Informações</div>
+        <div class="s-title">Información</div>
         <% if(evento.data_inicio){ %>
-        <div class="info-it"><div class="i-icon"><svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg></div><div><div class="i-lbl">Data</div><div class="i-val"><%= new Date(evento.data_inicio).toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'}) %></div></div></div>
-        <div class="info-it"><div class="i-icon"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg></div><div><div class="i-lbl">Início</div><div class="i-val"><%= new Date(evento.data_inicio).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) %> h</div></div></div>
+        <div class="info-it"><div class="i-icon"><svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg></div><div><div class="i-lbl">Fecha</div><div class="i-val"><%= new Date(evento.data_inicio).toLocaleDateString('es-PY',{day:'2-digit',month:'long',year:'numeric'}) %></div></div></div>
+        <div class="info-it"><div class="i-icon"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z"/></svg></div><div><div class="i-lbl">Inicio</div><div class="i-val"><%= new Date(evento.data_inicio).toLocaleTimeString('es-PY',{hour:'2-digit',minute:'2-digit'}) %> h</div></div></div>
         <% } %>
-        <div class="info-it"><div class="i-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg></div><div><div class="i-lbl">Modalidade</div><div class="i-val"><%= evento.tipo_evento==='online'?'Online':evento.tipo_evento==='hibrido'?'Híbrido':'Presencial' %></div></div></div>
+        <div class="info-it"><div class="i-icon"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg></div><div><div class="i-lbl">Modalidad</div><div class="i-val"><%= evento.tipo_evento==='online'?'Online':evento.tipo_evento==='hibrido'?'Híbrido':'Presencial' %></div></div></div>
         <% if(evento.carga_horaria){ %>
         <div class="info-it"><div class="i-icon"><svg viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18V17c0 .34.17.66.45.84l6 3.75c.17.11.36.16.55.16s.38-.05.55-.16l6-3.75c.28-.18.45-.5.45-.84v-5.82L23 9 12 3zm6 11.82l-6 3.75-6-3.75V12.09l6 3.27 6-3.27v2.73z"/></svg></div><div><div class="i-lbl">Certificado</div><div class="i-val"><%= evento.carga_horaria %> horas</div></div></div>
         <% } %>
         <% if(evento.local&&evento.tipo_evento!=='online'){ %>
-        <div class="info-it"><div class="i-icon"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div><div><div class="i-lbl">Local</div><div class="i-val"><%= evento.local %></div><% if(evento.endereco){ %><div class="i-sub"><%= evento.endereco %></div><% } %></div></div>
+        <div class="info-it"><div class="i-icon"><svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg></div><div><div class="i-lbl">Lugar</div><div class="i-val"><%= evento.local %></div><% if(evento.endereco){ %><div class="i-sub"><%= evento.endereco %></div><% } %></div></div>
         <% } %>
         <div class="org-strip">
           <div class="org-logo-box"><% if(config&&config.org_logo){ %><img src="<%= config.org_logo %>" alt="LAURO"><% } else { %><svg viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 14l-5-5 1.41-1.41L12 14.17l7.59-7.59L21 8l-9 9z"/></svg><% } %></div>
@@ -828,15 +828,15 @@
         <div class="social-list">
           <a href="https://wa.me/595992010423" target="_blank" class="s-btn s-btn-wpp">
             <div class="s-btn-logo"><svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg></div>
-            <div><div class="s-btn-lbl">Atendimento via</div><div class="s-btn-name">WhatsApp</div></div>
+            <div><div class="s-btn-lbl">Atención vía</div><div class="s-btn-name">WhatsApp</div></div>
           </a>
           <a href="https://www.instagram.com/lauroucp.cde/" target="_blank" class="s-btn s-btn-ig">
             <div class="s-btn-logo"><svg viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg></div>
-            <div><div class="s-btn-lbl">Siga no</div><div class="s-btn-name">@lauroucp.cde</div></div>
+            <div><div class="s-btn-lbl">Siga en</div><div class="s-btn-name">@lauroucp.cde</div></div>
           </a>
           <a href="https://www.youtube.com/@LAUROUCPCDE" target="_blank" class="s-btn s-btn-yt">
             <div class="s-btn-logo"><svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 00-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 00.502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 002.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 002.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></div>
-            <div><div class="s-btn-lbl">Assista no</div><div class="s-btn-name">YouTube</div></div>
+            <div><div class="s-btn-lbl">Vea en</div><div class="s-btn-name">YouTube</div></div>
           </a>
         </div>
       </div>
@@ -847,39 +847,39 @@
 
 <% if(evento.termos_texto){ %>
 <div class="modal-wrap" id="modal-termos" onclick="if(event.target===this)fecharModal('modal-termos')">
-  <div class="modal-box"><div class="modal-hd"><h3>Termos de Participação</h3><button class="modal-close" onclick="fecharModal('modal-termos')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div class="modal-body"><%- evento.termos_texto %></div><div class="modal-ft"><button class="modal-ok" onclick="fecharModal('modal-termos')">Entendi</button></div></div>
+  <div class="modal-box"><div class="modal-hd"><h3>Términos de Participación</h3><button class="modal-close" onclick="fecharModal('modal-termos')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div><div class="modal-body"><%- evento.termos_texto %></div><div class="modal-ft"><button class="modal-ok" onclick="fecharModal('modal-termos')">Entendido</button></div></div>
 </div>
 <% } %>
 
 <div class="modal-wrap" id="modal-lgpd" onclick="if(event.target===this)fecharModal('modal-lgpd')">
-  <div class="modal-box"><div class="modal-hd"><h3>Política de Privacidade</h3><button class="modal-close" onclick="fecharModal('modal-lgpd')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+  <div class="modal-box"><div class="modal-hd"><h3>Política de Privacidad</h3><button class="modal-close" onclick="fecharModal('modal-lgpd')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
   <div class="modal-body"><% if(evento.lgpd_texto){ %><%- evento.lgpd_texto %><% } else { %>Liga Académica de Urología — LAURO
-Política de Privacidade e Proteção de Dados (LGPD)
+Política de Privacidad y Protección de Datos (LGPD)
 
-1. RESPONSÁVEL PELO TRATAMENTO
-A Liga Académica de Urología (LAURO), vinculada à Universidad Central del Paraguay, é a responsável pelo tratamento dos dados pessoais coletados neste formulário.
+1. RESPONSABLE DEL TRATAMIENTO
+La Liga Académica de Urología (LAURO), vinculada a la Universidad Central del Paraguay, es la responsable del tratamiento de los datos personales recopilados en este formulario.
 
-2. DADOS COLETADOS
-Coletamos: nome completo, e-mail, telefone/WhatsApp, data de nascimento, documento de identidade (RG/CI), número de catraca (alunos UCP), semestre, turma e instituição de ensino.
+2. DATOS RECOPILADOS
+Recopilamos: nombre completo, correo electrónico, teléfono/WhatsApp, fecha de nacimiento, documento de identidad (RG/CI), número de catraca (alumnos UCP), semestre, sección e institución de enseñanza.
 
-3. FINALIDADE DO TRATAMENTO
-Os dados são utilizados exclusivamente para: (a) processamento e confirmação de inscrição no evento; (b) envio de comunicações relacionadas ao evento; (c) emissão de certificados de participação; (d) controle de acesso (check-in) no dia do evento.
+3. FINALIDAD DEL TRATAMIENTO
+Los datos se utilizan exclusivamente para: (a) procesamiento y confirmación de la inscripción en el evento; (b) envío de comunicaciones relacionadas con el evento; (c) emisión de certificados de participación; (d) control de acceso (check-in) el día del evento.
 
-4. COMPARTILHAMENTO
-Os dados não serão comercializados, cedidos ou compartilhados com terceiros, exceto quando necessário para a realização do evento ou por obrigação legal.
+4. COMPARTICIÓN
+Los datos no serán comercializados, cedidos ni compartidos con terceros, salvo cuando sea necesario para la realización del evento o por obligación legal.
 
-5. PRAZO DE RETENÇÃO
-Os dados serão mantidos por até 5 anos para fins de comprovação de participação e emissão de certificados.
+5. PLAZO DE RETENCIÓN
+Los datos se mantendrán por hasta 5 años a efectos de comprobación de participación y emisión de certificados.
 
-6. DIREITOS DO TITULAR
-Acesso, correção, exclusão e portabilidade: lauroucpcde@lauroucpcde.com
+6. DERECHOS DEL TITULAR
+Acceso, corrección, eliminación y portabilidad: lauroucpcde@lauroucpcde.com
 
-7. CONSENTIMENTO
-Ao marcar esta opção, você consente com o tratamento dos seus dados.<% } %></div>
-  <div class="modal-ft"><button class="modal-ok" onclick="fecharModal('modal-lgpd')">Entendi</button></div></div>
+7. CONSENTIMIENTO
+Al marcar esta opción, usted consiente el tratamiento de sus datos.<% } %></div>
+  <div class="modal-ft"><button class="modal-ok" onclick="fecharModal('modal-lgpd')">Entendido</button></div></div>
 </div>
 
-<a href="https://wa.me/595992010423" target="_blank" class="wpp-float" title="Fale conosco">
+<a href="https://wa.me/595992010423" target="_blank" class="wpp-float" title="Contáctenos">
   <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
 </a>
 
@@ -988,9 +988,9 @@ function aplicarCupom(){
   fetch('/eventos/<%= evento.id %>/cupom?cod='+encodeURIComponent(cod))
     .then(r=>r.json()).then(d=>{
       msg.style.display='block';
-      if(d.ok){desconto=d.desconto||0;msg.className='cupom-ok';msg.textContent='Cupom aplicado — '+Math.round(desconto*100)+'% de desconto';document.getElementById('campo-cupom').value=cod;updRes(lotesData.find(x=>x.id==loteId));}
-      else{msg.className='cupom-err';msg.textContent=d.msg||'Cupom inválido ou expirado';}
-    }).catch(()=>{document.getElementById('cupom-msg').className='cupom-err';document.getElementById('cupom-msg').textContent='Erro ao verificar o cupom';document.getElementById('cupom-msg').style.display='block';});
+      if(d.ok){desconto=d.desconto||0;msg.className='cupom-ok';msg.textContent='Cupón aplicado — '+Math.round(desconto*100)+'% de descuento';document.getElementById('campo-cupom').value=cod;updRes(lotesData.find(x=>x.id==loteId));}
+      else{msg.className='cupom-err';msg.textContent=d.msg||'Cupón inválido o expirado';}
+    }).catch(()=>{document.getElementById('cupom-msg').className='cupom-err';document.getElementById('cupom-msg').textContent='Error al verificar el cupón';document.getElementById('cupom-msg').style.display='block';});
 }
 // Auto-aplicar cupom se vier na URL
 if(window._autoCupom) {
@@ -1047,11 +1047,11 @@ function entrarEspera(){
   const nome=document.getElementById('esp-nome').value.trim();
   const email=document.getElementById('esp-email').value.trim();
   const wpp=document.getElementById('esp-wpp').value.trim();
-  if(!nome){alert('Informe seu nome.');return;}
+  if(!nome){alert('Ingrese su nombre.');return;}
   fetch('/inscricao/<%= evento.id %>/lista-espera',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({nome,email,whatsapp:wpp})})
   .then(r=>r.json()).then(d=>{
-    if(d.ok){document.getElementById('modal-espera').querySelector('div').innerHTML='<div style="text-align:center;padding:20px"><div style="font-size:40px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><h3>Voce esta na lista!</h3><p style="color:#6b7280;font-size:14px;margin:8px 0">'+d.msg+'</p><button onclick="fecharEspera()" style="margin-top:12px;padding:10px 24px;background:#1a56db;color:white;border:none;border-radius:8px;cursor:pointer">Fechar</button></div>';}
-    else{alert(d.msg||'Erro.');}
+    if(d.ok){document.getElementById('modal-espera').querySelector('div').innerHTML='<div style="text-align:center;padding:20px"><div style="font-size:40px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div><h3>¡Usted está en la lista!</h3><p style="color:#6b7280;font-size:14px;margin:8px 0">'+d.msg+'</p><button onclick="fecharEspera()" style="margin-top:12px;padding:10px 24px;background:#1a56db;color:white;border:none;border-radius:8px;cursor:pointer">Cerrar</button></div>';}
+    else{alert(d.msg||'Error.');}
   });
 }
 // COUNTDOWN
@@ -1064,7 +1064,7 @@ function entrarEspera(){
     const diff = dataEvento - agora;
     if (diff <= 0) {
       const w = document.getElementById('countdown-wrap');
-      if (w) w.innerHTML = '<div style="font-size:14px;font-weight:700;color:white">Evento em andamento!</div>';
+      if (w) w.innerHTML = '<div style="font-size:14px;font-weight:700;color:white">¡Evento en curso!</div>';
       return;
     }
     const dias  = Math.floor(diff / 86400000);
@@ -1087,13 +1087,13 @@ function entrarEspera(){
 <div id="modal-espera" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;padding:20px">
   <div style="background:white;border-radius:16px;padding:28px;max-width:420px;width:100%">
     <h3 style="font-size:18px;font-weight:700;margin-bottom:6px">Lista de espera</h3>
-    <p style="font-size:13px;color:#6b7280;margin-bottom:20px">Preencha seus dados e avisaremos assim que uma vaga abrir.</p>
-    <input id="esp-nome" type="text" placeholder="Seu nome completo *" style="width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
-    <input id="esp-email" type="email" placeholder="Seu email" style="width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
-    <input id="esp-wpp" type="tel" placeholder="WhatsApp (com DDD)" style="width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:16px;font-family:inherit">
+    <p style="font-size:13px;color:#6b7280;margin-bottom:20px">Complete sus datos y le avisaremos en cuanto se libere un cupo.</p>
+    <input id="esp-nome" type="text" placeholder="Su nombre completo *" style="width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
+    <input id="esp-email" type="email" placeholder="Su correo electrónico" style="width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:10px;font-family:inherit">
+    <input id="esp-wpp" type="tel" placeholder="WhatsApp (con código de área)" style="width:100%;padding:11px 14px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;margin-bottom:16px;font-family:inherit">
     <div style="display:flex;gap:10px;justify-content:flex-end">
       <button onclick="fecharEspera()" style="padding:10px 20px;border:1px solid #e5e7eb;border-radius:8px;background:white;cursor:pointer;font-size:13px">Cancelar</button>
-      <button onclick="entrarEspera()" style="padding:10px 20px;background:#1a56db;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">Entrar na lista</button>
+      <button onclick="entrarEspera()" style="padding:10px 20px;background:#1a56db;color:white;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600">Entrar a la lista</button>
     </div>
   </div>
 </div>
@@ -1104,14 +1104,14 @@ function entrarEspera(){
       <button onclick="fecharPales()" class="btn-close-x" style="position:absolute;top:14px;right:14px;width:28px;height:28px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:rgba(255,255,255,.45);font-size:18px;border:0.5px solid rgba(255,255,255,.15);border-radius:2px;background:transparent;transition:color .2s,border-color .2s"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       <div id="pm-foto" style="flex-shrink:0"></div>
       <div>
-        <div style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#1D9E75;margin-bottom:6px">Palestrante</div>
+        <div style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#1D9E75;margin-bottom:6px">Disertante</div>
         <div id="pm-nome" style="font-size:20px;font-weight:500;color:white;line-height:1.2;margin-bottom:10px"></div>
         <div id="pm-inst" style="font-size:12px;color:rgba(255,255,255,.5);letter-spacing:.3px"></div>
       </div>
     </div>
     <div style="height:3px;background:linear-gradient(90deg,#1D9E75,#0F6E56,transparent)"></div>
     <div style="padding:28px 32px">
-      <div style="font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:#9ca3af;margin-bottom:14px">Biografia</div>
+      <div style="font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:#9ca3af;margin-bottom:14px">Biografía</div>
       <div id="pm-bio" style="font-size:14px;color:#374151;line-height:1.85;text-align:justify"></div>
     </div>
     <div style="padding:16px 32px 24px;display:flex;gap:10px;border-top:1px solid #f3f4f6">
@@ -1119,7 +1119,7 @@ function entrarEspera(){
         <svg style="width:15px;height:15px;fill:white;flex-shrink:0" viewBox="0 0 24 24"><path d="M14 3h7v7h-2V6.41l-9.29 9.3-1.42-1.42L17.59 5H14V3zM5 5h6v2H7v10h10v-4h2v6H5V5z"/></svg>
         Ver perfil completo
       </a>
-      <button onclick="fecharPales()" class="btn-fechar" style="padding:12px 20px;border-radius:2px;background:transparent;color:#6b7280;border:1px solid #e5e7eb;font-size:13px;cursor:pointer">Fechar</button>
+      <button onclick="fecharPales()" class="btn-fechar" style="padding:12px 20px;border-radius:2px;background:transparent;color:#6b7280;border:1px solid #e5e7eb;font-size:13px;cursor:pointer">Cerrar</button>
     </div>
   </div>
 </div>
