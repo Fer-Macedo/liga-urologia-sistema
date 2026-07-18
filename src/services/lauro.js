@@ -370,6 +370,24 @@ async function enviarMensagem(numero, mensagem) {
   const r = await enviarTexto(numero, mensagem);
   if (!r.ok) console.error('Lauro erro envio:', JSON.stringify(r.erro));
 }
+// Notifica um numero de area sobre atendimento novo. Texto livre so entrega dentro da
+// janela de 24h desde a ultima mensagem DA area (fora dela o WhatsApp devolve 131047 e o
+// aviso some em silencio — era por isso que a secretaria nao ficava sabendo dos
+// atendimentos). Se o texto livre falhar, cai para um modelo aprovado, que entrega a
+// qualquer momento; quando a area responder, a janela reabre e o proxy volta ao normal.
+async function notificarArea(numeroArea, msgArea, nomeMembro, areaNome) {
+  const { enviarTexto, enviarTemplate } = require('./whatsapp-oficial');
+  const r = await enviarTexto(numeroArea, msgArea);
+  if (r.ok) return;
+  console.warn('[LAURO] Texto livre falhou p/ area (janela 24h?), tentando modelo:', JSON.stringify(r.erro).slice(0, 200));
+  const componentes = [{ type: 'body', parameters: [
+    { type: 'text', text: nomeMembro || 'Membro' },
+    { type: 'text', text: areaNome || 'Atendimento' }
+  ] }];
+  const t = await enviarTemplate(numeroArea, 'novo_atendimento', 'pt_BR', componentes);
+  if (!t.ok) console.error('[LAURO] Modelo novo_atendimento tambem falhou:', JSON.stringify(t.erro).slice(0, 200));
+  else console.log('[LAURO] Area avisada pelo modelo novo_atendimento (fora da janela de 24h).');
+}
 async function enviarImagem(numero, imagem, legenda) {
   const { enviarImagem: enviarImagemOficial } = require('./whatsapp-oficial');
   const r = await enviarImagemOficial(numero, imagem, legenda);
@@ -449,7 +467,7 @@ async function redirecionarArea(numero, area, idioma) {
     + 'AT1: SAIR - encerrar um atendimento especifico\n'
     + 'QUEM - identificar quem voce esta atendendo\n'
     + 'SAIR - encerrar (quando ha apenas um atendimento)';
-  await enviarMensagem(numeroArea, msgArea);
+  await notificarArea(numeroArea, msgArea, nomeMembro, nomesPT[idx]);
 
   // Notifica presidencia
   if (area !== 'presidencia') {
