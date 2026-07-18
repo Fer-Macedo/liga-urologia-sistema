@@ -177,7 +177,7 @@
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
           Contáctenos
         </button>
-        <a href="https://wa.me/55<%= config.wapi_numero || '' %>" target="_blank" class="btn-contato wpp">
+        <a href="https://wa.me/595992010423" target="_blank" class="btn-contato wpp">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.62 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.6a16 16 0 0 0 5.49 5.49l.95-.95a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16.92z"/></svg>
           WhatsApp
         </a>
@@ -229,7 +229,6 @@ const nomeInscrito = '<%= presenca.nome %>';
 const segundosIniciais = <%= presenca.tempo_total_segundos || 0 %>;
 const primeiroAcessoStr = '<%= presenca.primeiro_acesso ? new Date(presenca.primeiro_acesso).toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"}) : "" %>';
 const ultimoPingStr = '<%= presenca.ultimo_ping ? new Date(presenca.ultimo_ping).toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"}) : "" %>';
-const wapiNum = '<%= config.wapi_numero || "" %>';
 
 let online = true;
 let segundosSessao = 0;
@@ -305,7 +304,7 @@ function enviarContato() {
   const msg = document.getElementById('cont-msg').value;
   if (!msg.trim()) { alert('Ingrese su mensaje.'); return; }
   const txt = 'Contacto vía Live — *'+document.getElementById('cont-nome').value+'* ('+document.getElementById('cont-email').value+'): '+msg;
-  window.open('https://wa.me/55'+wapiNum+'?text='+encodeURIComponent(txt),'_blank');
+  window.open('https://wa.me/595992010423?text='+encodeURIComponent(txt),'_blank');
   fecharContato();
 }
 document.getElementById('modal-contato').addEventListener('click', e => { if(e.target===document.getElementById('modal-contato')) fecharContato(); });
