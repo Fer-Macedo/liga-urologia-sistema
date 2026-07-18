@@ -68,6 +68,10 @@ module.exports = function (router) {
         const rank = { sent: 1, delivered: 2, read: 3, failed: 2 };
         (async () => {
           for (const st of statuses) {
+            // Log sempre: entrega/leitura/falha. Sem isso, uma mensagem "aceita" pela Meta mas
+            // NÃO entregue (ex: descartada por limite de marketing) some sem deixar rastro.
+            const erroDetalhe = (st.errors || []).map(e => e.code + ':' + (e.title || e.message || '')).join(' | ');
+            console.log('[WHATSAPP OFICIAL] entrega', st.status, '->', st.recipient_id, erroDetalhe ? ('ERRO ' + erroDetalhe) : '');
             try {
               await query(
                 `UPDATE notificacoes_log SET entrega=$1, entrega_em=to_timestamp($2)
