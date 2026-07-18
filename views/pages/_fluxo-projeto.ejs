@@ -61,11 +61,20 @@ var temDocFinal = anexosList.some(function(a){ return a.tipo==='documento_final'
     <% if (ehAdmin && etapa==='aguardando_presidencia') { %>
       <div style="background:#FBF3E0;border:1px solid #EAD9B0;border-radius:3px;padding:12px;margin-bottom:10px">
         <p style="font-size:12.5px;color:#9A6B14;margin-bottom:8px;font-weight:600">Revisión de Presidencia</p>
-        <p style="font-size:11.5px;color:var(--ink-soft);margin-bottom:8px">Descargue el documento, revise/corrija manualmente y, si hubo cambios, adjunte la versión corregida. Luego envíe a Secretaría.</p>
+
+        <!-- Camino recomendado: corregir dentro del sistema y regenerar el documento -->
+        <p style="font-size:11.5px;color:var(--ink-soft);margin-bottom:6px"><strong>Opción 1 — Corregir aquí mismo (recomendado):</strong> edite el proyecto en el sistema y regenere el documento con membrete. La versión corregida se adjunta sola y es la que sigue a Secretaría.</p>
+        <a href="/projetos/<%= p.id %>/editar" class="btn btn-pri" style="width:100%;justify-content:center;text-align:center;margin-bottom:6px;text-decoration:none">Editar proyecto en el sistema</a>
+        <button type="button" class="btn btn-sec" style="width:100%;margin-bottom:8px;justify-content:center;text-align:center" id="btn-gen-timbrado-pres" onclick="generarTimbrado('btn-gen-timbrado-pres')">Regenerar documento con las correcciones</button>
+
+        <div style="border-top:1px dashed var(--line);margin:10px 0;padding-top:10px"></div>
+
+        <!-- Camino alternativo: sigue disponible para quien prefiera Word/Docs -->
+        <p style="font-size:11.5px;color:var(--ink-soft);margin-bottom:6px"><strong>Opción 2 — Corregir fuera del sistema:</strong> descargue el documento, edítelo en Word o Google Docs y adjunte la versión corregida.</p>
         <form method="POST" action="/projetos/<%= p.id %>/anexar" enctype="multipart/form-data" style="margin-bottom:8px">
           <input type="hidden" name="tipo_anexo" value="correcao_presidencia">
           <input type="file" name="arquivo" accept=".pdf,.doc,.docx" class="input" style="padding:7px;margin-bottom:6px;width:100%">
-          <button type="submit" class="btn btn-sec" style="width:100%;justify-content:center;text-align:center">Adjuntar versión corregida (opcional)</button>
+          <button type="submit" class="btn btn-sec" style="width:100%;justify-content:center;text-align:center">Adjuntar versión corregida</button>
         </form>
       </div>
       <button class="btn btn-pri" id="btn-env-sec" style="width:100%;justify-content:center;text-align:center" onclick="accionFlujo('enviar-secretaria','¿Aprobar y enviar a Secretaría?')">Aprobar y enviar a Secretaría</button>
@@ -133,15 +142,18 @@ var temDocFinal = anexosList.some(function(a){ return a.tipo==='documento_final'
 </div>
 
 <script>
-async function generarTimbrado() {
-  var b = document.getElementById('btn-gen-timbrado');
+// btnId: ha dois botoes que geram o documento (Enseñanza/Extensión e Presidencia).
+// Guarda o rotulo original para restaurar em caso de erro, em vez de fixar um texto.
+async function generarTimbrado(btnId) {
+  var b = document.getElementById(btnId || 'btn-gen-timbrado');
+  var rotulo = b ? b.textContent : '';
   if (b) { b.disabled = true; b.textContent = 'Generando…'; }
   try {
     var r = await fetch('/projetos/<%= p.id %>/gerar-timbrado', { method:'POST' });
     var d = await r.json();
     if (d.ok) { alert('Documento generado y adjuntado: ' + d.anexo_nome); location.reload(); }
-    else { if (b){ b.disabled=false; b.textContent='Generar documento timbrado'; } alert('Error: '+d.erro); }
-  } catch(e) { if (b){ b.disabled=false; b.textContent='Generar documento timbrado'; } alert('Error de conexión'); }
+    else { if (b){ b.disabled=false; b.textContent=rotulo; } alert('Error: '+d.erro); }
+  } catch(e) { if (b){ b.disabled=false; b.textContent=rotulo; } alert('Error de conexión'); }
 }
 async function accionFlujo(accion, confirmacion) {
   confirmarAcao(confirmacion, async function() {

@@ -19,6 +19,23 @@ async function podeEditar(usuario, tipo) {
   return await temPermissaoModulo(usuario.id, tipo);
 }
 
+// Quem pode editar o projeto NA ETAPA EM QUE ELE ESTA. Antes a permissao olhava so o
+// perfil e a trava real ficava na tela (o botao Editar so aparecia em rascunho) — ou seja,
+// o servidor aceitava editar em qualquer etapa por URL, e a Presidencia, que PODE editar,
+// nao tinha como fazer isso pela tela e precisava baixar/reanexar o documento. Agora a
+// regra e uma so, usada na tela e no servidor.
+async function podeEditarAgora(usuario, p) {
+  if (usuario.perfil === 'admin') return true;
+  // Documento ja saiu da liga ou projeto encerrado: ninguem mais mexe (so admin, acima).
+  if (['aguardando_secretaria','enviado_coordinacion','aprobado_final'].includes(p.etapa_atual)) return false;
+  if (['aprovado','concluido','cancelado'].includes(p.status)) return false;
+  const ehPresidencia = usuario.perfil === 'presidencia';
+  // Em revisao da Presidencia, so ela ajusta — evita a equipe alterar durante a analise.
+  if (p.etapa_atual === 'aguardando_presidencia') return ehPresidencia;
+  // Rascunho e "en_correccion": equipe do modulo (ensino/extensao) ou Presidencia.
+  return ehPresidencia || await temPermissaoModulo(usuario.id, p.tipo);
+}
+
 async function getConfig() {
   let config = {};
   try {
@@ -93,8 +110,8 @@ module.exports = function(router) {
       if (isNaN(req.params.id)) return res.redirect('/dashboard');
       const p = await buscarProjeto(req.params.id);
       if (!p) return res.redirect('/dashboard');
-      if (!await podeEditar(req.session.usuario, p.tipo)) {
-        req.flash('erro','Sem permissão para editar.');
+      if (!await podeEditarAgora(req.session.usuario, p)) {
+        req.flash('erro','No se puede editar el proyecto en esta etapa.');
         return res.redirect('/projetos/'+p.id);
       }
       res.render('pages/projeto-form', {
@@ -122,7 +139,10 @@ module.exports = function(router) {
       res.render('pages/projeto-detalhe', {
         config: await getConfig(), usuario: req.session.usuario,
         p, historico: hist.rows, totalHoras, anexos,
-        editavel: await podeEditar(req.session.usuario, p.tipo)
+        editavel: await podeEditar(req.session.usuario, p.tipo),
+        // Editar de verdade AGORA (considera a etapa) — controla o botao Editar e o
+        // bloco de edicao em tela da Presidencia no painel de fluxo.
+        podeEditarProjeto: await podeEditarAgora(req.session.usuario, p)
       });
     } catch(e) { console.error(e); res.redirect('/dashboard'); }
   });
@@ -135,6 +155,15 @@ module.exports = function(router) {
       if (!await podeEditar(req.session.usuario, tipo)) {
         req.flash('erro','Sem permissão.');
         return res.redirect('/'+tipo);
+      }
+      // Edicao de projeto existente respeita a etapa (a mesma regra da tela). Projeto novo
+      // nao tem etapa ainda, entao segue so com a permissao de modulo acima.
+      if (b.id) {
+        const atual = await buscarProjeto(b.id);
+        if (atual && !await podeEditarAgora(req.session.usuario, atual)) {
+          req.flash('erro','No se puede editar el proyecto en esta etapa.');
+          return res.redirect('/projetos/'+b.id);
+        }
       }
       const uid = req.session.usuario.id;
       const arr = v => Array.isArray(v) ? v : (v !== undefined && v !== '' ? [v] : []);
