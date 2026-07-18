@@ -64,7 +64,7 @@ async function atualizarPixAtrasados() {
   // Busca cobranças atrasadas sem PIX ou com vencimento_pix passado
   const { rows } = await query(`
     SELECT c.id, c.referencia, c.valor_cheio, c.valor_desconto, c.data_vencimento, c.membro_id,
-           to_char(c.data_vencimento,'YYYY-MM-DD') as venc_ymd,
+           to_char(c.data_vencimento::date,'YYYY-MM-DD') as venc_ymd,
            m.nome, m.email, m.cpf
     FROM cobrancas c
     JOIN membros m ON m.id = c.membro_id
