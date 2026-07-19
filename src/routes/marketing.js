@@ -100,6 +100,32 @@ router.post('/marketing/instagram/criar', requireAuth, requirePermissao('marketi
   });
 });
 
+// ── Edição de post do marketing (o botão Editar existia sem rota por trás) ──
+router.post('/marketing/:id/editar', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { titulo, conteudo, agendado_para } = req.body;
+    if (!titulo || !titulo.trim()) { req.session.erro = ['O título é obrigatório.']; return res.redirect('/marketing?tab=posts'); }
+    const quando = agendado_para ? new Date(agendado_para) : null;
+    const status = quando && !isNaN(quando) ? 'agendado' : 'rascunho';
+    const r = await query(
+      "UPDATE marketing_posts SET titulo=$1, conteudo=$2, agendado_para=$3, status=$4 WHERE id=$5 AND status IN ('rascunho','agendado') RETURNING id",
+      [titulo.trim(), (conteudo || '').trim(), (status === 'agendado' ? quando : null), status, req.params.id]
+    );
+    if (!r.rowCount) { req.session.erro = ['Só é possível editar posts em rascunho ou agendados.']; return res.redirect('/marketing?tab=posts'); }
+    req.session.msg = ['Post atualizado.'];
+    res.redirect('/marketing?tab=posts');
+  } catch (e) { req.session.erro = [e.message]; res.redirect('/marketing?tab=posts'); }
+});
+
+// Dados de um post, para preencher o formulário de edição
+router.get('/marketing/:id/dados', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const r = await query('SELECT id, titulo, conteudo, status, agendado_para FROM marketing_posts WHERE id=$1', [req.params.id]);
+    if (!r.rowCount) return res.json({ ok: false, erro: 'Post não encontrado.' });
+    res.json({ ok: true, post: r.rows[0] });
+  } catch (e) { res.json({ ok: false, erro: e.message }); }
+});
+
 router.get('/marketing/canva/conectar', requireAuth, requireAdmin, async (req, res) => {
   const { gerarPkce, montarUrlAutorizacao } = require('../services/canva');
   const { verifier, challenge } = gerarPkce();

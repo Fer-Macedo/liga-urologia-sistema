@@ -1862,6 +1862,78 @@ function buscarPost(termo){
   });
 }
 
+// ─── BOTÕES QUE CHAMAVAM FUNÇÕES INEXISTENTES ────────────────────────────────
+// editarPost / usarMidia / calcularMelhorHorario eram invocadas pelo HTML mas
+// nunca haviam sido escritas — os botões simplesmente não faziam nada.
+
+// Abre o modal de post já preenchido e aponta o formulário para a rota de edição
+function editarPost(id){
+  fetch('/marketing/'+id+'/dados').then(function(r){return r.json();}).then(function(d){
+    if(!d.ok){ mostrarAviso(d.erro||'Não foi possível carregar o post.','erro'); return; }
+    var m = document.getElementById('modal-novo-post');
+    if(!m){ mostrarAviso('Formulário de post não encontrado.','erro'); return; }
+    var f = m.querySelector('form');
+    f.action = '/marketing/'+id+'/editar';
+    if(f.titulo) f.titulo.value = d.post.titulo || '';
+    if(f.conteudo) f.conteudo.value = d.post.conteudo || '';
+    if(f.agendado_para && d.post.agendado_para){
+      // datetime-local exige AAAA-MM-DDTHH:MM no horário local
+      var dt = new Date(d.post.agendado_para);
+      dt.setMinutes(dt.getMinutes() - dt.getTimezoneOffset());
+      f.agendado_para.value = dt.toISOString().slice(0,16);
+    }
+    var tit = m.querySelector('.modal-titulo, h3, h2');
+    if(tit) tit.textContent = 'Editar post';
+    abrirModal('modal-novo-post');
+  }).catch(function(){ mostrarAviso('Erro ao carregar o post.','erro'); });
+}
+
+// "Usar" na aba Mídias: abre o formulário de post já indicando a mídia escolhida
+function usarMidia(id, nome){
+  var m = document.getElementById('modal-novo-post');
+  if(!m){ mostrarAviso('Formulário de post não encontrado.','erro'); return; }
+  var f = m.querySelector('form');
+  var campo = f.querySelector('input[name="midia_id"]');
+  if(!campo){
+    campo = document.createElement('input');
+    campo.type = 'hidden'; campo.name = 'midia_id';
+    f.appendChild(campo);
+  }
+  campo.value = id;
+  var aviso = document.getElementById('midia-escolhida');
+  if(!aviso){
+    aviso = document.createElement('div');
+    aviso.id = 'midia-escolhida';
+    aviso.style.cssText = 'font-size:12px;color:var(--texto2);margin-top:6px';
+    f.insertBefore(aviso, f.firstChild);
+  }
+  aviso.textContent = 'Mídia selecionada: ' + nome;
+  abrirModal('modal-novo-post');
+  mostrarAviso('Mídia "'+nome+'" selecionada para o post.','sucesso');
+}
+
+// Dica de horário ao escolher a data de agendamento
+function calcularMelhorHorario(valor){
+  var alvo = document.getElementById('dica-horario');
+  if(!alvo){
+    var campo = document.querySelector('input[name="agendado_para"]');
+    if(!campo) return;
+    alvo = document.createElement('div');
+    alvo.id = 'dica-horario';
+    alvo.style.cssText = 'font-size:11.5px;margin-top:5px';
+    campo.parentNode.appendChild(alvo);
+  }
+  if(!valor){ alvo.textContent = ''; return; }
+  var d = new Date(valor);
+  if(isNaN(d)){ alvo.textContent = ''; return; }
+  var h = d.getHours(), dia = d.getDay();
+  var bom = (h >= 7 && h <= 9) || (h >= 11 && h <= 13) || (h >= 18 && h <= 21);
+  var fds = (dia === 0 || dia === 6);
+  if(bom && !fds){ alvo.style.color = '#16a34a'; alvo.textContent = '✓ Bom horário — seu público (25-34 anos) costuma estar ativo nesta faixa.'; }
+  else if(fds){ alvo.style.color = '#d97706'; alvo.textContent = '⚠ Fim de semana costuma render menos alcance para conteúdo educativo.'; }
+  else { alvo.style.color = '#d97706'; alvo.textContent = '⚠ Faixa de menor atividade. Melhores horários: 7h-9h, 11h-13h ou 18h-21h.'; }
+}
+
 // ─── AÇÕES SOBRE PUBLICAÇÕES AGENDADAS DO INSTAGRAM ───────────────────────────
 function cancelarPostIG(id){
   confirmarAcao('Cancelar esta publicação? Ela não será postada no Instagram.', function(){
