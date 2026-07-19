@@ -104,6 +104,14 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
   const msg = req.session.msg||[]; req.session.msg=[];
   const erro = req.session.erro||[]; req.session.erro=[];
   const [postsR, midiasR] = await Promise.all([query('SELECT * FROM marketing_posts ORDER BY criado_em DESC'), query('SELECT * FROM marketing_midias ORDER BY criado_em DESC')]);
+  // Publicações do Instagram vivem em OUTRA tabela (instagram_posts, alimentada pelo
+  // agendamento automático). Sem isso, um carrossel agendado não aparecia em lugar
+  // nenhum da interface — o usuário não tinha como conferir o que estava programado.
+  let igPosts = [];
+  try {
+    const r = await query("SELECT id, tipo, legenda, status, agendado_para, publicado_em, erro_msg, instagram_media_id FROM instagram_posts ORDER BY COALESCE(publicado_em, agendado_para) DESC LIMIT 30");
+    igPosts = r.rows;
+  } catch(e) { console.error('[MARKETING] instagram_posts:', e.message); }
   const mktConfig = await getMktConfig();
   const { estaConectado } = require('../services/canva');
   const { gerarUrlInline } = require('../services/arquivos');
@@ -173,7 +181,7 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
     query('SELECT ec.*, u.nome as criado_por_nome FROM marketing_calendario ec LEFT JOIN usuarios u ON u.id=ec.criado_por ORDER BY ec.data_inicio'),
     query('SELECT n.*, u.nome as criado_por_nome FROM marketing_notas n LEFT JOIN usuarios u ON u.id=n.criado_por ORDER BY n.fixado DESC, n.criado_em DESC')
   ]);
-  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows, aniversariantesMes: aniversariantesMesR.rows, nomeMesAtual, eventosInternos: eventosInternosR.rows, notas: notasR.rows });
+  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, igPosts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows, aniversariantesMes: aniversariantesMesR.rows, nomeMesAtual, eventosInternos: eventosInternosR.rows, notas: notasR.rows });
 });
 
 router.post('/marketing/interno/evento', requireAuth, requirePermissao('marketing'), async (req, res) => {
