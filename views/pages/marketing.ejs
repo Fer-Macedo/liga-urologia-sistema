@@ -1181,7 +1181,7 @@
               <div style="font-weight:600;font-size:13px"><%=p.titulo%></div>
               <div style="font-size:11px;color:var(--texto2)"><%=new Date(p.criado_em).toLocaleString('pt-BR')%></div>
             </div>
-            <div style="display:flex;gap:4px"><%=(p.redes||[]).map(r=>'<span class="rede-badge rede-'+r+'">'+r+'</span>').join(' ')%></div>
+            <div style="display:flex;gap:4px"><%(p.redes||[]).forEach(r=>{%><span class="rede-badge rede-<%=r%>"><%=r%></span><%});%></div>
           </div><%});%>
         </div>
       </div>
