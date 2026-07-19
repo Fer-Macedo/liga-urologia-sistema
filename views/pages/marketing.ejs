@@ -105,13 +105,6 @@
     .hashtag-chip{padding:3px 10px;border-radius:var(--rad);background:#eff6ff;color:var(--cor-primaria);font-size:11px;font-weight:600;cursor:pointer;border:1.5px solid #bfdbfe;transition:.15s;}
     .hashtag-chip:hover{background:var(--cor-primaria);color:white;border-color:var(--cor-primaria);}
     .hashtag-chip.selecionado{background:var(--cor-primaria);color:white;border-color:var(--cor-primaria);}
-    .horario-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:8px;}
-    .horario-dia{text-align:center;font-size:10px;}
-    .horario-dia-nome{font-weight:700;color:var(--texto2);margin-bottom:4px;}
-    .horario-slot{padding:3px 2px;border-radius:var(--rad);font-size:9px;font-weight:600;text-align:center;margin-bottom:2px;}
-    .slot-bom{background:#dcfce7;color:#166534;}
-    .slot-otimo{background:#059669;color:white;}
-    .slot-fraco{background:#f3f4f6;color:#9ca3af;}
     .aprovacao-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:var(--rad);font-size:11px;font-weight:700;}
     .aprovacao-pendente{background:#fef3c7;color:#92400e;}
     .aprovacao-aprovado{background:#dcfce7;color:#166534;}
@@ -283,16 +276,34 @@
           </div>
         </div>
         <div class="card" style="margin-top:20px">
-          <div class="card-titulo" style="margin-bottom:14px">Melhores Horarios para Postar</div>
-          <div style="font-size:12px;color:var(--texto2);margin-bottom:10px">Baseado em dados do setor de saude e educacao no Brasil</div>
-          <div class="horario-grid">
-            <div class="horario-dia"><div class="horario-dia-nome">Dom</div><div class="horario-slot slot-fraco">8h</div><div class="horario-slot slot-fraco">12h</div><div class="horario-slot slot-bom">18h</div><div class="horario-slot slot-fraco">21h</div></div>
-            <div class="horario-dia"><div class="horario-dia-nome">Seg</div><div class="horario-slot slot-bom">8h</div><div class="horario-slot slot-otimo">12h</div><div class="horario-slot slot-bom">18h</div><div class="horario-slot slot-bom">20h</div></div>
-            <div class="horario-dia"><div class="horario-dia-nome">Ter</div><div class="horario-slot slot-bom">8h</div><div class="horario-slot slot-otimo">12h</div><div class="horario-slot slot-otimo">18h</div><div class="horario-slot slot-bom">20h</div></div>
-            <div class="horario-dia"><div class="horario-dia-nome">Qua</div><div class="horario-slot slot-otimo">8h</div><div class="horario-slot slot-otimo">12h</div><div class="horario-slot slot-otimo">18h</div><div class="horario-slot slot-bom">20h</div></div>
-            <div class="horario-dia"><div class="horario-dia-nome">Qui</div><div class="horario-slot slot-bom">8h</div><div class="horario-slot slot-otimo">12h</div><div class="horario-slot slot-bom">18h</div><div class="horario-slot slot-bom">20h</div></div>
-            <div class="horario-dia"><div class="horario-dia-nome">Sex</div><div class="horario-slot slot-bom">8h</div><div class="horario-slot slot-bom">12h</div><div class="horario-slot slot-fraco">18h</div><div class="horario-slot slot-fraco">20h</div></div>
-            <div class="horario-dia"><div class="horario-dia-nome">Sab</div><div class="horario-slot slot-fraco">10h</div><div class="horario-slot slot-bom">12h</div><div class="horario-slot slot-bom">16h</div><div class="horario-slot slot-fraco">20h</div></div>
+          <div class="card-titulo" style="margin-bottom:4px">Desempenho da conta</div>
+          <p style="font-size:11.5px;color:var(--texto2);margin-bottom:12px">Numeros reais do Instagram da liga.</p>
+          <% var r7 = (typeof analise !== 'undefined' && analise && analise.resumo7d) ? analise.resumo7d : null;
+             var r28 = (typeof analise !== 'undefined' && analise && analise.resumo28d) ? analise.resumo28d : null; %>
+          <% if (r7) { %>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:var(--fundo);border-radius:var(--rad);padding:12px;text-align:center">
+              <div style="font-size:22px;font-weight:700;color:var(--cor-primaria)"><%= r7.alcance %></div>
+              <div style="font-size:11px;color:var(--texto2)">Alcance (7 dias)</div></div>
+            <div style="background:var(--fundo);border-radius:var(--rad);padding:12px;text-align:center">
+              <div style="font-size:22px;font-weight:700;color:var(--cor-primaria)"><%= r7.interacoes %></div>
+              <div style="font-size:11px;color:var(--texto2)">Interacoes (7 dias)</div></div>
+            <div style="background:var(--fundo);border-radius:var(--rad);padding:12px;text-align:center">
+              <div style="font-size:22px;font-weight:700;color:#10b981">+<%= r7.novosSeguidores %></div>
+              <div style="font-size:11px;color:var(--texto2)">Seguidores (7 dias)</div></div>
+            <div style="background:var(--fundo);border-radius:var(--rad);padding:12px;text-align:center">
+              <div style="font-size:22px;font-weight:700;color:var(--cor-primaria)"><%= r28 ? r28.alcance : '-' %></div>
+              <div style="font-size:11px;color:var(--texto2)">Alcance (28 dias)</div></div>
+          </div>
+          <% } else { %>
+          <div style="text-align:center;padding:24px;color:var(--texto2);font-size:12px">Sem dados da conta no momento.</div>
+          <% } %>
+          <!-- A grade de "melhores horarios" que ficava aqui era inventada: dias/horas fixos no codigo,
+               iguais para qualquer conta, apresentados como se fossem analise do setor. Removida. -->
+          <div style="margin-top:12px;padding:10px;background:var(--fundo2,#f6f7f9);border-radius:8px;font-size:11.5px;color:var(--texto2);line-height:1.5">
+            <b style="color:var(--texto)">Melhor horario para publicar</b><br>
+            Ainda nao da para calcular: e preciso historico de publicacoes desta conta para comparar
+            desempenho por horario. Ate la nao ha recomendacao confiavel a dar.
           </div>
         </div>
         <div class="section-header" style="margin-top:28px">
@@ -1117,7 +1128,9 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
           <div class="card">
             <div class="card-titulo" style="margin-bottom:14px">Posts Aguardando Aprovacao</div>
-            <%const pendAprov=posts.filter(p=>p.status==='rascunho');%>
+            <%// A fila lia so marketing_posts (vazia) — os posts reais vivem em instagram_posts.
+   const pendAprov = posts.filter(p=>p.status==='rascunho')
+     .concat(igPosts.filter(p=>p.status==='rascunho').map(p=>({...p, titulo: p.legenda ? String(p.legenda).slice(0,60) : 'Post do Instagram', origem:'instagram'})));%>
             <%if(pendAprov.length===0){%>
             <div style="text-align:center;padding:32px;color:var(--texto2)">Nenhum pendente</div>
             <%}%>
@@ -1135,21 +1148,34 @@
             <%});%>
           </div>
           <div class="card">
-            <div class="card-titulo" style="margin-bottom:14px">Melhores Horarios</div>
-            <p style="font-size:12px;color:var(--texto2);margin-bottom:10px">Setor saude/educacao no Brasil</p>
-            <div class="horario-grid">
-              <%[['Dom',0],['Seg',1],['Ter',1],['Qua',1],['Qui',1],['Sex',1],['Sab',0]].forEach(([d,util])=>{%>
-              <div class="horario-dia"><div class="horario-dia-nome"><%=d%></div>
-                <div class="horario-slot <%=util?'alto':'baixo'%>">8h</div>
-                <div class="horario-slot <%=util?'alto':'medio'%>">12h</div>
-                <div class="horario-slot <%=util?'alto':'medio'%>">18h</div>
-                <div class="horario-slot medio">21h</div>
-              </div><%});%>
+            <div class="card-titulo" style="margin-bottom:4px">Desempenho da conta</div>
+            <p style="font-size:11.5px;color:var(--texto2);margin-bottom:12px">Numeros reais do Instagram da liga.</p>
+            <% var r7 = (typeof analise !== 'undefined' && analise && analise.resumo7d) ? analise.resumo7d : null;
+               var r28 = (typeof analise !== 'undefined' && analise && analise.resumo28d) ? analise.resumo28d : null; %>
+            <% if (r7) { %>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="background:var(--fundo);border-radius:var(--rad);padding:12px;text-align:center">
+                <div style="font-size:22px;font-weight:700;color:var(--cor-primaria)"><%= r7.alcance %></div>
+                <div style="font-size:11px;color:var(--texto2)">Alcance (7 dias)</div></div>
+              <div style="background:var(--fundo);border-radius:var(--rad);padding:12px;text-align:center">
+                <div style="font-size:22px;font-weight:700;color:var(--cor-primaria)"><%= r7.interacoes %></div>
+                <div style="font-size:11px;color:var(--texto2)">Interacoes (7 dias)</div></div>
+              <div style="background:var(--fundo);border-radius:var(--rad);padding:12px;text-align:center">
+                <div style="font-size:22px;font-weight:700;color:#10b981">+<%= r7.novosSeguidores %></div>
+                <div style="font-size:11px;color:var(--texto2)">Seguidores (7 dias)</div></div>
+              <div style="background:var(--fundo);border-radius:var(--rad);padding:12px;text-align:center">
+                <div style="font-size:22px;font-weight:700;color:var(--cor-primaria)"><%= r28 ? r28.alcance : '-' %></div>
+                <div style="font-size:11px;color:var(--texto2)">Alcance (28 dias)</div></div>
             </div>
-            <div style="display:flex;gap:8px;margin-top:10px;font-size:11px">
-              <span style="background:#dcfce7;color:#166534;padding:2px 8px;border-radius:var(--rad);font-weight:600">Alto</span>
-              <span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:var(--rad);font-weight:600">Medio</span>
-              <span style="background:#f3f4f6;color:#9ca3af;padding:2px 8px;border-radius:var(--rad);font-weight:600">Baixo</span>
+            <% } else { %>
+            <div style="text-align:center;padding:24px;color:var(--texto2);font-size:12px">Sem dados da conta no momento.</div>
+            <% } %>
+            <!-- A grade de "melhores horarios" que ficava aqui era inventada: dias/horas fixos no codigo,
+                 iguais para qualquer conta, apresentados como se fossem analise do setor. Removida. -->
+            <div style="margin-top:12px;padding:10px;background:var(--fundo2,#f6f7f9);border-radius:8px;font-size:11.5px;color:var(--texto2);line-height:1.5">
+              <b style="color:var(--texto)">Melhor horario para publicar</b><br>
+              Ainda nao da para calcular: e preciso historico de publicacoes desta conta para comparar
+              desempenho por horario. Ate la nao ha recomendacao confiavel a dar.
             </div>
           </div>
         </div>
@@ -1382,7 +1408,7 @@
             <label style="display:flex;align-items:center;gap:6px;font-size:13px;opacity:.5"><input type="checkbox" disabled> WhatsApp — desativado</label>
           </div>
         </div>
-        <div class="campo"><label class="label">Agendar para (opcional)</label><input type="datetime-local" name="agendado_para" class="input" onchange="calcularMelhorHorario(this.value)"></div>
+        <div class="campo"><label class="label">Agendar para (opcional)</label><input type="datetime-local" name="agendado_para" class="input"></div>
         <div class="campo">
           <label class="label">Hashtags (clique para adicionar)</label>
           <div class="ia-loading" id="hashtag-loading"><div class="dots"><span>.</span><span>.</span><span>.</span></div> Buscando hashtags...</div>
@@ -1907,26 +1933,9 @@ function usarMidia(id, nome){
 }
 
 // Dica de horário ao escolher a data de agendamento
-function calcularMelhorHorario(valor){
-  var alvo = document.getElementById('dica-horario');
-  if(!alvo){
-    var campo = document.querySelector('input[name="agendado_para"]');
-    if(!campo) return;
-    alvo = document.createElement('div');
-    alvo.id = 'dica-horario';
-    alvo.style.cssText = 'font-size:11.5px;margin-top:5px';
-    campo.parentNode.appendChild(alvo);
-  }
-  if(!valor){ alvo.textContent = ''; return; }
-  var d = new Date(valor);
-  if(isNaN(d)){ alvo.textContent = ''; return; }
-  var h = d.getHours(), dia = d.getDay();
-  var bom = (h >= 7 && h <= 9) || (h >= 11 && h <= 13) || (h >= 18 && h <= 21);
-  var fds = (dia === 0 || dia === 6);
-  if(bom && !fds){ alvo.style.color = '#16a34a'; alvo.textContent = '✓ Bom horário — seu público (25-34 anos) costuma estar ativo nesta faixa.'; }
-  else if(fds){ alvo.style.color = '#d97706'; alvo.textContent = '⚠ Fim de semana costuma render menos alcance para conteúdo educativo.'; }
-  else { alvo.style.color = '#d97706'; alvo.textContent = '⚠ Faixa de menor atividade. Melhores horários: 7h-9h, 11h-13h ou 18h-21h.'; }
-}
+// calcularMelhorHorario foi removida junto com as grades de horario: classificava faixas de
+// horario como boas ou ruins e citava dados demograficos do publico sem nenhuma fonte por
+// tras. Voltar a implementar quando houver historico de publicacoes com insights reais.
 
 // ─── AÇÕES SOBRE PUBLICAÇÕES AGENDADAS DO INSTAGRAM ───────────────────────────
 function cancelarPostIG(id){
