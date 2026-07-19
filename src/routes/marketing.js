@@ -61,6 +61,45 @@ router.post('/marketing/instagram/post/:id/legenda', requireAuth, requirePermiss
   } catch (e) { res.json({ ok: false, erro: e.message }); }
 });
 
+// ── Criação MANUAL de publicação do Instagram (equipe de marketing) ──────────
+// Antes só existia agendamento por código; a equipe não tinha como criar um post
+// pela plataforma. Aceita 1 imagem (foto/story) ou várias (carrossel, 2 a 10).
+router.post('/marketing/instagram/criar', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  const { upload, uploadArquivo, gerarUrlInline } = require('../services/arquivos');
+  upload.array('imagens', 10)(req, res, async (err) => {
+    try {
+      if (err) { req.session.erro = ['Falha no envio das imagens: ' + err.message]; return res.redirect('/marketing?tab=posts'); }
+      const { legenda, agendado_para } = req.body;
+      const arquivos = req.files || [];
+      if (!arquivos.length) { req.session.erro = ['Envie pelo menos uma imagem.']; return res.redirect('/marketing?tab=posts'); }
+      if (!agendado_para) { req.session.erro = ['Informe a data e a hora da publicação.']; return res.redirect('/marketing?tab=posts'); }
+      const quando = new Date(agendado_para);
+      if (isNaN(quando.getTime())) { req.session.erro = ['Data inválida.']; return res.redirect('/marketing?tab=posts'); }
+      if (quando <= new Date()) { req.session.erro = ['A data precisa ser no futuro.']; return res.redirect('/marketing?tab=posts'); }
+      // URL assinada expira em 24h — agendar além disso deixaria a imagem inacessível na hora de publicar
+      const limite = new Date(Date.now() + 23 * 3600 * 1000);
+      if (quando > limite) { req.session.erro = ['Por ora só dá para agendar dentro das próximas 23 horas (limite técnico do link da imagem).']; return res.redirect('/marketing?tab=posts'); }
+
+      const midias = [];
+      for (const f of arquivos) {
+        const up = await uploadArquivo(f.buffer, f.originalname || 'post.png', f.mimetype || 'image/png', 'instagram-posts');
+        midias.push({ url: await gerarUrlInline(up.chave, f.mimetype || 'image/png'), chave: up.chave });
+      }
+      const tipo = midias.length > 1 ? 'carousel' : (req.body.tipo === 'story' ? 'story' : 'feed');
+      await query(
+        "INSERT INTO instagram_posts (tipo, midia_url, midias, legenda, agendado_para, criado_por, status) VALUES ($1,$2,$3,$4,$5,$6,'agendado')",
+        [tipo, midias[0].url, JSON.stringify(midias), (legenda || '').trim(), quando, req.session.usuario.id]
+      );
+      req.session.msg = ['Publicação agendada para ' + quando.toLocaleString('pt-BR') + '.'];
+      res.redirect('/marketing?tab=posts');
+    } catch (e) {
+      console.error('[MARKETING] criar post IG:', e.message);
+      req.session.erro = ['Erro ao agendar: ' + e.message];
+      res.redirect('/marketing?tab=posts');
+    }
+  });
+});
+
 router.get('/marketing/canva/conectar', requireAuth, requireAdmin, async (req, res) => {
   const { gerarPkce, montarUrlAutorizacao } = require('../services/canva');
   const { verifier, challenge } = gerarPkce();

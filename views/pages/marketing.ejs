@@ -309,7 +309,7 @@
             <input type="text" placeholder="Buscar post..." oninput="buscarPost(this.value)">
           </div>
         </div>
-        <%if(posts.length===0){%>
+        <%if(posts.length===0 && (typeof igPosts==='undefined' || !igPosts || !igPosts.length)){%>
         <div style="text-align:center;padding:48px;color:var(--texto2)">
           <div style="margin-bottom:12px;display:flex;justify-content:center;opacity:.35"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
           <div style="font-weight:600">Nenhum post criado ainda</div>
@@ -368,6 +368,39 @@
             <input type="text" placeholder="Buscar post..." oninput="buscarPost(this.value)">
           </div>
         </div>
+        <!-- Criação manual de publicação do Instagram (equipe de marketing) -->
+        <details class="card" style="margin-bottom:16px">
+          <summary style="cursor:pointer;font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;list-style:none">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="#e1306c" stroke="none"/></svg>
+            + Agendar publicação no Instagram
+          </summary>
+          <form method="POST" action="/marketing/instagram/criar" enctype="multipart/form-data" style="margin-top:14px;display:flex;flex-direction:column;gap:12px">
+            <div class="campo">
+              <label class="label">Imagens *</label>
+              <input type="file" name="imagens" class="input" accept="image/*" multiple required style="padding:7px">
+              <div style="font-size:11.5px;color:var(--texto2);margin-top:4px">1 imagem = post simples · 2 a 10 = carrossel (a ordem de seleção é a ordem dos slides)</div>
+            </div>
+            <div class="campo">
+              <label class="label">Publicar como</label>
+              <select name="tipo" class="input">
+                <option value="feed">Post no feed</option>
+                <option value="story">Story</option>
+              </select>
+              <div style="font-size:11.5px;color:var(--texto2);margin-top:4px">Com 2 ou mais imagens vira carrossel automaticamente</div>
+            </div>
+            <div class="campo">
+              <label class="label">Legenda</label>
+              <textarea name="legenda" class="input" rows="5" placeholder="Escreva a legenda da publicação..."></textarea>
+            </div>
+            <div class="campo">
+              <label class="label">Data e hora da publicação *</label>
+              <input type="datetime-local" name="agendado_para" class="input" required>
+              <div style="font-size:11.5px;color:var(--texto2);margin-top:4px">⚠️ Por ora, no máximo 23 horas à frente — é o tempo de validade do link da imagem</div>
+            </div>
+            <button type="submit" class="btn btn-primario" style="justify-content:center">Agendar publicação</button>
+          </form>
+        </details>
+
         <!-- Publicações do Instagram: mesma classe .post-item, então entram no filtro e na busca -->
         <% var igp = (typeof igPosts !== 'undefined' && igPosts) ? igPosts : [];
            igp.forEach(function(g){
@@ -413,7 +446,7 @@
         </div>
         <% }); %>
 
-        <%if(posts.length===0){%>
+        <%if(posts.length===0 && (typeof igPosts==='undefined' || !igPosts || !igPosts.length)){%>
         <div style="text-align:center;padding:48px;color:var(--texto2)">
           <div style="margin-bottom:12px;display:flex;justify-content:center;opacity:.35"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
           <div style="font-weight:600">Nenhum post criado ainda</div>
