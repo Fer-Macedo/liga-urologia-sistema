@@ -27,12 +27,15 @@ async function publicarPostMarketing(postId) {
       await axios.post(`https://graph.facebook.com/v18.0/${mktConfig.facebook_id}/feed`, { message: post.conteudo, access_token: mktConfig.facebook_token });
     } catch(e) { erros.push('Facebook: ' + e.message); }
   }
+  // ⛔ Canal WhatsApp DESATIVADO na campanha multicanal (decisão da presidência, 2026-07-19).
+  // O código anterior varria ligantes + diretivos e disparava a mensagem para TODOS, um a um,
+  // sem confirmação, sem intervalo e sem limite — exatamente o padrão de envio em massa que
+  // derruba número por spam. Além disso, mensagem livre só é entregue dentro da janela de 24h,
+  // então falharia para quase todo mundo. Envio em massa por WhatsApp deve usar modelo aprovado
+  // e cadência controlada — ver a memória "project_whatsapp_bloqueado".
   if (redes.includes('whatsapp')) {
-    try {
-      const { enviarWhatsApp } = require('./notificacoes');
-      const pessoas = await query('SELECT whatsapp FROM ligantes WHERE ativo=1 AND whatsapp IS NOT NULL UNION SELECT whatsapp FROM diretivos WHERE ativo=1 AND whatsapp IS NOT NULL');
-      for (const p of pessoas.rows) { if (p.whatsapp) await enviarWhatsApp(p.whatsapp, post.conteudo).catch(()=>{}); }
-    } catch(e) { erros.push('WhatsApp: ' + e.message); }
+    erros.push('WhatsApp: canal desativado nesta campanha (envio em massa exige modelo aprovado e cadência controlada).');
+    console.warn('[MARKETING] Campanha pediu WhatsApp, mas o canal está desativado — nenhum envio feito.');
   }
   await query('UPDATE marketing_posts SET status=$1, publicado_em=NOW() WHERE id=$2', [erros.length === 0 ? 'publicado' : 'erro', postId]);
   return { ok: erros.length === 0, erros };
