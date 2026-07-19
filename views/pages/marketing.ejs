@@ -1157,7 +1157,20 @@
       <div class="mkt-section" id="tab-historico">
         <div class="card">
           <div class="card-titulo" style="margin-bottom:14px">Historico de Publicacoes</div>
-          <%const pubList=posts.filter(p=>p.status==='publicado');%>
+          <% // O histórico olhava só marketing_posts e ignorava as publicações do
+             // Instagram — nasceria vazio para sempre, mesmo depois de publicar.
+             // Agora une as duas origens e ordena da mais recente para a mais antiga.
+             const igPub = (typeof igPosts !== 'undefined' && igPosts ? igPosts : [])
+               .filter(g => g.status === 'publicado')
+               .map(g => ({
+                 titulo: ({carousel:'Carrossel',feed:'Post',story:'Story',reel:'Reels'}[g.tipo] || g.tipo)
+                         + ' — ' + (g.legenda || '').replace(/\s+/g,' ').substring(0,60),
+                 criado_em: g.publicado_em || g.agendado_para,
+                 redes: ['instagram'],
+                 media_id: g.instagram_media_id
+               }));
+             const pubList = posts.filter(p => p.status === 'publicado').concat(igPub)
+               .sort((a,b) => new Date(b.criado_em) - new Date(a.criado_em)); %>
           <%if(pubList.length===0){%>
           <div style="text-align:center;padding:40px;color:var(--texto2)">Nenhuma publicacao ainda</div>
           <%}%>
