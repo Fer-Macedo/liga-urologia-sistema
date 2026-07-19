@@ -72,8 +72,6 @@
     .badge-conectado{background:#dcfce7;color:#166534;padding:3px 10px;border-radius:var(--rad);font-size:11px;font-weight:700;}
     .badge-desconectado{background:#fee2e2;color:#991b1b;padding:3px 10px;border-radius:var(--rad);font-size:11px;font-weight:700;}
     .whatsapp-preview{background:#e5ddd5;border-radius:var(--rad);padding:16px;min-height:200px;}
-    .wpp-bubble{background:white;border-radius:var(--rad);padding:10px 14px;margin-bottom:8px;box-shadow:0 1px 2px rgba(0,0,0,.1);font-size:13px;max-width:85%;}
-    .wpp-bubble.saida{background:#d9fdd3;margin-left:auto;}
     .engaj-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
     .engaj-label{width:90px;font-size:12px;color:var(--texto2);font-weight:600;}
     .engaj-fill{flex:1;background:var(--fundo);border-radius:var(--rad);height:8px;overflow:hidden;border:1px solid var(--borda);}
@@ -90,8 +88,6 @@
     .dots span:nth-child(2){animation-delay:.2s;}
     .dots span:nth-child(3){animation-delay:.4s;}
     @keyframes dots{0%,80%,100%{opacity:0}40%{opacity:1}}
-    .template-btn{display:block;width:100%;text-align:left;padding:10px 14px;border:1px solid var(--borda);border-radius:var(--rad);background:var(--fundo);cursor:pointer;font-size:12px;margin-bottom:6px;transition:.15s;font-family:inherit;}
-    .template-btn:hover{border-color:var(--cor-primaria);background:#eff6ff;color:var(--cor-primaria);}
     .search-bar{display:flex;align-items:center;gap:8px;background:var(--fundo);border:1px solid var(--borda);border-radius:var(--rad);padding:0 12px;height:36px;}
     .search-bar input{border:none;background:transparent;font-size:13px;color:var(--texto);outline:none;width:180px;font-family:inherit;}
     .filter-pills{display:flex;gap:6px;flex-wrap:wrap;}
@@ -160,7 +156,6 @@
     <div class="topbar">
       <h1 class="page-titulo">Marketing</h1>
       <div class="topbar-acoes">
-        <button class="btn btn-sm" onclick="abrirModal('modal-wpp-massa')">WhatsApp em Massa</button>
         <button class="btn btn-sm btn-primario" onclick="abrirModal('modal-novo-post')">+ Novo Post</button>
       </div>
     </div>
@@ -183,9 +178,6 @@
         <button class="mkt-tab" onclick="showTab('aniversario',this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
           Aniversario</button>
-        <button class="mkt-tab" onclick="showTab('whatsapp',this)">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          WhatsApp</button>
         <button class="mkt-tab" onclick="showTab('integracao',this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="18" r="3"/><circle cx="6" cy="6" r="3"/><path d="M13 6h3a2 2 0 0 1 2 2v7"/><line x1="6" y1="9" x2="6" y2="21"/></svg>
           Integracoes</button>
@@ -268,10 +260,6 @@
               <div class="engaj-fill"><div style="height:100%;background:#1877f2;width:<%=fbPct%>%"></div></div>
               <div class="engaj-valor" style="color:#1877f2"><%=typeof contaFB!=='undefined'?contaFB:0%></div>
             </div>
-            <div class="engaj-bar">
-              <div class="engaj-label">WhatsApp</div>
-              <div class="engaj-fill"><div style="height:100%;background:#25d366;width:<%=waPct%>%"></div></div>
-              <div class="engaj-valor" style="color:#25d366"><%=typeof contaWA!=='undefined'?contaWA:0%></div>
             </div>
           </div>
         </div>
@@ -954,42 +942,6 @@
           <%}%>
         </div>
       </div>
-      <div class="mkt-section" id="tab-whatsapp">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px">
-          <div class="card">
-            <div class="card-titulo" style="margin-bottom:14px">Envio em Massa</div>
-            <form action="/marketing/whatsapp-massa" method="POST">
-              <div style="display:flex;flex-direction:column;gap:12px">
-                <div class="campo"><label class="label">Destinatarios</label>
-                  <select name="destinatarios" class="input">
-                    <option value="todos">Todos (Ligantes + Diretivos)</option>
-                    <option value="ligantes">Somente Ligantes</option>
-                    <option value="diretivos">Somente Diretivos</option>
-                  </select>
-                </div>
-                <div class="campo"><label class="label">Mensagem</label>
-                  <textarea name="mensagem" id="wpp-mensagem" class="input" rows="5" placeholder="Digite a mensagem..." oninput="previewWpp(this.value)"></textarea>
-                </div>
-                <button type="submit" class="btn btn-primario" onclick="var f=this.form; confirmarAcao('Enviar para todos?', function(){ f.submit(); }); return false;">Enviar Agora</button>
-              </div>
-            </form>
-          </div>
-          <div class="card">
-            <div class="card-titulo" style="margin-bottom:14px">Preview</div>
-            <div class="whatsapp-preview">
-              <div class="wpp-bubble">Ola! Como vai?</div>
-              <div class="wpp-bubble saida" id="wpp-preview-text">Sua mensagem aparecera aqui...</div>
-            </div>
-          </div>
-          <div class="card">
-            <div class="card-titulo" style="margin-bottom:14px">Templates Rapidos</div>
-            <button class="template-btn" onclick="usarTemplate(this)">Convite para evento da Liga — prezado ligante, convidamos voce para participar do nosso proximo evento...</button>
-            <button class="template-btn" onclick="usarTemplate(this)">Lembrete de mensalidade — informamos que sua mensalidade esta em aberto. Realize o pagamento para continuar ativo...</button>
-            <button class="template-btn" onclick="usarTemplate(this)">Aviso de reuniao — comunicamos que havera reuniao da diretoria na proxima semana. Sua presenca e importante...</button>
-            <button class="template-btn" onclick="usarTemplate(this)">Boas-vindas ao novo ligante — seja bem-vindo a Liga! Estamos felizes em ter voce conosco...</button>
-          </div>
-        </div>
-      </div>
       <div class="mkt-section" id="tab-integracao">
         <style>
           .ig-feed-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-top:16px;}
@@ -1231,10 +1183,6 @@
                 <span style="font-weight:600;color:#1e40af">Facebook</span>
                 <span style="font-weight:700;font-size:18px;color:#1e40af"><%=typeof contaFB!=='undefined'?contaFB:0%></span>
               </div>
-              <div style="display:flex;justify-content:space-between;padding:10px;background:#dcfce7;border-radius:var(--rad)">
-                <span style="font-weight:600;color:#166534">WhatsApp</span>
-                <span style="font-weight:700;font-size:18px;color:#166534"><%=typeof contaWA!=='undefined'?contaWA:0%></span>
-              </div>
             </div>
           </div>
           <div class="card"><div class="card-titulo" style="margin-bottom:14px">Resumo do Mes</div>
@@ -1288,10 +1236,6 @@
                       <% if (fbOk) { %><span style="font-size:11px;color:#10b981">&#10003; conectado</span>
                       <% } else { %><span style="font-size:11px;color:var(--texto2)">sem credencial cadastrada</span><% } %>
                     </label>
-                    <label style="display:flex;align-items:center;gap:6px;cursor:not-allowed;font-size:13px;opacity:.55">
-                      <input type="checkbox" disabled> WhatsApp
-                      <span style="font-size:11px;color:var(--texto2)">canal desativado</span>
-                    </label>
                   </div>
                 </div>
                 <div class="campo"><label class="label">Publicar automaticamente em (opcional)</label>
@@ -1328,7 +1272,6 @@
                 <b style="color:var(--texto)">Situacao dos canais</b><br>
                 Instagram: <%= igOk ? 'conectado, publica normalmente' : 'sem credencial — nao publica' %><br>
                 Facebook: <%= fbOk ? 'conectado, publica normalmente' : 'sem credencial — nao publica' %><br>
-                WhatsApp: desativado. O envio em massa foi retirado para nao arriscar o bloqueio do numero.
               </div>
             </div>
           </div>
@@ -1405,7 +1348,6 @@
           <div style="display:flex;gap:16px;flex-wrap:wrap">
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" name="redes" value="instagram"> Instagram</label>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px"><input type="checkbox" name="redes" value="facebook"> Facebook</label>
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;opacity:.5"><input type="checkbox" disabled> WhatsApp — desativado</label>
           </div>
         </div>
         <div class="campo"><label class="label">Agendar para (opcional)</label><input type="datetime-local" name="agendado_para" class="input"></div>
@@ -1438,41 +1380,12 @@
               </div>
             </div>
           </div>
-          <div>
-            <div style="font-size:11px;font-weight:700;color:#25d366;margin-bottom:6px">WhatsApp</div>
-            <div style="background:#e5ddd5;border-radius:var(--rad);padding:10px;min-height:120px">
-              <div class="wpp-bubble saida" id="prev-wpp-txt" style="font-size:11px">Mensagem aparece aqui...</div>
-            </div>
-          </div>
         </div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn" onclick="fecharModal('modal-novo-post')">Cancelar</button>
         <button type="submit" name="acao" value="rascunho" class="btn">Rascunho</button>
         <button type="submit" name="acao" value="agendar" class="btn btn-primario">Agendar</button>
-      </div>
-    </form>
-  </div>
-</div>
-<div class="modal-overlay" id="modal-wpp-massa" style="display:none">
-  <div class="modal">
-    <div class="modal-header"><span class="modal-titulo">WhatsApp em Massa</span><button class="icon-btn" onclick="fecharModal('modal-wpp-massa')">&#x2715;</button></div>
-    <form action="/marketing/whatsapp-massa" method="POST">
-      <div style="display:flex;flex-direction:column;gap:14px">
-        <div class="campo"><label class="label">Destinatarios</label>
-          <select name="destinatarios" class="input">
-            <option value="todos">Todos (Ligantes + Diretivos)</option>
-            <option value="ligantes">Somente Ligantes</option>
-            <option value="diretivos">Somente Diretivos</option>
-          </select>
-        </div>
-        <div class="campo"><label class="label">Mensagem</label>
-          <textarea name="mensagem" class="input" rows="5" placeholder="Digite a mensagem..."></textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn" onclick="fecharModal('modal-wpp-massa')">Cancelar</button>
-        <button type="submit" class="btn btn-primario" onclick="var f=this.form; confirmarAcao('Enviar para todos?', function(){ f.submit(); }); return false;">Enviar</button>
       </div>
     </form>
   </div>
@@ -1595,9 +1508,7 @@ function usarTemplate2(titulo,conteudo){
 function atualizarPreview(){
   const txt=document.getElementById('post-conteudo')?.value||'';
   const ig=document.getElementById('prev-ig-txt');
-  const wpp=document.getElementById('prev-wpp-txt');
   if(ig)ig.textContent=txt.substring(0,150)+(txt.length>150?'...':'');
-  if(wpp)wpp.textContent=txt.substring(0,200)+(txt.length>200?'...':'');
 }
 document.addEventListener('input',e=>{
   if(e.target.id==='post-conteudo')atualizarPreview();
@@ -1818,13 +1729,6 @@ function canvaCarregarDesigns(){
 function previewWpp(texto){
   var p=document.getElementById('wpp-preview-text');
   if(p) p.textContent=texto||'Sua mensagem aparecera aqui...';
-}
-function usarTemplate(btn){
-  var ta=document.getElementById('wpp-mensagem');
-  if(!ta) return;
-  ta.value=btn.textContent.trim();
-  previewWpp(ta.value);
-  ta.scrollIntoView({behavior:'smooth',block:'center'});
 }
 function canvaTogglePersonalizado(tipo){
   var mostrar=tipo==='Personalizado';

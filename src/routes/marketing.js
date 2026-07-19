@@ -210,9 +210,7 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
   const contaIG = posts.filter(p => (p.redes||[]).includes('instagram')).length + igPosts.length;
   const igPct = Math.round(contaIG / divisor * 100);
   const fbPct = Math.round(posts.filter(p=>(p.redes||[]).includes('facebook')).length/divisor*100);
-  const waPct = Math.round(posts.filter(p=>(p.redes||[]).includes('whatsapp')).length/divisor*100);
   const contaFB = posts.filter(p=>(p.redes||[]).includes('facebook')).length;
-  const contaWA = posts.filter(p=>(p.redes||[]).includes('whatsapp')).length;
   // contagem por status, também somando as duas origens (alimenta as pills)
   const porStatus = (st) => posts.filter(p=>p.status===st).length + igPosts.filter(g=>g.status===st).length;
   const contagem = { todos: total, rascunho: porStatus('rascunho'), agendado: porStatus('agendado'), publicado: porStatus('publicado') };
@@ -281,7 +279,7 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
   // funcionavam e o Facebook falhava em silêncio por nunca ter tido credencial cadastrada.
   const igOk = !!(mktConfig.instagram_token && mktConfig.instagram_id);
   const fbOk = !!(mktConfig.facebook_token && mktConfig.facebook_id);
-  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, igPosts, midias: midiasR.rows, mktConfig, igOk, fbOk, contagem, contaIG, contaFB, contaWA, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows, aniversariantesMes: aniversariantesMesR.rows, nomeMesAtual, eventosInternos: eventosInternosR.rows, notas: notasR.rows });
+  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, igPosts, midias: midiasR.rows, mktConfig, igOk, fbOk, contagem, contaIG, contaFB, igPct, fbPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows, aniversariantesMes: aniversariantesMesR.rows, nomeMesAtual, eventosInternos: eventosInternosR.rows, notas: notasR.rows });
 });
 
 router.post('/marketing/interno/evento', requireAuth, requirePermissao('marketing'), async (req, res) => {
@@ -615,29 +613,8 @@ router.post('/marketing/gerar-hashtags', requireAuth, requirePermissao('marketin
   } catch(e) { res.json({ ok: false, erro: e.message }); }
 });
 
-router.post('/marketing/whatsapp-massa', requireAuth, requirePermissao('marketing'), async (req, res) => {
-  try {
-    const { destinatarios, mensagem } = req.body;
-    if (!mensagem) { req.session.erro=['Mensagem obrigatória!']; return res.redirect('/marketing'); }
-    const { enviarWhatsApp } = require('../services/notificacoes');
-    let pessoas = [];
-    if (destinatarios==='ligantes'||destinatarios==='todos') { const r=await query('SELECT nome,whatsapp FROM ligantes WHERE ativo=1 AND whatsapp IS NOT NULL'); pessoas=[...pessoas,...r.rows]; }
-    if (destinatarios==='diretivos'||destinatarios==='todos') { const r=await query('SELECT nome,whatsapp FROM diretivos WHERE ativo=1 AND whatsapp IS NOT NULL'); pessoas=[...pessoas,...r.rows]; }
-    let enviados=0, erros=0, bloqueados=0;
-    for (const p of pessoas) {
-      if (!p.whatsapp) continue;
-      try {
-        const r = await enviarWhatsApp(p.whatsapp, mensagem.replace('{nome}', p.nome));
-        if (r && r.blocked) bloqueados++; else enviados++;
-      } catch(e) { erros++; }
-    }
-    if (bloqueados > 0 && enviados === 0) {
-      req.session.erro = ['Por enquanto, o envio de mensagens via WhatsApp esta suspenso pelo administrador (numero em periodo de aquecimento, para evitar banimento). Em breve retornaremos com o servico normalmente. Enquanto isso, use o e-mail para se comunicar.'];
-    } else {
-      req.session.msg=[`WhatsApp enviado! ${enviados} enviados, ${erros} erros${bloqueados?', '+bloqueados+' bloqueados (envio suspenso pelo administrador)':''}.`];
-    }
-    res.redirect('/marketing?tab=whatsapp');
-  } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing?tab=whatsapp'); }
-});
+// A rota /marketing/whatsapp-massa foi removida em 2026-07-19 a pedido da presidência:
+// disparar WhatsApp para os grupos/equipe não é uso do marketing. Era um envio em massa
+// para todos os ligantes e diretivos, o mesmo padrão que já desativamos na campanha.
 
 };
