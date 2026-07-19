@@ -220,9 +220,11 @@
       </div>
       <div id="mkt-content">
       <div class="mkt-section ativo" id="tab-dashboard">
-        <%const total=posts.length;const agend=posts.filter(p=>p.status==='agendado').length;
-        const pub=posts.filter(p=>p.status==='publicado').length;
-        const rasc=posts.filter(p=>p.status==='rascunho').length;%>
+        <% // Os contadores vinham daqui, recalculados só sobre marketing_posts — o que
+           // ANULAVA os valores enviados pela rota e ignorava as publicações do Instagram.
+           // Agora usa a contagem do servidor, que soma as duas origens.
+           const cont = (typeof contagem !== 'undefined' && contagem) ? contagem : {todos:posts.length,agendado:0,publicado:0,rascunho:0};
+           const total = cont.todos, agend = cont.agendado, pub = cont.publicado, rasc = cont.rascunho; %>
         <div class="stats-row">
           <div class="stat-box" style="--cor-stat:var(--cor-primaria)">
             <div class="stat-num"><%=total%></div><div class="stat-lab">Total de Posts</div>
@@ -266,17 +268,17 @@
             <div class="engaj-bar">
               <div class="engaj-label">Instagram</div>
               <div class="engaj-fill"><div style="height:100%;background:#e1306c;width:<%=igPct%>%"></div></div>
-              <div class="engaj-valor" style="color:#e1306c"><%=posts.filter(p=>(p.redes||[]).includes('instagram')).length%></div>
+              <div class="engaj-valor" style="color:#e1306c"><%=typeof contaIG!=='undefined'?contaIG:0%></div>
             </div>
             <div class="engaj-bar">
               <div class="engaj-label">Facebook</div>
               <div class="engaj-fill"><div style="height:100%;background:#1877f2;width:<%=fbPct%>%"></div></div>
-              <div class="engaj-valor" style="color:#1877f2"><%=posts.filter(p=>(p.redes||[]).includes('facebook')).length%></div>
+              <div class="engaj-valor" style="color:#1877f2"><%=typeof contaFB!=='undefined'?contaFB:0%></div>
             </div>
             <div class="engaj-bar">
               <div class="engaj-label">WhatsApp</div>
               <div class="engaj-fill"><div style="height:100%;background:#25d366;width:<%=waPct%>%"></div></div>
-              <div class="engaj-valor" style="color:#25d366"><%=posts.filter(p=>(p.redes||[]).includes('whatsapp')).length%></div>
+              <div class="engaj-valor" style="color:#25d366"><%=typeof contaWA!=='undefined'?contaWA:0%></div>
             </div>
           </div>
         </div>
@@ -300,9 +302,9 @@
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
           <div class="filter-pills">
             <span class="pill ativo" onclick="filtrarPosts('todos',this)">Todos (<%=total%>)</span>
-            <span class="pill" onclick="filtrarPosts('rascunho',this)">Rascunhos</span>
-            <span class="pill" onclick="filtrarPosts('agendado',this)">Agendados</span>
-            <span class="pill" onclick="filtrarPosts('publicado',this)">Publicados</span>
+            <span class="pill" onclick="filtrarPosts('rascunho',this)">Rascunhos (<%=typeof contagem!=='undefined'?contagem.rascunho:0%>)</span>
+            <span class="pill" onclick="filtrarPosts('agendado',this)">Agendados (<%=typeof contagem!=='undefined'?contagem.agendado:0%>)</span>
+            <span class="pill" onclick="filtrarPosts('publicado',this)">Publicados (<%=typeof contagem!=='undefined'?contagem.publicado:0%>)</span>
           </div>
           <div class="search-bar">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--texto2)"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>
@@ -359,10 +361,10 @@
       <div class="mkt-section" id="tab-posts">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:16px">
           <div class="filter-pills">
-            <span class="pill ativo" onclick="filtrarPosts('todos',this)">Todos (<%=posts.length%>)</span>
-            <span class="pill" onclick="filtrarPosts('rascunho',this)">Rascunhos</span>
-            <span class="pill" onclick="filtrarPosts('agendado',this)">Agendados</span>
-            <span class="pill" onclick="filtrarPosts('publicado',this)">Publicados</span>
+            <span class="pill ativo" onclick="filtrarPosts('todos',this)">Todos (<%=typeof contagem!=='undefined'?contagem.todos:0%>)</span>
+            <span class="pill" onclick="filtrarPosts('rascunho',this)">Rascunhos (<%=typeof contagem!=='undefined'?contagem.rascunho:0%>)</span>
+            <span class="pill" onclick="filtrarPosts('agendado',this)">Agendados (<%=typeof contagem!=='undefined'?contagem.agendado:0%>)</span>
+            <span class="pill" onclick="filtrarPosts('publicado',this)">Publicados (<%=typeof contagem!=='undefined'?contagem.publicado:0%>)</span>
           </div>
           <div class="search-bar">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--texto2)"><path d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z"/></svg>
@@ -1184,15 +1186,15 @@
             <div style="display:flex;flex-direction:column;gap:10px">
               <div style="display:flex;justify-content:space-between;padding:10px;background:#fce7f3;border-radius:var(--rad)">
                 <span style="font-weight:600;color:#9d174d">Instagram</span>
-                <span style="font-weight:700;font-size:18px;color:#9d174d"><%=posts.filter(p=>(p.redes||[]).includes('instagram')).length%></span>
+                <span style="font-weight:700;font-size:18px;color:#9d174d"><%=typeof contaIG!=='undefined'?contaIG:0%></span>
               </div>
               <div style="display:flex;justify-content:space-between;padding:10px;background:#dbeafe;border-radius:var(--rad)">
                 <span style="font-weight:600;color:#1e40af">Facebook</span>
-                <span style="font-weight:700;font-size:18px;color:#1e40af"><%=posts.filter(p=>(p.redes||[]).includes('facebook')).length%></span>
+                <span style="font-weight:700;font-size:18px;color:#1e40af"><%=typeof contaFB!=='undefined'?contaFB:0%></span>
               </div>
               <div style="display:flex;justify-content:space-between;padding:10px;background:#dcfce7;border-radius:var(--rad)">
                 <span style="font-weight:600;color:#166534">WhatsApp</span>
-                <span style="font-weight:700;font-size:18px;color:#166534"><%=posts.filter(p=>(p.redes||[]).includes('whatsapp')).length%></span>
+                <span style="font-weight:700;font-size:18px;color:#166534"><%=typeof contaWA!=='undefined'?contaWA:0%></span>
               </div>
             </div>
           </div>

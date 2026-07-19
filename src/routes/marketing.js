@@ -200,10 +200,22 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
   const { estaConectado } = require('../services/canva');
   const { gerarUrlInline } = require('../services/arquivos');
   const canvaConectado = await estaConectado();
-  const posts = postsR.rows; const total = posts.length||1;
-  const igPct = Math.round(posts.filter(p=>(p.redes||[]).includes('instagram')).length/total*100);
-  const fbPct = Math.round(posts.filter(p=>(p.redes||[]).includes('facebook')).length/total*100);
-  const waPct = Math.round(posts.filter(p=>(p.redes||[]).includes('whatsapp')).length/total*100);
+  const posts = postsR.rows;
+  // Contadores somam as DUAS origens: campanhas multicanal (marketing_posts) e
+  // publicações do Instagram (instagram_posts). Antes 'total' usava `|| 1`, que
+  // servia para não dividir por zero mas vazava para a tela — com a tabela vazia
+  // o dashboard exibia "1" sem existir post nenhum.
+  const total = posts.length + igPosts.length;
+  const divisor = total || 1;
+  const contaIG = posts.filter(p => (p.redes||[]).includes('instagram')).length + igPosts.length;
+  const igPct = Math.round(contaIG / divisor * 100);
+  const fbPct = Math.round(posts.filter(p=>(p.redes||[]).includes('facebook')).length/divisor*100);
+  const waPct = Math.round(posts.filter(p=>(p.redes||[]).includes('whatsapp')).length/divisor*100);
+  const contaFB = posts.filter(p=>(p.redes||[]).includes('facebook')).length;
+  const contaWA = posts.filter(p=>(p.redes||[]).includes('whatsapp')).length;
+  // contagem por status, também somando as duas origens (alimenta as pills)
+  const porStatus = (st) => posts.filter(p=>p.status===st).length + igPosts.filter(g=>g.status===st).length;
+  const contagem = { todos: total, rascunho: porStatus('rascunho'), agendado: porStatus('agendado'), publicado: porStatus('publicado') };
   // Dados leves para a gestao das fotos do site - so nome e foto, sem nenhum dado sensivel (cpf/rg/email/whatsapp)
   const [ligEquipeR, dirEquipeR, bannersR] = await Promise.all([
     query("SELECT id, nome, foto_site_chave FROM ligantes WHERE ativo=1 AND pendente=false ORDER BY nome"),
@@ -265,7 +277,7 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
     query('SELECT ec.*, u.nome as criado_por_nome FROM marketing_calendario ec LEFT JOIN usuarios u ON u.id=ec.criado_por ORDER BY ec.data_inicio'),
     query('SELECT n.*, u.nome as criado_por_nome FROM marketing_notas n LEFT JOIN usuarios u ON u.id=n.criado_por ORDER BY n.fixado DESC, n.criado_em DESC')
   ]);
-  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, igPosts, midias: midiasR.rows, mktConfig, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows, aniversariantesMes: aniversariantesMesR.rows, nomeMesAtual, eventosInternos: eventosInternosR.rows, notas: notasR.rows });
+  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, igPosts, midias: midiasR.rows, mktConfig, contagem, contaIG, contaFB, contaWA, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows, aniversariantesMes: aniversariantesMesR.rows, nomeMesAtual, eventosInternos: eventosInternosR.rows, notas: notasR.rows });
 });
 
 router.post('/marketing/interno/evento', requireAuth, requirePermissao('marketing'), async (req, res) => {
