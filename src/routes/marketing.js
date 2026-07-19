@@ -277,7 +277,11 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
     query('SELECT ec.*, u.nome as criado_por_nome FROM marketing_calendario ec LEFT JOIN usuarios u ON u.id=ec.criado_por ORDER BY ec.data_inicio'),
     query('SELECT n.*, u.nome as criado_por_nome FROM marketing_notas n LEFT JOIN usuarios u ON u.id=n.criado_por ORDER BY n.fixado DESC, n.criado_em DESC')
   ]);
-  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, igPosts, midias: midiasR.rows, mktConfig, contagem, contaIG, contaFB, contaWA, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows, aniversariantesMes: aniversariantesMesR.rows, nomeMesAtual, eventosInternos: eventosInternosR.rows, notas: notasR.rows });
+  // A tela de Campanhas mostra qual canal realmente publica — antes ela sugeria que os três
+  // funcionavam e o Facebook falhava em silêncio por nunca ter tido credencial cadastrada.
+  const igOk = !!(mktConfig.instagram_token && mktConfig.instagram_id);
+  const fbOk = !!(mktConfig.facebook_token && mktConfig.facebook_id);
+  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, igPosts, midias: midiasR.rows, mktConfig, igOk, fbOk, contagem, contaIG, contaFB, contaWA, igPct, fbPct, waPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows, aniversariantesMes: aniversariantesMesR.rows, nomeMesAtual, eventosInternos: eventosInternosR.rows, notas: notasR.rows });
 });
 
 router.post('/marketing/interno/evento', requireAuth, requirePermissao('marketing'), async (req, res) => {
@@ -512,9 +516,19 @@ router.post('/marketing/posts', requireAuth, requirePermissao('marketing'), asyn
       const redes = Array.isArray(req.body.redes) ? req.body.redes : (req.body.redes ? [req.body.redes] : []);
       let imagemChave = null;
       if (req.file) { const r = await uploadArquivo(req.file.buffer, req.file.originalname, req.file.mimetype, 'marketing'); imagemChave = r.chave; }
-      const status = acao === 'agendar' && agendado_para ? 'agendado' : 'rascunho';
+      // 'agendar' sem data virava rascunho em silêncio — o botão dizia uma coisa e fazia outra.
+      if (acao === 'agendar' && !agendado_para) {
+        req.session.erro = ['Informe a data e a hora para agendar a publicacao.'];
+        return res.redirect('/marketing');
+      }
+      const status = acao === 'agendar' ? 'agendado' : 'rascunho';
       await query('INSERT INTO marketing_posts (titulo,conteudo,imagem_chave,redes,status,agendado_para,criado_por) VALUES ($1,$2,$3,$4,$5,$6,$7)', [titulo, conteudo, imagemChave, redes, status, agendado_para||null, req.session.usuario.id]);
-      req.session.msg = [status==='agendado'?'Post agendado!':'Rascunho salvo!']; res.redirect('/marketing');
+      const cfg = await getMktConfig();
+      const semCred = [];
+      if (redes.includes('instagram') && !(cfg.instagram_token && cfg.instagram_id)) semCred.push('Instagram');
+      if (redes.includes('facebook') && !(cfg.facebook_token && cfg.facebook_id)) semCred.push('Facebook');
+      const aviso = semCred.length ? ' Atencao: ' + semCred.join(' e ') + ' sem credencial cadastrada — esse canal nao vai publicar.' : '';
+      req.session.msg = [(status==='agendado'?'Campanha agendada!':'Rascunho salvo! Ele aparece na aba Aprovacoes para publicar.') + aviso]; res.redirect('/marketing');
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/marketing'); }
 });
