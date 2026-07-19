@@ -368,31 +368,46 @@
             <input type="text" placeholder="Buscar post..." oninput="buscarPost(this.value)">
           </div>
         </div>
-        <!-- Publicações do Instagram (tabela instagram_posts) — agendamento automático -->
-        <% var igp = (typeof igPosts !== 'undefined' && igPosts) ? igPosts : []; if (igp.length) { %>
-        <div style="margin-bottom:18px;border:1px solid var(--borda);border-radius:var(--rad);overflow:hidden">
-          <div style="background:var(--fundo);padding:10px 14px;font-weight:700;font-size:13px;display:flex;align-items:center;gap:8px">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="#e1306c" stroke="none"/></svg>
-            Publicações do Instagram <span style="font-weight:500;color:var(--texto2)">(agendamento automático)</span>
-          </div>
-          <% igp.forEach(function(g){
-               var st = { agendado:['#fef3c7','#92400e','Agendado'], publicado:['#dcfce7','#166534','Publicado'], erro:['#fee2e2','#991b1b','Erro'] }[g.status] || ['#eee','#555',g.status];
-               var quando = g.publicado_em || g.agendado_para;
-               var tipoLbl = { carousel:'Carrossel', feed:'Foto', story:'Story', reel:'Reel' }[g.tipo] || g.tipo; %>
-          <div style="padding:12px 14px;border-top:1px solid var(--borda);display:flex;align-items:center;gap:12px">
-            <span class="badge" style="background:<%=st[0]%>;color:<%=st[1]%>;flex-shrink:0"><%=st[2]%></span>
-            <div style="flex:1;min-width:0">
-              <div style="font-weight:600;font-size:13px"><%=tipoLbl%></div>
-              <div style="font-size:12px;color:var(--texto2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><%=(g.legenda||'').replace(/\s+/g,' ').substring(0,90)%></div>
-              <% if (g.erro_msg) { %><div style="font-size:11px;color:#dc2626;margin-top:2px"><%=g.erro_msg%></div><% } %>
+        <!-- Publicações do Instagram: mesma classe .post-item, então entram no filtro e na busca -->
+        <% var igp = (typeof igPosts !== 'undefined' && igPosts) ? igPosts : [];
+           igp.forEach(function(g){
+             var st = { agendado:['#fef3c7','#92400e','Agendado'], publicado:['#dcfce7','#166534','Publicado'], cancelado:['#e5e7eb','#4b5563','Cancelado'], erro:['#fee2e2','#991b1b','Erro'] }[g.status] || ['#eee','#555',g.status];
+             var quando = g.publicado_em || g.agendado_para;
+             var tipoLbl = { carousel:'Carrossel', feed:'Foto', story:'Story', reel:'Reel' }[g.tipo] || g.tipo;
+             var mid = []; try { mid = typeof g.midias === 'string' ? JSON.parse(g.midias) : (g.midias || []); } catch(e) {}
+             if (!mid.length && g.midia_url) mid = [{url:g.midia_url}]; %>
+        <div class="post-card post-item" data-status="<%=g.status%>" data-titulo="instagram <%=tipoLbl.toLowerCase()%> <%=(g.legenda||'').toLowerCase().substring(0,120)%>">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:10px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e1306c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1.2" fill="#e1306c" stroke="none"/></svg>
+              <div>
+                <div style="font-weight:700;font-size:14px">Instagram · <%=tipoLbl%> <%= mid.length>1 ? '('+mid.length+' slides)' : '' %></div>
+                <div style="font-size:12px;color:var(--texto2)"><%= quando ? new Date(quando).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) : '-' %></div>
+              </div>
             </div>
-            <div style="font-size:12px;color:var(--texto2);text-align:right;flex-shrink:0">
-              <%= quando ? new Date(quando).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '-' %>
-            </div>
+            <span class="badge" style="background:<%=st[0]%>;color:<%=st[1]%>"><%=st[2]%></span>
           </div>
-          <% }); %>
+
+          <% if (mid.length) { %>
+          <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;margin-bottom:10px">
+            <% mid.forEach(function(m,ix){ %>
+            <img src="<%=m.url%>" onclick="window.open('<%=m.url%>','_blank')" title="Slide <%=ix+1%> — clique para ampliar"
+                 style="height:150px;border-radius:8px;border:1px solid var(--borda);cursor:pointer;flex-shrink:0">
+            <% }); %>
+          </div>
+          <% } %>
+
+          <div style="font-size:13px;color:var(--texto2);white-space:pre-wrap;line-height:1.5;background:var(--fundo);padding:10px 12px;border-radius:var(--rad);max-height:120px;overflow:auto" id="leg-<%=g.id%>"><%=g.legenda||''%></div>
+          <% if (g.erro_msg) { %><div style="font-size:12px;color:#dc2626;margin-top:8px">Erro: <%=g.erro_msg%></div><% } %>
+
+          <% if (g.status === 'agendado') { %>
+          <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+            <button class="btn btn-sm" onclick="editarLegendaIG(<%=g.id%>)">Editar legenda</button>
+            <button class="btn btn-sm" style="color:#dc2626" onclick="cancelarPostIG(<%=g.id%>)">Cancelar publicação</button>
+          </div>
+          <% } %>
         </div>
-        <% } %>
+        <% }); %>
 
         <%if(posts.length===0){%>
         <div style="text-align:center;padding:48px;color:var(--texto2)">
@@ -1808,6 +1823,32 @@ function buscarPost(termo){
     var texto = (c.dataset.titulo || '') + ' ' + (c.textContent || '').toLowerCase();
     c.style.display = (!t || texto.indexOf(t) >= 0) ? '' : 'none';
   });
+}
+
+// ─── AÇÕES SOBRE PUBLICAÇÕES AGENDADAS DO INSTAGRAM ───────────────────────────
+function cancelarPostIG(id){
+  confirmarAcao('Cancelar esta publicação? Ela não será postada no Instagram.', function(){
+    fetch('/marketing/instagram/post/'+id+'/cancelar',{method:'POST'})
+      .then(function(r){return r.json();})
+      .then(function(d){
+        if(!d.ok){ mostrarAviso(d.erro||'Não foi possível cancelar.','erro'); return; }
+        mostrarAviso('Publicação cancelada.','sucesso');
+        setTimeout(function(){ location.reload(); },900);
+      }).catch(function(){ mostrarAviso('Erro de conexão.','erro'); });
+  });
+}
+function editarLegendaIG(id){
+  var atual = (document.getElementById('leg-'+id)||{}).textContent || '';
+  var nova = prompt('Editar a legenda da publicação:', atual);
+  if(nova === null) return;
+  fetch('/marketing/instagram/post/'+id+'/legenda',{
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({legenda:nova})
+  }).then(function(r){return r.json();})
+    .then(function(d){
+      if(!d.ok){ mostrarAviso(d.erro||'Não foi possível salvar.','erro'); return; }
+      mostrarAviso('Legenda atualizada.','sucesso');
+      setTimeout(function(){ location.reload(); },900);
+    }).catch(function(){ mostrarAviso('Erro de conexão.','erro'); });
 }
 
 // ─── ANÁLISE DE DESEMPENHO DO INSTAGRAM (dados reais da API da Meta) ───────────

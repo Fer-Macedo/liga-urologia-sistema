@@ -42,6 +42,25 @@ router.post('/marketing/instagram/estrategia/gerar', requireAuth, requirePermiss
   }
 });
 
+// ── Ações sobre publicações agendadas do Instagram (cancelar / editar legenda) ──
+router.post('/marketing/instagram/post/:id/cancelar', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const r = await query("UPDATE instagram_posts SET status='cancelado' WHERE id=$1 AND status='agendado' RETURNING id", [req.params.id]);
+    if (!r.rowCount) return res.json({ ok: false, erro: 'Só é possível cancelar uma publicação que ainda está agendada.' });
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, erro: e.message }); }
+});
+
+router.post('/marketing/instagram/post/:id/legenda', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const legenda = (req.body && req.body.legenda || '').trim();
+    if (!legenda) return res.json({ ok: false, erro: 'A legenda não pode ficar vazia.' });
+    const r = await query("UPDATE instagram_posts SET legenda=$1 WHERE id=$2 AND status='agendado' RETURNING id", [legenda, req.params.id]);
+    if (!r.rowCount) return res.json({ ok: false, erro: 'Só dá para editar enquanto a publicação está agendada.' });
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false, erro: e.message }); }
+});
+
 router.get('/marketing/canva/conectar', requireAuth, requireAdmin, async (req, res) => {
   const { gerarPkce, montarUrlAutorizacao } = require('../services/canva');
   const { verifier, challenge } = gerarPkce();
@@ -109,7 +128,7 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
   // nenhum da interface — o usuário não tinha como conferir o que estava programado.
   let igPosts = [];
   try {
-    const r = await query("SELECT id, tipo, legenda, status, agendado_para, publicado_em, erro_msg, instagram_media_id FROM instagram_posts ORDER BY COALESCE(publicado_em, agendado_para) DESC LIMIT 30");
+    const r = await query("SELECT id, tipo, legenda, status, agendado_para, publicado_em, erro_msg, instagram_media_id, midia_url, midias FROM instagram_posts ORDER BY COALESCE(publicado_em, agendado_para) DESC LIMIT 30");
     igPosts = r.rows;
   } catch(e) { console.error('[MARKETING] instagram_posts:', e.message); }
   const mktConfig = await getMktConfig();
