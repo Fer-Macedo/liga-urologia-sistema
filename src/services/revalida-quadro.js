@@ -2,7 +2,7 @@
 //
 // A API do Instagram nao cria enquete (adesivo so existe no app), entao este quadro
 // NAO publica sozinho: gera as duas artes, manda por e-mail para marketing/presidencia/
-// admin as 6h e a equipe publica pelo app encaixando a enquete na moldura reservada.
+// admin as 6h e a equipe publica pelo app encaixando a enquete no espaco reservado.
 // Mesmo padrao do lembrete de aniversario (aniversario-lembrete.js).
 //
 // As questoes sao reais do Revalida (INEP) e so entram com GABARITO DEFINITIVO —
@@ -19,8 +19,9 @@ function b64(rel, mime = 'image/png') {
 }
 
 // ─── ARTE ─────────────────────────────────────────────────────────────────────
-// Layout aprovado pela presidencia em 2026-07-19. A moldura da enquete tem 690x640,
-// medida no aparelho: o adesivo real de 4 opcoes ocupa ~655x609 em 1080x1920.
+// Layout aprovado pela presidencia em 2026-07-19. O espaco da enquete tem 690x640,
+// medido no aparelho: o adesivo real de 4 opcoes ocupa ~655x609 em 1080x1920. O espaco
+// e vazio de proposito — nao desenhar moldura, ela aparece em volta do adesivo.
 function estiloBase() {
   return `
  *{margin:0;padding:0;box-sizing:border-box}
@@ -68,16 +69,16 @@ function htmlPergunta(q, lauro, ucp) {
       border-radius:0 10px 10px 0;padding:13px 18px}
  .alt .l{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:31px;color:${VERDE};flex-shrink:0;line-height:1.15}
  .alt .t{font-size:29px;line-height:1.3;color:#EAF0F7}
- .slot{margin-top:52px;align-self:center;width:690px;height:640px;border:3px dashed rgba(255,255,255,.32);
-       border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px}
- .slot b{font-family:'Barlow Condensed',sans-serif;font-size:30px;letter-spacing:3px;color:rgba(255,255,255,.85)}
- .slot span{font-size:23px;color:#8FA6C4}
+ /* Espaco reservado para a enquete: INVISIVEL de proposito. A moldura tracejada que
+    ficava aqui aparecia em volta do adesivo na hora de publicar e ficava feia. A area
+    continua reservada; o centro e dado pela linha da fonte, logo abaixo. */
+ .slot{margin-top:52px;align-self:center;width:690px;height:640px}
 </style></head><body>
  ${cabecalho(lauro, 'QUESTÃO COMENTADA · UROLOGIA')}
  <div class="corpo">
    <div class="caso">${paragrafos}</div>
    <div class="alts">${q.alternativas.map(a => `<div class="alt"><div class="l">${a.letra}</div><div class="t">${a.texto}</div></div>`).join('')}</div>
-   <div class="slot"><b>ENQUETE AQUI</b><span>A · B · C · D</span><span style="font-size:19px;opacity:.7">tamanho real do adesivo</span></div>
+   <div class="slot"></div>
  </div>
  ${rodape(ucp, q.fonte)}
 </body></html>`;
