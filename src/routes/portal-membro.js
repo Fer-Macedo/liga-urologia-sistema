@@ -572,11 +572,19 @@ router.post('/membro/esqueci-senha', limiterEsqueciSenha, async (req, res) => {
   if (!tipo) return res.render('pages/membro/esqueci-senha', { erro: null, ok: 'Se o email estiver cadastrado, voce recebera o codigo em instantes.' });
   // Gerar codigo de 6 digitos (crypto.randomInt — nao previsivel como Math.random)
   const codigo = require('crypto').randomInt(100000, 1000000).toString();
-  const expira = new Date(Date.now() + 15 * 60 * 1000); // 15 minutos
   // Invalidar codigos anteriores
   await query('UPDATE recuperacao_senha_portal SET usado=true WHERE email=LOWER($1) AND usado=false', [email]);
-  // Salvar novo codigo
-  await query('INSERT INTO recuperacao_senha_portal (origem_tipo, origem_id, email, codigo, expira_em) VALUES ($1,$2,LOWER($3),$4,$5)', [tipo, id, email, codigo, expira]);
+  // A validade e calculada PELO BANCO (NOW() + INTERVAL), nunca pelo Node.
+  //
+  // Antes vinha de `new Date(Date.now() + 15min)` e era comparada, na hora de conferir o
+  // codigo, com o NOW() do banco. Como o PostgreSQL roda em Europe/Berlin e o Node em
+  // outro fuso, a coluna `timestamp without time zone` guardava horas de relogios
+  // diferentes: o codigo nascia expirado ~5h antes de ser criado e NENHUM funcionava.
+  // Deixando os dois lados no mesmo relogio, a diferenca de fuso deixa de importar.
+  await query(
+    "INSERT INTO recuperacao_senha_portal (origem_tipo, origem_id, email, codigo, expira_em) VALUES ($1,$2,LOWER($3),$4, NOW() + INTERVAL '15 minutes')",
+    [tipo, id, email, codigo]
+  );
   // Enviar email
   try {
     const { enviarEmail } = require('../services/notificacoes');
