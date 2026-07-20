@@ -485,7 +485,7 @@
             <% sugestoes.forEach(function(s){
                  var cor = s.status==='aceita' ? '#10b981' : (s.status==='recusada' ? '#94a3b8' : 'var(--cor-primaria)');
                  var opac = s.status==='recusada' ? '.55' : '1'; %>
-              <div style="border:1px solid var(--borda);border-left:5px solid <%=cor%>;border-radius:var(--rad);padding:14px 16px;opacity:<%=opac%>">
+              <div style="border:1px solid var(--borda);border-left:5px solid <%=cor%>;border-radius:var(--rad);padding:14px 16px;opacity:<%=opac%>;background:<%= s.status==='aceita' ? 'rgba(16,185,129,.07)' : (s.status==='recusada' ? 'var(--fundo)' : 'transparent') %>">
                 <div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap">
                   <span style="font-weight:700;font-size:15px;color:<%=cor%>"><%= s.dia %></span>
                   <span style="font-weight:600;font-size:14px"><%= s.tema %></span>
@@ -503,11 +503,25 @@
                     <% if (s.respondido_por) { %><span style="color:var(--texto2)"> — <%= s.respondido_por %>, <%= s.respondido %></span><% } %>
                   </div>
                 <% } %>
-                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
-                  <input class="input" id="cmt-<%=s.id%>" placeholder="Comentário (opcional)" style="flex:1;min-width:180px;font-size:12.5px;padding:7px 10px">
-                  <button class="btn btn-sm" onclick="responderSugestao(<%=s.id%>,'aceita')" style="color:#059669">Aceitar</button>
-                  <button class="btn btn-sm" onclick="responderSugestao(<%=s.id%>,'recusada')" style="color:#dc2626">Recusar</button>
-                </div>
+                <% if (s.status === 'sugerida') { %>
+                  <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+                    <input class="input" id="cmt-<%=s.id%>" placeholder="Comentário (opcional)" style="flex:1;min-width:180px;font-size:12.5px;padding:7px 10px">
+                    <button class="btn btn-sm" onclick="responderSugestao(<%=s.id%>,'aceita')" style="color:#059669">Aceitar</button>
+                    <button class="btn btn-sm" onclick="responderSugestao(<%=s.id%>,'recusada')" style="color:#dc2626">Recusar</button>
+                  </div>
+                <% } else { %>
+                  <%# Decisao ja tomada: os botoes somem e o estado fica explicito. Antes eles
+                      continuavam na tela e a pessoa achava que a aprovacao nao tinha sido salva. %>
+                  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
+                    <div style="font-size:12.5px;font-weight:700;color:<%=cor%>">
+                      <%= s.status === 'aceita' ? '✓ Aprovada' : '✕ Recusada' %>
+                      <span style="font-weight:400;color:var(--texto2)">
+                        por <%= s.respondido_por || '—' %><%= s.respondido ? ' em ' + s.respondido : '' %>
+                      </span>
+                    </div>
+                    <button class="btn btn-sm" onclick="responderSugestao(<%=s.id%>,'sugerida')" style="font-size:12px;color:var(--texto2)">Alterar decisão</button>
+                  </div>
+                <% } %>
               </div>
             <% }); %>
             </div>
@@ -2010,6 +2024,7 @@ function gerarCronograma(){
 function responderSugestao(id,status){
   var campo=document.getElementById('cmt-'+id);
   var comentario=campo?campo.value:'';
+  if(status==='sugerida'){ comentario=''; }
   if(status==='recusada' && !comentario){
     mostrarAviso('Escreva o motivo da recusa — é ele que a IA usa para não repetir o tema.');
     if(campo) campo.focus();
