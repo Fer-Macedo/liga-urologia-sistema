@@ -142,6 +142,10 @@ async function gerarArtes(q) {
 }
 
 // ─── ENVIO ────────────────────────────────────────────────────────────────────
+// A ordem da fila segue o eixo tematico do mes (ver marketing-cronograma.js). Em julho
+// de 2026 as primeiras sao de hematuria e cancer de bexiga, para conversar com a campanha
+// "Julio Morado" que a liga publicou em 19/07 — conteudo solto parece falta de linha
+// editorial. Para mudar a ordem, basta atualizar a coluna `ordem`.
 async function proximaQuestao() {
   const r = await query(
     "SELECT * FROM revalida_questoes WHERE status='aprovada' AND enviado_em IS NULL ORDER BY ordem, id LIMIT 1"
