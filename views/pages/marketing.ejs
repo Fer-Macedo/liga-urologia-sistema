@@ -483,9 +483,10 @@
           <% } else { %>
             <div style="display:flex;flex-direction:column;gap:10px">
             <% sugestoes.forEach(function(s){
-                 var cor = s.status==='aceita' ? '#10b981' : (s.status==='recusada' ? '#94a3b8' : 'var(--cor-primaria)');
+                 // verde = aprovada, vermelho = recusada. Cinza nao comunicava recusa.
+                 var cor = s.status==='aceita' ? '#10b981' : (s.status==='recusada' ? '#dc2626' : 'var(--cor-primaria)');
                  var opac = s.status==='recusada' ? '.55' : '1'; %>
-              <div style="border:1px solid var(--borda);border-left:5px solid <%=cor%>;border-radius:var(--rad);padding:14px 16px;opacity:<%=opac%>;background:<%= s.status==='aceita' ? 'rgba(16,185,129,.07)' : (s.status==='recusada' ? 'var(--fundo)' : 'transparent') %>">
+              <div style="border:1px solid var(--borda);border-left:5px solid <%=cor%>;border-radius:var(--rad);padding:14px 16px;opacity:<%=opac%>;background:<%= s.status==='aceita' ? 'rgba(16,185,129,.07)' : (s.status==='recusada' ? 'rgba(220,38,38,.06)' : 'transparent') %>">
                 <div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap">
                   <span style="font-weight:700;font-size:15px;color:<%=cor%>"><%= s.dia %></span>
                   <span style="font-weight:600;font-size:14px"><%= s.tema %></span>
