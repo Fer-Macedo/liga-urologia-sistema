@@ -153,9 +153,23 @@ async function proximaQuestao() {
   return r.rows[0] || null;
 }
 
-function corpoEmail(q) {
+function corpoEmail(q, pendentes) {
   const alts = q.alternativas.map(a => `<tr><td style="padding:4px 10px 4px 0;font-weight:700">${a.letra}</td><td style="padding:4px 0">${a.texto}</td></tr>`).join('');
-  return `
+  // Alerta de publicacao em aberto, no TOPO. Vai aqui e nao num e-mail separado porque
+  // este ja sai duas vezes por semana — mais um e-mail so faria a equipe ignorar os dois.
+  const alerta = (pendentes && pendentes.length) ? `
+<div style="border:2px solid #dc2626;background:#fef2f2;border-radius:8px;padding:14px 18px;margin-bottom:20px">
+  <div style="color:#dc2626;font-weight:700;font-size:15px;margin-bottom:6px">⚠️ Publicação anterior em aberto</div>
+  <div style="font-size:14px;line-height:1.55">
+    ${pendentes.map(x => `A questão enviada em <strong>${x.enviado}</strong> (${x.fonte}) continua <strong>sem confirmação de publicação</strong>.`).join('<br>')}
+    <br><br>
+    Verifiquem se ela chegou a ser publicada no Instagram:
+    <br>• <strong>Se foi publicada</strong> — entrem em <em>Marketing → Momento Revalida</em> e cliquem em <strong>“Marcar como publicado”</strong>.
+    <br>• <strong>Se não foi</strong> — vale publicar hoje junto com a de agora, ou decidir descartar.
+  </div>
+</div>` : '';
+
+  return `${alerta}
 <p>Bom dia! Hoje sai o <strong>Momento Revalida Brasil</strong>. As duas artes estão anexadas.</p>
 
 <p><strong>Como publicar</strong></p>
@@ -191,6 +205,14 @@ async function enviarQuadroRevalida() {
   );
   if (!destinatarios.rows.length) { console.warn('[REVALIDA] Sem destinatários — envio abortado.'); return { ok: false, motivo: 'sem destinatários' }; }
 
+  // enviadas antes e ainda sem confirmacao de publicacao
+  const pend = await query(
+    `SELECT fonte, to_char(enviado_em,'DD/MM') AS enviado FROM revalida_questoes
+     WHERE enviado_em IS NOT NULL AND publicado_em IS NULL AND id <> $1
+     ORDER BY enviado_em`, [q.id]
+  );
+  if (pend.rows.length) console.warn(`[REVALIDA] ${pend.rows.length} publicação(ões) em aberto — alerta incluído no e-mail.`);
+
   const artes = await gerarArtes(q);
   const { enviarEmail } = require('./notificacoes');
   const anexos = [
@@ -202,8 +224,8 @@ async function enviarQuadroRevalida() {
   for (const d of destinatarios.rows) {
     const r = await enviarEmail({
       para: d.email,
-      assunto: `Momento Revalida Brasil — publicar hoje (${q.fonte})`,
-      html: corpoEmail(q),
+      assunto: (pend.rows.length ? '⚠️ ' : '') + `Momento Revalida Brasil — publicar hoje (${q.fonte})`,
+      html: corpoEmail(q, pend.rows),
       anexos
     }).catch(e => ({ ok: false, erro: e.message }));
     if (r && r.ok) enviados++;
