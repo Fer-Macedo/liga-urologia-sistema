@@ -607,6 +607,16 @@ function iniciarAgendamentos() {
     } catch(e) { console.error('[LEMBRETE ANIVERSARIO] erro (dia):', e.message); }
   }, { timezone: 'America/Asuncion' });
 
+  // Alerta de pendencias do marketing — domingo e quarta as 8h, dois dias antes de cada
+  // envio do Momento Revalida (terca e sexta), dando margem para aprovar a tempo.
+  // So dispara e-mail se houver pendencia: alerta que chega sempre vira ruido ignorado.
+  cron.schedule('0 8 * * 0,3', async () => {
+    try {
+      const { enviarAlertaPendencias } = require('./marketing-alerta');
+      await enviarAlertaPendencias();
+    } catch(e) { console.error('[ALERTA MKT] Cron erro:', e.message); }
+  }, { timezone: 'America/Asuncion' });
+
   // Momento Revalida Brasil — quadro dos stories, terça e sexta às 6h.
   // Nao publica sozinho: a API do Instagram nao cria enquete, entao manda as artes
   // por e-mail para a equipe publicar pelo app encaixando o adesivo.
