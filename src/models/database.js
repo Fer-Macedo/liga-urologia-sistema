@@ -295,6 +295,18 @@ async function initSchema() {
     );
   }
 
+  // Chat de marketing com a IA. A equipe so tem acesso ao sistema; e aqui que ela
+  // discute pauta e questiona o cronograma sem depender de intermediario.
+  await query(`
+    CREATE TABLE IF NOT EXISTS marketing_chat (
+      id SERIAL PRIMARY KEY,
+      papel VARCHAR(10) NOT NULL,
+      usuario VARCHAR(120),
+      mensagem TEXT NOT NULL,
+      criado_em TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
   // Cronograma de conteudo sugerido pela IA + resposta da equipe. E conversa, nao
   // monologo: o que a equipe recusa ou comenta volta como contexto na proxima geracao,
   // para a IA parar de repetir o que ja foi descartado.

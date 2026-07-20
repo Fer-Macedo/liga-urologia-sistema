@@ -23,6 +23,22 @@ router.get('/marketing/instagram/analise', requireAuth, requirePermissao('market
 });
 
 // Análise estratégica por IA: última análise salva + gerar uma nova sob demanda.
+// ─── CHAT DE MARKETING COM A IA ───────────────────────────────────────────────
+router.post('/marketing/chat', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { enviarMensagem } = require('../services/marketing-chat');
+    const r = await enviarMensagem(req.session.usuario.nome, (req.body || {}).mensagem);
+    res.json(r);
+  } catch (e) { res.json({ ok: false, erro: e.message }); }
+});
+
+router.get('/marketing/chat', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { historico } = require('../services/marketing-chat');
+    res.json({ ok: true, mensagens: await historico(40) });
+  } catch (e) { res.json({ ok: false, erro: e.message }); }
+});
+
 // ─── CRONOGRAMA SUGERIDO PELA IA ──────────────────────────────────────────────
 router.post('/marketing/cronograma/gerar', requireAuth, requirePermissao('marketing'), async (req, res) => {
   try {

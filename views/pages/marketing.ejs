@@ -25,6 +25,7 @@
         if(typeof carregarIgPerfil==='function') carregarIgPerfil();
       }
       if(id==='midias' && typeof canvaCarregarDesigns==='function') canvaCarregarDesigns();
+      if(id==='estrategia' && typeof carregarChatMkt==='function') carregarChatMkt();
     }
     document.addEventListener('DOMContentLoaded',function(){
       var tab=new URLSearchParams(window.location.search).get('tab');
@@ -504,6 +505,21 @@
             <% }); %>
             </div>
           <% } %>
+        </div>
+        <div class="card" style="margin-top:20px">
+          <div class="card-titulo">💬 Falar com a IA sobre marketing</div>
+          <div style="font-size:12px;color:var(--texto2);margin-bottom:12px">
+            Discuta pauta, questione o cronograma, proponha outra ideia. A IA vê os números da conta
+            e o cronograma atual. A conversa fica registrada para toda a equipe.
+          </div>
+          <div id="chat-mkt" style="border:1px solid var(--borda);border-radius:var(--rad);height:340px;overflow-y:auto;padding:14px;background:var(--fundo);display:flex;flex-direction:column;gap:10px">
+            <div style="color:var(--texto2);font-size:13px;text-align:center;margin:auto">Carregando conversa…</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <input id="chat-msg" class="input" placeholder="Ex: acho que story de bastidor rende mais que carrossel. O que você acha?"
+                   style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();enviarChatMkt();}">
+            <button class="btn btn-primario" id="chat-btn" onclick="enviarChatMkt()">Enviar</button>
+          </div>
         </div>
       </div>
       <div class="mkt-section" id="tab-interno">
@@ -1916,6 +1932,61 @@ function carregarEstrategiaIG(){
     else box.innerHTML='<p style="color:#dc2626;font-size:13px">'+(d.erro||'erro')+'</p>';
   }).catch(function(){ box.innerHTML='<p style="color:#dc2626;font-size:13px">Erro ao carregar.</p>'; });
 }
+function balaoChat(m){
+  var eq = m.papel !== 'ia';
+  var d = document.createElement('div');
+  d.style.cssText = 'max-width:82%;padding:10px 13px;border-radius:12px;font-size:13px;line-height:1.5;white-space:pre-wrap;'
+    + (eq ? 'align-self:flex-end;background:var(--cor-primaria);color:#fff' : 'align-self:flex-start;background:var(--card);border:1px solid var(--borda)');
+  var quem = document.createElement('div');
+  quem.style.cssText = 'font-size:10.5px;opacity:.75;margin-bottom:3px;font-weight:600';
+  quem.textContent = (eq ? (m.usuario || 'Equipe') : 'IA') + (m.quando ? ' · ' + m.quando : '');
+  d.appendChild(quem);
+  var t = document.createElement('div'); t.textContent = m.mensagem; d.appendChild(t);
+  return d;
+}
+
+function carregarChatMkt(){
+  var cx = document.getElementById('chat-mkt'); if(!cx) return;
+  fetch('/marketing/chat').then(function(r){return r.json()}).then(function(d){
+    cx.innerHTML = '';
+    if(!d.ok || !d.mensagens || !d.mensagens.length){
+      cx.innerHTML = '<div style="color:var(--texto2);font-size:13px;text-align:center;margin:auto">Nenhuma conversa ainda. Escreva a primeira mensagem.</div>';
+      return;
+    }
+    d.mensagens.forEach(function(m){ cx.appendChild(balaoChat(m)); });
+    cx.scrollTop = cx.scrollHeight;
+  }).catch(function(){
+    cx.innerHTML = '<div style="color:var(--texto2);font-size:13px;text-align:center;margin:auto">Não foi possível carregar a conversa.</div>';
+  });
+}
+
+function enviarChatMkt(){
+  var campo = document.getElementById('chat-msg'), b = document.getElementById('chat-btn'), cx = document.getElementById('chat-mkt');
+  if(!campo || !campo.value.trim()) return;
+  var texto = campo.value.trim();
+  campo.value = ''; b.disabled = true; b.textContent = 'Enviando…';
+  if(cx){
+    if(cx.querySelector('div[style*="margin:auto"]')) cx.innerHTML = '';
+    cx.appendChild(balaoChat({papel:'equipe', mensagem:texto}));
+    var esperando = balaoChat({papel:'ia', mensagem:'…'});
+    esperando.id = 'chat-esperando';
+    cx.appendChild(esperando);
+    cx.scrollTop = cx.scrollHeight;
+  }
+  fetch('/marketing/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mensagem:texto})})
+    .then(function(r){return r.json()})
+    .then(function(d){
+      var e = document.getElementById('chat-esperando'); if(e) e.remove();
+      if(d.ok){ carregarChatMkt(); }
+      else { mostrarAviso(d.erro || 'A IA não respondeu.'); carregarChatMkt(); }
+    })
+    .catch(function(){
+      var e = document.getElementById('chat-esperando'); if(e) e.remove();
+      mostrarAviso('Falha de conexão.');
+    })
+    .finally(function(){ b.disabled = false; b.textContent = 'Enviar'; });
+}
+
 function gerarCronograma(){
   var b=document.getElementById('btn-crono'); if(!b) return;
   var pedido=(document.getElementById('crono-pedido')||{}).value||'';

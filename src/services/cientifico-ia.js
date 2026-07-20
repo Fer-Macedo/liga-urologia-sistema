@@ -7,7 +7,9 @@ const MODEL = 'claude-sonnet-4-5';
 const CUSTO_ENTRADA_POR_1K = 0.003;
 const CUSTO_SAIDA_POR_1K = 0.015;
 
-async function chamarClaude(query, { system, content, contexto, maxTokens }) {
+// `messages` (opcional) permite conversa com historico; sem ele, mantem o
+// comportamento antigo de uma unica mensagem via `content`.
+async function chamarClaude(query, { system, content, contexto, maxTokens, messages }) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) return { ok: false, erro: 'Assistente de IA nao configurado.' };
   try {
@@ -15,7 +17,7 @@ async function chamarClaude(query, { system, content, contexto, maxTokens }) {
       model: MODEL,
       max_tokens: maxTokens || 1200,
       system,
-      messages: [{ role: 'user', content }]
+      messages: messages || [{ role: 'user', content }]
     }, {
       headers: { 'Content-Type': 'application/json', 'anthropic-version': '2023-06-01', 'x-api-key': apiKey },
       timeout: 45000
