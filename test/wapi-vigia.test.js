@@ -9,11 +9,15 @@ const path = require('path');
 const RAIZ = path.join(__dirname, '..');
 const MODULO = path.join(RAIZ, 'src/services/wapi-vigia.js');
 
-function comCenario({ canal = 'wapi' } = {}) {
+function comCenario({ canal = 'wapi', semAdmin = false } = {}) {
   const emails = [];
+  const consultas = [];
   const rq = require.resolve(path.join(RAIZ, 'src/models/database.js'));
   require.cache[rq] = { id: rq, filename: rq, loaded: true, exports: {
-    query: async () => ({ rows: [{ email: 'presidencia@teste' }] })
+    query: async (sql) => {
+      consultas.push(sql);
+      return { rows: semAdmin ? [] : [{ email: 'admin@teste' }] };
+    }
   }};
   const rn = require.resolve(path.join(RAIZ, 'src/services/notificacoes.js'));
   require.cache[rn] = { id: rn, filename: rn, loaded: true, exports: {
@@ -30,7 +34,7 @@ function comCenario({ canal = 'wapi' } = {}) {
   delete require.cache[require.resolve(MODULO)];
   const mod = require(MODULO);
   return {
-    mod, emails,
+    mod, emails, consultas,
     conectado: () => { resposta = { ok: true, data: { connected: true } }; },
     caiu: () => { resposta = { ok: true, data: { connected: false } }; },
     consultaFalhou: () => { resposta = { ok: false, erro: 'timeout' }; }
@@ -45,7 +49,7 @@ test('conectado o tempo todo → nenhum e-mail', async () => {
   assert.strictEqual(emails.length, 0);
 });
 
-test('ao cair, avisa a presidência com o passo a passo de reconectar', async () => {
+test('ao cair, avisa o admin com o passo a passo de reconectar', async () => {
   const { mod, emails, conectado, caiu } = comCenario();
   conectado();
   await mod.verificar();
@@ -91,6 +95,27 @@ test('primeira verificação já desconectado não alerta — sem estado anterio
   const { mod, emails, caiu } = comCenario();
   caiu();
   await mod.verificar();
+  assert.strictEqual(emails.length, 0);
+});
+
+// A ação é escanear um QR Code: quem não tem o celular e o painel só recebe um susto que
+// não pode resolver. O alerta vai só para o admin, de propósito.
+test('o alerta vai só para o admin, não para a presidência', async () => {
+  const { mod, emails, consultas, conectado, caiu } = comCenario();
+  conectado(); await mod.verificar();
+  caiu();      await mod.verificar();
+  assert.strictEqual(emails[0].para, 'admin@teste');
+  const consultaDest = consultas.find(s => /FROM usuarios/.test(s));
+  assert.match(consultaDest, /perfil='admin'/);
+  assert.doesNotMatch(consultaDest, /presidencia/);
+});
+
+// Sem destinatário o alerta some em silêncio — que é o problema que a vigia veio resolver.
+test('sem admin cadastrado, registra no log em vez de falhar calado', async () => {
+  const { mod, emails, conectado, caiu } = comCenario({ semAdmin: true });
+  conectado(); await mod.verificar();
+  caiu();
+  await assert.doesNotReject(() => mod.verificar());
   assert.strictEqual(emails.length, 0);
 });
 

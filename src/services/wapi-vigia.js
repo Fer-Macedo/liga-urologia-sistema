@@ -44,10 +44,17 @@ async function avisar() {
   console.error('[VIGIA W-API] INSTÂNCIA DESCONECTADA — atendimento fora do ar.');
   try {
     const { enviarEmail } = require('./notificacoes');
+    // SÓ o admin. A ação aqui é escanear um QR Code no painel da W-API, o que exige o
+    // celular do número e o acesso ao painel — quem não tem os dois só recebe um susto
+    // que não pode resolver. Alerta técnico para quem não pode agir vira ruído, e ruído
+    // treina todo mundo a ignorar o próximo.
     const dest = await query(
-      "SELECT DISTINCT email FROM usuarios WHERE ativo=1 AND email IS NOT NULL AND email <> '' AND perfil IN ('admin','presidencia')"
+      "SELECT DISTINCT email FROM usuarios WHERE ativo=1 AND email IS NOT NULL AND email <> '' AND perfil='admin'"
     );
-    if (!dest.rows.length) return;
+    if (!dest.rows.length) {
+      console.error('[VIGIA W-API] nenhum admin com e-mail — alerta NÃO enviado.');
+      return;
+    }
     const html = `
       <p>O WhatsApp do atendimento (<strong>+595 994316286</strong>) <strong>desconectou</strong>.
       Enquanto estiver assim, quem escrever para a liga <strong>não recebe resposta</strong> —
