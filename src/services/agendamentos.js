@@ -607,6 +607,16 @@ function iniciarAgendamentos() {
     } catch(e) { console.error('[LEMBRETE ANIVERSARIO] erro (dia):', e.message); }
   }, { timezone: 'America/Asuncion' });
 
+  // Momento Revalida Brasil — quadro dos stories, terça e sexta às 6h.
+  // Nao publica sozinho: a API do Instagram nao cria enquete, entao manda as artes
+  // por e-mail para a equipe publicar pelo app encaixando o adesivo.
+  cron.schedule('0 6 * * 2,5', async () => {
+    try {
+      const { enviarQuadroRevalida } = require('./revalida-quadro');
+      await enviarQuadroRevalida();
+    } catch(e) { console.error('[REVALIDA] Cron erro:', e.message); }
+  }, { timezone: 'America/Asuncion' });
+
   // Instagram — plano de ação estratégico (IA) da conta, segunda e quinta às 8h (marketing/presidência/admin)
   cron.schedule('0 8 * * 1,4', async () => {
     try {

@@ -295,6 +295,28 @@ async function initSchema() {
     );
   }
 
+  // Momento Revalida Brasil — fila de questoes do quadro dos stories (2x/semana).
+  // Questoes reais do Revalida/INEP; so entram com gabarito DEFINITIVO (anuladas e
+  // gabarito preliminar ficam de fora). status='aprovada' = liberada pela orientacao
+  // medica; o cron so envia o que estiver aprovado.
+  await query(`
+    CREATE TABLE IF NOT EXISTS revalida_questoes (
+      id SERIAL PRIMARY KEY,
+      fonte TEXT NOT NULL,
+      caso TEXT NOT NULL,
+      alternativas JSONB NOT NULL,
+      gabarito CHAR(1) NOT NULL,
+      porque TEXT NOT NULL,
+      pegadinha TEXT,
+      distratores JSONB,
+      legenda TEXT,
+      ordem INTEGER DEFAULT 0,
+      status VARCHAR(20) DEFAULT 'rascunho',
+      enviado_em TIMESTAMP,
+      criado_em TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
   // Admin padrão
   const admin = await query("SELECT id FROM usuarios WHERE perfil = 'admin'");
   if (admin.rows.length === 0) {
