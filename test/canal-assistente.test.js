@@ -1,86 +1,79 @@
-// O sistema passa a ter dois canais de WhatsApp com papéis diferentes: os disparos vão
-// pela API Oficial, o assistente virtual vai pela W-API. O risco é os dois se cruzarem —
-// uma resposta do assistente saindo pelo número dos disparos, ou pior, o aviso à área
-// deixando de entregar. Estes testes prendem as regras de roteamento.
+// O sistema tem dois canais de WhatsApp com papéis diferentes: os disparos vão pela API
+// Oficial, o atendimento (assistente + aba /atendimentos) vai pela W-API. O risco é os
+// dois se cruzarem — uma resposta de atendimento saindo pelo número dos disparos, ou o
+// aviso à área deixando de entregar. Estes testes prendem as regras de roteamento.
 const { test } = require('node:test');
 const assert = require('node:assert');
 const path = require('path');
-const fs = require('fs');
 
 const RAIZ = path.join(__dirname, '..');
 const MODULO = path.join(RAIZ, 'src/services/canal-assistente.js');
-const WAPI = path.join(RAIZ, 'src/services/whatsapp-wapi.js');
 
-// O adaptador da W-API ainda não existe (falta credencial do número novo). Para exercitar
-// o seletor, o teste cria um adaptador de mentira em disco e apaga no fim — não dá para
-// simular pelo require.cache, porque o require falha na resolução antes de olhar o cache.
-function criarAdaptadorFalso() {
-  if (fs.existsSync(WAPI)) return false;
-  fs.writeFileSync(WAPI, `
-    module.exports = {
-      enviarTexto: async () => ({ ok: true, via: 'wapi' }),
-      enviarImagem: async () => ({ ok: true, via: 'wapi' }),
-      enviarDocumento: async () => ({ ok: true, via: 'wapi' })
-    };
-  `);
-  return true;
-}
-function removerAdaptadorFalso(criado) { if (criado) fs.unlinkSync(WAPI); }
-
-// O transporte oficial vira um dublê que só registra por onde a mensagem saiu.
-function comCanais({ canal } = {}) {
+// Os dois transportes viram dublês que só registram por onde a mensagem saiu.
+// `wapiQuebrado` simula o adaptador fora do ar: o require lança ao ser lido.
+function comCanais({ canal, wapiQuebrado = false } = {}) {
   const chamadas = [];
+  const duble = (nome) => ({
+    enviarTexto: async (n, m) => { chamadas.push({ via: nome, tipo: 'texto', n, m }); return { ok: true }; },
+    enviarImagem: async (n) => { chamadas.push({ via: nome, tipo: 'imagem', n }); return { ok: true }; },
+    enviarDocumento: async (n) => { chamadas.push({ via: nome, tipo: 'documento', n }); return { ok: true }; },
+    enviarTemplate: async (n, t) => { chamadas.push({ via: nome, tipo: 'template', n, t }); return { ok: true }; }
+  });
+
   const rOf = require.resolve(path.join(RAIZ, 'src/services/whatsapp-oficial.js'));
-  require.cache[rOf] = { id: rOf, filename: rOf, loaded: true, exports: {
-    enviarTexto: async (n, m) => { chamadas.push({ via: 'oficial', tipo: 'texto', n, m }); return { ok: true }; },
-    enviarImagem: async (n) => { chamadas.push({ via: 'oficial', tipo: 'imagem', n }); return { ok: true }; },
-    enviarDocumento: async (n) => { chamadas.push({ via: 'oficial', tipo: 'documento', n }); return { ok: true }; },
-    enviarTemplate: async (n, t) => { chamadas.push({ via: 'oficial', tipo: 'template', n, t }); return { ok: true }; }
-  }};
+  require.cache[rOf] = { id: rOf, filename: rOf, loaded: true, exports: duble('oficial') };
+
+  const rWa = require.resolve(path.join(RAIZ, 'src/services/whatsapp-wapi.js'));
+  if (wapiQuebrado) {
+    require.cache[rWa] = { id: rWa, filename: rWa, loaded: true,
+      get exports() { throw new Error('adaptador indisponível'); } };
+  } else {
+    require.cache[rWa] = { id: rWa, filename: rWa, loaded: true, exports: duble('wapi') };
+  }
 
   if (canal) process.env.ASSISTENTE_CANAL = canal;
   else delete process.env.ASSISTENTE_CANAL;
 
   delete require.cache[require.resolve(MODULO)];
-  if (fs.existsSync(WAPI)) delete require.cache[WAPI];
   return { mod: require(MODULO), chamadas };
 }
 
-test('sem configuração, o assistente responde pela API oficial', async () => {
+test('sem configuração, o atendimento responde pela API oficial', async () => {
   const { mod, chamadas } = comCanais({});
   await mod.enviarTexto('595991', 'oi');
   assert.strictEqual(chamadas[0].via, 'oficial');
 });
 
 test('com ASSISTENTE_CANAL=wapi, texto/imagem/documento saem pela W-API', async () => {
-  const criado = criarAdaptadorFalso();
-  try {
-    const { mod, chamadas } = comCanais({ canal: 'wapi' });
-    const r1 = await mod.enviarTexto('595991', 'oi');
-    const r2 = await mod.enviarImagem('595991', 'http://x/i.png', 'legenda');
-    const r3 = await mod.enviarDocumento('595991', 'http://x/d.pdf', 'd.pdf');
-    assert.deepStrictEqual([r1.via, r2.via, r3.via], ['wapi', 'wapi', 'wapi']);
-    assert.strictEqual(chamadas.length, 0, 'nada do assistente pode vazar para a oficial');
-  } finally { removerAdaptadorFalso(criado); }
+  const { mod, chamadas } = comCanais({ canal: 'wapi' });
+  await mod.enviarTexto('595991', 'oi');
+  await mod.enviarImagem('595991', 'data:image/png;base64,AAA', 'legenda');
+  await mod.enviarDocumento('595991', 'data:application/pdf;base64,BBB', 'ata.pdf');
+  assert.deepStrictEqual(chamadas.map(c => c.via), ['wapi', 'wapi', 'wapi'],
+    'nada do atendimento pode vazar para o número dos disparos');
 });
 
-// Modelo aprovado é recurso exclusivo da API Oficial. Se ele fosse pela W-API, o aviso
-// de novo atendimento à secretaria pararia de entregar fora da janela de 24h — que foi
-// exatamente o bug que o modelo novo_atendimento veio consertar.
-test('o modelo aprovado vai pela oficial mesmo com o assistente na W-API', async () => {
-  const criado = criarAdaptadorFalso();
-  try {
-    const { mod, chamadas } = comCanais({ canal: 'wapi' });
-    await mod.enviarTemplate('595991', 'novo_atendimento', 'pt_BR', []);
-    assert.strictEqual(chamadas[0].via, 'oficial');
-    assert.strictEqual(chamadas[0].tipo, 'template');
-  } finally { removerAdaptadorFalso(criado); }
+// O aviso à área (secretaria, financeiro) é atendimento, não disparo: tem que sair do
+// mesmo número com quem a pessoa está conversando.
+test('o aviso à área sai pela W-API junto com o resto do atendimento', async () => {
+  const { mod, chamadas } = comCanais({ canal: 'wapi' });
+  await mod.enviarTexto('595992010423', 'Novo atendimento aguardando');
+  assert.strictEqual(chamadas[0].via, 'wapi');
+});
+
+// Modelo aprovado é recurso exclusivo da API Oficial — a W-API não tem esse conceito.
+// Aqui ele é só rede de segurança: se a W-API cair, o aviso à área ainda entrega.
+test('o modelo aprovado vai pela oficial mesmo com o atendimento na W-API', async () => {
+  const { mod, chamadas } = comCanais({ canal: 'wapi' });
+  await mod.enviarTemplate('595991', 'novo_atendimento', 'pt_BR', []);
+  assert.strictEqual(chamadas[0].via, 'oficial');
+  assert.strictEqual(chamadas[0].tipo, 'template');
 });
 
 // Canal configurado como wapi + adaptador fora do ar não pode virar silêncio: membro
 // escrevendo pra liga e não recebendo resposta é pior do que responder pelo outro número.
 test('W-API indisponível cai na oficial em vez de derrubar o atendimento', async () => {
-  const { mod, chamadas } = comCanais({ canal: 'wapi' }); // sem criar o adaptador
+  const { mod, chamadas } = comCanais({ canal: 'wapi', wapiQuebrado: true });
   await mod.enviarTexto('595991', 'oi');
   assert.strictEqual(chamadas[0].via, 'oficial');
 });

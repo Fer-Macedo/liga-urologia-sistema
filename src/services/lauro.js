@@ -372,11 +372,14 @@ async function enviarMensagem(numero, mensagem) {
   const r = await enviarTexto(numero, mensagem);
   if (!r.ok) console.error('Lauro erro envio:', JSON.stringify(r.erro));
 }
-// Notifica um numero de area sobre atendimento novo. Texto livre so entrega dentro da
-// janela de 24h desde a ultima mensagem DA area (fora dela o WhatsApp devolve 131047 e o
-// aviso some em silencio — era por isso que a secretaria nao ficava sabendo dos
-// atendimentos). Se o texto livre falhar, cai para um modelo aprovado, que entrega a
-// qualquer momento; quando a area responder, a janela reabre e o proxy volta ao normal.
+// Notifica um numero de area (secretaria, financeiro...) sobre atendimento novo. Vai pelo
+// MESMO canal do assistente: quem escreve pra liga e a area que atende conversam pelo
+// numero do atendimento, nao pelo numero dos disparos.
+//
+// Na W-API nao existe janela de 24h — texto livre entrega sempre, que era o problema que
+// esta funcao vinha contornando. O modelo aprovado fica como rede de seguranca: se a
+// W-API estiver fora do ar, o aviso ainda sai pela API Oficial (de outro numero, o que
+// e feio, mas infinitamente melhor do que a secretaria nao ficar sabendo do atendimento).
 async function notificarArea(numeroArea, msgArea, nomeMembro, areaNome) {
   const { enviarTexto, enviarTemplate } = require('./canal-assistente');
   const r = await enviarTexto(numeroArea, msgArea);

@@ -82,6 +82,7 @@ require('./processo-seletivo')(router);
 require('./projetos-academicos')(router);
 require('./projeto-fluxo')(router);
 require('./whatsapp-oficial')(router);
+require('./whatsapp-wapi')(router);
 require('./sorteios')(router);
 require('./lista-assinaturas')(router);
 require('./fluxo-caixa')(router);
