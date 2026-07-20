@@ -157,7 +157,7 @@ body{display:flex;min-height:100vh;background:var(--v)}
 
     <p class="form-help">
       ¿Problemas para acceder? Contactanos por<br>
-      <a href="https://wa.me/595992010423" target="_blank">WhatsApp</a> o por <a href="mailto:lauroucpcde@lauroucpcde.com">correo electrónico</a>
+      <a href="https://wa.me/<%= typeof waAtendimento !== 'undefined' && waAtendimento ? waAtendimento : '595994316286' %>" target="_blank">WhatsApp</a> o por <a href="mailto:lauroucpcde@lauroucpcde.com">correo electrónico</a>
     </p>
   </div>
   <div class="right-footer">Liga Académica de Urología — LAURO · © <%= new Date().getFullYear() %></div>

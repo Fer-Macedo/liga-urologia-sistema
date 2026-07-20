@@ -111,6 +111,13 @@ app.use(async (req, res, next) => {
   res.locals.permissoesAtivas = req.session.permissoesAtivas || [];
   // Badge de correções de cadastro pendentes na sidebar (só p/ quem está logado no painel)
   res.locals.correcoesPendentesCount = 0;
+  // Número do atendimento: as páginas públicas montam o link do WhatsApp com ele.
+  // Injetado aqui porque quem mais usa são páginas sem login (inscrição, checkout,
+  // desafio azul) e cada rota ter que lembrar de passar era o que gerou os 20 números
+  // escritos à mão que isso veio substituir.
+  try {
+    res.locals.waAtendimento = await require('./services/contato').whatsappAtendimento();
+  } catch (e) { res.locals.waAtendimento = require('./services/contato').PADRAO; }
   if (req.session.usuario) {
     try {
       const r = await query("SELECT COUNT(*) n FROM cadastro_correcoes WHERE status='pendente'");
@@ -141,6 +148,9 @@ async function start() {
       iniciarAgendamentos();
       agendarBackup();
     }
+    // Aquece o número do atendimento: o rodapé dos e-mails lê de forma síncrona e
+    // sem isso o primeiro e-mail após o boot sairia com o valor padrão do código.
+    require('./services/contato').aquecer();
     httpServer.listen(PORT, () => {
       console.log('\n🏥 Liga Urologia — Sistema de Cobranças');
       console.log('🌐 Porta: ' + PORT + '\n');

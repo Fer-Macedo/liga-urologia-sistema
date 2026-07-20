@@ -58,6 +58,9 @@ router.post('/configuracoes', requireAuth, requireAdmin, async (req, res) => {
           await query('INSERT INTO configuracoes (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2',[campo+'_chave',r.chave]);
         }
       }
+      // O número do atendimento fica em cache de 60s: sem limpar, a tela mostraria o
+      // número novo e as páginas públicas continuariam com o antigo por até um minuto.
+      require('../services/contato').limparCache();
       req.flash('msg', 'Configurações salvas!');
       res.redirect('/configuracoes');
     } catch(e) { console.error('salvar config:', e); req.flash('erro', e.message); res.redirect('/configuracoes'); }

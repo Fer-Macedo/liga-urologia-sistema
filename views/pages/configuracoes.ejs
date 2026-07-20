@@ -92,6 +92,14 @@
                   <input class="input" id="corTexto" value="<%=config.org_cor||'#1a56db'%>" placeholder="#1a56db" style="flex:1" readonly>
                 </div>
               </div>
+              <div class="campo" style="grid-column:1/-1">
+                <label class="label">WhatsApp do atendimento</label>
+                <input name="whatsapp_atendimento" class="input" value="<%=config.whatsapp_atendimento||'595994316286'%>" placeholder="595994316286" pattern="[0-9]{10,15}" title="Somente numeros, com o codigo do pais. Ex: 595994316286">
+                <p style="margin:6px 0 0;font-size:11.5px;color:var(--texto2);line-height:1.5">
+                  Numero que aparece em <strong>todas</strong> as paginas publicas (inscricao, checkout, portal do membro)
+                  e no rodape dos e-mails. Somente numeros, com o codigo do pais e sem o sinal de mais.
+                </p>
+              </div>
             </div>
           </div>
         </div>

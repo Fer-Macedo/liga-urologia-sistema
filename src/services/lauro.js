@@ -364,9 +364,11 @@ REGLAS IMPORTANTES:
   }
 }
 
-// Integração única de WhatsApp: API Oficial da Meta (whatsapp-oficial.js).
+// O assistente NAO escolhe o transporte: quem escolhe e o canal-assistente.js. Isso separa
+// o cerebro (este arquivo) do canal, para que o atendimento possa migrar para a W-API sem
+// tocar na logica de conversa e sem afetar os disparos, que seguem pela API Oficial.
 async function enviarMensagem(numero, mensagem) {
-  const { enviarTexto } = require('./whatsapp-oficial');
+  const { enviarTexto } = require('./canal-assistente');
   const r = await enviarTexto(numero, mensagem);
   if (!r.ok) console.error('Lauro erro envio:', JSON.stringify(r.erro));
 }
@@ -376,7 +378,7 @@ async function enviarMensagem(numero, mensagem) {
 // atendimentos). Se o texto livre falhar, cai para um modelo aprovado, que entrega a
 // qualquer momento; quando a area responder, a janela reabre e o proxy volta ao normal.
 async function notificarArea(numeroArea, msgArea, nomeMembro, areaNome) {
-  const { enviarTexto, enviarTemplate } = require('./whatsapp-oficial');
+  const { enviarTexto, enviarTemplate } = require('./canal-assistente');
   const r = await enviarTexto(numeroArea, msgArea);
   if (r.ok) return;
   console.warn('[LAURO] Texto livre falhou p/ area (janela 24h?), tentando modelo:', JSON.stringify(r.erro).slice(0, 200));
@@ -389,13 +391,13 @@ async function notificarArea(numeroArea, msgArea, nomeMembro, areaNome) {
   else console.log('[LAURO] Area avisada pelo modelo novo_atendimento (fora da janela de 24h).');
 }
 async function enviarImagem(numero, imagem, legenda) {
-  const { enviarImagem: enviarImagemOficial } = require('./whatsapp-oficial');
-  const r = await enviarImagemOficial(numero, imagem, legenda);
+  const { enviarImagem: enviarImagemCanal } = require('./canal-assistente');
+  const r = await enviarImagemCanal(numero, imagem, legenda);
   if (!r.ok) console.error('Lauro erro envio imagem:', JSON.stringify(r.erro));
 }
 async function enviarDocumento(numero, documento, fileName) {
-  const { enviarDocumento: enviarDocumentoOficial } = require('./whatsapp-oficial');
-  const r = await enviarDocumentoOficial(numero, documento, fileName);
+  const { enviarDocumento: enviarDocumentoCanal } = require('./canal-assistente');
+  const r = await enviarDocumentoCanal(numero, documento, fileName);
   if (!r.ok) console.error('Lauro erro envio documento:', JSON.stringify(r.erro));
 }
 
