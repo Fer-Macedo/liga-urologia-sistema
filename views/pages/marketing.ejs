@@ -453,6 +453,58 @@
           <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">O Claude analisa os dados reais da conta e monta um plano de ação para a equipe engajar melhor e crescer. Gerado toda segunda automaticamente — e você pode gerar na hora quando quiser.</p>
           <div id="estrat-conteudo"><p style="color:var(--texto2);font-size:13px">Carregando…</p></div>
         </div>
+        <div class="card" style="margin-top:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:8px">
+            <div>
+              <div class="card-titulo">🗓️ Cronograma sugerido</div>
+              <div style="font-size:12px;color:var(--texto2)">A IA propõe os temas; a equipe aceita, recusa ou comenta.</div>
+            </div>
+            <button class="btn btn-primario btn-sm" id="btn-crono" onclick="gerarCronograma()">Gerar sugestões</button>
+          </div>
+          <div class="campo" style="margin:12px 0">
+            <label class="label" style="font-size:12px">Pedido da equipe (opcional) — a IA leva em conta na próxima geração</label>
+            <input id="crono-pedido" class="input" placeholder="Ex: menos post de campanha, mais bastidores da liga">
+          </div>
+          <p style="font-size:11.5px;color:var(--texto2);margin-bottom:14px">
+            Terça e sexta não recebem sugestão: são do Momento Revalida Brasil.
+          </p>
+          <% if (!sugestoes || !sugestoes.length) { %>
+            <div style="text-align:center;padding:28px;color:var(--texto2);font-size:13px">
+              Nenhuma sugestão ainda. Clique em "Gerar sugestões".
+            </div>
+          <% } else { %>
+            <div style="display:flex;flex-direction:column;gap:10px">
+            <% sugestoes.forEach(function(s){
+                 var cor = s.status==='aceita' ? '#10b981' : (s.status==='recusada' ? '#94a3b8' : 'var(--cor-primaria)');
+                 var opac = s.status==='recusada' ? '.55' : '1'; %>
+              <div style="border:1px solid var(--borda);border-left:5px solid <%=cor%>;border-radius:var(--rad);padding:14px 16px;opacity:<%=opac%>">
+                <div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap">
+                  <span style="font-weight:700;font-size:15px;color:<%=cor%>"><%= s.dia %></span>
+                  <span style="font-weight:600;font-size:14px"><%= s.tema %></span>
+                  <span class="rede-badge" style="background:var(--fundo);color:var(--texto2)"><%= s.formato %></span>
+                  <% if (s.status!=='sugerida') { %>
+                    <span style="font-size:11px;color:<%=cor%>;font-weight:700;text-transform:uppercase"><%= s.status %></span>
+                  <% } %>
+                </div>
+                <% if (s.justificativa) { %>
+                  <div style="font-size:12.5px;color:var(--texto2);margin-top:6px;line-height:1.5"><%= s.justificativa %></div>
+                <% } %>
+                <% if (s.comentario_equipe) { %>
+                  <div style="font-size:12px;margin-top:8px;padding:8px 10px;background:var(--fundo);border-radius:6px">
+                    <b>Equipe:</b> <%= s.comentario_equipe %>
+                    <% if (s.respondido_por) { %><span style="color:var(--texto2)"> — <%= s.respondido_por %>, <%= s.respondido %></span><% } %>
+                  </div>
+                <% } %>
+                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap">
+                  <input class="input" id="cmt-<%=s.id%>" placeholder="Comentário (opcional)" style="flex:1;min-width:180px;font-size:12.5px;padding:7px 10px">
+                  <button class="btn btn-sm" onclick="responderSugestao(<%=s.id%>,'aceita')" style="color:#059669">Aceitar</button>
+                  <button class="btn btn-sm" onclick="responderSugestao(<%=s.id%>,'recusada')" style="color:#dc2626">Recusar</button>
+                </div>
+              </div>
+            <% }); %>
+            </div>
+          <% } %>
+        </div>
       </div>
       <div class="mkt-section" id="tab-interno">
         <div class="interno-banner">
@@ -1864,6 +1916,34 @@ function carregarEstrategiaIG(){
     else box.innerHTML='<p style="color:#dc2626;font-size:13px">'+(d.erro||'erro')+'</p>';
   }).catch(function(){ box.innerHTML='<p style="color:#dc2626;font-size:13px">Erro ao carregar.</p>'; });
 }
+function gerarCronograma(){
+  var b=document.getElementById('btn-crono'); if(!b) return;
+  var pedido=(document.getElementById('crono-pedido')||{}).value||'';
+  b.disabled=true; var txt=b.textContent; b.textContent='Gerando…';
+  fetch('/marketing/cronograma/gerar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pedido:pedido})})
+    .then(function(r){return r.json()})
+    .then(function(d){
+      if(d.ok){ mostrarAviso(d.gravadas+' sugestão(ões) gerada(s).'); setTimeout(function(){location.reload()},900); }
+      else { mostrarAviso(d.erro||'Não foi possível gerar as sugestões.'); b.disabled=false; b.textContent=txt; }
+    })
+    .catch(function(){ mostrarAviso('Falha de conexão ao gerar sugestões.'); b.disabled=false; b.textContent=txt; });
+}
+
+function responderSugestao(id,status){
+  var campo=document.getElementById('cmt-'+id);
+  var comentario=campo?campo.value:'';
+  if(status==='recusada' && !comentario){
+    mostrarAviso('Escreva o motivo da recusa — é ele que a IA usa para não repetir o tema.');
+    if(campo) campo.focus();
+    return;
+  }
+  fetch('/marketing/sugestao/'+id+'/responder',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({status:status,comentario:comentario})})
+    .then(function(r){return r.json()})
+    .then(function(d){ if(d.ok) location.reload(); else mostrarAviso(d.erro||'Não foi possível registrar a resposta.'); })
+    .catch(function(){ mostrarAviso('Falha de conexão.'); });
+}
+
 function gerarEstrategiaIG(){
   var btn=document.getElementById('btn-estrat'), box=document.getElementById('estrat-conteudo');
   var t=btn.textContent; btn.disabled=true; btn.textContent='Analisando…';

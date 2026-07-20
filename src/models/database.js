@@ -295,6 +295,25 @@ async function initSchema() {
     );
   }
 
+  // Cronograma de conteudo sugerido pela IA + resposta da equipe. E conversa, nao
+  // monologo: o que a equipe recusa ou comenta volta como contexto na proxima geracao,
+  // para a IA parar de repetir o que ja foi descartado.
+  await query(`
+    CREATE TABLE IF NOT EXISTS marketing_sugestoes (
+      id SERIAL PRIMARY KEY,
+      data_sugerida DATE NOT NULL,
+      tema TEXT NOT NULL,
+      formato VARCHAR(20) DEFAULT 'feed',
+      justificativa TEXT,
+      status VARCHAR(20) DEFAULT 'sugerida',
+      comentario_equipe TEXT,
+      respondido_por VARCHAR(120),
+      respondido_em TIMESTAMP,
+      criado_por VARCHAR(120),
+      criado_em TIMESTAMP DEFAULT NOW()
+    )
+  `);
+
   // Momento Revalida Brasil — fila de questoes do quadro dos stories (2x/semana).
   // Questoes reais do Revalida/INEP; so entram com gabarito DEFINITIVO (anuladas e
   // gabarito preliminar ficam de fora). status='aprovada' = liberada pela orientacao

@@ -23,6 +23,24 @@ router.get('/marketing/instagram/analise', requireAuth, requirePermissao('market
 });
 
 // Análise estratégica por IA: última análise salva + gerar uma nova sob demanda.
+// ─── CRONOGRAMA SUGERIDO PELA IA ──────────────────────────────────────────────
+router.post('/marketing/cronograma/gerar', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { gerarCronograma } = require('../services/marketing-cronograma');
+    const r = await gerarCronograma(req.session.usuario.nome, (req.body || {}).pedido);
+    res.json(r);
+  } catch (e) { res.json({ ok: false, erro: e.message }); }
+});
+
+router.post('/marketing/sugestao/:id/responder', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { responderSugestao } = require('../services/marketing-cronograma');
+    const { status, comentario } = req.body || {};
+    const r = await responderSugestao(req.params.id, status, comentario, req.session.usuario.nome);
+    res.json(r);
+  } catch (e) { res.json({ ok: false, erro: e.message }); }
+});
+
 router.get('/marketing/instagram/estrategia', requireAuth, requirePermissao('marketing'), async (req, res) => {
   try {
     const { ultimaEstrategia } = require('../services/instagram-estrategia');
@@ -277,9 +295,12 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
   ]);
   // A tela de Campanhas mostra qual canal realmente publica — antes ela sugeria que os três
   // funcionavam e o Facebook falhava em silêncio por nunca ter tido credencial cadastrada.
+  let sugestoes = [];
+  try { sugestoes = await require('../services/marketing-cronograma').listarSugestoes(); }
+  catch(e) { console.error('[CRONOGRAMA] erro ao listar:', e.message); }
   const igOk = !!(mktConfig.instagram_token && mktConfig.instagram_id);
   const fbOk = !!(mktConfig.facebook_token && mktConfig.facebook_id);
-  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, igPosts, midias: midiasR.rows, mktConfig, igOk, fbOk, contagem, contaIG, contaFB, igPct, fbPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows, aniversariantesMes: aniversariantesMesR.rows, nomeMesAtual, eventosInternos: eventosInternosR.rows, notas: notasR.rows });
+  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, igPosts, midias: midiasR.rows, mktConfig, igOk, fbOk, sugestoes, contagem, contaIG, contaFB, igPct, fbPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows, aniversariantesMes: aniversariantesMesR.rows, nomeMesAtual, eventosInternos: eventosInternosR.rows, notas: notasR.rows });
 });
 
 router.post('/marketing/interno/evento', requireAuth, requirePermissao('marketing'), async (req, res) => {
