@@ -32,9 +32,13 @@ function htmlSlide(s, total, lauro, ucp) {
     Sem ele a peca ficava fechada demais, so navy — a presidencia apontou. */
  .filete{position:absolute;top:0;left:0;width:1080px;height:10px;
          background:linear-gradient(90deg,${VERDE} 0%,${VERDE} 38%,${AZUL} 38%,${AZUL} 84%,${AMBAR} 84%,${AMBAR} 100%)}
- /* Numeral gigante ao fundo: preenche o vazio e da ritmo de leitura ao carrossel */
- .marca-dagua{position:absolute;right:-30px;bottom:96px;font-family:'Barlow Condensed',sans-serif;
-              font-weight:700;font-size:420px;line-height:.7;color:rgba(255,255,255,.045);letter-spacing:-14px}
+ /* Numeral gigante ao fundo: referencia o ITEM do conteudo (senal 1, 2, 3...), NAO a
+    posicao do slide — essa ja aparece no contador pequeno la em cima. Usar o mesmo numero
+    para as duas coisas fazia a capa contar como 1 e a "Senal 1" exibir um "02" gigante,
+    contradizendo o proprio rotulo. */
+ /* right positivo: com -30px o segundo digito era cortado na borda direita */
+ .marca-dagua{position:absolute;right:56px;bottom:104px;font-family:'Barlow Condensed',sans-serif;
+              font-weight:700;font-size:400px;line-height:.7;color:rgba(255,255,255,.05);letter-spacing:-10px}
  .selo{position:absolute;top:64px;${capa ? 'left:50%;transform:translateX(-50%)' : 'left:64px'};width:${capa ? 156 : 104}px;height:${capa ? 156 : 104}px;
        border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}
  .selo img{width:${capa ? 144 : 96}px;height:${capa ? 144 : 96}px;object-fit:contain}
@@ -59,7 +63,7 @@ function htmlSlide(s, total, lauro, ucp) {
  .marca .ucp img{width:70px;height:70px;object-fit:contain}
 </style></head><body>
  <div class="filete"></div>
- ${s.n ? `<div class="marca-dagua">${String(s.n).padStart(2,'0')}</div>` : ''}
+ ${s.item ? `<div class="marca-dagua">${String(s.item).padStart(2,'0')}</div>` : ''}
  <div class="selo"><img src="${lauro}"></div>
  ${s.n ? `<div class="num">${s.n}/${total}</div>` : ''}
  <div class="corpo">
