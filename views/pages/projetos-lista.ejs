@@ -84,11 +84,13 @@ var fmtD = function(d){ try { return d ? new Date(d).toLocaleDateString('es-PY')
   </div>
 
   <% var perfilL = usuario.perfil; var ehAdminL = perfilL==='admin'||perfilL==='presidencia'; var pend = (typeof pendencias!=='undefined'&&pendencias)||{}; %>
+  <% var pid = (typeof pendenciaId!=='undefined'&&pendenciaId)?pendenciaId:{}; %>
+  <%# Com um unico projeto no estado, o aviso abre o projeto; com varios, filtra a lista. %>
   <% if (ehAdminL && pend.pendente) { %>
-  <div class="aviso amber"><a href="/<%= tipo %>?status=pendente"><%= pend.pendente %> proyecto(s) pendiente(s) de aprobación de la Presidencia — clic para revisar</a></div>
+  <div class="aviso amber"><a href="<%= pid.pendente ? '/projetos/'+pid.pendente : '/'+tipo+'?status=pendente' %>"><%= pend.pendente %> proyecto(s) pendiente(s) de aprobación de la Presidencia — clic para <%= pid.pendente ? 'abrir' : 'revisar' %></a></div>
   <% } %>
   <% if ((perfilL==='secretaria'||ehAdminL) && pend.liberado) { %>
-  <div class="aviso teal"><a href="/<%= tipo %>?status=liberado"><%= pend.liberado %> proyecto(s) liberado(s) esperando generación del Doc y envío a la UCP por Secretaría — clic para ver</a></div>
+  <div class="aviso teal"><a href="<%= pid.liberado ? '/projetos/'+pid.liberado : '/'+tipo+'?status=liberado' %>"><%= pend.liberado %> proyecto(s) liberado(s) esperando generación del Doc y envío a la UCP por Secretaría — clic para ver</a></div>
   <% } %>
   <form class="filtros" method="GET">
     <select name="status" onchange="this.form.submit()">

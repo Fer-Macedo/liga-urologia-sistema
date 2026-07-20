@@ -82,10 +82,18 @@ module.exports = function(router) {
         const editavel = await podeEditar(req.session.usuario, tipo);
         const cnt = await query("SELECT status, COUNT(*) AS n FROM projetos_academicos WHERE tipo=$1 AND status IN ('pendente','liberado') GROUP BY status", [tipo]);
         const pend = {}; cnt.rows.forEach(function(x){ pend[x.status] = parseInt(x.n); });
+        // Quando ha um unico projeto naquele estado, o aviso leva DIRETO a ele. Antes o
+        // aviso sempre apontava para o filtro (?status=pendente) e, com um so projeto, o
+        // filtro nao mudava nada na tela — o clique parecia morto.
+        const unicos = await query(
+          "SELECT status, MIN(id) AS id FROM projetos_academicos WHERE tipo=$1 AND status IN ('pendente','liberado') GROUP BY status HAVING COUNT(*)=1",
+          [tipo]
+        );
+        const pendId = {}; unicos.rows.forEach(function(x){ pendId[x.status] = x.id; });
         res.render('pages/projetos-lista', {
           config: await getConfig(), usuario: req.session.usuario,
           projetos: proj.rows, filtros: {status: status||'', q: q||''},
-          tipo, editavel, pendencias: pend
+          tipo, editavel, pendencias: pend, pendenciaId: pendId
         });
       } catch(e) { console.error(e); req.flash('erro', e.message); res.redirect('/dashboard'); }
     });
