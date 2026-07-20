@@ -201,6 +201,10 @@
         <button class="mkt-tab" onclick="showTab('analytics',this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
           Analytics</button>
+        <button class="mkt-tab" onclick="showTab('revalida',this)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          Momento Revalida
+        </button>
         <button class="mkt-tab" onclick="showTab('estrategia',this)">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.5.4.8 1 .9 1.6h6.2c.1-.6.4-1.2.9-1.6A7 7 0 0 0 12 2z"/></svg>
           Estratégia</button>
@@ -448,6 +452,64 @@
         </div>
         <%});%>
       </div>
+      <div class="mkt-section" id="tab-revalida">
+        <div class="card">
+          <div class="card-titulo" style="margin-bottom:4px">📋 Momento Revalida Brasil</div>
+          <p style="font-size:12px;color:var(--texto2);margin-bottom:16px">
+            Quadro híbrido: o sistema envia as artes por e-mail <b>terça e sexta às 6h</b> e a equipe publica
+            pelo aplicativo, encaixando a enquete. Só sai o que estiver <b>aprovado</b>.
+          </p>
+          <% var fila = (typeof revalidaFila !== 'undefined' && revalidaFila) ? revalidaFila : [];
+             var apr = fila.filter(function(q){return q.status==='aprovada' && !q.enviado});
+             var env = fila.filter(function(q){return q.enviado}); %>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
+            <div style="background:var(--fundo);border-radius:var(--rad);padding:12px;text-align:center">
+              <div style="font-size:22px;font-weight:700;color:#10b981"><%= apr.length %></div>
+              <div style="font-size:11px;color:var(--texto2)">Aprovadas na fila</div></div>
+            <div style="background:var(--fundo);border-radius:var(--rad);padding:12px;text-align:center">
+              <div style="font-size:22px;font-weight:700;color:var(--texto2)"><%= fila.length - apr.length - env.length %></div>
+              <div style="font-size:11px;color:var(--texto2)">Aguardando aprovação</div></div>
+            <div style="background:var(--fundo);border-radius:var(--rad);padding:12px;text-align:center">
+              <div style="font-size:22px;font-weight:700;color:var(--cor-primaria)"><%= env.length %></div>
+              <div style="font-size:11px;color:var(--texto2)">Já enviadas</div></div>
+          </div>
+          <% if (!fila.length) { %>
+            <div style="text-align:center;padding:28px;color:var(--texto2);font-size:13px">Nenhuma questão cadastrada.</div>
+          <% } else { %>
+            <div style="display:flex;flex-direction:column;gap:10px">
+            <% fila.forEach(function(q){
+                 var cor = q.publicado ? '#10b981' : (q.enviado ? '#2563eb' : (q.status==='aprovada' ? '#10b981' : 'var(--texto2)')); %>
+              <div style="border:1px solid var(--borda);border-left:5px solid <%=cor%>;border-radius:var(--rad);padding:13px 16px">
+                <div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
+                  <span style="font-weight:700;color:<%=cor%>"><%= q.ordem %>º</span>
+                  <span style="font-weight:600;font-size:13.5px"><%= q.fonte %></span>
+                  <span class="rede-badge" style="background:var(--fundo);color:var(--texto2)">gabarito <%= q.gabarito %></span>
+                  <% if (q.publicado) { %><span style="font-size:11px;font-weight:700;color:#10b981">✓ PUBLICADO <%= q.publicado %></span>
+                  <% } else if (q.enviado) { %><span style="font-size:11px;font-weight:700;color:#2563eb">✉ ENVIADO <%= q.enviado %></span>
+                  <% } else if (q.status==='aprovada') { %><span style="font-size:11px;font-weight:700;color:#10b981">APROVADA<%= q.aprovado_por ? ' · ' + q.aprovado_por : '' %></span>
+                  <% } %>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center">
+                  <button class="btn btn-sm" onclick="verArteRevalida(<%=q.id%>)">Ver artes</button>
+                  <% if (!q.enviado) { %>
+                    <% if (q.status==='aprovada') { %>
+                      <button class="btn btn-sm" onclick="statusRevalida(<%=q.id%>,'rascunho')" style="color:var(--texto2)">Voltar a rascunho</button>
+                    <% } else { %>
+                      <button class="btn btn-sm" onclick="statusRevalida(<%=q.id%>,'aprovada')" style="color:#059669">Aprovar</button>
+                    <% } %>
+                  <% } %>
+                  <% if (q.enviado && !q.publicado) { %>
+                    <button class="btn btn-sm btn-primario" onclick="publicadoRevalida(<%=q.id%>)">Marcar como publicado</button>
+                  <% } %>
+                  <% if (q.publicado_por) { %><span style="font-size:11.5px;color:var(--texto2)">por <%= q.publicado_por %></span><% } %>
+                </div>
+              </div>
+            <% }); %>
+            </div>
+          <% } %>
+        </div>
+      </div>
+
       <div class="mkt-section" id="tab-estrategia">
         <style>.estrat-body h4{margin:18px 0 6px;font-size:14px;color:var(--texto)}.estrat-body h4:first-child{margin-top:0}.estrat-body ul{margin:0 0 10px;padding-left:20px}.estrat-body li{margin-bottom:5px;font-size:13px;line-height:1.5}.estrat-body p{font-size:13px;margin:0 0 10px;color:var(--texto2);line-height:1.5}</style>
         <div class="card">
@@ -2007,6 +2069,61 @@ function enviarChatMkt(){
       mostrarAviso('Falha de conexão.');
     })
     .finally(function(){ b.disabled = false; b.textContent = 'Enviar'; });
+}
+
+function statusRevalida(id, status){
+  var msg = status==='aprovada'
+    ? 'Aprovar esta questão? Ela entra na fila e sai no próximo envio (terça ou sexta, 6h).'
+    : 'Voltar esta questão para rascunho? Ela sai da fila e não será enviada.';
+  confirmarAcao(msg, function(){
+    fetch('/marketing/revalida/'+id+'/status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:status})})
+      .then(function(r){return r.json()})
+      .then(function(d){ if(d.ok) location.reload(); else mostrarAviso(d.erro||'Não foi possível alterar.'); })
+      .catch(function(){ mostrarAviso('Falha de conexão.'); });
+  });
+}
+
+function publicadoRevalida(id){
+  confirmarAcao('Confirmar que esta questão já foi publicada no Instagram?', function(){
+    fetch('/marketing/revalida/'+id+'/publicado',{method:'POST'})
+      .then(function(r){return r.json()})
+      .then(function(d){ if(d.ok) location.reload(); else mostrarAviso(d.erro||'Não foi possível registrar.'); })
+      .catch(function(){ mostrarAviso('Falha de conexão.'); });
+  });
+}
+
+function verArteRevalida(id){
+  var m = document.getElementById('modal-arte-revalida');
+  if(!m){
+    m = document.createElement('div');
+    m.id = 'modal-arte-revalida';
+    m.className = 'modal-overlay';
+    m.innerHTML = '<div class="modal" style="max-width:820px">'
+      + '<div class="modal-header"><span class="modal-titulo">Artes do envio</span>'
+      + '<button class="icon-btn" onclick="document.getElementById(\'modal-arte-revalida\').style.display=\'none\'">✕</button></div>'
+      + '<div style="padding:16px"><p style="font-size:12px;color:var(--texto2);margin-bottom:12px">'
+      + 'São exatamente as imagens que vão anexadas no e-mail. A geração leva alguns segundos.</p>'
+      + '<div id="arte-rev-box" style="display:grid;grid-template-columns:1fr 1fr;gap:14px"></div></div></div>';
+    document.body.appendChild(m);
+  }
+  var box = document.getElementById('arte-rev-box');
+  box.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:34px;color:var(--texto2);font-size:13px">Gerando as artes…</div>';
+  m.style.display = 'flex';
+  var pronto = 0;
+  ['pergunta','resposta'].forEach(function(tipo){
+    var img = new Image();
+    img.style.cssText = 'width:100%;border-radius:8px;border:1px solid var(--borda)';
+    img.onload = function(){
+      if(!pronto){ box.innerHTML = ''; }
+      pronto++;
+      var w = document.createElement('div');
+      w.innerHTML = '<div style="font-size:11.5px;font-weight:700;color:var(--texto2);margin-bottom:6px;text-transform:uppercase">'+tipo+'</div>';
+      w.appendChild(img);
+      box.appendChild(w);
+    };
+    img.onerror = function(){ box.innerHTML = '<div style="grid-column:1/-1;color:#dc2626;font-size:13px;padding:20px">Não foi possível gerar a arte.</div>'; };
+    img.src = '/marketing/revalida/'+id+'/arte/'+tipo+'?t='+Date.now();
+  });
 }
 
 function gerarCronograma(){

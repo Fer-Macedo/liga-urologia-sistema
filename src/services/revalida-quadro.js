@@ -214,4 +214,39 @@ async function enviarQuadroRevalida() {
   return { ok: enviados > 0, enviados, questao: q.id };
 }
 
-module.exports = { gerarArtes, enviarQuadroRevalida, proximaQuestao };
+
+// ─── OPERACAO PELA TELA ───────────────────────────────────────────────────────
+// O quadro e hibrido: o sistema manda as artes por e-mail e a equipe publica pelo app.
+// Sem estas funcoes a fila era invisivel — ninguem via o que ia sair, o que ja saiu, nem
+// se alguem chegou a publicar.
+async function listarFila() {
+  const r = await query(
+    `SELECT id, ordem, fonte, gabarito, status,
+            to_char(enviado_em,'DD/MM HH24:MI') AS enviado,
+            to_char(publicado_em,'DD/MM HH24:MI') AS publicado,
+            aprovado_por, publicado_por
+     FROM revalida_questoes ORDER BY ordem, id`
+  );
+  return r.rows;
+}
+
+async function definirStatus(id, status, usuario) {
+  if (!['rascunho', 'aprovada'].includes(status)) return { ok: false, erro: 'Status inválido.' };
+  await query('UPDATE revalida_questoes SET status=$1, aprovado_por=$2 WHERE id=$3',
+    [status, status === 'aprovada' ? usuario : null, id]);
+  return { ok: true };
+}
+
+// Confirmacao manual: quem publicou pelo app marca aqui, senao nao existe registro de
+// que a peca foi ao ar — o sistema so sabe que mandou o e-mail.
+async function marcarPublicado(id, usuario) {
+  await query('UPDATE revalida_questoes SET publicado_em=NOW(), publicado_por=$1 WHERE id=$2', [usuario, id]);
+  return { ok: true };
+}
+
+async function questaoPorId(id) {
+  const r = await query('SELECT * FROM revalida_questoes WHERE id=$1', [id]);
+  return r.rows[0] || null;
+}
+
+module.exports = { gerarArtes, enviarQuadroRevalida, proximaQuestao, listarFila, definirStatus, marcarPublicado, questaoPorId };

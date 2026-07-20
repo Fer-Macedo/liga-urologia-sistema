@@ -23,6 +23,34 @@ router.get('/marketing/instagram/analise', requireAuth, requirePermissao('market
 });
 
 // Análise estratégica por IA: última análise salva + gerar uma nova sob demanda.
+// ─── MOMENTO REVALIDA — operacao pela tela ────────────────────────────────────
+router.post('/marketing/revalida/:id/status', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { definirStatus } = require('../services/revalida-quadro');
+    res.json(await definirStatus(req.params.id, (req.body || {}).status, req.session.usuario.nome));
+  } catch (e) { res.json({ ok: false, erro: e.message }); }
+});
+
+router.post('/marketing/revalida/:id/publicado', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { marcarPublicado } = require('../services/revalida-quadro');
+    res.json(await marcarPublicado(req.params.id, req.session.usuario.nome));
+  } catch (e) { res.json({ ok: false, erro: e.message }); }
+});
+
+// Previa da arte. Gera na hora (~4s) a partir dos dados da questao — e exatamente a
+// mesma funcao que o cron usa no envio, entao o que se ve aqui e o que vai por e-mail.
+router.get('/marketing/revalida/:id/arte/:tipo', requireAuth, requirePermissao('marketing'), async (req, res) => {
+  try {
+    const { questaoPorId, gerarArtes } = require('../services/revalida-quadro');
+    const q = await questaoPorId(req.params.id);
+    if (!q) return res.status(404).send('Questão não encontrada');
+    const artes = await gerarArtes(q);
+    const img = req.params.tipo === 'resposta' ? artes.resposta : artes.pergunta;
+    res.set('Content-Type', 'image/png').set('Cache-Control', 'private, max-age=300').send(img);
+  } catch (e) { res.status(500).send('Erro ao gerar a arte: ' + e.message); }
+});
+
 // ─── CHAT DE MARKETING COM A IA ───────────────────────────────────────────────
 router.post('/marketing/chat', requireAuth, requirePermissao('marketing'), async (req, res) => {
   try {
@@ -311,12 +339,15 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
   ]);
   // A tela de Campanhas mostra qual canal realmente publica — antes ela sugeria que os três
   // funcionavam e o Facebook falhava em silêncio por nunca ter tido credencial cadastrada.
+  let revalidaFila = [];
+  try { revalidaFila = await require('../services/revalida-quadro').listarFila(); }
+  catch(e) { console.error('[REVALIDA] erro ao listar fila:', e.message); }
   let sugestoes = [];
   try { sugestoes = await require('../services/marketing-cronograma').listarSugestoes(); }
   catch(e) { console.error('[CRONOGRAMA] erro ao listar:', e.message); }
   const igOk = !!(mktConfig.instagram_token && mktConfig.instagram_id);
   const fbOk = !!(mktConfig.facebook_token && mktConfig.facebook_id);
-  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, igPosts, midias: midiasR.rows, mktConfig, igOk, fbOk, sugestoes, contagem, contaIG, contaFB, igPct, fbPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows, aniversariantesMes: aniversariantesMesR.rows, nomeMesAtual, eventosInternos: eventosInternosR.rows, notas: notasR.rows });
+  res.render('pages/marketing', { config, usuario: req.session.usuario, msg, erro, posts, igPosts, midias: midiasR.rows, mktConfig, igOk, fbOk, sugestoes, revalidaFila, contagem, contaIG, contaFB, igPct, fbPct, canvaConectado, equipeLigantes, equipeDiretivos, siteBanners, siteVideoUrl, marcaDaguaUrl, galerias, aniversarioAtivo, aniversarioTemplateUrl, aniversariantesHoje: aniversariantesHojeR.rows, aniversariantesMes: aniversariantesMesR.rows, nomeMesAtual, eventosInternos: eventosInternosR.rows, notas: notasR.rows });
 });
 
 router.post('/marketing/interno/evento', requireAuth, requirePermissao('marketing'), async (req, res) => {

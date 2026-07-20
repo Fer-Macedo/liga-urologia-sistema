@@ -313,6 +313,13 @@ async function initSchema() {
     )
   `);
 
+  // Colunas de operacao do quadro Revalida. ALTER e seguro aqui: revalida_questoes foi
+  // criada por este initSchema, entao pertence ao ligauser (testado). Diferente de
+  // instagram_posts, que e do postgres — ver o comentario mais acima.
+  await query('ALTER TABLE revalida_questoes ADD COLUMN IF NOT EXISTS aprovado_por VARCHAR(120)');
+  await query('ALTER TABLE revalida_questoes ADD COLUMN IF NOT EXISTS publicado_em TIMESTAMP');
+  await query('ALTER TABLE revalida_questoes ADD COLUMN IF NOT EXISTS publicado_por VARCHAR(120)');
+
   // Cronograma de conteudo sugerido pela IA + resposta da equipe. E conversa, nao
   // monologo: o que a equipe recusa ou comenta volta como contexto na proxima geracao,
   // para a IA parar de repetir o que ja foi descartado.
