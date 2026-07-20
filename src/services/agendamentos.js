@@ -32,7 +32,11 @@ async function gerarCobrancasMes() {
     // Vencimento sempre dia fixo do mes de referencia (nunca usar hoje.date() pois se o dia ja passou dayjs retorna data errada)
     const dataVenc = `${mes}-${String(diaVenc).padStart(2,'0')}`;
     const valorCheio = parseFloat(membro.mensalidade) || 0;
-    const descPct = parseFloat(membro.desconto_pontualidade) || parseFloat(config.desconto_padrao) || 20;
+    // Primeiro valor numerico valido, aceitando ZERO. Com `||`, um desconto de 0% (que e
+    // parseFloat('0')=0, falsy) era tratado como ausente e virava 20% — o membro que
+    // deveria pagar cheio ganhava desconto. So cai no proximo quando o anterior e NaN.
+    const primeiroNum = (...vs) => { for (const v of vs) { const n = parseFloat(v); if (!Number.isNaN(n)) return n; } return 20; };
+    const descPct = primeiroNum(membro.desconto_pontualidade, config.desconto_padrao);
     const valorDesc = +(valorCheio * (1 - descPct / 100)).toFixed(2);
 
     // O PIX de desconto DEVE expirar no vencimento — o PagBank nao deixa cancelar um PIX

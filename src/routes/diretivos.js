@@ -216,16 +216,19 @@ router.get('/diretivos/relatorio', requireAuth, requireSecretaria, async (req, r
   const config = await getConfig();
   const q = req.query;
   const filtros = { status: q.status||'todos', cargo: q.cargo||'todos', semestre_turma: q.semestre_turma||'todos', ordem: q.ordem||'nome', colunas: q.colunas ? (Array.isArray(q.colunas) ? q.colunas : [q.colunas]) : ['nome','email','cargo','semestre_turma','whatsapp','status'] };
+  // Valores viram parametros; nomes de coluna sao literais e o ORDER BY vem do whitelist.
   let where = [];
+  const params = [];
+  const eq = (coluna, valor) => { params.push(valor); where.push(`${coluna} = $${params.length}`); };
   if (filtros.status === 'ativo') where.push("ativo = 1");
   if (filtros.status === 'inativo') where.push("ativo = 0");
-  if (filtros.cargo !== 'todos') where.push(`cargo = '${filtros.cargo.replace(/'/g,"''")}'`);
-  if (filtros.semestre_turma !== 'todos') where.push(`semestre_turma = '${filtros.semestre_turma.replace(/'/g,"''")}'`);
+  if (filtros.cargo !== 'todos') eq('cargo', filtros.cargo);
+  if (filtros.semestre_turma !== 'todos') eq('semestre_turma', filtros.semestre_turma);
   const ordens = { nome:'nome ASC', nome_desc:'nome DESC', cargo:'cargo ASC', semestre_turma:'semestre_turma ASC', cadastrado_em:'cadastrado_em DESC' };
   const orderBy = ordens[filtros.ordem] || 'nome ASC';
   const sql = `SELECT * FROM diretivos ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY ${orderBy}`;
   const [r, cargosR, semestresR] = await Promise.all([
-    query(sql),
+    query(sql, params),
     query("SELECT DISTINCT cargo FROM diretivos WHERE cargo IS NOT NULL AND cargo <> '' ORDER BY cargo"),
     query("SELECT DISTINCT semestre_turma FROM diretivos WHERE semestre_turma IS NOT NULL AND semestre_turma <> '' ORDER BY semestre_turma")
   ]);
