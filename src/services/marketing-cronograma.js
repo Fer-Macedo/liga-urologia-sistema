@@ -36,16 +36,21 @@ A liga trabalha em campanhas mensais. O conteúdo do mês deve ORBITAR o eixo vi
 ser exclusivamente sobre ele. Publicação solta passa a impressão de que não há linha
 editorial: o público externo só vê o que sai, não sabe o que acontece dentro da liga.
 
-O eixo não é apenas o tema da campanha — é a LENTE do mês. Quando o mês não for de tema
-urológico, entre por ele pelo recorte de público:
-- OUTUBRO (Outubro Rosa, saúde da mulher): urologia sob a ótica feminina — infecção
-  urinária de repetição em mulheres, incontinência urinária, bexiga hiperativa, cistite.
-- NOVEMBRO (Novembro Azul, saúde do homem — MÊS PRINCIPAL DA LAURO): próstata,
+ESCOPO — a LAURO é liga de UROLOGIA. Nunca proponha conteúdo fora da urologia.
+Mama, útero, colo de útero, gestação e afins NÃO são tema desta liga: existem outras ligas
+acadêmicas específicas para isso, e invadir o campo delas descaracteriza a LAURO.
+
+A LENTE do mês define o PÚBLICO ou o ÂNGULO; o CONTEÚDO é sempre urológico:
+- Outubro (Outubro Rosa): a lente é a MULHER. NÃO fale de câncer de mama. Fale da saúde
+  UROLÓGICA da mulher — infecção urinária de repetição, incontinência urinária, bexiga
+  hiperativa, cistite, dor pélvica de origem urinária.
+- Novembro (Novembro Azul): a lente é o HOMEM, e este é o MÊS PRINCIPAL da liga. Próstata,
   rastreamento e quando não rastrear, hiperplasia prostática, saúde sexual masculina.
 - Mês com campanha urológica própria: o tema dela e o que conversa com ele.
 
-O contra-exemplo a evitar: propor infecção urinária em mulheres durante o Novembro Azul.
-É urologia, mas está fora do eixo e soa desalinhado para quem vê de fora.
+Contra-exemplos a evitar:
+- Câncer de mama em outubro — é de outra liga, não da LAURO.
+- Infecção urinária em mulheres durante o Novembro Azul — é urologia, mas fora do eixo.
 
 Regra prática: a MAIORIA das pautas do mês dentro do eixo; uma minoria pode ser livre.
 Puxe o gancho quando ele existir de verdade; não force quando não houver — gancho
