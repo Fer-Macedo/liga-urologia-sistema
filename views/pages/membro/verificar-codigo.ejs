@@ -25,16 +25,23 @@ input:focus{border-color:#0F6E56}
 <body>
 <div class="box">
   <h1>Verificar Código</h1>
-  <div class="info">Enviamos un código de 6 dígitos a <strong><%=email%></strong>. Revisá tu bandeja de entrada y el spam.</div>
+  <div class="info">
+    <%if(email){%>Enviamos un código de 6 dígitos a <strong><%=email%></strong>. Revisá tu bandeja de entrada y el spam.
+    <%}else{%>Ingresá el correo donde recibiste el código de 6 dígitos.<%}%>
+  </div>
   <%if(locals.erro){%><div class="erro"><%=erro%></div><%}%>
   <form method="POST" action="/membro/verificar-codigo">
-    <input type="hidden" name="email" value="<%=email%>">
+    <%# O e-mail fica VISIVEL e editavel de proposito. Como campo escondido, quem abrisse %>
+    <%# esta tela em outro aparelho (o caso do iPad) enviava e-mail vazio, e a conferencia %>
+    <%# respondia "codigo invalido" para qualquer codigo, para sempre. %>
+    <label>Correo electrónico</label>
+    <input type="email" name="email" value="<%=email%>" placeholder="tu@correo.com" required <%if(!email){%>autofocus<%}%>>
     <label>Código de verificación</label>
-    <input type="text" name="codigo" class="codigo-input" placeholder="000000" maxlength="6" required autofocus autocomplete="off">
-    <label>Nueva contraseña (mínimo 6 caracteres)</label>
-    <input type="password" name="nova_senha" placeholder="Nueva contraseña" required minlength="6">
+    <input type="text" name="codigo" class="codigo-input" placeholder="000000" maxlength="6" required <%if(email){%>autofocus<%}%> autocomplete="off">
+    <label>Nueva contraseña (mínimo 8 caracteres)</label>
+    <input type="password" name="nova_senha" placeholder="Nueva contraseña" required minlength="8">
     <label>Confirmar nueva contraseña</label>
-    <input type="password" name="confirmar_senha" placeholder="Confirmar contraseña" required minlength="6">
+    <input type="password" name="confirmar_senha" placeholder="Confirmar contraseña" required minlength="8">
     <button type="submit" class="btn">Restablecer contraseña</button>
   </form>
   <div class="voltar"><a href="/membro/esqueci-senha">Reenviar código</a> &nbsp;|&nbsp; <a href="/membro/login">Volver al inicio de sesión</a></div>

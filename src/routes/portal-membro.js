@@ -568,8 +568,13 @@ router.post('/membro/esqueci-senha', limiterEsqueciSenha, async (req, res) => {
     const d = await query('SELECT id FROM diretivos WHERE LOWER(email)=LOWER($1) AND ativo=1', [email]);
     if (d.rows.length) { tipo = 'diretivo'; id = d.rows[0].id; }
   }
-  // Nao revelar se email existe ou nao (seguranca)
-  if (!tipo) return res.render('pages/membro/esqueci-senha', { erro: null, ok: 'Se o email estiver cadastrado, voce recebera o codigo em instantes.' });
+  // Nao revelar se email existe ou nao: e-mail desconhecido segue exatamente o mesmo
+  // caminho do conhecido — mesma tela, mesma mensagem. Se um ficasse na pagina e o outro
+  // avancasse, a diferenca de comportamento ja entregaria quem esta cadastrado.
+  if (!tipo) {
+    req.session.recEmail = String(email).toLowerCase();
+    return res.redirect('/membro/verificar-codigo');
+  }
   // Gerar codigo de 6 digitos (crypto.randomInt — nao previsivel como Math.random)
   const codigo = require('crypto').randomInt(100000, 1000000).toString();
   // Invalidar codigos anteriores
@@ -582,7 +587,10 @@ router.post('/membro/esqueci-senha', limiterEsqueciSenha, async (req, res) => {
   // diferentes: o codigo nascia expirado ~5h antes de ser criado e NENHUM funcionava.
   // Deixando os dois lados no mesmo relogio, a diferenca de fuso deixa de importar.
   await query(
-    "INSERT INTO recuperacao_senha_portal (origem_tipo, origem_id, email, codigo, expira_em) VALUES ($1,$2,LOWER($3),$4, NOW() + INTERVAL '15 minutes')",
+    // 30 minutos, nao 15: entre o e-mail chegar, a pessoa achar no meio da caixa (ou no
+    // spam) e digitar num celular, 15 estavam vencendo antes da troca. Codigo de uso unico
+    // e invalidado a cada novo pedido — a janela maior nao afrouxa nada relevante.
+    "INSERT INTO recuperacao_senha_portal (origem_tipo, origem_id, email, codigo, expira_em) VALUES ($1,$2,LOWER($3),$4, NOW() + INTERVAL '30 minutes')",
     [tipo, id, email, codigo]
   );
   // Enviar email
@@ -598,19 +606,34 @@ router.post('/membro/esqueci-senha', limiterEsqueciSenha, async (req, res) => {
         <p style="color:#6B7A72;margin-bottom:24px">Portal do Membro</p>
         <p style="margin-bottom:16px">Voce solicitou a recuperacao de senha. Use o codigo abaixo para redefinir sua senha:</p>
         <div style="background:#0C231B;color:#4ade80;font-size:36px;font-weight:700;letter-spacing:12px;text-align:center;padding:24px;margin:24px 0">${codigo}</div>
-        <p style="color:#6B7A72;font-size:13px">Este codigo expira em <strong>15 minutos</strong>.</p>
+        <div style="text-align:center;margin:0 0 20px">
+          <a href="https://membro.lauroucpcde.com/membro/verificar-codigo" style="display:inline-block;background:#0F6E56;color:#fff;padding:12px 28px;text-decoration:none;font-weight:700;font-size:13px">Inserir o codigo</a>
+        </div>
+        <p style="color:#6B7A72;font-size:13px">Este codigo expira em <strong>30 minutos</strong>.</p>
         <p style="color:#6B7A72;font-size:13px;margin-top:8px">Se nao foi voce, ignore este email.</p>
         <hr style="border:none;border-top:1px solid #E5EBE8;margin:24px 0">
         <p style="color:#9BA8A4;font-size:11px">Portal do Membro — <a href="https://membro.lauroucpcde.com" style="color:#0F6E56">membro.lauroucpcde.com</a></p>
       </div>`
     });
   } catch(e) { console.error('Erro ao enviar email recuperacao:', e.message); }
-  res.render('pages/membro/esqueci-senha', { erro: null, ok: 'Se o email estiver cadastrado, voce recebera o codigo em instantes.' });
+  // Leva direto para a tela de digitar o codigo. Antes ficava nesta mesma pagina com um
+  // aviso de "voce recebera o codigo" e NENHUM caminho para continuar: nem link, nem
+  // redirecionamento, nem no e-mail. Quem chegava em /membro/verificar-codigo digitando a
+  // URL caia numa tela com o campo de e-mail escondido e VAZIO, entao a conferencia
+  // procurava por e-mail em branco e respondia "codigo invalido" para qualquer codigo.
+  //
+  // O e-mail vai pela sessao, nao pela URL: endereco de pessoa em query string vaza em
+  // historico de navegador, log de servidor e no cabecalho Referer.
+  req.session.recEmail = String(email).toLowerCase();
+  res.redirect('/membro/verificar-codigo');
 });
 
 // GET /membro/verificar-codigo
 router.get('/membro/verificar-codigo', (req, res) => {
-  const email = req.query.email || '';
+  // Preenche o e-mail quando veio do fluxo normal. Quando NAO veio — o caso de quem abriu
+  // o link do e-mail em outro aparelho, que foi o do iPad — a tela mostra o campo para
+  // digitar, em vez de mandar um valor vazio escondido e dar "codigo invalido" pra sempre.
+  const email = req.session.recEmail || req.query.email || '';
   res.render('pages/membro/verificar-codigo', { email, erro: null });
 });
 
@@ -626,9 +649,16 @@ router.post('/membro/verificar-codigo', limiterCodigoRecuperacao, async (req, re
   const rec = r.rows[0];
   // Atualizar senha
   const hash = await bcryptMembro.hash(nova_senha, 10);
-  await query('UPDATE portal_cientifico_senhas SET senha_hash=$1, primeiro_acesso=false WHERE origem_tipo=$2 AND origem_id=$3', [hash, rec.origem_tipo, rec.origem_id]);
+  const upd = await query('UPDATE portal_cientifico_senhas SET senha_hash=$1, primeiro_acesso=false WHERE origem_tipo=$2 AND origem_id=$3', [hash, rec.origem_tipo, rec.origem_id]);
+  // Membro que nunca acessou o portal nao tem linha de senha: o UPDATE acima nao acha
+  // nada, e sem isto a tela diria "senha redefinida com sucesso" sem NADA ter mudado —
+  // a pessoa voltaria pro login e continuaria sem entrar, sem entender por que.
+  if (!upd.rowCount) {
+    await query('INSERT INTO portal_cientifico_senhas (origem_tipo, origem_id, senha_hash, primeiro_acesso) VALUES ($1,$2,$3,false)', [rec.origem_tipo, rec.origem_id, hash]);
+  }
   // Marcar codigo como usado
   await query('UPDATE recuperacao_senha_portal SET usado=true WHERE id=$1', [rec.id]);
+  req.session.recEmail = null;
   res.redirect('/membro/login?msg=Senha+redefinida+com+sucesso');
 });
 
