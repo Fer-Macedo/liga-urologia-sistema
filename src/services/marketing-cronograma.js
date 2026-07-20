@@ -97,7 +97,7 @@ Responda APENAS com um array JSON válido, sem texto ao redor, no formato:
 [{"data":"AAAA-MM-DD","tema":"...","formato":"feed|carrossel|story","justificativa":"..."}]
 Entre 4 e 8 sugestões. Datas a partir de amanhã, nunca em terça ou sexta.`;
 
-function contexto(analise, historico, pedido) {
+function contexto(analise, historico, pedido, agenda) {
   const linhas = [];
   if (analise && analise.resumo7d) {
     const r = analise.resumo7d, r28 = analise.resumo28d || {};
@@ -114,6 +114,10 @@ function contexto(analise, historico, pedido) {
   const comentarios = historico.filter(h => h.comentario_equipe && h.status !== 'recusada');
   if (comentarios.length) linhas.push(`Comentários da equipe: ${comentarios.map(h => h.comentario_equipe).join(' | ')}`);
   if (pedido) linhas.push(`PEDIDO DIRETO DA EQUIPE para esta rodada: ${pedido}`);
+  if (agenda && agenda.length) {
+    linhas.push('AGENDA REAL DA LIGA (atividades ja marcadas — use como gancho de pauta):');
+    agenda.forEach(a => linhas.push(`- ${a.quando} | ${a.titulo}${a.local ? ' @ ' + a.local : ''}`));
+  }
   linhas.push(`Hoje é ${new Date().toISOString().slice(0, 10)}.`);
   return linhas.join('\n');
 }
@@ -125,8 +129,20 @@ async function gerarCronograma(criadoPor, pedido) {
   const hist = await query(
     "SELECT tema, status, comentario_equipe FROM marketing_sugestoes WHERE status <> 'sugerida' ORDER BY id DESC LIMIT 30"
   );
+  // A agenda real da liga entra no contexto: sem ela a IA sugeria pauta ignorando que
+  // existe Jornada, Aula Magna ou processo seletivo marcados — e conteudo que anuncia
+  // atividade real rende muito mais que conteudo generico.
+  let agenda = [];
+  try {
+    const ag = await query(
+      `SELECT titulo, local, to_char(data_inicio AT TIME ZONE 'America/Asuncion','DD/MM') AS quando
+       FROM calendario_atividades WHERE data_inicio >= NOW() ORDER BY data_inicio LIMIT 12`
+    );
+    agenda = ag.rows;
+  } catch (e) { /* segue sem agenda */ }
+
   const r = await chamarClaude(query, {
-    system: SISTEMA, content: contexto(analise, hist.rows, pedido),
+    system: SISTEMA, content: contexto(analise, hist.rows, pedido, agenda),
     contexto: 'marketing-cronograma', maxTokens: 2000
   });
   if (!r.ok) return r;

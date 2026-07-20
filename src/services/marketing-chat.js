@@ -121,6 +121,17 @@ async function contextoAtual() {
     }
   } catch (e) { /* sem cronograma */ }
 
+  try {
+    const ag = await query(
+      `SELECT titulo, local, to_char(data_inicio AT TIME ZONE 'America/Asuncion','DD/MM') AS quando
+       FROM calendario_atividades WHERE data_inicio >= NOW() ORDER BY data_inicio LIMIT 12`
+    );
+    if (ag.rows.length) {
+      linhas.push('Agenda real da liga:');
+      ag.rows.forEach(a => linhas.push(`- ${a.quando} | ${a.titulo}${a.local ? ' @ ' + a.local : ''}`));
+    }
+  } catch (e) { /* segue sem agenda */ }
+
   linhas.push(`Hoje é ${new Date().toISOString().slice(0, 10)}.`);
   return linhas.join('\n');
 }
