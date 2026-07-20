@@ -181,10 +181,13 @@ module.exports = function(router) {
       // Temário (ensino)
       const temTit = arr(b.temario_titulo), temPon = arr(b.temario_ponente),
             temPer = arr(b.temario_perfil), temDes = arr(b.temario_descricao),
-            temDur = arr(b.temario_duracao);
+            temDur = arr(b.temario_duracao), temDat = arr(b.temario_data);
       const temario = temTit.map((t,i)=>({
         titulo:t, ponente:temPon[i]||'', perfil_ponente:temPer[i]||'',
-        descricao:temDes[i]||'', duracao_min:temDur[i]||''
+        descricao:temDes[i]||'', duracao_min:temDur[i]||'',
+        // Data em que a classe e ministrada (YYYY-MM-DD). Temas com a mesma data sao a
+        // mesma classe — o agrupamento "Clase N" e derivado na exibicao, nao gravado.
+        data:temDat[i]||''
       })).filter(t=>t.titulo&&t.titulo.trim());
 
       const vals = [

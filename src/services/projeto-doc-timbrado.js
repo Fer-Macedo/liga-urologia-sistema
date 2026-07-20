@@ -185,6 +185,8 @@ function montarCorpo(p, cfg) {
     x += sec('TEMARIO Y PROGRAMA');
     for (const t of temario) {
       x += parXml([{ t: 'Título: ', b: true }, { t: t.titulo || '', b: false }], 'left');
+      // Data da classe: YYYY-MM-DD vira DD/MM/YYYY.
+      x += parXml([{ t: 'Fecha de la clase: ', b: true }, { t: t.data ? t.data.split('-').reverse().join('/') : '', b: false }], 'left');
       x += parXml([{ t: 'Descripción del contenido: ', b: true }, { t: t.descricao || '', b: false }], 'left');
       x += parXml([{ t: 'Duración estimada: ', b: true }, { t: t.duracao_min ? (t.duracao_min + ' minutos') : '', b: false }], 'left');
       x += parXml([{ t: 'Nombre del ponente: ', b: true }, { t: t.ponente || '', b: false }], 'left');

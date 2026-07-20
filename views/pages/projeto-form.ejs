@@ -197,9 +197,13 @@ if (!cron.length) cron = [{}];
               <button type="button" class="btn-del" onclick="this.closest('.tem-item').remove()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:8px;margin-bottom:8px">
-              <input type="text" name="temario_ponente" value="<%= t.ponente || '' %>" placeholder="Nombre del ponente">
-              <input type="text" name="temario_perfil" value="<%= t.perfil_ponente || '' %>" placeholder="Cargo / Especialización del ponente">
+              <div>
+                <label style="display:block;font-size:11px;font-weight:600;color:var(--texto2,#64748b);margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px">Fecha de la clase</label>
+                <input type="date" name="temario_data" value="<%= t.data || '' %>" style="width:100%">
+              </div>
+              <input type="text" name="temario_ponente" value="<%= t.ponente || '' %>" placeholder="Nombre del ponente" style="align-self:end">
             </div>
+            <input type="text" name="temario_perfil" value="<%= t.perfil_ponente || '' %>" placeholder="Cargo / Especialización del ponente" style="margin-bottom:8px">
             <textarea name="temario_descricao" rows="2" placeholder="Descripción breve del contenido"><%= t.descricao || '' %></textarea>
           </div>
           <% }) %>
@@ -369,13 +373,18 @@ function addObj() {
 function addTem() {
   var d = document.createElement('div');
   d.className = 'tem-item';
+  // A ORDEM e o conjunto de campos tem que bater com o loop renderizado acima: cada item
+  // envia titulo/duracao/data/ponente/perfil/descricao. Um campo a menos aqui desalinha os
+  // arrays no backend (o tema N herdaria a data do tema N+1).
   d.innerHTML = '<div class="tem-grid">' +
     '<input type="text" name="temario_titulo" placeholder="Título de la charla / taller">' +
     '<input type="number" name="temario_duracao" placeholder="Duración (min)">' +
     '<button type="button" class="btn-del" onclick="this.closest(\'.tem-item\').remove()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>' +
     '<div style="display:grid;grid-template-columns:1fr 1.5fr;gap:8px;margin-bottom:8px">' +
-    '<input type="text" name="temario_ponente" placeholder="Nombre del ponente">' +
-    '<input type="text" name="temario_perfil" placeholder="Cargo / Especialización del ponente"></div>' +
+    '<div><label style="display:block;font-size:11px;font-weight:600;color:var(--texto2,#64748b);margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px">Fecha de la clase</label>' +
+    '<input type="date" name="temario_data" style="width:100%"></div>' +
+    '<input type="text" name="temario_ponente" placeholder="Nombre del ponente" style="align-self:end"></div>' +
+    '<input type="text" name="temario_perfil" placeholder="Cargo / Especialización del ponente" style="margin-bottom:8px">' +
     '<textarea name="temario_descricao" rows="2" placeholder="Descripción breve del contenido"></textarea>';
   document.getElementById('tem-list').appendChild(d);
 }

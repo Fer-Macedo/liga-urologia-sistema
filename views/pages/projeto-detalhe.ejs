@@ -109,6 +109,8 @@ var emailsUCP = 'sergio.marmori@central.edu.py,lilian.ramirez@central.edu.py,raq
     .hist li{padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px}
     .hist li:last-child{border:none}
     .hist .quando{font-size:11px;color:var(--ink-faint);margin-top:2px}
+    .tem-clase-h{font-weight:700;font-size:12.5px;color:var(--green,#0F6E56);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--green,#0F6E56)}
+    .tem-clase-h:first-child{margin-top:0}
     .tem-view{border:1px solid var(--line);border-radius:3px;padding:12px 14px;margin-bottom:8px;background:#FBFCFA}
     .tem-view .tt{font-weight:600;font-size:13.5px}
     .tem-view .pn{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
@@ -190,12 +192,28 @@ var emailsUCP = 'sergio.marmori@central.edu.py,lilian.ramirez@central.edu.py,raq
       <div class="card">
         <div class="card-h">Temario y programa</div>
         <div class="card-b">
-          <% temario.forEach(function(t){ %>
+          <%
+            // Agrupa por data: temas com a mesma data sao a mesma classe. "Clase N" e
+            // derivado da ordem das datas (nao gravado). Temas sem data vao num grupo final.
+            var _datas = [];
+            temario.forEach(function(t){ if (t.data && _datas.indexOf(t.data) === -1) _datas.push(t.data); });
+            _datas.sort();
+            function _fmtData(iso){ var pp2 = String(iso).split('-'); return pp2.length === 3 ? pp2[2]+'/'+pp2[1]+'/'+pp2[0] : iso; }
+            var _grupos = _datas.map(function(dia, i){
+              return { titulo: 'Clase ' + (i+1) + ' · ' + _fmtData(dia), itens: temario.filter(function(t){ return t.data === dia; }) };
+            });
+            var _semData = temario.filter(function(t){ return !t.data; });
+            if (_semData.length) _grupos.push({ titulo: _datas.length ? 'Sin fecha asignada' : '', itens: _semData });
+          %>
+          <% _grupos.forEach(function(g){ %>
+          <% if (g.titulo) { %><div class="tem-clase-h"><%= g.titulo %></div><% } %>
+          <% g.itens.forEach(function(t){ %>
           <div class="tem-view">
             <div class="tt"><%= t.titulo %><%= t.duracao_min ? ' · '+t.duracao_min+' min' : '' %></div>
             <% if (t.ponente) { %><div class="pn">Ponente: <%= t.ponente %><%= t.perfil_ponente ? ' — '+t.perfil_ponente : '' %></div><% } %>
             <% if (t.descricao) { %><div class="ds"><%= t.descricao %></div><% } %>
           </div>
+          <% }) %>
           <% }) %>
         </div>
       </div>

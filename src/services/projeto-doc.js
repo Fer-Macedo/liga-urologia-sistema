@@ -200,6 +200,8 @@ function montarProjeto(p, totalH) {
       sec(5, 'TEMARIO Y PROGRAMA'),
       ...temario.flatMap(t => [
         pLabel('Título: ', t.titulo || ''),
+        // Data da classe: YYYY-MM-DD (do <input type=date>) vira DD/MM/YYYY.
+        pLabel('Fecha de la clase: ', t.data ? t.data.split('-').reverse().join('/') : ''),
         pLabel('Descripción del contenido: ', t.descricao || ''),
         pLabel('Duración estimada: ', t.duracao_min ? t.duracao_min + ' minutos' : ''),
         pLabel('Nombre del ponente: ', t.ponente || ''),
