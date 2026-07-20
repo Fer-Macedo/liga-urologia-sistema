@@ -372,26 +372,61 @@ async function enviarMensagem(numero, mensagem) {
   const r = await enviarTexto(numero, mensagem);
   if (!r.ok) console.error('Lauro erro envio:', JSON.stringify(r.erro));
 }
-// Notifica um numero de area (secretaria, financeiro...) sobre atendimento novo. Vai pelo
-// MESMO canal do assistente: quem escreve pra liga e a area que atende conversam pelo
-// numero do atendimento, nao pelo numero dos disparos.
+// Ja recebemos alguma mensagem DESTE numero? Aceita as duas grafias do numero brasileiro,
+// porque o contato da area e cadastrado com o nono digito e a conversa fica gravada com a
+// grafia que o WhatsApp usa — sem isso a checagem daria "nunca conversou" para todo mundo.
+async function areaJaConversou(numeroArea) {
+  try {
+    const { variantesBR, limparNumero } = require('./whatsapp-oficial');
+    const formas = variantesBR(limparNumero(numeroArea));
+    const r = await query(
+      "SELECT 1 FROM lauro_conversas WHERE papel='user' AND numero = ANY($1::text[]) LIMIT 1",
+      [formas]
+    );
+    return r.rows.length > 0;
+  } catch (e) {
+    // Na duvida, assume que NAO conversou: o caminho garantido (modelo oficial) entrega
+    // de qualquer forma, enquanto o outro pode sumir calado.
+    console.error('[LAURO] falha ao checar conversa previa da area:', e.message);
+    return false;
+  }
+}
+
+// Notifica um numero de area (secretaria, financeiro...) sobre atendimento novo.
 //
-// Na W-API nao existe janela de 24h — texto livre entrega sempre, que era o problema que
-// esta funcao vinha contornando. O modelo aprovado fica como rede de seguranca: se a
-// W-API estiver fora do ar, o aviso ainda sai pela API Oficial (de outro numero, o que
-// e feio, mas infinitamente melhor do que a secretaria nao ficar sabendo do atendimento).
+// O caminho depende de a area ja ter conversado com o numero do atendimento:
+//
+//   ja conversou  -> W-API, texto livre. A conversa acontece toda no mesmo numero, que e
+//                    o comportamento desejado.
+//   nunca conversou -> modelo aprovado pela API Oficial, direto.
+//
+// Por que a distincao existe: em 2026-07-20 o secretario nao recebeu aviso nenhum, mesmo
+// com a W-API devolvendo 200 e messageId. O numero do atendimento tinha sido ativado
+// naquele dia, e o WhatsApp descarta EM SILENCIO mensagem de conta nova para quem nunca
+// escreveu para ela — e o retrato de spam. A evidencia foi limpa: 157 mensagens recebidas
+// do unico numero que recebia os avisos, ZERO das sete areas que nao recebiam nenhum.
+//
+// Tentar a W-API primeiro nesses casos nao adianta: ela responde "ok" e a mensagem some,
+// entao nem daria para cair no fallback. Por isso a checagem vem ANTES do envio.
 async function notificarArea(numeroArea, msgArea, nomeMembro, areaNome) {
   const { enviarTexto, enviarTemplate } = require('./canal-assistente');
-  const r = await enviarTexto(numeroArea, msgArea);
-  if (r.ok) return;
-  console.warn('[LAURO] Texto livre falhou p/ area (janela 24h?), tentando modelo:', JSON.stringify(r.erro).slice(0, 200));
+
+  if (await areaJaConversou(numeroArea)) {
+    const r = await enviarTexto(numeroArea, msgArea);
+    if (r.ok) return;
+    console.warn('[LAURO] Texto livre falhou p/ area, tentando o modelo:', JSON.stringify(r.erro).slice(0, 200));
+  } else {
+    console.warn('[LAURO] Area', numeroArea, 'nunca escreveu para o numero do atendimento —',
+      'a W-API descartaria em silencio. Indo direto pelo modelo oficial.');
+  }
+
   const componentes = [{ type: 'body', parameters: [
     { type: 'text', text: nomeMembro || 'Membro' },
     { type: 'text', text: areaNome || 'Atendimento' }
   ] }];
   const t = await enviarTemplate(numeroArea, 'novo_atendimento', 'pt_BR', componentes);
-  if (!t.ok) console.error('[LAURO] Modelo novo_atendimento tambem falhou:', JSON.stringify(t.erro).slice(0, 200));
-  else console.log('[LAURO] Area avisada pelo modelo novo_atendimento (fora da janela de 24h).');
+  if (!t.ok) console.error('[LAURO] Modelo novo_atendimento falhou:', JSON.stringify(t.erro).slice(0, 200));
+  else console.log('[LAURO] Area avisada pelo modelo novo_atendimento (API Oficial).');
 }
 async function enviarImagem(numero, imagem, legenda) {
   const { enviarImagem: enviarImagemCanal } = require('./canal-assistente');
@@ -867,5 +902,7 @@ recarregarContatos();
 
 module.exports = {
   processarMensagem, enviarMensagemDireta, redirecionarArea,
-  recarregarContatos, enviarImagem, enviarDocumento
+  recarregarContatos, enviarImagem, enviarDocumento,
+  // exportados para teste: a escolha do canal do aviso a area e regra de negocio, nao detalhe
+  notificarArea, areaJaConversou
 };

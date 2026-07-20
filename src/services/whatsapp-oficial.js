@@ -113,4 +113,6 @@ async function enviarDocumento(numero, documentoOuUrl, fileName) {
   });
 }
 
-module.exports = { enviarTemplate, enviarTexto, enviarImagem, enviarDocumento };
+// variantesBR/limparNumero saem daqui porque o mesmo numero brasileiro aparece com e sem
+// o nono digito, e quem precisa casar numero (nao so enviar) tem que olhar as duas formas.
+module.exports = { enviarTemplate, enviarTexto, enviarImagem, enviarDocumento, variantesBR, limparNumero };
