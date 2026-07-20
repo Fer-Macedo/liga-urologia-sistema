@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <title>Meu Perfil</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <style>
+    :root{--cor-primaria:<%= config.org_cor||'#1a56db' %>;}
+    .perfil-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+    @media (max-width:900px){.perfil-grid{grid-template-columns:1fr}}
+    .cartao{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:20px 22px;margin-bottom:18px}
+    .cartao h2{font-size:15px;margin:0 0 4px}
+    .cartao p.ajuda{font-size:12.5px;color:var(--texto2);margin:0 0 16px;line-height:1.5}
+    .campo{margin-bottom:13px}
+    .campo label{display:block;font-size:12.5px;font-weight:600;color:var(--texto2);margin-bottom:5px}
+    .campo input{width:100%;padding:9px 12px;border:1px solid var(--borda);border-radius:8px;font-size:14px;font-family:inherit;background:var(--fundo)}
+    .dado{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--borda);font-size:14px}
+    .dado:last-child{border-bottom:none}
+    .dado .rot{color:var(--texto2);font-size:12.5px;font-weight:600}
+    .selo{display:inline-block;background:var(--fundo);border:1px solid var(--borda);border-radius:20px;padding:3px 12px;font-size:12px;font-weight:600}
+    .aviso-seguranca{background:#fffbeb;border-left:4px solid #d97706;border-radius:0 8px 8px 0;padding:11px 14px;font-size:12.5px;line-height:1.5;color:#78350f;margin-top:12px}
+  </style>
+</head>
+<body>
+  <%- include('../partials/sidebar', { paginaAtual: 'perfil' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Meu Perfil</h1>
+    </div>
+    <div class="content">
+      <%if(msg&&msg.length>0){%><div class="alerta alerta-ok"><%=msg[0]%></div><%}%>
+      <%if(erro&&erro.length>0){%><div class="alerta alerta-erro"><%=erro[0]%></div><%}%>
+
+    <div class="cartao">
+      <h2>Dados da conta</h2>
+      <p class="ajuda">Nome e perfil de acesso são definidos pela administração da liga.</p>
+      <div class="dado"><span class="rot">NOME</span><span><%= usuario.nome %></span></div>
+      <div class="dado"><span class="rot">E-MAIL</span><span><%= usuario.email %></span></div>
+      <div class="dado"><span class="rot">PERFIL</span><span class="selo"><%= usuario.perfil %></span></div>
+      <% if (typeof criadoEm !== 'undefined' && criadoEm) { %>
+      <div class="dado"><span class="rot">NA LIGA DESDE</span><span><%= criadoEm %></span></div>
+      <% } %>
+    </div>
+
+    <div class="perfil-grid">
+      <div class="cartao">
+        <h2>Alterar e-mail</h2>
+        <p class="ajuda">É por ele que você recebe os avisos do sistema e recupera o acesso.</p>
+        <form method="POST" action="/meu-email">
+          <div class="campo">
+            <label>Novo e-mail</label>
+            <input type="email" name="novo_email" required placeholder="<%= usuario.email %>">
+          </div>
+          <div class="campo">
+            <label>Sua senha atual</label>
+            <input type="password" name="senha_confirmacao" required autocomplete="current-password">
+          </div>
+          <button type="submit" class="btn btn-primario">Alterar e-mail</button>
+        </form>
+      </div>
+
+      <div class="cartao">
+        <h2>Alterar senha</h2>
+        <p class="ajuda">Mínimo de 8 caracteres.</p>
+        <form method="POST" action="/minha-senha">
+          <div class="campo">
+            <label>Senha atual</label>
+            <input type="password" name="senha_atual" required autocomplete="current-password">
+          </div>
+          <div class="campo">
+            <label>Nova senha</label>
+            <input type="password" name="nova_senha" required minlength="8" autocomplete="new-password">
+          </div>
+          <div class="campo">
+            <label>Confirmar nova senha</label>
+            <input type="password" name="confirmar_senha" required minlength="8" autocomplete="new-password">
+          </div>
+          <button type="submit" class="btn btn-primario">Alterar senha</button>
+          <div class="aviso-seguranca">
+            Ao trocar a senha, sua sessão é encerrada e você precisa entrar de novo — inclusive
+            em outros aparelhos onde estiver conectado.
+          </div>
+        </form>
+      </div>
+    </div>
+    </div>
+  </main>
+</body>
+</html>

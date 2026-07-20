@@ -53,16 +53,31 @@ router.post('/usuarios/:id/telefone', requireAuth, requireAdmin, async (req, res
 
 // ─── MEU PERFIL ───────────────────────────────────────────────────────────────
 
+// Meu Perfil. O botao do dashboard apontava para /perfil desde sempre, mas a pagina nunca
+// existiu — dava 404. As acoes (/minha-senha e /meu-email) ja estavam prontas logo abaixo;
+// faltava so a tela para chegar ate elas.
+router.get('/perfil', requireAuth, async (req, res) => {
+  try {
+    const r = await query('SELECT criado_em FROM usuarios WHERE id=$1', [req.session.usuario.id]);
+    const c = r.rows[0] && r.rows[0].criado_em;
+    res.render('pages/perfil', {
+      config: await getConfig(), usuario: req.session.usuario,
+      msg: req.flash('msg'), erro: req.flash('erro'),
+      criadoEm: c ? new Date(c).toLocaleDateString('pt-BR') : null
+    });
+  } catch (e) { console.error(e); req.flash('erro', e.message); res.redirect('/dashboard'); }
+});
+
 router.post('/minha-senha', requireAuth, async (req, res) => {
   const { senha_atual, nova_senha, confirmar_senha } = req.body;
 
   if (!nova_senha || nova_senha.length < 8) {
     req.flash('erro', 'A nova senha deve ter pelo menos 8 caracteres.');
-    return res.redirect('/dashboard');
+    return res.redirect('/perfil');
   }
   if (nova_senha !== confirmar_senha) {
     req.flash('erro', 'A nova senha e a confirmação não coincidem.');
-    return res.redirect('/dashboard');
+    return res.redirect('/perfil');
   }
 
   const r = await query('SELECT * FROM usuarios WHERE id=$1', [req.session.usuario.id]);
@@ -70,7 +85,7 @@ router.post('/minha-senha', requireAuth, async (req, res) => {
 
   if (!usuario || !bcrypt.compareSync(senha_atual, usuario.senha)) {
     req.flash('erro', 'Senha atual incorreta.');
-    return res.redirect('/dashboard');
+    return res.redirect('/perfil');
   }
 
   const novoHash = bcrypt.hashSync(nova_senha, 10);
@@ -87,7 +102,7 @@ router.post('/meu-email', requireAuth, async (req, res) => {
 
   if (!novo_email || !novo_email.includes('@')) {
     req.flash('erro', 'E-mail inválido.');
-    return res.redirect('/dashboard');
+    return res.redirect('/perfil');
   }
 
   const r = await query('SELECT * FROM usuarios WHERE id=$1', [req.session.usuario.id]);
@@ -95,13 +110,13 @@ router.post('/meu-email', requireAuth, async (req, res) => {
 
   if (!usuario || !bcrypt.compareSync(senha_confirmacao, usuario.senha)) {
     req.flash('erro', 'Senha incorreta. Não foi possível alterar o e-mail.');
-    return res.redirect('/dashboard');
+    return res.redirect('/perfil');
   }
 
   const emailExiste = await query('SELECT id FROM usuarios WHERE email=$1 AND id!=$2', [novo_email.toLowerCase().trim(), usuario.id]);
   if (emailExiste.rows.length > 0) {
     req.flash('erro', 'Este e-mail já está em uso.');
-    return res.redirect('/dashboard');
+    return res.redirect('/perfil');
   }
 
   await query('UPDATE usuarios SET email=$1 WHERE id=$2', [novo_email.toLowerCase().trim(), usuario.id]);
@@ -109,7 +124,7 @@ router.post('/meu-email', requireAuth, async (req, res) => {
 
   console.log('EMAIL ALTERADO: ' + usuario.email + ' -> ' + novo_email + ' | ' + new Date().toISOString());
   req.flash('msg', 'E-mail alterado com sucesso!');
-  res.redirect('/dashboard');
+  res.redirect('/perfil');
 });
 
 router.get('/usuarios', requireAuth, requirePermissao('usuarios'), async (req, res) => {
