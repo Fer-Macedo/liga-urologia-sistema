@@ -93,14 +93,19 @@ router.post('/cobrancas/:id/confirmar', requireAuth, requireFinanceiro, async (r
     const metodo = ['pix','cartao','dinheiro'].includes(req.body.metodo) ? req.body.metodo : 'pix';
     await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW(), metodo_pagamento=COALESCE(metodo_pagamento,$2), valor_pago=COALESCE(valor_pago, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE id=$1 AND status!='pago'", [req.params.id, metodo]);
     try { const { lancarMensalidadeNoFluxo } = require('../services/fluxo-mensalidade'); await lancarMensalidadeNoFluxo(query, req.params.id); } catch(e) { console.error('lancar fluxo (baixa manual):', e.message); }
-    req.session.msg = ['Pagamento confirmado manualmente!'];
-  } catch(e) { req.session.erro = ['Erro ao confirmar: '+e.message]; }
+    // req.flash, nao req.session.msg: o render de /cobrancas le req.flash('msg') (que o
+    // connect-flash guarda em req.session.flash). Escrever em req.session.msg fazia a
+    // mensagem "Pagamento confirmado" ser engolida no redirect — o irmao /pago ja usava flash.
+    req.flash('msg', 'Pagamento confirmado manualmente!');
+  } catch(e) { req.flash('erro', 'Erro ao confirmar: '+e.message); }
   const ref = req.headers.referer || '/cobrancas';
   res.redirect(ref);
 });
 
 router.post('/cobrancas/:id/pago', requireAuth, requireFinanceiro, async (req, res) => {
-  await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW(), metodo_pagamento=COALESCE(metodo_pagamento,'pix'), valor_pago=COALESCE(valor_pago, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE id=$1", [req.params.id]);
+  // AND status!='pago': sem o guard, um duplo-clique/repost reescrevia data_pagamento=NOW()
+  // numa cobranca ja paga, corrompendo a data original. O irmao /confirmar ja tinha o guard.
+  await query("UPDATE cobrancas SET status='pago', data_pagamento=NOW(), metodo_pagamento=COALESCE(metodo_pagamento,'pix'), valor_pago=COALESCE(valor_pago, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE id=$1 AND status!='pago'", [req.params.id]);
   try { const { lancarMensalidadeNoFluxo } = require('../services/fluxo-mensalidade'); await lancarMensalidadeNoFluxo(query, req.params.id); } catch(e) { console.error('lancar fluxo (baixa manual 2):', e.message); }
   req.flash('msg', 'Pagamento registrado!');
   res.redirect('/cobrancas');

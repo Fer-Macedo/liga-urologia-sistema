@@ -70,12 +70,20 @@ async function requireMembro(req, res, next) {
   const { tipo, id } = req.session.membroPortal;
   const { query } = require('../models/database');
   const tabela = tipo === 'ligante' ? 'ligantes' : 'diretivos';
-  const r = await query('SELECT ativo, pendente FROM ' + tabela + ' WHERE id=$1', [id]);
-  if (!r.rows.length || r.rows[0].ativo != 1 || r.rows[0].pendente) {
-    req.session.membroPortal = null;
-    return res.render('pages/membro/login', { erro: 'Você não tem mais permissão para acessar essa área. Esta área é restrita a membros ativos da Liga.' });
+  try {
+    const r = await query('SELECT ativo, pendente FROM ' + tabela + ' WHERE id=$1', [id]);
+    if (!r.rows.length || r.rows[0].ativo != 1 || r.rows[0].pendente) {
+      req.session.membroPortal = null;
+      return res.render('pages/membro/login', { erro: 'Você não tem mais permissão para acessar essa área. Esta área é restrita a membros ativos da Liga.' });
+    }
+    next();
+  } catch (e) {
+    // Middleware async sem try/catch: uma piscada do banco durante o SELECT rejeitava a
+    // promise, o Express 4 nao captura, e a request do portal pendurava (nem next nem
+    // resposta) — a pagina ficava carregando pra sempre. Responder erro limpo evita isso.
+    console.error('[requireMembro] falha ao verificar acesso:', e.message);
+    return res.status(503).render('pages/membro/login', { erro: 'Sistema temporariamente indisponível. Tente novamente em instantes.' });
   }
-  next();
 }
 
 module.exports = { requireAuth, requireAdmin, requireFinanceiro, requireSecretaria, requirePresidencia, requirePermissao, injetarPermissoes, requireMembro };
