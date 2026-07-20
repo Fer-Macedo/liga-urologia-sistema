@@ -303,7 +303,7 @@ router.post('/cientifico/grupo/:grupoId/membro/adicionar', requireAuth, requireC
     // gerar senha padrao no portal se nao existir
     const senhaExiste = await query('SELECT 1 FROM portal_cientifico_senhas WHERE origem_tipo=$1 AND origem_id=$2',[origem_tipo,origem_id]);
     if (!senhaExiste.rows.length) {
-      const hash = await bcryptCient.hash('123456', 10);
+      const hash = await bcryptCient.hash('12345678', 10);
       await query('INSERT INTO portal_cientifico_senhas (origem_tipo,origem_id,senha_hash,primeiro_acesso) VALUES ($1,$2,$3,true)',[origem_tipo,origem_id,hash]);
     }
     req.session.msg=['Membro adicionado!'];
