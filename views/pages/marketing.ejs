@@ -462,16 +462,19 @@
           <% var fila = (typeof revalidaFila !== 'undefined' && revalidaFila) ? revalidaFila : [];
              var apr = fila.filter(function(q){return q.status==='aprovada' && !q.enviado});
              var env = fila.filter(function(q){return q.enviado}); %>
-          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px">
-            <div style="background:var(--fundo);border-radius:var(--rad);padding:12px;text-align:center">
-              <div style="font-size:22px;font-weight:700;color:#10b981"><%= apr.length %></div>
-              <div style="font-size:11px;color:var(--texto2)">Aprovadas na fila</div></div>
-            <div style="background:var(--fundo);border-radius:var(--rad);padding:12px;text-align:center">
-              <div style="font-size:22px;font-weight:700;color:var(--texto2)"><%= fila.length - apr.length - env.length %></div>
-              <div style="font-size:11px;color:var(--texto2)">Aguardando aprovação</div></div>
-            <div style="background:var(--fundo);border-radius:var(--rad);padding:12px;text-align:center">
-              <div style="font-size:22px;font-weight:700;color:var(--cor-primaria)"><%= env.length %></div>
-              <div style="font-size:11px;color:var(--texto2)">Já enviadas</div></div>
+          <div class="stats-row" style="grid-template-columns:repeat(4,1fr)">
+            <div class="stat-box" style="--cor-stat:#10b981">
+              <div class="stat-num"><%= apr.length %></div><div class="stat-lab">Aprovadas na fila</div>
+            </div>
+            <div class="stat-box" style="--cor-stat:#6b7280">
+              <div class="stat-num"><%= fila.length - apr.length - env.length %></div><div class="stat-lab">Aguardando aprovação</div>
+            </div>
+            <div class="stat-box" style="--cor-stat:#2563eb">
+              <div class="stat-num"><%= env.length %></div><div class="stat-lab">Já enviadas</div>
+            </div>
+            <div class="stat-box" style="--cor-stat:var(--cor-primaria)">
+              <div class="stat-num"><%= fila.filter(function(q){return q.publicado}).length %></div><div class="stat-lab">Publicadas</div>
+            </div>
           </div>
           <% if (!fila.length) { %>
             <div style="text-align:center;padding:28px;color:var(--texto2);font-size:13px">Nenhuma questão cadastrada.</div>
