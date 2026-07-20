@@ -295,6 +295,12 @@ async function initSchema() {
     );
   }
 
+  // NAO adicionar ALTER TABLE em instagram_posts aqui: a tabela pertence ao usuario
+  // `postgres`, e o `ligauser` da aplicacao recebe "must be owner of table". DDL que
+  // falha no initSchema encerra o processo e derruba o app com 502 — ja aconteceu em
+  // 2026-07-12. Colunas nessa tabela sao aplicadas a mao, como postgres.
+  // A coluna midia_chave foi criada assim em 2026-07-19.
+
   // Chat de marketing com a IA. A equipe so tem acesso ao sistema; e aqui que ela
   // discute pauta e questiona o cronograma sem depender de intermediario.
   await query(`

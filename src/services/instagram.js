@@ -152,6 +152,21 @@ async function agendarPost({ tipo, midiaUrl, midias, legenda, agendadoPara, cria
 }
 
 // ─── PROCESSAR POSTS AGENDADOS ────────────────────────────────────────────────
+// A URL assinada do R2 vale 24h. Um post agendado para daqui a uma semana publicaria
+// com link expirado e a Meta nao conseguiria baixar a imagem. Por isso a URL e
+// REGENERADA na hora da publicacao, a partir da chave do arquivo, que e permanente.
+// Sem isso o agendamento so funcionava dentro de 24h.
+async function urlFresca(chave, urlAntiga, mime) {
+  if (!chave) return urlAntiga;   // registros antigos, salvos antes de guardarmos a chave
+  try {
+    const { gerarUrlInline } = require('./arquivos');
+    return await gerarUrlInline(chave, mime || 'image/png');
+  } catch (e) {
+    console.error('[INSTAGRAM] Falha ao regenerar URL de', chave, '-', e.message);
+    return urlAntiga;
+  }
+}
+
 async function processarPostsAgendados() {
   const r = await query(
     "SELECT * FROM instagram_posts WHERE status='agendado' AND agendado_para <= NOW()"
@@ -162,14 +177,18 @@ async function processarPostsAgendados() {
       let resultado;
 
       if (post.tipo === 'feed') {
-        resultado = await publicarFoto({ imageUrl: post.midia_url, legenda: post.legenda });
+        const url = await urlFresca(post.midia_chave, post.midia_url);
+        resultado = await publicarFoto({ imageUrl: url, legenda: post.legenda });
       } else if (post.tipo === 'carousel') {
-        const urls = post.midias.map(m => m.url);
+        const urls = [];
+        for (const m of post.midias) urls.push(await urlFresca(m.chave, m.url));
         resultado = await publicarCarrossel({ imageUrls: urls, legenda: post.legenda });
       } else if (post.tipo === 'story') {
-        resultado = await publicarStory({ imageUrl: post.midia_url });
+        const url = await urlFresca(post.midia_chave, post.midia_url);
+        resultado = await publicarStory({ imageUrl: url });
       } else if (post.tipo === 'reel') {
-        resultado = await publicarReel({ videoUrl: post.midia_url, legenda: post.legenda });
+        const url = await urlFresca(post.midia_chave, post.midia_url, 'video/mp4');
+        resultado = await publicarReel({ videoUrl: url, legenda: post.legenda });
       }
 
       await query(
