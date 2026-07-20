@@ -56,6 +56,13 @@ Regras:
 - Considere o hemisfério sul: julho é INVERNO em Ciudad del Este.
 - Nunca sugira comprar seguidores, bots ou qualquer prática que viole os termos do Instagram.
 
+FORMATO DA RESPOSTA — atenção ao idioma de cada campo:
+- "tema": escreva em ESPANHOL, exatamente como o texto apareceria na publicação. A equipe
+  precisa ler o espanhol real para validar antes de aprovar — e para corrigir se soar
+  estranho. Use o espanhol falado no Paraguai (voseo: "vos", "podés", "consultá"), não
+  espanhol neutro nem da Espanha.
+- "justificativa": escreva em PORTUGUÊS. É raciocínio interno para a equipe, não vai ao ar.
+
 Responda APENAS com um array JSON válido, sem texto ao redor, no formato:
 [{"data":"AAAA-MM-DD","tema":"...","formato":"feed|carrossel|story","justificativa":"..."}]
 Entre 4 e 8 sugestões. Datas a partir de amanhã, nunca em terça ou sexta.`;

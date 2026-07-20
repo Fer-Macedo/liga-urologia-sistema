@@ -26,9 +26,16 @@
       }
       if(id==='midias' && typeof canvaCarregarDesigns==='function') canvaCarregarDesigns();
       if(id==='estrategia' && typeof carregarChatMkt==='function') carregarChatMkt();
+      // Guarda a aba aberta. Sem isto, qualquer recarga (botao que usa location.reload,
+      // formulario que faz POST e volta com redirect) jogava o usuario de volta no
+      // dashboard, perdendo o lugar onde ele estava trabalhando.
+      try { sessionStorage.setItem('mktTab', id); } catch(e) {}
+      try { history.replaceState(null, '', '?tab=' + id); } catch(e) {}
     }
     document.addEventListener('DOMContentLoaded',function(){
-      var tab=new URLSearchParams(window.location.search).get('tab');
+      // ?tab= tem prioridade (link direto); senao, volta para a ultima aba usada
+      var tab = new URLSearchParams(window.location.search).get('tab');
+      if(!tab){ try { tab = sessionStorage.getItem('mktTab'); } catch(e) {} }
       if(tab){
         var btn=document.querySelector('.mkt-tab[onclick*="\''+tab+'\'"]');
         if(btn) showTab(tab,btn);
