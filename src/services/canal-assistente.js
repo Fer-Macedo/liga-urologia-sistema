@@ -22,6 +22,9 @@ function provedor() {
 // mas o adaptador não estiver disponível, cai na oficial em vez de derrubar o
 // atendimento — e grita no log, porque silêncio aqui significa membro sem resposta.
 function transporte() {
+  // Qual canal esta atendendo, dito em voz alta. Sem isso, "o assistente nao respondeu"
+  // nao distingue entre canal errado, credencial faltando e falha de entrega.
+  console.log('[CANAL] atendimento saindo por:', provedor());
   if (provedor() === 'wapi') {
     try {
       return require('./whatsapp-wapi');

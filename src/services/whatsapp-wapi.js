@@ -49,6 +49,10 @@ async function enviarTexto(numero, mensagem) {
     const data = await _post('/send-text', {
       phone: String(numero).replace(/\D/g, ''), message: mensagem
     }, instancia, token);
+    // Registrar o sucesso, e nao so o erro: sem esta linha nao ha como distinguir
+    // "o sistema nao enviou" de "enviou e o WhatsApp nao entregou" — foi exatamente
+    // essa cegueira que travou o diagnostico no primeiro dia do numero novo.
+    console.log('[W-API] enviado para', numero, '— messageId', (data && data.messageId) || '?');
     return { ok: true, data };
   } catch (e) {
     const erro = e.response ? e.response.data : e.message;

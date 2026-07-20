@@ -559,6 +559,13 @@ function iniciarAgendamentos() {
     try { await lembrarInscricoesPendentes(); } catch(e) { console.error('Lembrete inscrições erro:', e.message); }
   }, { timezone: 'America/Asuncion' });
 
+  // Vigia da W-API — a cada 5 minutos. A instância cai sem avisar ninguém, e instância
+  // caída = quem escreve pra liga nao recebe resposta e a mensagem nem chega no sistema.
+  // Só avisa na transição para desconectado, senão viraria e-mail repetido.
+  cron.schedule('*/5 * * * *', async () => {
+    try { await require('./wapi-vigia').verificar(); } catch(e) { console.error('[VIGIA W-API] erro:', e.message); }
+  }, { timezone: 'America/Asuncion' });
+
   // Instagram — verificar posts agendados a cada 5 minutos
   cron.schedule('*/5 * * * *', async () => {
     try {
