@@ -522,8 +522,14 @@ async function processarMensagem(numero, texto, midia) {
   let msg = (texto || '').trim();
 
   // ── PROXY: se quem envia é número de área, encaminhar ao membro ──────────
+  // O contato da area e cadastrado com o nono digito (5541991796180) mas o WhatsApp
+  // entrega sem ele (554191796180). Comparar string com string reconhecia so as areas
+  // paraguaias; as quatro brasileiras caiam no fluxo de membro e o assistente comecava a
+  // perguntar idioma e nome para a propria diretoria.
+  const { variantesBR, limparNumero } = require('./whatsapp-oficial');
+  const formasDoRemetente = variantesBR(limparNumero(numero));
   const numerosArea = Object.entries(CONTATOS);
-  const areaRemetente = numerosArea.find(([, n]) => n === numero);
+  const areaRemetente = numerosArea.find(([, n]) => formasDoRemetente.includes(limparNumero(n)));
   if (areaRemetente) {
     const [areaNome] = areaRemetente;
     const atendTodos = await query(
