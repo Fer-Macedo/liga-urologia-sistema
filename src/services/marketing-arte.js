@@ -9,7 +9,7 @@
 const path = require('path');
 
 const RAIZ = path.join(__dirname, '..', '..');
-const TINTA = '#0C2340', VERDE = '#17A34A';
+const TINTA = '#0C2340', VERDE = '#17A34A', AZUL = '#1268CE', AMBAR = '#F2B705';
 
 function b64(rel, mime = 'image/png') {
   const fs = require('fs');
@@ -28,31 +28,46 @@ function htmlSlide(s, total, lauro, ucp) {
   return `<!DOCTYPE html><html><head><meta charset="utf-8">${fontes()}<style>
  *{margin:0;padding:0;box-sizing:border-box}
  body{width:1080px;height:1350px;background:${TINTA};font-family:'Barlow',sans-serif;color:#fff;position:relative;overflow:hidden}
- .selo{position:absolute;top:56px;${capa ? 'left:50%;transform:translateX(-50%)' : 'left:64px'};width:${capa ? 148 : 104}px;height:${capa ? 148 : 104}px;
+ /* Filete da marca: verde e azul dos dois rins da logomarca, com um toque ambar.
+    Sem ele a peca ficava fechada demais, so navy — a presidencia apontou. */
+ .filete{position:absolute;top:0;left:0;width:1080px;height:10px;
+         background:linear-gradient(90deg,${VERDE} 0%,${VERDE} 38%,${AZUL} 38%,${AZUL} 84%,${AMBAR} 84%,${AMBAR} 100%)}
+ /* Numeral gigante ao fundo: preenche o vazio e da ritmo de leitura ao carrossel */
+ .marca-dagua{position:absolute;right:-30px;bottom:96px;font-family:'Barlow Condensed',sans-serif;
+              font-weight:700;font-size:420px;line-height:.7;color:rgba(255,255,255,.045);letter-spacing:-14px}
+ .selo{position:absolute;top:64px;${capa ? 'left:50%;transform:translateX(-50%)' : 'left:64px'};width:${capa ? 156 : 104}px;height:${capa ? 156 : 104}px;
        border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}
- .selo img{width:${capa ? 137 : 96}px;height:${capa ? 137 : 96}px;object-fit:contain}
- .num{position:absolute;top:72px;right:64px;font-family:'Barlow Condensed',sans-serif;font-weight:700;
-      font-size:28px;color:rgba(255,255,255,.5);letter-spacing:2px}
- .corpo{position:absolute;left:64px;right:64px;top:${capa ? 260 : 210}px;bottom:170px;display:flex;flex-direction:column;
-        justify-content:${capa ? 'center' : 'flex-start'};text-align:${capa ? 'center' : 'left'}}
+ .selo img{width:${capa ? 144 : 96}px;height:${capa ? 144 : 96}px;object-fit:contain}
+ .num{position:absolute;top:78px;right:64px;font-family:'Barlow Condensed',sans-serif;font-weight:700;
+      font-size:28px;color:${VERDE};letter-spacing:2px}
+ .corpo{position:absolute;left:64px;right:64px;top:${capa ? 268 : 214}px;bottom:${capa ? 190 : 160}px;display:flex;flex-direction:column;
+        justify-content:center;text-align:${capa ? 'center' : 'left'}}
  .cap{font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:27px;letter-spacing:4px;
       text-transform:uppercase;color:${VERDE};margin-bottom:16px}
- h1{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:${capa ? 92 : 70}px;line-height:1.0;letter-spacing:-.5px}
+ h1{font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:${capa ? 104 : 74}px;line-height:.98;letter-spacing:-.5px}
  h1 em{font-style:normal;color:${VERDE};display:block}
- p{margin-top:24px;font-size:34px;line-height:1.45;color:#E3EBF5}
+ .regua{width:${capa ? 120 : 84}px;height:7px;background:${VERDE};margin:${capa ? '30px auto 0' : '26px 0 0'};border-radius:4px}
+ p{margin-top:28px;font-size:36px;line-height:1.45;color:#E3EBF5}
  p b{font-weight:600;color:#fff}
+ /* Fonte da informacao: discreta, no ultimo slide. Da lastro ao conteudo. */
+ .fonte{margin-top:auto;padding-top:20px;font-size:20px;line-height:1.4;color:#8AA0BE;
+        border-top:1px solid rgba(255,255,255,.14)}
  .marca{position:absolute;left:64px;right:64px;bottom:64px;display:flex;align-items:center;justify-content:space-between}
  .marca .ar{display:flex;align-items:center;gap:12px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:30px;letter-spacing:1px}
  .marca .ar svg{width:34px;height:34px;flex-shrink:0}
  .marca .ucp{width:78px;height:78px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}
  .marca .ucp img{width:70px;height:70px;object-fit:contain}
 </style></head><body>
+ <div class="filete"></div>
+ ${s.n ? `<div class="marca-dagua">${String(s.n).padStart(2,'0')}</div>` : ''}
  <div class="selo"><img src="${lauro}"></div>
  ${s.n ? `<div class="num">${s.n}/${total}</div>` : ''}
  <div class="corpo">
    ${s.cap ? `<div class="cap">${s.cap}</div>` : ''}
    <h1>${s.titulo}</h1>
+   <div class="regua"></div>
    ${s.texto ? `<p>${s.texto}</p>` : ''}
+   ${s.fonte ? `<div class="fonte">${s.fonte}</div>` : ''}
  </div>
  <div class="marca">
    <div class="ar">${ICONE_IG}lauroucp.cde</div>
@@ -66,6 +81,8 @@ function htmlStory(s, lauro, ucp) {
   return `<!DOCTYPE html><html><head><meta charset="utf-8">${fontes()}<style>
  *{margin:0;padding:0;box-sizing:border-box}
  body{width:1080px;height:1920px;background:${TINTA};font-family:'Barlow',sans-serif;color:#fff;position:relative;overflow:hidden}
+ .filete{position:absolute;top:0;left:0;width:1080px;height:12px;
+         background:linear-gradient(90deg,${VERDE} 0%,${VERDE} 38%,${AZUL} 38%,${AZUL} 84%,${AMBAR} 84%,${AMBAR} 100%)}
  .topo{position:absolute;top:150px;left:70px;right:70px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center}
  .selo{width:158px;height:158px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}
  .selo img{width:146px;height:146px;object-fit:contain}
@@ -78,17 +95,21 @@ function htmlStory(s, lauro, ucp) {
  .nota{margin-top:34px;background:rgba(23,163,74,.12);border-left:6px solid ${VERDE};border-radius:0 10px 10px 0;padding:22px 26px}
  .nota span{font-size:30px;line-height:1.42;color:#EAF0F7}
  .nota span b{color:#fff;font-weight:600}
+ .fonte{margin-top:30px;padding-top:18px;font-size:21px;line-height:1.4;color:#8AA0BE;
+        border-top:1px solid rgba(255,255,255,.14)}
  .marca{position:absolute;left:70px;right:70px;bottom:80px;display:flex;align-items:center;justify-content:space-between}
  .marca .ar{display:flex;align-items:center;gap:13px;font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:34px;letter-spacing:1px}
  .marca .ar svg{width:38px;height:38px;flex-shrink:0}
  .marca .ucp{width:86px;height:86px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center}
  .marca .ucp img{width:78px;height:78px;object-fit:contain}
 </style></head><body>
+ <div class="filete"></div>
  <div class="topo"><div class="selo"><img src="${lauro}"></div>${s.cap ? `<div class="cap">${s.cap}</div>` : ''}</div>
  <div class="corpo">
    <h1>${s.titulo}</h1>
    ${s.texto ? `<p>${s.texto}</p>` : ''}
    ${s.nota ? `<div class="nota"><span>${s.nota}</span></div>` : ''}
+   ${s.fonte ? `<div class="fonte">${s.fonte}</div>` : ''}
  </div>
  <div class="marca">
    <div class="ar">${ICONE_IG}lauroucp.cde</div>

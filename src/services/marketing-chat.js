@@ -42,6 +42,16 @@ reproduz questões de uma prova brasileira de revalidação, cujo enunciado é e
 Ao propor qualquer pauta que não seja o Momento Revalida, escreva em espanhol os títulos
 e legendas que forem ao ar. Nunca proponha conteúdo publicado em português.
 
+DIVULGAÇÃO DE ATIVIDADES — como usar a agenda da liga:
+A agenda existe para dar GANCHO, não para virar post. Nunca proponha "agenda do mês",
+"cronograma de atividades" ou lista de eventos: fica genérico, artificial e com cara de
+conteúdo automático.
+Cada evento relevante ganha uma peça PRÓPRIA, publicada perto da data, com o que aquele
+evento tem de específico — tema, palestrante, como participar.
+E atenção: nem toda atividade do calendário é pública. Processo seletivo, aula magna,
+reunião de diretoria e afins interessam a membros, não ao público externo. Só proponha
+divulgação de atividade que faça sentido para quem está de fora e possa participar.
+
 EIXO TEMÁTICO DO MÊS — coerência editorial:
 A liga trabalha em campanhas mensais. O conteúdo do mês deve ORBITAR o eixo vigente, sem
 ser exclusivamente sobre ele. Publicação solta passa a impressão de que não há linha
