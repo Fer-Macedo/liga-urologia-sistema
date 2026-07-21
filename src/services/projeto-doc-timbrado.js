@@ -78,28 +78,49 @@ function quebraPagina() {
 }
 
 // ── tabela do cronograma ──
-function cronogramaXml(crono) {
+// Modelo aprovado: 6 colunas (horário dividido em INÍCIO e TÉRMINO, sem segundos),
+// cabeçalho AZUL com texto branco, e as horas totais como ÚLTIMA LINHA da tabela (não
+// como texto solto embaixo). Antes eram 5 colunas com o horário junto e o total fora.
+function cronogramaXml(crono, ehEns) {
   crono = crono || [];
-  if (!crono.length) {
-    return parXml([{ t: 'Horas complementares totales del proyecto: 0h', b: true }], 'both', SZ_CORPO);
-  }
-  const cabs = ['ACTIVIDADES', 'DISERTANTE', 'FECHA', 'HORARIO', 'HORAS'];
-  const cellHdr = (t) => '<w:tc><w:tcPr><w:tcBorders><w:top w:val="single" w:sz="4"/><w:left w:val="single" w:sz="4"/><w:bottom w:val="single" w:sz="4"/><w:right w:val="single" w:sz="4"/></w:tcBorders><w:shd w:val="clear" w:fill="EFEFEF"/></w:tcPr>' +
-    '<w:p><w:pPr><w:jc w:val="center"/></w:pPr>' + runXml(t, true, 20) + '</w:p></w:tc>';
-  const cell = (t) => '<w:tc><w:tcPr><w:tcBorders><w:top w:val="single" w:sz="4"/><w:left w:val="single" w:sz="4"/><w:bottom w:val="single" w:sz="4"/><w:right w:val="single" w:sz="4"/></w:tcBorders></w:tcPr>' +
-    '<w:p><w:pPr><w:jc w:val="center"/></w:pPr>' + runXml(t, false, 20) + '</w:p></w:tc>';
-  let rows = '<w:tr>' + cabs.map(cellHdr).join('') + '</w:tr>';
+  const AZUL = '2E74B5';
+  const cols = [2400, 1700, 1100, 1150, 1150, 1000]; // 6 colunas, soma ~8500 (largura útil A4)
+  const grid = '<w:tblGrid>' + cols.map(w => '<w:gridCol w:w="' + w + '"/>').join('') + '</w:tblGrid>';
+  const bordas = '<w:tcBorders><w:top w:val="single" w:sz="4"/><w:left w:val="single" w:sz="4"/><w:bottom w:val="single" w:sz="4"/><w:right w:val="single" w:sz="4"/></w:tcBorders>';
+  // opts: { w, bold, fill, blanco, span }
+  const cel = (t, o) => {
+    o = o || {};
+    let tcpr = '<w:tcPr>' + bordas + '<w:tcW w:w="' + (o.w || 1000) + '" w:type="dxa"/>';
+    if (o.span) tcpr += '<w:gridSpan w:val="' + o.span + '"/>';
+    if (o.fill) tcpr += '<w:shd w:val="clear" w:fill="' + o.fill + '"/>';
+    tcpr += '</w:tcPr>';
+    const rpr = '<w:rPr>' + (o.bold ? '<w:b/><w:bCs/>' : '') + (o.blanco ? '<w:color w:val="FFFFFF"/>' : '') +
+      '<w:rFonts w:ascii="' + FONTE + '" w:hAnsi="' + FONTE + '"/><w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr>';
+    return '<w:tc>' + tcpr + '<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="0" w:line="240"/></w:pPr>' +
+      '<w:r>' + rpr + '<w:t xml:space="preserve">' + esc(t) + '</w:t></w:r></w:p></w:tc>';
+  };
+  const hm = x => { const m = /^(\d{1,2}:\d{2})/.exec(String(x || '')); return m ? m[1] : ''; }; // HH:MM, sem segundos
+  const cabs = ['ACTIVIDADES', ehEns ? 'DISERTANTE' : 'RESPONSABLE', 'FECHA', 'HORA DE INICIO', 'HORA DE TÉRMINO', 'HORA TOTAL'];
+  let rows = '<w:tr>' + cabs.map((t, i) => cel(t, { w: cols[i], bold: true, fill: AZUL, blanco: true })).join('') + '</w:tr>';
   let total = 0;
   for (const it of crono) {
-    const horario = it.hora_inicio ? (it.hora_inicio + '–' + (it.hora_fim || '')) : '';
-    const horas = it.horas_total ? (it.horas_total + 'h') : '';
-    rows += '<w:tr>' + [it.atividade || '', it.responsavel || '', fmtData(it.data), horario, horas].map(cell).join('') + '</w:tr>';
+    rows += '<w:tr>' + [
+      cel(it.atividade || '', { w: cols[0] }),
+      cel(it.responsavel || '', { w: cols[1] }),
+      cel(fmtData(it.data), { w: cols[2] }),
+      cel(hm(it.hora_inicio), { w: cols[3] }),
+      cel(hm(it.hora_fim), { w: cols[4] }),
+      cel(it.horas_total ? (it.horas_total + 'h') : '', { w: cols[5] })
+    ].join('') + '</w:tr>';
     const h = parseFloat(it.horas_total || 0); if (!isNaN(h)) total += h;
   }
-  const tbl = '<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/>' +
+  const totalStr = (total % 1 === 0 ? total : total.toFixed(1)) + 'h';
+  rows += '<w:tr>' +
+    cel('Horas complementarias totales del proyecto', { w: cols[0] + cols[1] + cols[2] + cols[3] + cols[4], bold: true, span: 5 }) +
+    cel(totalStr, { w: cols[5], bold: true }) + '</w:tr>';
+  return '<w:tbl><w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="0" w:type="auto"/>' +
     '<w:tblBorders><w:top w:val="single" w:sz="4"/><w:left w:val="single" w:sz="4"/><w:bottom w:val="single" w:sz="4"/><w:right w:val="single" w:sz="4"/><w:insideH w:val="single" w:sz="4"/><w:insideV w:val="single" w:sz="4"/></w:tblBorders></w:tblPr>' +
-    rows + '</w:tbl>';
-  return tbl + vazio(1) + parXml([{ t: 'Horas complementares totales del proyecto: ' + (total % 1 === 0 ? total : total.toFixed(1)) + 'h', b: true }], 'both', SZ_CORPO);
+    grid + rows + '</w:tbl>';
 }
 
 
@@ -210,17 +231,12 @@ function montarCorpo(p, cfg) {
     x += sec('METODOLOGÍA');
     for (const l of linhas(p.metodologia)) x += parXml([{ t: l, b: false }], 'both');
     x += sec('INSCRIPCIÓN');
-    if (p.inscricao_gratuita) {
-      x += parXml([{ t: 'Inscripción gratuita.', b: false }], 'both');
-    } else {
-      let vs; try { vs = Number(p.inscricao_valor || 0).toLocaleString('es-PY'); } catch (e) { vs = String(p.inscricao_valor || 0); }
-      let txt = 'Inscripción con costo de Gs. ' + vs;
-      if (p.inscricao_valor_brl) { try { txt += ' (R$ ' + Number(p.inscricao_valor_brl).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) + ')'; } catch (e) {} }
-      x += parXml([{ t: txt + '.', b: false }], 'both');
-    }
+    // Texto corrido conforme o modelo aprovado: gratuita/obligatoria para ligantes, valores
+    // en R$ y G$ (numeral y por extenso), días de las clases, hora y plataforma/local.
+    x += parXml([{ t: require('./projeto-texto').textoInscripcion(p), b: false }], 'both');
     if (p.inscricao_inicio) x += parXml([{ t: 'Período de inscripciones: ' + fmtData(p.inscricao_inicio) + ' al ' + fmtData(p.inscricao_fim) + '.', b: false }], 'both');
     x += sec('CRONOGRAMA');
-    x += cronogramaXml(p.cronograma);
+    x += cronogramaXml(p.cronograma, ehEns);
     x += sec('RECURSOS');
     for (const l of linhas(p.recursos_necessarios)) x += parXml([{ t: l, b: false }], 'both');
     x += sec('REFERENCIAS');
@@ -241,7 +257,7 @@ function montarCorpo(p, cfg) {
     x += sec('RECURSOS NECESARIOS');
     for (const l of linhas(p.recursos_necessarios)) x += parXml([{ t: l, b: false }], 'both');
     x += sec('CRONOGRAMA');
-    x += cronogramaXml(p.cronograma);
+    x += cronogramaXml(p.cronograma, ehEns);
     x += sec('RESULTADOS ESPERADOS');
     for (const l of linhas(p.resultados_esperados)) x += parXml([{ t: l, b: false }], 'both');
   }
