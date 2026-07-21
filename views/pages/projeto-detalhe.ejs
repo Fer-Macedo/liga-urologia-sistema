@@ -209,7 +209,7 @@ var emailsUCP = 'sergio.marmori@central.edu.py,lilian.ramirez@central.edu.py,raq
           <% if (g.titulo) { %><div class="tem-clase-h"><%= g.titulo %></div><% } %>
           <% g.itens.forEach(function(t){ %>
           <div class="tem-view">
-            <div class="tt"><%= t.titulo %><%= t.duracao_min ? ' · '+t.duracao_min+' min' : '' %></div>
+            <div class="tt"><%= t.titulo %><%= t.duracao_horas ? ' · '+t.duracao_horas+' h' : '' %></div>
             <% if (t.ponente) { %><div class="pn">Ponente: <%= t.ponente %><%= t.perfil_ponente ? ' — '+t.perfil_ponente : '' %></div><% } %>
             <% if (t.descricao) { %><div class="ds"><%= t.descricao %></div><% } %>
           </div>

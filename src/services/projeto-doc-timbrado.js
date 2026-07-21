@@ -199,7 +199,7 @@ function montarCorpo(p, cfg) {
       for (const t of g.itens) {
         x += parXml([{ t: 'Título de la clase: ', b: true }, { t: t.titulo || '', b: false }], 'both');
         x += parXml([{ t: 'Descripción del contenido: ', b: true }, { t: t.descricao || '', b: false }], 'both');
-        x += parXml([{ t: 'Duración estimada: ', b: true }, { t: t.duracao_min ? (t.duracao_min + ' minutos') : '', b: false }], 'both');
+        x += parXml([{ t: 'Duración estimada: ', b: true }, { t: t.duracao_horas ? (t.duracao_horas + 'h') : '', b: false }], 'both');
         x += parXml([{ t: 'Nombre del ponente: ', b: true }, { t: t.ponente || '', b: false }], 'both');
         x += parXml([{ t: 'Perfil del ponente: ', b: true }, { t: t.perfil_ponente || '', b: false }], 'both');
         x += vazio(1);

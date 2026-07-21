@@ -214,7 +214,7 @@ function montarProjeto(p, totalH) {
           ...g.itens.flatMap(t => [
             pLabel('Título de la clase: ', t.titulo || ''),
             pLabel('Descripción del contenido: ', t.descricao || ''),
-            pLabel('Duración estimada: ', t.duracao_min ? t.duracao_min + ' minutos' : ''),
+            pLabel('Duración estimada: ', t.duracao_horas ? t.duracao_horas + 'h' : ''),
             pLabel('Nombre del ponente: ', t.ponente || ''),
             pLabel('Perfil del ponente: ', t.perfil_ponente || ''),
             pEmpty()

@@ -184,7 +184,7 @@ module.exports = function(router) {
             temDur = arr(b.temario_duracao), temDat = arr(b.temario_data);
       const temario = temTit.map((t,i)=>({
         titulo:t, ponente:temPon[i]||'', perfil_ponente:temPer[i]||'',
-        descricao:temDes[i]||'', duracao_min:temDur[i]||'',
+        descricao:temDes[i]||'', duracao_horas:temDur[i]||'',
         // Data em que a classe e ministrada (YYYY-MM-DD). Temas com a mesma data sao a
         // mesma classe — o agrupamento "Clase N" e derivado na exibicao, nao gravado.
         data:temDat[i]||''

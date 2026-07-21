@@ -16,7 +16,7 @@ function montarTemario(b) {
         temDur = arr(b.temario_duracao), temDat = arr(b.temario_data);
   return temTit.map((t, i) => ({
     titulo: t, ponente: temPon[i] || '', perfil_ponente: temPer[i] || '',
-    descricao: temDes[i] || '', duracao_min: temDur[i] || '', data: temDat[i] || ''
+    descricao: temDes[i] || '', duracao_horas: temDur[i] || '', data: temDat[i] || ''
   })).filter(t => t.titulo && t.titulo.trim());
 }
 
@@ -87,4 +87,13 @@ test('nenhuma data: um grupo só, sem cabeçalho de classe', () => {
   assert.strictEqual(g.length, 1);
   assert.strictEqual(g[0].titulo, '', 'sem datas, não inventa "Clase 1"');
   assert.strictEqual(g[0].itens.length, 2);
+});
+
+test('duração é guardada em horas (duracao_horas), não minutos', () => {
+  const t = montarTemario({
+    temario_titulo: ['Clase larga'],
+    temario_duracao: ['3']   // 3 horas — certificação da universidade é por hora-aula
+  });
+  assert.strictEqual(t[0].duracao_horas, '3');
+  assert.strictEqual(t[0].duracao_min, undefined, 'não pode mais gravar em minutos');
 });

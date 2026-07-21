@@ -193,7 +193,7 @@ if (!cron.length) cron = [{}];
           <div class="tem-item">
             <div class="tem-grid">
               <input type="text" name="temario_titulo" value="<%= t.titulo || '' %>" placeholder="Título de la charla / taller">
-              <input type="number" name="temario_duracao" value="<%= t.duracao_min || '' %>" placeholder="Duración (min)">
+              <input type="number" name="temario_duracao" step="0.5" min="0" value="<%= t.duracao_horas || '' %>" placeholder="Duración (horas)">
               <button type="button" class="btn-del" onclick="this.closest('.tem-item').remove()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:8px;margin-bottom:8px">
@@ -378,7 +378,7 @@ function addTem() {
   // arrays no backend (o tema N herdaria a data do tema N+1).
   d.innerHTML = '<div class="tem-grid">' +
     '<input type="text" name="temario_titulo" placeholder="Título de la charla / taller">' +
-    '<input type="number" name="temario_duracao" placeholder="Duración (min)">' +
+    '<input type="number" name="temario_duracao" step="0.5" min="0" placeholder="Duración (horas)">' +
     '<button type="button" class="btn-del" onclick="this.closest(\'.tem-item\').remove()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>' +
     '<div style="display:grid;grid-template-columns:1fr 1.5fr;gap:8px;margin-bottom:8px">' +
     '<div><label style="display:block;font-size:11px;font-weight:600;color:var(--texto2,#64748b);margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px">Fecha de la clase</label>' +
