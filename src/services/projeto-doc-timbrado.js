@@ -135,8 +135,8 @@ function montarCorpo(p, cfg) {
   x += vazio(3);
   x += parXml([{ t: ehEns ? 'PROYECTO DE ENSEÑANZA' : 'PROYECTO DE EXTENSIÓN', b: true }], 'center', SZ_CAPA);
   x += vazio(2);
-  x += parXml([{ t: 'Nombre: ', b: true }, { t: p.nome || '', b: false }], 'left');
-  x += parXml([{ t: 'Responsable: ', b: true }, { t: 'Liga Académica de Urología – LAURO', b: false }], 'left');
+  x += parXml([{ t: 'Nombre: ', b: true }, { t: p.nome || '', b: false }], 'both');
+  x += parXml([{ t: 'Responsable: ', b: true }, { t: 'Liga Académica de Urología – LAURO', b: false }], 'both');
   x += vazio(11);
   x += parXml([{ t: 'Ciudad del Este – PY', b: true }], 'center', SZ_CORPO, { after: 0 });
   x += parXml([{ t: String(new Date().getFullYear()), b: true }], 'center', SZ_CORPO, { after: 0 });
@@ -153,23 +153,23 @@ function montarCorpo(p, cfg) {
 
   // IDENTIFICACIÓN
   x += sec('IDENTIFICACIÓN');
-  x += parXml([{ t: 'Nombre del Proyecto: ', b: true }, { t: p.nome || '', b: false }], 'left');
+  x += parXml([{ t: 'Nombre del Proyecto: ', b: true }, { t: p.nome || '', b: false }], 'both');
   if (ehEns) {
     const local = (p.local || '') + (p.plataforma ? ' (' + p.plataforma + ')' : '');
     let fecha = fmtData(p.data_execucao_inicio);
     if (p.data_execucao_fim) fecha += ' al ' + fmtData(p.data_execucao_fim);
     if (p.horario_inicio) fecha += ' | ' + p.horario_inicio + (p.horario_fim ? ' – ' + p.horario_fim : '');
-    x += parXml([{ t: 'Local: ', b: true }, { t: local, b: false }], 'left');
-    x += parXml([{ t: 'Fecha: ', b: true }, { t: fecha, b: false }], 'left');
-    x += parXml([{ t: 'Docente Responsable del Proyecto: ', b: true }, { t: p.docente_responsavel || '', b: false }], 'left');
-    x += parXml([{ t: 'Liga Responsable: ', b: true }, { t: 'Liga Académica de Urología – LAURO', b: false }], 'left');
+    x += parXml([{ t: 'Local: ', b: true }, { t: local, b: false }], 'both');
+    x += parXml([{ t: 'Fecha: ', b: true }, { t: fecha, b: false }], 'both');
+    x += parXml([{ t: 'Docente Responsable del Proyecto: ', b: true }, { t: p.docente_responsavel || '', b: false }], 'both');
+    x += parXml([{ t: 'Liga Responsable: ', b: true }, { t: 'Liga Académica de Urología – LAURO', b: false }], 'both');
   } else {
     let fecha = fmtData(p.data_execucao_inicio);
     if (p.data_execucao_fim) fecha += ' al ' + fmtData(p.data_execucao_fim);
-    x += parXml([{ t: 'Fecha de Ejecución: ', b: true }, { t: fecha, b: false }], 'left');
-    x += parXml([{ t: 'Lugar de Ejecución: ', b: true }, { t: p.lugar_execucao || p.local || '', b: false }], 'left');
-    x += parXml([{ t: 'Responsable del Proyecto: ', b: true }, { t: p.docente_responsavel || '', b: false }], 'left');
-    x += parXml([{ t: 'Liga Responsable: ', b: true }, { t: 'Liga Académica de Urología – LAURO', b: false }], 'left');
+    x += parXml([{ t: 'Fecha de Ejecución: ', b: true }, { t: fecha, b: false }], 'both');
+    x += parXml([{ t: 'Lugar de Ejecución: ', b: true }, { t: p.lugar_execucao || p.local || '', b: false }], 'both');
+    x += parXml([{ t: 'Responsable del Proyecto: ', b: true }, { t: p.docente_responsavel || '', b: false }], 'both');
+    x += parXml([{ t: 'Liga Responsable: ', b: true }, { t: 'Liga Académica de Urología – LAURO', b: false }], 'both');
   }
 
   x += sec('ANTECEDENTES Y JUSTIFICACIÓN DEL PROYECTO');
@@ -183,15 +183,27 @@ function montarCorpo(p, cfg) {
 
   if (ehEns) {
     x += sec('TEMARIO Y PROGRAMA');
-    for (const t of temario) {
-      x += parXml([{ t: 'Título: ', b: true }, { t: t.titulo || '', b: false }], 'left');
-      // Data da classe: YYYY-MM-DD vira DD/MM/YYYY.
-      x += parXml([{ t: 'Fecha de la clase: ', b: true }, { t: t.data ? t.data.split('-').reverse().join('/') : '', b: false }], 'left');
-      x += parXml([{ t: 'Descripción del contenido: ', b: true }, { t: t.descricao || '', b: false }], 'left');
-      x += parXml([{ t: 'Duración estimada: ', b: true }, { t: t.duracao_min ? (t.duracao_min + ' minutos') : '', b: false }], 'left');
-      x += parXml([{ t: 'Nombre del ponente: ', b: true }, { t: t.ponente || '', b: false }], 'left');
-      x += parXml([{ t: 'Perfil del ponente: ', b: true }, { t: t.perfil_ponente || '', b: false }], 'left');
-      x += vazio(1);
+    // Estrutura do modelo aprovado pela coordinación: os temas sao agrupados por data como
+    // "Nª Clase – DD/MM/YYYY" (cabecalho em negrito), e TUDO justificado (jc=both). O numero
+    // da clase e derivado da ordem cronologica das datas, nao digitado. Antes cada tema saia
+    // solto, com "Título:"/"Fecha de la clase:" em linhas separadas e alinhado a esquerda.
+    const _fmt = iso => iso ? iso.split('-').reverse().join('/') : '';
+    const _datas = [];
+    temario.forEach(t => { if (t.data && _datas.indexOf(t.data) === -1) _datas.push(t.data); });
+    _datas.sort();
+    const _grupos = _datas.map((dia, i) => ({ hdr: (i + 1) + 'ª Clase – ' + _fmt(dia), itens: temario.filter(t => t.data === dia) }));
+    const _sem = temario.filter(t => !t.data);
+    if (_sem.length) _grupos.push({ hdr: _datas.length ? 'Sin fecha asignada' : '', itens: _sem });
+    for (const g of _grupos) {
+      if (g.hdr) x += parXml([{ t: g.hdr, b: true }], 'both');
+      for (const t of g.itens) {
+        x += parXml([{ t: 'Título de la clase: ', b: true }, { t: t.titulo || '', b: false }], 'both');
+        x += parXml([{ t: 'Descripción del contenido: ', b: true }, { t: t.descricao || '', b: false }], 'both');
+        x += parXml([{ t: 'Duración estimada: ', b: true }, { t: t.duracao_min ? (t.duracao_min + ' minutos') : '', b: false }], 'both');
+        x += parXml([{ t: 'Nombre del exponente: ', b: true }, { t: t.ponente || '', b: false }], 'both');
+        x += parXml([{ t: 'Perfil del exponente: ', b: true }, { t: t.perfil_ponente || '', b: false }], 'both');
+        x += vazio(1);
+      }
     }
     x += sec('PÚBLICO OBJETIVO');
     x += parXml([{ t: pub.map(z => pubmap[z] || z).join(', ') + '.', b: false }], 'both');
@@ -218,10 +230,10 @@ function montarCorpo(p, cfg) {
     for (const l of linhas(p.atividades_realizar)) x += parXml([{ t: l, b: false }], 'both');
     x += sec('INTEGRANTES DEL PROYECTO');
     if (integrantes.length) {
-      x += parXml([{ t: '- Responsable Principal: ', b: true }, { t: String(integrantes[0]), b: false }], 'left');
+      x += parXml([{ t: '- Responsable Principal: ', b: true }, { t: String(integrantes[0]), b: false }], 'both');
       if (integrantes.length > 1) {
-        x += parXml([{ t: '- Equipo de Trabajo:', b: true }], 'left');
-        for (const o of integrantes.slice(1)) x += parXml([{ t: '  ' + o, b: false }], 'left');
+        x += parXml([{ t: '- Equipo de Trabajo:', b: true }], 'both');
+        for (const o of integrantes.slice(1)) x += parXml([{ t: '  ' + o, b: false }], 'both');
       }
     }
     x += sec('METODOLOGÍA');

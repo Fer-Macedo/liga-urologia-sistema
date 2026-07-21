@@ -198,16 +198,29 @@ function montarProjeto(p, totalH) {
   if (ehEns) {
     especifico = [
       sec(5, 'TEMARIO Y PROGRAMA'),
-      ...temario.flatMap(t => [
-        pLabel('Título: ', t.titulo || ''),
-        // Data da classe: YYYY-MM-DD (do <input type=date>) vira DD/MM/YYYY.
-        pLabel('Fecha de la clase: ', t.data ? t.data.split('-').reverse().join('/') : ''),
-        pLabel('Descripción del contenido: ', t.descricao || ''),
-        pLabel('Duración estimada: ', t.duracao_min ? t.duracao_min + ' minutos' : ''),
-        pLabel('Nombre del ponente: ', t.ponente || ''),
-        pLabel('Perfil del ponente: ', t.perfil_ponente || ''),
-        pEmpty()
-      ]),
+      // Estrutura do modelo aprovado pela coordinación: temas agrupados por data como
+      // "Nª Clase – DD/MM/YYYY" (cabecalho negrito), numero derivado da ordem cronologica
+      // das datas. pLabel ja e justificado (par -> AlignmentType.JUSTIFIED).
+      ...(() => {
+        const fmt = iso => iso ? iso.split('-').reverse().join('/') : '';
+        const datas = [];
+        temario.forEach(t => { if (t.data && datas.indexOf(t.data) === -1) datas.push(t.data); });
+        datas.sort();
+        const grupos = datas.map((dia, i) => ({ hdr: (i + 1) + 'ª Clase – ' + fmt(dia), itens: temario.filter(t => t.data === dia) }));
+        const sem = temario.filter(t => !t.data);
+        if (sem.length) grupos.push({ hdr: datas.length ? 'Sin fecha asignada' : '', itens: sem });
+        return grupos.flatMap(g => [
+          ...(g.hdr ? [pBold(g.hdr)] : []),
+          ...g.itens.flatMap(t => [
+            pLabel('Título de la clase: ', t.titulo || ''),
+            pLabel('Descripción del contenido: ', t.descricao || ''),
+            pLabel('Duración estimada: ', t.duracao_min ? t.duracao_min + ' minutos' : ''),
+            pLabel('Nombre del exponente: ', t.ponente || ''),
+            pLabel('Perfil del exponente: ', t.perfil_ponente || ''),
+            pEmpty()
+          ])
+        ]);
+      })(),
       sec(6, 'PÚBLICO OBJETIVO'),
       pTxt(pubAlvo.map(x => pubMap[x] || x).join(', ') + '.'), pEmpty(),
       sec(7, 'METODOLOGÍA'),
