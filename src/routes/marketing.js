@@ -262,6 +262,24 @@ router.get('/marketing', requireAuth, requirePermissao('marketing'), async (req,
   const { estaConectado } = require('../services/canva');
   const { gerarUrlInline } = require('../services/arquivos');
   const canvaConectado = await estaConectado();
+
+  // As miniaturas dos posts do Instagram estavam quebradas: a URL do R2 gravada em
+  // midias/midia_url é ASSINADA e expira em 24h. A CHAVE (permanente) é que deve virar
+  // uma URL nova a cada abertura. Aqui regeneramos as URLs frescas antes de renderizar.
+  // Quando não há chave (stories antigas), extraímos a chave do próprio endereço gravado.
+  const chaveDeUrl = (u) => { try { return decodeURIComponent(new URL(u).pathname.replace(/^\/+/, '')); } catch (e) { return null; } };
+  await Promise.all(igPosts.map(async (g) => {
+    let mid = [];
+    try { mid = typeof g.midias === 'string' ? JSON.parse(g.midias) : (g.midias || []); } catch (e) {}
+    if (!mid.length && g.midia_url) mid = [{ url: g.midia_url }];
+    await Promise.all(mid.map(async (m) => {
+      const chave = m.chave || chaveDeUrl(m.url);
+      if (chave) { try { m.url = await gerarUrlInline(chave, 'image/png'); m.chave = chave; } catch (e) {} }
+    }));
+    g.midias = mid;                                   // array já enriquecida (a view aceita array)
+    if (mid[0] && mid[0].url) g.midia_url = mid[0].url;
+  }));
+
   const posts = postsR.rows;
   // Contadores somam as DUAS origens: campanhas multicanal (marketing_posts) e
   // publicações do Instagram (instagram_posts). Antes 'total' usava `|| 1`, que
