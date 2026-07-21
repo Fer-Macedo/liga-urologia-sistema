@@ -361,7 +361,13 @@ module.exports = function(router) {
       await query('INSERT INTO projetos_anexos (projeto_id,tipo,arquivo_chave,nome_original,mimetype,enviado_por) VALUES ($1,$2,$3,$4,$5,$6)',
         [p.id, 'documento_final', r.chave, nomeArq, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', req.session.usuario.id]);
       await logHist(p.id, p.status, p.status, 'Documento timbrado generado', req.session.usuario.id);
-      res.json({ok:true, anexo_nome: nomeArq});
+      // URL de download direto (Content-Disposition: attachment) para o front baixar o
+      // .docx na hora. O documento tambem fica anexado ao projeto; a URL so serve para a
+      // pessoa editar em Word/Docs sem ter que ir cacar o anexo depois.
+      const { gerarUrlDownload } = require('../services/arquivos');
+      let download_url = null;
+      try { download_url = await gerarUrlDownload(r.chave, nomeArq); } catch(e) { console.error('url download timbrado:', e.message); }
+      res.json({ok:true, anexo_nome: nomeArq, download_url});
     } catch(e) { console.error('gerar-timbrado:', e); res.status(500).json({erro:e.message}); }
   });
 

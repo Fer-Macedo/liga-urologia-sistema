@@ -157,7 +157,18 @@ async function generarTimbrado(btnId) {
   try {
     var r = await fetch('/projetos/<%= p.id %>/gerar-timbrado', { method:'POST' });
     var d = await r.json();
-    if (d.ok) { alert('Documento generado y adjuntado: ' + d.anexo_nome); location.reload(); }
+    if (d.ok) {
+      // Baixa o .docx na hora (editable em Word/Docs). Antes o botao so anexava e dava
+      // reload — sem download nenhum — e o reload imediato ainda cancelaria a descarga.
+      if (d.download_url) {
+        var a = document.createElement('a');
+        a.href = d.download_url; a.download = d.anexo_nome || 'documento.docx';
+        document.body.appendChild(a); a.click(); a.remove();
+      }
+      if (b) { b.textContent = '✓ Descargado y adjuntado'; }
+      // Espera o download comecar antes de recarregar (o reload cancelaria a descarga).
+      setTimeout(function(){ location.reload(); }, 2500);
+    }
     else { if (b){ b.disabled=false; b.textContent=rotulo; } alert('Error: '+d.erro); }
   } catch(e) { if (b){ b.disabled=false; b.textContent=rotulo; } alert('Error de conexión'); }
 }
