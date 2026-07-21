@@ -215,8 +215,8 @@ function montarProjeto(p, totalH) {
             pLabel('Título de la clase: ', t.titulo || ''),
             pLabel('Descripción del contenido: ', t.descricao || ''),
             pLabel('Duración estimada: ', t.duracao_min ? t.duracao_min + ' minutos' : ''),
-            pLabel('Nombre del exponente: ', t.ponente || ''),
-            pLabel('Perfil del exponente: ', t.perfil_ponente || ''),
+            pLabel('Nombre del ponente: ', t.ponente || ''),
+            pLabel('Perfil del ponente: ', t.perfil_ponente || ''),
             pEmpty()
           ])
         ]);
