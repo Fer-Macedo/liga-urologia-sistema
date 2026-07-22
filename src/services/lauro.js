@@ -372,6 +372,17 @@ async function enviarMensagem(numero, mensagem) {
   const r = await enviarTexto(numero, mensagem);
   if (!r.ok) console.error('Lauro erro envio:', JSON.stringify(r.erro));
 }
+// ═══ POLÍTICA "A W-API SÓ RESPONDE, NUNCA INICIA" ════════════════════════════
+// Em 2026-07-22 o WhatsApp RESTRINGIU o número novo ("pode caracterizar envio de spam").
+// Não foi volume: 37 mensagens em 2 dias, para 9 números, e só 1 deles era conversa
+// iniciada por nós. A causa foi conta NOVA (2 dias) + automação NÃO-OFICIAL (W-API) +
+// 5 mensagens seguidas a um contato que nunca respondeu. Foi a segunda vez que a mesma
+// mecânica derrubou um número (ver memória do ban anterior).
+//
+// A regra, decidida pela presidência: a W-API só pode falar com quem JÁ ESCREVEU para
+// nós. Todo aviso que PARTE de nós (avisar secretaria/financeiro de atendimento novo)
+// sai pelo modelo aprovado da API Oficial, que é o canal legítimo para iniciar conversa.
+
 // Ja recebemos alguma mensagem DESTE numero? Aceita as duas grafias do numero brasileiro,
 // porque o contato da area e cadastrado com o nono digito e a conversa fica gravada com a
 // grafia que o WhatsApp usa — sem isso a checagem daria "nunca conversou" para todo mundo.
@@ -394,31 +405,16 @@ async function areaJaConversou(numeroArea) {
 
 // Notifica um numero de area (secretaria, financeiro...) sobre atendimento novo.
 //
-// O caminho depende de a area ja ter conversado com o numero do atendimento:
+// SEMPRE pela API Oficial (modelo aprovado) — NUNCA pela W-API. Este aviso PARTE de nos,
+// entao e uma conversa INICIADA, e iniciar conversa e exatamente o que fez o WhatsApp
+// restringir o numero em 2026-07-22 (ver a politica no topo deste bloco). O modelo
+// aprovado e o canal legitimo para isso e entrega mesmo sem conversa previa.
 //
-//   ja conversou  -> W-API, texto livre. A conversa acontece toda no mesmo numero, que e
-//                    o comportamento desejado.
-//   nunca conversou -> modelo aprovado pela API Oficial, direto.
-//
-// Por que a distincao existe: em 2026-07-20 o secretario nao recebeu aviso nenhum, mesmo
-// com a W-API devolvendo 200 e messageId. O numero do atendimento tinha sido ativado
-// naquele dia, e o WhatsApp descarta EM SILENCIO mensagem de conta nova para quem nunca
-// escreveu para ela — e o retrato de spam. A evidencia foi limpa: 157 mensagens recebidas
-// do unico numero que recebia os avisos, ZERO das sete areas que nao recebiam nenhum.
-//
-// Tentar a W-API primeiro nesses casos nao adianta: ela responde "ok" e a mensagem some,
-// entao nem daria para cair no fallback. Por isso a checagem vem ANTES do envio.
+// Antes daqui saia por W-API quando a area ja tinha escrito. Foi removido de proposito:
+// mesmo com conversa previa, um aviso automatico partindo de uma conta nova em automacao
+// nao-oficial e o padrao que o WhatsApp pune.
 async function notificarArea(numeroArea, msgArea, nomeMembro, areaNome) {
-  const { enviarTexto, enviarTemplate } = require('./canal-assistente');
-
-  if (await areaJaConversou(numeroArea)) {
-    const r = await enviarTexto(numeroArea, msgArea);
-    if (r.ok) return;
-    console.warn('[LAURO] Texto livre falhou p/ area, tentando o modelo:', JSON.stringify(r.erro).slice(0, 200));
-  } else {
-    console.warn('[LAURO] Area', numeroArea, 'nunca escreveu para o numero do atendimento —',
-      'a W-API descartaria em silencio. Indo direto pelo modelo oficial.');
-  }
+  const { enviarTemplate } = require('./canal-assistente');
 
   const componentes = [{ type: 'body', parameters: [
     { type: 'text', text: nomeMembro || 'Membro' },
@@ -673,11 +669,17 @@ async function processarMensagem(numero, texto, midia) {
     const _at = await query("SELECT numero_area, area FROM lauro_atendimentos WHERE numero_membro=$1 AND status='aguardando' ORDER BY criado_em DESC LIMIT 1", [numero]);
     if (_at.rows.length > 0) {
       const _na = _at.rows[0].numero_area;
-      if (midia.tipo === 'image') await enviarImagem(_na, midia.url, midia.caption || '');
-      else if (midia.tipo === 'document') await enviarDocumento(_na, midia.url, midia.fileName || 'arquivo');
-      else await enviarMensagem(_na, (midia.caption ? midia.caption + '\n' : '') + (midia.url || ''));
+      // Mesma politica do texto: so envia pela W-API para area que JA escreveu para nos.
+      if (await areaJaConversou(_na)) {
+        if (midia.tipo === 'image') await enviarImagem(_na, midia.url, midia.caption || '');
+        else if (midia.tipo === 'document') await enviarDocumento(_na, midia.url, midia.fileName || 'arquivo');
+        else await enviarMensagem(_na, (midia.caption ? midia.caption + '\n' : '') + (midia.url || ''));
+        console.log('Lauro: midia do membro', numero, 'repassada para area', _na);
+      } else {
+        console.warn('[LAURO] Area', _na, 'ainda nao escreveu — midia NAO repassada por WhatsApp',
+          '(fica em /atendimentos). Politica: a W-API so responde.');
+      }
       await salvarConversa(numero, 'user', '[[MIDIA]]'+(midia.tipo||'document')+'|||'+(midia.url||'')+'|||'+(midia.fileName||'')).catch(()=>{});
-      console.log('Lauro: midia do membro', numero, 'repassada para area', _na);
       return;
     }
     const _ack = (getSessao(numero).idioma === 'es') ? '¡Recibí tu archivo! 😊 ¿En qué puedo ayudarte?' : 'Recebi seu arquivo! 😊 Como posso te ajudar?';
@@ -707,7 +709,17 @@ async function processarMensagem(numero, texto, midia) {
             }
           }
         } catch(e) {}
-        await enviarMensagem(_naT, '\ud83d\udce9 *' + _nomeM + ':* ' + msg).catch(()=>{});
+        // S\u00f3 repassa pela W-API se a \u00e1rea J\u00c1 escreveu para n\u00f3s \u2014 a\u00ed \u00e9 resposta dentro da
+        // conversa dela. Se nunca escreveu, repassar seria insistir com quem n\u00e3o responde:
+        // foi exatamente esse padr\u00e3o (5 mensagens seguidas \u00e0 secretaria) que ajudou a
+        // restringir o n\u00famero. Nesse caso a mensagem fica salva e aparece em /atendimentos;
+        // a \u00e1rea j\u00e1 foi avisada pelo modelo oficial quando o atendimento foi aberto.
+        if (await areaJaConversou(_naT)) {
+          await enviarMensagem(_naT, '\ud83d\udce9 *' + _nomeM + ':* ' + msg).catch(()=>{});
+        } else {
+          console.warn('[LAURO] Area', _naT, 'ainda nao escreveu para o numero \u2014 mensagem do membro',
+            'NAO repassada por WhatsApp (fica em /atendimentos). Politica: a W-API so responde.');
+        }
         await salvarConversa(numero, 'user', msg).catch(()=>{});
         return;
       } else {

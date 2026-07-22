@@ -1,12 +1,11 @@
-// Em 2026-07-20 o secretário não recebeu aviso nenhum de atendimento, mesmo com a W-API
-// devolvendo 200 e messageId. O número do atendimento tinha sido ativado naquele dia, e o
-// WhatsApp descarta EM SILÊNCIO mensagem de conta nova para quem nunca escreveu para ela.
-// A evidência foi limpa: 157 mensagens recebidas do único número que recebia os avisos,
-// ZERO das sete áreas que não recebiam nada.
+// POLÍTICA "A W-API SÓ RESPONDE, NUNCA INICIA" (decidida em 2026-07-22).
 //
-// A regra que estes testes prendem: se a área nunca conversou com o número do atendimento,
-// o aviso vai pelo modelo aprovado da API Oficial — que entrega — em vez de pela W-API,
-// que responderia "ok" e jogaria fora.
+// O WhatsApp restringiu o número novo por "envio de spam". Não foi volume: 37 mensagens em
+// 2 dias, 9 destinos, só 1 conversa iniciada por nós. A causa foi conta NOVA + automação
+// não-oficial (W-API) + 5 mensagens seguidas a um contato que nunca respondeu.
+//
+// Estes testes prendem a regra: tudo que PARTE de nós sai pela API Oficial (modelo
+// aprovado); a W-API só fala com quem já escreveu.
 const { test } = require('node:test');
 const assert = require('node:assert');
 const path = require('path');
@@ -14,7 +13,7 @@ const path = require('path');
 const RAIZ = path.join(__dirname, '..');
 const MODULO = path.join(RAIZ, 'src/services/lauro.js');
 
-function comCenario({ conversasDaArea = 0, wapiFalha = false, consultaFalha = false } = {}) {
+function comCenario({ areaJaEscreveu = false, consultaFalha = false } = {}) {
   const enviados = [];
 
   const rq = require.resolve(path.join(RAIZ, 'src/models/database.js'));
@@ -22,7 +21,7 @@ function comCenario({ conversasDaArea = 0, wapiFalha = false, consultaFalha = fa
     query: async (sql) => {
       if (consultaFalha && /lauro_conversas/.test(sql)) throw new Error('banco fora');
       if (/FROM lauro_conversas WHERE papel='user'/.test(sql)) {
-        return { rows: conversasDaArea > 0 ? [{ '?column?': 1 }] : [] };
+        return { rows: areaJaEscreveu ? [{ '?column?': 1 }] : [] };
       }
       return { rows: [] };
     }
@@ -30,60 +29,46 @@ function comCenario({ conversasDaArea = 0, wapiFalha = false, consultaFalha = fa
 
   const rc = require.resolve(path.join(RAIZ, 'src/services/canal-assistente.js'));
   require.cache[rc] = { id: rc, filename: rc, loaded: true, exports: {
-    enviarTexto: async (n, m) => {
-      enviados.push({ via: 'wapi', numero: n, msg: m });
-      return wapiFalha ? { ok: false, erro: 'falhou' } : { ok: true };
-    },
-    enviarTemplate: async (n, nome) => {
-      enviados.push({ via: 'oficial-template', numero: n, modelo: nome });
-      return { ok: true };
-    }
+    enviarTexto: async (n, m) => { enviados.push({ via: 'wapi', numero: n, msg: m }); return { ok: true }; },
+    enviarTemplate: async (n, nome) => { enviados.push({ via: 'oficial-template', numero: n, modelo: nome }); return { ok: true }; }
   }};
 
   delete require.cache[require.resolve(MODULO)];
   return { mod: require(MODULO), enviados };
 }
 
-test('área que NUNCA conversou → modelo oficial, sem nem tentar a W-API', async () => {
-  const { mod, enviados } = comCenario({ conversasDaArea: 0 });
+// O aviso de atendimento novo PARTE de nós — é uma conversa iniciada. Nunca pela W-API.
+test('aviso à área SEMPRE pelo modelo oficial, mesmo se a área já escreveu', async () => {
+  const { mod, enviados } = comCenario({ areaJaEscreveu: true });
   await mod.notificarArea('595973738431', 'Novo atendimento', 'Fulano', 'Secretaria');
   assert.strictEqual(enviados.length, 1, 'um envio só');
   assert.strictEqual(enviados[0].via, 'oficial-template');
   assert.strictEqual(enviados[0].modelo, 'novo_atendimento');
 });
 
-// Tentar a W-API antes seria pior que inútil: ela responde "ok" e a mensagem some, então
-// o código nem chegaria no fallback. A checagem precisa vir ANTES do envio.
-test('não pode tentar a W-API primeiro quando a área nunca conversou', async () => {
-  const { mod, enviados } = comCenario({ conversasDaArea: 0 });
-  await mod.notificarArea('595973738431', 'Novo atendimento', 'Fulano', 'Secretaria');
-  assert.ok(!enviados.some(e => e.via === 'wapi'),
-    'a W-API responderia ok e engoliria a mensagem — o fallback nunca dispararia');
-});
-
-test('área que JÁ conversou → texto livre pela W-API, no mesmo número da conversa', async () => {
-  const { mod, enviados } = comCenario({ conversasDaArea: 3 });
-  await mod.notificarArea('595973738431', 'Novo atendimento', 'Fulano', 'Secretaria');
-  assert.strictEqual(enviados.length, 1);
-  assert.strictEqual(enviados[0].via, 'wapi');
-  assert.strictEqual(enviados[0].msg, 'Novo atendimento');
-});
-
-test('área que já conversou mas a W-API falha → cai no modelo oficial', async () => {
-  const { mod, enviados } = comCenario({ conversasDaArea: 3, wapiFalha: true });
-  await mod.notificarArea('595973738431', 'Novo atendimento', 'Fulano', 'Secretaria');
-  assert.deepStrictEqual(enviados.map(e => e.via), ['wapi', 'oficial-template']);
-});
-
-// Na dúvida, o caminho que entrega. Silêncio é o pior resultado possível aqui.
-test('se a checagem no banco falhar, usa o caminho garantido', async () => {
-  const { mod, enviados } = comCenario({ conversasDaArea: 5, consultaFalha: true });
+test('área que nunca escreveu: também pelo modelo oficial', async () => {
+  const { mod, enviados } = comCenario({ areaJaEscreveu: false });
   await mod.notificarArea('595973738431', 'Novo atendimento', 'Fulano', 'Secretaria');
   assert.strictEqual(enviados[0].via, 'oficial-template');
 });
 
-test('o modelo leva o nome do membro e o nome da área nos parâmetros', async () => {
-  const { mod, enviados } = comCenario({ conversasDaArea: 0 });
-  await mod.notificarArea('595973738431', 'msg', 'Josias Gomes', 'Secretaria');
-  assert.strictEqual(enviados[0].numero, '595973738431');
+// A regressão que causou a restrição: o aviso saindo pela W-API.
+test('o aviso à área NUNCA pode sair pela W-API', async () => {
+  for (const jaEscreveu of [true, false]) {
+    const { mod, enviados } = comCenario({ areaJaEscreveu: jaEscreveu });
+    await mod.notificarArea('554191796180', 'Novo atendimento', 'Fulano', 'Financeiro');
+    assert.ok(!enviados.some(e => e.via === 'wapi'),
+      'iniciar conversa pela W-API é o que fez o WhatsApp restringir o número');
+  }
+});
+
+test('areaJaConversou: reconhece quem escreveu e quem não escreveu', async () => {
+  assert.strictEqual(await comCenario({ areaJaEscreveu: true }).mod.areaJaConversou('595973738431'), true);
+  assert.strictEqual(await comCenario({ areaJaEscreveu: false }).mod.areaJaConversou('595973738431'), false);
+});
+
+// Na dúvida, o caminho seguro: assume que não escreveu (não arrisca a W-API).
+test('se o banco falhar, areaJaConversou responde "não escreveu"', async () => {
+  const { mod } = comCenario({ areaJaEscreveu: true, consultaFalha: true });
+  assert.strictEqual(await mod.areaJaConversou('595973738431'), false);
 });

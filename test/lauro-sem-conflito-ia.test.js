@@ -16,7 +16,7 @@ const MODULO = path.join(RAIZ, 'src/services/lauro.js');
 const AREA_SECRETARIA = '595973738431';   // paraguaio (bate com o contato padrão)
 const MEMBRO = '5511988887777';
 
-function montar({ membroComAtendimento = false, areaComAtendimento = false } = {}) {
+function montar({ membroComAtendimento = false, areaComAtendimento = false, areaJaEscreveu = true } = {}) {
   const enviados = [];      // { numero, msg }
   let iaChamada = false;
 
@@ -35,6 +35,10 @@ function montar({ membroComAtendimento = false, areaComAtendimento = false } = {
     query: async (sql) => {
       if (/SELECT area, numero FROM lauro_contatos/.test(sql)) {
         return { rows: [{ area: 'secretaria', numero: AREA_SECRETARIA }] };
+      }
+      // Política "a W-API só responde": o repasse só sai se a área já escreveu para nós.
+      if (/FROM lauro_conversas WHERE papel='user'/.test(sql)) {
+        return { rows: areaJaEscreveu ? [{ '?column?': 1 }] : [] };
       }
       // membro -> área: existe atendimento aberto para este membro?
       if (/FROM lauro_atendimentos WHERE numero_membro=\$1 AND status='aguardando'/.test(sql)) {
@@ -62,7 +66,7 @@ function montar({ membroComAtendimento = false, areaComAtendimento = false } = {
 }
 
 test('membro com atendimento aberto: mensagem vai pra ÁREA e a IA NÃO responde', async () => {
-  const { mod, enviados, iaFoiChamada } = montar({ membroComAtendimento: true });
+  const { mod, enviados, iaFoiChamada } = montar({ membroComAtendimento: true, areaJaEscreveu: true });
   await mod.recarregarContatos();
   await mod.processarMensagem(MEMBRO, 'ainda preciso de ajuda com meu pagamento', null);
 
@@ -71,6 +75,20 @@ test('membro com atendimento aberto: mensagem vai pra ÁREA e a IA NÃO responde
   assert.ok(foiPraArea, 'a mensagem do membro tem que ser repassada para a área');
   const respondeuAoMembro = enviados.some(e => e.numero === MEMBRO);
   assert.ok(!respondeuAoMembro, 'o robô NÃO pode mandar resposta ao membro nesse momento');
+});
+
+// Política de 2026-07-22: se a área NUNCA escreveu para o número, repassar seria iniciar
+// conversa pela W-API — foi isso que fez o WhatsApp restringir o número. A mensagem fica
+// em /atendimentos. O que NÃO pode mudar: a IA continua calada e o membro não é respondido.
+test('área que nunca escreveu: NÃO repassa por WhatsApp, mas a IA segue calada', async () => {
+  const { mod, enviados, iaFoiChamada } = montar({ membroComAtendimento: true, areaJaEscreveu: false });
+  await mod.recarregarContatos();
+  await mod.processarMensagem(MEMBRO, 'ainda preciso de ajuda com meu pagamento', null);
+
+  assert.strictEqual(iaFoiChamada(), false, 'a IA continua proibida de responder');
+  assert.ok(!enviados.some(e => e.numero === AREA_SECRETARIA),
+    'não pode iniciar conversa pela W-API com quem nunca escreveu');
+  assert.ok(!enviados.some(e => e.numero === MEMBRO), 'o robô não responde ao membro');
 });
 
 test('área responde: mensagem vai pro MEMBRO e a IA NÃO responde', async () => {
