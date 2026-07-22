@@ -61,6 +61,13 @@ app.use(express.static(path.join(__dirname, '../public')));
 // materiais cientificos, contratos assinados, midia de atendimento) — base64 infla ~33%,
 // entao 25mb comporta arquivos de ~18mb. Ainda corta payloads gigantes usados em DoS.
 // Uploads de arquivo comuns usam multer (multipart), com limite proprio (500mb).
+// O webhook do PagBank TEM que ler o corpo cru, e por isso vem ANTES do express.json.
+// Se o json global rodar primeiro, ele consome o stream e marca req._body=true; o
+// express.raw da rota entao pula, req.body chega como objeto, req.body.toString() vira
+// "[object Object]", o JSON.parse falha e a rota responde 200 descartando a notificacao.
+// Foi exatamente isso: em toda a historia do sistema, ZERO notificacoes do PagBank foram
+// processadas — pagamento no cartao caia no vazio e o membro seguia sendo cobrado.
+app.use('/webhook/pagbank', express.raw({ type: '*/*', limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use(express.json({ limit: '25mb' }));
 app.use(methodOverride('_method'));

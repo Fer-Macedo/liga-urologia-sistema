@@ -271,6 +271,31 @@ async function consultarPagamento(orderId) {
 // Alias para compatibilidade com qualquer código que use consultarCobranca
 const consultarCobranca = consultarPagamento;
 
+// Pagamento no CARTAO nao entra no pedido do PIX: o checkout gera um pedido NOVO a cada
+// tentativa, e nada amarra esse pedido de volta a cobranca. Consultar so o
+// pagbank_charge_id (o pedido do PIX) devolve "sem cobrancas" para sempre — foi assim que
+// R$75 do Rafael Nardy sumiram enquanto ele recebia cobranca diaria. Aqui a gente entra
+// pelo checkout e varre os pedidos que ele gerou.
+// Recebe a URL do link (ou so o code) e devolve o mesmo formato do consultarPagamento.
+async function consultarCheckout(linkOuCode) {
+  if (!linkOuCode || !TOKEN) return { ok: false };
+  const code = String(linkOuCode).split('code=').pop();
+  try {
+    const { data } = await axios.get(BASE_URL + '/checkouts/' + code, { headers: headers(), timeout: 10000 });
+    for (const ref of (data.orders || [])) {
+      const pedido = await axios.get(BASE_URL + '/orders/' + ref.id, { headers: headers(), timeout: 10000 });
+      const charges = pedido.data.charges || [];
+      if (charges.some(c => c.status === 'PAID')) {
+        return { ok: true, status: 'PAID', data: pedido.data };
+      }
+    }
+    return { ok: true, status: 'PENDING' };
+  } catch (err) {
+    console.error('PagBank consultarCheckout ERRO:', code, err.message);
+    return { ok: false };
+  }
+}
+
 // ─── PROCESSAR WEBHOOK ────────────────────────────────────────────────────────
 
 // Detecta o método de pagamento (pix | cartao) a partir das charges do PagBank
@@ -437,6 +462,7 @@ module.exports = {
   criarPixPss,        // inscrição de processo seletivo — PIX + checkout cartão
   criarCheckoutLink,  // checkout cartão avulso
   consultarPagamento, // consulta order
+  consultarCheckout,  // consulta os pedidos gerados pelo link de cartão
   consultarCobranca,  // alias
   processarWebhook,   // interpreta body do webhook
   obterChavePublica,  // chave pública p/ criptografar cartão no navegador

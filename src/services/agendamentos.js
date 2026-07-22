@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const dayjs = require('dayjs');
 const { query } = require('../models/database');
-const { criarCobranca, consultarPagamento, detectarMetodo } = require('./pagbank');
+const { criarCobranca, consultarPagamento, consultarCheckout, detectarMetodo } = require('./pagbank');
 const { notificarCobranca, notificarAniversario } = require('./notificacoes');
 
 async function getConfig() {
@@ -97,7 +97,14 @@ async function atualizarPixAtrasados() {
         referencia: c.referencia
       });
       if (pag.ok) {
-        await query(`UPDATE cobrancas SET pix_copia_cola=$1, pix_qr_code_base64=$2, pix_qr_image=$3, pagbank_charge_id=$4, pagbank_link=$5 WHERE id=$6`,
+        // O link que sai daqui SUBSTITUI o anterior. Guardar o antigo e o que permite
+        // achar depois um pagamento feito no link velho — sem isso, vira dinheiro sem dono.
+        await query(`UPDATE cobrancas SET pix_copia_cola=$1, pix_qr_code_base64=$2, pix_qr_image=$3, pagbank_charge_id=$4,
+                       pagbank_links_antigos = CASE
+                         WHEN pagbank_link IS NULL OR pagbank_link = $5 THEN pagbank_links_antigos
+                         ELSE COALESCE(pagbank_links_antigos || E'\\n', '') || pagbank_link END,
+                       pagbank_link=$5
+                     WHERE id=$6`,
           [pag.pix_copia_cola, pag.pix_qr_code_base64, pag.pix_qr_image, pag.charge_id, pag.link, c.id]);
         console.log('[PIX-UPDATE] PIX atualizado:', c.nome, c.referencia);
       }
@@ -108,12 +115,23 @@ async function atualizarPixAtrasados() {
 
 // ─── VERIFICAR PAGAMENTOS ─────────────────────────────────────────────────────
 async function verificarPagamentos() {
+  // Duas portas de entrada, porque sao dois objetos diferentes no PagBank:
+  //   PIX    -> o pedido guardado em pagbank_charge_id
+  //   CARTAO -> um pedido NOVO, pendurado no checkout do pagbank_link
+  // Conferir so a primeira e o que deixou R$75 pagos no cartao passarem batido enquanto a
+  // cobranca diaria continuava saindo. O link tambem entra no filtro pelo mesmo motivo.
   const pbR = await query(
-    "SELECT * FROM cobrancas WHERE status IN ('pendente','atrasado') AND pagbank_charge_id IS NOT NULL"
+    "SELECT * FROM cobrancas WHERE status IN ('pendente','atrasado') AND (pagbank_charge_id IS NOT NULL OR pagbank_link IS NOT NULL)"
   );
   for (const cob of pbR.rows) {
     try {
-      const result = await consultarPagamento(cob.pagbank_charge_id);
+      let result = { ok: false };
+      if (cob.pagbank_charge_id) result = await consultarPagamento(cob.pagbank_charge_id);
+      const links = [cob.pagbank_link, ...String(cob.pagbank_links_antigos || '').split('\n')].filter(Boolean);
+      for (const link of links) {
+        if (result.ok && result.status === 'PAID') break;
+        result = await consultarCheckout(link);
+      }
       if (result.ok && result.status === 'PAID') {
         const charges = result.data.charges || (result.data.status ? [result.data] : []);
         const paga = charges.find(c => c.status === 'PAID');

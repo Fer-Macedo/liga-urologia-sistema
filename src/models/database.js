@@ -83,6 +83,11 @@ async function initSchema() {
       criado_em TIMESTAMP DEFAULT NOW()
     );
     ALTER TABLE cobrancas ADD COLUMN IF NOT EXISTS valor_pago REAL;
+    -- Ao regerar o PIX/link do atrasado, o link antigo era SOBRESCRITO. Quem pagasse no
+    -- link velho virava dinheiro sem dono: o checkout some do nosso lado e o PagBank nao
+    -- deixa buscar pedido por referencia. Aqui a gente guarda os links anteriores para
+    -- conseguir reconciliar depois.
+    ALTER TABLE cobrancas ADD COLUMN IF NOT EXISTS pagbank_links_antigos TEXT;
     DO $$ BEGIN
       IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'cobrancas_referencia_key') THEN
         ALTER TABLE cobrancas ADD CONSTRAINT cobrancas_referencia_key UNIQUE (referencia);
