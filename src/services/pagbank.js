@@ -321,6 +321,17 @@ function extrairValorPago(charges) {
   return null;
 }
 
+// Quando o dinheiro ENTROU, segundo o PagBank — nao quando a gente percebeu. O cron gravava
+// NOW(), entao um pagamento so notado dias depois (webhook morto, link regerado) entrava no
+// fluxo de caixa na data errada: o de 17/07 do Rafael foi lancado em 22/07.
+function extrairDataPagamento(charges) {
+  try {
+    const paga = (charges || []).find(c => c.status === 'PAID' && c.paid_at);
+    if (paga) return paga.paid_at;
+  } catch (e) {}
+  return null;
+}
+
 function processarWebhook(body) {
   try {
     let orderId = null, referencia = null, status = null, pago = false, metodo = null, valorPago = null;
@@ -468,5 +479,6 @@ module.exports = {
   obterChavePublica,  // chave pública p/ criptografar cartão no navegador
   pagarComCartao,     // pagamento com cartão embutido no portal (sem redirecionar)
   detectarMetodo,     // pix/cartao/boleto a partir das charges de uma order
-  extrairValorPago    // valor realmente pago, lido da API (o do webhook é forjável)
+  extrairValorPago,   // valor realmente pago, lido da API (o do webhook é forjável)
+  extrairDataPagamento // quando o dinheiro entrou (paid_at), não quando percebemos
 };

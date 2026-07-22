@@ -4,7 +4,7 @@ const dayjs = require('dayjs');
 const { query } = require('../models/database');
 const { requireAuth, requireAdmin, requireFinanceiro, requirePermissao } = require('../middleware/auth');
 const { getConfig } = require('../services/config');
-const { criarCobranca, processarWebhook, consultarPagamento, detectarMetodo, extrairValorPago } = require('../services/pagbank');
+const { criarCobranca, processarWebhook, consultarPagamento, detectarMetodo, extrairValorPago, extrairDataPagamento } = require('../services/pagbank');
 const { confirmarInscricaoPss } = require('../services/pss');
 
 module.exports = function (router) {
@@ -157,6 +157,7 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
     // order forjada nao existe la, ou nao esta paga, entao a reconsulta derruba a fraude.
     // Fail-closed: sem orderId ou sem confirmacao, NAO da baixa.
     let pagoConfirmado = false;
+    let pagoEm = null;
     if (pago) {
       if (!orderId) {
         console.warn('PagBank webhook: pago=true sem orderId — baixa ignorada (nao da pra reconfirmar).');
@@ -174,11 +175,13 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
             console.warn('PagBank webhook: order', orderId, 'pertence a', refReal, 'e nao a', referencia, '— baixa ignorada (forja).');
             pagoConfirmado = false;
           } else {
-            // Valor e metodo tambem saem da API: os do corpo sao forjaveis.
+            // Valor, metodo e data tambem saem da API: os do corpo sao forjaveis, e a data
+            // tem que ser quando o dinheiro ENTROU (para o fluxo de caixa nao mentir).
             const chargesReais = (conf.data && conf.data.charges) || [];
             metodo = detectarMetodo(chargesReais) || metodo;
             const v = extrairValorPago(chargesReais);
             if (v !== null) valorPago = v;
+            pagoEm = extrairDataPagamento(chargesReais);
           }
         }
       }
@@ -187,8 +190,8 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
     // Pagamento de MENSALIDADE
     if (pagoConfirmado && referencia.startsWith('mensalidade-')) {
       const r = await query(
-        "UPDATE cobrancas SET status='pago', data_pagamento=NOW(), pagbank_charge_id=$1, metodo_pagamento=COALESCE($3,metodo_pagamento), valor_pago=COALESCE($4, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE referencia=$2 AND status!='pago' RETURNING id",
-        [orderId, referencia, metodo, valorPago]
+        "UPDATE cobrancas SET status='pago', data_pagamento=COALESCE($5::timestamptz, NOW()), pagbank_charge_id=$1, metodo_pagamento=COALESCE($3,metodo_pagamento), valor_pago=COALESCE($4, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE referencia=$2 AND status!='pago' RETURNING id",
+        [orderId, referencia, metodo, valorPago, pagoEm]
       );
       if (r.rowCount > 0) {
         console.log('PagBank mensalidade confirmada:', referencia, orderId, 'metodo:', metodo);
@@ -202,8 +205,8 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
     // Pagamento de MENSALIDADE (formato {membro_id}-{ano}-{mes}, ex: 56-2026-05)
     if (pagoConfirmado && /^\d+-\d{4}-\d{2}$/.test(referencia)) {
       const r = await query(
-        "UPDATE cobrancas SET status='pago', data_pagamento=NOW(), metodo_pagamento=COALESCE($2,metodo_pagamento), valor_pago=COALESCE($3, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE referencia=$1 AND status!='pago' RETURNING id",
-        [referencia, metodo, valorPago]
+        "UPDATE cobrancas SET status='pago', data_pagamento=COALESCE($4::timestamptz, NOW()), metodo_pagamento=COALESCE($2,metodo_pagamento), valor_pago=COALESCE($3, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE referencia=$1 AND status!='pago' RETURNING id",
+        [referencia, metodo, valorPago, pagoEm]
       );
       if (r.rowCount > 0) {
         console.log('PagBank mensalidade confirmada via webhook:', referencia, orderId, 'metodo:', metodo);

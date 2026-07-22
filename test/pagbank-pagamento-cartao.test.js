@@ -75,7 +75,7 @@ test('com o json primeiro, a notificação é descartada (o bug do Rafael)', asy
 const MODULO = path.join(RAIZ, 'src/services/agendamentos.js');
 
 // Reproduz o cenário real: o pedido do PIX está limpo, o pagamento está no checkout.
-function montar({ pagoNoCheckout = null, linksAntigos = null } = {}) {
+function montar({ pagoNoCheckout = null, linksAntigos = null, pagoEm = '2026-07-17T14:47:48.000-03:00' } = {}) {
   const updates = [];
   const consultados = [];
 
@@ -106,10 +106,11 @@ function montar({ pagoNoCheckout = null, linksAntigos = null } = {}) {
       consultados.push(code);
       if (code !== pagoNoCheckout) return { ok: true, status: 'PENDING' };
       return { ok: true, status: 'PAID', data: { charges: [
-        { status: 'PAID', amount: { value: 2500 }, payment_method: { type: 'CREDIT_CARD' } }
+        { status: 'PAID', amount: { value: 2500 }, paid_at: pagoEm, payment_method: { type: 'CREDIT_CARD' } }
       ] } };
     },
-    detectarMetodo: () => 'cartao'
+    detectarMetodo: () => 'cartao',
+    extrairDataPagamento: (chs) => { const p = (chs||[]).find(c => c.status==='PAID' && c.paid_at); return p ? p.paid_at : null; }
   }};
 
   const rn = require.resolve(path.join(RAIZ, 'src/services/notificacoes.js'));
@@ -239,4 +240,26 @@ test('valor e método vêm da API, não do corpo forjável', async () => {
                               charges: [{ status: 'PAID', amount: { value: 100 }, payment_method: { type: 'PIX' } }] });
   assert.ok(u[0].params.includes(25), 'R$25 (o que a API confirma), não R$1 do corpo');
   assert.ok(u[0].params.includes('cartao'), 'cartão (o que a API confirma), não "pix" do corpo');
+});
+
+// ─── A DATA DO DINHEIRO ───────────────────────────────────────────────────────
+// O cron gravava data_pagamento=NOW() — a hora em que ELE percebeu. Enquanto o webhook
+// esteve morto, pagamento notado dias depois entrava no fluxo de caixa na data errada:
+// o pagamento do Rafael de 17/07 foi lançado em 22/07, 5 dias fora. O fluxo é caixa
+// (dinheiro que entrou no dia), então a data tem que ser o paid_at do PagBank.
+
+test('a baixa usa a data em que o dinheiro entrou, não a data de hoje', async () => {
+  const { mod, updates } = montar({ pagoNoCheckout: 'LINK-ATUAL', pagoEm: '2026-07-17T14:47:48.000-03:00' });
+  await mod.verificarPagamentos();
+  assert.ok(updates[0].params.includes('2026-07-17T14:47:48.000-03:00'),
+    'sem isso o caixa registra receita no dia errado');
+  assert.doesNotMatch(updates[0].sql, /data_pagamento=NOW\(\)/,
+    'NOW() puro é a data em que percebemos, não a em que o dinheiro entrou');
+});
+
+test('sem paid_at, cai no NOW() em vez de gravar data vazia', async () => {
+  const { mod, updates } = montar({ pagoNoCheckout: 'LINK-ATUAL', pagoEm: null });
+  await mod.verificarPagamentos();
+  assert.match(updates[0].sql, /COALESCE\(\$4::timestamptz, NOW\(\)\)/,
+    'cobrança paga sem data é pior que data aproximada');
 });

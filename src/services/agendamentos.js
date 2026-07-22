@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const dayjs = require('dayjs');
 const { query } = require('../models/database');
-const { criarCobranca, consultarPagamento, consultarCheckout, detectarMetodo } = require('./pagbank');
+const { criarCobranca, consultarPagamento, consultarCheckout, detectarMetodo, extrairDataPagamento } = require('./pagbank');
 const { notificarCobranca, notificarAniversario } = require('./notificacoes');
 
 async function getConfig() {
@@ -137,9 +137,13 @@ async function verificarPagamentos() {
         const paga = charges.find(c => c.status === 'PAID');
         const valorPago = (paga && paga.amount && typeof paga.amount.value === 'number') ? paga.amount.value / 100 : null;
         const metodo = detectarMetodo(charges);
+        // Data = quando o dinheiro ENTROU (paid_at do PagBank), nao quando o cron percebeu.
+        // Com NOW(), um pagamento so notado dias depois entra no fluxo de caixa na data
+        // errada — o de 17/07 do Rafael tinha sido lancado em 22/07.
+        const pagoEm = extrairDataPagamento(charges);
         await query(
-          "UPDATE cobrancas SET status='pago', data_pagamento=NOW(), metodo_pagamento=COALESCE($3,metodo_pagamento,'pix'), valor_pago=COALESCE($2, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE id=$1",
-          [cob.id, valorPago, metodo]
+          "UPDATE cobrancas SET status='pago', data_pagamento=COALESCE($4::timestamptz, NOW()), metodo_pagamento=COALESCE($3,metodo_pagamento,'pix'), valor_pago=COALESCE($2, CASE WHEN data_vencimento::date >= CURRENT_DATE THEN valor_desconto ELSE valor_cheio END) WHERE id=$1",
+          [cob.id, valorPago, metodo, pagoEm]
         );
         console.log('PagBank pagamento confirmado via cron:', cob.referencia);
         try {
