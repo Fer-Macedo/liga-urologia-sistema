@@ -467,5 +467,6 @@ module.exports = {
   processarWebhook,   // interpreta body do webhook
   obterChavePublica,  // chave pública p/ criptografar cartão no navegador
   pagarComCartao,     // pagamento com cartão embutido no portal (sem redirecionar)
-  detectarMetodo      // pix/cartao/boleto a partir das charges de uma order
+  detectarMetodo,     // pix/cartao/boleto a partir das charges de uma order
+  extrairValorPago    // valor realmente pago, lido da API (o do webhook é forjável)
 };

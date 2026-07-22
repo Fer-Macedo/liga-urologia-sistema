@@ -168,3 +168,75 @@ test('ao regerar o link, o anterior é guardado em vez de sobrescrito', () => {
   assert.match(trecho, /pagbank_links_antigos/,
     'sobrescrever o link apaga a única pista de um pagamento feito nele');
 });
+
+// ─── O RISCO NOVO: ressuscitar o webhook reabre uma porta ─────────────────────
+// Enquanto o webhook estava morto, a falta de amarração order->referência era inofensiva
+// (o handler não processava nada). Com ele vivo, vira exploração real: bastava mandar
+// { orderId: <qualquer pedido pago, até o meu de R$5>, referencia: <cobrança da vítima> }
+// para quitar a dívida de outro membro. A referência tem que vir da API, não do corpo.
+
+const ROTA = path.join(RAIZ, 'src/routes/cobrancas.js');
+
+function montarWebhook({ refDaApi = '47-2026-07', chargesDaApi = null } = {}) {
+  const updates = [];
+  const rq = require.resolve(path.join(RAIZ, 'src/models/database.js'));
+  require.cache[rq] = { id: rq, filename: rq, loaded: true, exports: {
+    query: async (sql, params) => {
+      if (/UPDATE cobrancas SET status='pago'/.test(sql)) { updates.push({ sql, params }); return { rowCount: 1, rows: [{ id: 174 }] }; }
+      return { rows: [], rowCount: 0 };
+    }
+  }};
+  const rp = require.resolve(path.join(RAIZ, 'src/services/pagbank.js'));
+  delete require.cache[rp];          // os testes acima deixaram um dublê no lugar
+  const real = require(rp);          // aqui a gente quer o processarWebhook de verdade
+  require.cache[rp] = { id: rp, filename: rp, loaded: true, exports: Object.assign({}, real, {
+    criarCobranca: async () => ({ ok: false }),
+    consultarPagamento: async () => ({ ok: true, status: 'PAID', data: {
+      reference_id: refDaApi,
+      charges: chargesDaApi || [{ status: 'PAID', amount: { value: 500 }, payment_method: { type: 'PIX' } }]
+    } })
+  })};
+  const rf = require.resolve(path.join(RAIZ, 'src/services/fluxo-mensalidade.js'));
+  require.cache[rf] = { id: rf, filename: rf, loaded: true, exports: { lancarMensalidadeNoFluxo: async()=>{} } };
+  const ra = require.resolve(path.join(RAIZ, 'src/middleware/auth.js'));
+  require.cache[ra] = { id: ra, filename: ra, loaded: true, exports: {
+    requireAuth:(q,s,n)=>n(), requireAdmin:(q,s,n)=>n(), requirePermissao:()=>(q,s,n)=>n(), requireMembro:(q,s,n)=>n()
+  }};
+
+  let handler = null;
+  const router = { get: () => {}, use: () => {},
+    post: (rota, ...fns) => { if (rota === '/webhook/pagbank') handler = fns[fns.length - 1]; },
+    delete: () => {}, put: () => {} };
+  delete require.cache[require.resolve(ROTA)];
+  require(ROTA)(router);
+
+  const notificar = async (corpo) => {
+    await handler({ body: Buffer.from(JSON.stringify(corpo)) }, { sendStatus: () => {}, json: () => {}, redirect: () => {} });
+    return updates;
+  };
+  return { notificar };
+}
+
+test('webhook honesto: a order confere com a referência e a baixa acontece', async () => {
+  const { notificar } = montarWebhook({ refDaApi: '47-2026-07' });
+  const u = await notificar({ id: 'ORDE_REAL', reference_id: '47-2026-07', status: 'PAID' });
+  assert.strictEqual(u.length, 1, 'pagamento legítimo tem que dar baixa');
+});
+
+// A exploração: uma order paga DE VERDADE, apontada para a cobrança de outra pessoa.
+test('forja: order paga de outro dono NÃO quita a cobrança da vítima', async () => {
+  const { notificar } = montarWebhook({ refDaApi: 'evento-insc-99' });   // a API diz a verdade
+  const u = await notificar({ id: 'ORDE_DO_ATACANTE', reference_id: '47-2026-07', status: 'PAID' });
+  assert.strictEqual(u.length, 0, 'confirmar que a order está paga NÃO basta — tem que ser DELA');
+});
+
+test('valor e método vêm da API, não do corpo forjável', async () => {
+  const { notificar } = montarWebhook({
+    refDaApi: '47-2026-07',
+    chargesDaApi: [{ status: 'PAID', amount: { value: 2500 }, payment_method: { type: 'CREDIT_CARD' } }]
+  });
+  const u = await notificar({ id: 'ORDE_REAL', reference_id: '47-2026-07', status: 'PAID',
+                              charges: [{ status: 'PAID', amount: { value: 100 }, payment_method: { type: 'PIX' } }] });
+  assert.ok(u[0].params.includes(25), 'R$25 (o que a API confirma), não R$1 do corpo');
+  assert.ok(u[0].params.includes('cartao'), 'cartão (o que a API confirma), não "pix" do corpo');
+});

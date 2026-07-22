@@ -4,7 +4,7 @@ const dayjs = require('dayjs');
 const { query } = require('../models/database');
 const { requireAuth, requireAdmin, requireFinanceiro, requirePermissao } = require('../middleware/auth');
 const { getConfig } = require('../services/config');
-const { criarCobranca, processarWebhook, consultarPagamento } = require('../services/pagbank');
+const { criarCobranca, processarWebhook, consultarPagamento, detectarMetodo, extrairValorPago } = require('../services/pagbank');
 const { confirmarInscricaoPss } = require('../services/pss');
 
 module.exports = function (router) {
@@ -145,7 +145,9 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
 
     console.log('PagBank Webhook recebido:', JSON.stringify(body).substring(0, 300));
 
-    const { orderId, referencia, status, pago, metodo, valorPago } = processarWebhook(body);
+    // metodo e valorPago sao `let`: quando a API reconfirma, os valores dela substituem os
+    // do corpo (que qualquer um pode escrever).
+    let { orderId, referencia, status, pago, metodo, valorPago } = processarWebhook(body);
 
     if (!referencia) return res.sendStatus(200);
 
@@ -162,6 +164,23 @@ router.post('/webhook/pagbank', express.raw({ type: '*/*' }), async (req, res) =
         const conf = await consultarPagamento(orderId);
         pagoConfirmado = conf.ok && conf.status === 'PAID';
         if (!pagoConfirmado) console.warn('PagBank webhook: reconfirmacao NAO retornou PAID para', orderId, '— baixa ignorada (possivel forja).');
+        // Confirmar que a order esta paga NAO basta: o corpo diz de quem e a cobranca.
+        // Sem amarrar order -> referencia, qualquer um manda {orderId: <uma order paga
+        // qualquer, ate a dele>, referencia: <cobranca da vitima>} e quita a divida do
+        // outro. A referencia tem que vir da API, nunca do corpo.
+        if (pagoConfirmado) {
+          const refReal = conf.data && conf.data.reference_id;
+          if (refReal !== referencia) {
+            console.warn('PagBank webhook: order', orderId, 'pertence a', refReal, 'e nao a', referencia, '— baixa ignorada (forja).');
+            pagoConfirmado = false;
+          } else {
+            // Valor e metodo tambem saem da API: os do corpo sao forjaveis.
+            const chargesReais = (conf.data && conf.data.charges) || [];
+            metodo = detectarMetodo(chargesReais) || metodo;
+            const v = extrairValorPago(chargesReais);
+            if (v !== null) valorPago = v;
+          }
+        }
       }
     }
 
