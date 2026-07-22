@@ -3,6 +3,10 @@ const { query } = require('../models/database');
 const { requireAuth, requireAdmin, requirePermissao, requireMembro } = require('../middleware/auth');
 const { getConfig } = require('../services/config');
 const { limiterLogin, limiterEsqueciSenha } = require('../services/rate-limiters');
+// enviarEmail era importado SÓ dentro de uma função lá embaixo. Na rota de recuperar senha
+// ele não existia, e a chamada estourava "ReferenceError: enviarEmail is not defined" —
+// pendurando a requisição (nginx registrava 499) e deixando o usuário sem o e-mail.
+const { enviarEmail: enviarEmailCient } = require('../services/notificacoes');
 
 module.exports = function (router) {
 
@@ -775,22 +779,48 @@ router.get('/portal/esqueci-senha', async (req, res) => {
 
 // POST /portal/esqueci-senha
 router.post('/portal/esqueci-senha', limiterEsqueciSenha, async (req, res) => {
-  const { email } = req.body;
-  let membro = null, tipo = null;
-  const rL = await query('SELECT id, nome, email FROM ligantes WHERE LOWER(email)=LOWER($1) AND ativo=1', [email]);
-  if (rL.rows.length) { membro = rL.rows[0]; tipo = 'ligante'; }
-  else {
-    const rD = await query('SELECT id, nome, email FROM diretivos WHERE LOWER(email)=LOWER($1) AND ativo=1', [email]);
-    if (rD.rows.length) { membro = rD.rows[0]; tipo = 'diretivo'; }
+  // try/catch obrigatorio: rota async que estoura sem captura pendura a requisicao para
+  // sempre (Express 4 nao pega rejeicao de promise) — foi o que gerou os 499 no nginx.
+  try {
+    const { email } = req.body;
+    let membro = null, tipo = null;
+    const rL = await query('SELECT id, nome, email FROM ligantes WHERE LOWER(email)=LOWER($1) AND ativo=1', [email]);
+    if (rL.rows.length) { membro = rL.rows[0]; tipo = 'ligante'; }
+    else {
+      const rD = await query('SELECT id, nome, email FROM diretivos WHERE LOWER(email)=LOWER($1) AND ativo=1', [email]);
+      if (rD.rows.length) { membro = rD.rows[0]; tipo = 'diretivo'; }
+    }
+    if (membro) {
+      const novaSenha = require('crypto').randomBytes(6).toString('base64url');
+      // ORDEM IMPORTA: envia o e-mail PRIMEIRO e só troca a senha se ele saiu. Antes era o
+      // contrário — a senha era destruída e, quando o envio falhava, a pessoa ficava
+      // trancada fora: a antiga não valia mais e a nova nunca chegava.
+      const env = await enviarEmailCient({
+        para: membro.email,
+        assunto: 'Portal Cientifico — Senha temporaria',
+        texto: 'Ola ' + membro.nome + ',\n\nSua senha temporaria para o Portal Cientifico e: ' + novaSenha +
+               '\n\nAo entrar, sera solicitado que voce defina uma nova senha.\n\nAcesse: ' +
+               (process.env.APP_URL || '') + '/portal/login'
+      });
+      if (env && env.ok) {
+        const hash = await bcryptPortal.hash(novaSenha, 10);
+        const upd = await query('UPDATE portal_cientifico_senhas SET senha_hash=$1, primeiro_acesso=true WHERE origem_tipo=$2 AND origem_id=$3', [hash, tipo, membro.id]);
+        // Quem nunca acessou o portal nao tem linha: sem isso o UPDATE nao acha nada e a
+        // pessoa recebe uma senha que nao foi gravada em lugar nenhum.
+        if (!upd.rowCount) {
+          await query('INSERT INTO portal_cientifico_senhas (origem_tipo, origem_id, senha_hash, primeiro_acesso) VALUES ($1,$2,$3,true)', [tipo, membro.id, hash]);
+        }
+      } else {
+        console.error('[PORTAL CIENTIFICO] envio do e-mail falhou — senha NAO alterada para', membro.email);
+      }
+    }
+    req.session.msg = ['Se o email estiver cadastrado, voce recebera as instrucoes em instantes.'];
+    res.redirect('/portal/esqueci-senha');
+  } catch (e) {
+    console.error('[PORTAL CIENTIFICO] esqueci-senha:', e);
+    req.session.erro = ['No pudimos procesar tu solicitud ahora. Intentá de nuevo en instantes.'];
+    res.redirect('/portal/esqueci-senha');
   }
-  if (membro) {
-    const novaSenha = require('crypto').randomBytes(6).toString('base64url');
-    const hash = await bcryptPortal.hash(novaSenha, 10);
-    await query('UPDATE portal_cientifico_senhas SET senha_hash=$1, primeiro_acesso=true WHERE origem_tipo=$2 AND origem_id=$3', [hash, tipo, membro.id]);
-    await enviarEmail({ para: membro.email, assunto: 'Portal Cientifico — Senha temporaria', texto: 'Ola ' + membro.nome + ',\n\nSua senha temporaria para o Portal Cientifico e: ' + novaSenha + '\n\nAo entrar, sera solicitado que voce defina uma nova senha.\n\nAcesse: ' + (process.env.APP_URL||'') + '/portal/login' });
-  }
-  req.session.msg=['Se o email estiver cadastrado, voce recebera as instrucoes em instantes.'];
-  res.redirect('/portal/esqueci-senha');
 });
 
 // GET /portal/logout
