@@ -101,12 +101,38 @@ async function salvarConversa(numero, papel, mensagem) {
   } catch(e) {}
 }
 
+// Aviso INTERNO para a presidencia (creditos, atendimento registrado, transferencia).
+// Todos eles PARTEM de nos — sao conversa iniciada, nao resposta. Mandar isso pela W-API
+// e exatamente o que fez o numero ser restringido: mensagem automatica, repetida, para
+// quem nao respondeu. Entao: WhatsApp so dentro da janela de 24h; fora dela, e-mail —
+// o mesmo caminho que o vigia da W-API ja usa para alerta interno.
+async function avisarPresidencia(assunto, texto) {
+  try {
+    if (CONTATOS.presidencia && await areaJaConversou(CONTATOS.presidencia)) {
+      await enviarMensagem(CONTATOS.presidencia, texto);
+      return;
+    }
+  } catch (e) { console.error('[LAURO] aviso presidencia (whatsapp):', e.message); }
+  try {
+    const { enviarEmail } = require('./notificacoes');
+    const dest = await query(
+      "SELECT DISTINCT email FROM usuarios WHERE ativo=1 AND email IS NOT NULL AND email <> '' AND perfil IN ('presidencia','admin')"
+    );
+    if (!dest.rows.length) { console.warn('[LAURO] sem e-mail de presidencia/admin — aviso NAO enviado:', assunto); return; }
+    const html = '<p>' + String(texto)
+      .replace(/[<>]/g, '')
+      .replace(/\*(.+?)\*/g, '<strong>$1</strong>')
+      .replace(/\n/g, '<br>') + '</p>';
+    await enviarEmail({ para: dest.rows.map(x => x.email).join(','), assunto, titulo: assunto, html });
+  } catch (e) { console.error('[LAURO] aviso presidencia (e-mail):', e.message); }
+}
+
 // Envia alerta para presidencia quando creditos estao acabando
 async function alertarCreditos(tipo) {
   const zerado = 'Atencao: Os creditos da API do Claude acabaram! O Lauro esta em modo basico. Recarregue em console.anthropic.com/settings/billing';
   const baixo = 'Atencao: Os creditos da API do Claude estao baixos! Recarregue em breve em console.anthropic.com/settings/billing';
   const msg = tipo === 'zerado' ? zerado : baixo;
-  try { await enviarMensagem(CONTATOS.presidencia, msg); } catch(e) {}
+  await avisarPresidencia('Creditos da IA do assistente', msg);
 }
 
 // Menu de fallback quando IA nao esta disponivel
@@ -390,8 +416,13 @@ async function areaJaConversou(numeroArea) {
   try {
     const { variantesBR, limparNumero } = require('./whatsapp-oficial');
     const formas = variantesBR(limparNumero(numeroArea));
+    // 24 HORAS, nao "alguma vez na vida". Essa e a janela de atendimento do WhatsApp:
+    // dentro dela a nossa mensagem e RESPOSTA; fora dela e conversa NOVA, exatamente o que
+    // fez o numero ser restringido duas vezes. Sem o limite de tempo, bastava a area ter
+    // escrito uma vez, meses atras, para a W-API poder cutucar ela para sempre.
     const r = await query(
-      "SELECT 1 FROM lauro_conversas WHERE papel='user' AND numero = ANY($1::text[]) LIMIT 1",
+      "SELECT 1 FROM lauro_conversas WHERE papel='user' AND numero = ANY($1::text[])" +
+      " AND criado_em > NOW() - INTERVAL '24 hours' LIMIT 1",
       [formas]
     );
     return r.rows.length > 0;
@@ -507,7 +538,7 @@ async function redirecionarArea(numero, area, idioma) {
 
   // Notifica presidencia
   if (area !== 'presidencia') {
-    await enviarMensagem(CONTATOS.presidencia,
+    await avisarPresidencia('Lauro — Atendimento registrado',
       '📊 💚💙 *Lauro — Atendimento registrado*\n\nArea: *' + nomesPT[idx] + '*\nHora: ' + hora
     );
   }
@@ -638,7 +669,7 @@ async function processarMensagem(numero, texto, midia) {
         await enviarMensagem(numero,'🔄 *Transferência realizada!*\n\nAtendimento encaminhado para *'+_nomeT+'*. O membro será avisado automaticamente.');
         if(_target!=='presidencia'&&areaNome!=='presidencia'){
           const _hora=new Date().toLocaleString('pt-BR',{timeZone:'America/Asuncion'});
-          await enviarMensagem(CONTATOS.presidencia,'📊 *Lauro — Transferência*\n\nDe: *'+_nomeF+'*\nPara: *'+_nomeT+'*\nHora: '+_hora).catch(()=>{});
+          await avisarPresidencia('Lauro — Transferência de atendimento','📊 *Lauro — Transferência*\n\nDe: *'+_nomeF+'*\nPara: *'+_nomeT+'*\nHora: '+_hora).catch(()=>{});
         }
         await redirecionarArea(numero_membro,_target,idioma);
         console.log('Lauro proxy: transferencia',areaNome,'->',_target,'| membro:',numero_membro);
@@ -731,7 +762,16 @@ async function processarMensagem(numero, texto, midia) {
       // Se o banco falhou MAS a sess\u00e3o diz que h\u00e1 atendimento humano, n\u00e3o chama a IA
       if (sessoes[numero] && sessoes[numero].emAtendimentoHumano) {
         const _naFallback = sessoes[numero].emAtendimentoHumano;
-        await enviarMensagem(_naFallback, '\ud83d\udce9 *' + numero + ':* ' + msg).catch(()=>{});
+        // Mesma regra do caminho normal: so repassa se a area escreveu nas ultimas 24h.
+        // Este ramo roda com o banco em erro \u2014 e a checagem tambem depende do banco, entao
+        // ela devolve "nao escreveu" e a mensagem NAO sai. E o certo: fica em /atendimentos
+        // e ninguem e cutucado. Sem isso, a falha do banco viraria a brecha por onde a
+        // W-API volta a iniciar conversa.
+        if (await areaJaConversou(_naFallback)) {
+          await enviarMensagem(_naFallback, '\ud83d\udce9 *' + numero + ':* ' + msg).catch(()=>{});
+        } else {
+          console.warn('[LAURO] fallback: area', _naFallback, 'sem conversa nas ultimas 24h \u2014 nao repassado (a W-API so responde).');
+        }
         await salvarConversa(numero, 'user', msg).catch(()=>{});
         return;
       }
@@ -922,5 +962,5 @@ module.exports = {
   processarMensagem, enviarMensagemDireta, redirecionarArea,
   recarregarContatos, enviarImagem, enviarDocumento,
   // exportados para teste: a escolha do canal do aviso a area e regra de negocio, nao detalhe
-  notificarArea, areaJaConversou
+  notificarArea, areaJaConversou, avisarPresidencia
 };
