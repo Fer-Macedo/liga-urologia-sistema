@@ -7,6 +7,27 @@ const BASE = 'https://graph.instagram.com/v21.0';
 // Espera entre as tentativas de publicacao. Configuravel so para o teste nao ficar 60s
 // parado esperando relogio de verdade.
 const ESPERA_RETENTATIVA_MS = Number(process.env.IG_RETRY_MS || 20000);
+// Intervalo entre as consultas de "ja ficou pronto?". Tambem so e reduzido no teste.
+const ESPERA_PROCESSAMENTO_MS = Number(process.env.IG_POLL_MS || 3000);
+
+// O container criado por /media NAO fica pronto na hora: a Meta ainda baixa e processa a
+// midia. Publicar antes disso devolve 9007 "The media is not ready for publishing".
+// O story ja esperava; o carrossel NAO — e foi assim que o post de 22/07 morreu (7 slides
+// demoram mais que os poucos segundos que davam certo por sorte antes).
+// Uma funcao so, usada por todos, para a correcao nao viver em um lugar e faltar noutro.
+async function esperarProcessar(containerId, oQue, tentativasMax = 20, intervaloMs = ESPERA_PROCESSAMENTO_MS) {
+  let status = 'IN_PROGRESS';
+  for (let i = 0; i < tentativasMax && status !== 'FINISHED'; i++) {
+    await new Promise(r => setTimeout(r, intervaloMs));
+    const check = await axios.get(`${BASE}/${containerId}`, {
+      params: { fields: 'status_code', access_token: TOKEN }
+    });
+    status = check.data.status_code;
+    if (status === 'ERROR') throw new Error('O Instagram recusou a midia do ' + oQue + ' (status ERROR)');
+  }
+  if (status !== 'FINISHED') throw new Error('O ' + oQue + ' nao ficou pronto a tempo (status ' + status + ')');
+  return status;
+}
 
 // ─── PUBLICAR FOTO NO FEED ────────────────────────────────────────────────────
 async function publicarFoto({ imageUrl, legenda }) {
@@ -17,6 +38,9 @@ async function publicarFoto({ imageUrl, legenda }) {
     access_token: TOKEN
   });
   const containerId = container.data.id;
+
+  // Mesma espera do carrossel e do story: sem ela a Meta responde 9007.
+  await esperarProcessar(containerId, 'post');
 
   // 2. Publicar
   const pub = await axios.post(`${BASE}/${IG_ID}/media_publish`, {
@@ -48,6 +72,13 @@ async function publicarCarrossel({ imageUrls, legenda }) {
     access_token: TOKEN
   });
 
+  // Aguarda o Instagram terminar de montar o carrossel — MESMA espera que o story ja
+  // tinha. Sem ela o media_publish sai antes da hora e a Meta responde 9007 "The media
+  // is not ready for publishing". Foi o que derrubou o carrossel de 22/07: publicar na
+  // hora funciona quando o processamento e rapido (o de 19/07 passou por sorte) e falha
+  // quando demora. Quanto mais slides, mais demora — este tinha 7.
+  await esperarProcessar(carousel.data.id, 'carrossel');
+
   // 3. Publicar
   const pub = await axios.post(`${BASE}/${IG_ID}/media_publish`, {
     creation_id: carousel.data.id,
@@ -65,19 +96,7 @@ async function publicarStory({ imageUrl }) {
     access_token: TOKEN
   });
 
-  // Aguarda o Instagram processar a imagem antes de publicar — sem isso o
-  // media_publish falha com "Media ID is not available" (code 9007).
-  let status = 'IN_PROGRESS';
-  let tentativas = 0;
-  while (status !== 'FINISHED' && tentativas < 15) {
-    await new Promise(r => setTimeout(r, 2000));
-    const check = await axios.get(`${BASE}/${container.data.id}`, {
-      params: { fields: 'status_code', access_token: TOKEN }
-    });
-    status = check.data.status_code;
-    tentativas++;
-  }
-  if (status !== 'FINISHED') throw new Error('Processamento da imagem do story falhou: ' + status);
+  await esperarProcessar(container.data.id, 'story');
 
   const pub = await axios.post(`${BASE}/${IG_ID}/media_publish`, {
     creation_id: container.data.id,
@@ -96,19 +115,8 @@ async function publicarReel({ videoUrl, legenda }) {
     access_token: TOKEN
   });
 
-  // Aguarda processamento do vídeo
-  let status = 'IN_PROGRESS';
-  let tentativas = 0;
-  while (status === 'IN_PROGRESS' && tentativas < 20) {
-    await new Promise(r => setTimeout(r, 5000));
-    const check = await axios.get(`${BASE}/${container.data.id}`, {
-      params: { fields: 'status_code', access_token: TOKEN }
-    });
-    status = check.data.status_code;
-    tentativas++;
-  }
-
-  if (status !== 'FINISHED') throw new Error('Processamento do vídeo falhou: ' + status);
+  // Video demora bem mais que imagem: mais tentativas e intervalo maior.
+  await esperarProcessar(container.data.id, 'reel', 30, ESPERA_PROCESSAMENTO_MS * 5 / 3);
 
   const pub = await axios.post(`${BASE}/${IG_ID}/media_publish`, {
     creation_id: container.data.id,

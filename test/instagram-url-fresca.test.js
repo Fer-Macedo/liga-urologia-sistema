@@ -33,17 +33,21 @@ async function publicar(post, { falharUrl = false } = {}) {
   });
   stub('src/services/canva.js', {});
   delete require.cache[require.resolve(MODULO)];
-  const ig = require(MODULO);
+  process.env.IG_POLL_MS = '1';   // publicarCarrossel/publicarFoto esperam o container
+  const ig = require(MODULO);     // ficar pronto (status_code) antes de publicar
   // intercepta a chamada real a Meta
   const axios = require('axios');
-  const postOriginal = axios.post;
+  const postOriginal = axios.post, getOriginal = axios.get;
   axios.post = async (url, body) => {
     // o container do carrossel tambem bate em /media, mas sem image_url
     if (/\/media$/.test(url)) { if (body.image_url) recebidas.push(body.image_url); return { data: { id: 'c1' } }; }
     if (/media_publish$/.test(url)) return { data: { id: 'm1' } };
     return { data: {} };
   };
-  try { await ig.processarPostsAgendados(); } finally { axios.post = postOriginal; }
+  // esperarProcessar confere o status do container — sem este stub ela bateria na Meta
+  // de verdade e falharia (token de teste), fazendo o laço de retentativas repetir tudo.
+  axios.get = async () => ({ data: { status_code: 'FINISHED' } });
+  try { await ig.processarPostsAgendados(); } finally { axios.post = postOriginal; axios.get = getOriginal; }
   return { recebidas, statusGravado };
 }
 
