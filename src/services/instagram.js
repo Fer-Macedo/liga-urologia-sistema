@@ -4,6 +4,9 @@ const { query } = require('../models/database');
 const IG_ID = process.env.INSTAGRAM_BUSINESS_ID;
 const TOKEN = process.env.INSTAGRAM_ACCESS_TOKEN;
 const BASE = 'https://graph.instagram.com/v21.0';
+// Espera entre as tentativas de publicacao. Configuravel so para o teste nao ficar 60s
+// parado esperando relogio de verdade.
+const ESPERA_RETENTATIVA_MS = Number(process.env.IG_RETRY_MS || 20000);
 
 // ─── PUBLICAR FOTO NO FEED ────────────────────────────────────────────────────
 async function publicarFoto({ imageUrl, legenda }) {
@@ -156,6 +159,23 @@ async function agendarPost({ tipo, midiaUrl, midias, legenda, agendadoPara, cria
 // com link expirado e a Meta nao conseguiria baixar a imagem. Por isso a URL e
 // REGENERADA na hora da publicacao, a partir da chave do arquivo, que e permanente.
 // Sem isso o agendamento so funcionava dentro de 24h.
+// O axios resume tudo em "Request failed with status code 400" e joga fora o corpo da
+// resposta — que e justamente onde a Meta explica o motivo. Com isso, o carrossel de
+// 22/07 falhou e ficou impossivel saber por que: o log e o painel so tinham o numero.
+// Aqui a gente extrai a mensagem real (error.message / error_user_msg) para gravar.
+function motivoDaFalha(e) {
+  const d = e && e.response && e.response.data;
+  const err = d && (d.error || d);
+  if (err && (err.message || err.error_user_msg)) {
+    const partes = [err.error_user_msg || err.message];
+    if (err.code) partes.push('codigo ' + err.code + (err.error_subcode ? '/' + err.error_subcode : ''));
+    if (err.error_user_title) partes.unshift(err.error_user_title + ':');
+    return partes.join(' — ').slice(0, 500);
+  }
+  if (d) return (typeof d === 'string' ? d : JSON.stringify(d)).slice(0, 500);
+  return String((e && e.message) || e).slice(0, 500);
+}
+
 async function urlFresca(chave, urlAntiga, mime) {
   if (!chave) return urlAntiga;   // registros antigos, salvos antes de guardarmos a chave
   try {
@@ -167,41 +187,106 @@ async function urlFresca(chave, urlAntiga, mime) {
   }
 }
 
+// Avisa quem cuida do Instagram que uma publicacao agendada NAO saiu. Sem isso a falha e
+// silenciosa: a data passa, o post fica marcado 'erro' no painel e ninguem fica sabendo.
+async function avisarFalhaDePublicacao(post, motivo) {
+  const { enviarEmail } = require('./notificacoes');
+  const dest = await query(
+    "SELECT DISTINCT email FROM usuarios WHERE ativo=1 AND email IS NOT NULL AND email <> '' AND perfil IN ('marketing','presidencia','admin')"
+  );
+  if (!dest.rows.length) { console.error('[INSTAGRAM] sem e-mail de marketing/admin — falha NAO avisada.'); return; }
+  const quando = post.agendado_para ? new Date(post.agendado_para).toLocaleString('pt-BR', { timeZone: 'America/Asuncion' }) : '-';
+  const trecho = String(post.legenda || '').slice(0, 120).replace(/[<>]/g, '');
+  await enviarEmail({
+    para: dest.rows.map(x => x.email).join(','),
+    assunto: '⚠️ Publicação do Instagram não saiu',
+    titulo: 'Publicação não saiu',
+    faixaLabel: 'ALERTA',
+    html: `<p>A publicação agendada para <strong>${quando}</strong> (${post.tipo}) <strong>não foi publicada</strong>.</p>
+           <p><strong>Motivo informado pelo Instagram:</strong><br>${String(motivo).replace(/[<>]/g, '')}</p>
+           <p style="color:#64748b;font-size:13px">Início da legenda: “${trecho}…”</p>
+           <p>O conteúdo continua salvo no painel, em <strong>Marketing → Dashboard</strong>. Depois de resolver a causa, reagende por lá.</p>`
+  });
+  console.log('[INSTAGRAM] equipe avisada da falha do post', post.id);
+}
+
+// A publicacao ja esta no ar? Compara com o que a conta realmente tem, nao com o nosso
+// banco. Serve de trava contra post duplicado quando a chamada anterior publicou mas a
+// resposta se perdeu — sem isso, uma nova tentativa postaria a mesma arte duas vezes.
+async function jaEstaNoInstagram(legenda) {
+  const inicio = String(legenda || '').trim().slice(0, 60);
+  if (inicio.length < 15) return false;   // legenda curta demais para servir de assinatura
+  try {
+    const recentes = await buscarMetricas();
+    return recentes.some(m => String(m.caption || '').trim().slice(0, 60) === inicio);
+  } catch (e) {
+    // Nao deu para conferir: assume que NAO esta no ar. Repetir um post e chato; deixar
+    // de publicar por causa de uma consulta que falhou e pior.
+    console.error('[INSTAGRAM] nao consegui conferir duplicidade:', e.message);
+    return false;
+  }
+}
+
 async function processarPostsAgendados() {
   const r = await query(
     "SELECT * FROM instagram_posts WHERE status='agendado' AND agendado_para <= NOW()"
   );
 
   for (const post of r.rows) {
-    try {
-      let resultado;
-
-      if (post.tipo === 'feed') {
-        const url = await urlFresca(post.midia_chave, post.midia_url);
-        resultado = await publicarFoto({ imageUrl: url, legenda: post.legenda });
-      } else if (post.tipo === 'carousel') {
-        const urls = [];
-        for (const m of post.midias) urls.push(await urlFresca(m.chave, m.url));
-        resultado = await publicarCarrossel({ imageUrls: urls, legenda: post.legenda });
-      } else if (post.tipo === 'story') {
-        const url = await urlFresca(post.midia_chave, post.midia_url);
-        resultado = await publicarStory({ imageUrl: url });
-      } else if (post.tipo === 'reel') {
-        const url = await urlFresca(post.midia_chave, post.midia_url, 'video/mp4');
-        resultado = await publicarReel({ videoUrl: url, legenda: post.legenda });
+    // Ate 3 tentativas, com espera crescente. O carrossel de 22/07 morreu numa falha
+    // PASSAGEIRA da Meta: o mesmo conteudo, mesmo token e mesmas imagens funcionaram
+    // perfeitamente depois. Uma tentativa unica transforma soluco em post perdido.
+    let ultimoMotivo = null;
+    for (let tentativa = 1; tentativa <= 3; tentativa++) {
+      if (tentativa > 1) {
+        await new Promise(s => setTimeout(s, tentativa * ESPERA_RETENTATIVA_MS));   // 20s, depois 40s
+        if (await jaEstaNoInstagram(post.legenda)) {
+          await query("UPDATE instagram_posts SET status='publicado', publicado_em=NOW() WHERE id=$1", [post.id]);
+          console.log('[INSTAGRAM] post', post.id, 'ja estava no ar — marcado como publicado, sem repetir.');
+          ultimoMotivo = null;
+          break;
+        }
+        console.warn('[INSTAGRAM] post', post.id, '— tentativa', tentativa, 'apos falha:', ultimoMotivo);
       }
+      try {
+        let resultado;
 
-      await query(
-        "UPDATE instagram_posts SET status='publicado', publicado_em=NOW(), instagram_media_id=$1 WHERE id=$2",
-        [resultado.media_id, post.id]
-      );
-      console.log('[INSTAGRAM] Post publicado:', post.id, post.tipo);
-    } catch(e) {
+        if (post.tipo === 'feed') {
+          const url = await urlFresca(post.midia_chave, post.midia_url);
+          resultado = await publicarFoto({ imageUrl: url, legenda: post.legenda });
+        } else if (post.tipo === 'carousel') {
+          const urls = [];
+          for (const m of post.midias) urls.push(await urlFresca(m.chave, m.url));
+          resultado = await publicarCarrossel({ imageUrls: urls, legenda: post.legenda });
+        } else if (post.tipo === 'story') {
+          const url = await urlFresca(post.midia_chave, post.midia_url);
+          resultado = await publicarStory({ imageUrl: url });
+        } else if (post.tipo === 'reel') {
+          const url = await urlFresca(post.midia_chave, post.midia_url, 'video/mp4');
+          resultado = await publicarReel({ videoUrl: url, legenda: post.legenda });
+        }
+
+        await query(
+          "UPDATE instagram_posts SET status='publicado', publicado_em=NOW(), instagram_media_id=$1 WHERE id=$2",
+          [resultado.media_id, post.id]
+        );
+        console.log('[INSTAGRAM] Post publicado:', post.id, post.tipo, tentativa > 1 ? '(na tentativa ' + tentativa + ')' : '');
+        ultimoMotivo = null;
+        break;
+      } catch(e) {
+        ultimoMotivo = motivoDaFalha(e);
+      }
+    }
+
+    if (ultimoMotivo) {
       await query(
         "UPDATE instagram_posts SET status='erro', erro_msg=$1 WHERE id=$2",
-        [e.message, post.id]
+        ['apos 3 tentativas: ' + ultimoMotivo, post.id]
       );
-      console.error('[INSTAGRAM] Erro ao publicar post:', post.id, e.message);
+      console.error('[INSTAGRAM] Erro ao publicar post:', post.id, ultimoMotivo);
+      // Post agendado que falha calado nao e publicado por ninguem: a data passa e so se
+      // descobre olhando o painel por acaso. Avisa a equipe na hora.
+      await avisarFalhaDePublicacao(post, ultimoMotivo).catch(() => {});
     }
   }
 }
@@ -239,7 +324,7 @@ async function postarAniversariantesDoDia() {
         );
         console.log('[INSTAGRAM] Post aniversário publicado:', membro.nome);
       } catch(e) {
-        console.error('[INSTAGRAM] Erro post aniversário:', e.message);
+        console.error('[INSTAGRAM] Erro post aniversário:', motivoDaFalha(e));
       }
     }
   }
@@ -307,7 +392,7 @@ async function postarStoriesAniversarioDoDia() {
       );
       console.log('[INSTAGRAM] Story de aniversário publicado:', pessoa.tipo, pessoa.nome);
     } catch (e) {
-      console.error('[INSTAGRAM] Erro story aniversário:', pessoa.nome, e.message);
+      console.error('[INSTAGRAM] Erro story aniversário:', pessoa.nome, motivoDaFalha(e));
     }
   }
 
