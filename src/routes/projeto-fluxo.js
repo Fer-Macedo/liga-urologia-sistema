@@ -52,7 +52,11 @@ module.exports = function (router) {
     return r.rows[0] || null;
   }
   async function logH(pid, de, para, obs, uid) {
-    try { await query('INSERT INTO projetos_historico(projeto_id,status_de,status_para,observacao,usuario_id) VALUES($1,$2,$3,$4,$5)', [pid, de, para, obs || '', uid]); } catch (e) {}
+    // Nao propaga o erro (a transicao de etapa ja aconteceu, nao vale reverter so por causa
+    // do registro). Mas o catch(e){} vazio ja deixou etapas inteiras sumirem do historico
+    // sem ninguem perceber (status_de/status_para VARCHAR(20) — corrigido em database.js).
+    try { await query('INSERT INTO projetos_historico(projeto_id,status_de,status_para,observacao,usuario_id) VALUES($1,$2,$3,$4,$5)', [pid, de, para, obs || '', uid]); }
+    catch (e) { console.error('[PROJETO-FLUXO] falha ao gravar historico:', pid, de, '->', para, '-', e.message); }
   }
   async function temModulo(uid, modulo) {
     try { const r = await query('SELECT id FROM usuario_permissoes WHERE usuario_id=$1 AND modulo=$2', [uid, modulo]); return r.rows.length > 0; } catch (e) { return false; }

@@ -12,7 +12,7 @@ const path = require('path');
 const RAIZ = path.join(__dirname, '..');
 const MODULO = path.join(RAIZ, 'src/routes/projeto-fluxo.js');
 
-function montar({ etapaAtual = 'aguardando_secretaria' } = {}) {
+function montar({ etapaAtual = 'aguardando_secretaria', falhaHistorico = false } = {}) {
   const updates = [];
   const historico = [];
 
@@ -25,7 +25,10 @@ function montar({ etapaAtual = 'aguardando_secretaria' } = {}) {
       if (/UPDATE projetos_academicos SET etapa_atual='aguardando_presidencia'/.test(sql)) {
         updates.push({ sql, params }); return { rows: [] };
       }
-      if (/INSERT INTO projetos_historico/.test(sql)) { historico.push(params); return { rows: [] }; }
+      if (/INSERT INTO projetos_historico/.test(sql)) {
+        if (falhaHistorico) throw new Error('value too long for type character varying(20)');
+        historico.push(params); return { rows: [] };
+      }
       return { rows: [] };
     }
   }};
@@ -107,4 +110,31 @@ test('fica registrado no histórico do projeto', async () => {
   await chamar('admin');
   assert.strictEqual(historico.length, 1);
   assert.match(String(historico[0][3]), /Retrocedido a Presidencia/);
+});
+
+// BUG DE RAIZ (achado ao aplicar esta correção em produção): status_de/status_para eram
+// VARCHAR(20). 'aguardando_presidencia' (22) e 'aguardando_secretaria' (21) excedem isso.
+// Como logH() engolia o erro em catch(e){}, TODA transição de/para essas duas etapas vinha
+// falhando calada desde sempre — o histórico do projeto nunca registrava. Corrigido:
+// database.js alarga para VARCHAR(30); logH agora loga o erro em vez de sumir com ele.
+test('nomes de etapa longos (aguardando_presidencia/secretaria) não estouram o histórico', () => {
+  const nomes = ['rascunho', 'aguardando_presidencia', 'aguardando_secretaria',
+                 'enviado_coordinacion', 'en_correccion', 'aprobado_final'];
+  const LIMITE = 30; // deve bater com VARCHAR(30) em database.js
+  nomes.forEach(n => assert.ok(n.length <= LIMITE,
+    `"${n}" tem ${n.length} caracteres — excede o VARCHAR(${LIMITE}) de status_de/status_para`));
+});
+
+test('logH não engole o erro em silêncio: registra no console, mas não derruba a transição', async () => {
+  const avisos = [];
+  const original = console.error;
+  console.error = (...args) => avisos.push(args.join(' '));
+  try {
+    const { chamar, updates } = montar({ falhaHistorico: true });
+    const r = await chamar('admin');
+    assert.strictEqual(r.corpo.ok, true, 'o histórico falhar não pode impedir a transição de etapa');
+    assert.strictEqual(updates.length, 1, 'a etapa muda mesmo com o histórico falhando');
+    assert.ok(avisos.some(a => /falha ao gravar historico/.test(a)),
+      'antes isso sumia em catch(e){} — o histórico de etapas inteiras nunca era gravado, sem ninguém perceber');
+  } finally { console.error = original; }
 });

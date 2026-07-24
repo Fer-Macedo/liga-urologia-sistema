@@ -325,6 +325,14 @@ async function initSchema() {
   await query('ALTER TABLE revalida_questoes ADD COLUMN IF NOT EXISTS publicado_em TIMESTAMP');
   await query('ALTER TABLE revalida_questoes ADD COLUMN IF NOT EXISTS publicado_por VARCHAR(120)');
 
+  // status_de/status_para eram VARCHAR(20) — curto demais para as etapas do fluxo de
+  // projetos ('aguardando_presidencia' tem 22, 'aguardando_secretaria' tem 21). Como
+  // logH() (projeto-fluxo.js) engole erro em catch(e){}, todo INSERT nessas duas etapas
+  // vinha falhando CALADO desde sempre: o historico do projeto simplesmente nao registrava
+  // essas transicoes, sem ninguem perceber. Alargar e idempotente — repetir nao da erro.
+  await query('ALTER TABLE projetos_historico ALTER COLUMN status_de TYPE VARCHAR(30)');
+  await query('ALTER TABLE projetos_historico ALTER COLUMN status_para TYPE VARCHAR(30)');
+
   // Cronograma de conteudo sugerido pela IA + resposta da equipe. E conversa, nao
   // monologo: o que a equipe recusa ou comenta volta como contexto na proxima geracao,
   // para a IA parar de repetir o que ja foi descartado.
