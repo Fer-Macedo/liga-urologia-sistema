@@ -13,7 +13,7 @@ async function verificarRespostas(authClient, pool, emailLiga) {
 
   for (const t of threads.rows) {
     try {
-      const th = await gmail.users.threads.get({ userId: 'me', id: t.gmail_thread_id, format: 'metadata', metadataHeaders: ['From', 'Date'] });
+      const th = await gmail.users.threads.get({ userId: 'me', id: t.gmail_thread_id, format: 'metadata', metadataHeaders: ['From', 'Date', 'Message-ID'] });
       const msgs = th.data.messages || [];
       if (!msgs.length) continue;
 
@@ -28,9 +28,14 @@ async function verificarRespostas(authClient, pool, emailLiga) {
       const ehDaLiga = fromVal.includes((emailLiga || '').toLowerCase());
 
       if (!ehDaLiga && ultimaId !== t.ultima_msg_vista) {
-        // Resposta nova detectada
-        await pool.query('UPDATE projetos_email_thread SET tem_resposta_nova=true, resposta_em=NOW(), ultima_msg_vista=$1 WHERE id=$2',
-          [ultimaId, t.id]);
+        // Resposta nova detectada. Guarda tambem o Message-ID real da coordenação: se nao
+        // atualizarmos, o proximo envio nosso (correcao) responderia ao NOSSO ultimo
+        // e-mail, nao ao dela — a thread continua correta gracas ao threadId explicito no
+        // send, mas o cabecalho In-Reply-To ficaria desatualizado. Sem chave, mantem a
+        // anterior (nunca perde a referencia por falta do header).
+        const msgIdH = headers.find(h => h.name.toLowerCase() === 'message-id');
+        await pool.query('UPDATE projetos_email_thread SET tem_resposta_nova=true, resposta_em=NOW(), ultima_msg_vista=$1, gmail_message_id=COALESCE($3, gmail_message_id) WHERE id=$2',
+          [ultimaId, t.id, msgIdH ? msgIdH.value : null]);
         novas++;
       } else if (ehDaLiga) {
         // Última é da liga: atualiza o "visto" e limpa flag de resposta

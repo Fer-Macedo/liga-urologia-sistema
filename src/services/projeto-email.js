@@ -76,14 +76,15 @@ async function enviarEmailProjeto(authClient, pool, opts) {
     if (h) rfcMessageId = h.value;
   } catch (e) { /* usa o id interno como fallback */ }
 
-  // Salva/atualiza a thread do projeto
-  if (threadInfo) {
-    await pool.query('UPDATE projetos_email_thread SET gmail_thread_id=$1, gmail_message_id=$2, updated_at=NOW() WHERE id=$3',
-      [newThreadId, rfcMessageId, threadInfo.id]);
-  } else {
-    await pool.query('INSERT INTO projetos_email_thread (projeto_id, gmail_thread_id, gmail_message_id, assunto) VALUES ($1,$2,$3,$4)',
-      [projetoId, newThreadId, rfcMessageId, subject]);
-  }
+  // Salva/atualiza a thread do projeto. UPSERT atomico (nao SELECT-depois-decide): com o
+  // unique em projeto_id, isso garante UMA thread por projeto mesmo sob corrida (duplo
+  // clique, duas abas) — nunca duas conversas separadas para o mesmo projeto.
+  await pool.query(
+    `INSERT INTO projetos_email_thread (projeto_id, gmail_thread_id, gmail_message_id, assunto)
+     VALUES ($1,$2,$3,$4)
+     ON CONFLICT (projeto_id) DO UPDATE SET
+       gmail_thread_id=EXCLUDED.gmail_thread_id, gmail_message_id=EXCLUDED.gmail_message_id, updated_at=NOW()`,
+    [projetoId, newThreadId, rfcMessageId, subject]);
 
   return { messageId, threadId: newThreadId, assunto };
 }

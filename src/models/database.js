@@ -333,6 +333,20 @@ async function initSchema() {
   await query('ALTER TABLE projetos_historico ALTER COLUMN status_de TYPE VARCHAR(30)');
   await query('ALTER TABLE projetos_historico ALTER COLUMN status_para TYPE VARCHAR(30)');
 
+  // A norma da Coordinación exige UMA thread de e-mail por projeto, do primeiro envio ate
+  // o projeto ser concluido. projetos_email_thread ja existia (criada fora do initSchema),
+  // mas SEM unique em projeto_id — a garantia de "uma thread so" dependia so do codigo
+  // (SELECT antes de INSERT em enviarEmailProjeto), sem trava no banco. Numa corrida (duplo
+  // clique, duas abas), duas linhas de thread para o mesmo projeto criariam DUAS conversas
+  // por e-mail — exatamente o que a norma proibe, e ninguem perceberia.
+  await query(`
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'projetos_email_thread_projeto_id_key') THEN
+        ALTER TABLE projetos_email_thread ADD CONSTRAINT projetos_email_thread_projeto_id_key UNIQUE (projeto_id);
+      END IF;
+    END $$;
+  `);
+
   // Cronograma de conteudo sugerido pela IA + resposta da equipe. E conversa, nao
   // monologo: o que a equipe recusa ou comenta volta como contexto na proxima geracao,
   // para a IA parar de repetir o que ja foi descartado.

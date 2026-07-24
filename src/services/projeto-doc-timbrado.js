@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const JSZip = require('jszip');
 
-const FONTE = 'Segoe UI';
+const FONTE = 'Arial';
 const SZ_CORPO = 24;       // meio-pontos => 12pt
 const SZ_TITULO = 24;
 const SZ_CAPA = 30;        // 16pt
@@ -43,7 +43,7 @@ function runXml(t, bold, size) {
   const sz = size || SZ_CORPO;
   return '<w:r><w:rPr>' +
     (bold ? '<w:b/><w:bCs/>' : '') +
-    '<w:rFonts w:ascii="' + FONTE + '" w:hAnsi="' + FONTE + '" w:eastAsia="Segoe UI" w:cs="Segoe UI"/>' +
+    '<w:rFonts w:ascii="' + FONTE + '" w:hAnsi="' + FONTE + '" w:eastAsia="' + FONTE + '" w:cs="' + FONTE + '"/>' +
     '<w:sz w:val="' + sz + '"/><w:szCs w:val="' + sz + '"/>' +
     '</w:rPr><w:t xml:space="preserve">' + esc(t) + '</w:t></w:r>';
 }
