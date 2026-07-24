@@ -2,7 +2,7 @@
 // extenso em espanhol e a redação corrida precisam sair certos — é documento formal.
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { enEspanol, moneda, milhar, textoInscripcion } = require('../src/services/projeto-texto');
+const { enEspanol, moneda, milhar, textoInscripcion, nomeDocumentoProjeto } = require('../src/services/projeto-texto');
 
 test('número por extenso em espanhol', () => {
   assert.strictEqual(enEspanol(12), 'doce');
@@ -65,4 +65,33 @@ test('online (virtual) com plataforma no campo local vira "en la plataforma"', (
   });
   assert.match(t, /a las 19h/);
   assert.match(t, /en la plataforma Google Meet/);
+});
+
+
+// NORMA OBRIGATÓRIA da Coordinación de Ligas (2026-07-24, corrigida no mesmo dia): todo
+// documento de projeto (ensino/extensão), baixado e/ou enviado a ela, tem que se chamar
+// "LAURO_Proyecto de <Ensino|Extensão>_<nome do projeto>" — eles recebem projetos de várias
+// ligas ao mesmo tempo e precisam identificar origem, tipo e projeto só pelo nome do arquivo.
+test('nomeDocumentoProjeto: ensino', () => {
+  assert.strictEqual(nomeDocumentoProjeto('ensino', 'Jornada de Salud del Hombre', 'docx'),
+    'LAURO_Proyecto de Ensino_Jornada de Salud del Hombre.docx');
+});
+
+test('nomeDocumentoProjeto: extensão (qualquer tipo que não seja "ensino")', () => {
+  assert.strictEqual(nomeDocumentoProjeto('extensao', 'Campanha de Prevención', 'docx'),
+    'LAURO_Proyecto de Extensão_Campanha de Prevención.docx');
+});
+
+test('nomeDocumentoProjeto: usa a extensão do arquivo enviado, não força .docx', () => {
+  assert.strictEqual(nomeDocumentoProjeto('ensino', 'Jornada', 'pdf'),
+    'LAURO_Proyecto de Ensino_Jornada.pdf');
+});
+
+test('nomeDocumentoProjeto: sem nome de projeto ainda sai identificável', () => {
+  assert.strictEqual(nomeDocumentoProjeto('ensino', '', 'docx'), 'LAURO_Proyecto de Ensino_Proyecto.docx');
+  assert.strictEqual(nomeDocumentoProjeto('ensino', null, 'docx'), 'LAURO_Proyecto de Ensino_Proyecto.docx');
+});
+
+test('nomeDocumentoProjeto: extensão vazia cai para docx', () => {
+  assert.strictEqual(nomeDocumentoProjeto('ensino', 'Jornada', ''), 'LAURO_Proyecto de Ensino_Jornada.docx');
 });

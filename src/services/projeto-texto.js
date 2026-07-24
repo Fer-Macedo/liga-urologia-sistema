@@ -9,6 +9,18 @@
 
 const MESES_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
 
+// Norma obrigatória da Coordinación de Ligas: todo documento de projeto (ensino/extensão),
+// baixado e/ou enviado a ela, tem que se chamar "LAURO_Proyecto de <Ensino|Extensão>_<nome
+// do projeto>" — ela recebe projetos de varias ligas ao mesmo tempo e precisa identificar
+// origem, tipo e projeto so pelo nome do arquivo. Aplicado na geracao, no upload manual E de
+// novo no momento do envio — isso cobre tambem anexos antigos que ja existiam antes da regra.
+function nomeDocumentoProjeto(tipo, nomeProjeto, extensao) {
+  const label = tipo === 'ensino' ? 'Ensino' : 'Extensão';
+  const nome = String(nomeProjeto || 'Proyecto').trim();
+  const ext = String(extensao || 'docx').replace(/^\./, '') || 'docx';
+  return 'LAURO_Proyecto de ' + label + '_' + nome + '.' + ext;
+}
+
 // Número cardinal por extenso em espanhol (0 a 999.999 — cobre reais e guaraníes de sobra).
 function enEspanol(n) {
   n = Math.floor(Math.abs(Number(n) || 0));
@@ -128,4 +140,4 @@ function textoInscripcion(p) {
   return base + inversion + cuando + '.';
 }
 
-module.exports = { enEspanol, moneda, milhar, textoDias, textoHora, textoInscripcion };
+module.exports = { enEspanol, moneda, milhar, textoDias, textoHora, textoInscripcion, nomeDocumentoProjeto };

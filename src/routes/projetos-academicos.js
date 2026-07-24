@@ -349,14 +349,11 @@ module.exports = function(router) {
       const membrete = fs.readFileSync(require('path').join(__dirname, '..', '..', 'templates', 'membrete-ucp.docx'));
       const cfg = await getConfig();
       const buffer = await gerarProjetoTimbrado(membrete, p, cfg);
-      const agora = new Date();
-      const dd = String(agora.getDate()).padStart(2,'0');
-      const mm = String(agora.getMonth()+1).padStart(2,'0');
-      const aa = agora.getFullYear();
-      const hh = String(agora.getHours()).padStart(2,'0');
-      const min = String(agora.getMinutes()).padStart(2,'0');
-      const carimbo = dd + '-' + mm + '-' + aa + '_' + hh + 'h' + min;
-      const nomeArq = (p.tipo==='ensino'?'Proyecto-Ensenanza-':'Proyecto-Extension-') + (p.nome||'proyecto').replace(/[^a-zA-Z0-9]/g,'_').slice(0,40) + '_' + carimbo + '.docx';
+      // Norma obrigatoria da Coordinación de Ligas: "LAURO_Proyecto de <Ensino|Extensão>_
+      // <nome do projeto>" — eles recebem projetos de varias ligas ao mesmo tempo e
+      // precisam identificar origem, tipo e projeto so pelo nome do arquivo.
+      const { nomeDocumentoProjeto } = require('../services/projeto-texto');
+      const nomeArq = nomeDocumentoProjeto(p.tipo, p.nome, 'docx');
       const r = await uploadArquivo(buffer, nomeArq, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'projetos-docs');
       await query('INSERT INTO projetos_anexos (projeto_id,tipo,arquivo_chave,nome_original,mimetype,enviado_por) VALUES ($1,$2,$3,$4,$5,$6)',
         [p.id, 'documento_final', r.chave, nomeArq, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', req.session.usuario.id]);

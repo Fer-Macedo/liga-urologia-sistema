@@ -83,9 +83,19 @@ module.exports = function (router) {
 
         const tipo = req.body.tipo_anexo || 'documento_final';
         const obs = req.body.observacao || null;
-        const r = await uploadArquivo(req.file.buffer, 'proj' + p.id + '-' + tipo + '-' + Date.now() + '.' + (req.file.originalname.split('.').pop() || 'pdf'), req.file.mimetype, 'projetos-docs');
+        const extensao = req.file.originalname.split('.').pop() || 'pdf';
+        const r = await uploadArquivo(req.file.buffer, 'proj' + p.id + '-' + tipo + '-' + Date.now() + '.' + extensao, req.file.mimetype, 'projetos-docs');
+        // Norma da Coordinación: "LAURO_Proyecto de <Ensino|Extensão>_<nome do projeto>",
+        // so para os tipos que efetivamente sao enviados a ela (documento final e versoes
+        // corrigidas) — troca o nome do arquivo da pessoa pelo nome exigido, mantendo so a
+        // extensao original. O que a propria Coordinación nos manda (pedido_correccion) e o
+        // que ela ja aprovou (aprobado_final) mantem o nome original — não é algo que
+        // devolvemos a ela.
+        const { nomeDocumentoProjeto } = require('../services/projeto-texto');
+        const enviadoAoTipo = ['documento_final', 'correcao_presidencia', 'correccion_enseñanza'].includes(tipo);
+        const nomeParaSalvar = enviadoAoTipo ? nomeDocumentoProjeto(p.tipo, p.nome, extensao) : req.file.originalname;
         await query('INSERT INTO projetos_anexos (projeto_id,tipo,arquivo_chave,nome_original,mimetype,observacao,enviado_por) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-          [p.id, tipo, r.chave, req.file.originalname, req.file.mimetype, obs, u.id]);
+          [p.id, tipo, r.chave, nomeParaSalvar, req.file.mimetype, obs, u.id]);
         await logH(p.id, p.etapa_atual, p.etapa_atual, 'Documento anexado: ' + tipo, u.id);
         req.session.msg = ['Documento anexado correctamente.'];
         res.redirect('/projetos/' + p.id);
@@ -189,9 +199,13 @@ module.exports = function (router) {
         ? '<p>Estimada Coordinación de Ligas,</p><p>Adjuntamos el proyecto de ' + tipoLabel.toLowerCase() + ' <strong>"' + p.nome + '"</strong> de la Liga Académica de Urología (LAURO) para su evaluación.</p><p>Quedamos atentos a sus observaciones.</p><p>Atentamente,<br>Liga Académica de Urología – LAURO</p>'
         : '<p>Estimada Coordinación de Ligas,</p><p>Adjuntamos la versión corregida del proyecto <strong>"' + p.nome + '"</strong> conforme a las observaciones recibidas.</p><p>Quedamos atentos.</p><p>Atentamente,<br>Liga Académica de Urología – LAURO</p>';
 
+      // Ultima trava antes de sair da liga: reconstroi o nome no formato exigido mesmo
+      // para anexos antigos, gerados antes desta norma existir ou com nome fora do padrao.
+      const { nomeDocumentoProjeto } = require('../services/projeto-texto');
+      const extAnexo = (anx.rows[0].nome_original || '').split('.').pop() || 'docx';
       const r = await enviarEmailProjeto(client, pool, {
         projetoId: p.id, to: dest, from, subject, corpoHtml,
-        anexos: [{ nome: anx.rows[0].nome_original || 'proyecto.pdf', mimetype: anx.rows[0].mimetype || 'application/pdf', buffer }]
+        anexos: [{ nome: nomeDocumentoProjeto(p.tipo, p.nome, extAnexo), mimetype: anx.rows[0].mimetype || 'application/pdf', buffer }]
       });
 
       await query("UPDATE projetos_academicos SET etapa_atual='enviado_coordinacion', status='revisao', notif_secretaria=false, updated_at=NOW() WHERE id=$1", [p.id]);
