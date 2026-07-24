@@ -46,10 +46,10 @@ var temDocFinal = anexosList.some(function(a){ return a.tipo==='documento_final'
         <p style="font-size:11.5px;color:var(--ink-soft);margin-bottom:8px">El sistema genera el documento completo con el membrete de la UCP, listo para descargar y anexar. Editable en Word o Google Docs.</p>
         <button type="button" class="btn btn-pri" style="width:100%;margin-bottom:8px;justify-content:center;text-align:center" id="btn-gen-timbrado" onclick="generarTimbrado()">Generar documento timbrado</button>
         <div style="border-top:1px dashed var(--line);margin:10px 0;padding-top:10px"></div>
-        <p style="font-size:11.5px;color:var(--ink-soft);margin-bottom:6px">O adjunte manualmente un documento:</p>
+        <p style="font-size:11.5px;color:var(--ink-soft);margin-bottom:6px">O adjunte manualmente un documento (Word, para que la Coordinación pueda escribir sus correcciones dentro del archivo):</p>
         <form method="POST" action="/projetos/<%= p.id %>/anexar" enctype="multipart/form-data">
           <input type="hidden" name="tipo_anexo" value="<%= etapa==='en_correccion' ? 'correccion_enseñanza' : 'documento_final' %>">
-          <input type="file" name="arquivo" accept=".pdf,.doc,.docx" required class="input" style="padding:7px;margin-bottom:6px;width:100%">
+          <input type="file" name="arquivo" accept=".doc,.docx" required class="input" style="padding:7px;margin-bottom:6px;width:100%">
           <button type="submit" class="btn btn-sec" style="width:100%;justify-content:center;text-align:center">Adjuntar documento manualmente</button>
         </form>
       <% if (temDocFinal || etapa==='en_correccion') { %>
@@ -70,10 +70,10 @@ var temDocFinal = anexosList.some(function(a){ return a.tipo==='documento_final'
         <div style="border-top:1px dashed var(--line);margin:10px 0;padding-top:10px"></div>
 
         <!-- Camino alternativo: sigue disponible para quien prefiera Word/Docs -->
-        <p style="font-size:11.5px;color:var(--ink-soft);margin-bottom:6px"><strong>Opción 2 — Corregir fuera del sistema:</strong> descargue el documento, edítelo en Word o Google Docs y adjunte la versión corregida.</p>
+        <p style="font-size:11.5px;color:var(--ink-soft);margin-bottom:6px"><strong>Opción 2 — Corregir fuera del sistema:</strong> descargue el documento, edítelo en Word o Google Docs y adjunte la versión corregida (Word, no PDF — la Coordinación necesita poder escribir dentro del archivo).</p>
         <form method="POST" action="/projetos/<%= p.id %>/anexar" enctype="multipart/form-data" style="margin-bottom:8px">
           <input type="hidden" name="tipo_anexo" value="correcao_presidencia">
-          <input type="file" name="arquivo" accept=".pdf,.doc,.docx" class="input" style="padding:7px;margin-bottom:6px;width:100%">
+          <input type="file" name="arquivo" accept=".doc,.docx" class="input" style="padding:7px;margin-bottom:6px;width:100%">
           <button type="submit" class="btn btn-sec" style="width:100%;justify-content:center;text-align:center">Adjuntar versión corregida</button>
         </form>
       </div>

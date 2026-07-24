@@ -54,40 +54,65 @@ function montarAnexar({ tipo = 'documento_final', nomeArquivo = 'Proyecto correg
   montarComTimers(() => require(MODULO)(router));
 
   const chamar = async () => {
-    const req = { params: { id: '2' }, body: { tipo_anexo: tipo }, session: { usuario: { id: 1, perfil: 'presidencia' }, msg: null } };
+    const req = { params: { id: '2' }, body: { tipo_anexo: tipo }, session: { usuario: { id: 1, perfil: 'presidencia' }, msg: null, erro: null } };
     const res = { redirect: () => {} };
     handler(req, res);
     await pendente;
-    return inserts[0];
+    return { insert: inserts[0], sessao: req.session, totalInserts: inserts.length };
   };
   return { chamar };
 }
 
 test('upload manual do documento final (ensino): sai no formato exigido, extensão preservada', async () => {
   const { chamar } = montarAnexar({ tipo: 'documento_final', nomeArquivo: 'Proyecto corregido final.docx', projTipo: 'ensino', projNome: 'Jornada X' });
-  const params = await chamar();
-  const nomeSalvo = params[3]; // (projeto_id,tipo,arquivo_chave,nome_original,...)
+  const { insert } = await chamar();
+  const nomeSalvo = insert[3]; // (projeto_id,tipo,arquivo_chave,nome_original,...)
   assert.strictEqual(nomeSalvo, 'LAURO_Proyecto de Ensino_Jornada X.docx',
     'o nome do arquivo da pessoa é descartado — o que vale é o padrão exigido pela Coordinación');
 });
 
 test('upload manual do documento final (extensão): usa o rótulo certo', async () => {
-  const { chamar } = montarAnexar({ tipo: 'documento_final', nomeArquivo: 'v2.pdf', projTipo: 'extensao', projNome: 'Campanha X' });
-  const params = await chamar();
-  assert.strictEqual(params[3], 'LAURO_Proyecto de Extensão_Campanha X.pdf');
+  const { chamar } = montarAnexar({ tipo: 'documento_final', nomeArquivo: 'v2.doc', projTipo: 'extensao', projNome: 'Campanha X' });
+  const { insert } = await chamar();
+  assert.strictEqual(insert[3], 'LAURO_Proyecto de Extensão_Campanha X.doc');
 });
 
 test('upload manual de correção da Presidencia: também segue o padrão', async () => {
   const { chamar } = montarAnexar({ tipo: 'correcao_presidencia', nomeArquivo: 'v2.docx' });
-  const params = await chamar();
-  assert.strictEqual(params[3], 'LAURO_Proyecto de Ensino_Jornada X.docx');
+  const { insert } = await chamar();
+  assert.strictEqual(insert[3], 'LAURO_Proyecto de Ensino_Jornada X.docx');
 });
 
-test('pedido_correccion (o que a Coordinación NOS manda): mantém o nome original', async () => {
+test('pedido_correccion (o que a Coordinación NOS manda): mantém o nome original, PDF é normal', async () => {
   const { chamar } = montarAnexar({ tipo: 'pedido_correccion', nomeArquivo: 'observaciones_coordinacion.pdf' });
-  const params = await chamar();
-  assert.strictEqual(params[3], 'observaciones_coordinacion.pdf',
-    'não é algo que devolvemos a eles — renomear aqui não tem por quê');
+  const { insert } = await chamar();
+  assert.strictEqual(insert[3], 'observaciones_coordinacion.pdf',
+    'não é algo que devolvemos a eles — renomear ou barrar PDF aqui não tem por quê');
+});
+
+// ─── DOCUMENTO PARA A COORDINACIÓN TEM QUE SER EDITÁVEL (nunca PDF) ───────────
+// Quem corrige escreve as observações DENTRO do arquivo — PDF não dá pra anotar por
+// dentro. Vale só para os tipos que efetivamente vão à Coordinación.
+
+test('documento_final em PDF é recusado: a Coordinación precisa poder escrever dentro', async () => {
+  const { chamar } = montarAnexar({ tipo: 'documento_final', nomeArquivo: 'proyecto.pdf' });
+  const { insert, sessao, totalInserts } = await chamar();
+  assert.strictEqual(totalInserts, 0, 'PDF não pode nem chegar a ser salvo como documento_final');
+  assert.ok(insert === undefined);
+  assert.ok(sessao.erro && sessao.erro.length, 'a pessoa precisa saber por que foi recusado');
+  assert.match(sessao.erro[0], /editable|Word/i);
+});
+
+test('correcao_presidencia em PDF também é recusada', async () => {
+  const { chamar } = montarAnexar({ tipo: 'correcao_presidencia', nomeArquivo: 'v2.pdf' });
+  const { totalInserts } = await chamar();
+  assert.strictEqual(totalInserts, 0);
+});
+
+test('pedido_correccion em PDF continua permitido (não é o que devolvemos a eles)', async () => {
+  const { chamar } = montarAnexar({ tipo: 'pedido_correccion', nomeArquivo: 'obs.pdf' });
+  const { totalInserts } = await chamar();
+  assert.strictEqual(totalInserts, 1, 'a Coordinación pode mandar PDF pra gente sem problema');
 });
 
 // ─── ENVIO REAL (/projetos/:id/enviar-coordinacion) ───────────────────────────
@@ -148,8 +173,18 @@ test('envio à Coordinación: documento antigo fora do padrão é reconstruído 
     'rede de segurança: mesmo um anexo antigo, gerado antes da norma, tem que sair no formato exato');
 });
 
-test('envio à Coordinación: preserva a extensão do arquivo original ao reconstruir o nome', async () => {
-  const { chamar, nomeUsadoNoEmail } = montarEnvio({ nomeSalvo: 'qualquer_coisa.pdf', projTipo: 'extensao', projNome: 'Campanha X' });
+test('envio à Coordinación: preserva a extensão .doc do arquivo original ao reconstruir o nome', async () => {
+  const { chamar, nomeUsadoNoEmail } = montarEnvio({ nomeSalvo: 'qualquer_coisa.doc', projTipo: 'extensao', projNome: 'Campanha X' });
   await chamar();
-  assert.strictEqual(nomeUsadoNoEmail(), 'LAURO_Proyecto de Extensão_Campanha X.pdf');
+  assert.strictEqual(nomeUsadoNoEmail(), 'LAURO_Proyecto de Extensão_Campanha X.doc');
+});
+
+// A trava final: um anexo antigo em PDF (salvo antes desta regra existir) não pode sair
+// pelo e-mail — a Coordinación precisa poder escrever as correções dentro do arquivo.
+test('envio à Coordinación: recusa se o anexo salvo estiver em PDF', async () => {
+  const { chamar, nomeUsadoNoEmail } = montarEnvio({ nomeSalvo: 'proyecto_antigo.pdf' });
+  const r = await chamar();
+  assert.ok(r.erro, 'não pode mandar um PDF calado — tem que avisar que não é editável');
+  assert.match(r.erro, /editable|Word/i);
+  assert.strictEqual(nomeUsadoNoEmail(), null, 'o e-mail nem chega a ser enviado');
 });

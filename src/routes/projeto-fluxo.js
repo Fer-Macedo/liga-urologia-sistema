@@ -83,16 +83,22 @@ module.exports = function (router) {
 
         const tipo = req.body.tipo_anexo || 'documento_final';
         const obs = req.body.observacao || null;
-        const extensao = req.file.originalname.split('.').pop() || 'pdf';
-        const r = await uploadArquivo(req.file.buffer, 'proj' + p.id + '-' + tipo + '-' + Date.now() + '.' + extensao, req.file.mimetype, 'projetos-docs');
-        // Norma da Coordinación: "LAURO_Proyecto de <Ensino|Extensão>_<nome do projeto>",
-        // so para os tipos que efetivamente sao enviados a ela (documento final e versoes
-        // corrigidas) — troca o nome do arquivo da pessoa pelo nome exigido, mantendo so a
-        // extensao original. O que a propria Coordinación nos manda (pedido_correccion) e o
-        // que ela ja aprovou (aprobado_final) mantem o nome original — não é algo que
-        // devolvemos a ela.
-        const { nomeDocumentoProjeto } = require('../services/projeto-texto');
+        const extensao = (req.file.originalname.split('.').pop() || 'pdf').toLowerCase();
+        // Norma da Coordinación: o documento enviado para avaliação tem que ser EDITÁVEL —
+        // quem corrige escreve as observações dentro do próprio arquivo (Word). Um PDF não
+        // dá pra anotar por dentro, então os tipos enviados a ela têm que ser .doc/.docx.
+        // pedido_correccion (o que ELA nos manda) e aprobado_final (o que ela já aprovou)
+        // podem ser PDF sem problema — não é o que devolvemos para correção.
         const enviadoAoTipo = ['documento_final', 'correcao_presidencia', 'correccion_enseñanza'].includes(tipo);
+        if (enviadoAoTipo && !['doc', 'docx'].includes(extensao)) {
+          req.session.erro = ['El documento enviado a la Coordinación tiene que ser editable (Word .doc o .docx), para que se puedan escribir las correcciones dentro del archivo.'];
+          return res.redirect('/projetos/' + p.id);
+        }
+        const r = await uploadArquivo(req.file.buffer, 'proj' + p.id + '-' + tipo + '-' + Date.now() + '.' + extensao, req.file.mimetype, 'projetos-docs');
+        // "LAURO_Proyecto de <Ensino|Extensão>_<nome do projeto>" — troca o nome do arquivo
+        // da pessoa pelo nome exigido, mantendo so a extensao (agora sempre doc/docx para
+        // os tipos enviados a Coordinación).
+        const { nomeDocumentoProjeto } = require('../services/projeto-texto');
         const nomeParaSalvar = enviadoAoTipo ? nomeDocumentoProjeto(p.tipo, p.nome, extensao) : req.file.originalname;
         await query('INSERT INTO projetos_anexos (projeto_id,tipo,arquivo_chave,nome_original,mimetype,observacao,enviado_por) VALUES ($1,$2,$3,$4,$5,$6,$7)',
           [p.id, tipo, r.chave, nomeParaSalvar, req.file.mimetype, obs, u.id]);
@@ -175,6 +181,13 @@ module.exports = function (router) {
       // Pega o anexo mais recente (documento final ou corrigido) para enviar
       const anx = await query("SELECT * FROM projetos_anexos WHERE projeto_id=$1 AND tipo IN ('documento_final','correcao_presidencia','correccion_enseñanza') ORDER BY id DESC LIMIT 1", [p.id]);
       if (!anx.rows.length) return res.status(400).json({ erro: 'No hay documento para enviar.' });
+      // A Coordinación precisa poder ESCREVER as correções dentro do arquivo — um PDF não
+      // é editável. Ultima trava antes de sair: pega documentos antigos (de antes desta
+      // regra existir) que ainda estejam em PDF, e barra o envio em vez de mandar calado.
+      const extEnviar = (anx.rows[0].nome_original || '').split('.').pop().toLowerCase();
+      if (!['doc', 'docx'].includes(extEnviar)) {
+        return res.status(400).json({ erro: 'El documento adjunto no es editable (' + (extEnviar || 'archivo') + '). Suba una versión en Word (.doc/.docx) antes de enviar a la Coordinación.' });
+      }
 
       const { getClientAtualizado } = require('../services/google-drive');
       const { enviarEmailProjeto } = require('../services/projeto-email');
