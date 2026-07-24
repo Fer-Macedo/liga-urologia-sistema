@@ -97,6 +97,10 @@ var temDocFinal = anexosList.some(function(a){ return a.tipo==='documento_final'
         <% } %>
       </div>
       <button class="btn btn-pri" id="btn-env-coord" style="width:100%;justify-content:center;text-align:center" <%= emailCoord ? '' : 'disabled' %> onclick="accionFlujo('enviar-coordinacion','¿Enviar el proyecto a la Coordinación de Ligas por email?')">Enviar a Coordinación de Ligas</button>
+      <!-- Solo quien aprobó (admin/presidencia) puede deshacer esa aprobación -->
+      <% if (ehAdmin) { %>
+        <button class="btn btn-sec" id="btn-retro-pres" style="width:100%;justify-content:center;text-align:center;margin-top:8px" onclick="accionFlujo('retroceder-presidencia','¿Retroceder a revisión de Presidencia para corregir el documento?')">Retroceder a edición de Presidencia</button>
+      <% } %>
       <!-- Secretaría revisa antes de enviar: puede devolver, pero NO edita el documento -->
       <form method="POST" action="/projetos/<%= p.id %>/devolver-correccion" enctype="multipart/form-data" style="margin-top:8px">
         <p style="font-size:11.5px;color:var(--ink-soft);margin-bottom:6px">¿Encontró algo a corregir antes de enviar? Devuelva a Enseñanza/Extensión:</p>
@@ -174,7 +178,7 @@ async function generarTimbrado(btnId) {
 }
 async function accionFlujo(accion, confirmacion) {
   confirmarAcao(confirmacion, async function() {
-    var btnId = {'enviar-presidencia':'btn-env-pres','enviar-secretaria':'btn-env-sec','enviar-coordinacion':'btn-env-coord'}[accion];
+    var btnId = {'enviar-presidencia':'btn-env-pres','enviar-secretaria':'btn-env-sec','enviar-coordinacion':'btn-env-coord','retroceder-presidencia':'btn-retro-pres'}[accion];
     var b = btnId ? document.getElementById(btnId) : null;
     if (b) { b.disabled = true; b.textContent = 'Procesando…'; }
     try {

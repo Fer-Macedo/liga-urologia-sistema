@@ -132,6 +132,21 @@ module.exports = function (router) {
     } catch (e) { res.status(500).json({ erro: e.message }); }
   });
 
+  // Secretaria → volta para Presidencia (desfaz a aprovação, para corrigir o documento).
+  // Só admin/presidencia: é a mesma autoridade que aprovou o envio à Secretaria; a
+  // Secretaria não pode devolver a decisão de quem está acima dela no fluxo.
+  router.post('/projetos/:id/retroceder-presidencia', requireAuth, async (req, res) => {
+    try {
+      const u = req.session.usuario; const p = await buscar(req.params.id);
+      if (!p) return res.status(404).json({ erro: 'No encontrado' });
+      if (!['admin', 'presidencia'].includes(u.perfil)) return res.status(403).json({ erro: 'Solo Presidencia/Admin' });
+      if (p.etapa_atual !== 'aguardando_secretaria') return res.status(400).json({ erro: 'El proyecto no está en Secretaría.' });
+      await query("UPDATE projetos_academicos SET etapa_atual='aguardando_presidencia', status='pendente', notif_secretaria=false, updated_at=NOW() WHERE id=$1", [p.id]);
+      await logH(p.id, p.etapa_atual, 'aguardando_presidencia', 'Retrocedido a Presidencia para corrección', u.id);
+      res.json({ ok: true });
+    } catch (e) { res.status(500).json({ erro: e.message }); }
+  });
+
   // Secretaria → Coordenação (dispara email na thread única, com o documento anexado)
   router.post('/projetos/:id/enviar-coordinacion', requireAuth, async (req, res) => {
     try {
