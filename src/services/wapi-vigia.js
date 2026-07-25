@@ -12,7 +12,25 @@ const { query } = require('../models/database');
 
 // Só avisa na TRANSIÇÃO para desconectado. Sem isso, uma queda de fim de semana viraria
 // um e-mail a cada verificação e a equipe passaria a ignorar o alerta.
-let ultimoEstado = null;
+//
+// O estado anterior TEM que sobreviver a um restart do processo (deploy dá `git push`,
+// e cada push reinicia o app). Guardado em memória, um restart zera para null — e a
+// checagem seguinte, vindo de null, NUNCA dispara "caiu" (exige ter visto true antes).
+// Se uma queda coincidir com os minutos logo apos um deploy, o alerta seria perdido em
+// silencio — justo a janela que o usuario passou a confiar para monitorar a frequencia
+// das quedas. Por isso o estado fica em configuracoes, nao numa variavel do processo.
+async function lerUltimoEstado() {
+  const r = await query("SELECT valor FROM configuracoes WHERE chave='wapi_ultimo_estado_conectado'");
+  if (!r.rows.length || r.rows[0].valor === '') return null;
+  return r.rows[0].valor === 'true';
+}
+async function salvarUltimoEstado(conectado) {
+  await query(
+    `INSERT INTO configuracoes (chave, valor) VALUES ('wapi_ultimo_estado_conectado', $1)
+     ON CONFLICT (chave) DO UPDATE SET valor=$1`,
+    [String(conectado)]
+  );
+}
 
 async function verificar() {
   // Se o atendimento não está na W-API, não há o que vigiar.
@@ -30,9 +48,10 @@ async function verificar() {
   }
 
   const conectado = !!(r.data && r.data.connected);
+  const ultimoEstado = await lerUltimoEstado();
   const caiu = ultimoEstado === true && conectado === false;
   const voltou = ultimoEstado === false && conectado === true;
-  ultimoEstado = conectado;
+  await salvarUltimoEstado(conectado);
 
   if (caiu) await avisar();
   if (voltou) console.log('[VIGIA W-API] conexão restabelecida.');

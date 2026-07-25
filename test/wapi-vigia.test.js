@@ -12,11 +12,20 @@ const MODULO = path.join(RAIZ, 'src/services/wapi-vigia.js');
 function comCenario({ canal = 'wapi', semAdmin = false } = {}) {
   const emails = [];
   const consultas = [];
+  // Simula a tabela configuracoes de verdade: sobrevive a recarregar o módulo (o que o
+  // teste de restart abaixo faz de propósito), diferente de uma variável do processo.
+  const configStore = {};
   const rq = require.resolve(path.join(RAIZ, 'src/models/database.js'));
   require.cache[rq] = { id: rq, filename: rq, loaded: true, exports: {
-    query: async (sql) => {
+    query: async (sql, params) => {
       consultas.push(sql);
-      return { rows: semAdmin ? [] : [{ email: 'admin@teste' }] };
+      if (/FROM usuarios/.test(sql)) return { rows: semAdmin ? [] : [{ email: 'admin@teste' }] };
+      if (/SELECT valor FROM configuracoes WHERE chave='wapi_ultimo_estado_conectado'/.test(sql)) {
+        const v = configStore.wapi_ultimo_estado_conectado;
+        return { rows: v === undefined ? [] : [{ valor: v }] };
+      }
+      if (/INSERT INTO configuracoes/.test(sql)) { configStore.wapi_ultimo_estado_conectado = params[0]; return { rows: [] }; }
+      return { rows: [] };
     }
   }};
   const rn = require.resolve(path.join(RAIZ, 'src/services/notificacoes.js'));
@@ -125,4 +134,24 @@ test('com o atendimento na API oficial, a vigia nem consulta', async () => {
   const r = await mod.verificar();
   assert.strictEqual(r.checado, false);
   assert.strictEqual(emails.length, 0);
+});
+
+// Todo deploy reinicia o processo (git push -> pm2 restart). Antes, "estava conectado"
+// vivia numa variável do processo: um restart zerava para null e a checagem seguinte
+// nunca disparava "caiu" (a lógica exige ter visto true antes). Se uma queda coincidisse
+// com os minutos logo após um deploy, o alerta era perdido em silêncio.
+test('reinício do processo NÃO reseta o estado — a queda ainda é detectada', async () => {
+  const { mod, emails, conectado, caiu } = comCenario();
+  conectado();
+  await mod.verificar(); // 1ª leitura real: conectado (grava no "banco" mockado)
+
+  // Simula um restart: descarrega e recarrega o módulo. O mock do banco (configStore)
+  // NÃO é recriado — representa o Postgres de verdade, que sobrevive ao restart.
+  delete require.cache[require.resolve(MODULO)];
+  const mod2 = require(MODULO);
+
+  caiu();
+  await mod2.verificar();
+  assert.strictEqual(emails.length, 1,
+    'em memória, null->false nunca dispara "caiu" — o restart faria a queda passar batida');
 });
