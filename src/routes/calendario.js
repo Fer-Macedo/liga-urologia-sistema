@@ -45,12 +45,21 @@ async function getAniversarios(anoRef) {
   const anos = [anoRef - 1, anoRef, anoRef + 1];
 
   r.rows.forEach(m => {
+    // data_nascimento vem do Postgres como DATE (sem hora): o driver, seguindo a regra do
+    // JS para strings so-de-data, sempre devolve isso em UTC — daqui pra tras esta certo.
     const nasc = new Date(m.data_nascimento);
     const dia = nasc.getUTCDate();
     const mes = nasc.getUTCMonth(); // 0-11
 
     anos.forEach(ano => {
-      const dataAniv = new Date(Date.UTC(ano, mes, dia));
+      // AQUI e onde o aniversario nascia torto: reconstruir com Date.UTC(...) gera meia-
+      // noite UTC, mas TODO o resto do calendario (atividades de verdade, criadas na tela)
+      // guarda hora local (o servidor roda em America/Asuncion — confirmado, GMT-3/4) e a
+      // grade do calendario le o dia com getFullYear/getMonth/getDate LOCAIS. Meia-noite
+      // UTC cai no fim da tarde do dia ANTERIOR em Asuncion, entao todo aniversario
+      // aparecia um dia adiantado no calendario (Ellen nascida 27/07 aparecendo em 26/07).
+      // O construtor local alinha com a mesma convencao que ja funciona para atividades.
+      const dataAniv = new Date(ano, mes, dia);
       aniversarios.push({
         id: `aniv-${m.tipo}-${m.nome}-${ano}`,
         titulo: `🎂 Aniversário — ${m.nome}`,
