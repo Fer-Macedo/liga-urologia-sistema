@@ -2,6 +2,10 @@ const nodemailer = require('nodemailer');
 const { query } = require('../models/database');
 require('dotenv').config();
 
+// Espera entre tentativas de achar a mensagem recem-enviada no Gmail (indexacao do
+// rfc822msgid nao e instantanea). Configuravel so pro teste nao ficar parado esperando.
+const ESPERA_BUSCA_GMAIL_MS = Number(process.env.GMAIL_RETRY_MS || 1500);
+
 // Envio de WhatsApp 100% pela API Oficial da Meta (Cloud API) — ver whatsapp-oficial.js.
 // A W-API (gateway não-oficial, causa raiz de banimentos recorrentes) foi removida e a
 // assinatura cancelada em 2026-07-15. Ver memória "project_whatsapp_ban_causa_raiz".
@@ -28,17 +32,46 @@ async function enviarEmail(opts) {
       auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
       connectionTimeout: 15000, tls: { rejectUnauthorized: false }
     });
-    await t.sendMail({
+    const info = await t.sendMail({
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: opts.para, subject: opts.assunto,
       text: opts.texto || '', html: html,
       attachments: opts.anexos || undefined
     });
     console.log('Email enviado para ' + opts.para);
+    // Cobranca sai em alto volume (diario, sem limite) e poluia a caixa de Enviados do
+    // Gmail da liga, a ponto de quem trabalha ali perder o controle da correspondencia de
+    // verdade. O envio ja aconteceu (a entrega nao depende disso); isso so tira a copia
+    // da pasta Enviados, best-effort — se falhar, o email continua entregue normalmente.
+    if (opts.ocultarDeEnviados) await removerDeEnviados(info.messageId);
     return { ok: true };
   } catch (err) {
     console.error('Email erro: ' + err.message);
     return { ok: false };
+  }
+}
+
+async function removerDeEnviados(messageId) {
+  if (!messageId) return;
+  try {
+    const { getClientAtualizado } = require('./google-drive');
+    const { google } = require('googleapis');
+    // O SMTP (nodemailer) e o Gmail API sao a MESMA caixa (lauroucpcde@lauroucpcde.com,
+    // confirmado) — por isso da pra achar aqui a mensagem que acabou de sair pelo SMTP.
+    const client = await getClientAtualizado({ query });
+    const gmail = google.gmail({ version: 'v1', auth: client });
+    // O Gmail pode levar um instante pra indexar a mensagem recem-enviada antes do
+    // rfc822msgid conseguir acha-la — tenta algumas vezes com espera curta.
+    let achada = null;
+    for (let tentativa = 0; tentativa < 3 && !achada; tentativa++) {
+      if (tentativa > 0) await new Promise(r => setTimeout(r, ESPERA_BUSCA_GMAIL_MS));
+      const busca = await gmail.users.messages.list({ userId: 'me', q: 'rfc822msgid:' + messageId });
+      if (busca.data.messages && busca.data.messages.length) achada = busca.data.messages[0];
+    }
+    if (!achada) { console.warn('[EMAIL] nao achei a mensagem pra tirar de Enviados:', messageId); return; }
+    await gmail.users.messages.modify({ userId: 'me', id: achada.id, requestBody: { removeLabelIds: ['SENT'] } });
+  } catch (e) {
+    console.error('[EMAIL] falha ao tirar de Enviados (entrega ja aconteceu, nao afeta):', e.message);
   }
 }
 
@@ -259,7 +292,9 @@ async function notificarCobranca(opts) {
       para:    membro.email,
       assunto: assuntoMap[tipo] || '',
       html:    msgHtml,
-      texto:   msgWppMap[tipo] || ''
+      texto:   msgWppMap[tipo] || '',
+      // Alto volume, enviado todo dia — sem isso lota a caixa de Enviados da liga.
+      ocultarDeEnviados: true
     });
 
     await query(
@@ -304,12 +339,15 @@ async function notificarAniversario(opts) {
   }
 
   if (membro.email) {
-    const html = htmlCobranca({
-      titulo:    '🎂 Feliz Aniversário, ' + membro.nome.split(' ')[0] + '!',
-      mensagem:  msg,
-      linkCartao: null,
-      pixCode:    null,
-      orgNome, orgCor, orgLogo
+    // htmlCobranca() e SO para cobranca: sempre renderiza "Opcoes de pagamento", PIX/
+    // cartao e o rodape financeiro, mesmo sem nada disso pra mostrar (foi assim que o
+    // aniversario da Ellen saiu com a faixa "LEMBRETE DE COBRANCA" e instrucao de PIX).
+    // htmlSimples() e o layout generico (mesmo header/rodape, sem secao de pagamento).
+    const html = htmlSimples({
+      titulo:     '🎂 Feliz Aniversário, ' + membro.nome.split(' ')[0] + '!',
+      mensagem:   msg,
+      faixaLabel: 'ANIVERSÁRIO',
+      config
     });
     const r = await enviarEmail({
       para:    membro.email,
