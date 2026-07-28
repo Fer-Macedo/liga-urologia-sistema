@@ -69,7 +69,15 @@ async function removerDeEnviados(messageId) {
       if (busca.data.messages && busca.data.messages.length) achada = busca.data.messages[0];
     }
     if (!achada) { console.warn('[EMAIL] nao achei a mensagem pra tirar de Enviados:', messageId); return; }
-    await gmail.users.messages.modify({ userId: 'me', id: achada.id, requestBody: { removeLabelIds: ['SENT'] } });
+    // messages.modify({removeLabelIds:['SENT']}) parecia o caminho obvio, mas o Gmail
+    // RECUSA remover esse rotulo especifico ("Invalid label: SENT") — descoberto so em
+    // producao, quando o e-mail continuou aparecendo em Enviados apos o primeiro deploy
+    // desta correcao. Confirmado contra a API de verdade (nao so documentacao, dessa vez):
+    // messages.trash() e o caminho suportado — a mensagem some da busca "in:sent" mesmo
+    // com o rotulo SENT tecnicamente ainda presente por baixo. Fica em Lixeira por ~30
+    // dias (expira sozinha); o registro de quem foi avisado e quando ja vive em
+    // notificacoes_log, entao a copia do e-mail em si nao precisa ser guardada.
+    await gmail.users.messages.trash({ userId: 'me', id: achada.id });
   } catch (e) {
     console.error('[EMAIL] falha ao tirar de Enviados (entrega ja aconteceu, nao afeta):', e.message);
   }

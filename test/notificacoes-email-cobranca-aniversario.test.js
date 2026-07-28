@@ -10,8 +10,15 @@
 //   2. E-mails de cobrança (enviados todo dia, sem limite) inundavam a caixa "Enviados"
 //      do Gmail da liga — 1.468+ mensagens, perdendo o controle da correspondência real.
 //      A entrega continua normal (SMTP); depois de enviar, uma chamada best-effort ao
-//      Gmail API (mesma caixa, confirmado: lauroucpcde@lauroucpcde.com nos dois) remove
-//      o rótulo SENT da mensagem — ela sai de "Enviados" sem afetar quem já recebeu.
+//      Gmail API (mesma caixa, confirmado: lauroucpcde@lauroucpcde.com nos dois) tira a
+//      mensagem de "Enviados". PRIMEIRA TENTATIVA (deploy af0de34) tentava
+//      messages.modify({removeLabelIds:['SENT']}) — parecia certo, mas o Gmail RECUSA
+//      remover esse rótulo específico ("Invalid label: SENT"), só descoberto em produção
+//      quando o e-mail continuou aparecendo em Enviados no dia seguinte. Confirmado ao
+//      vivo contra a API de verdade (não só documentação): messages.trash() é o caminho
+//      que funciona — a mensagem some de "in:sent" mesmo com o rótulo SENT ainda presente
+//      por baixo. Vai para a Lixeira (~30 dias, expira sozinha); o registro de quem foi
+//      avisado e quando já vive em notificacoes_log, não depende da cópia do e-mail.
 process.env.GMAIL_RETRY_MS = '1'; // sem isso o teste de retentativa espera segundos de relógio real
 
 const { test } = require('node:test');
@@ -24,7 +31,8 @@ const MODULO = path.join(RAIZ, 'src/services/notificacoes.js');
 function montar({ falhaRemocao = false, achaMensagem = true } = {}) {
   const emailsEnviados = [];      // { to, subject, html }
   const buscas = [];
-  const modificacoes = [];
+  const trashes = [];   // chamadas a messages.trash (o que de fato tira de Enviados)
+  const modifies = [];  // chamadas a messages.modify — NENHUMA deveria acontecer mais
 
   process.env.EMAIL_USER = 'lauroucpcde@lauroucpcde.com';
   process.env.EMAIL_PASS = 'senha-teste';
@@ -60,7 +68,11 @@ function montar({ falhaRemocao = false, achaMensagem = true } = {}) {
               if (falhaRemocao) throw new Error('falha simulada de rede');
               return { data: { messages: achaMensagem ? [{ id: 'GMAIL_MSG_1' }] : [] } };
             },
-            modify: async (opts) => { modificacoes.push(opts); return {}; }
+            // O Gmail RECUSA modify({removeLabelIds:['SENT']}) na vida real ("Invalid
+            // label: SENT") — o mock reproduz essa rejeição, para o teste falhar se o
+            // código voltar a depender desse caminho quebrado.
+            modify: async (opts) => { modifies.push(opts); throw new Error('Invalid label: SENT'); },
+            trash: async (opts) => { trashes.push(opts); return { data: { labelIds: ['TRASH', 'SENT'] } }; }
           }
         }
       })
@@ -69,7 +81,7 @@ function montar({ falhaRemocao = false, achaMensagem = true } = {}) {
 
   delete require.cache[require.resolve(MODULO)];
   const mod = require(MODULO);
-  return { mod, emailsEnviados, buscas, modificacoes };
+  return { mod, emailsEnviados, buscas, trashes, modifies };
 }
 
 // ─── FALHA 1: aniversário no layout errado ────────────────────────────────────
@@ -94,20 +106,22 @@ test('notificarAniversario: o corpo da mensagem de parabéns continua presente',
 // ─── FALHA 2: cobrança poluindo a caixa de Enviados ───────────────────────────
 
 test('notificarCobranca: pede pra sair de Enviados (alto volume, diário)', async () => {
-  const { mod, buscas, modificacoes } = montar();
+  const { mod, buscas, trashes, modifies } = montar();
   const membro = { id: 1, nome: 'Fulano', email: 'fulano@teste.com', whatsapp: null };
   const cobranca = { id: 10, data_vencimento: '2026-07-15', valor_desconto: 20, valor_cheio: 25 };
   await mod.notificarCobranca({ membro, cobranca, tipo: 'pos' });
   assert.strictEqual(buscas.length, 1, 'tem que procurar a mensagem recém-enviada no Gmail');
   assert.match(buscas[0], /rfc822msgid:/, 'a busca usa o Message-ID real do e-mail enviado');
-  assert.strictEqual(modificacoes.length, 1, 'tem que remover o rótulo SENT');
-  assert.deepStrictEqual(modificacoes[0].requestBody, { removeLabelIds: ['SENT'] });
+  assert.strictEqual(trashes.length, 1, 'tem que mover a mensagem pra Lixeira — é isso que tira ela de Enviados');
+  assert.strictEqual(trashes[0].id, 'GMAIL_MSG_1');
+  assert.strictEqual(modifies.length, 0,
+    'NUNCA usar messages.modify pra isso — o Gmail recusa remover o rótulo SENT (foi o bug do primeiro deploy)');
 });
 
 test('notificarAniversario: NÃO tira de Enviados (baixo volume, um por vez)', async () => {
-  const { mod, modificacoes } = montar();
+  const { mod, trashes } = montar();
   await mod.notificarAniversario({ membro: { id: 1, nome: 'Ellen', email: 'ellen@teste.com', whatsapp: null } });
-  assert.strictEqual(modificacoes.length, 0, 'aniversário pode continuar visível em Enviados');
+  assert.strictEqual(trashes.length, 0, 'aniversário pode continuar visível em Enviados');
 });
 
 test('a entrega do e-mail não depende de conseguir tirar de Enviados', async () => {
