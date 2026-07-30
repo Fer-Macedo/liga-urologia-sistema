@@ -4,8 +4,8 @@
 // estado vira papel de parede e a equipe passa a ignorar. Se este e-mail chegou, e porque
 // existe algo concreto a fazer. Quando esta tudo em ordem, o silencio e a resposta.
 //
-// Roda domingo e quarta as 8h — dois dias antes de cada envio do Momento Revalida
-// (terca e sexta), dando margem para a equipe aprovar a tempo.
+// Roda domingo e terca as 8h — dois dias antes de cada envio do Momento Revalida
+// (terca e quinta), dando margem para a equipe aprovar a tempo.
 const { query } = require('../models/database');
 
 const DIAS = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
@@ -24,8 +24,8 @@ const fmt = d => `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() 
 async function levantarPendencias() {
   const p = [];
 
-  // 1. Momento Revalida — terca(2) e sexta(5). Sem questao aprovada, o cron nao envia nada.
-  const envio = proximoDia([2, 5]);
+  // 1. Momento Revalida — terca(2) e quinta(4). Sem questao aprovada, o cron nao envia nada.
+  const envio = proximoDia([2, 4]);
   const apr = await query("SELECT COUNT(*) c FROM revalida_questoes WHERE status='aprovada' AND enviado_em IS NULL");
   const naFila = Number(apr.rows[0].c);
   if (envio && naFila === 0) {
