@@ -144,9 +144,13 @@ module.exports = function(router) {
       // Anexos do fluxo (documentos por etapa)
       let anexos = [];
       try { const ax = await query('SELECT id,tipo,nome_original,observacao,created_at FROM projetos_anexos WHERE projeto_id=$1 ORDER BY id DESC',[p.id]); anexos = ax.rows; } catch(e){}
+      // Resumo + sugestao automatica da ultima resposta da Coordinación (se houver), pra
+      // Secretaria decidir sem precisar abrir o Gmail so pra saber do que se trata.
+      let emailThread = null;
+      try { const et = await query('SELECT gmail_thread_id,tem_resposta_nova,sugestao_status,resposta_resumo FROM projetos_email_thread WHERE projeto_id=$1',[p.id]); emailThread = et.rows[0] || null; } catch(e){}
       res.render('pages/projeto-detalhe', {
         config: await getConfig(), usuario: req.session.usuario,
-        p, historico: hist.rows, totalHoras, anexos,
+        p, historico: hist.rows, totalHoras, anexos, emailThread,
         editavel: await podeEditar(req.session.usuario, p.tipo),
         // Editar de verdade AGORA (considera a etapa) — controla o botao Editar e o
         // bloco de edicao em tela da Presidencia no painel de fluxo.

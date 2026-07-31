@@ -1,8 +1,70 @@
 // ═══ DETECÇÃO DE RESPOSTAS DA COORDENAÇÃO (Caminho B) ═══
 // Verifica cada thread de email de projeto e detecta se a coordenação respondeu
 // (última mensagem da thread NÃO foi enviada pela conta da liga).
-// Apenas LÊ para detectar — a resposta continua sendo feita no Gmail (mais seguro).
+//
+// Meio-termo decidido com o usuário (2026-07-30): a decisão OFICIAL (aprovar ou devolver
+// para correção) continua sendo sempre de uma pessoa — a Secretaria, com Presidência/Admin
+// como apoio (mesma permissão que já existe em /devolver-correccion e /aprobar-final).
+// O que fica automático é o trabalho manual de ANTES da decisão: baixar o anexo que a
+// Coordinación mandou e ler o e-mail so pra saber do que se trata. Por isso, quando uma
+// resposta nova e detectada, alem de marcar tem_resposta_nova, o sistema:
+//   1. anexa automaticamente qualquer arquivo da resposta ao projeto (tipo pedido_correccion
+//      — o mesmo "balde" que ja era usado quando alguem anexava isso a mao);
+//   2. guarda um resumo do texto e uma sugestao (aprovado/correcao) por palavras-chave, SO
+//      como dica na tela — nunca muda o status do projeto sozinho.
 const { google } = require('googleapis');
+
+function base64UrlParaBuffer(b64url) {
+  const b64 = String(b64url || '').replace(/-/g, '+').replace(/_/g, '/');
+  return Buffer.from(b64, 'base64');
+}
+
+// Percorre as partes MIME (podem vir aninhadas: multipart/mixed > multipart/alternative >
+// text/plain + text/html, mais partes separadas para cada anexo) e junta texto + anexos.
+function extrairPartesEmail(payload, acc) {
+  acc = acc || { textoPlano: null, textoHtml: null, anexos: [] };
+  if (!payload) return acc;
+  const mime = payload.mimeType || '';
+  if (payload.filename && payload.body && payload.body.attachmentId) {
+    acc.anexos.push({ filename: payload.filename, mimeType: mime, attachmentId: payload.body.attachmentId });
+  } else if (mime === 'text/plain' && payload.body && payload.body.data && !acc.textoPlano) {
+    acc.textoPlano = base64UrlParaBuffer(payload.body.data).toString('utf8');
+  } else if (mime === 'text/html' && payload.body && payload.body.data && !acc.textoHtml) {
+    acc.textoHtml = base64UrlParaBuffer(payload.body.data).toString('utf8');
+  }
+  if (Array.isArray(payload.parts)) payload.parts.forEach(p => extrairPartesEmail(p, acc));
+  return acc;
+}
+
+// Sugestao por palavras-chave — so como dica, nunca decide sozinho. Ambiguo (os dois
+// sinais juntos, ou nenhum) devolve null de proposito: melhor nao sugerir nada do que
+// sugerir errado numa aprovacao/devolucao oficial de projeto.
+function classificarResposta(texto) {
+  const t = (texto || '').toLowerCase();
+  const pareceAprovado = /\baprovad[oa]s?\b|\baprobad[oa]s?\b/.test(t);
+  const pareceCorrecao = /correcci[oó]n(es)?|corre[cç][aã]o|ajust(e|ar|es)|revis(ar|ão)|observaç(ão|ões)|observacion(es)?/.test(t);
+  if (pareceAprovado && !pareceCorrecao) return 'aprovado';
+  if (pareceCorrecao && !pareceAprovado) return 'correcao';
+  return null;
+}
+
+// Baixa cada anexo da resposta e salva no projeto — mesmo INSERT que o upload manual ja
+// usava, so que sem usuario (ninguem da liga fez essa acao; veio direto da Coordinación).
+async function anexarArquivosDaResposta(gmail, pool, { messageId, projetoId, anexos }) {
+  if (!anexos.length) return;
+  const { uploadArquivo } = require('./arquivos');
+  for (const a of anexos) {
+    try {
+      const att = await gmail.users.messages.attachments.get({ userId: 'me', messageId, id: a.attachmentId });
+      const buffer = base64UrlParaBuffer(att.data.data);
+      const r = await uploadArquivo(buffer, a.filename, a.mimeType, 'projetos-docs');
+      await pool.query(
+        'INSERT INTO projetos_anexos (projeto_id,tipo,arquivo_chave,nome_original,mimetype,observacao,enviado_por) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [projetoId, 'pedido_correccion', r.chave, a.filename, a.mimeType, 'Anexado automaticamente da resposta da Coordinación', null]
+      );
+    } catch (e) { console.error('[REVISAO EMAIL] erro ao anexar arquivo da resposta:', a.filename, e.message); }
+  }
+}
 
 // Verifica todas as threads ativas e marca as que têm resposta nova da coordenação.
 // authClient: cliente OAuth da liga ; pool: conexão pg ; emailLiga: email oficial (remetente)
@@ -34,12 +96,31 @@ async function verificarRespostas(authClient, pool, emailLiga) {
         // send, mas o cabecalho In-Reply-To ficaria desatualizado. Sem chave, mantem a
         // anterior (nunca perde a referencia por falta do header).
         const msgIdH = headers.find(h => h.name.toLowerCase() === 'message-id');
-        await pool.query('UPDATE projetos_email_thread SET tem_resposta_nova=true, resposta_em=NOW(), ultima_msg_vista=$1, gmail_message_id=COALESCE($3, gmail_message_id) WHERE id=$2',
-          [ultimaId, t.id, msgIdH ? msgIdH.value : null]);
+
+        // So agora (resposta nova de verdade) busca a mensagem INTEIRA — o check acima e
+        // leve (so metadata) de proposito, pra nao pesar a varredura de 3 em 3 minutos
+        // quando nao ha nada novo.
+        let resumo = null, sugestao = null;
+        try {
+          const completa = await gmail.users.messages.get({ userId: 'me', id: ultimaId, format: 'full' });
+          const partes = extrairPartesEmail(completa.data.payload);
+          const textoBruto = partes.textoPlano || (partes.textoHtml || '').replace(/<[^>]+>/g, ' ');
+          resumo = textoBruto.replace(/\s+/g, ' ').trim().slice(0, 500) || null;
+          sugestao = classificarResposta(textoBruto);
+          if (partes.anexos.length) {
+            await anexarArquivosDaResposta(gmail, pool, { messageId: ultimaId, projetoId: t.projeto_id, anexos: partes.anexos });
+          }
+        } catch (e) { console.error('[REVISAO EMAIL] erro ao ler o conteudo da resposta:', e.message); }
+
+        await pool.query(
+          'UPDATE projetos_email_thread SET tem_resposta_nova=true, resposta_em=NOW(), ultima_msg_vista=$1, gmail_message_id=COALESCE($3, gmail_message_id), sugestao_status=$4, resposta_resumo=$5 WHERE id=$2',
+          [ultimaId, t.id, msgIdH ? msgIdH.value : null, sugestao, resumo]
+        );
         novas++;
       } else if (ehDaLiga) {
-        // Última é da liga: atualiza o "visto" e limpa flag de resposta
-        await pool.query('UPDATE projetos_email_thread SET tem_resposta_nova=false, ultima_msg_vista=$1 WHERE id=$2',
+        // Última é da liga: atualiza o "visto", limpa flag de resposta e a sugestão antiga
+        // (senão a próxima resposta da Coordinación herdaria uma dica que já foi resolvida).
+        await pool.query('UPDATE projetos_email_thread SET tem_resposta_nova=false, ultima_msg_vista=$1, sugestao_status=NULL, resposta_resumo=NULL WHERE id=$2',
           [ultimaId, t.id]);
       }
     } catch (e) { /* ignora thread com erro, continua as outras */ }

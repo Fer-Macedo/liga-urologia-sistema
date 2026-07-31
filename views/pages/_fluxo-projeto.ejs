@@ -27,6 +27,11 @@ var emailCoord = cfg.email_coordenacion_ligas || '';
 // Quem é Enseñanza/Extensión: admin/presidencia OU tem o módulo (não dá pra checar módulo na view, então usamos editavel)
 var ehEnsinoExt = ehAdmin || (typeof editavel !== 'undefined' && editavel);
 var temDocFinal = anexosList.some(function(a){ return a.tipo==='documento_final'; });
+var et_ = (typeof emailThread !== 'undefined' && emailThread) ? emailThread : null;
+var sugestaoMap = {
+  aprovado: { texto: '✅ Parece uma APROVAÇÃO', cor: '#166534' },
+  correcao: { texto: '✏️ Parece um PEDIDO DE CORRECIÓN', cor: '#C0392B' }
+};
 %>
 
 <div class="card" style="border-left:3px solid <%= et.cor %>">
@@ -111,6 +116,21 @@ var temDocFinal = anexosList.some(function(a){ return a.tipo==='documento_final'
 
     <!-- ░░ SECRETARÍA: recibió corrección de la coordinación → devolver a enseñanza ░░ -->
     <% if (ehSec && etapa==='enviado_coordinacion') { %>
+      <% if (et_ && et_.resposta_resumo) { %>
+        <div style="background:#F0F6FF;border:1px solid #C7DAF5;border-radius:3px;padding:12px;margin-bottom:10px">
+          <p style="font-size:12px;color:var(--ink-faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Última respuesta de la Coordinación — leída automáticamente</p>
+          <% if (sugestaoMap[et_.sugestao_status]) { %>
+            <p style="font-size:13px;font-weight:700;color:<%= sugestaoMap[et_.sugestao_status].cor %>;margin-bottom:8px"><%= sugestaoMap[et_.sugestao_status].texto %></p>
+          <% } else { %>
+            <p style="font-size:12px;color:var(--ink-soft);margin-bottom:8px;font-style:italic">No se identificó automáticamente si es aprobación o corrección — lea el resumen.</p>
+          <% } %>
+          <p style="font-size:12px;color:var(--ink-soft);line-height:1.6;margin-bottom:8px;white-space:pre-wrap"><%= et_.resposta_resumo %><%= et_.resposta_resumo.length >= 500 ? '…' : '' %></p>
+          <% if (et_.gmail_thread_id) { %>
+            <a href="https://mail.google.com/mail/u/0/#all/<%= et_.gmail_thread_id %>" target="_blank" style="font-size:11.5px;color:var(--blue);text-decoration:none">Abrir el correo completo en Gmail →</a>
+          <% } %>
+          <p style="font-size:10.5px;color:var(--ink-faint);margin-top:8px">Si adjuntó un archivo, ya fue anexado abajo automáticamente como "Pedido de corrección". Esto es solo una sugerencia — la decisión final es suya.</p>
+        </div>
+      <% } %>
       <div style="background:#FBE9E7;border:1px solid #F0C5C0;border-radius:3px;padding:12px;margin-bottom:10px">
         <p style="font-size:12.5px;color:var(--red);margin-bottom:8px;font-weight:600">¿La Coordinación pidió correcciones?</p>
         <p style="font-size:11.5px;color:var(--ink-soft);margin-bottom:8px">Adjunte el documento/email con las correcciones solicitadas y devuelva a Enseñanza/Extensión.</p>

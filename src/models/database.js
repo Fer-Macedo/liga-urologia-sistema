@@ -347,6 +347,12 @@ async function initSchema() {
     END $$;
   `);
 
+  // Quando a Coordinación responde, o vigia (projeto-email-detect.js) agora le a mensagem
+  // inteira e guarda um resumo + uma sugestao de leitura (aprovado/correcao), pra Secretaria
+  // decidir com o texto na tela em vez de precisar abrir o Gmail so pra saber do que se trata.
+  await query('ALTER TABLE projetos_email_thread ADD COLUMN IF NOT EXISTS sugestao_status TEXT');
+  await query('ALTER TABLE projetos_email_thread ADD COLUMN IF NOT EXISTS resposta_resumo TEXT');
+
   // Cronograma de conteudo sugerido pela IA + resposta da equipe. E conversa, nao
   // monologo: o que a equipe recusa ou comenta volta como contexto na proxima geracao,
   // para a IA parar de repetir o que ja foi descartado.
