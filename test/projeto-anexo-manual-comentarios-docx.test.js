@@ -24,7 +24,9 @@ async function gerarDocxComComentario() {
   const JSZip = require('jszip');
   const zip = new JSZip();
   zip.file('word/document.xml',
-    '<w:document><w:body><w:p><w:r><w:t>Antes </w:t></w:r>' +
+    '<w:document><w:body>' +
+    '<w:p><w:r><w:t>Título de la clase: Fertilidad Masculina</w:t></w:r></w:p>' +
+    '<w:p><w:r><w:t>Antes </w:t></w:r>' +
     '<w:commentRangeStart w:id="1"/><w:r><w:t>metodología incompleta</w:t></w:r><w:commentRangeEnd w:id="1"/>' +
     '<w:r><w:commentReference w:id="1"/></w:r></w:p></w:body></w:document>');
   zip.file('word/comments.xml',
@@ -89,7 +91,10 @@ test('devolver-correccion (upload manual): .docx com comentário do Word já sal
   const comentarios = JSON.parse(inserts[0][7]);
   assert.strictEqual(comentarios.length, 1);
   assert.strictEqual(comentarios[0].texto, 'Detallar más este punto');
-  assert.strictEqual(comentarios[0].trecho, 'metodología incompleta');
+  assert.strictEqual(comentarios[0].trecho, 'Antes metodología incompleta',
+    'tem que ser o parágrafo inteiro, não só o trecho marcado pelo Word');
+  assert.strictEqual(comentarios[0].contexto, 'Título de la clase: Fertilidad Masculina',
+    'o parágrafo anterior ajuda a saber em qual seção está o problema');
 });
 
 test('anexar genérico (pedido_correccion manual): .docx com comentário também extrai', async () => {

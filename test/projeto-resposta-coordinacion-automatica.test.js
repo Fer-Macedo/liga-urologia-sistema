@@ -145,15 +145,22 @@ test('anexo pdf: coluna comentarios fica null (não é docx)', async () => {
   assert.strictEqual(comentarios, null);
 });
 
-// O caso que interessa: .docx com comentários do Word (as caixinhas) tem que ser lido e
-// guardado como JSON, com o texto do comentário E o trecho do documento que ele marca.
-test('anexo docx com comentário do Word: extrai autor, texto e trecho comentado', async () => {
+// Achado real (2026-07-30, "II Jornada de Salud del Hombre"): o Word costuma marcar o
+// commentRange só em cima de um RÓTULO curto ("Descripción del contenido:"), repetido em
+// vários parágrafos do documento — pegar só o texto entre start/end faz vários comentários
+// mostrarem o MESMO trecho ambíguo, sem dar pra saber qual corrigir. Por isso o trecho tem
+// que ser o PARÁGRAFO INTEIRO (não só o que está marcado) + o parágrafo anterior como
+// contexto (geralmente tem o título da seção).
+test('anexo docx com comentário do Word: pega o parágrafo INTEIRO (não só o trecho marcado) + contexto do parágrafo anterior', async () => {
   const JSZip = require('jszip');
   const zip = new JSZip();
   zip.file('word/document.xml',
-    '<w:document><w:body><w:p><w:r><w:t>Antes </w:t></w:r>' +
-    '<w:commentRangeStart w:id="1"/><w:r><w:t>trecho comentado</w:t></w:r><w:commentRangeEnd w:id="1"/>' +
-    '<w:r><w:commentReference w:id="1"/></w:r></w:p></w:body></w:document>');
+    '<w:document><w:body>' +
+    '<w:p><w:r><w:t>Título de la clase: Salud Sexual del Hombre</w:t></w:r></w:p>' +
+    '<w:p><w:r><w:t>Descripción del contenido: </w:t></w:r>' +
+    '<w:commentRangeStart w:id="1"/><w:r><w:t>Rótulo</w:t></w:r><w:commentRangeEnd w:id="1"/>' +
+    '<w:r><w:commentReference w:id="1"/></w:r><w:r><w:t> el segundo día será dedicado a...</w:t></w:r></w:p>' +
+    '</w:body></w:document>');
   zip.file('word/comments.xml',
     '<w:comments><w:comment w:id="1" w:author="Coordinación">' +
     '<w:p><w:r><w:t>Corrigir este párrafo</w:t></w:r></w:p></w:comment></w:comments>');
@@ -168,7 +175,10 @@ test('anexo docx com comentário do Word: extrai autor, texto e trecho comentado
   assert.strictEqual(comentarios.length, 1);
   assert.strictEqual(comentarios[0].autor, 'Coordinación');
   assert.strictEqual(comentarios[0].texto, 'Corrigir este párrafo');
-  assert.strictEqual(comentarios[0].trecho, 'trecho comentado');
+  assert.strictEqual(comentarios[0].trecho, 'Descripción del contenido: Rótulo el segundo día será dedicado a...',
+    'tem que trazer o parágrafo inteiro, não só o rótulo marcado — senão dois comentários no mesmo rótulo ficam indistinguíveis');
+  assert.strictEqual(comentarios[0].contexto, 'Título de la clase: Salud Sexual del Hombre',
+    'o parágrafo anterior ajuda a localizar qual seção/dia é, quando o rótulo sozinho se repete no documento');
 });
 
 // .docx sem nenhum comentário (respondeu só aprovando, por exemplo): não quebra, fica null.

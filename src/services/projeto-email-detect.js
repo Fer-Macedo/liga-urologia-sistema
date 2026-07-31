@@ -57,11 +57,20 @@ function extrairTextoW(xml) {
     .join('');
 }
 
-// Comentario do Word (as caixinhas na lateral) fica guardado em word/comments.xml, com o
-// TEXTO do comentario. Word marca ONDE ele se aplica em word/document.xml, com
-// <w:commentRangeStart w:id="N"/>...trecho comentado...<w:commentRangeEnd w:id="N"/>. So
-// pega comentario com id numerico; se o Word mudar o formato num arquivo especifico e nao
-// bater, essa entrada simplesmente nao acha o trecho (fica ''), nunca quebra o resto.
+// Achado real (2026-07-30, projeto "II Jornada de Salud del Hombre"): o Word costuma
+// marcar o <w:commentRangeStart>/<w:commentRangeEnd> só em cima de um RÓTULO curto (ex:
+// "Descripción del contenido:"), não da frase inteira — o texto que realmente diferencia
+// ONDE está o problema ("El primer día...", "El segundo día...") fica no MESMO parágrafo,
+// só que fora do trecho marcado. Pegar só o que está entre start/end faz três comentários
+// diferentes (dia 1, dia 2, dia 3) mostrarem o mesmo trecho ambíguo "Descripción del
+// contenido:" — impossível saber qual corrigir. Por isso agora pegamos o PARÁGRAFO INTEIRO
+// que contém a marcação (não só o texto entre as tags) e também o parágrafo ANTERIOR como
+// contexto (geralmente tem o título da seção ou o nome do palestrante) — o suficiente pra
+// localizar no Word com Ctrl+F sem precisar reabrir o arquivo procurando às cegas.
+function extrairParagrafos(docXml) {
+  return (docXml || '').split(/(?=<w:p[ >])/).filter(p => /^<w:p[ >]/.test(p));
+}
+
 async function extrairComentariosDocx(buffer) {
   try {
     const JSZip = require('jszip');
@@ -71,6 +80,7 @@ async function extrairComentariosDocx(buffer) {
     const commentsXml = await commentsFile.async('string');
     const docFile = zip.file('word/document.xml');
     const docXml = docFile ? await docFile.async('string') : '';
+    const paragrafos = extrairParagrafos(docXml);
 
     const comentarios = [];
     const regexComment = /<w:comment\s+([^>]*)>([\s\S]*?)<\/w:comment>/g;
@@ -82,13 +92,20 @@ async function extrairComentariosDocx(buffer) {
       const texto = extrairTextoW(corpo).trim();
       if (!texto) continue;
 
-      let trecho = '';
-      if (idM && docXml) {
-        const re = new RegExp('<w:commentRangeStart\\s+w:id="' + idM[1] + '"\\s*/>([\\s\\S]*?)<w:commentRangeEnd\\s+w:id="' + idM[1] + '"\\s*/>');
-        const rm = docXml.match(re);
-        if (rm) trecho = extrairTextoW(rm[1]).trim().slice(0, 300);
+      let trecho = '', contexto = '';
+      if (idM) {
+        const iStart = paragrafos.findIndex(p => p.includes('<w:commentRangeStart w:id="' + idM[1] + '"'));
+        if (iStart >= 0) {
+          let iEnd = paragrafos.findIndex((p, i) => i >= iStart && p.includes('<w:commentRangeEnd w:id="' + idM[1] + '"'));
+          if (iEnd < iStart) iEnd = iStart;
+          trecho = paragrafos.slice(iStart, iEnd + 1).map(extrairTextoW).join(' ').trim().slice(0, 300);
+          for (let i = iStart - 1; i >= 0 && i >= iStart - 3; i--) {
+            const anterior = extrairTextoW(paragrafos[i]).trim();
+            if (anterior) { contexto = anterior.slice(0, 200); break; }
+          }
+        }
       }
-      comentarios.push({ autor: authorM ? authorM[1] : '', texto, trecho });
+      comentarios.push({ autor: authorM ? authorM[1] : '', texto, trecho, contexto });
     }
     return comentarios;
   } catch (e) {
