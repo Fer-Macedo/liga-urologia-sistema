@@ -12,7 +12,24 @@ var stMap = {
   concluido: {t:'Concluido',             bg:'#D9EFE1', cor:'#15633B'},
   cancelado: {t:'Cancelado',             bg:'#FBE9E7', cor:'#C0392B'}
 };
+// status é o rótulo antigo, mais grosso — não distingue "enviado à Coordinación" de
+// "devuelto por la Coordinación para corrección" (os dois ficam status='revisao'). Quando
+// status é um dos que o fluxo de aprobación (etapa_atual) também cobre, o rótulo mais fino
+// da etapa manda — senão a etiqueta do topo mostra "Enviado a la UCP" bem quando o projeto
+// voltou para correção. Fora desses 3, o ciclo é o de execução do projeto (andamento/
+// concluido/etc.), que só existe em status — segue igual.
+var etapaMap = {
+  rascunho:               {t:'Borrador — Enseñanza/Extensión', bg:'#EEF0ED', cor:'#5F6E66'},
+  aguardando_presidencia: {t:'Pendiente de Presidencia',       bg:'#FBF3E0', cor:'#C98A1E'},
+  aguardando_secretaria:  {t:'Pendiente de Secretaría',        bg:'#FBF3E0', cor:'#C98A1E'},
+  enviado_coordinacion:   {t:'Enviado a Coordinación de Ligas',bg:'#E8F0FA', cor:'#2C6BB3'},
+  en_correccion:          {t:'En corrección',                  bg:'#FBE9E7', cor:'#C0392B'},
+  aprobado_final:         {t:'Aprobado y Finalizado',          bg:'#E2F3EA', cor:'#23704F'}
+};
 var st = stMap[p.status] || {t:p.status,bg:'#EEF0ED',cor:'#5F6E66'};
+if (['pendente','liberado','revisao'].includes(p.status) && etapaMap[p.etapa_atual]) {
+  st = etapaMap[p.etapa_atual];
+}
 var fmtD = function(d){ try { return d ? new Date(d).toLocaleDateString('es-PY') : '—'; } catch(e){ return '—'; } };
 var objEsp = [];
 try { objEsp = Array.isArray(p.objetivos_especificos) ? p.objetivos_especificos : JSON.parse(p.objetivos_especificos||'[]'); } catch(e){}

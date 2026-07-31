@@ -6,14 +6,9 @@ var ehAdmin = (typeof ehAdmin !== "undefined") ? ehAdmin : (__perfil === "admin"
 var ehSec = (typeof ehSec !== "undefined") ? ehSec : (__perfil === "secretaria" || ehAdmin);
 var ehEnsino = (typeof ehEnsino !== "undefined") ? ehEnsino : (p.tipo === "ensino");
 var etapa = p.etapa_atual || 'rascunho';
-var etapaMap = {
-  rascunho:               {t:'Borrador — Enseñanza/Extensión', bg:'#EEF0ED', cor:'#5F6E66'},
-  aguardando_presidencia: {t:'Pendiente de Presidencia',       bg:'#FBF3E0', cor:'#C98A1E'},
-  aguardando_secretaria:  {t:'Pendiente de Secretaría',        bg:'#FBF3E0', cor:'#C98A1E'},
-  enviado_coordinacion:   {t:'Enviado a Coordinación de Ligas',bg:'#E8F0FA', cor:'#2C6BB3'},
-  en_correccion:          {t:'En corrección',                  bg:'#FBE9E7', cor:'#C0392B'},
-  aprobado_final:         {t:'Aprobado y Finalizado',          bg:'#E2F3EA', cor:'#23704F'}
-};
+// etapaMap já vem definido por projeto-detalhe.ejs (único lugar que inclui este parcial,
+// no mesmo escopo) — usado também na etiqueta do topo, pra não ter dois rótulos divergentes
+// pro mesmo estado.
 var et = etapaMap[etapa] || {t:etapa, bg:'#EEF0ED', cor:'#5F6E66'};
 var anexosList = (typeof anexos !== 'undefined' && anexos) ? anexos : [];
 var anexoTipoLabel = {

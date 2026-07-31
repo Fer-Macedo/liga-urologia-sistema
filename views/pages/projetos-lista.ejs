@@ -14,6 +14,17 @@ var stMap = {
   cancelado: {t:'Cancelado',             bg:'#FBE9E7', cor:'#C0392B'}
 };
 var fmtD = function(d){ try { return d ? new Date(d).toLocaleDateString('es-PY') : '—'; } catch(e){ return '—'; } };
+// status='revisao' cobre TANTO "enviado à Coordinación" quanto "devuelto para corrección"
+// — os dois ficam com o mesmo rótulo genérico. etapa_atual (mais fino) desambigua; mesmo
+// mapa usado em projeto-detalhe.ejs/_fluxo-projeto.ejs, pra não mostrar "Enviado a la UCP"
+// numa lista quando o projeto já voltou para correção.
+var etapaMap = {
+  aguardando_presidencia: {t:'Pendiente de Presidencia',       bg:'#FBF3E0', cor:'#C98A1E'},
+  aguardando_secretaria:  {t:'Pendiente de Secretaría',        bg:'#FBF3E0', cor:'#C98A1E'},
+  enviado_coordinacion:   {t:'Enviado a Coordinación de Ligas',bg:'#E8F0FA', cor:'#2C6BB3'},
+  en_correccion:          {t:'En corrección',                  bg:'#FBE9E7', cor:'#C0392B'},
+  aprobado_final:         {t:'Aprobado y Finalizado',          bg:'#E2F3EA', cor:'#23704F'}
+};
 %>
 <!DOCTYPE html>
 <html lang="es">
@@ -124,6 +135,9 @@ var fmtD = function(d){ try { return d ? new Date(d).toLocaleDateString('es-PY')
       <tbody>
       <% projetos.forEach(function(p){
         var st = stMap[p.status] || {t:p.status,bg:'#EEF0ED',cor:'#5F6E66'};
+        if (['pendente','liberado','revisao'].includes(p.status) && etapaMap[p.etapa_atual]) {
+          st = etapaMap[p.etapa_atual];
+        }
       %>
       <tr>
         <td>
