@@ -6,6 +6,17 @@
 const { query } = require('../models/database');
 const { requireAuth } = require('../middleware/auth');
 const { upload, uploadArquivo } = require('../services/arquivos');
+const { extrairComentariosDocx } = require('../services/projeto-email-detect');
+
+// Anexo .docx pode trazer comentários do Word (as caixinhas de revisão da Coordinación) —
+// mesma extração usada quando o anexo chega automaticamente por e-mail (Caminho B), agora
+// também no upload manual (Caminho A: a Secretaria baixa o e-mail e sobe aqui na mão).
+async function comentariosSeDocx(buffer, mimetype, nomeArquivo) {
+  const ehDocx = /wordprocessingml/.test(mimetype || '') || /\.docx$/i.test(nomeArquivo || '');
+  if (!ehDocx) return null;
+  const comentarios = await extrairComentariosDocx(buffer);
+  return comentarios.length ? JSON.stringify(comentarios) : null;
+}
 
 // Rótulos amigáveis das etapas (para exibir na tela)
 const ETAPAS = {
@@ -100,8 +111,9 @@ module.exports = function (router) {
         // os tipos enviados a Coordinación).
         const { nomeDocumentoProjeto } = require('../services/projeto-texto');
         const nomeParaSalvar = enviadoAoTipo ? nomeDocumentoProjeto(p.tipo, p.nome, extensao) : req.file.originalname;
-        await query('INSERT INTO projetos_anexos (projeto_id,tipo,arquivo_chave,nome_original,mimetype,observacao,enviado_por) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-          [p.id, tipo, r.chave, nomeParaSalvar, req.file.mimetype, obs, u.id]);
+        const comentarios = await comentariosSeDocx(req.file.buffer, req.file.mimetype, req.file.originalname);
+        await query('INSERT INTO projetos_anexos (projeto_id,tipo,arquivo_chave,nome_original,mimetype,observacao,enviado_por,comentarios) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+          [p.id, tipo, r.chave, nomeParaSalvar, req.file.mimetype, obs, u.id, comentarios]);
         await logH(p.id, p.etapa_atual, p.etapa_atual, 'Documento anexado: ' + tipo, u.id);
         req.session.msg = ['Documento anexado correctamente.'];
         res.redirect('/projetos/' + p.id);
@@ -239,8 +251,9 @@ module.exports = function (router) {
         // anexa o pedido de correção (se enviou arquivo)
         if (req.file) {
           const r = await uploadArquivo(req.file.buffer, 'proj' + p.id + '-pedido-' + Date.now() + '.' + (req.file.originalname.split('.').pop() || 'pdf'), req.file.mimetype, 'projetos-docs');
-          await query('INSERT INTO projetos_anexos (projeto_id,tipo,arquivo_chave,nome_original,mimetype,observacao,enviado_por) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-            [p.id, 'pedido_correccion', r.chave, req.file.originalname, req.file.mimetype, req.body.observacao || null, u.id]);
+          const comentarios = await comentariosSeDocx(req.file.buffer, req.file.mimetype, req.file.originalname);
+          await query('INSERT INTO projetos_anexos (projeto_id,tipo,arquivo_chave,nome_original,mimetype,observacao,enviado_por,comentarios) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+            [p.id, 'pedido_correccion', r.chave, req.file.originalname, req.file.mimetype, req.body.observacao || null, u.id, comentarios]);
         }
         await query("UPDATE projetos_academicos SET etapa_atual='en_correccion', status='revisao', updated_at=NOW() WHERE id=$1", [p.id]);
         await logH(p.id, p.etapa_atual, 'en_correccion', 'Devuelto a Enseñanza/Extensión para corrección', u.id);

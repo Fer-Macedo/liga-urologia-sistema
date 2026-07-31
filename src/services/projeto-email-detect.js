@@ -200,4 +200,4 @@ async function marcarRespostaVista(pool, projetoId) {
   await pool.query('UPDATE projetos_email_thread SET tem_resposta_nova=false WHERE projeto_id=$1', [projetoId]);
 }
 
-module.exports = { verificarRespostas, projetosComResposta, marcarRespostaVista };
+module.exports = { verificarRespostas, projetosComResposta, marcarRespostaVista, extrairComentariosDocx };
