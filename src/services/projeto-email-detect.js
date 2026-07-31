@@ -48,8 +48,59 @@ function classificarResposta(texto) {
   return null;
 }
 
+// Pega todo texto de dentro de tags <w:t ...>...</w:t> (o texto de verdade, dentro do XML
+// bruto do .docx — mesmo estilo de manipulacao regex ja usado em projeto-doc-timbrado.js,
+// sem trazer um parser de XML novo so pra isso).
+function extrairTextoW(xml) {
+  return ((xml || '').match(/<w:t[^>]*>([^<]*)<\/w:t>/g) || [])
+    .map(t => t.replace(/<w:t[^>]*>/, '').replace(/<\/w:t>/, ''))
+    .join('');
+}
+
+// Comentario do Word (as caixinhas na lateral) fica guardado em word/comments.xml, com o
+// TEXTO do comentario. Word marca ONDE ele se aplica em word/document.xml, com
+// <w:commentRangeStart w:id="N"/>...trecho comentado...<w:commentRangeEnd w:id="N"/>. So
+// pega comentario com id numerico; se o Word mudar o formato num arquivo especifico e nao
+// bater, essa entrada simplesmente nao acha o trecho (fica ''), nunca quebra o resto.
+async function extrairComentariosDocx(buffer) {
+  try {
+    const JSZip = require('jszip');
+    const zip = await JSZip.loadAsync(buffer);
+    const commentsFile = zip.file('word/comments.xml');
+    if (!commentsFile) return [];
+    const commentsXml = await commentsFile.async('string');
+    const docFile = zip.file('word/document.xml');
+    const docXml = docFile ? await docFile.async('string') : '';
+
+    const comentarios = [];
+    const regexComment = /<w:comment\s+([^>]*)>([\s\S]*?)<\/w:comment>/g;
+    let m;
+    while ((m = regexComment.exec(commentsXml))) {
+      const attrs = m[1], corpo = m[2];
+      const idM = attrs.match(/w:id="(\d+)"/);
+      const authorM = attrs.match(/w:author="([^"]*)"/);
+      const texto = extrairTextoW(corpo).trim();
+      if (!texto) continue;
+
+      let trecho = '';
+      if (idM && docXml) {
+        const re = new RegExp('<w:commentRangeStart\\s+w:id="' + idM[1] + '"\\s*/>([\\s\\S]*?)<w:commentRangeEnd\\s+w:id="' + idM[1] + '"\\s*/>');
+        const rm = docXml.match(re);
+        if (rm) trecho = extrairTextoW(rm[1]).trim().slice(0, 300);
+      }
+      comentarios.push({ autor: authorM ? authorM[1] : '', texto, trecho });
+    }
+    return comentarios;
+  } catch (e) {
+    console.error('[REVISAO EMAIL] erro ao extrair comentarios do docx:', e.message);
+    return [];
+  }
+}
+
 // Baixa cada anexo da resposta e salva no projeto — mesmo INSERT que o upload manual ja
 // usava, so que sem usuario (ninguem da liga fez essa acao; veio direto da Coordinación).
+// Se for .docx, tambem extrai os comentarios do Word (caixinhas de revisao) — pra
+// Ensino/Extensao ver o que precisa corrigir sem abrir o Word so pra achar as caixinhas.
 async function anexarArquivosDaResposta(gmail, pool, { messageId, projetoId, anexos }) {
   if (!anexos.length) return;
   const { uploadArquivo } = require('./arquivos');
@@ -58,9 +109,14 @@ async function anexarArquivosDaResposta(gmail, pool, { messageId, projetoId, ane
       const att = await gmail.users.messages.attachments.get({ userId: 'me', messageId, id: a.attachmentId });
       const buffer = base64UrlParaBuffer(att.data.data);
       const r = await uploadArquivo(buffer, a.filename, a.mimeType, 'projetos-docs');
+
+      const ehDocx = /wordprocessingml/.test(a.mimeType || '') || /\.docx$/i.test(a.filename || '');
+      const comentarios = ehDocx ? await extrairComentariosDocx(buffer) : [];
+
       await pool.query(
-        'INSERT INTO projetos_anexos (projeto_id,tipo,arquivo_chave,nome_original,mimetype,observacao,enviado_por) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-        [projetoId, 'pedido_correccion', r.chave, a.filename, a.mimeType, 'Anexado automaticamente da resposta da Coordinación', null]
+        'INSERT INTO projetos_anexos (projeto_id,tipo,arquivo_chave,nome_original,mimetype,observacao,enviado_por,comentarios) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+        [projetoId, 'pedido_correccion', r.chave, a.filename, a.mimeType, 'Anexado automaticamente da resposta da Coordinación', null,
+         comentarios.length ? JSON.stringify(comentarios) : null]
       );
     } catch (e) { console.error('[REVISAO EMAIL] erro ao anexar arquivo da resposta:', a.filename, e.message); }
   }

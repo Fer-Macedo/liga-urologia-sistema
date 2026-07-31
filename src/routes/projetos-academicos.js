@@ -143,7 +143,7 @@ module.exports = function(router) {
       const totalHoras = p.cronograma.reduce((a,c)=>a+parseFloat(c.horas_total||0),0);
       // Anexos do fluxo (documentos por etapa)
       let anexos = [];
-      try { const ax = await query('SELECT id,tipo,nome_original,observacao,created_at FROM projetos_anexos WHERE projeto_id=$1 ORDER BY id DESC',[p.id]); anexos = ax.rows; } catch(e){}
+      try { const ax = await query('SELECT id,tipo,nome_original,observacao,created_at,comentarios FROM projetos_anexos WHERE projeto_id=$1 ORDER BY id DESC',[p.id]); anexos = ax.rows; } catch(e){}
       // Resumo + sugestao automatica da ultima resposta da Coordinación (se houver), pra
       // Secretaria decidir sem precisar abrir o Gmail so pra saber do que se trata.
       let emailThread = null;

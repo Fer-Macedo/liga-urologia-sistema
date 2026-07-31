@@ -160,11 +160,25 @@ var sugestaoMap = {
     <% if (anexosList.length) { %>
       <div style="border-top:1px solid var(--line);margin-top:12px;padding-top:10px">
         <p style="font-size:11px;color:var(--ink-faint);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">Documentos del proyecto</p>
-        <% anexosList.forEach(function(a){ %>
-          <a href="/projetos/<%= p.id %>/anexo/<%= a.id %>" target="_blank" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;text-decoration:none;color:var(--ink-soft);font-size:12px;border:1px solid var(--line);margin-bottom:5px">
+        <% anexosList.forEach(function(a){
+             var coms = [];
+             if (a.comentarios) { try { coms = JSON.parse(a.comentarios); } catch(e) { coms = []; } }
+        %>
+          <a href="/projetos/<%= p.id %>/anexo/<%= a.id %>" target="_blank" style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:6px;text-decoration:none;color:var(--ink-soft);font-size:12px;border:1px solid var(--line);margin-bottom:<%= coms.length ? '0' : '5px' %>">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
             <span style="flex:1"><strong style="color:var(--ink)"><%= anexoTipoLabel[a.tipo] || a.tipo %></strong><br><span style="color:var(--ink-faint);font-size:11px"><%= a.nome_original %></span></span>
           </a>
+          <% if (coms.length) { %>
+            <div style="border:1px solid var(--line);border-top:none;border-radius:0 0 6px 6px;padding:8px 10px;margin-bottom:5px;background:#FFFBEB">
+              <p style="font-size:10.5px;color:#9A6B14;font-weight:700;margin-bottom:6px;text-transform:uppercase;letter-spacing:.03em">💬 <%= coms.length %> comentario<%= coms.length>1?'s':'' %> del Word — leídos automáticamente</p>
+              <% coms.forEach(function(c){ %>
+                <div style="margin-bottom:6px;padding-bottom:6px;border-bottom:1px dashed #EAD9B0">
+                  <% if (c.trecho) { %><p style="font-size:11px;color:var(--ink-faint);font-style:italic;margin-bottom:2px">"<%= c.trecho %><%= c.trecho.length>=300?'…':'' %>"</p><% } %>
+                  <p style="font-size:12px;color:var(--ink);margin:0"><strong><%= c.autor || 'Coordinación' %>:</strong> <%= c.texto %></p>
+                </div>
+              <% }); %>
+            </div>
+          <% } %>
         <% }); %>
       </div>
     <% } %>

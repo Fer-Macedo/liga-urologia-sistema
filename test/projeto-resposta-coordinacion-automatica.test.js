@@ -135,3 +135,54 @@ test('resposta sem anexo: não tenta salvar nenhum arquivo', async () => {
   await mod.verificarRespostas({}, pool, 'lauro@lauro.org');
   assert.strictEqual(anexosSalvos.length, 0);
 });
+
+// Anexo PDF (não-docx): não tenta extrair comentários, coluna fica null.
+test('anexo pdf: coluna comentarios fica null (não é docx)', async () => {
+  const payload = payloadComTextoEAnexo('Seguem las correcciones solicitadas.', { filename: 'correcciones.pdf' });
+  const { mod, pool, anexosSalvos } = montar({ payload });
+  await mod.verificarRespostas({}, pool, 'lauro@lauro.org');
+  const comentarios = anexosSalvos[0][7];
+  assert.strictEqual(comentarios, null);
+});
+
+// O caso que interessa: .docx com comentários do Word (as caixinhas) tem que ser lido e
+// guardado como JSON, com o texto do comentário E o trecho do documento que ele marca.
+test('anexo docx com comentário do Word: extrai autor, texto e trecho comentado', async () => {
+  const JSZip = require('jszip');
+  const zip = new JSZip();
+  zip.file('word/document.xml',
+    '<w:document><w:body><w:p><w:r><w:t>Antes </w:t></w:r>' +
+    '<w:commentRangeStart w:id="1"/><w:r><w:t>trecho comentado</w:t></w:r><w:commentRangeEnd w:id="1"/>' +
+    '<w:r><w:commentReference w:id="1"/></w:r></w:p></w:body></w:document>');
+  zip.file('word/comments.xml',
+    '<w:comments><w:comment w:id="1" w:author="Coordinación">' +
+    '<w:p><w:r><w:t>Corrigir este párrafo</w:t></w:r></w:p></w:comment></w:comments>');
+  const docxBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+
+  const payload = payloadComTextoEAnexo('Seguem las correcciones solicitadas.',
+    { filename: 'correcciones.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  const { mod, pool, anexosSalvos } = montar({ payload, anexoBytes: docxBuffer });
+  await mod.verificarRespostas({}, pool, 'lauro@lauro.org');
+
+  const comentarios = JSON.parse(anexosSalvos[0][7]);
+  assert.strictEqual(comentarios.length, 1);
+  assert.strictEqual(comentarios[0].autor, 'Coordinación');
+  assert.strictEqual(comentarios[0].texto, 'Corrigir este párrafo');
+  assert.strictEqual(comentarios[0].trecho, 'trecho comentado');
+});
+
+// .docx sem nenhum comentário (respondeu só aprovando, por exemplo): não quebra, fica null.
+test('anexo docx sem comentários: coluna comentarios fica null', async () => {
+  const JSZip = require('jszip');
+  const zip = new JSZip();
+  zip.file('word/document.xml', '<w:document><w:body><w:p><w:r><w:t>Sin comentarios.</w:t></w:r></w:p></w:body></w:document>');
+  const docxBuffer = await zip.generateAsync({ type: 'nodebuffer' });
+
+  const payload = payloadComTextoEAnexo('Proyecto aprobado.',
+    { filename: 'aprobado.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+  const { mod, pool, anexosSalvos } = montar({ payload, anexoBytes: docxBuffer });
+  await mod.verificarRespostas({}, pool, 'lauro@lauro.org');
+
+  const comentarios = anexosSalvos[0][7];
+  assert.strictEqual(comentarios, null);
+});

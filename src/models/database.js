@@ -353,6 +353,13 @@ async function initSchema() {
   await query('ALTER TABLE projetos_email_thread ADD COLUMN IF NOT EXISTS sugestao_status TEXT');
   await query('ALTER TABLE projetos_email_thread ADD COLUMN IF NOT EXISTS resposta_resumo TEXT');
 
+  // Quando a Coordinación devolve um .docx com comentarios (as caixinhas na lateral do
+  // Word), o anexo automatico ja guarda o TEXTO de cada comentario + o trecho do
+  // documento que ele marca — pra Ensino/Extensao ver na tela, sem abrir o Word so pra
+  // achar as caixinhas. JSON (array) guardado como texto, mesmo padrao ja usado noutras
+  // colunas deste projeto (ex: objetivos_especificos).
+  await query('ALTER TABLE projetos_anexos ADD COLUMN IF NOT EXISTS comentarios TEXT');
+
   // Cronograma de conteudo sugerido pela IA + resposta da equipe. E conversa, nao
   // monologo: o que a equipe recusa ou comenta volta como contexto na proxima geracao,
   // para a IA parar de repetir o que ja foi descartado.
