@@ -2,6 +2,12 @@
 const { query } = require('../models/database');
 const { requireAuth, requirePermissao } = require('../middleware/auth');
 const { getConfig } = require('../services/config');
+// A copia da conversa para o numero_area (secretaria/financeiro...) SEMPRE pela API
+// Oficial, nunca pelo canal do assistente (W-API quando ASSISTENTE_CANAL=wapi) — mesma
+// razao documentada em lauro.js/notificarArea: e a liga quem inicia esse envio, e iniciar
+// pela automacao nao-oficial e o padrao que puniu o numero em 2026-07-22 e 2026-07-25.
+// Fora da janela de 24h a Oficial so rejeita (falha visivel), nunca arrisca o numero.
+const whatsappOficial = require('../services/whatsapp-oficial');
 
 module.exports = function (router) {
 
@@ -94,7 +100,7 @@ router.post('/atendimentos/:id/responder', requireAuth, requirePermissao('atendi
     }
     const lauro = require('../services/lauro');
     await lauro.enviarMensagemDireta(numero_membro, mensagem.trim());
-    if (numero_area) await lauro.enviarMensagemDireta(numero_area, mensagem.trim()).catch(()=>{});
+    if (numero_area) await whatsappOficial.enviarTexto(numero_area, mensagem.trim()).catch(()=>{});
     await query('INSERT INTO lauro_conversas (numero,papel,mensagem) VALUES ($1,$2,$3)', [numero_membro, 'area', mensagem.trim()]).catch(()=>{});
     res.json({ok:true, enviado: mensagem.trim(), area: nomeArea});
   } catch(e) { res.json({ok:false, erro: e.message}); }
@@ -118,8 +124,8 @@ router.post('/atendimentos/:id/responder-arquivo', requireAuth, requirePermissao
       if (req.file.mimetype.indexOf('image/') === 0) { tipo = 'image'; await lauro.enviarImagem(numero_membro, dataUri, ''); }
       else { tipo = 'document'; await lauro.enviarDocumento(numero_membro, dataUri, req.file.originalname); }
       if (numero_area) {
-        if (tipo === 'image') await lauro.enviarImagem(numero_area, dataUri, '').catch(()=>{});
-        else await lauro.enviarDocumento(numero_area, dataUri, req.file.originalname).catch(()=>{});
+        if (tipo === 'image') await whatsappOficial.enviarImagem(numero_area, dataUri, '').catch(()=>{});
+        else await whatsappOficial.enviarDocumento(numero_area, dataUri, req.file.originalname).catch(()=>{});
       }
       await query('INSERT INTO lauro_conversas (numero, papel, mensagem) VALUES ($1,$2,$3)', [numero_membro, 'area', '[[MIDIA]]'+tipo+'|||'+r.chave+'|||'+req.file.originalname]);
       res.json({ok:true, tipo, chave: r.chave, nome: req.file.originalname});
