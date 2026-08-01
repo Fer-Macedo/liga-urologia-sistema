@@ -587,6 +587,10 @@ module.exports = function (router) {
       const turma = (req.body.turma || '').trim().toUpperCase();
       if (!nome || !email || !whatsappNum || !dataNascimento || !catraca || !documento || !semestre || !turma)
         return renderErro('Todos los campos son obligatorios. / Preencha todos os campos.');
+      if (p.edital_chave && req.body.aceite_edital !== 'on')
+        return renderErro('Debe aceptar las Bases del Edital para continuar.');
+      if (req.body.aceite_lgpd !== 'on')
+        return renderErro('Debe aceptar la Política de Privacidad (LGPD) para continuar.');
       const dup = await query("SELECT id FROM ps_candidatos WHERE processo_id=$1 AND (LOWER(email)=$2 OR (documento IS NOT NULL AND documento=$3)) LIMIT 1", [p.id, email, documento]);
       if (dup.rows.length) return renderErro('Ya existe una inscripción con este documento o correo en este proceso. / Já existe uma inscrição com este documento ou e-mail neste processo.');
       const cupomCodigo = (req.body.cupom_codigo || '').toUpperCase().trim();

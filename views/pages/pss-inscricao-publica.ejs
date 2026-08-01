@@ -78,6 +78,18 @@
     .btn-sub:hover{background:#0F6E56}
     .btn-sub:disabled{opacity:.6}
     .secure-note{text-align:center;font-size:11px;color:var(--ink4);margin-top:12px}
+    .termos-box{background:var(--sur2);border:1px solid var(--bdr);border-radius:var(--r);padding:16px;margin-top:16px}
+    .termo-check{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:13px;color:var(--ink2)}
+    .termo-check:last-child{margin-bottom:0}
+    .termo-link{color:var(--p);font-weight:600;text-decoration:underline;cursor:pointer;text-underline-offset:2px}
+    .modal-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+    .modal-wrap.open{display:flex}
+    .modal-box{background:white;border-radius:var(--r-lg);max-width:640px;width:100%;max-height:82vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--sh-lg)}
+    .modal-hd{padding:20px 24px;border-bottom:1px solid var(--bdr);display:flex;justify-content:space-between;align-items:center}
+    .modal-close{border:none;background:var(--sur3);width:30px;height:30px;border-radius:7px;cursor:pointer;color:var(--ink2);font-size:18px;display:flex;align-items:center;justify-content:center}
+    .modal-body{padding:22px 24px;overflow-y:auto;font-size:13px;color:var(--ink2);line-height:1.8;white-space:pre-wrap;flex:1}
+    .modal-ft{padding:14px 24px;border-top:1px solid var(--bdr);text-align:right}
+    .modal-ok{background:var(--p);color:white;border:none;padding:10px 24px;border-radius:8px;font-weight:700;cursor:pointer;font-family:'Inter',sans-serif;font-size:13px}
     .resumo-card{border-radius:4px;padding:22px;margin-bottom:18px;color:white;position:relative;overflow:hidden;background:linear-gradient(135deg,var(--p) 0%,color-mix(in srgb,var(--p) 75%,#000) 100%);box-shadow:0 8px 28px color-mix(in srgb,var(--p) 35%,transparent)}
     .resumo-card::before{content:'';position:absolute;top:-40px;right:-40px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.07)}
     .resumo-eyebrow{font-size:10px;font-weight:700;opacity:.7;text-transform:uppercase;letter-spacing:.8px;margin-bottom:5px}
@@ -222,6 +234,12 @@
             </div>
           </div>
           <div class="campo"><label>Cupón de descuento (opcional)</label><input name="cupom_codigo" class="inp cupom-in" value="<%= typeof cupomUrl!=='undefined'?cupomUrl:'' %>" placeholder="CÓDIGO"></div>
+          <div class="termos-box">
+            <% if(processo.edital_chave){ %>
+            <div class="termo-check"><input type="checkbox" name="aceite_edital" required><span>He leído y acepto las <a href="/pss/<%= processo.id %>/edital" target="_blank" rel="noopener" class="termo-link">Bases del Edital</a> <span class="req">*</span></span></div>
+            <% } %>
+            <div class="termo-check"><input type="checkbox" name="aceite_lgpd" required><span>He leído y acepto la <span class="termo-link" onclick="abrirModal('modal-lgpd')">Política de Privacidad</span> <span class="req">*</span></span></div>
+          </div>
           <button class="btn-sub" id="bt" type="submit"><%= _v>0 ? 'Continuar al pago' : 'Confirmar inscripción' %></button>
           <div class="secure-note">Cada persona puede inscribirse una sola vez por proceso.</div>
         </form>
@@ -254,6 +272,34 @@
   </div>
 </div></div>
 
+<div class="modal-wrap" id="modal-lgpd" onclick="if(event.target===this)fecharModal('modal-lgpd')">
+  <div class="modal-box"><div class="modal-hd"><h3>Política de Privacidad</h3><button class="modal-close" onclick="fecharModal('modal-lgpd')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+  <div class="modal-body">Liga Académica de Urología — LAURO
+Política de Privacidad y Protección de Datos (LGPD)
+
+1. RESPONSABLE DEL TRATAMIENTO
+La Liga Académica de Urología (LAURO), vinculada a la Universidad Central del Paraguay, es la responsable del tratamiento de los datos personales recopilados en este formulario.
+
+2. DATOS RECOPILADOS
+Recopilamos: nombre completo, correo electrónico, teléfono/WhatsApp, fecha de nacimiento, documento de identidad (CPF/CI/DNI), número de catraca (alumnos UCP), semestre y turma.
+
+3. FINALIDAD DEL TRATAMIENTO
+Los datos se utilizan exclusivamente para: (a) procesamiento y confirmación de la inscripción en el proceso selectivo; (b) envío de comunicaciones relacionadas con el proceso; (c) organización de la prueba y entrevista; (d) contacto en caso de aprobación.
+
+4. COMPARTICIÓN
+Los datos no serán comercializados, cedidos ni compartidos con terceros, salvo cuando sea necesario para la realización del proceso o por obligación legal.
+
+5. PLAZO DE RETENCIÓN
+Los datos se mantendrán por hasta 5 años a efectos de comprobación del proceso selectivo.
+
+6. DERECHOS DEL TITULAR
+Acceso, corrección, eliminación y portabilidad: lauroucpcde@lauroucpcde.com
+
+7. CONSENTIMIENTO
+Al marcar esta opción, usted consiente el tratamiento de sus datos.</div>
+  <div class="modal-ft"><button class="modal-ok" onclick="fecharModal('modal-lgpd')">Entendido</button></div></div>
+</div>
+
 <% } %>
 
 <footer>
@@ -266,5 +312,9 @@
   <span style="display:block;margin-top:6px"><a href="mailto:lauroucpcde@lauroucpcde.com">lauroucpcde@lauroucpcde.com</a> · +595 992 010 423</span>
 </footer>
 <a href="https://wa.me/<%= typeof waAtendimento !== 'undefined' && waAtendimento ? waAtendimento : '595994316286' %>" target="_blank" class="wpp-float" title="Habla con nosotros"><%- WPP %></a>
+<script>
+function abrirModal(id){document.getElementById(id)?.classList.add('open');}
+function fecharModal(id){document.getElementById(id)?.classList.remove('open');}
+</script>
 </body>
 </html>
