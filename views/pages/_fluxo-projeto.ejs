@@ -36,6 +36,13 @@ var sugestaoMap = {
   aprovado: { texto: '✅ Parece uma APROVAÇÃO', cor: '#166534' },
   correcao: { texto: '✏️ Parece um PEDIDO DE CORRECIÓN', cor: '#C0392B' }
 };
+// Editar o projeto (paso "Editar proyecto en el sistema") só grava os campos — quem gera o
+// .docx de verdade é o botão separado "Regenerar documento". Se alguém edita e esquece de
+// regenerar, o "documento actual" continua sendo o de ANTES da correção, sem aviso nenhum —
+// achado real: a pessoa acha que já mandou corrigido e não mandou. Compara a data da última
+// edição do projeto com a data do anexo mais recente pra avisar exatamente esse caso.
+var documentoDesatualizado = anexosList.length && p.updated_at &&
+  new Date(p.updated_at) > new Date(anexosList[0].created_at);
 %>
 
 <div class="card" style="border-left:3px solid <%= et.cor %>">
@@ -50,9 +57,14 @@ var sugestaoMap = {
     <!-- corrigieron, o el de la Coordinación si todavía no) — siempre visible, sin tener -->
     <!-- que buscar entre el historial de abajo. ░░ -->
     <% if (anexosList.length) { %>
-      <a href="/projetos/<%= p.id %>/anexo/<%= anexosList[0].id %>" target="_blank" class="btn btn-pri" style="width:100%;justify-content:center;text-align:center;text-decoration:none;margin-bottom:12px;gap:8px">
+      <% if (documentoDesatualizado) { %>
+        <div style="background:#FBE9E7;border:1px solid #F0C5C0;border-radius:3px;padding:10px 12px;margin-bottom:8px;font-size:12px;color:#C0392B;font-weight:600">
+          ⚠️ El proyecto fue editado DESPUÉS de generar este documento — el archivo de abajo NO tiene esa corrección. Generá el documento de nuevo antes de descargar o enviar.
+        </div>
+      <% } %>
+      <a href="/projetos/<%= p.id %>/anexo/<%= anexosList[0].id %>" target="_blank" class="btn <%= documentoDesatualizado ? 'btn-danger' : 'btn-pri' %>" style="width:100%;justify-content:center;text-align:center;text-decoration:none;margin-bottom:12px;gap:8px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-        Descargar documento actual (<%= anexoTipoLabel[anexosList[0].tipo] || anexosList[0].tipo %>)
+        <%= documentoDesatualizado ? '⚠️ Descargar documento DESACTUALIZADO' : 'Descargar documento actual' %> (<%= anexoTipoLabel[anexosList[0].tipo] || anexosList[0].tipo %>)
       </a>
     <% } %>
 
