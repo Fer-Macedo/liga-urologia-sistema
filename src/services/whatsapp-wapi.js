@@ -83,16 +83,77 @@ async function _destino(numero, instancia, token) {
   return fone;
 }
 
+// ─── ATRASO "HUMANO" ────────────────────────────────────────────────────────
+// Antes era uma fórmula fixa (tamanho × 25ms, entre 1,5s-4s) — o MESMO atraso sempre pro
+// mesmo texto, o que é uma assinatura de automação tão óbvia quanto responder instantâneo.
+// Pessoa de verdade varia muito: às vezes responde na hora, às vezes demora, às vezes se
+// distrai no meio da conversa. Aqui tem uma base aleatória, um componente por tamanho
+// (também aleatório) e, de vez em quando, uma pausa bem mais longa.
+function atrasoHumano(mensagem) {
+  // Mesmo padrao do GMAIL_RETRY_MS (notificacoes.js): override total pra teste nao
+  // esperar segundos de verdade por uma variacao aleatoria que nao muda o resultado.
+  if (process.env.WAPI_ATRASO_TESTE_MS !== undefined) return Number(process.env.WAPI_ATRASO_TESTE_MS);
+  const tam = String(mensagem || '').length;
+  const base = 1200 + Math.random() * 2800; // 1,2s-4s
+  const porTamanho = tam * (12 + Math.random() * 18); // 12-30ms por caractere
+  const distraido = Math.random() < 0.12 ? 2500 + Math.random() * 5000 : 0; // ~1 em 8 vezes
+  return Math.min(Math.round(base + porTamanho + distraido), 14000);
+}
+
+// ─── LIMITE DIÁRIO DE ENVIOS (proteção anti-banimento) ───────────────────────
+// O número já foi restringido/banido 3 vezes (22/07, 25/07, 02/08) mesmo só respondendo
+// quem escreveu primeiro — o WhatsApp parece aplicar escrutínio extra logo após
+// reconectar. Um teto diário bem mais apertado nos primeiros dias pós-reconexão (e um
+// teto normal depois disso) dá uma segunda camada de segurança, independente do
+// conteúdo das mensagens. Não bloqueia em silêncio: quem excede o teto fica sem
+// resposta automática, mas a mensagem continua salva em /atendimentos pra alguém
+// responder na mão.
+const WAPI_TETO_NORMAL = parseInt(process.env.WAPI_TETO_DIARIO || '60', 10);
+const WAPI_TETO_AQUECIMENTO = parseInt(process.env.WAPI_TETO_DIARIO_AQUECIMENTO || '15', 10);
+const WAPI_HORAS_AQUECIMENTO = parseInt(process.env.WAPI_HORAS_AQUECIMENTO || '72', 10);
+
+async function tetoDeHoje() {
+  try {
+    const { query } = require('../models/database');
+    const r = await query("SELECT valor FROM configuracoes WHERE chave='wapi_reconectado_em'");
+    const reconectadoEm = r.rows[0] && r.rows[0].valor ? new Date(r.rows[0].valor) : null;
+    if (reconectadoEm) {
+      const horasDesde = (Date.now() - reconectadoEm.getTime()) / 3600000;
+      if (horasDesde < WAPI_HORAS_AQUECIMENTO) return WAPI_TETO_AQUECIMENTO;
+    }
+  } catch (e) { /* sem dado de reconexão, segue com o teto normal */ }
+  return WAPI_TETO_NORMAL;
+}
+
+async function podeEnviarHoje() {
+  try {
+    const { query } = require('../models/database');
+    const teto = await tetoDeHoje();
+    const r = await query(
+      `INSERT INTO wapi_envios_diarios (dia, total) VALUES (CURRENT_DATE, 1)
+       ON CONFLICT (dia) DO UPDATE SET total = wapi_envios_diarios.total + 1
+       RETURNING total`
+    );
+    if (r.rows[0].total > teto) {
+      console.warn('[W-API] teto diário de envios atingido (' + teto + ') — proteção anti-banimento, mensagem NÃO enviada (fica salva pra resposta manual)');
+      return false;
+    }
+    return true;
+  } catch (e) {
+    // Falha ao checar o teto não pode travar o atendimento inteiro.
+    console.error('[W-API] falha ao checar teto diário, seguindo sem o limite:', e.message);
+    return true;
+  }
+}
+
 async function enviarTexto(numero, mensagem) {
   const { instancia, token } = credenciais();
   if (!instancia || !token) return semCredencial();
+  if (!await podeEnviarHoje()) return { ok: false, erro: 'teto diário de envios atingido (proteção anti-banimento)' };
   try {
-    // Pausa proporcional ao tamanho do texto (1,5s a 4s). Resposta instantânea é a
-    // assinatura mais óbvia de robô — este atraso imita a digitação de uma pessoa.
     const fone = await _destino(numero, instancia, token);
     if (!fone) return { ok: false, erro: 'numero sem WhatsApp: ' + numero };
-    const espera = Math.min(Math.max(String(mensagem).length * 25, 1500), 4000);
-    await new Promise(r => setTimeout(r, espera));
+    await new Promise(r => setTimeout(r, atrasoHumano(mensagem)));
     const data = await _post('/send-text', {
       phone: fone, message: mensagem
     }, instancia, token);
@@ -112,9 +173,11 @@ async function enviarTexto(numero, mensagem) {
 async function enviarImagem(numero, imagem, legenda) {
   const { instancia, token } = credenciais();
   if (!instancia || !token) return semCredencial();
+  if (!await podeEnviarHoje()) return { ok: false, erro: 'teto diário de envios atingido (proteção anti-banimento)' };
   try {
     const fone = await _destino(numero, instancia, token);
     if (!fone) return { ok: false, erro: 'numero sem WhatsApp: ' + numero };
+    await new Promise(r => setTimeout(r, atrasoHumano(legenda)));
     const data = await _post('/send-image', {
       phone: fone, image: imagem, caption: legenda || ''
     }, instancia, token);
@@ -130,9 +193,11 @@ async function enviarImagem(numero, imagem, legenda) {
 async function enviarDocumento(numero, documento, fileName) {
   const { instancia, token } = credenciais();
   if (!instancia || !token) return semCredencial();
+  if (!await podeEnviarHoje()) return { ok: false, erro: 'teto diário de envios atingido (proteção anti-banimento)' };
   try {
     const fone = await _destino(numero, instancia, token);
     if (!fone) return { ok: false, erro: 'numero sem WhatsApp: ' + numero };
+    await new Promise(r => setTimeout(r, atrasoHumano(fileName)));
     const data = await _post('/send-document', {
       phone: fone, document: documento,
       fileName: fileName || 'arquivo.pdf'
@@ -173,4 +238,9 @@ async function conferirNumero(numero) {
   return { ok: true, existe: !!fone, numero: fone };
 }
 
-module.exports = { enviarTexto, enviarImagem, enviarDocumento, statusInstancia, conferirNumero };
+module.exports = {
+  enviarTexto, enviarImagem, enviarDocumento, statusInstancia, conferirNumero,
+  // exportados para teste: a variação do atraso e o teto diário são regra de
+  // negócio (proteção anti-banimento), não detalhe de implementação
+  atrasoHumano, podeEnviarHoje
+};

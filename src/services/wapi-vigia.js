@@ -54,7 +54,19 @@ async function verificar() {
   await salvarUltimoEstado(conectado);
 
   if (caiu) await avisar();
-  if (voltou) console.log('[VIGIA W-API] conexão restabelecida.');
+  if (voltou) {
+    console.log('[VIGIA W-API] conexão restabelecida.');
+    // Marca o momento da reconexão — whatsapp-wapi.js usa isso pra apertar o teto diário
+    // de envios por alguns dias (o número já escalou de restrição pra banimento total
+    // justo nos primeiros dias após reconectar, 3 vezes seguidas).
+    try {
+      await query(
+        `INSERT INTO configuracoes (chave, valor) VALUES ('wapi_reconectado_em', $1)
+         ON CONFLICT (chave) DO UPDATE SET valor=$1`,
+        [new Date().toISOString()]
+      );
+    } catch (e) { console.error('[VIGIA W-API] falha ao gravar reconectado_em:', e.message); }
+  }
 
   return { checado: true, conectado, caiu, voltou };
 }

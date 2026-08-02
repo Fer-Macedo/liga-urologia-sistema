@@ -401,6 +401,17 @@ async function initSchema() {
     )
   `);
 
+  // Contador diário de envios pela W-API (canal do assistente) — protege contra o
+  // padrão que já restringiu/baniu o número 3x: conta nova/recém-reconectada em
+  // automação não-oficial mandando volume acima do que uma conversa humana teria.
+  // Um dia por linha, incrementado a cada envio de texto/imagem/documento.
+  await query(`
+    CREATE TABLE IF NOT EXISTS wapi_envios_diarios (
+      dia DATE PRIMARY KEY,
+      total INTEGER NOT NULL DEFAULT 0
+    )
+  `);
+
   // Admin padrão
   const admin = await query("SELECT id FROM usuarios WHERE perfil = 'admin'");
   if (admin.rows.length === 0) {

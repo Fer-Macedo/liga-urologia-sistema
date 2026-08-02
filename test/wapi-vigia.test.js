@@ -24,7 +24,14 @@ function comCenario({ canal = 'wapi', semAdmin = false } = {}) {
         const v = configStore.wapi_ultimo_estado_conectado;
         return { rows: v === undefined ? [] : [{ valor: v }] };
       }
-      if (/INSERT INTO configuracoes/.test(sql)) { configStore.wapi_ultimo_estado_conectado = params[0]; return { rows: [] }; }
+      if (/INSERT INTO configuracoes/.test(sql)) {
+        // Cada chave e uma linha propria na tabela de verdade — o mock precisa distinguir
+        // por chave tambem, senao uma segunda chave (ex: wapi_reconectado_em) sobrescreve
+        // por engano o valor de wapi_ultimo_estado_conectado.
+        const chave = (sql.match(/VALUES\s*\('([^']+)'/) || [])[1];
+        if (chave) configStore[chave] = params[0];
+        return { rows: [] };
+      }
       return { rows: [] };
     }
   }};

@@ -5,6 +5,10 @@ const { test } = require('node:test');
 const assert = require('node:assert');
 const path = require('path');
 
+// Sem isso, cada envio esperaria de verdade o atraso "humano" (até 14s) — mesmo padrão
+// do GMAIL_RETRY_MS em notificacoes.js.
+process.env.WAPI_ATRASO_TESTE_MS = '1';
+
 const RAIZ = path.join(__dirname, '..');
 const MODULO = path.join(RAIZ, 'src/services/whatsapp-wapi.js');
 
