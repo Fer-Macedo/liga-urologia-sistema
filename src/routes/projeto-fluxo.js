@@ -126,8 +126,12 @@ module.exports = function (router) {
     try {
       const a = await query('SELECT * FROM projetos_anexos WHERE id=$1 AND projeto_id=$2', [req.params.anexoId, req.params.id]);
       if (!a.rows[0]) return res.status(404).send('No encontrado');
-      const { getUrlAssinada } = require('../services/desligamento');
-      const url = await getUrlAssinada(a.rows[0].arquivo_chave);
+      // getUrlAssinada (desligamento.js) não fixa nome de download — o navegador cai pro
+      // nome da chave no R2 (ex: "1785271270307-f6e826e01db97184.docx"), não pro nome que a
+      // Coordinación exige (LAURO_Proyecto de <Ensino|Extensão>_<projeto>). gerarUrlDownload
+      // já resolve isso com Content-Disposition.
+      const { gerarUrlDownload } = require('../services/arquivos');
+      const url = await gerarUrlDownload(a.rows[0].arquivo_chave, a.rows[0].nome_original || 'documento.docx');
       res.redirect(url);
     } catch (e) { res.status(500).send('Error'); }
   });
