@@ -485,7 +485,7 @@ function copiarLinkGerado(){
   const url = document.getElementById('linkGerado')?.textContent;
   if(!url) return;
   navigator.clipboard.writeText(url).then(()=>{
-    alert('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Link copiado!\n\nEnvie por WhatsApp ou e-mail para o palestrante preencher.');
+    mostrarAviso('Link copiado!\n\nEnvie por WhatsApp ou e-mail para o palestrante preencher.', 'sucesso');
   }).catch(()=>{ mostrarTextoCopiavel('Copie este link:', url); });
 }
 
@@ -548,8 +548,8 @@ function copiarLinkModal(){
   const url = document.getElementById('linkBox').textContent;
   navigator.clipboard.writeText(url).then(() => {
     const btn = document.querySelector('.btn-copiar');
-    btn.textContent = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copiado!';
-    setTimeout(() => btn.textContent = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Copiar Link', 2000);
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Copiado!';
+    setTimeout(() => btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Copiar Link', 2000);
   }).catch(() => { mostrarTextoCopiavel('Copie este link:', url); });
 }
 

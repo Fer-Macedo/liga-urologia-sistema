@@ -528,7 +528,7 @@ function toggleSub(id) {
   const toggle = document.getElementById('toggle-' + id);
   if (!subs) { navegarPasta(id); return; }
   if (subs.classList.contains('aberta')) { subs.classList.remove('aberta'); toggle.textContent = '▶'; }
-  else { subs.classList.add('aberta'); toggle.textContent = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg>'; navegarPasta(id); }
+  else { subs.classList.add('aberta'); toggle.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg>'; navegarPasta(id); }
 }
 
 // Abre pasta pai automaticamente
@@ -536,7 +536,7 @@ function toggleSub(id) {
 document.addEventListener('DOMContentLoaded', function() {
   const subs = document.getElementById('subs-<%= pastaAtual.pasta_pai_id %>');
   const toggle = document.getElementById('toggle-<%= pastaAtual.pasta_pai_id %>');
-  if (subs) { subs.classList.add('aberta'); if(toggle) toggle.textContent = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg>'; }
+  if (subs) { subs.classList.add('aberta'); if(toggle) toggle.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg>'; }
 });
 <% } %>
 
@@ -694,7 +694,7 @@ function excluirPasta(id) {
 
 // Editar pasta
 function editarPasta(id, nome, icone, cor) {
-  document.getElementById('titulo-modal-pasta').textContent = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar Pasta';
+  document.getElementById('titulo-modal-pasta').innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar Pasta';
   document.getElementById('btn-salvar-pasta').textContent = 'Salvar alterações';
   document.getElementById('form-pasta').action = '/arquivos/pasta/' + id + '/editar';
   document.getElementById('pasta-edit-id').value = id;

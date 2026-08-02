@@ -695,7 +695,7 @@
     const input = document.getElementById('pix-code');
     navigator.clipboard.writeText(input.value).then(function() {
       const btn = document.getElementById('btn-copy');
-      btn.textContent = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg> ¡Copiado!';
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg> ¡Copiado!';
       btn.classList.add('copied');
       setTimeout(function() { btn.textContent = 'Copiar'; btn.classList.remove('copied'); }, 2000);
     }).catch(function() {
@@ -730,7 +730,7 @@
     document.getElementById('sucesso-card').style.display = 'block';
     // Atualizar steps
     document.getElementById('step2').className = 'step done';
-    document.getElementById('step2').querySelector('.step-num').textContent = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg>';
+    document.getElementById('step2').querySelector('.step-num').innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg>';
     document.getElementById('line3').className = 'step-line done';
     document.getElementById('step3').className = 'step active';
   }
