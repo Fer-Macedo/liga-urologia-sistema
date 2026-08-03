@@ -84,12 +84,17 @@ test('aviso de créditos fora da janela vai por E-MAIL, não pela W-API', async 
   assert.ok(enviados.some(e => e.via === 'email'), 'o aviso não pode simplesmente sumir');
 });
 
-test('dentro da janela, o aviso pode ir por WhatsApp', async () => {
+// Endurecido em 2026-08-02: mesmo dentro da janela de 24h, avisarPresidencia() não pode
+// mais ir por WhatsApp. alertarCreditos('zerado') chama esta função a CADA mensagem
+// recebida enquanto o crédito da IA estiver zerado — sem um "sempre e-mail" aqui, isso
+// vira uma rajada de mensagens automáticas repetidas pela W-API bem na hora que o
+// crédito acaba, exatamente o padrão que já restringiu/baniu o número 3 vezes.
+test('mesmo dentro da janela de 24h, o aviso de créditos SEMPRE vai por e-mail agora', async () => {
   const { mod, enviados } = montar({ escreveuRecente: true });
   await mod.recarregarContatos();
   await mod.avisarPresidencia('Creditos da IA', 'Os creditos acabaram');
-  assert.ok(enviados.some(e => e.via === 'wapi'), 'responder dentro de 24h é permitido');
-  assert.ok(!enviados.some(e => e.via === 'email'), 'não duplica o aviso nos dois canais');
+  assert.ok(!enviados.some(e => e.via === 'wapi'), 'aviso interno não justifica mais WhatsApp, nem dentro da janela');
+  assert.ok(enviados.some(e => e.via === 'email'));
 });
 
 // O aviso à área continua sendo o modelo oficial, em qualquer situação.

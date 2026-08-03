@@ -103,16 +103,14 @@ async function salvarConversa(numero, papel, mensagem) {
 
 // Aviso INTERNO para a presidencia (creditos, atendimento registrado, transferencia).
 // Todos eles PARTEM de nos — sao conversa iniciada, nao resposta. Mandar isso pela W-API
-// e exatamente o que fez o numero ser restringido: mensagem automatica, repetida, para
-// quem nao respondeu. Entao: WhatsApp so dentro da janela de 24h; fora dela, e-mail —
-// o mesmo caminho que o vigia da W-API ja usa para alerta interno.
+// e exatamente o que fez o numero ser restringido/banido (3 vezes): mensagem automatica
+// para quem nao respondeu. Endurecido em 2026-08-02: SEMPRE por e-mail, sem excecao —
+// o gate "areaJaConversou" que existia aqui foi removido porque alertarCreditos('zerado')
+// chama esta funcao a CADA mensagem recebida enquanto o credito da IA estiver zerado, e
+// sem essa fila unica isso vira uma rajada de mensagens automaticas repetidas pela W-API
+// caso a presidencia tenha conversado nas ultimas 24h — exatamente o padrao que ja
+// restringiu o numero antes. Mesmo raciocinio ja aplicado a notificarArea().
 async function avisarPresidencia(assunto, texto) {
-  try {
-    if (CONTATOS.presidencia && await areaJaConversou(CONTATOS.presidencia)) {
-      await enviarMensagem(CONTATOS.presidencia, texto);
-      return;
-    }
-  } catch (e) { console.error('[LAURO] aviso presidencia (whatsapp):', e.message); }
   try {
     const { enviarEmail } = require('./notificacoes');
     const dest = await query(
