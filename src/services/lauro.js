@@ -71,6 +71,45 @@ async function getEventosAtivos() {
   }
 }
 
+// Achado em 2026-08-03: o prompt tinha um texto ESTÁTICO sobre processo seletivo
+// ("acompanhe nosso Instagram"), que nunca refletia o processo real cadastrado em
+// ps_processos — mesmo com a inscrição aberta, com link e datas, a IA dizia que não
+// havia processo seletivo. Causa: a regra de "não confiar na base de conhecimento para
+// disponibilidade, só na lista oficial do sistema" existia pra eventos, mas processo
+// seletivo nunca teve essa lista oficial — a IA generalizava a desconfiança e não tinha
+// nada confiável pra citar no lugar. Mesmo padrão de getEventosAtivos(), agora pra PSS.
+async function getProcessosSeletivosAtivos() {
+  try {
+    const r = await query(`
+      SELECT id, nome, semestre, data_prova, local_prova, vagas, valor_inscricao,
+             inscricoes_abertas, edital_chave
+      FROM ps_processos
+      WHERE status='aberto'
+      ORDER BY criado_em DESC
+    `);
+    if (r.rows.length === 0) return 'Nenhum processo seletivo aberto no momento.';
+    return r.rows.map(p => {
+      const prova = p.data_prova ? new Date(p.data_prova).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : 'a definir';
+      const valor = parseFloat(p.valor_inscricao) > 0
+        ? 'R$ ' + parseFloat(p.valor_inscricao).toFixed(2).replace('.', ',')
+        : 'Gratuito';
+      const linkInscricao = 'https://inscricao.lauroucpcde.com/pss/' + p.id + '/inscricao';
+      const linkEdital = p.edital_chave ? 'https://inscricao.lauroucpcde.com/pss/' + p.id + '/edital' : null;
+      return 'Processo Seletivo: ' + p.nome +
+        '\nStatus: ' + (p.inscricoes_abertas ? 'INSCRICOES ABERTAS' : 'INSCRICOES ENCERRADAS') +
+        '\nSemestre: ' + (p.semestre || 'nao informado') +
+        '\nData da prova: ' + prova +
+        '\nLocal da prova: ' + (p.local_prova || 'a definir') +
+        '\nVagas: ' + (p.vagas || 'nao informado') +
+        '\nValor da inscricao: ' + valor +
+        (p.inscricoes_abertas ? '\nLink para inscricao: ' + linkInscricao : '') +
+        (linkEdital ? '\nEdital (bases oficiales do processo): ' + linkEdital : '');
+    }).join('\n\n---\n\n');
+  } catch (e) {
+    return 'Nenhum processo seletivo aberto no momento.';
+  }
+}
+
 // Busca base de conhecimento do banco
 async function getBaseConhecimento() {
   try {
@@ -223,6 +262,7 @@ async function chamarClaude(sessao, mensagemUsuario, idioma, numero) {
 
   const baseConhecimento = await getBaseConhecimento();
   const eventosAtivos = await getEventosAtivos();
+  const processosSeletivos = await getProcessosSeletivosAtivos();
   const freqPessoal = numero ? await getFrequenciaPorWhatsapp(numero) : null;
 
   const _dataHj=new Date().toLocaleDateString('pt-BR',{timeZone:'America/Asuncion'});
@@ -249,10 +289,9 @@ INFORMAÇÕES DA LIGA:
 - Relatório de frequência: enviado automaticamente no último dia de cada mês
 - Formas de pagamento: PIX ou Cartão de crédito
 
-PROCESSO SELETIVO:
-- A Liga realiza processos seletivos semestralmente para novos membros
-- Para saber a data do próximo processo seletivo ou prova de ingresso, acompanhe nosso Instagram: @lauroucp.cde (https://instagram.com/lauroucp.cde)
-- Todos os nossos eventos abertos e processos seletivos também podem ser acompanhados em: https://linktr.ee/lauroucp.cde
+PROCESSOS SELETIVOS DISPONÍVEIS:
+${processosSeletivos}
+Se não houver nenhum processo seletivo listado acima, informe que não há processo seletivo aberto no momento e sugira acompanhar o Instagram (@lauroucp.cde) e o Linktree (https://linktr.ee/lauroucp.cde) para novidades.
 
 EVENTO ANUAL INSTITUCIONAL — DESAFIO RUN AZUL:
 - Corrida de rua aberta ao público e à comunidade acadêmica em geral
@@ -284,6 +323,7 @@ REGRAS IMPORTANTES:
 6. Mantenha respostas curtas e objetivas — WhatsApp não é email
 7. Nunca invente informações que não tem certeza
 8. EVENTOS — REGRA CRÍTICA: ao falar de eventos, agenda, "próximos eventos", "eventos da semana" etc, use EXCLUSIVAMENTE a lista em "EVENTOS DISPONÍVEIS PARA INSCRIÇÃO" acima (essa lista vem do sistema e está sempre atualizada). NUNCA cite eventos, datas, horários ou locais que estejam apenas na BASE DE CONHECIMENTO — essas informações podem estar desatualizadas. Se um evento não está na lista "EVENTOS DISPONÍVEIS PARA INSCRIÇÃO", ele NÃO está disponível.
+8b. PROCESSO SELETIVO — REGRA CRÍTICA: ao falar de processo seletivo, prova de ingresso, inscrição para novos membros/ligantes etc, use EXCLUSIVAMENTE a lista em "PROCESSOS SELETIVOS DISPONÍVEIS" acima (vem do sistema, sempre atualizada). NUNCA diga que não há processo seletivo, nem cite datas/links de processo seletivo que estejam só na BASE DE CONHECIMENTO — confie SEMPRE na lista "PROCESSOS SELETIVOS DISPONÍVEIS" acima, mesmo que pareça conflitar com o que você "acha" que sabe.
 9. DATAS: compare sempre a data do evento com a data de hoje (informada no início). Se a data do evento já passou, NUNCA ofereça como disponível nem diga que vai acontecer. Eventos que já ocorreram são passado.
 10. Se tiver qualquer dúvida sobre datas, horários ou se um evento ainda vai acontecer, NÃO arrisque — direcione para a Secretaria: DIRECIONAR:secretaria
 
@@ -314,6 +354,13 @@ INFORMACIÓN DE LA LIGA:
 - Asistencia mínima 75%: aplica solo al certificado anual de la Liga (miembros y directivos), NO para certificados de eventos
 - Reporte de asistencia: enviado automáticamente el último día de cada mes
 
+EVENTOS DISPONÍVEIS PARA INSCRIÇÃO:
+${eventosAtivos}
+
+PROCESSOS SELETIVOS DISPONÍVEIS:
+${processosSeletivos}
+Si no hay ningún proceso selectivo listado arriba, informa que no hay proceso selectivo abierto en este momento y sugiere seguir el Instagram (@lauroucp.cde) y el Linktree (https://linktr.ee/lauroucp.cde) para novedades.
+
 ÁREAS DE CONTACTO: Secretaría, Finanzas, Científico, Extensión, Enseñanza, Marketing, Presidencia
 
 BASE DE CONOCIMIENTO ADICIONAL:
@@ -332,6 +379,7 @@ REGLAS IMPORTANTES:
 6. Mantén respuestas cortas — WhatsApp no es email
 7. Nunca inventes información
 8. EVENTOS — REGLA CRÍTICA: al hablar de eventos, agenda, "próximos eventos", "eventos de la semana" etc, usa EXCLUSIVAMENTE la lista en "EVENTOS DISPONÍVEIS PARA INSCRIÇÃO" de arriba (esa lista viene del sistema y está siempre actualizada). NUNCA cites eventos, fechas, horarios o lugares que estén solo en la BASE DE CONOCIMIENTO — esa información puede estar desactualizada. Si un evento no está en la lista de eventos disponibles, NO está disponible.
+8b. PROCESO SELECTIVO — REGLA CRÍTICA: al hablar de proceso selectivo, examen de ingreso, inscripción para nuevos miembros/ligantes etc, usa EXCLUSIVAMENTE la lista en "PROCESSOS SELETIVOS DISPONÍVEIS" de arriba (viene del sistema, siempre actualizada). NUNCA digas que no hay proceso selectivo, ni cites fechas/enlaces de proceso selectivo que estén solo en la BASE DE CONOCIMIENTO — confía SIEMPRE en la lista "PROCESSOS SELETIVOS DISPONÍVEIS" de arriba, aunque parezca contradecir lo que vos "creés" saber.
 9. FECHAS: compara siempre la fecha del evento con la fecha de hoy (informada al inicio). Si la fecha del evento ya pasó, NUNCA lo ofrezcas como disponible ni digas que va a ocurrir. Los eventos que ya ocurrieron son pasado.
 10. Si tienes cualquier duda sobre fechas, horarios o si un evento todavía va a ocurrir, NO arriesgues — dirige a Secretaría: DIRECIONAR:secretaria
 
