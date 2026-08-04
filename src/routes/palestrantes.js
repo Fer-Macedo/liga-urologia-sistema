@@ -104,6 +104,7 @@ router.get('/palestrante/form/:token', async (req, res) => {
       config: await getConfig(),
       palestrante: r.rows[0],
       enviado: false,
+      idioma: null,
       erro: null
     });
   } catch(e) { res.send('ERRO: ' + e.message); }
@@ -115,7 +116,11 @@ router.post('/palestrante/form/:token', async (req, res) => {
     if(!r.rows.length) return res.status(404).send('<h2>Link inválido.</h2>');
     const { nome_completo, email, whatsapp, rg_ci, especialidade, instituicao,
       endereco_pais, endereco_cep, endereco_rua, endereco_numero, endereco_complemento,
-      endereco_bairro, endereco_cidade, endereco_estado } = req.body;
+      endereco_bairro, endereco_cidade, endereco_estado, idioma } = req.body;
+    // A tela de sucesso é montada no servidor (enviado=true), então o JS de tradução do
+    // formulário nunca chega a rodar nela — precisa saber o idioma que a pessoa escolheu.
+    // Fallback pelo país cobre o caso raro de o campo oculto não chegar (ex: cache antigo).
+    const idiomaFinal = idioma === 'pt' || idioma === 'es' ? idioma : (endereco_pais === 'Brasil' ? 'pt' : 'es');
     await query(
       `UPDATE palestrantes SET nome_completo=$1,email=$2,whatsapp=$3,rg_ci=$4,especialidade=$5,
         instituicao=$6,endereco_pais=$7,endereco_cep=$8,endereco_rua=$9,endereco_numero=$10,
@@ -131,6 +136,7 @@ router.post('/palestrante/form/:token', async (req, res) => {
       config: await getConfig(),
       palestrante: updated.rows[0],
       enviado: true,
+      idioma: idiomaFinal,
       erro: null
     });
   } catch(e) { res.send('ERRO: ' + e.message); }

@@ -118,12 +118,21 @@
   <div class="sucesso-wrap">
     <div class="sucesso-card">
       <span class="sucesso-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>
-      <div class="sucesso-titulo" id="sucessoTitulo">Datos enviados!</div>
+      <% if (idioma === 'pt') { %>
+      <div class="sucesso-titulo" id="sucessoTitulo">Dados enviados!</div>
+      <p class="sucesso-txt" id="sucessoTxt">
+        Obrigado, <strong><%= palestrante.nome_completo %></strong>.<br>
+        Seus dados foram recebidos pela equipe da <%= config.org_nome %>.<br>
+        Entraremos em contato se for necessário.
+      </p>
+      <% } else { %>
+      <div class="sucesso-titulo" id="sucessoTitulo">¡Datos enviados!</div>
       <p class="sucesso-txt" id="sucessoTxt">
         Gracias, <strong><%= palestrante.nome_completo %></strong>.<br>
         Sus datos fueron recibidos por el equipo de <%= config.org_nome %>.<br>
         Nos pondremos en contacto si es necesario.
       </p>
+      <% } %>
     </div>
   </div>
 
@@ -177,6 +186,7 @@
 
       <form method="POST" action="/palestrante/form/<%= palestrante.token_form %>" id="formPalestrante">
         <input type="hidden" name="endereco_pais" id="inputPais" value="">
+        <input type="hidden" name="idioma" id="inputIdioma" value="">
 
         <!-- DADOS PESSOAIS -->
         <div class="form-card">
@@ -390,6 +400,7 @@ async function selecionarPais(pais){
   }
 
   aplicarIdioma(idiomaAtual);
+  document.getElementById('inputIdioma').value = idiomaAtual;
 
   // Mostrar formulário
   document.getElementById('paisScreen').style.display = 'none';
