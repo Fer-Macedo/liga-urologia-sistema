@@ -156,6 +156,7 @@
                     <% if(!conf){ %><form method="POST" action="/inscricoes-pss/candidato/<%=i.id%>/confirmar-manual" style="display:inline" onsubmit="var f=this; confirmarAcao('Confirmar esta inscrição manualmente (ex.: pagamento em dinheiro)? Será atribuído o número e lançado no fluxo de caixa.', function(){ f.submit(); }, {textoConfirmar:'Confirmar', corConfirmar:'#16a34a'}); return false;"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm" style="background:#16a34a;color:#fff">Confirmar</button></form>
                     <form method="POST" action="/inscricoes-pss/candidato/<%=i.id%>/lembrete" style="display:inline" onsubmit="var f=this; confirmarAcao('Enviar e-mail de lembrete a este candidato, oferecendo ajuda para concluir a inscrição?', function(){ f.submit(); }, {textoConfirmar:'Enviar', corConfirmar:'#d97706'}); return false;"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm" style="color:#d97706">Lembrete</button></form><% } else { %>
                     <form method="POST" action="/inscricoes-pss/candidato/<%=i.id%>/reenviar-email" style="display:inline"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm">Reenviar e-mail</button></form><% } %>
+                    <button type="button" class="btn btn-sm" onclick="verInsc(<%=i.id%>)">Visualizar</button>
                     <button type="button" class="btn btn-sm" onclick="editarInsc(<%=i.id%>)">Editar</button>
                     <form method="POST" action="/inscricoes-pss/candidato/<%=i.id%>/excluir" style="display:inline" onsubmit="var f=this; confirmarAcao('Excluir DEFINITIVAMENTE esta inscrição? Esta ação não pode ser desfeita.', function(){ f.submit(); }); return false;"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm" style="color:#b91c1c">Excluir</button></form>
                   </td>
@@ -169,6 +170,46 @@
 </div>
 
 <% if (processo) { %>
+<div class="modal-overlay" id="modal-ver-insc" style="display:none">
+  <div class="modal" style="max-width:540px">
+    <div class="modal-header"><span class="modal-titulo">Dados da Inscrição</span><button class="icon-btn" onclick="fecharModal('modal-ver-insc')">&#x2715;</button></div>
+    <div class="modal-body" style="padding:20px 24px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="label">Nome</label><div id="vi-nome" style="font-weight:600"></div></div>
+        <div><label class="label">Nº de inscrição</label><div id="vi-numero"></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="label">E-mail</label><div id="vi-email"></div></div>
+        <div><label class="label">WhatsApp</label><div id="vi-telefone"></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="label">Documento</label><div id="vi-documento"></div></div>
+        <div><label class="label">Data de nascimento</label><div id="vi-nascimento"></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="label">Curso / Semestre</label><div id="vi-curso"></div></div>
+        <div><label class="label">Turma / Fila / Catraca</label><div id="vi-turma"></div></div>
+      </div>
+      <hr style="border:none;border-top:1px solid var(--borda);margin:4px 0">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="label">Status do pagamento</label><div id="vi-status"></div></div>
+        <div><label class="label">Valor pago</label><div id="vi-valor"></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="label">Cupom</label><div id="vi-cupom"></div></div>
+        <div><label class="label">E-mail de confirmação</label><div id="vi-email-enviado"></div></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><label class="label">Inscrito em</label><div id="vi-criado"></div></div>
+        <div><label class="label">Confirmado em</label><div id="vi-confirmado"></div></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn" onclick="fecharModal('modal-ver-insc')">Fechar</button>
+      <button type="button" class="btn btn-primario" id="vi-btn-editar">Editar</button>
+    </div>
+  </div>
+</div>
 <div class="modal-overlay" id="modal-editar-insc" style="display:none">
   <div class="modal" style="max-width:540px">
     <div class="modal-header"><span class="modal-titulo">Editar Inscrição</span><button class="icon-btn" onclick="fecharModal('modal-editar-insc')">&#x2715;</button></div>
@@ -265,7 +306,28 @@ function filtrarInsc(){
   });
   var sr=document.getElementById('sem-resultado'); if(sr) sr.style.display=(vis===0)?'':'none';
 }
-var INSCRITOS=<%- JSON.stringify(inscritos.map(function(i){return {id:i.id,nome:i.nome,email:i.email,telefone:i.telefone,documento_tipo:i.documento_tipo,documento:i.documento,curso:i.curso,semestre_atual:i.semestre_atual,numero_lista:i.numero_lista,fila_prova:i.fila_prova};})).replace(/</g,'\\u003c') %>;
+var INSCRITOS=<%- JSON.stringify(inscritos.map(function(i){return {id:i.id,nome:i.nome,email:i.email,telefone:i.telefone,documento_tipo:i.documento_tipo,documento:i.documento,curso:i.curso,semestre_atual:i.semestre_atual,numero_lista:i.numero_lista,fila_prova:i.fila_prova,
+  data_nascimento:i.data_nascimento,catraca:i.catraca,turma:i.turma,pagamento_status:i.pagamento_status,valor_pago:i.valor_pago,isento:i.isento,cupom_codigo:i.cupom_codigo,
+  email_confirmacao_enviado:i.email_confirmacao_enviado,criado_em:i.criado_em,confirmado_em:i.confirmado_em};})).replace(/</g,'\\u003c') %>;
+function verInsc(id){
+  var i=INSCRITOS.find(function(x){return x.id===id;}); if(!i)return;
+  document.getElementById('vi-nome').textContent=i.nome||'—';
+  document.getElementById('vi-numero').textContent=i.numero_lista?String(i.numero_lista).padStart(3,'0'):'—';
+  document.getElementById('vi-email').textContent=i.email||'—';
+  document.getElementById('vi-telefone').textContent=i.telefone||'—';
+  document.getElementById('vi-documento').textContent=(i.documento_tipo||'')+' '+(i.documento||'—');
+  document.getElementById('vi-nascimento').textContent=i.data_nascimento?new Date(i.data_nascimento).toLocaleDateString('pt-BR',{timeZone:'UTC'}):'—';
+  document.getElementById('vi-curso').textContent=(i.curso||'—')+(i.semestre_atual?(' / '+i.semestre_atual+'º sem.'):'');
+  document.getElementById('vi-turma').textContent=[i.turma,i.fila_prova?('fila '+i.fila_prova):'',i.catraca].filter(Boolean).join(' / ')||'—';
+  document.getElementById('vi-status').textContent=(i.pagamento_status==='confirmado'?'Confirmado':'Pendente')+(i.isento?' (isento)':'');
+  document.getElementById('vi-valor').textContent=i.valor_pago!=null?('R$ '+(parseFloat(i.valor_pago)||0).toFixed(2).replace('.',',')):'—';
+  document.getElementById('vi-cupom').textContent=i.cupom_codigo||'—';
+  document.getElementById('vi-email-enviado').textContent=i.email_confirmacao_enviado?'Enviado':'Não enviado';
+  document.getElementById('vi-criado').textContent=i.criado_em?new Date(i.criado_em).toLocaleString('pt-BR'):'—';
+  document.getElementById('vi-confirmado').textContent=i.confirmado_em?new Date(i.confirmado_em).toLocaleString('pt-BR'):'—';
+  document.getElementById('vi-btn-editar').onclick=function(){ fecharModal('modal-ver-insc'); editarInsc(id); };
+  abrirModal('modal-ver-insc');
+}
 function editarInsc(id){
   var i=INSCRITOS.find(function(x){return x.id===id;}); if(!i)return;
   document.getElementById('form-editar-insc').action='/inscricoes-pss/candidato/'+id+'/editar';
