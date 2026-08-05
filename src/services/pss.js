@@ -40,7 +40,7 @@ async function enviarEmailConfirmacaoPss(candidatoId) {
       + '<div style="text-align:center;margin:20px 0;padding:20px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0"><p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">Su número de inscripción</p><p style="margin:0;font-size:44px;font-weight:900;color:#1a3d2b;letter-spacing:4px">' + num + '</p><p style="margin:8px 0 0;font-size:12px;color:#94a3b8">Guarde este número. Deberá completarlo en la hoja de respuestas el día del examen.</p></div>'
       + (dataStr ? ('<p><strong>Fecha del examen:</strong> ' + dataStr + (c.local_prova ? (' — ' + c.local_prova) : '') + '</p>') : '')
       + '<p style="margin-top:16px">Atentamente,<br><strong>Comité Organizador — LAURO</strong></p>';
-    await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: c.email, subject: 'Inscripción confirmada — ' + c.processo_nome, html: emailBonito('Inscripción confirmada', corpo), faixaLabel: 'INSCRIPCIÓN CONFIRMADA' });
+    await enviarEmail({ para: c.email, assunto: 'Inscripción confirmada — ' + c.processo_nome, titulo: 'Inscripción confirmada', html: corpo, faixaLabel: 'INSCRIPCIÓN CONFIRMADA' });
     await query("UPDATE ps_candidatos SET email_confirmacao_enviado=true WHERE id=$1", [candidatoId]);
   } catch (e) { console.error('enviarEmailConfirmacaoPss ERRO:', e.message); }
 }
@@ -56,7 +56,7 @@ async function enviarLembretePss(candidatoId) {
       + '<div style="text-align:center;margin:20px 0"><a href="' + link + '" style="display:inline-block;background:#1a3d2b;color:#fff;padding:13px 30px;border-radius:8px;text-decoration:none;font-weight:700">Concluir mi inscripción</a></div>'
       + '<p>Si tuviste algún inconveniente con el pago o necesitás ayuda, respondé este correo y con gusto te asistimos.</p>'
       + '<p style="margin-top:16px">Atentamente,<br><strong>Comité Organizador — LAURO</strong></p>';
-    await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: c.email, subject: 'Complete su inscripción — ' + c.processo_nome, html: emailBonito('¿Necesitás ayuda para concluir tu inscripción?', corpo), faixaLabel: 'INSCRIPCIÓN PENDIENTE' });
+    await enviarEmail({ para: c.email, assunto: 'Complete su inscripción — ' + c.processo_nome, titulo: '¿Necesitás ayuda para concluir tu inscripción?', html: corpo, faixaLabel: 'INSCRIPCIÓN PENDIENTE' });
     return true;
   } catch (e) { console.error('enviarLembretePss ERRO:', e.message); return false; }
 }
@@ -71,7 +71,7 @@ async function enviarEmailBoasVindasPss(candidatoId) {
       + '<p>A partir de ahora formás parte de nuestra comunidad académica. En breve te contactaremos con los detalles de la <strong>jornada de inducción</strong> y los próximos pasos para el inicio de tu trayectoria como ligante.</p>'
       + '<p>¡Te damos la más cordial bienvenida!</p>'
       + '<p style="margin-top:16px">Atentamente,<br><strong>Dirección — LAURO</strong></p>';
-    await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: c.email, subject: '¡Bienvenido/a a la LAURO! 🎉', html: emailBonito('¡Felicitaciones! Fuiste seleccionado/a', corpo), faixaLabel: 'BIENVENIDO A LA LAURO' });
+    await enviarEmail({ para: c.email, assunto: '¡Bienvenido/a a la LAURO! 🎉', titulo: '¡Felicitaciones! Fuiste seleccionado/a', html: corpo, faixaLabel: 'BIENVENIDO A LA LAURO' });
     await query("UPDATE ps_candidatos SET boas_vindas_enviado=NOW() WHERE id=$1", [candidatoId]);
     return true;
   } catch (e) { console.error('enviarEmailBoasVindasPss ERRO:', e.message); return false; }
