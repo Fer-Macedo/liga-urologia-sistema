@@ -1,7 +1,7 @@
 const cron = require('node-cron');
 const dayjs = require('dayjs');
 const { query } = require('../models/database');
-const { criarCobranca, consultarPagamento, consultarCheckout, detectarMetodo, extrairDataPagamento } = require('./pagbank');
+const { criarCobranca, consultarPagamento, consultarCheckout, detectarMetodo, extrairDataPagamento, extrairValorPago } = require('./pagbank');
 const { notificarCobranca, notificarAniversario } = require('./notificacoes');
 
 async function getConfig() {
@@ -152,6 +152,31 @@ async function verificarPagamentos() {
         } catch(e) { console.error('lancar fluxo (cron verificarPagamentos):', e.message); }
       }
     } catch(e) { console.error('PagBank verificar erro:', cob.id, e.message); }
+  }
+}
+
+// Mesma rede de segurança do verificarPagamentos, mas para inscrições do processo seletivo:
+// achado em 2026-08-05 que duas candidatas pagaram o PIX e ficaram "pendente" pra sempre —
+// o webhook do PagBank só chegou 1x (na criação da order), nunca no pagamento em si, e
+// ps_pagamentos não tinha reconciliação nenhuma (só cobrancas tinha).
+async function verificarPagamentosPss() {
+  const r = await query(
+    `SELECT p.candidato_id, p.pagbank_order_id FROM ps_pagamentos p
+     JOIN ps_candidatos c ON c.id=p.candidato_id
+     WHERE p.status='pendente' AND p.pagbank_order_id IS NOT NULL AND c.pagamento_status!='confirmado'`
+  );
+  for (const pag of r.rows) {
+    try {
+      const conf = await consultarPagamento(pag.pagbank_order_id);
+      if (conf.ok && conf.status === 'PAID') {
+        const charges = conf.data.charges || [];
+        const valorPago = extrairValorPago(charges);
+        const metodo = detectarMetodo(charges);
+        const { confirmarInscricaoPss } = require('./pss');
+        await confirmarInscricaoPss(pag.candidato_id, { orderId: pag.pagbank_order_id, valorPago, metodo });
+        console.log('PagBank inscrição PSS confirmada via cron:', pag.candidato_id, pag.pagbank_order_id);
+      }
+    } catch(e) { console.error('PagBank verificar PSS erro:', pag.candidato_id, e.message); }
   }
 }
 
@@ -571,6 +596,7 @@ function iniciarAgendamentos() {
   // A cada 3min — verificar pagamentos (sem WhatsApp)
   cron.schedule('*/3 * * * *', async () => {
     try { await verificarPagamentos(); } catch(e) { console.error('Verificar pagamentos erro:', e.message); }
+    try { await verificarPagamentosPss(); } catch(e) { console.error('Verificar pagamentos PSS erro:', e.message); }
   }, { timezone: 'America/Asuncion' });
 
   // Último dia do mês às 20h — frequência mensal
@@ -686,6 +712,7 @@ module.exports = {
   iniciarAgendamentos,
   gerarCobrancasMes,
   verificarPagamentos,
+  verificarPagamentosPss,
   atualizarPixAtrasados,
   logNotificacao,
   enviarFrequenciaMensal,

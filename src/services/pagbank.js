@@ -139,7 +139,7 @@ async function criarCobranca({ membro, valor, vencimento, referencia }) {
       const qr = data.qr_codes[0];
       pixText = qr.text || null;
       if (qr.links) {
-        const png = qr.links.find(l => l.rel === 'QRCODE_PNG');
+        const png = qr.links.find(l => l.rel === 'QRCODE.PNG');
         pixQrImage = png ? png.href : null;
       }
     }
@@ -220,7 +220,7 @@ async function criarPixEvento({ inscricao, lote, eventoNome }) {
       const qr = data.qr_codes[0];
       pixText = qr.text || null;
       if (qr.links) {
-        const png = qr.links.find(l => l.rel === 'QRCODE_PNG');
+        const png = qr.links.find(l => l.rel === 'QRCODE.PNG');
         pixQrImage = png ? png.href : null;
       }
     }
@@ -457,7 +457,7 @@ async function criarPixPss({ candidato, valor, processoNome }) {
       notification_urls: [APP_URL + '/webhook/pagbank']
     }, { headers: headers(), timeout: 15000 });
     let pixText = null, pixQrImage = null;
-    if (data.qr_codes && data.qr_codes.length) { const qr = data.qr_codes[0]; pixText = qr.text || null; if (qr.links) { const png = qr.links.find(l => l.rel === 'QRCODE_PNG'); pixQrImage = png ? png.href : null; } }
+    if (data.qr_codes && data.qr_codes.length) { const qr = data.qr_codes[0]; pixText = qr.text || null; if (qr.links) { const png = qr.links.find(l => l.rel === 'QRCODE.PNG'); pixQrImage = png ? png.href : null; } }
     const checkoutLink = await criarCheckoutLink({ nome: candidato.nome, email: candidato.email, cpf: candidato.cpf, valor, referencia, descricao: desc, expDate });
     return { ok: true, order_id: data.id, pix_copia_cola: pixText, pix_qr_image: pixQrImage, checkout_link: checkoutLink };
   } catch (err) {
