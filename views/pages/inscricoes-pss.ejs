@@ -150,7 +150,7 @@
                   <td><%= (i.documento_tipo||'')+' '+(i.documento||'') %></td>
                   <td style="font-size:12px"><%=i.email%></td>
                   <td style="font-size:12px;white-space:nowrap"><%= i.criado_em ? new Date(i.criado_em).toLocaleDateString('pt-BR') : '—' %></td>
-                  <td><span class="badge <%=conf?'ok':'pd'%>"><%= conf?'Confirmado':'Pendente' %></span><%= i.isento?' <span class="badge" style="background:#e0e7ff;color:#3730a3">isento</span>':'' %></td>
+                  <td><span class="badge <%=conf?'ok':'pd'%>"><%= conf?'Confirmado':'Pendente' %></span><%- i.isento?' <span class="badge" style="background:#e0e7ff;color:#3730a3">isento</span>':'' %></td>
                   <td><%= i.valor_pago!=null ? ('R$ '+(parseFloat(i.valor_pago)||0).toFixed(2).replace('.',',')) : '—' %></td>
                   <td style="white-space:nowrap">
                     <% if(!conf){ %><form method="POST" action="/inscricoes-pss/candidato/<%=i.id%>/confirmar-manual" style="display:inline" onsubmit="var f=this; confirmarAcao('Confirmar esta inscrição manualmente (ex.: pagamento em dinheiro)? Será atribuído o número e lançado no fluxo de caixa.', function(){ f.submit(); }, {textoConfirmar:'Confirmar', corConfirmar:'#16a34a'}); return false;"><input type="hidden" name="processo_id" value="<%=processo.id%>"><button class="btn btn-sm" style="background:#16a34a;color:#fff">Confirmar</button></form>
