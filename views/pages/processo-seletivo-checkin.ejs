@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Check-in — <%= processo.nome %></title>
+  <link rel="stylesheet" href="/css/style.css">
+  <link rel="stylesheet" href="/css/admin-modern.css">
+  <link rel="stylesheet" href="/css/tema-lauro.css">
+  <style>
+    :root { --cor-primaria: <%= config.org_cor || '#1a56db' %>; }
+
+    .checkin-panel {
+      background: var(--card);
+      border: 1px solid var(--borda);
+      border-radius: 16px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .checkin-panel-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--borda);
+      font-size: 15px;
+      font-weight: 700;
+      font-family: 'Outfit', sans-serif;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .checkin-panel-body { padding: 24px; }
+
+    .ocasiao-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+    .ocasiao-tab {
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: 2px solid var(--borda);
+      background: var(--card);
+      color: var(--texto);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: 'Outfit', sans-serif;
+    }
+    .ocasiao-tab.ativo { border-color: #16a34a; background: #dcfce7; color: #166534; }
+
+    .checkin-input-wrap { display: flex; gap: 10px; margin-bottom: 16px; }
+    .checkin-input {
+      flex: 1;
+      font-size: 16px;
+      padding: 12px 16px;
+      border: 2px solid var(--borda);
+      border-radius: 10px;
+      background: var(--card);
+      color: var(--texto);
+      font-family: 'Outfit', sans-serif;
+    }
+    .checkin-input:focus { outline: none; border-color: var(--cor-primaria); }
+
+    .resultado {
+      padding: 16px 20px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      display: none;
+      align-items: center;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .resultado.ok   { background: #dcfce7; color: #166534; display: flex; }
+    .resultado.erro { background: #fee2e2; color: #991b1b; display: flex; }
+
+    .camera-wrap {
+      position: relative;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      max-width: 360px;
+      margin: 0 auto 16px;
+      display: none;
+    }
+    .camera-wrap.ativo { display: block; }
+    #video-qr { width: 100%; display: block; border-radius: 12px; }
+    .camera-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+    .camera-frame {
+      width: 200px; height: 200px;
+      border: 3px solid #16a34a;
+      border-radius: 12px;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.4);
+    }
+
+    .table-moderna { background: var(--card); border: 1px solid var(--borda); border-radius: 14px; overflow: hidden; }
+    .table-moderna table { width: 100%; border-collapse: collapse; }
+    .table-moderna thead th {
+      background: var(--fundo);
+      padding: 11px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--texto2);
+      text-align: left;
+      border-bottom: 1px solid var(--borda);
+    }
+    .table-moderna tbody tr { border-bottom: 1px solid var(--borda); }
+    .table-moderna tbody tr:last-child { border-bottom: none; }
+    .table-moderna tbody tr:hover { background: var(--fundo); }
+    .table-moderna tbody td { padding: 11px 14px; font-size: 13px; color: var(--texto); vertical-align: middle; }
+
+    .badge-checkin {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 700;
+      border: none; cursor: pointer; font-family: inherit;
+    }
+    .badge-checkin.ok   { background: #dcfce7; color: #166534; }
+    .badge-checkin.wait { background: #fef3c7; color: #92400e; }
+
+    .busca-input {
+      padding: 7px 12px; border: 1px solid var(--borda); border-radius: 8px;
+      background: var(--fundo); font-size: 13px; color: var(--texto); width: 260px;
+    }
+    .busca-input:focus { outline: none; border-color: var(--cor-primaria); }
+
+    .flash-ok {
+      position: fixed; inset: 0; background: rgba(22,163,74,.18); z-index: 9999;
+      pointer-events: none; opacity: 0; transition: opacity .1s;
+    }
+    .flash-ok.show { opacity: 1; }
+  </style>
+</head>
+<body>
+<div class="flash-ok" id="flash"></div>
+<div class="layout">
+  <%- include('../partials/sidebar', { paginaAtual: 'processo-seletivo' }) %>
+  <main class="main">
+    <div class="topbar">
+      <h1 class="page-titulo">Check-in — <%= processo.nome %></h1>
+      <div class="topbar-acoes">
+        <a href="/processo-seletivo" class="btn btn-sm">Voltar</a>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <div class="checkin-panel">
+        <div class="checkin-panel-header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Registrar presença
+        </div>
+        <div class="checkin-panel-body">
+
+          <div class="ocasiao-tabs" id="ocasiao-tabs">
+            <% Object.keys(ocasioes).forEach((k, i) => { %>
+            <button type="button" class="ocasiao-tab <%= i===0 ? 'ativo' : '' %>" data-ocasiao="<%= k %>" onclick="selecionarOcasiao('<%= k %>', this)"><%= ocasioes[k] %></button>
+            <% }) %>
+          </div>
+
+          <div class="camera-wrap" id="camera-wrap">
+            <video id="video-qr" autoplay playsinline muted></video>
+            <div class="camera-overlay"><div class="camera-frame"></div></div>
+            <canvas id="canvas-qr" style="display:none"></canvas>
+          </div>
+
+          <div class="checkin-input-wrap">
+            <input type="text" class="checkin-input" id="busca-checkin"
+              placeholder="Digite o nome, número de inscrição ou código do QR..."
+              autofocus autocomplete="off">
+            <button class="btn btn-primario" onclick="fazerCheckin()" style="white-space:nowrap">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Check-in
+            </button>
+            <button class="btn" id="btn-camera" onclick="toggleCamera()" title="Usar câmera" style="padding:10px 14px">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            </button>
+          </div>
+
+          <div class="resultado" id="resultado">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" id="resultado-icon"><polyline points="20 6 9 17 4 12"/></svg>
+            <span id="resultado-texto"></span>
+          </div>
+
+          <div style="font-size:12px;color:var(--texto2);margin-top:12px">
+            Escolha a ocasião acima, depois digite o nome/número/QR do candidato e pressione Enter — ou use a câmera para ler o QR do e-mail de confirmação.
+          </div>
+        </div>
+      </div>
+
+      <div class="table-moderna">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+          <span style="font-size:14px;font-weight:700;font-family:'Outfit',sans-serif">Candidatos confirmados</span>
+          <input type="text" class="busca-input" placeholder="Buscar na lista..." oninput="buscarLista(this.value)">
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Nº</th>
+              <th>Nome</th>
+              <% Object.keys(ocasioes).forEach(k => { %><th><%= ocasioes[k] %></th><% }) %>
+            </tr>
+          </thead>
+          <tbody id="tbody-lista">
+            <% candidatos.forEach(c => { %>
+            <tr data-busca="<%= (c.nome + ' ' + (c.numero_lista||'')).toLowerCase() %>">
+              <td><%= c.numero_lista || '—' %></td>
+              <td style="font-weight:600"><%= c.nome %></td>
+              <% Object.keys(ocasioes).forEach(k => { %>
+                <td>
+                  <% if (c.ocasioes_feitas.includes(k)) { %>
+                    <span class="badge-checkin ok">
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      OK
+                    </span>
+                  <% } else { %>
+                    <form method="POST" action="/processo-seletivo/<%= processo.id %>/checkin/<%= c.id %>" style="display:inline;margin:0">
+                      <input type="hidden" name="ocasiao" value="<%= k %>">
+                      <button type="submit" class="badge-checkin wait">Marcar</button>
+                    </form>
+                  <% } %>
+                </td>
+              <% }) %>
+            </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script>
+const processoId = '<%= processo.id %>';
+let ocasiaoAtual = '<%= Object.keys(ocasioes)[0] %>';
+let cameraAtiva = false;
+let stream = null;
+let scanInterval = null;
+
+function selecionarOcasiao(k, btn) {
+  ocasiaoAtual = k;
+  document.querySelectorAll('#ocasiao-tabs .ocasiao-tab').forEach(b => b.classList.remove('ativo'));
+  btn.classList.add('ativo');
+  document.getElementById('busca-checkin').focus();
+}
+
+function fazerCheckin(codigo) {
+  const busca = codigo || document.getElementById('busca-checkin').value.trim();
+  if (!busca) return;
+  fetch('/processo-seletivo/' + processoId + '/checkin/buscar', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ busca, ocasiao: ocasiaoAtual })
+  })
+  .then(r => r.json())
+  .then(data => {
+    mostrarResultado(data.ok, data.msg);
+    if (data.ok) {
+      document.getElementById('busca-checkin').value = '';
+      flashVerde();
+      setTimeout(() => location.reload(), 2000);
+    }
+  })
+  .catch(() => mostrarResultado(false, 'Erro de conexão.'));
+}
+
+function mostrarResultado(ok, msg) {
+  const res = document.getElementById('resultado');
+  const icon = document.getElementById('resultado-icon');
+  const txt = document.getElementById('resultado-texto');
+  res.className = 'resultado ' + (ok ? 'ok' : 'erro');
+  txt.textContent = msg;
+  icon.innerHTML = ok
+    ? '<path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>'
+    : '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>';
+}
+
+function flashVerde() {
+  const f = document.getElementById('flash');
+  f.classList.add('show');
+  setTimeout(() => f.classList.remove('show'), 400);
+}
+
+function buscarLista(termo) {
+  const t = termo.toLowerCase();
+  document.querySelectorAll('#tbody-lista tr[data-busca]').forEach(r => {
+    r.style.display = !t || r.dataset.busca.includes(t) ? '' : 'none';
+  });
+}
+
+async function toggleCamera() {
+  const btn = document.getElementById('btn-camera');
+  const wrap = document.getElementById('camera-wrap');
+  if (!cameraAtiva) {
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      document.getElementById('video-qr').srcObject = stream;
+      wrap.classList.add('ativo');
+      btn.style.background = '#16a34a';
+      btn.style.color = 'white';
+      cameraAtiva = true;
+      iniciarScan();
+    } catch(e) {
+      alert('Não foi possível acessar a câmera. Verifique as permissões do navegador.');
+    }
+  } else {
+    pararCamera();
+  }
+}
+
+function iniciarScan() {
+  const video = document.getElementById('video-qr');
+  const canvas = document.getElementById('canvas-qr');
+  const ctx = canvas.getContext('2d');
+  scanInterval = setInterval(() => {
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+      if (code && code.data) {
+        pararCamera();
+        fazerCheckin(code.data);
+      }
+    }
+  }, 300);
+}
+
+function pararCamera() {
+  clearInterval(scanInterval);
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  document.getElementById('camera-wrap').classList.remove('ativo');
+  const btn = document.getElementById('btn-camera');
+  btn.style.background = '';
+  btn.style.color = '';
+  cameraAtiva = false;
+  stream = null;
+}
+
+document.getElementById('busca-checkin').addEventListener('keypress', e => {
+  if (e.key === 'Enter') fazerCheckin();
+});
+document.getElementById('busca-checkin').focus();
+</script>
+</body>
+</html>

@@ -6,6 +6,56 @@ const { query } = require('../models/database');
 const { enviarEmail } = require('./notificacoes');
 const { lancarPssNoFluxo } = require('./fluxo-pss');
 
+// Check-in de presença: mesmo padrão já usado em eventos.js (evento_inscricoes.qrcode +
+// api.qrserver.com, sem lib nova), mas com múltiplas ocasiões por candidato (ps_checkins)
+// em vez de 1 checkin_em só, porque o PSS tem vários dias de presença (aula magna, prova...).
+const OCASIOES_PSS = { aula_magna: 'Aula Magna', prova: 'Prueba', entrevista: 'Entrevista' };
+
+async function _garantirQrcodePss(c) {
+  if (c.qrcode) return c.qrcode;
+  const qrcode = 'PSS-' + c.processo_id + '-' + c.id + '-' + Date.now();
+  await query("UPDATE ps_candidatos SET qrcode=$2 WHERE id=$1", [c.id, qrcode]);
+  return qrcode;
+}
+
+async function listarCandidatosCheckin(processoId) {
+  const r = await query(
+    `SELECT c.id, c.nome, c.email, c.numero_lista, c.qrcode,
+       COALESCE(json_agg(k.ocasiao) FILTER (WHERE k.id IS NOT NULL), '[]') AS ocasioes_feitas
+     FROM ps_candidatos c
+     LEFT JOIN ps_checkins k ON k.candidato_id=c.id
+     WHERE c.processo_id=$1 AND c.pagamento_status='confirmado'
+     GROUP BY c.id ORDER BY c.numero_lista`,
+    [processoId]
+  );
+  return r.rows;
+}
+
+async function buscarCandidatoCheckin(processoId, termo) {
+  const t = '%' + String(termo || '').toLowerCase() + '%';
+  const r = await query(
+    `SELECT c.id, c.nome, c.numero_lista, c.qrcode,
+       COALESCE(json_agg(k.ocasiao) FILTER (WHERE k.id IS NOT NULL), '[]') AS ocasioes_feitas
+     FROM ps_candidatos c
+     LEFT JOIN ps_checkins k ON k.candidato_id=c.id
+     WHERE c.processo_id=$1 AND c.pagamento_status='confirmado'
+       AND (LOWER(c.nome) LIKE $2 OR c.qrcode=$3 OR CAST(c.numero_lista AS TEXT)=$3)
+     GROUP BY c.id LIMIT 1`,
+    [processoId, t, String(termo || '')]
+  );
+  return r.rows[0] || null;
+}
+
+// Idempotente (UNIQUE candidato_id+ocasiao): reenviar o mesmo checkin não duplica nem falha.
+async function marcarPresencaPss(candidatoId, ocasiao, usuarioId) {
+  if (!OCASIOES_PSS[ocasiao]) throw new Error('Ocasião inválida.');
+  await query(
+    `INSERT INTO ps_checkins (candidato_id, ocasiao, checkin_por) VALUES ($1,$2,$3)
+     ON CONFLICT (candidato_id, ocasiao) DO NOTHING`,
+    [candidatoId, ocasiao, usuarioId || null]
+  );
+}
+
 // Próximo número de inscrição (1..999) do processo. ponytail: MAX+1 (sequencial, sem
 // reuso). Volume baixo -> corrida de concorrência ignorada; se virar problema, usar lock.
 async function _pssProximoNumero(processoId) {
@@ -36,9 +86,11 @@ async function enviarEmailConfirmacaoPss(candidatoId) {
     if (!c || !c.email) return;
     const dataStr = c.data_prova ? new Date(c.data_prova).toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric', timeZone: 'UTC' }) : '';
     const num = String(c.numero_lista || '').padStart(3, '0');
+    const qrcode = await _garantirQrcodePss(c);
     const corpo = '<p>Estimado/a <strong>' + (c.nome || '').split(' ')[0] + '</strong>,</p><p>Confirmamos su inscripción al proceso selectivo <strong>' + c.processo_nome + '</strong>.</p>'
       + '<div style="text-align:center;margin:20px 0;padding:20px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0"><p style="margin:0 0 6px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">Su número de inscripción</p><p style="margin:0;font-size:44px;font-weight:900;color:#1a3d2b;letter-spacing:4px">' + num + '</p><p style="margin:8px 0 0;font-size:12px;color:#94a3b8">Guarde este número. Deberá completarlo en la hoja de respuestas el día del examen.</p></div>'
       + (dataStr ? ('<p><strong>Fecha del examen:</strong> ' + dataStr + (c.local_prova ? (' — ' + c.local_prova) : '') + '</p>') : '')
+      + '<div style="text-align:center;margin:20px 0"><p style="margin:0 0 8px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">Su código de asistencia</p><img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=' + encodeURIComponent(qrcode) + '" alt="QR Code" style="width:160px;height:160px;border-radius:8px"><p style="margin:8px 0 0;font-size:12px;color:#94a3b8">Presente este código QR en cada día del proceso (aula magna, prueba, entrevista) para registrar su presencia.</p></div>'
       + '<p style="margin-top:16px">Atentamente,<br><strong>Comité Organizador — LAURO</strong></p>';
     await enviarEmail({ para: c.email, assunto: 'Inscripción confirmada — ' + c.processo_nome, titulo: 'Inscripción confirmada', html: corpo, faixaLabel: 'INSCRIPCIÓN CONFIRMADA' });
     await query("UPDATE ps_candidatos SET email_confirmacao_enviado=true WHERE id=$1", [candidatoId]);
@@ -84,5 +136,9 @@ module.exports = {
   confirmarInscricaoPss,
   enviarEmailConfirmacaoPss,
   enviarLembretePss,
-  enviarEmailBoasVindasPss
+  enviarEmailBoasVindasPss,
+  OCASIOES_PSS,
+  listarCandidatosCheckin,
+  buscarCandidatoCheckin,
+  marcarPresencaPss
 };

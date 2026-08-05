@@ -110,6 +110,17 @@ async function initSchema() {
     ALTER TABLE cartas_cobranca ADD COLUMN IF NOT EXISTS meses_json TEXT;
     -- ponytail: IF EXISTS pq as tabelas ps_* vivem só no banco (não há CREATE no código)
     ALTER TABLE IF EXISTS ps_processos ADD COLUMN IF NOT EXISTS edital_chave TEXT;
+    -- check-in de presença do PSS (aula magna, prova, entrevista): qrcode gerado sob demanda
+    -- no e-mail de confirmação; ps_checkins registra 1 presença por candidato+ocasião
+    ALTER TABLE IF EXISTS ps_candidatos ADD COLUMN IF NOT EXISTS qrcode TEXT;
+    CREATE TABLE IF NOT EXISTS ps_checkins (
+      id SERIAL PRIMARY KEY,
+      candidato_id INTEGER NOT NULL,
+      ocasiao TEXT NOT NULL,
+      checkin_em TIMESTAMP NOT NULL DEFAULT NOW(),
+      checkin_por INTEGER REFERENCES usuarios(id),
+      UNIQUE(candidato_id, ocasiao)
+    );
 
     CREATE TABLE IF NOT EXISTS cadastro_correcoes (
       id SERIAL PRIMARY KEY,

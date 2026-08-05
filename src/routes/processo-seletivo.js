@@ -12,7 +12,8 @@ const { enviarEmail } = require('../services/notificacoes');
 const omr = require('../services/omr');
 const {
   _pssProximoNumero, confirmarInscricaoPss, enviarEmailConfirmacaoPss,
-  enviarLembretePss, enviarEmailBoasVindasPss
+  enviarLembretePss, enviarEmailBoasVindasPss,
+  OCASIOES_PSS, listarCandidatosCheckin, buscarCandidatoCheckin, marcarPresencaPss
 } = require('../services/pss');
 
 module.exports = function (router) {
@@ -296,6 +297,40 @@ module.exports = function (router) {
       }
       res.json({ ok: true, enviados, falhas });
     } catch (e) { res.json({ ok: false, erro: e.message }); }
+  });
+  // Check-in de presença (aula magna, prova, entrevista) — QR enviado no e-mail de confirmação
+  router.get('/processo-seletivo/:id/checkin', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
+    try {
+      const config = await getConfig();
+      const msg = req.session.msg || []; req.session.msg = [];
+      const [procR, candidatos] = await Promise.all([
+        query('SELECT * FROM ps_processos WHERE id=$1', [req.params.id]),
+        listarCandidatosCheckin(req.params.id)
+      ]);
+      if (!procR.rows[0]) { req.session.erro = ['Processo não encontrado.']; return res.redirect('/processo-seletivo'); }
+      res.render('pages/processo-seletivo-checkin', {
+        config, usuario: req.session.usuario, msg, erro: [],
+        processo: procR.rows[0], candidatos, ocasioes: OCASIOES_PSS
+      });
+    } catch (e) { req.session.erro = ['Erro: ' + e.message]; res.redirect('/processo-seletivo'); }
+  });
+  router.post('/processo-seletivo/:id/checkin/buscar', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
+    try {
+      const { busca, ocasiao } = req.body;
+      if (!OCASIOES_PSS[ocasiao]) return res.json({ ok: false, msg: 'Ocasião inválida.' });
+      const c = await buscarCandidatoCheckin(req.params.id, busca);
+      if (!c) return res.json({ ok: false, msg: 'Candidato não encontrado.' });
+      if (c.ocasioes_feitas.includes(ocasiao)) return res.json({ ok: false, msg: c.nome + ' já tem presença registrada em ' + OCASIOES_PSS[ocasiao] + '.' });
+      await marcarPresencaPss(c.id, ocasiao, req.session.usuario.id);
+      res.json({ ok: true, msg: 'Presença registrada: ' + c.nome + ' — ' + OCASIOES_PSS[ocasiao], nome: c.nome });
+    } catch (e) { res.json({ ok: false, msg: 'Erro: ' + e.message }); }
+  });
+  router.post('/processo-seletivo/:id/checkin/:candidatoId', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
+    try {
+      await marcarPresencaPss(req.params.candidatoId, req.body.ocasiao, req.session.usuario.id);
+      req.session.msg = ['Presença registrada!'];
+    } catch (e) { req.session.erro = ['Erro: ' + e.message]; }
+    res.redirect('/processo-seletivo/' + req.params.id + '/checkin');
   });
   router.get('/processo-seletivo/:id/perguntas-entrevista', requireAuth, requirePermissao('processo-seletivo'), async (req, res) => {
     try {
