@@ -23,6 +23,18 @@
     .ok .num{font-size:52px;font-weight:900;color:var(--cor);letter-spacing:5px;margin:10px 0;}
     .spin{display:inline-block;width:16px;height:16px;border:2px solid #cbd5e1;border-top-color:var(--cor);border-radius:50%;animation:s 1s linear infinite;vertical-align:middle;margin-right:6px;}
     @keyframes s{to{transform:rotate(360deg)}}
+    .tabs{display:flex;gap:8px;margin:16px 0 4px;}
+    .tab{flex:1;padding:10px;border-radius:8px;border:2px solid #e2e8f0;background:#fff;color:#64748b;font-size:13px;font-weight:700;cursor:pointer;text-align:center;}
+    .tab.ativo{border-color:var(--cor);color:var(--cor);background:#f8fafc;}
+    #bloco-pix,#bloco-cartao{display:none;text-align:left;}
+    #bloco-pix.show,#bloco-cartao.show{display:block;}
+    .campo{margin:10px 0;text-align:left;}
+    .campo label{display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+    .campo input,.campo select{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:8px;font-size:14px;font-family:monospace;color:#0f172a;}
+    .campo-2{display:flex;gap:10px;}
+    .campo-2 .campo{flex:1;margin:10px 0;}
+    .erro-cartao{display:none;background:#fee2e2;color:#991b1b;border-radius:8px;padding:10px 12px;font-size:12.5px;font-weight:600;margin-top:10px;text-align:left;}
+    .erro-cartao.show{display:block;}
   </style>
 </head>
 <body>
@@ -32,17 +44,52 @@
       <div id="pend">
         <div class="valor">R$ <%= (parseFloat(valor)||0).toFixed(2).replace('.',',') %></div>
         <p class="mut" style="margin-top:0">Inscripción de <strong><%= candidato.nome %></strong></p>
-        <% if (pixData && (pixData.pix_qr_image || pixData.pix_copia_cola)) { %>
-          <p style="margin-top:16px;font-weight:700;color:#0f172a">Escaneá el QR con tu app de banco (PIX)</p>
-          <% if (pixData.pix_qr_image) { %><img class="qr" src="<%= pixData.pix_qr_image %>" alt="PIX QR"><% } %>
-          <% if (pixData.pix_copia_cola) { %>
-            <div class="cc" id="cc"><%= pixData.pix_copia_cola %></div>
-            <button class="btn" onclick="navigator.clipboard.writeText(document.getElementById('cc').textContent);this.textContent='✅ Copiado';">Copiar código PIX</button>
+        <div class="tabs">
+          <div class="tab ativo" id="tab-pix" onclick="selecionarAba('pix')">PIX</div>
+          <div class="tab" id="tab-cartao" onclick="selecionarAba('cartao')">Tarjeta de crédito</div>
+        </div>
+
+        <div id="bloco-pix" class="show">
+          <% if (pixData && (pixData.pix_qr_image || pixData.pix_copia_cola)) { %>
+            <p style="margin-top:16px;font-weight:700;color:#0f172a">Escaneá el QR con tu app de banco (PIX)</p>
+            <% if (pixData.pix_qr_image) { %><img class="qr" src="<%= pixData.pix_qr_image %>" alt="PIX QR"><% } %>
+            <% if (pixData.pix_copia_cola) { %>
+              <div class="cc" id="cc"><%= pixData.pix_copia_cola %></div>
+              <button class="btn" onclick="navigator.clipboard.writeText(document.getElementById('cc').textContent);this.textContent='✅ Copiado';">Copiar código PIX</button>
+            <% } %>
+          <% } else { %>
+            <p style="color:#b91c1c;margin-top:16px">No se pudo generar el pago. Contactá a la organización.</p>
           <% } %>
-        <% } else { %>
-          <p style="color:#b91c1c;margin-top:16px">No se pudo generar el pago. Contactá a la organización.</p>
-        <% } %>
-        <div class="status"><span class="spin"></span>Esperando confirmación del pago…</div>
+        </div>
+
+        <div id="bloco-cartao">
+          <div class="campo">
+            <label>Número de la tarjeta</label>
+            <input type="text" id="cc-num" maxlength="19" placeholder="0000 0000 0000 0000" oninput="fmtCartao(this)" autocomplete="cc-number">
+          </div>
+          <div class="campo">
+            <label>Titular de la tarjeta</label>
+            <input type="text" id="cc-nome" placeholder="NOMBRE COMO EN LA TARJETA" style="text-transform:uppercase;font-family:inherit" oninput="this.value=this.value.toUpperCase()" autocomplete="cc-name">
+          </div>
+          <div class="campo-2">
+            <div class="campo">
+              <label>Vencimiento</label>
+              <input type="text" id="cc-exp" maxlength="5" placeholder="MM/AA" oninput="fmtExp(this)" autocomplete="cc-exp">
+            </div>
+            <div class="campo">
+              <label>CVV</label>
+              <input type="text" id="cc-cvv" maxlength="4" placeholder="•••" autocomplete="cc-csc">
+            </div>
+          </div>
+          <div class="campo">
+            <label>CPF del titular</label>
+            <input type="text" id="cc-cpf" maxlength="14" placeholder="000.000.000-00" oninput="fmtCpf(this)">
+          </div>
+          <div class="erro-cartao" id="erro-cartao"></div>
+          <button class="btn" id="btn-pagar-cartao" onclick="pagarCartao()">Pagar R$ <%= (parseFloat(valor)||0).toFixed(2).replace('.',',') %></button>
+        </div>
+
+        <div class="status" id="status-espera"><span class="spin"></span>Esperando confirmación del pago…</div>
         <p class="mut">Después de pagar, esta página se actualiza sola. Podés cerrarla; la confirmación llega por correo.</p>
       </div>
       <div class="ok" id="ok">
@@ -59,6 +106,50 @@ var CID=<%= candidato.id %>, jaConf=<%= candidato.pagamento_status==='confirmado
 function mostrarOk(numero){ document.getElementById('pend').style.display='none'; var ok=document.getElementById('ok'); ok.style.display='block'; document.getElementById('num').textContent=numero?String(numero).padStart(3,'0'):'—'; }
 function checar(){ fetch('/pss/pagamento/'+CID+'/status',{credentials:'same-origin'}).then(r=>r.json()).then(d=>{ if(d.confirmado){ mostrarOk(d.numero); } else setTimeout(checar,4000); }).catch(()=>setTimeout(checar,6000)); }
 if(jaConf){ fetch('/pss/pagamento/'+CID+'/status').then(r=>r.json()).then(d=>mostrarOk(d.numero)); } else checar();
+
+function selecionarAba(aba){
+  document.getElementById('tab-pix').classList.toggle('ativo', aba==='pix');
+  document.getElementById('tab-cartao').classList.toggle('ativo', aba==='cartao');
+  document.getElementById('bloco-pix').classList.toggle('show', aba==='pix');
+  document.getElementById('bloco-cartao').classList.toggle('show', aba==='cartao');
+  document.getElementById('status-espera').style.display = aba==='pix' ? 'block' : 'none';
+}
+document.getElementById('status-espera').style.display='block';
+
+function fmtCartao(el){ var v=el.value.replace(/\D/g,'').substring(0,16); el.value=v.replace(/(\d{4})(?=\d)/g,'$1 '); }
+function fmtExp(el){ var v=el.value.replace(/\D/g,''); if(v.length>=2) v=v.substring(0,2)+'/'+v.substring(2,4); el.value=v; }
+function fmtCpf(el){ var v=el.value.replace(/\D/g,'').substring(0,11); v=v.replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d)/,'$1.$2').replace(/(\d{3})(\d{1,2})$/,'$1-$2'); el.value=v; }
+
+function mostrarErroCartao(msg){ var el=document.getElementById('erro-cartao'); el.textContent=msg; el.className='erro-cartao show'; }
+
+async function pagarCartao(){
+  var num=document.getElementById('cc-num').value.replace(/\D/g,'');
+  var nome=document.getElementById('cc-nome').value.trim();
+  var exp=document.getElementById('cc-exp').value;
+  var cvv=document.getElementById('cc-cvv').value.replace(/\D/g,'');
+  var cpf=document.getElementById('cc-cpf').value.replace(/\D/g,'');
+
+  if(num.length<13) return mostrarErroCartao('Número de la tarjeta inválido.');
+  if(nome.length<3) return mostrarErroCartao('Ingrese el nombre como está en la tarjeta.');
+  if(exp.length<5) return mostrarErroCartao('Vencimiento inválido.');
+  if(cvv.length<3) return mostrarErroCartao('CVV inválido.');
+  if(cpf.length<11) return mostrarErroCartao('CPF del titular inválido.');
+
+  var partes=exp.split('/'), mes=parseInt(partes[0]), ano=2000+parseInt(partes[1]);
+  var btn=document.getElementById('btn-pagar-cartao');
+  btn.disabled=true; btn.textContent='Procesando…';
+  document.getElementById('erro-cartao').className='erro-cartao';
+
+  try{
+    var r=await fetch('/pss/pagamento/'+CID+'/cartao',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({num:num, nome:nome, mes:mes, ano:ano, cvv:cvv, cpf:cpf})
+    });
+    var data=await r.json();
+    if(data.ok){ mostrarOk(data.numero); }
+    else { btn.disabled=false; btn.textContent='Pagar'; mostrarErroCartao(data.erro||'Pago rechazado. Verifique los datos e intente nuevamente.'); }
+  }catch(e){ btn.disabled=false; btn.textContent='Pagar'; mostrarErroCartao('Error de conexión. Intente nuevamente.'); }
+}
 </script>
 </body>
 </html>
