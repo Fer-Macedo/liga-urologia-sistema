@@ -15,6 +15,22 @@ const {
   enviarLembretePss, enviarEmailBoasVindasPss,
   OCASIOES_PSS, listarCandidatosCheckin, buscarCandidatoCheckin, marcarPresencaPss
 } = require('../services/pss');
+const { calcularLiquidoPss } = require('../services/fluxo-pss');
+
+// "Arrecadado (líq.)": soma o valor já líquido (taxa do PagBank descontada) de cada
+// confirmado — o mesmo cálculo que vira lançamento real no fluxo de caixa (fluxo-pss.js).
+// Isento (bruto=0) não precisa do método de pagamento: não teve pagamento, líquido é 0.
+async function _arrecadadoLiquidoPss(inscritos) {
+  const comValor = inscritos.filter(i => i.pagamento_status === 'confirmado' && (parseFloat(i.valor_pago) || 0) > 0);
+  let metodosPorCandidato = {};
+  if (comValor.length) {
+    const pgR = await query("SELECT candidato_id, metodo FROM ps_pagamentos WHERE candidato_id = ANY($1::int[]) AND status='pago'", [comValor.map(i => i.id)]);
+    pgR.rows.forEach(p => { metodosPorCandidato[p.candidato_id] = p.metodo; });
+  }
+  let arrecadado = 0;
+  comValor.forEach(i => { arrecadado += calcularLiquidoPss(i.valor_pago, metodosPorCandidato[i.id]); });
+  return arrecadado;
+}
 
 module.exports = function (router) {
 
@@ -754,7 +770,8 @@ module.exports = function (router) {
         inscritos = (await query("SELECT * FROM ps_candidatos WHERE processo_id=$1 ORDER BY (pagamento_status='confirmado') DESC, numero_lista NULLS LAST, criado_em DESC", [selId])).rows;
         cupons = (await query("SELECT ec.*, c.nome AS usado_nome FROM ps_cupons ec LEFT JOIN ps_candidatos c ON c.id=ec.usado_por_candidato_id WHERE ec.processo_id=$1 ORDER BY ec.criado_em DESC", [selId])).rows;
         resumo.total = inscritos.length;
-        inscritos.forEach(i => { if (i.pagamento_status === 'confirmado') { resumo.confirmados++; resumo.arrecadado += parseFloat(i.valor_pago) || 0; } else resumo.pendentes++; });
+        inscritos.forEach(i => { if (i.pagamento_status === 'confirmado') resumo.confirmados++; else resumo.pendentes++; });
+        resumo.arrecadado = await _arrecadadoLiquidoPss(inscritos);
       }
       res.render('pages/inscricoes-pss', { config, usuario: req.session.usuario, procs, vista, processo, inscritos, cupons, resumo, inscricaoBase: process.env.INSCRICAO_URL || 'https://inscricao.lauroucpcde.com', msg: req.session.msg || [], erro: req.session.erro || [] });
       req.session.msg = []; req.session.erro = [];
@@ -896,8 +913,9 @@ module.exports = function (router) {
       const busca = (req.query.busca || '').toLowerCase().trim(), status = req.query.status || '';
       if (busca) inscritos = inscritos.filter(i => ((i.nome || '') + ' ' + (i.documento || '') + ' ' + (i.email || '')).toLowerCase().includes(busca));
       if (status) inscritos = inscritos.filter(i => i.pagamento_status === status);
-      let arrecadado = 0, confirmados = 0;
-      inscritos.forEach(i => { if (i.pagamento_status === 'confirmado') { confirmados++; arrecadado += parseFloat(i.valor_pago) || 0; } });
+      let confirmados = 0;
+      inscritos.forEach(i => { if (i.pagamento_status === 'confirmado') confirmados++; });
+      const arrecadado = await _arrecadadoLiquidoPss(inscritos);
       const config = await getConfig();
       res.render('pages/inscricoes-pss-relatorio', { config, processo, inscritos, arrecadado, confirmados, busca, status });
     } catch (e) { res.status(500).send('Erro: ' + e.message); }

@@ -1,3 +1,11 @@
+// Valor líquido (já descontada a taxa do PagBank) de um pagamento do PSS. Mesma taxa usada
+// no lançamento real do fluxo de caixa: cartão 4%, PIX 1,9%. Exportada para os paineis de
+// inscrições (dashboard e relatório) não mostrarem o bruto rotulado como "líquido".
+function calcularLiquidoPss(bruto, metodo) {
+  const v = parseFloat(bruto) || 0;
+  return metodo === 'cartao' ? Math.round(v * 0.96 * 100) / 100 : Math.round(v * 0.981 * 100) / 100;
+}
+
 // Lança no fluxo de caixa o pagamento de uma inscrição de Processo Seletivo (PSS),
 // evitando duplicar (mesmo padrão de fluxo-eventos.js). Categoria: "Processo Seletivo".
 async function lancarPssNoFluxo(query, pagamentoId) {
@@ -11,7 +19,7 @@ async function lancarPssNoFluxo(query, pagamentoId) {
     const ja = await query('SELECT id FROM fluxo_caixa WHERE observacoes ILIKE $1', ['%ps_pagamento_id:' + pg.id + '%']);
     if (ja.rows.length) return { ok: true, motivo: 'ja lancado' };
     const v = parseFloat(pg.valor) || 0;
-    const liquido = pg.metodo === 'cartao' ? Math.round(v * 0.96 * 100) / 100 : Math.round(v * 0.981 * 100) / 100;
+    const liquido = calcularLiquidoPss(v, pg.metodo);
     const dataPag = new Date().toISOString().slice(0, 10);
     await query(
       `INSERT INTO fluxo_caixa (tipo,descricao,categoria,valor,data_lancamento,observacoes,criado_em) VALUES ('E',$1,'Processo Seletivo',$2,$3,$4,NOW())`,
@@ -24,4 +32,4 @@ async function lancarPssNoFluxo(query, pagamentoId) {
     return { ok: false, motivo: e.message };
   }
 }
-module.exports = { lancarPssNoFluxo };
+module.exports = { lancarPssNoFluxo, calcularLiquidoPss };
