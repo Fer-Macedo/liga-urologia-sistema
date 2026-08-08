@@ -731,12 +731,10 @@
               <button class="btn btn-sm" onclick="canvaCarregarDesigns()">Atualizar</button>
             </div>
           </div>
-          <%if(mktConfig.canva_login_email){%>
           <div style="font-size:12.5px;color:var(--texto2);background:var(--fundo);border:1px solid var(--borda);border-radius:8px;padding:8px 12px;margin-bottom:14px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-            <span>Se o Canva pedir login: <strong id="canva-hint-email"><%=mktConfig.canva_login_email%></strong> / <strong id="canva-hint-senha">••••••••</strong></span>
-            <button type="button" class="btn-xs" onclick="var s=document.getElementById('canva-hint-senha'); var m=s.textContent==='••••••••'; s.textContent=m?<%=JSON.stringify(mktConfig.canva_login_senha||'')%>:'••••••••'; this.textContent=m?'Ocultar':'Mostrar senha';">Mostrar senha</button>
+            <span>Se o Canva pedir login ao criar/editar, a ajuda com a senha aparece automaticamente.</span>
+            <button type="button" class="btn-xs" onclick="canvaMostrarAjudaLogin()">Ver login do Canva</button>
           </div>
-          <%}%>
           <div id="canva-designs-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
             <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--texto2)">Carregando designs do Canva...</div>
           </div>
@@ -1530,6 +1528,30 @@
     </form>
   </div>
 </div>
+<div class="modal-overlay" id="modal-canva-login-ajuda" style="display:none">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header"><span class="modal-titulo">Login do Canva</span><button class="icon-btn" onclick="fecharModal('modal-canva-login-ajuda')">&#x2715;</button></div>
+    <div class="modal-body" style="padding:20px 24px;display:flex;flex-direction:column;gap:12px">
+      <p style="font-size:13px;color:var(--texto2);margin:0">Se a aba do Canva que abriu pedir login, use os dados abaixo.</p>
+      <div class="campo"><label class="label">E-mail</label>
+        <div style="display:flex;gap:6px">
+          <input id="cla-email" class="input" readonly>
+          <button type="button" class="btn btn-sm" onclick="canvaCopiar('cla-email',this)">Copiar</button>
+        </div>
+      </div>
+      <div class="campo"><label class="label">Senha</label>
+        <div style="display:flex;gap:6px">
+          <input id="cla-senha" class="input" type="password" readonly>
+          <button type="button" class="btn btn-sm" onclick="canvaMostrarSenha(this)">Mostrar</button>
+          <button type="button" class="btn btn-sm" onclick="canvaCopiar('cla-senha',this)">Copiar</button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-primario" style="width:100%" onclick="fecharModal('modal-canva-login-ajuda')">Entendi</button>
+    </div>
+  </div>
+</div>
 <script src="/js/app.js"></script>
 <script>
 const postsData=<%- JSON.stringify(posts).replace(/</g,"\u003c") %>;
@@ -1807,7 +1829,34 @@ function enviarRespostaComentario(comId) {
 // ─── FIM INSTAGRAM JS ─────────────────────────────────────────────────────────
 
 // ─── CANVA ────────────────────────────────────────────────────────────────────
+var CANVA_LOGIN=<%-JSON.stringify({email: mktConfig.canva_login_email||'', senha: mktConfig.canva_login_senha||''}).replace(/</g,'\\u003c')%>;
 var _canvaCarregado=false;
+// Chamada sempre que se abre uma aba do Canva (criar ou editar): não dá pra saber, do nosso
+// lado, se aquela aba (outro domínio) pediu login ou não — então mostramos a ajuda de qualquer
+// forma, pra quem precisar já ter a senha à mão sem precisar procurar em outro lugar.
+function canvaMostrarAjudaLogin(){
+  if(!CANVA_LOGIN.email){
+    mostrarAviso('Nenhuma credencial de login do Canva cadastrada ainda. Configure em Integrações → Credenciais → Canva — Login (só admin).','erro');
+    return;
+  }
+  document.getElementById('cla-email').value=CANVA_LOGIN.email;
+  var s=document.getElementById('cla-senha'); s.value=CANVA_LOGIN.senha; s.type='password';
+  var btnSenha=document.querySelector('#modal-canva-login-ajuda button[onclick^="canvaMostrarSenha"]'); if(btnSenha) btnSenha.textContent='Mostrar';
+  abrirModal('modal-canva-login-ajuda');
+}
+function canvaMostrarSenha(btn){
+  var s=document.getElementById('cla-senha');
+  var mostrando=s.type==='text';
+  s.type=mostrando?'password':'text';
+  btn.textContent=mostrando?'Mostrar':'Ocultar';
+}
+function canvaCopiar(id,btn){
+  var inp=document.getElementById(id);
+  inp.select(); inp.setSelectionRange(0,99999);
+  function ok(){ var t=btn.textContent; btn.textContent='Copiado!'; setTimeout(function(){btn.textContent=t;},1500); }
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(inp.value).then(ok).catch(function(){try{document.execCommand('copy');ok();}catch(e){}}); }
+  else { try{document.execCommand('copy');ok();}catch(e){} }
+}
 function canvaCarregarDesigns(){
   var grid=document.getElementById('canva-designs-grid');
   if(!grid) return;
@@ -1822,7 +1871,7 @@ function canvaCarregarDesigns(){
       return '<div class="midia-card">'
         +'<img src="'+thumb+'" alt="'+titulo+'" onerror="this.onerror=null;this.src=\'/img/placeholder.png\'">'
         +'<div class="midia-overlay" style="flex-direction:column;gap:6px;padding:8px">'
-        +(editUrl?'<a href="'+editUrl+'" target="_blank" class="btn-xs" style="background:white;color:#111;text-decoration:none;width:100%;justify-content:center">Editar</a>':'')
+        +(editUrl?'<a href="'+editUrl+'" target="_blank" onclick="if(CANVA_LOGIN.email)canvaMostrarAjudaLogin()" class="btn-xs" style="background:white;color:#111;text-decoration:none;width:100%;justify-content:center">Editar</a>':'')
         +'<button onclick="canvaImportar(\''+des.id+'\',\''+titulo.replace(/'/g,"\\'")+'\',this)" class="btn-xs" style="background:#0F6E56;color:white;border-color:transparent;width:100%;justify-content:center">Importar</button>'
         +'</div>'
         +'<div class="midia-card-info">'+titulo+'</div>'
@@ -1851,6 +1900,7 @@ function canvaCriarDesign(){
       if(!d.ok){if(win)win.close(); mostrarAviso(d.erro||'Nao foi possivel criar o design.','erro');return;}
       if(d.editUrl && win) win.location.href=d.editUrl;
       else if(d.editUrl) window.open(d.editUrl,'_blank');
+      if(d.editUrl && CANVA_LOGIN.email) canvaMostrarAjudaLogin();
       setTimeout(canvaCarregarDesigns,1500);
     }).catch(function(){if(win)win.close(); mostrarAviso('Erro ao criar design no Canva.','erro');});
 }
