@@ -698,59 +698,52 @@ module.exports = function (router) {
     if (m.includes('limit') || m.includes('limite')) return 'Limite do cartão excedido.';
     return 'Pagamento não aprovado. Verifique os dados ou tente outro cartão.';
   }
-  // Pagamento via Cartão de Crédito — mesmo padrão de eventos.js (dados do cartão direto
-  // pro PagBank, sem tokenização no navegador; a inscrição usa confirmarInscricaoPss pra
-  // reaproveitar o mesmo e-mail/QR/número de lista que o PIX já usa)
-  router.post('/pss/pagamento/:cid/cartao', async (req, res) => {
+  // Chave pública p/ criptografar o cartão no navegador (PagSeguro.encryptCard) — o
+  // número/CVV nunca chegam em texto puro no nosso servidor.
+  router.get('/pss/pagamento/chave-publica', async (req, res) => {
+    const { obterChavePublica } = require('../services/pagbank');
+    const r = await obterChavePublica();
+    if (!r.ok) return res.status(502).json({ ok: false, erro: 'Não foi possível iniciar o pagamento. Tente novamente.' });
+    res.json({ ok: true, publicKey: r.publicKey });
+  });
+
+  // Pagamento via Cartão de Crédito — recebe o cartão já criptografado pelo SDK no
+  // navegador; a inscrição usa confirmarInscricaoPss pra reaproveitar o mesmo
+  // e-mail/QR/número de lista que o PIX já usa.
+  router.post('/pss/pagamento/:cid/cartao', require('../services/rate-limiters').limiterPagamentoCartao, async (req, res) => {
     try {
-      const { num, nome, mes, ano, cvv, cpf } = req.body;
+      const { encryptedCard, holder_name, holder_cpf } = req.body;
+      if (!encryptedCard || !holder_name) return res.json({ ok: false, erro: 'Dados do cartão incompletos.' });
+
       const c = (await query("SELECT c.*, p.nome AS processo_nome FROM ps_candidatos c JOIN ps_processos p ON p.id=c.processo_id WHERE c.id=$1", [req.params.cid])).rows[0];
       if (!c) return res.json({ ok: false, erro: 'Inscrição não encontrada.' });
       if (c.pagamento_status === 'confirmado') return res.json({ ok: true, numero: c.numero_lista });
 
-      const axios = require('axios');
-      const isProd = (process.env.PAGBANK_ENV || 'sandbox') === 'production';
-      const BASE_URL = isProd ? 'https://api.pagseguro.com' : 'https://sandbox.api.pagseguro.com';
-      const TOKEN = process.env.PAGBANK_TOKEN;
-      const valorCents = Math.round(parseFloat(c.valor_pago) * 100);
+      const { pagarComCartao } = require('../services/pagbank');
       const referencia = 'pss-cand-' + c.id;
-      const cpfLimpo = (cpf || '').replace(/\D/g, '') || '12345678909';
+      const r = await pagarComCartao({
+        referencia,
+        valor: c.valor_pago,
+        membro: { nome: c.nome, email: c.email, cpf: holder_cpf },
+        encryptedCard,
+        holderName: holder_name,
+        holderCpf: holder_cpf,
+        itemName: ('Inscrição — ' + c.processo_nome).substring(0, 100),
+        descricao: ('Inscrição — ' + c.processo_nome).substring(0, 64)
+      });
 
-      const { data } = await axios.post(
-        BASE_URL + '/orders',
-        {
-          reference_id: referencia,
-          customer: { name: c.nome, email: c.email || 'inscrito@ligaurologia.com.br', tax_id: cpfLimpo },
-          items: [{ name: ('Inscrição — ' + c.processo_nome).substring(0, 100), quantity: 1, unit_amount: valorCents }],
-          charges: [{
-            reference_id: referencia,
-            description: ('Inscrição — ' + c.processo_nome).substring(0, 64),
-            amount: { value: valorCents, currency: 'BRL' },
-            payment_method: {
-              type: 'CREDIT_CARD', installments: 1, capture: true,
-              card: { number: num, exp_month: String(mes).padStart(2, '0'), exp_year: String(ano), security_code: cvv, holder: { name: nome } }
-            }
-          }],
-          notification_urls: [(process.env.APP_URL || 'https://sistema.lauroucpcde.com') + '/webhook/pagbank']
-        },
-        { headers: { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json' }, timeout: 20000 }
-      );
-
-      const charges = data.charges || [];
-      const aprovado = charges.some(ch => ch.status === 'PAID' || ch.status === 'AUTHORIZED');
-      if (aprovado) {
-        await query("INSERT INTO ps_pagamentos (candidato_id,valor,metodo,status,pagbank_order_id) VALUES ($1,$2,'cartao','pendente',$3)", [c.id, c.valor_pago, data.id]);
-        await confirmarInscricaoPss(c.id, { orderId: data.id, valorPago: parseFloat(c.valor_pago), metodo: 'cartao' });
-        const numero = (await query("SELECT numero_lista FROM ps_candidatos WHERE id=$1", [c.id])).rows[0].numero_lista;
-        return res.json({ ok: true, numero });
+      if (!r.ok) return res.json({ ok: false, erro: r.erro });
+      if (!r.aprovado) {
+        console.error('PagBank cartão PSS recusado:', r.status);
+        return res.json({ ok: false, erro: _traduzirRecusaCartaoPss(r.status) });
       }
-      const motivoCharge = charges[0];
-      const motivo = motivoCharge ? (motivoCharge.payment_response?.message || motivoCharge.status || 'Recusado') : 'Pagamento não aprovado';
-      console.error('PagBank cartão PSS recusado:', motivo);
-      res.json({ ok: false, erro: _traduzirRecusaCartaoPss(motivo) });
+
+      await query("INSERT INTO ps_pagamentos (candidato_id,valor,metodo,status,pagbank_order_id) VALUES ($1,$2,'cartao','pendente',$3)", [c.id, c.valor_pago, r.charge_id]);
+      await confirmarInscricaoPss(c.id, { orderId: r.charge_id, valorPago: parseFloat(c.valor_pago), metodo: 'cartao' });
+      const numero = (await query("SELECT numero_lista FROM ps_candidatos WHERE id=$1", [c.id])).rows[0].numero_lista;
+      res.json({ ok: true, numero });
     } catch (e) {
-      const detail = e.response ? JSON.stringify(e.response.data).substring(0, 300) : e.message;
-      console.error('PagBank cartão PSS ERRO:', detail);
+      console.error('PagBank cartão PSS ERRO:', e.message);
       res.json({ ok: false, erro: 'Erro ao processar cartão. Verifique os dados e tente novamente.' });
     }
   });

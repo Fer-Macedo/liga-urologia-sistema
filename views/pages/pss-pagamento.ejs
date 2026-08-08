@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pago — <%= processoNome %></title>
+  <script src="https://assets.pagseguro.com.br/checkout-sdk-js/rc/dist/browser/pagseguro.min.js"></script>
   <style>
     :root{--cor:<%= (config && config.org_cor) || '#1a3d2b' %>;}
     *{box-sizing:border-box;margin:0;padding:0;}
@@ -141,14 +142,22 @@ async function pagarCartao(){
   document.getElementById('erro-cartao').className='erro-cartao';
 
   try{
+    var kr = await fetch('/pss/pagamento/chave-publica').then(function(r){ return r.json(); });
+    if (!kr.ok) throw new Error('No fue posible iniciar el pago. Intente nuevamente.');
+    var card = PagSeguro.encryptCard({
+      publicKey: kr.publicKey, holder: nome, number: num,
+      expMonth: mes, expYear: ano, securityCode: cvv
+    });
+    if (card.hasErrors) throw new Error('Datos de la tarjeta inválidos. Verifique número, vencimiento y CVV.');
+
     var r=await fetch('/pss/pagamento/'+CID+'/cartao',{
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({num:num, nome:nome, mes:mes, ano:ano, cvv:cvv, cpf:cpf})
+      body: JSON.stringify({ encryptedCard: card.encryptedCard, holder_name: nome, holder_cpf: cpf })
     });
     var data=await r.json();
     if(data.ok){ mostrarOk(data.numero); }
     else { btn.disabled=false; btn.textContent='Pagar'; mostrarErroCartao(data.erro||'Pago rechazado. Verifique los datos e intente nuevamente.'); }
-  }catch(e){ btn.disabled=false; btn.textContent='Pagar'; mostrarErroCartao('Error de conexión. Intente nuevamente.'); }
+  }catch(e){ btn.disabled=false; btn.textContent='Pagar'; mostrarErroCartao(e.message||'Error de conexión. Intente nuevamente.'); }
 }
 </script>
 </body>

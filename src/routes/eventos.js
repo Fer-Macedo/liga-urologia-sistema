@@ -4,8 +4,9 @@ const { query } = require('../models/database');
 const { requireAuth, requireAdmin, requirePermissao } = require('../middleware/auth');
 const { getConfig } = require('../services/config');
 const { enviarEmail, emailBonito } = require('../services/email');
-const { criarPixEvento, consultarPagamento } = require('../services/pagbank');
+const { criarPixEvento, consultarPagamento, obterChavePublica, pagarComCartao } = require('../services/pagbank');
 const { enviarEmailConfirmacaoEvento } = require('../services/eventos-email');
+const { limiterPagamentoCartao } = require('../services/rate-limiters');
 
 // /inscricao e /checkout ficam de fora do rate-limit geral (src/routes/index.js) porque
 // alguém legitimamente pode recarregar/tentar de novo várias vezes numa fila de evento —
@@ -344,10 +345,19 @@ router.get('/pagamento/:inscricaoId/status', async (req, res) => {
   }
 });
 
-// Pagamento via Cartão de Crédito
-router.post('/pagamento/:inscricaoId/cartao', async (req, res) => {
+// Chave pública p/ criptografar o cartão no navegador (PagSeguro.encryptCard) — o
+// número/CVV nunca chegam em texto puro no nosso servidor.
+router.get('/pagamento/chave-publica', async (req, res) => {
+  const r = await obterChavePublica();
+  if (!r.ok) return res.status(502).json({ ok: false, erro: 'Não foi possível iniciar o pagamento. Tente novamente.' });
+  res.json({ ok: true, publicKey: r.publicKey });
+});
+
+// Pagamento via Cartão de Crédito — recebe o cartão já criptografado pelo SDK no navegador.
+router.post('/pagamento/:inscricaoId/cartao', limiterPagamentoCartao, async (req, res) => {
   try {
-    const { num, nome, mes, ano, cvv, cpf, parcelas } = req.body;
+    const { encryptedCard, holder_name, holder_cpf } = req.body;
+    if (!encryptedCard || !holder_name) return res.json({ ok: false, erro: 'Dados do cartão incompletos.' });
 
     const inscR = await query(
       'SELECT i.*, e.nome as evento_nome FROM evento_inscricoes i JOIN eventos e ON e.id=i.evento_id WHERE i.id=$1',
@@ -358,75 +368,37 @@ router.post('/pagamento/:inscricaoId/cartao', async (req, res) => {
 
     const loteR = await query('SELECT * FROM evento_lotes WHERE id=$1', [inscricao.lote_id]);
     const lote = loteR.rows[0];
-
-    const axios = require('axios');
-    const isProd = (process.env.PAGBANK_ENV || 'sandbox') === 'production';
-    const BASE_URL = isProd ? 'https://api.pagseguro.com' : 'https://sandbox.api.pagseguro.com';
-    const TOKEN = process.env.PAGBANK_TOKEN;
-
-    const valorCents = Math.round(parseFloat(lote.preco) * 100);
     const referencia = 'evento-insc-' + inscricao.id;
-    const cpfLimpo = (cpf || '').replace(/\D/g, '') || '12345678909';
 
-    const { data } = await axios.post(
-      BASE_URL + '/orders',
-      {
-        reference_id: referencia,
-        customer: {
-          name: inscricao.nome,
-          email: inscricao.email || 'inscrito@ligaurologia.com.br',
-          tax_id: cpfLimpo
-        },
-        items: [{
-          name: ('Ingresso — ' + inscricao.evento_nome + ' — ' + lote.nome).substring(0, 100),
-          quantity: 1,
-          unit_amount: valorCents
-        }],
-        charges: [{
-          reference_id: referencia,
-          description: ('Ingresso — ' + inscricao.evento_nome).substring(0, 64),
-          amount: { value: valorCents, currency: 'BRL' },
-          payment_method: {
-            type: 'CREDIT_CARD',
-            installments: parseInt(parcelas) || 1,
-            capture: true,
-            card: {
-              number: num,
-              exp_month: String(mes).padStart(2, '0'),
-              exp_year: String(ano),
-              security_code: cvv,
-              holder: { name: nome }
-            }
-          }
-        }],
-        notification_urls: [(process.env.APP_URL || 'https://liga-urologia.onrender.com') + '/webhook/pagbank']
-      },
-      { headers: { Authorization: 'Bearer ' + TOKEN, 'Content-Type': 'application/json' }, timeout: 20000 }
-    );
+    const r = await pagarComCartao({
+      referencia,
+      valor: lote.preco,
+      membro: { nome: inscricao.nome, email: inscricao.email, cpf: holder_cpf },
+      encryptedCard,
+      holderName: holder_name,
+      holderCpf: holder_cpf,
+      itemName: ('Ingresso — ' + inscricao.evento_nome + ' — ' + lote.nome).substring(0, 100),
+      descricao: ('Ingresso — ' + inscricao.evento_nome).substring(0, 64)
+    });
 
-    const charges = data.charges || [];
-    const aprovado = charges.some(c => c.status === 'PAID' || c.status === 'AUTHORIZED');
-
-    if (aprovado) {
-      await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1", [req.params.inscricaoId]);
-      await query(
-        `INSERT INTO evento_pagamentos (inscricao_id, valor, metodo, status, pagbank_order_id, pago_em)
-         VALUES ($1,$2,'cartao','pago',$3,NOW())
-         ON CONFLICT DO NOTHING`,
-        [req.params.inscricaoId, lote.preco, data.id]
-      );
-      await enviarEmailConfirmacaoEvento(req.params.inscricaoId);
-      return res.json({ ok: true });
+    if (!r.ok) return res.json({ ok: false, erro: r.erro });
+    if (!r.aprovado) {
+      console.error('PagBank cartão recusado:', r.status);
+      return res.json({ ok: false, erro: traduzirRecusaCartao(r.status) });
     }
 
-    const motivoCharge = charges[0];
-    const motivo = motivoCharge ? (motivoCharge.payment_response?.message || motivoCharge.status || 'Recusado') : 'Pagamento não aprovado';
-    console.error('PagBank cartão recusado:', motivo);
-    res.json({ ok: false, erro: traduzirRecusaCartao(motivo) });
+    await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1", [req.params.inscricaoId]);
+    await query(
+      `INSERT INTO evento_pagamentos (inscricao_id, valor, metodo, status, pagbank_order_id, pago_em)
+       VALUES ($1,$2,'cartao','pago',$3,NOW())
+       ON CONFLICT DO NOTHING`,
+      [req.params.inscricaoId, lote.preco, r.charge_id]
+    );
+    await enviarEmailConfirmacaoEvento(req.params.inscricaoId);
+    res.json({ ok: true });
 
   } catch(e) {
-    const detail = e.response ? JSON.stringify(e.response.data).substring(0, 300) : e.message;
-    console.error('PagBank cartão ERRO:', detail);
+    console.error('PagBank cartão ERRO:', e.message);
     res.json({ ok: false, erro: 'Erro ao processar cartão. Verifique os dados e tente novamente.' });
   }
 });

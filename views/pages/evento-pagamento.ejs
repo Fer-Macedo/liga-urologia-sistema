@@ -7,6 +7,7 @@
   <title>Pago — <%= evento.nome %></title>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://assets.pagseguro.com.br/checkout-sdk-js/rc/dist/browser/pagseguro.min.js"></script>
   <style>
     :root {
       --cor: <%= evento.cor_tema || '#1a3d2b' %>;
@@ -784,10 +785,18 @@
     document.getElementById('btn-pagar').disabled = true;
 
     try {
+      const kr = await fetch('/pagamento/chave-publica').then(r => r.json());
+      if (!kr.ok) throw new Error('No fue posible iniciar el pago. Intente nuevamente.');
+      const card = PagSeguro.encryptCard({
+        publicKey: kr.publicKey, holder: nome, number: num,
+        expMonth: mes, expYear: ano, securityCode: cvv
+      });
+      if (card.hasErrors) throw new Error('Datos de la tarjeta inválidos. Verifique número, vencimiento y CVV.');
+
       const r = await fetch('/pagamento/' + INSCRICAO_ID + '/cartao', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ num, nome, mes, ano, cvv, cpf, parcelas })
+        body: JSON.stringify({ encryptedCard: card.encryptedCard, holder_name: nome, holder_cpf: cpf, parcelas })
       });
       const data = await r.json();
       document.getElementById('loading').classList.remove('show');
@@ -801,7 +810,7 @@
     } catch(e) {
       document.getElementById('loading').classList.remove('show');
       document.getElementById('btn-pagar').disabled = false;
-      mostrarErro('Error de conexión. Intente nuevamente.');
+      mostrarErro(e.message || 'Error de conexión. Intente nuevamente.');
     }
   }
 

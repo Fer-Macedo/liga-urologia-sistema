@@ -389,7 +389,7 @@ async function obterChavePublica() {
 // ─── PAGAMENTO COM CARTÃO EMBUTIDO (checkout inline, sem redirecionar) ────────
 // Recebe o cartão já criptografado pelo SDK no navegador (encryptedCard).
 // Retorna: { ok, aprovado, charge_id, status, erro }
-async function pagarComCartao({ referencia, valor, membro, encryptedCard, holderName, holderCpf }) {
+async function pagarComCartao({ referencia, valor, membro, encryptedCard, holderName, holderCpf, itemName, descricao }) {
   if (!TOKEN) return { ok: false, erro: 'Gateway de pagamento não configurado.' };
   const valorCents = centavos(valor);
   try {
@@ -403,14 +403,14 @@ async function pagarComCartao({ referencia, valor, membro, encryptedCard, holder
           tax_id: cpfValido(membro.cpf)
         },
         items: [{
-          name: 'Mensalidade Liga Academica de Urologia',
+          name: itemName || 'Mensalidade Liga Academica de Urologia',
           quantity: 1,
           unit_amount: valorCents
         }],
         notification_urls: [APP_URL + '/webhook/pagbank'],
         charges: [{
           reference_id: referencia,
-          description: 'Mensalidade Liga Academica de Urologia',
+          description: descricao || 'Mensalidade Liga Academica de Urologia',
           amount: { value: valorCents, currency: 'BRL' },
           payment_method: {
             type: 'CREDIT_CARD',
