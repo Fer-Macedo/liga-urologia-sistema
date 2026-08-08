@@ -727,7 +727,7 @@
               </select>
               <input type="number" id="canva-largura" class="input" placeholder="Largura (px)" style="width:110px;display:none">
               <input type="number" id="canva-altura" class="input" placeholder="Altura (px)" style="width:110px;display:none">
-              <button class="btn btn-primario btn-sm" onclick="canvaCriarDesign()">+ Criar novo design</button>
+              <button class="btn btn-primario btn-sm" id="canva-btn-criar" onclick="canvaCriarDesign()">+ Criar novo design</button>
               <button class="btn btn-sm" onclick="canvaCarregarDesigns()">Atualizar</button>
             </div>
           </div>
@@ -1530,25 +1530,29 @@
 </div>
 <div class="modal-overlay" id="modal-canva-login-ajuda" style="display:none">
   <div class="modal" style="max-width:420px">
-    <div class="modal-header"><span class="modal-titulo">Login do Canva</span><button class="icon-btn" onclick="fecharModal('modal-canva-login-ajuda')">&#x2715;</button></div>
+    <div class="modal-header"><span class="modal-titulo">Abrir no Canva</span><button class="icon-btn" onclick="fecharModal('modal-canva-login-ajuda')">&#x2715;</button></div>
     <div class="modal-body" style="padding:20px 24px;display:flex;flex-direction:column;gap:12px">
-      <p style="font-size:13px;color:var(--texto2);margin:0">Se a aba do Canva que abriu pedir login, use os dados abaixo.</p>
-      <div class="campo"><label class="label">E-mail</label>
-        <div style="display:flex;gap:6px">
-          <input id="cla-email" class="input" readonly>
-          <button type="button" class="btn btn-sm" onclick="canvaCopiar('cla-email',this)">Copiar</button>
+      <p style="font-size:13px;color:var(--texto2);margin:0">Se o Canva pedir login na aba que abrir, volte aqui — esta janela continua com os dados prontos pra copiar.</p>
+      <div id="cla-campos" style="display:none;flex-direction:column;gap:12px">
+        <div class="campo"><label class="label">E-mail</label>
+          <div style="display:flex;gap:6px">
+            <input id="cla-email" class="input" readonly>
+            <button type="button" class="btn btn-sm" onclick="canvaCopiar('cla-email',this)">Copiar</button>
+          </div>
+        </div>
+        <div class="campo"><label class="label">Senha</label>
+          <div style="display:flex;gap:6px">
+            <input id="cla-senha" class="input" type="password" readonly>
+            <button type="button" class="btn btn-sm" onclick="canvaMostrarSenha(this)">Mostrar</button>
+            <button type="button" class="btn btn-sm" onclick="canvaCopiar('cla-senha',this)">Copiar</button>
+          </div>
         </div>
       </div>
-      <div class="campo"><label class="label">Senha</label>
-        <div style="display:flex;gap:6px">
-          <input id="cla-senha" class="input" type="password" readonly>
-          <button type="button" class="btn btn-sm" onclick="canvaMostrarSenha(this)">Mostrar</button>
-          <button type="button" class="btn btn-sm" onclick="canvaCopiar('cla-senha',this)">Copiar</button>
-        </div>
-      </div>
+      <p id="cla-sem-credencial" style="display:none;font-size:12.5px;color:#92400e;background:#fef3c7;border-radius:8px;padding:8px 12px;margin:0">Nenhuma credencial cadastrada ainda. Um admin pode cadastrar em Integrações → Credenciais → Canva — Login.</p>
     </div>
-    <div class="modal-footer">
-      <button type="button" class="btn btn-primario" style="width:100%" onclick="fecharModal('modal-canva-login-ajuda')">Entendi</button>
+    <div class="modal-footer" style="flex-direction:column;gap:8px">
+      <div id="cla-abrir-wrap" style="width:100%"><button type="button" class="btn btn-primario" style="width:100%" onclick="canvaAbrirNoCanva()">Abrir no Canva</button></div>
+      <button type="button" class="btn" style="width:100%" onclick="fecharModal('modal-canva-login-ajuda')">Fechar</button>
     </div>
   </div>
 </div>
@@ -1831,18 +1835,27 @@ function enviarRespostaComentario(comId) {
 // ─── CANVA ────────────────────────────────────────────────────────────────────
 var CANVA_LOGIN=<%-JSON.stringify({email: mktConfig.canva_login_email||'', senha: mktConfig.canva_login_senha||''}).replace(/</g,'\\u003c')%>;
 var _canvaCarregado=false;
-// Chamada sempre que se abre uma aba do Canva (criar ou editar): não dá pra saber, do nosso
-// lado, se aquela aba (outro domínio) pediu login ou não — então mostramos a ajuda de qualquer
-// forma, pra quem precisar já ter a senha à mão sem precisar procurar em outro lugar.
-function canvaMostrarAjudaLogin(){
-  if(!CANVA_LOGIN.email){
-    mostrarAviso('Nenhuma credencial de login do Canva cadastrada ainda. Configure em Integrações → Credenciais → Canva — Login (só admin).','erro');
-    return;
+// Fluxo: o modal abre PRIMEIRO, com e-mail/senha prontos pra copiar e o botão "Abrir no
+// Canva" — só quando esse botão é clicado que a aba do Canva de fato abre (clique direto do
+// usuário, então window.open não é bloqueado como pop-up, sem precisar do truque de abrir
+// aba em branco antes). Se o Canva pedir login lá, a pessoa volta pra esta aba: o modal
+// continua aberto, com os dados ainda ali.
+var _canvaEditUrlPendente=null;
+function canvaMostrarAjudaLogin(editUrl){
+  _canvaEditUrlPendente=editUrl||null;
+  document.getElementById('cla-abrir-wrap').style.display=_canvaEditUrlPendente?'':'none';
+  var temCredencial=!!CANVA_LOGIN.email;
+  document.getElementById('cla-campos').style.display=temCredencial?'flex':'none';
+  document.getElementById('cla-sem-credencial').style.display=temCredencial?'none':'';
+  if(temCredencial){
+    document.getElementById('cla-email').value=CANVA_LOGIN.email;
+    var s=document.getElementById('cla-senha'); s.value=CANVA_LOGIN.senha; s.type='password';
+    var btnSenha=document.querySelector('#modal-canva-login-ajuda button[onclick^="canvaMostrarSenha"]'); if(btnSenha) btnSenha.textContent='Mostrar';
   }
-  document.getElementById('cla-email').value=CANVA_LOGIN.email;
-  var s=document.getElementById('cla-senha'); s.value=CANVA_LOGIN.senha; s.type='password';
-  var btnSenha=document.querySelector('#modal-canva-login-ajuda button[onclick^="canvaMostrarSenha"]'); if(btnSenha) btnSenha.textContent='Mostrar';
   abrirModal('modal-canva-login-ajuda');
+}
+function canvaAbrirNoCanva(){
+  if(_canvaEditUrlPendente) window.open(_canvaEditUrlPendente,'_blank');
 }
 function canvaMostrarSenha(btn){
   var s=document.getElementById('cla-senha');
@@ -1871,7 +1884,7 @@ function canvaCarregarDesigns(){
       return '<div class="midia-card">'
         +'<img src="'+thumb+'" alt="'+titulo+'" onerror="this.onerror=null;this.src=\'/img/placeholder.png\'">'
         +'<div class="midia-overlay" style="flex-direction:column;gap:6px;padding:8px">'
-        +(editUrl?'<a href="'+editUrl+'" target="_blank" onclick="if(CANVA_LOGIN.email)canvaMostrarAjudaLogin()" class="btn-xs" style="background:white;color:#111;text-decoration:none;width:100%;justify-content:center">Editar</a>':'')
+        +(editUrl?'<button onclick="canvaMostrarAjudaLogin(\''+editUrl.replace(/'/g,"\\'")+'\')" class="btn-xs" style="background:white;color:#111;width:100%;justify-content:center">Editar</button>':'')
         +'<button onclick="canvaImportar(\''+des.id+'\',\''+titulo.replace(/'/g,"\\'")+'\',this)" class="btn-xs" style="background:#0F6E56;color:white;border-color:transparent;width:100%;justify-content:center">Importar</button>'
         +'</div>'
         +'<div class="midia-card-info">'+titulo+'</div>'
@@ -1893,16 +1906,18 @@ function canvaCriarDesign(){
     mostrarAviso('Informe largura e altura para o formato personalizado.','erro');
     return;
   }
-  var win=window.open('','_blank'); // abre a aba na hora do clique, para o navegador nao bloquear como pop-up
-  if(win) win.document.write('Abrindo o Canva...');
+  // O modal só abre DEPOIS de ter a editUrl pronta, com o botão "Abrir no Canva" — assim o
+  // clique nesse botão é um gesto direto do usuário, e window.open não é bloqueado como
+  // pop-up (não precisa mais do truque de abrir uma aba em branco antes da resposta chegar).
+  var btn=document.getElementById('canva-btn-criar');
+  btn.disabled=true; var textoOriginal=btn.textContent; btn.textContent='Criando...';
   fetch('/marketing/canva/criar',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({tipo:tipo,largura:largura,altura:altura})})
     .then(function(r){return r.json();}).then(function(d){
-      if(!d.ok){if(win)win.close(); mostrarAviso(d.erro||'Nao foi possivel criar o design.','erro');return;}
-      if(d.editUrl && win) win.location.href=d.editUrl;
-      else if(d.editUrl) window.open(d.editUrl,'_blank');
-      if(d.editUrl && CANVA_LOGIN.email) canvaMostrarAjudaLogin();
+      btn.disabled=false; btn.textContent=textoOriginal;
+      if(!d.ok){mostrarAviso(d.erro||'Nao foi possivel criar o design.','erro');return;}
+      if(d.editUrl) canvaMostrarAjudaLogin(d.editUrl);
       setTimeout(canvaCarregarDesigns,1500);
-    }).catch(function(){if(win)win.close(); mostrarAviso('Erro ao criar design no Canva.','erro');});
+    }).catch(function(){btn.disabled=false; btn.textContent=textoOriginal; mostrarAviso('Erro ao criar design no Canva.','erro');});
 }
 function canvaImportar(designId,titulo,btn){
   btn.disabled=true; btn.textContent='Importando...';
