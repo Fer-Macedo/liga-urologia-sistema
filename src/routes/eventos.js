@@ -276,6 +276,15 @@ router.post('/inscricao/:id', limiterInscricaoEvento, async (req, res) => {
 
 // ─── PAGAMENTO DE EVENTOS ─────────────────────────────────────────────────────
 
+// Chave pública p/ criptografar o cartão no navegador (PagSeguro.encryptCard) — o
+// número/CVV nunca chegam em texto puro no nosso servidor. Precisa vir ANTES de
+// /pagamento/:inscricaoId, senão "chave-publica" é capturado como inscricaoId.
+router.get('/pagamento/chave-publica', async (req, res) => {
+  const r = await obterChavePublica();
+  if (!r.ok) return res.status(502).json({ ok: false, erro: 'Não foi possível iniciar o pagamento. Tente novamente.' });
+  res.json({ ok: true, publicKey: r.publicKey });
+});
+
 // Página de pagamento (PIX + Cartão)
 router.get('/pagamento/:inscricaoId', async (req, res) => {
   try {
@@ -343,14 +352,6 @@ router.get('/pagamento/:inscricaoId/status', async (req, res) => {
     console.error('Status polling erro:', e.message);
     res.json({ pago: false });
   }
-});
-
-// Chave pública p/ criptografar o cartão no navegador (PagSeguro.encryptCard) — o
-// número/CVV nunca chegam em texto puro no nosso servidor.
-router.get('/pagamento/chave-publica', async (req, res) => {
-  const r = await obterChavePublica();
-  if (!r.ok) return res.status(502).json({ ok: false, erro: 'Não foi possível iniciar o pagamento. Tente novamente.' });
-  res.json({ ok: true, publicKey: r.publicKey });
 });
 
 // Pagamento via Cartão de Crédito — recebe o cartão já criptografado pelo SDK no navegador.

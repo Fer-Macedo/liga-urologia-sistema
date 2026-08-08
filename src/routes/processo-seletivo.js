@@ -673,6 +673,16 @@ module.exports = function (router) {
       res.redirect('/pss/pagamento/' + candId);
     } catch (e) { console.error('POST /pss/inscricao:', e.message); res.status(500).send('Erro ao processar inscrição.'); }
   });
+  // Chave pública p/ criptografar o cartão no navegador (PagSeguro.encryptCard) — o
+  // número/CVV nunca chegam em texto puro no nosso servidor. Precisa vir ANTES de
+  // /pss/pagamento/:cid, senão "chave-publica" é capturado como cid.
+  router.get('/pss/pagamento/chave-publica', async (req, res) => {
+    const { obterChavePublica } = require('../services/pagbank');
+    const r = await obterChavePublica();
+    if (!r.ok) return res.status(502).json({ ok: false, erro: 'Não foi possível iniciar o pagamento. Tente novamente.' });
+    res.json({ ok: true, publicKey: r.publicKey });
+  });
+
   // ── Página de pagamento (PIX) ──
   router.get('/pss/pagamento/:cid', async (req, res) => {
     try {
@@ -698,14 +708,6 @@ module.exports = function (router) {
     if (m.includes('limit') || m.includes('limite')) return 'Limite do cartão excedido.';
     return 'Pagamento não aprovado. Verifique os dados ou tente outro cartão.';
   }
-  // Chave pública p/ criptografar o cartão no navegador (PagSeguro.encryptCard) — o
-  // número/CVV nunca chegam em texto puro no nosso servidor.
-  router.get('/pss/pagamento/chave-publica', async (req, res) => {
-    const { obterChavePublica } = require('../services/pagbank');
-    const r = await obterChavePublica();
-    if (!r.ok) return res.status(502).json({ ok: false, erro: 'Não foi possível iniciar o pagamento. Tente novamente.' });
-    res.json({ ok: true, publicKey: r.publicKey });
-  });
 
   // Pagamento via Cartão de Crédito — recebe o cartão já criptografado pelo SDK no
   // navegador; a inscrição usa confirmarInscricaoPss pra reaproveitar o mesmo

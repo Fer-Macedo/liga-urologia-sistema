@@ -161,3 +161,27 @@ test('GET /pss/pagamento/chave-publica devolve a chave pública p/ tokenizar no 
   assert.strictEqual(res._json.ok, true);
   assert.strictEqual(res._json.publicKey, 'PUBKEY_TESTE');
 });
+
+// O mock de rotas acima é um mapa plano (rota -> handler) — não reproduz a ordem real de
+// registro do Express, então não pega o bug de "/pss/pagamento/:cid" (registrada antes)
+// engolindo "/pss/pagamento/chave-publica" como se "chave-publica" fosse o :cid. Esse bug
+// aconteceu de verdade (produção, 2026-08-08) — este teste usa um Router real pra não repetir.
+test('com o Router real do Express, /pss/pagamento/chave-publica não é engolida por /pss/pagamento/:cid', async () => {
+  montar({ candidato: candidatoBase });
+  const express = require('express');
+  const realRouter = express.Router();
+  require(MODULO)(realRouter);
+  const app = express();
+  app.use(express.json());
+  app.use(realRouter);
+  const srv = app.listen(0);
+  try {
+    const porta = srv.address().port;
+    const r = await fetch('http://127.0.0.1:' + porta + '/pss/pagamento/chave-publica');
+    const data = await r.json();
+    assert.strictEqual(data.ok, true);
+    assert.strictEqual(data.publicKey, 'PUBKEY_TESTE');
+  } finally {
+    srv.close();
+  }
+});
