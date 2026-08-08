@@ -672,6 +672,17 @@ router.post('/marketing/config/facebook', requireAuth, requireAdmin, async (req,
   req.session.msg = ['Configuração Facebook salva!']; res.redirect('/marketing');
 });
 
+// Credenciais de login do canva.com (login/senha, não confundir com o token OAuth da API)
+// pra equipe conseguir logar de novo no navegador dela quando a sessão cair — a sessão do
+// editor do Canva é do navegador, nosso OAuth não tem como mantê-la viva. Só admin edita;
+// quem tem permissão de marketing (a equipe) só visualiza, na aba Mídias.
+router.post('/marketing/config/canva-login', requireAuth, requireAdmin, async (req, res) => {
+  const { canva_login_email, canva_login_senha } = req.body;
+  await query('INSERT INTO marketing_config (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', ['canva_login_email', canva_login_email || '']);
+  await query('INSERT INTO marketing_config (chave,valor) VALUES ($1,$2) ON CONFLICT (chave) DO UPDATE SET valor=$2', ['canva_login_senha', canva_login_senha || '']);
+  req.session.msg = ['Credenciais de login do Canva salvas!']; res.redirect('/marketing');
+});
+
 router.post('/marketing/gerar-legenda', requireAuth, requirePermissao('marketing'), async (req, res) => {
   try {
     const { chamarClaudeTexto } = require('../services/cientifico-ia');
