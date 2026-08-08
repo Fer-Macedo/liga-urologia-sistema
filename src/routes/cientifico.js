@@ -560,7 +560,7 @@ router.get('/portal/materiais/:id/arquivo', requirePortal, async (req, res) => {
     const { gerarUrlTemporaria } = require('../services/arquivos');
     const url = await gerarUrlTemporaria(mat.arquivo_chave, 600);
     res.redirect(url);
-  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+  } catch(e) { console.error('portal/materiais arquivo:', e.message); res.status(500).send('Erro ao abrir arquivo.'); }
 });
 
 // GET /portal

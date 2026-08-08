@@ -617,7 +617,7 @@ module.exports = function (router) {
       if (!p) return res.status(404).send('Processo não encontrado.');
       const config = await getConfig();
       res.render('pages/pss-inscricao-publica', { processo: p, config, sucesso: false, numero: null, erro: null, cupomUrl: req.query.cupom ? req.query.cupom.toUpperCase() : '' });
-    } catch (e) { res.status(500).send('Erro: ' + e.message); }
+    } catch (e) { console.error('GET /pss/inscricao:', e.message); res.status(500).send('Erro ao carregar inscrição.'); }
   });
   router.post('/pss/:id/inscricao', async (req, res) => {
     const renderErro = async (msg) => { const p = (await query("SELECT * FROM ps_processos WHERE id=$1", [req.params.id])).rows[0]; const config = await getConfig(); return res.status(400).render('pages/pss-inscricao-publica', { processo: p, config, sucesso: false, numero: null, erro: msg, cupomUrl: (req.body.cupom_codigo || '').toUpperCase() }); };
@@ -671,7 +671,7 @@ module.exports = function (router) {
       await query("INSERT INTO ps_pagamentos (candidato_id,valor,metodo,status,pagbank_order_id,pix_copia_cola,pix_qr_image) VALUES ($1,$2,'pix','pendente',$3,$4,$5)",
         [candId, valorFinal, pixData && pixData.order_id || null, pixData && pixData.pix_copia_cola || null, pixData && pixData.pix_qr_image || null]);
       res.redirect('/pss/pagamento/' + candId);
-    } catch (e) { console.error('POST /pss/inscricao:', e.message); res.status(500).send('Erro ao processar inscrição: ' + e.message); }
+    } catch (e) { console.error('POST /pss/inscricao:', e.message); res.status(500).send('Erro ao processar inscrição.'); }
   });
   // ── Página de pagamento (PIX) ──
   router.get('/pss/pagamento/:cid', async (req, res) => {
@@ -682,7 +682,7 @@ module.exports = function (router) {
       const config = await getConfig();
       const pixData = pg ? { pix_copia_cola: pg.pix_copia_cola, pix_qr_image: pg.pix_qr_image, order_id: pg.pagbank_order_id, checkout_link: null } : null;
       res.render('pages/pss-pagamento', { config, candidato: c, processoNome: c.processo_nome, valor: c.valor_pago, pixData });
-    } catch (e) { res.status(500).send('Erro: ' + e.message); }
+    } catch (e) { console.error('GET /pss/pagamento:', e.message); res.status(500).send('Erro ao carregar pagamento.'); }
   });
   router.get('/pss/pagamento/:cid/status', async (req, res) => {
     try { const c = (await query("SELECT pagamento_status, numero_lista FROM ps_candidatos WHERE id=$1", [req.params.cid])).rows[0]; res.json({ confirmado: c && c.pagamento_status === 'confirmado', numero: c ? c.numero_lista : null }); }

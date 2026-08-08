@@ -134,8 +134,9 @@ app.use(async (req, res, next) => {
   next();
 });
 
-// Health check para o Render
-app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now(), __dirname, views: app.get('views'), cwd: process.cwd(), pid: process.pid }));
+// Health check — só o essencial pra confirmar que o processo responde; __dirname/cwd/pid
+// não tem por que estar público (nenhuma autenticação nessa rota).
+app.get('/health', (req, res) => res.json({ status: 'ok', ts: Date.now() }));
 
 app.use('/', routes);
 

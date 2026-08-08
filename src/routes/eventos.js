@@ -1,10 +1,34 @@
 // ═══ EVENTOS ════════════════════════════════════════════════════════════════
+const rateLimit = require('express-rate-limit');
 const { query } = require('../models/database');
 const { requireAuth, requireAdmin, requirePermissao } = require('../middleware/auth');
 const { getConfig } = require('../services/config');
 const { enviarEmail, emailBonito } = require('../services/email');
 const { criarPixEvento, consultarPagamento } = require('../services/pagbank');
 const { enviarEmailConfirmacaoEvento } = require('../services/eventos-email');
+
+// /inscricao e /checkout ficam de fora do rate-limit geral (src/routes/index.js) porque
+// alguém legitimamente pode recarregar/tentar de novo várias vezes numa fila de evento —
+// mas isso não pode significar SEM limite nenhum. Um teto mais folgado que o geral, só
+// pra essas rotas públicas específicas.
+const limiterInscricaoEvento = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: { erro: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+// Formulário de contato — poucas mensagens legítimas por pessoa; teto mais apertado.
+const limiterContatoEvento = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { erro: 'Muitas mensagens. Aguarde alguns minutos e tente novamente.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
 
 module.exports = function (router) {
 
@@ -113,7 +137,7 @@ router.post('/eventos/:id/lotes/:lid/deletar', requireAuth, requirePermissao('ev
 });
 
 // INSCRIÇÕES - Página Pública
-router.get('/inscricao/:id', async (req, res) => {
+router.get('/inscricao/:id', limiterInscricaoEvento, async (req, res) => {
   try {
     const [evR, lotesR] = await Promise.all([
       query(`SELECT e.*, (SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=e.id) as total_inscritos FROM eventos e WHERE id=$1`,[req.params.id]),
@@ -131,11 +155,11 @@ router.get('/inscricao/:id', async (req, res) => {
     const cfgPub = await getConfig();
     const cupomUrl = req.query.cupom ? req.query.cupom.toUpperCase() : null;
     res.render('pages/evento-inscricao-publica', { evento: evR.rows[0], lotes: lotesR.rows, sucesso: false, qrcode: null, campos: camposR.rows, codigoInscricao: null, config: cfgPub, programacao: progPubR.rows, palestrantes: palesPubR.rows, patrocinadores: patrocPubR.rows, pixData: null, cupomUrl, encerrado: _eventoEncerrado });
-  } catch(e) { res.status(500).send('Erro: '+e.message); }
+  } catch(e) { console.error('GET /inscricao:', e.message); res.status(500).send('Erro ao carregar a inscrição.'); }
 });
 
 // INSCRIÇÕES — POST: salva dados e redireciona para pagamento
-router.post('/inscricao/:id', async (req, res) => {
+router.post('/inscricao/:id', limiterInscricaoEvento, async (req, res) => {
   try {
     const { nome, email, whatsapp, rg, cpf, instituicao, lote_id, tipo_participante, catraca, semestre, turma } = req.body;
     if (!nome || !email) return res.status(400).send('Nome e e-mail são obrigatórios.');
@@ -245,7 +269,7 @@ router.post('/inscricao/:id', async (req, res) => {
 
   } catch(e) {
     console.error('POST /inscricao erro:', e.message);
-    res.status(500).send('Erro ao processar inscrição: ' + e.message);
+    res.status(500).send('Erro ao processar inscrição. Tente novamente.');
   }
 });
 
@@ -281,7 +305,7 @@ router.get('/pagamento/:inscricaoId', async (req, res) => {
     });
   } catch(e) {
     console.error('GET /pagamento erro:', e.message);
-    res.status(500).send('Erro: ' + e.message);
+    res.status(500).send('Erro ao carregar pagamento.');
   }
 });
 
@@ -418,7 +442,7 @@ router.get('/pagamento/:inscricaoId/confirmado', async (req, res) => {
     if (!inscricao) return res.status(404).send('Não encontrado.');
     const config = await getConfig();
     res.render('pages/evento-confirmado', { config, inscricao });
-  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+  } catch(e) { console.error('GET /pagamento/confirmado:', e.message); res.status(500).send('Erro ao carregar confirmação.'); }
 });
 
 // ─── HELPERS PAGAMENTO ────────────────────────────────────────────────────────
@@ -895,11 +919,12 @@ router.post('/eventos/:id/lotes/:lid/editar', requireAuth, requirePermissao('eve
   req.session.msg=['Lote atualizado!']; res.redirect('/eventos/'+req.params.id);
 });
 
-router.post('/contato-evento/:id', async (req, res) => {
+router.post('/contato-evento/:id', limiterContatoEvento, async (req, res) => {
   try {
     const {nome,email,mensagem} = req.body;
-    // resend
-    await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:'lauroucpcde@lauroucpcde.com', subject:'Contato via evento — '+nome, html:'<p><strong>Nome:</strong> '+nome+'</p><p><strong>Email:</strong> '+email+'</p><p><strong>Mensagem:</strong><br>'+mensagem+'</p>' });
+    // resend — nome/email/mensagem vem de quem preenche o formulario publico, sem escape
+    // isso virava HTML de verdade dentro do e-mail que a liga recebe (injeção de conteúdo/link).
+    await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to:'lauroucpcde@lauroucpcde.com', subject:'Contato via evento — '+escapeHtml(nome), html:'<p><strong>Nome:</strong> '+escapeHtml(nome)+'</p><p><strong>Email:</strong> '+escapeHtml(email)+'</p><p><strong>Mensagem:</strong><br>'+escapeHtml(mensagem)+'</p>' });
     res.send('<script>alert("Mensagem enviada! Entraremos em contato em breve.");history.back();</script>');
   } catch(e) { res.send('<script>alert("Erro ao enviar. Tente novamente.");history.back();</script>'); }
 });
@@ -1315,7 +1340,7 @@ router.get('/live/:token', async (req, res) => {
     const config = await getConfig();
     const patrocR = await query('SELECT * FROM evento_patrocinadores WHERE evento_id=$1 ORDER BY id', [p.evento_id]);
     res.render('pages/evento-live', { token: req.params.token, presenca: p, config, patrocinadores: patrocR.rows });
-  } catch(e) { res.status(500).send('Erro: '+e.message); }
+  } catch(e) { console.error('GET /live:', e.message); res.status(500).send('Erro ao carregar transmissão.'); }
 });
 router.post('/live/:token/ping', async (req, res) => {
   try {
@@ -1464,7 +1489,7 @@ router.get('/certificado/validar/:codigo', async (req, res) => {
     const emitidoEm = cert.emitido_em ? new Date(cert.emitido_em).toLocaleDateString('es-PY') : '\u2014';
     const iconCheck = `<svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
     res.send(`${head('Certificado válido', orgCor)}<div class="cbody"><div class="badge">${iconCheck}</div><h1>Certificado válido</h1><p class="sub">Documento auténtico, emitido y verificado por ${orgNome}.</p><div class="rows"><div class="row"><div class="k">Participante</div><div class="v">${cert.nome}</div></div><div class="row"><div class="k">Evento</div><div class="v">${cert.evento_nome}</div></div><div class="row"><div class="k">Realizado el</div><div class="v">${dt}</div></div><div class="row"><div class="k">Emitido el</div><div class="v">${emitidoEm}</div></div><div class="row"><div class="k">Código</div><div class="v code">${req.params.codigo}</div></div></div></div>${foot}`);
-  } catch(e) { res.status(500).send('Error: '+e.message); }
+  } catch(e) { console.error('GET /certificado/validar:', e.message); res.status(500).send('Error al validar certificado.'); }
 });
 
 // ─── AVALIACAO POS-EVENTO ────────────────────────────────────────────────────
@@ -1497,7 +1522,7 @@ router.get('/avaliacao/:token', async (req, res) => {
     const config = await getConfig();
     if (aval.respondido) return res.render('pages/avaliacao-respondida',{config,aval});
     res.render('pages/avaliacao-form',{config,aval,token:req.params.token});
-  } catch(e) { res.status(500).send('Erro: '+e.message); }
+  } catch(e) { console.error('GET /avaliacao:', e.message); res.status(500).send('Erro ao carregar avaliação.'); }
 });
 router.post('/avaliacao/:token', async (req, res) => {
   try {
@@ -1508,7 +1533,7 @@ router.post('/avaliacao/:token', async (req, res) => {
     );
     const config = await getConfig();
     res.render('pages/avaliacao-obrigado',{config});
-  } catch(e) { res.status(500).send('Erro: '+e.message); }
+  } catch(e) { console.error('POST /avaliacao:', e.message); res.status(500).send('Erro ao enviar avaliação.'); }
 });
 router.get('/eventos/:id/avaliacoes', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
@@ -1520,7 +1545,7 @@ router.get('/eventos/:id/avaliacoes', requireAuth, requirePermissao('eventos'), 
 });
 
 // ─── LISTA DE ESPERA ─────────────────────────────────────────────────────────
-router.post('/inscricao/:id/lista-espera', async (req, res) => {
+router.post('/inscricao/:id/lista-espera', limiterInscricaoEvento, async (req, res) => {
   try {
     const { nome, email, whatsapp } = req.body;
     if (!nome) return res.json({ok:false, msg:'Nome obrigatório.'});
@@ -1557,7 +1582,7 @@ router.get('/eventos/:id/lista-espera', requireAuth, requirePermissao('eventos')
 // ═══════════════════════════════════════════════════════════════════════════
 
 // Página pública de check-out
-router.get('/checkout/:id', async (req, res) => {
+router.get('/checkout/:id', limiterInscricaoEvento, async (req, res) => {
   try {
     const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
     if (!evR.rows[0]) return res.status(404).send('Evento não encontrado.');
@@ -1571,7 +1596,7 @@ router.get('/checkout/:id', async (req, res) => {
 });
 
 // Registrar check-out (público)
-router.post('/checkout/:id', async (req, res) => {
+router.post('/checkout/:id', limiterInscricaoEvento, async (req, res) => {
   try {
     const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
     if (!evR.rows[0]) return res.status(404).send('Evento não encontrado.');
