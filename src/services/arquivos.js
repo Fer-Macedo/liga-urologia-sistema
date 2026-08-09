@@ -57,7 +57,38 @@ function iconeArquivo(mimetype) {
   return '📁';
 }
 
+// ─── ASSINATURA REAL DO ARQUIVO (magic bytes) ────────────────────────────────
+// file.mimetype vem do navegador — o cliente escolhe o que quiser (um .exe
+// renomeado pra .jpg passa pelo fileFilter tranquilo). Confere os primeiros
+// bytes do conteúdo de verdade contra a assinatura conhecida da família de
+// formato. text/plain e text/csv não têm assinatura (são texto livre) —
+// ficam de fora dessa checagem, protegidos só pelo fileFilter de mimetype.
+function assinaturaValida(buffer, mimetype) {
+  if (!buffer || buffer.length < 4) return false;
+  const b = buffer;
+  if (mimetype === 'image/jpeg') return b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF;
+  if (mimetype === 'image/png') return b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47;
+  if (mimetype === 'image/gif') return b.slice(0, 3).toString('ascii') === 'GIF';
+  if (mimetype === 'image/webp') return b.slice(0, 4).toString('ascii') === 'RIFF' && b.slice(8, 12).toString('ascii') === 'WEBP';
+  if (mimetype === 'application/pdf') return b.slice(0, 4).toString('ascii') === '%PDF';
+  if (mimetype === 'application/msword' || mimetype === 'application/vnd.ms-excel' || mimetype === 'application/vnd.ms-powerpoint') {
+    return b[0] === 0xD0 && b[1] === 0xCF && b[2] === 0x11 && b[3] === 0xE0; // OLE2 (formato legado do Office)
+  }
+  if (mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
+      mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      mimetype === 'application/vnd.openxmlformats-officedocument.presentationml.presentation') {
+    return b[0] === 0x50 && b[1] === 0x4B; // docx/xlsx/pptx são ZIP por dentro
+  }
+  if (mimetype === 'video/mp4' || mimetype === 'video/quicktime') return b.slice(4, 8).toString('ascii') === 'ftyp';
+  if (mimetype === 'video/x-msvideo') return b.slice(0, 4).toString('ascii') === 'RIFF';
+  if (mimetype === 'video/mpeg') return b[0] === 0x00 && b[1] === 0x00 && b[2] === 0x01;
+  return true; // text/plain, text/csv e qualquer tipo sem assinatura conhecida
+}
+
 async function uploadArquivo(buffer, nomeOriginal, mimetype, pasta) {
+  if (!assinaturaValida(buffer, mimetype)) {
+    throw new Error('O conteúdo do arquivo não corresponde ao tipo informado.');
+  }
   const ext = path.extname(nomeOriginal);
   const hash = crypto.randomBytes(8).toString('hex');
   const categoria = pasta || categoriaArquivo(mimetype);
@@ -133,4 +164,4 @@ async function aplicarMarcaDagua(buffer, marcaChave) {
   }
 }
 
-module.exports = { upload, uploadArquivo, deletarArquivo, gerarUrlDownload, listarArquivos, iconeArquivo, categoriaArquivo, gerarUrlInline, gerarUrlTemporaria, baixarArquivoBuffer, aplicarMarcaDagua, getSignedDownloadUrl: gerarUrlInline };
+module.exports = { upload, uploadArquivo, deletarArquivo, gerarUrlDownload, listarArquivos, iconeArquivo, categoriaArquivo, gerarUrlInline, gerarUrlTemporaria, baixarArquivoBuffer, aplicarMarcaDagua, getSignedDownloadUrl: gerarUrlInline, assinaturaValida };

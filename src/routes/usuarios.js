@@ -1,5 +1,6 @@
 // ═══ USUÁRIOS DO PAINEL (+ meu perfil + auditoria) ══════════════════════════
 const bcrypt = require('bcryptjs');
+const { authenticator } = require('otplib');
 const { query } = require('../models/database');
 const { requireAuth, requireAdmin, requirePermissao } = require('../middleware/auth');
 const { getConfig } = require('../services/config');
@@ -58,14 +59,53 @@ router.post('/usuarios/:id/telefone', requireAuth, requireAdmin, async (req, res
 // faltava so a tela para chegar ate elas.
 router.get('/perfil', requireAuth, async (req, res) => {
   try {
-    const r = await query('SELECT criado_em FROM usuarios WHERE id=$1', [req.session.usuario.id]);
+    const r = await query('SELECT criado_em, mfa_ativo FROM usuarios WHERE id=$1', [req.session.usuario.id]);
     const c = r.rows[0] && r.rows[0].criado_em;
     res.render('pages/perfil', {
       config: await getConfig(), usuario: req.session.usuario,
       msg: req.flash('msg'), erro: req.flash('erro'),
-      criadoEm: c ? new Date(c).toLocaleDateString('pt-BR') : null
+      criadoEm: c ? new Date(c).toLocaleDateString('pt-BR') : null,
+      mfaAtivo: !!(r.rows[0] && r.rows[0].mfa_ativo)
     });
   } catch (e) { console.error(e); req.flash('erro', e.message); res.redirect('/dashboard'); }
+});
+
+// ─── AUTENTICAÇÃO EM DUAS ETAPAS (TOTP) ────────────────────────────────────────
+// Opcional, por conta — cada usuário liga pra si mesmo em /perfil. Não é obrigatório
+// por perfil porque forçar de uma vez trancaria contas existentes que nunca configuraram.
+
+router.post('/mfa/iniciar', requireAuth, async (req, res) => {
+  const secret = authenticator.generateSecret();
+  req.session.mfaSetupSecret = secret;
+  const config = await getConfig();
+  const emissor = (config.org_nome || 'LAURO').substring(0, 30);
+  const otpauthUrl = authenticator.keyuri(req.session.usuario.email, emissor, secret);
+  res.json({ ok: true, secret, otpauthUrl });
+});
+
+router.post('/mfa/confirmar', requireAuth, async (req, res) => {
+  const secret = req.session.mfaSetupSecret;
+  const codigo = (req.body.codigo || '').replace(/\D/g, '');
+  if (!secret || !codigo || !authenticator.verify({ token: codigo, secret })) {
+    req.flash('erro', 'Código inválido. Escaneie o QR de novo e tente outra vez.');
+    return res.redirect('/perfil');
+  }
+  await query('UPDATE usuarios SET mfa_secret=$1, mfa_ativo=true WHERE id=$2', [secret, req.session.usuario.id]);
+  delete req.session.mfaSetupSecret;
+  req.flash('msg', 'Autenticação em duas etapas ativada!');
+  res.redirect('/perfil');
+});
+
+router.post('/mfa/desativar', requireAuth, async (req, res) => {
+  const r = await query('SELECT * FROM usuarios WHERE id=$1', [req.session.usuario.id]);
+  const usuario = r.rows[0];
+  if (!usuario || !bcrypt.compareSync(req.body.senha_confirmacao || '', usuario.senha)) {
+    req.flash('erro', 'Senha atual incorreta.');
+    return res.redirect('/perfil');
+  }
+  await query('UPDATE usuarios SET mfa_secret=NULL, mfa_ativo=false WHERE id=$1', [usuario.id]);
+  req.flash('msg', 'Autenticação em duas etapas desativada.');
+  res.redirect('/perfil');
 });
 
 router.post('/minha-senha', requireAuth, async (req, res) => {

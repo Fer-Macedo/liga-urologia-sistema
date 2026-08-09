@@ -95,6 +95,8 @@ async function initSchema() {
     END $$;
     ALTER TABLE membros ALTER COLUMN dia_vencimento SET DEFAULT 15;
     ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS telefone TEXT;
+    ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS mfa_secret TEXT;
+    ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS mfa_ativo BOOLEAN DEFAULT false;
     ALTER TABLE listas_assinaturas ADD COLUMN IF NOT EXISTS tipo_publico TEXT DEFAULT 'todos';
     ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
@@ -420,6 +422,20 @@ async function initSchema() {
     CREATE TABLE IF NOT EXISTS wapi_envios_diarios (
       dia DATE PRIMARY KEY,
       total INTEGER NOT NULL DEFAULT 0
+    );
+
+    -- Bloqueio de força bruta e tokens de "esqueci senha" — antes viviam em objeto JS em
+    -- memória (zerava a cada restart/deploy, e não escala com mais de um processo).
+    CREATE TABLE IF NOT EXISTS login_tentativas (
+      ip TEXT PRIMARY KEY,
+      tentativas INTEGER NOT NULL DEFAULT 0,
+      bloqueado_ate TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS tokens_senha (
+      token TEXT PRIMARY KEY,
+      usuario_id INTEGER NOT NULL,
+      expira TIMESTAMP NOT NULL
     )
   `);
 

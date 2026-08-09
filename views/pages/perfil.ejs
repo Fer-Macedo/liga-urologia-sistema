@@ -7,6 +7,7 @@
   <title>Meu Perfil</title>
   <link rel="stylesheet" href="/css/style.css">
   <link rel="stylesheet" href="/css/admin-modern.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     :root{--cor-primaria:<%= config.org_cor||'#1a56db' %>;}
     .perfil-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
@@ -87,8 +88,60 @@
         </form>
       </div>
     </div>
+
+    <div class="cartao">
+      <h2>Autenticação em duas etapas (2FA)</h2>
+      <p class="ajuda">Além da senha, pede um código do seu app autenticador (Google Authenticator, Authy, etc.) pra entrar no painel.</p>
+
+      <% if (mfaAtivo) { %>
+        <div class="dado"><span class="rot">STATUS</span><span class="selo" style="background:#EDF6F1;border-color:#23704F;color:#23704F">Ativo</span></div>
+        <form method="POST" action="/mfa/desativar" style="margin-top:14px">
+          <div class="campo">
+            <label>Confirme sua senha pra desativar</label>
+            <input type="password" name="senha_confirmacao" required autocomplete="current-password">
+          </div>
+          <button type="submit" class="btn btn-secundario" onclick="return confirm('Desativar a autenticação em duas etapas?')">Desativar 2FA</button>
+        </form>
+      <% } else { %>
+        <div class="dado"><span class="rot">STATUS</span><span class="selo">Inativo</span></div>
+        <button type="button" class="btn btn-primario" id="btn-iniciar-mfa" style="margin-top:14px">Ativar 2FA</button>
+
+        <div id="mfa-setup" style="display:none;margin-top:16px">
+          <p class="ajuda">Escaneie o QR com seu app autenticador:</p>
+          <div id="mfa-qr" style="width:180px;margin:10px 0"></div>
+          <p class="ajuda">Ou digite manualmente: <code id="mfa-chave" style="font-weight:700"></code></p>
+          <form method="POST" action="/mfa/confirmar" id="form-mfa-confirmar">
+            <div class="campo">
+              <label>Código do app (6 dígitos)</label>
+              <input type="text" name="codigo" inputmode="numeric" pattern="[0-9]*" maxlength="6" required placeholder="000000">
+            </div>
+            <button type="submit" class="btn btn-primario">Confirmar e ativar</button>
+          </form>
+        </div>
+      <% } %>
+    </div>
     </div>
   </main>
 </div>
+<script>
+  var btnIniciar = document.getElementById('btn-iniciar-mfa');
+  if (btnIniciar) {
+    btnIniciar.addEventListener('click', async function() {
+      btnIniciar.disabled = true;
+      try {
+        var r = await fetch('/mfa/iniciar', { method: 'POST' });
+        var data = await r.json();
+        document.getElementById('mfa-qr').innerHTML = '';
+        new QRCode(document.getElementById('mfa-qr'), { text: data.otpauthUrl, width: 180, height: 180 });
+        document.getElementById('mfa-chave').textContent = data.secret;
+        document.getElementById('mfa-setup').style.display = 'block';
+        btnIniciar.style.display = 'none';
+      } catch (e) {
+        alert('Não foi possível iniciar a configuração. Tente novamente.');
+        btnIniciar.disabled = false;
+      }
+    });
+  }
+</script>
 </body>
 </html>
