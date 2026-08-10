@@ -27,7 +27,8 @@ function dumpParaArquivo(caminho) {
   return new Promise((resolve, reject) => {
     if (!process.env.DATABASE_URL) return reject(new Error('DATABASE_URL não definida.'));
     const dump = spawn('pg_dump', ['--no-owner', '--no-privileges', '--dbname', process.env.DATABASE_URL]);
-    const out = fs.createWriteStream(caminho);
+    // mode 0o600: o dump tem senha com hash, CPF e dados financeiros — só o dono (root) le.
+    const out = fs.createWriteStream(caminho, { mode: 0o600 });
     let stderr = '';
     let codigo = null;
     dump.stderr.on('data', d => { stderr += d.toString(); });
@@ -82,7 +83,7 @@ async function executarBackup() {
   try {
     emailDestino = await destinatarios();
 
-    await fs.promises.mkdir(BACKUP_DIR, { recursive: true });
+    await fs.promises.mkdir(BACKUP_DIR, { recursive: true, mode: 0o700 });
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-'); // 2026-07-17-03-00-00
     const nomeArquivo = `backup-lauro-${stamp}.sql.gz`;
     const caminho = path.join(BACKUP_DIR, nomeArquivo);
