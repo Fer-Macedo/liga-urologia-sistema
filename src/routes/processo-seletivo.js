@@ -762,7 +762,7 @@ module.exports = function (router) {
       let processo = null, inscritos = [], cupons = [], resumo = { total: 0, confirmados: 0, pendentes: 0, arrecadado: 0 };
       if (selId) {
         processo = procs.find(p => p.id === selId) || null;
-        inscritos = (await query("SELECT * FROM ps_candidatos WHERE processo_id=$1 ORDER BY (pagamento_status='confirmado') DESC, numero_lista NULLS LAST, criado_em DESC", [selId])).rows;
+        inscritos = (await query("SELECT * FROM ps_candidatos WHERE processo_id=$1 ORDER BY LOWER(nome) ASC", [selId])).rows;
         cupons = (await query("SELECT ec.*, c.nome AS usado_nome FROM ps_cupons ec LEFT JOIN ps_candidatos c ON c.id=ec.usado_por_candidato_id WHERE ec.processo_id=$1 ORDER BY ec.criado_em DESC", [selId])).rows;
         resumo.total = inscritos.length;
         inscritos.forEach(i => { if (i.pagamento_status === 'confirmado') resumo.confirmados++; else resumo.pendentes++; });
