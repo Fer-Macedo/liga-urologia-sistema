@@ -997,22 +997,6 @@ router.post('/eventos/:id/palestrantes/:pid/editar', requireAuth, requirePermiss
   } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
 });
 
-router.post('/eventos/:id/palestrantes/:pid/editar', requireAuth, requirePermissao('eventos'), async (req, res) => {
-  try {
-    const {upload,uploadArquivo} = require('../services/arquivos');
-    upload.single('foto')(req, res, async (err) => {
-      const {nome,bio,instituicao} = req.body;
-      if (req.file) {
-        const r=await uploadArquivo(req.file.buffer,req.file.originalname,req.file.mimetype,'palestrantes');
-        await query('UPDATE evento_palestrantes SET nome=$1,bio=$2,instituicao=$3,foto_chave=$4 WHERE id=$5',[nome,bio||null,instituicao||null,r.chave,req.params.pid]);
-      } else {
-        await query('UPDATE evento_palestrantes SET nome=$1,bio=$2,instituicao=$3 WHERE id=$4',[nome,bio||null,instituicao||null,req.params.pid]);
-      }
-      req.session.msg=['Palestrante atualizado!']; res.redirect('/eventos/'+req.params.id);
-    });
-  } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
-});
-
 router.post('/eventos/:id/patrocinadores', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const {upload,uploadArquivo} = require('../services/arquivos');
