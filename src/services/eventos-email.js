@@ -4,6 +4,12 @@ const { query } = require('../models/database');
 const { getConfig } = require('./config');
 const { enviarEmail } = require('./email');
 
+// Texto padrão do email de confirmação (com {nombre}/{evento} pra substituir). Usado como
+// fallback no envio E como valor inicial ao criar um evento (rotas/eventos.js) — antes só
+// existia aqui dentro da função, então todo evento novo nascia com o campo vazio na tela de
+// edição, e quem criava o evento tinha que lembrar de colar o texto de um evento anterior.
+const TEXTO_CONFIRMACAO_PADRAO = '<p>Estimado/a <strong>{nombre}</strong>,</p><p>Confirmamos su inscripción al evento <strong>{evento}</strong>.</p><p>Próximamente recibirá un correo electrónico con toda la información del evento, incluyendo:</p><ul><li>Fecha y hora</li><li>Lugar</li><li>Instrucciones importantes para la participación</li></ul><p>Le recomendamos prestar atención a las instrucciones y ser puntual el día del evento. También le recomendamos unirse al grupo de WhatsApp del evento para recibir toda la información y mantenerse al día con las indicaciones del equipo organizador.</p><p>Si tiene alguna pregunta, no dude en contactarnos.</p><p>Atentamente,<br>Comité Organizador<br>Liga Académica de Urología – LAURO</p>';
+
 async function enviarEmailConfirmacaoEvento(inscricaoId) {
   try {
     const r = await query(
@@ -16,8 +22,7 @@ async function enviarEmailConfirmacaoEvento(inscricaoId) {
     // resend
     const cor = insc.cor_tema || '#1a3d2b';
     const textoExtra = insc.email_inscricao || '';
-    const _defConfEs = '<p>Estimado/a <strong>{nombre}</strong>,</p><p>Confirmamos su inscripción al evento <strong>{evento}</strong>.</p><p>Próximamente recibirá un correo electrónico con toda la información del evento, incluyendo:</p><ul><li>Fecha y hora</li><li>Lugar</li><li>Instrucciones importantes para la participación</li></ul><p>Le recomendamos prestar atención a las instrucciones y ser puntual el día del evento. También le recomendamos unirse al grupo de WhatsApp del evento para recibir toda la información y mantenerse al día con las indicaciones del equipo organizador.</p><p>Si tiene alguna pregunta, no dude en contactarnos.</p><p>Atentamente,<br>Comité Organizador<br>Liga Académica de Urología – LAURO</p>';
-    var _corpoConf = (textoExtra && textoExtra.replace(/<[^>]*>/g,'').trim().length) ? textoExtra : _defConfEs;
+    var _corpoConf = (textoExtra && textoExtra.replace(/<[^>]*>/g,'').trim().length) ? textoExtra : TEXTO_CONFIRMACAO_PADRAO;
     _corpoConf = _corpoConf.split('{nombre}').join((insc.nome||'').split(' ')[0]).split('{evento}').join(insc.evento_nome||'');
     const dataStr = insc.data_inicio ? new Date(insc.data_inicio).toLocaleDateString('pt-BR', {day:'2-digit',month:'long',year:'numeric',timeZone:'UTC'}) : '';
     const wppBtn = insc.wpp_grupo ? '<a href="'+insc.wpp_grupo+'" style="display:inline-block;background:#25d366;color:white;padding:12px 32px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.5px;text-transform:uppercase"><img src="https://sistema.lauroucpcde.com/img/whatsapp-white.svg" width="18" height="18" style="vertical-align:middle;margin-right:8px;display:inline" alt="">Unirse al grupo del evento</a>' : '';
@@ -38,4 +43,4 @@ async function enviarEmailConfirmacaoEvento(inscricaoId) {
   } catch(e) { console.error('enviarEmailConfirmacaoEvento ERRO:', e.message); }
 }
 
-module.exports = { enviarEmailConfirmacaoEvento };
+module.exports = { enviarEmailConfirmacaoEvento, TEXTO_CONFIRMACAO_PADRAO };

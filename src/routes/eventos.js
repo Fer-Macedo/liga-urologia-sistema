@@ -5,7 +5,7 @@ const { requireAuth, requireAdmin, requirePermissao } = require('../middleware/a
 const { getConfig } = require('../services/config');
 const { enviarEmail, emailBonito } = require('../services/email');
 const { criarPixEvento, consultarPagamento, obterChavePublica, pagarComCartao } = require('../services/pagbank');
-const { enviarEmailConfirmacaoEvento } = require('../services/eventos-email');
+const { enviarEmailConfirmacaoEvento, TEXTO_CONFIRMACAO_PADRAO } = require('../services/eventos-email');
 const { limiterPagamentoCartao } = require('../services/rate-limiters');
 
 // /inscricao e /checkout ficam de fora do rate-limit geral (src/routes/index.js) porque
@@ -77,8 +77,11 @@ router.post('/eventos', requireAuth, requirePermissao('eventos'), async (req, re
       const {nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico,cor_tema,tipo_evento} = req.body;
       let bannerChave = null;
       if (req.file) { const r=await uploadArquivo(req.file.buffer,req.file.originalname,req.file.mimetype,'eventos'); bannerChave=r.chave; }
-      await query('INSERT INTO eventos (nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico,banner_chave,cor_tema,tipo_evento,criado_por) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
-        [nome,descricao||null,data_inicio||null,data_fim||null,local||null,endereco||null,parseInt(vagas_total)||100,status||'rascunho',publico==='true',bannerChave,cor_tema||'#1a3d2b',tipo_evento||'presencial',req.session.usuario.id]);
+      // email_inscricao já nasce com o texto padrão (mesma regra usada como fallback no
+      // envio) — sem isso, todo evento novo tinha o campo vazio e exigia copiar e colar
+      // manualmente o texto de um evento anterior.
+      await query('INSERT INTO eventos (nome,descricao,data_inicio,data_fim,local,endereco,vagas_total,status,publico,banner_chave,cor_tema,tipo_evento,criado_por,email_inscricao) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)',
+        [nome,descricao||null,data_inicio||null,data_fim||null,local||null,endereco||null,parseInt(vagas_total)||100,status||'rascunho',publico==='true',bannerChave,cor_tema||'#1a3d2b',tipo_evento||'presencial',req.session.usuario.id,TEXTO_CONFIRMACAO_PADRAO]);
       req.session.msg=['Evento criado!']; res.redirect('/eventos');
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos'); }
