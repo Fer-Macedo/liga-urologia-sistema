@@ -472,9 +472,45 @@ router.post('/eventos/:id/inscricoes/manual', requireAuth, requirePermissao('eve
   req.session.msg=['Inscrição manual adicionada!']; res.redirect('/eventos/'+req.params.id);
 });
 
+// Confirmação manual da inscrição (botão "Confirmar" da lista) — usada sobretudo pra
+// pagamento recebido fora do sistema (dinheiro em mãos). Antes só trocava o status da
+// inscrição: não registrava o pagamento, não lançava no fluxo de caixa e não mandava
+// e-mail de confirmação — 3 sintomas de um caso real (Edilson Ferreira, 12/08/2026)
+// vieram todos dessa mesma causa.
 router.post('/eventos/:id/inscricoes/:iid/confirmar', requireAuth, requirePermissao('eventos'), async (req, res) => {
-  await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1",[req.params.iid]);
-  req.session.msg=['Inscrição confirmada!']; res.redirect('/eventos/'+req.params.id);
+  const iid = req.params.iid;
+  try {
+    const insR = await query('SELECT * FROM evento_inscricoes WHERE id=$1', [iid]);
+    const insc = insR.rows[0];
+    if (!insc) { req.session.erro=['Inscrição não encontrada.']; return res.redirect('/eventos/'+req.params.id); }
+
+    await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1", [iid]);
+
+    if (!insc.isento && insc.lote_id) {
+      const loteR = await query('SELECT preco FROM evento_lotes WHERE id=$1', [insc.lote_id]);
+      const preco = loteR.rows[0] ? parseFloat(loteR.rows[0].preco) : 0;
+      if (preco > 0) {
+        const pagExistente = await query('SELECT id, status FROM evento_pagamentos WHERE inscricao_id=$1 ORDER BY criado_em DESC LIMIT 1', [iid]);
+        const jaEstavaPago = pagExistente.rows.length && pagExistente.rows[0].status === 'pago';
+        if (!jaEstavaPago) {
+          if (pagExistente.rows.length) {
+            await query("UPDATE evento_pagamentos SET valor=$1, metodo='dinheiro', status='pago', pago_em=NOW() WHERE id=$2", [preco, pagExistente.rows[0].id]);
+          } else {
+            await query(`INSERT INTO evento_pagamentos (inscricao_id, valor, metodo, status, pago_em) VALUES ($1,$2,'dinheiro','pago',NOW())`, [iid, preco]);
+          }
+          const { lancarEventoNoFluxo } = require('../services/fluxo-eventos');
+          await lancarEventoNoFluxo(query, iid).catch(e => console.error('lancar fluxo evento (confirmar manual inscricao):', e.message));
+        }
+      }
+    }
+
+    await enviarEmailConfirmacaoEvento(iid).catch(e => console.error('email confirmacao manual:', e.message));
+    req.session.msg=['Inscrição confirmada!'];
+  } catch(e) {
+    console.error('confirmar inscricao manual erro:', e.message);
+    req.session.erro=['Erro ao confirmar: '+e.message];
+  }
+  res.redirect('/eventos/'+req.params.id);
 });
 
 router.post('/eventos/:id/inscricoes/:iid/deletar', requireAuth, requirePermissao('eventos'), async (req, res) => {
@@ -587,10 +623,13 @@ router.post('/eventos/:id/inscricoes/:iid/checkin', requireAuth, requirePermissa
 router.post('/eventos/:id/pagamentos/:pid/confirmar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   await query("UPDATE evento_pagamentos SET status='pago', pago_em=NOW() WHERE id=$1",[req.params.pid]);
   const iR = await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=(SELECT inscricao_id FROM evento_pagamentos WHERE id=$1) RETURNING id",[req.params.pid]);
-  try {
-    const { lancarEventoNoFluxo } = require('../services/fluxo-eventos');
-    if (iR.rows.length) await lancarEventoNoFluxo(query, iR.rows[0].id);
-  } catch(ef){ console.error('lancar fluxo evento (confirmar manual):', ef.message); }
+  if (iR.rows.length) {
+    try {
+      const { lancarEventoNoFluxo } = require('../services/fluxo-eventos');
+      await lancarEventoNoFluxo(query, iR.rows[0].id);
+    } catch(ef){ console.error('lancar fluxo evento (confirmar manual):', ef.message); }
+    await enviarEmailConfirmacaoEvento(iR.rows[0].id).catch(e => console.error('email confirmacao pagamento manual:', e.message));
+  }
   req.session.msg=['Pagamento confirmado!']; res.redirect('/eventos/'+req.params.id);
 });
 

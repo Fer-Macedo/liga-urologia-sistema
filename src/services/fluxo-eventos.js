@@ -1,9 +1,12 @@
 // Valor líquido (já descontada a taxa do PagBank) de um pagamento de evento. Mesma taxa usada
-// no lançamento real do fluxo de caixa: cartão 4%, PIX 1,9% (conforme extrato PagBank).
+// no lançamento real do fluxo de caixa: cartão 4%, PIX 1,9% (conforme extrato PagBank), dinheiro
+// sem taxa nenhuma (não passa por gateway — 12/08/2026: estava caindo no branco do PIX e
+// descontando 1,9% de um pagamento em espécie, que não tem taxa nenhuma).
 // Exportada para os paineis de eventos (aba financeiro, relatório em PDF) não mostrarem
 // o bruto rotulado como "líquido" nem duplicarem a taxa com um número diferente.
 function calcularLiquidoEvento(bruto, metodo) {
   const v = parseFloat(bruto) || 0;
+  if (metodo === 'dinheiro') return Math.round(v * 100) / 100;
   return metodo === 'cartao' ? Math.round(v * 0.96 * 100) / 100 : Math.round(v * 0.981 * 100) / 100;
 }
 
