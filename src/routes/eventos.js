@@ -1091,6 +1091,13 @@ router.post('/eventos/:id/cupons/:cid/deletar', requireAuth, requirePermissao('e
   req.session.msg=['Cupom excluído!']; res.redirect('/eventos/'+req.params.id);
 });
 
+// Contagem simples pra tela de cupons perceber sozinha quando a geração em segundo plano
+// (abaixo) termina, sem precisar a pessoa apertar F5.
+router.get('/eventos/:id/cupons/contagem', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  const r = await query('SELECT COUNT(*) AS n FROM evento_cupons WHERE evento_id=$1', [req.params.id]);
+  res.json({ total: parseInt(r.rows[0].n) || 0 });
+});
+
 // Gerar cupons em lote para ligantes EM DIA e diretivos com envio via WhatsApp/email
 router.post('/eventos/:id/cupons/gerar-ligantes', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const { prefixo, destino, enviar_wpp, enviar_email } = req.body;

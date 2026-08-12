@@ -296,6 +296,24 @@
     <div class="content">
       <% if (msg && msg.length > 0) { %><div class="alerta alerta-ok"><%= msg[0] %></div><% } %>
       <% if (erro && erro.length > 0) { %><div class="alerta alerta-erro"><%= erro[0] %></div><% } %>
+      <% if (msg && msg.length > 0 && msg[0].indexOf('segundo plano') !== -1) { %>
+      <script>
+        // A geração de cupons roda depois da resposta HTTP já ter saído (evita travar a
+        // tela esperando WhatsApp/email de cada pessoa) — sem isso, a lista carregava ANTES
+        // dos cupons existirem e só aparecia certo depois de apertar F5. Confere sozinho.
+        (function(){
+          var tentativas = 0, anterior = null;
+          var t = setInterval(function(){
+            tentativas++;
+            fetch('/eventos/<%= evento.id %>/cupons/contagem').then(function(r){ return r.json(); }).then(function(d){
+              if (anterior !== null && d.total === anterior) { clearInterval(t); location.reload(); return; }
+              anterior = d.total;
+              if (tentativas >= 20) clearInterval(t); // ~1min — desiste de esperar, F5 manual continua funcionando
+            }).catch(function(){});
+          }, 3000);
+        })();
+      </script>
+      <% } %>
 
       <!-- STATS -->
       <div class="stats-row">
