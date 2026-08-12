@@ -34,6 +34,20 @@ const limiterInscricaoEvento = rateLimit({
   standardHeaders: true,
   legacyHeaders: false
 });
+// Check-out de presença (evento online) — sem risco de pagamento e já protegido contra
+// duplicata (dedup por email/documento). Precisava de teto bem mais alto que inscrição:
+// dividia o mesmo limite de 60/15min com /inscricao e /lista-espera, e é justamente a
+// ação que centenas de pessoas legítimas fazem no mesmo minuto quando a janela abre —
+// algumas atrás do mesmo IP (rede corporativa, operadora de celular). Achado e corrigido
+// num teste de carga real (12/08/2026): 100 check-outs simultâneos do mesmo IP, 11 recusados
+// por esse limite compartilhado, mesmo sendo pessoas distintas de verdade.
+const limiterCheckoutEvento = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 500,
+  message: { erro: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 // Formulário de contato — poucas mensagens legítimas por pessoa; teto mais apertado.
 const limiterContatoEvento = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -1601,7 +1615,7 @@ router.get('/checkout/:id', limiterVisualizacaoEvento, async (req, res) => {
 });
 
 // Registrar check-out (público)
-router.post('/checkout/:id', limiterInscricaoEvento, async (req, res) => {
+router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
   try {
     const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
     if (!evR.rows[0]) return res.status(404).send('Evento não encontrado.');
