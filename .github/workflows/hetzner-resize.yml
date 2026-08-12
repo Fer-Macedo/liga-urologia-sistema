@@ -40,8 +40,22 @@ jobs:
           TARGET: ${{ steps.alvo.outputs.tipo }}
         run: |
           set -euo pipefail
-          api() { curl -sf -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" "$@"; }
+          # remove espaco/quebra de linha que possam ter vindo do copiar-colar do token
+          TOKEN=$(echo -n "$TOKEN" | tr -d '[:space:]')
+          api() {
+            local resp code body
+            resp=$(curl -s -w '\n%{http_code}' -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" "$@")
+            code=$(echo "$resp" | tail -n1)
+            body=$(echo "$resp" | sed '$d')
+            if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+              echo "ERRO HTTP $code na chamada: $*" >&2
+              echo "Resposta da API: $body" >&2
+              exit 1
+            fi
+            echo "$body"
+          }
 
+          echo "Token tem $(echo -n "$TOKEN" | wc -c) caracteres (deve ter uns 64)"
           ATUAL=$(api "https://api.hetzner.cloud/v1/servers/$SERVER_ID" | jq -r '.server.server_type.name')
           echo "Tipo atual: $ATUAL | Alvo: $TARGET"
           if [ "$ATUAL" = "$TARGET" ]; then
