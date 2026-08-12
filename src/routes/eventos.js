@@ -1108,22 +1108,23 @@ router.post('/eventos/:id/cupons/gerar-ligantes-v2', requireAuth, requirePermiss
 
   let pessoas = [];
 
-  // Ligantes EM DIA (último pagamento = pago OU sem cobranças = gratuito)
+  // Ligantes "em dia" pra fim de cupom: até 1 mensalidade atrasada tudo bem, 2+ não recebe.
+  // Ligante não tem cobrança/mensalidade própria — o vínculo com o financeiro (tabela
+  // membros/cobrancas) é por CPF ou e-mail, mesmo padrão já usado em ligantes.js pra
+  // sincronizar status entre as duas tabelas.
   if (destino === 'ligantes' || destino === 'todos') {
-    const ligR = await query(`
-      SELECT l.id, l.nome, l.email, l.whatsapp, 'ligante' as tipo,
-        (SELECT c.status FROM cobrancas c WHERE c.membro_id IS NULL
-         ORDER BY c.criado_em DESC LIMIT 1) as ultimo_status
-      FROM ligantes l WHERE l.ativo=1
-    `);
-    // Verifica em dia: pago ou sem dívidas atrasadas
+    const ligR = await query(`SELECT id, nome, email, whatsapp, cpf, 'ligante' as tipo FROM ligantes WHERE ativo=1`);
     for (const lig of ligR.rows) {
-      const divR = await query(
-        "SELECT COUNT(*) as n FROM cobrancas WHERE status='atrasado' AND referencia LIKE $1",
-        ['%-' + lig.id + '-%']
+      const atrasoR = await query(
+        `SELECT COUNT(*) as n FROM cobrancas c JOIN membros m ON m.id = c.membro_id
+         WHERE c.status='atrasado' AND (
+           ($1 <> '' AND m.cpf IS NOT NULL AND regexp_replace(m.cpf,'[^0-9]','','g') = regexp_replace($1,'[^0-9]','','g'))
+           OR ($2 <> '' AND m.email IS NOT NULL AND LOWER(m.email) = LOWER($2))
+         )`,
+        [lig.cpf || '', lig.email || '']
       );
-      // Ligantes não têm cobrança direta pelo id neste sistema — incluímos todos ativos
-      pessoas.push({ ...lig, em_dia: true });
+      const atrasos = parseInt(atrasoR.rows[0].n) || 0;
+      pessoas.push({ ...lig, em_dia: atrasos <= 1 });
     }
   }
 
