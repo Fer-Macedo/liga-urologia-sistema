@@ -6,7 +6,7 @@ const flash = require('connect-flash');
 const methodOverride = require('method-override');
 const path = require('path');
 
-const { initSchema, query } = require('./models/database');
+const { initSchema, query, pool } = require('./models/database');
 const routes = require('./routes/index');
 const { iniciarAgendamentos } = require('./services/agendamentos');
 const { agendarBackup } = require('./services/backup');
@@ -75,7 +75,7 @@ if (!process.env.SESSION_SECRET) {
   console.warn('AVISO: SESSION_SECRET nao definido no .env — usando segredo temporario gerado neste boot (sessoes serao invalidadas a cada restart). Configure SESSION_SECRET em producao.');
 }
 const sessionMiddleware = session({
-  store: new pgSession({ conString: process.env.DATABASE_URL, tableName: 'session', createTableIfMissing: true }),
+  store: new pgSession({ pool, tableName: 'session', createTableIfMissing: true }),
   secret: process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex'),
   resave: false,
   saveUninitialized: false,
