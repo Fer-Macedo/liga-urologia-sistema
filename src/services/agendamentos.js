@@ -489,18 +489,52 @@ async function enviarFrequenciaMensal() {
 }
 
 // ─── LEMBRETE INSCRIÇÕES PENDENTES ───────────────────────────────────────────
-async function lembrarInscricoesPendentes() {
+// Manda o lembrete de pagamento pendente pra UMA inscrição (WhatsApp + email). Usada tanto
+// pelo cron automático (lembrarInscricoesPendentes, respeitando janela/limite/cooldown)
+// quanto pelo botão manual em evento-detalhe.ejs (imediato, sem esperar a próxima hora).
+async function enviarLembreteInscricaoPendente(inscricaoId) {
   const { enviarWhatsApp, enviarEmail } = require('./notificacoes');
   const config = await query('SELECT chave,valor FROM configuracoes').then(r => { const c={}; r.rows.forEach(x=>c[x.chave]=x.valor); return c; });
   const orgNome = config.org_nome || 'LAURO - Liga Académica de Urología';
   const appUrl = process.env.APP_URL || 'https://sistema.lauroucpcde.com';
   const inscUrl = appUrl.replace('sistema','inscricao');
 
+  const r = await query(
+    `SELECT ei.id, ei.nome, ei.email, ei.whatsapp, e.nome as evento_nome
+     FROM evento_inscricoes ei JOIN eventos e ON e.id=ei.evento_id WHERE ei.id=$1`,
+    [inscricaoId]
+  );
+  const ei = r.rows[0];
+  if (!ei) return { ok: false, motivo: 'Inscrição não encontrada.' };
+
+  const linkPag = `${inscUrl}/pagamento/${ei.id}`;
+  const msg = `*${orgNome}*\n\nHola, *${ei.nome.split(' ')[0]}*! 👋\n\nNotamos que tu inscripción en el evento:\n*${ei.evento_nome}*\n\n...aún está pendiente de pago.\n\n💳 Completa tu inscripción aquí:\n${linkPag}\n\n_¡No pierdas tu lugar!_`;
+
+  let wppOk = false, emailOk = false;
+
+  if (ei.whatsapp) {
+    try { await enviarWhatsApp(ei.whatsapp, msg); wppOk = true; } catch(e) {}
+  }
+
+  if (ei.email) {
+    const html = `<h2 style="color:#0f172a">¡Completa tu inscripción!</h2><p style="color:#475569">Hola, <strong>${ei.nome.split(' ')[0]}</strong>! Tu inscripción en <strong>${ei.evento_nome}</strong> está pendiente.</p><div style="text-align:center;margin:24px 0"><a href="${linkPag}" style="background:#1a3d2b;color:white;padding:14px 36px;border-radius:8px;text-decoration:none;font-weight:700">Completar inscripción</a></div>`;
+    try {
+      await enviarEmail({ para: ei.email, assunto: `⏳ Completa tu inscripción — ${ei.evento_nome}`, html, texto: msg, faixaLabel: '⏳ INSCRIPCIÓN PENDIENTE' });
+      emailOk = true;
+    } catch(e) {}
+  }
+
+  if (wppOk) await query("INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES (NULL,$1,'lembrete_inscricao','whatsapp','ok')", [ei.id]);
+  if (emailOk) await query("INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES (NULL,$1,'lembrete_inscricao','email','ok')", [ei.id]);
+
+  return { ok: wppOk || emailOk, wppOk, emailOk, nome: ei.nome };
+}
+
+async function lembrarInscricoesPendentes() {
   const r = await query(`
-    SELECT ei.id, ei.nome, ei.email, ei.whatsapp, e.nome as evento_nome, ep.pix_copia_cola
+    SELECT ei.id, ei.nome
     FROM evento_inscricoes ei
     JOIN eventos e ON e.id=ei.evento_id
-    LEFT JOIN evento_pagamentos ep ON ep.inscricao_id=ei.id
     WHERE ei.status='pendente'
     AND ei.isento=false
     AND ei.criado_em < NOW() - INTERVAL '2 hours'
@@ -529,34 +563,9 @@ async function lembrarInscricoesPendentes() {
 
   console.log('[LEMBRETE] Inscrições pendentes para notificar:', r.rows.length);
 
-  let count = 0;
   for (const ei of r.rows) {
-    const linkPag = `${inscUrl}/pagamento/${ei.id}`;
-    const msg = `*${orgNome}*\n\nHola, *${ei.nome.split(' ')[0]}*! 👋\n\nNotamos que tu inscripción en el evento:\n*${ei.evento_nome}*\n\n...aún está pendiente de pago.\n\n💳 Completa tu inscripción aquí:\n${linkPag}\n\n_¡No pierdas tu lugar!_`;
-
-    let wppOk = false, emailOk = false;
-
-    if (ei.whatsapp) {
-      try {
-        await enviarWhatsApp(ei.whatsapp, msg);
-        count++;
-        wppOk = true;
-      } catch(e) {}
-    }
-
-    if (ei.email) {
-      const html = `<h2 style="color:#0f172a">¡Completa tu inscripción!</h2><p style="color:#475569">Hola, <strong>${ei.nome.split(' ')[0]}</strong>! Tu inscripción en <strong>${ei.evento_nome}</strong> está pendiente.</p><div style="text-align:center;margin:24px 0"><a href="${linkPag}" style="background:#1a3d2b;color:white;padding:14px 36px;border-radius:8px;text-decoration:none;font-weight:700">Completar inscripción</a></div>`;
-      try {
-        await enviarEmail({ para: ei.email, assunto: `⏳ Completa tu inscripción — ${ei.evento_nome}`, html, texto: msg, faixaLabel: '⏳ INSCRIPCIÓN PENDIENTE' });
-        emailOk = true;
-      } catch(e) {}
-    }
-
-    if (wppOk || emailOk) {
-      if (wppOk) await query("INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES (NULL,$1,'lembrete_inscricao','whatsapp','ok')", [ei.id]);
-      if (emailOk) await query("INSERT INTO notificacoes_log (membro_id,cobranca_id,tipo,canal,status) VALUES (NULL,$1,'lembrete_inscricao','email','ok')", [ei.id]);
-      console.log('[LEMBRETE] Enviado para:', ei.nome);
-    }
+    const resultado = await enviarLembreteInscricaoPendente(ei.id);
+    if (resultado.ok) console.log('[LEMBRETE] Enviado para:', ei.nome);
   }
 }
 
@@ -716,5 +725,6 @@ module.exports = {
   atualizarPixAtrasados,
   logNotificacao,
   enviarFrequenciaMensal,
-  enviarNotificacoes
+  enviarNotificacoes,
+  enviarLembreteInscricaoPendente
 };

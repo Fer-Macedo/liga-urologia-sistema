@@ -550,6 +550,20 @@ router.post('/eventos/:id/inscricoes/:iid/reenviar-email', requireAuth, requireP
   }
   res.redirect('/eventos/' + req.params.id + '?tab=inscritos');
 });
+// Dispara na hora o mesmo lembrete (WhatsApp + email) que o cron horário manda sozinho pra
+// inscrições pendentes há 2-48h — pra equipe poder cutucar alguém específico sem esperar.
+router.post('/eventos/:id/inscricoes/:iid/lembrete-pendente', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  try {
+    const { enviarLembreteInscricaoPendente } = require('../services/agendamentos');
+    const r = await enviarLembreteInscricaoPendente(req.params.iid);
+    if (!r.ok) throw new Error(r.motivo || 'Não foi possível enviar (sem WhatsApp/e-mail cadastrado?).');
+    req.session.msg = ['Lembrete de pagamento enviado!'];
+  } catch(e) {
+    req.session.erro = ['Erro ao enviar lembrete: ' + e.message];
+  }
+  res.redirect('/eventos/' + req.params.id + '?tab=inscritos');
+});
+
 router.post('/eventos/:id/inscricoes/:iid/checkin', requireAuth, requirePermissao('eventos'), async (req, res) => {
   await query('UPDATE evento_inscricoes SET checkin_em=NOW() WHERE id=$1',[req.params.iid]);
   req.session.msg=['Check-in realizado!']; res.redirect('/eventos/'+req.params.id+'/checkin');
