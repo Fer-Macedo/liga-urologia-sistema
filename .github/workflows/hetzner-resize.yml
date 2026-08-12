@@ -121,7 +121,13 @@ jobs:
           fi
           echo "SUCESSO: $ATUAL -> $NOVO, site respondendo 200"
 
-      - name: Ajusta o número de processos do PM2 pro tamanho novo
+      # DESLIGADO (12/08/2026): modo cluster (>1 processo) quebra a sessão de conversa do
+      # assistente (src/services/lauro.js guarda tudo num objeto em memória, não
+      # compartilhado entre processos) — cada mensagem podia cair num processo diferente e
+      # "esquecer" a conversa. Religar isso exige antes migrar essa sessão pra um
+      # armazenamento compartilhado (banco ou Redis). Até lá, fica sempre em 1 processo,
+      # não importa o tipo do servidor.
+      - name: Garante 1 processo só do PM2 (cluster desligado até a sessão do assistente ser corrigida)
         if: success()
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -129,8 +135,7 @@ jobs:
           username: root
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            if [ "${{ steps.alvo.outputs.tipo }}" = "cpx32" ]; then N=4; else N=2; fi
-            pm2 scale liga-urologia $N || true
+            pm2 scale liga-urologia 1 || true
             pm2 save
 
       - name: Avisa por e-mail (sucesso)

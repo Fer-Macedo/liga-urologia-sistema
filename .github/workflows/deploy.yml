@@ -22,6 +22,6 @@ jobs:
             git reset --hard origin/main
             npm install --production
             pm2 delete liga-urologia || true
-            pm2 start /var/www/liga-urologia/src/server.js --name liga-urologia --max-memory-restart 700M -i max
+            pm2 start /var/www/liga-urologia/src/server.js --name liga-urologia --max-memory-restart 700M
             pm2 save
             echo "Deploy concluído!"
