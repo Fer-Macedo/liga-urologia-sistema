@@ -1,0 +1,126 @@
+name: Redimensiona servidor pro evento
+
+# Roda em outra máquina (runner do GitHub), não no próprio servidor da Liga — de
+# propósito. Um script que desliga o servidor não pode rodar DENTRO dele: quando o
+# servidor desliga, o script morre junto e nunca chega na parte de religar. Isso já
+# aconteceu numa tentativa anterior (12/08/2026), corrigido movendo pra cá.
+#
+# 16/08 03:00 (Asunción) = 16/08 06:00 UTC — sobe pra CPX32 antes do evento (17-20/08)
+# 21/08 06:00 (Asunción) = 21/08 09:00 UTC — volta pra CPX22 depois do evento
+on:
+  schedule:
+    - cron: '0 6 16 8 *'
+    - cron: '0 9 21 8 *'
+  workflow_dispatch:
+    inputs:
+      tipo:
+        description: 'Tipo de servidor de destino (cpx32 ou cpx22)'
+        required: true
+        default: 'cpx32'
+
+jobs:
+  resize:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Define o tipo de destino
+        id: alvo
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tipo=${{ inputs.tipo }}" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.event.schedule }}" = "0 6 16 8 *" ]; then
+            echo "tipo=cpx32" >> "$GITHUB_OUTPUT"
+          else
+            echo "tipo=cpx22" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Troca o tipo do servidor
+        env:
+          TOKEN: ${{ secrets.HETZNER_API_TOKEN }}
+          SERVER_ID: '131933278'
+          TARGET: ${{ steps.alvo.outputs.tipo }}
+        run: |
+          set -euo pipefail
+          api() { curl -sf -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" "$@"; }
+
+          ATUAL=$(api "https://api.hetzner.cloud/v1/servers/$SERVER_ID" | jq -r '.server.server_type.name')
+          echo "Tipo atual: $ATUAL | Alvo: $TARGET"
+          if [ "$ATUAL" = "$TARGET" ]; then
+            echo "Já está no tipo certo, nada a fazer."
+            exit 0
+          fi
+
+          echo "==> desligando"
+          api -X POST "https://api.hetzner.cloud/v1/servers/$SERVER_ID/actions/shutdown" > /dev/null
+          for i in $(seq 1 20); do
+            STATUS=$(api "https://api.hetzner.cloud/v1/servers/$SERVER_ID" | jq -r '.server.status')
+            [ "$STATUS" = "off" ] && break
+            sleep 5
+          done
+          if [ "$STATUS" != "off" ]; then
+            echo "shutdown gracioso não completou, forçando poweroff"
+            api -X POST "https://api.hetzner.cloud/v1/servers/$SERVER_ID/actions/poweroff" > /dev/null
+            for i in $(seq 1 20); do
+              STATUS=$(api "https://api.hetzner.cloud/v1/servers/$SERVER_ID" | jq -r '.server.status')
+              [ "$STATUS" = "off" ] && break
+              sleep 5
+            done
+          fi
+          [ "$STATUS" = "off" ] || { echo "FALHOU: servidor não desligou"; exit 1; }
+          echo "desligado."
+
+          echo "==> trocando para $TARGET"
+          RESP=$(api -X POST "https://api.hetzner.cloud/v1/servers/$SERVER_ID/actions/change_type" \
+            -d "{\"server_type\":\"$TARGET\",\"upgrade_disk\":false}")
+          ACTION_ID=$(echo "$RESP" | jq -r '.action.id')
+          [ "$ACTION_ID" != "null" ] || { echo "FALHOU: change_type não retornou action id: $RESP"; exit 1; }
+          for i in $(seq 1 40); do
+            ASTATUS=$(api "https://api.hetzner.cloud/v1/actions/$ACTION_ID" | jq -r '.action.status')
+            [ "$ASTATUS" = "success" ] && break
+            [ "$ASTATUS" = "error" ] && { echo "FALHOU: change_type deu erro"; exit 1; }
+            sleep 5
+          done
+          [ "$ASTATUS" = "success" ] || { echo "FALHOU: change_type não terminou a tempo"; exit 1; }
+          echo "trocado."
+
+          echo "==> ligando"
+          api -X POST "https://api.hetzner.cloud/v1/servers/$SERVER_ID/actions/poweron" > /dev/null
+          for i in $(seq 1 20); do
+            STATUS=$(api "https://api.hetzner.cloud/v1/servers/$SERVER_ID" | jq -r '.server.status')
+            [ "$STATUS" = "running" ] && break
+            sleep 5
+          done
+          [ "$STATUS" = "running" ] || { echo "FALHOU: servidor não voltou a rodar"; exit 1; }
+          echo "ligado, aguardando site subir..."
+          sleep 30
+
+          echo "==> confere saúde do site (externo, via HTTPS)"
+          OK=0
+          for i in $(seq 1 10); do
+            CODE=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 8 https://sistema.lauroucpcde.com/health || true)
+            if [ "$CODE" = "200" ]; then OK=1; break; fi
+            sleep 6
+          done
+          NOVO=$(api "https://api.hetzner.cloud/v1/servers/$SERVER_ID" | jq -r '.server.server_type.name')
+          if [ "$OK" != "1" ]; then
+            echo "FALHOU: site não respondeu 200 depois de ligar (tipo agora: $NOVO)"
+            exit 1
+          fi
+          echo "SUCESSO: $ATUAL -> $NOVO, site respondendo 200"
+
+      - name: Avisa por e-mail (sucesso)
+        if: success()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          curl -s -X POST 'https://api.resend.com/emails' \
+            -H "Authorization: Bearer $RESEND_API_KEY" -H 'Content-Type: application/json' \
+            -d '{"from":"LAURO <lauroucpcde@lauroucpcde.com>","to":"claudinho@sistemaslr.com.br","subject":"✅ Servidor redimensionado com sucesso","html":"<p>Resize automático do evento rodou com sucesso. Confira o servidor no console da Hetzner se quiser conferir.</p>"}' > /dev/null
+
+      - name: Avisa por e-mail (falha)
+        if: failure()
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+        run: |
+          curl -s -X POST 'https://api.resend.com/emails' \
+            -H "Authorization: Bearer $RESEND_API_KEY" -H 'Content-Type: application/json' \
+            -d '{"from":"LAURO <lauroucpcde@lauroucpcde.com>","to":"claudinho@sistemaslr.com.br","subject":"⚠️ Resize automático do servidor FALHOU","html":"<p>O resize automático do servidor pro evento FALHOU. Verifique o servidor AGORA no console da Hetzner (pode estar desligado ou no tipo errado) — link: https://console.hetzner.com/projects/14655285/servers/131933278/overview — e o log em github.com nas Actions do repositório.</p>"}' > /dev/null
