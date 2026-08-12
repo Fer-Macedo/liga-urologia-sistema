@@ -121,6 +121,18 @@ jobs:
           fi
           echo "SUCESSO: $ATUAL -> $NOVO, site respondendo 200"
 
+      - name: Ajusta o número de processos do PM2 pro tamanho novo
+        if: success()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: 46.225.150.104
+          username: root
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            if [ "${{ steps.alvo.outputs.tipo }}" = "cpx32" ]; then N=4; else N=2; fi
+            pm2 scale liga-urologia $N || true
+            pm2 save
+
       - name: Avisa por e-mail (sucesso)
         if: success()
         env:
