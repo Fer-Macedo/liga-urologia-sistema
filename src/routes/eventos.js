@@ -1825,4 +1825,44 @@ router.get('/eventos/:id/checkout-export', requireAuth, requirePermissao('evento
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
+// Lista de presen\u00E7a e firma do evento \u2014 mesmo papel timbrado + bloco de assinaturas j\u00E1
+// usado em /lista-assinaturas, mas com os inscritos do evento em vez de ligantes/diretivos.
+// ?status=confirmado|pendente filtra; sem o par\u00E2metro, traz todos.
+router.get('/eventos/:id/lista-assinatura', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  try {
+    const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
+    const evento = evR.rows[0];
+    if (!evento) return res.status(404).send('Evento n\u00E3o encontrado.');
+
+    const statusFiltro = req.query.status;
+    let sql = 'SELECT nome, rg, catraca FROM evento_inscricoes WHERE evento_id=$1';
+    const params = [req.params.id];
+    if (statusFiltro === 'confirmado' || statusFiltro === 'pendente') {
+      sql += ' AND status=$2';
+      params.push(statusFiltro);
+    }
+    sql += ' ORDER BY LOWER(nome) ASC';
+    const inscR = await query(sql, params);
+    const pessoas = inscR.rows.map(p => ({
+      nome: (p.nome || '').toLowerCase().replace(/\p{L}[\p{L}'\u2019-]*/gu, w => w.charAt(0).toUpperCase() + w.slice(1)),
+      rg: p.rg,
+      catraca: p.catraca
+    }));
+
+    const config = await getConfig();
+    const { imagemBase64 } = require('../services/desligamento');
+    config.timbrado_b64 = await imagemBase64(config.timbrado_chave);
+    config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
+    config.assinatura_vicepresidente_b64 = await imagemBase64(config.assinatura_vicepresidente_chave);
+    config.assinatura_secretario_b64 = await imagemBase64(config.assinatura_secretario_chave);
+
+    const { gerarHTMLLista } = require('../services/lista-assinatura');
+    const d = evento.data_inicio ? new Date(evento.data_inicio).toLocaleDateString('es-PY') : null;
+    const descricaoFiltro = statusFiltro === 'confirmado' ? 'Confirmados' : statusFiltro === 'pendente' ? 'Pendientes' : null;
+    let html = await gerarHTMLLista(evento.nome, d, descricaoFiltro, pessoas, config);
+    html = html.replace('</body>', '<script>window.onload=function(){window.focus();setTimeout(function(){window.print()},300)}</script></body>');
+    res.send(html);
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
 };

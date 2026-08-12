@@ -339,6 +339,7 @@
         <button class="tab-btn" onclick="showTab('patrocinadores',this)">Patrocinadores</button>
         <button class="tab-btn" onclick="showTab('cupons',this)">Cupons</button>
         <button class="tab-btn" onclick="showTab('certificados',this)">Certificados</button>
+        <button class="tab-btn" onclick="showTab('lista-assinatura',this)">Lista de Assinatura</button>
         <button class="tab-btn" onclick="showTab('checkout',this);carregarRelatorioCheckout()">Check-out</button>
         <button class="tab-btn" onclick="showTab('avancado',this)">Avançado</button>
       </div>
@@ -1099,6 +1100,25 @@
         </div>
       </div>
 
+      <!-- LISTA DE ASSINATURA -->
+      <div class="tab-content" id="tab-lista-assinatura">
+        <div class="section-card">
+          <div class="section-header">Lista de presença e firma</div>
+          <div class="section-body">
+            <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Gera o mesmo documento em papel timbrado (nome, RG, catraca e campo para firma) já usado na Liga, com os inscritos deste evento em ordem alfabética — pronto para assinatura manual.</p>
+            <div class="campo" style="max-width:280px;margin-bottom:14px">
+              <label class="label">Quem incluir</label>
+              <select id="la-status" class="input">
+                <option value="">Todos os inscritos</option>
+                <option value="confirmado">Somente confirmados</option>
+                <option value="pendente">Somente pendentes</option>
+              </select>
+            </div>
+            <button type="button" class="btn btn-primario" onclick="gerarListaAssinatura()">Gerar e imprimir</button>
+          </div>
+        </div>
+      </div>
+
       <!-- AVANÇADO -->
       <!-- CHECK-OUT -->
       <div class="tab-content" id="tab-checkout">
@@ -1629,6 +1649,12 @@ function imprimirRelatorio() {
   w.document.write('<html><head><title>Relatório Financeiro</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}th,td{padding:8px 12px;border:1px solid #e5e7eb;text-align:left}thead{background:#f8fafc}</style></head><body>'+document.getElementById('tab-financeiro').innerHTML+'</body></html>');
   w.document.close();
   w.print();
+}
+
+function gerarListaAssinatura() {
+  const status = document.getElementById('la-status').value;
+  const url = '/eventos/<%= evento.id %>/lista-assinatura' + (status ? ('?status=' + status) : '');
+  window.open(url, '_blank');
 }
 
 function enviarLinksLive() {
