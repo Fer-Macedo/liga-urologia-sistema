@@ -12,6 +12,20 @@ const { limiterPagamentoCartao } = require('../services/rate-limiters');
 // alguém legitimamente pode recarregar/tentar de novo várias vezes numa fila de evento —
 // mas isso não pode significar SEM limite nenhum. Um teto mais folgado que o geral, só
 // pra essas rotas públicas específicas.
+//
+// GET (ver a página) e POST (enviar o formulário/pagar) têm perfis MUITO diferentes: um
+// pico de gente abrindo o link — inclusive várias pessoas atrás do mesmo IP (rede de
+// faculdade, hospital, operadora de celular) — gera dezenas de GETs legítimos em minutos.
+// O que precisa de teto apertado é o POST (inscrição repetida, tentativa de pagamento em
+// série) — foi misturar os dois no mesmo limite de 60 que derrubou gente de verdade numa
+// inscrição concorrida (11/08/2026).
+const limiterVisualizacaoEvento = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  message: { erro: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 const limiterInscricaoEvento = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 60,
@@ -138,7 +152,7 @@ router.post('/eventos/:id/lotes/:lid/deletar', requireAuth, requirePermissao('ev
 });
 
 // INSCRIÇÕES - Página Pública
-router.get('/inscricao/:id', limiterInscricaoEvento, async (req, res) => {
+router.get('/inscricao/:id', limiterVisualizacaoEvento, async (req, res) => {
   try {
     const [evR, lotesR] = await Promise.all([
       query(`SELECT e.*, (SELECT COUNT(*) FROM evento_inscricoes WHERE evento_id=e.id) as total_inscritos FROM eventos e WHERE id=$1`,[req.params.id]),
@@ -1555,7 +1569,7 @@ router.get('/eventos/:id/lista-espera', requireAuth, requirePermissao('eventos')
 // ═══════════════════════════════════════════════════════════════════════════
 
 // Página pública de check-out
-router.get('/checkout/:id', limiterInscricaoEvento, async (req, res) => {
+router.get('/checkout/:id', limiterVisualizacaoEvento, async (req, res) => {
   try {
     const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
     if (!evR.rows[0]) return res.status(404).send('Evento não encontrado.');
