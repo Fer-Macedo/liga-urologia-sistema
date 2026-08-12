@@ -14,6 +14,12 @@ async function enviarEmail({from, to, subject, html, attachments, faixaLabel, ti
   console.log('ENVIANDO EMAIL opts.attachments:', opts.attachments ? opts.attachments.length : 0);
   const result = await resend.emails.send(opts);
   console.log('RESEND RAW:', JSON.stringify(result));
+  // O SDK do Resend NÃO lança exceção em erro da API (domínio não verificado, quota,
+  // etc.) — só devolve { data: null, error: {...} }. Sem essa checagem, todo chamador
+  // (que espera try/catch) via "sucesso" mesmo com o e-mail nunca saindo (11/08/2026).
+  if (result && result.error) {
+    throw new Error(result.error.message || 'Falha ao enviar e-mail via Resend.');
+  }
   return result;
 }
 
