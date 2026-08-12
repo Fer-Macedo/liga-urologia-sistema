@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <link rel="shortcut icon" href="/favicon.ico"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png"><link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inscripción confirmada — <%= inscricao.evento_nome %></title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cor: <%= inscricao.cor_tema || '#1a3d2b' %>;
+      --bg: #f5f5f0;
+      --card: #ffffff;
+      --border: #e5e7eb;
+      --text: #111827;
+      --muted: #6b7280;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .header { background: var(--cor); padding: 18px 24px; display: flex; align-items: center; gap: 14px; }
+    .header-logo { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+    .header-info h1 { color: #fff; font-size: 15px; font-weight: 600; }
+    .header-info p { color: rgba(255,255,255,0.65); font-size: 12px; }
+    .container { max-width: 480px; margin: 0 auto; padding: 32px 20px 60px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+    .banner { width: 100%; height: 140px; object-fit: cover; }
+    .banner-fallback { width: 100%; height: 140px; background: var(--cor); display: flex; align-items: center; justify-content: center; }
+    .card-body { padding: 28px 24px; text-align: center; }
+    .sucesso-icon { width: 64px; height: 64px; border-radius: 50%; background: #dcfce7; display: flex; align-items: center; justify-content: center; margin: 0 auto 18px; }
+    h2 { font-size: 19px; margin-bottom: 8px; }
+    .card-body p { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 18px; }
+    .sucesso-codigo { font-family: 'JetBrains Mono', monospace; font-size: 13px; background: var(--bg); border: 1px dashed var(--border); border-radius: 6px; padding: 10px; margin-bottom: 18px; word-break: break-all; }
+    .qr { margin: 0 auto 18px; display: block; border: 1px solid var(--border); border-radius: 6px; }
+    .resumo-row { display: flex; justify-content: space-between; padding: 9px 0; border-top: 1px solid var(--border); font-size: 13px; text-align: left; }
+    .resumo-row .key { color: var(--muted); }
+    .resumo-row .val { font-weight: 600; }
+    .btn { display: inline-flex; align-items: center; gap: 10px; background: var(--cor); color: white; padding: 13px 24px; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 14px; margin-top: 18px; width: 100%; justify-content: center; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo"><img src="https://sistema.lauroucpcde.com/img/logo-lauro.png" width="36" height="36" style="border-radius:50%;object-fit:cover;border:2px solid rgba(255,255,255,0.3)" onerror="this.parentElement.innerHTML='<svg style=width:20px;height:20px;fill:white viewBox=0 0 24 24><path d=M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z/></svg>'"></div>
+  <div class="header-info">
+    <h1><%= config.org_nome || 'Liga Académica de Urología' %></h1>
+    <p>Inscripción</p>
+  </div>
+</div>
+
+<div class="container">
+  <div class="card">
+    <% if (inscricao.banner_chave) { %>
+      <img class="banner" src="/eventos/<%= inscricao.evento_id %>/banner" alt="Banner">
+    <% } else { %>
+      <div class="banner-fallback">
+        <svg style="width:40px;height:40px;fill:rgba(255,255,255,.4)" viewBox="0 0 24 24"><path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zm-7 3c1.93 0 3.5 1.57 3.5 3.5S13.93 13 12 13s-3.5-1.57-3.5-3.5S10.07 6 12 6zm7 13H5v-.23c0-.62.28-1.2.76-1.58C7.47 15.82 9.64 15 12 15s4.53.82 6.24 2.19c.48.38.76.97.76 1.58V19z"/></svg>
+      </div>
+    <% } %>
+    <div class="card-body">
+      <div class="sucesso-icon">
+        <svg style="width:32px;height:32px;fill:#16a34a" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/></svg>
+      </div>
+      <h2>¡Inscripción confirmada!</h2>
+      <p>Su inscripción en <strong><%= inscricao.evento_nome %></strong> está confirmada.</p>
+
+      <% if (inscricao.qrcode) { %>
+        <img class="qr" width="140" height="140" src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=<%= encodeURIComponent(inscricao.qrcode) %>" alt="Código de check-in">
+        <div class="sucesso-codigo"><%= inscricao.qrcode %></div>
+        <p style="margin-bottom:0">Guarde este código para el check-in en el evento.</p>
+      <% } %>
+
+      <div style="margin-top:18px">
+        <% if (inscricao.data_inicio) { %>
+          <div class="resumo-row"><span class="key">Fecha</span><span class="val"><%= new Date(inscricao.data_inicio).toLocaleDateString('es-PY', {day:'2-digit',month:'long',year:'numeric',timeZone:'UTC'}) %></span></div>
+        <% } %>
+        <% if (inscricao.local) { %>
+          <div class="resumo-row"><span class="key">Lugar</span><span class="val"><%= inscricao.local %></span></div>
+        <% } %>
+        <div class="resumo-row"><span class="key">Inscrito</span><span class="val"><%= inscricao.nome %></span></div>
+      </div>
+
+      <a href="/inscricao/<%= inscricao.evento_id %>" class="btn">Volver a la página del evento</a>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>
