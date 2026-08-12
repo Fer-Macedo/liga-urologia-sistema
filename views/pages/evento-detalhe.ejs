@@ -463,9 +463,11 @@
             <button type="button" onclick="salvarOrdem()" class="btn-xs verde" id="btn-salvar-ordem" style="display:none">Salvar ordem</button>
           </div>
           <div class="section-body">
-            <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Arraste para reordenar. Campos padrão não podem ser excluídos.</p>
+            <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Arraste para reordenar. Nome e Email nunca podem ser excluídos (a confirmação, o check-in e o certificado dependem deles) — os demais campos padrão podem, para eventos que não usam catraca, semestre etc.</p>
             <div id="lista-campos-ord">
-              <% const camposPad=[{key:'nome',label:'Nome completo'},{key:'email',label:'Email'},{key:'whatsapp',label:'WhatsApp'},{key:'data_nascimento',label:'Data de nascimento'},{key:'rg',label:'RG / CI'},{key:'semestre',label:'Semestre'},{key:'turma',label:'Turma'},{key:'catraca',label:'Catraca (UCP)'},{key:'instituicao',label:'Instituição (externos)'}]; %>
+              <% const camposFixos=['nome','email']; %>
+              <% const camposDesativados = evento.campos_padrao_desativados || []; %>
+              <% const camposPad=[{key:'nome',label:'Nome completo'},{key:'email',label:'Email'},{key:'whatsapp',label:'WhatsApp'},{key:'data_nascimento',label:'Data de nascimento'},{key:'rg',label:'RG / CI'},{key:'semestre',label:'Semestre'},{key:'turma',label:'Turma'},{key:'catraca',label:'Catraca (UCP)'},{key:'instituicao',label:'Instituição (externos)'}].filter(c=>!camposDesativados.includes(c.key)); %>
               <% const todosCampos=[...camposPad.map(c=>({...c,padrao:true})),...campos.map(c=>({key:'extra_'+c.id,label:c.label,padrao:false,id:c.id,tipo:c.tipo,obrigatorio:c.obrigatorio}))]; %>
               <% todosCampos.forEach(c => { %>
               <div class="campo-ord-item" data-key="<%= c.key %>">
@@ -477,7 +479,10 @@
                 </div>
                 <% if(!c.padrao){ %>
                 <form method="POST" action="/eventos/<%= evento.id %>/campos/<%= c.id %>/deletar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;"><button type="submit" class="btn-xs verm">Excluir</button></form>
-                <% }else{ %><span style="font-size:11px;color:#10b981;font-weight:600">fixo</span><% } %>
+                <% }else if(camposFixos.includes(c.key)){ %><span style="font-size:11px;color:#10b981;font-weight:600">fixo</span>
+                <% }else{ %>
+                <form method="POST" action="/eventos/<%= evento.id %>/campos-padrao/<%= c.key %>/deletar" style="display:inline;margin:0" onsubmit="var f=this; confirmarAcao('Remover \'<%= c.label %>\' do formulário de inscrição deste evento? Quem já se inscreveu não é afetado.', function(){ f.submit(); }); return false;"><button type="submit" class="btn-xs verm">Excluir</button></form>
+                <% } %>
               </div>
               <% }) %>
             </div>

@@ -110,6 +110,10 @@ async function initSchema() {
     CREATE UNIQUE INDEX IF NOT EXISTS evento_cupons_ligante_unico ON evento_cupons (evento_id, ligante_id) WHERE ligante_id IS NOT NULL;
     CREATE UNIQUE INDEX IF NOT EXISTS evento_cupons_diretivo_unico ON evento_cupons (evento_id, diretivo_id) WHERE diretivo_id IS NOT NULL;
     ALTER TABLE listas_assinaturas ADD COLUMN IF NOT EXISTS tipo_publico TEXT DEFAULT 'todos';
+    -- Campos padrão (catraca, RG, semestre...) que fazem sentido pra UCP hoje mas não pra
+    -- toda universidade que vier a usar o sistema no futuro. Chaves em src/routes/eventos.js
+    -- (nome/email nunca entram aqui — o sistema todo depende deles).
+    ALTER TABLE eventos ADD COLUMN IF NOT EXISTS campos_padrao_desativados TEXT[] DEFAULT '{}';
     ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS sexo TEXT;

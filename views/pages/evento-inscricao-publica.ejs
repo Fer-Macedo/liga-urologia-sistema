@@ -632,26 +632,42 @@
               <input type="hidden" name="quantidade" id="campo-qty" value="1">
               <input type="hidden" name="cupom_codigo" id="campo-cupom" value="">
               <input type="hidden" name="tipo_participante" id="campo-tipo" value="ucp">
+              <% var _cpd = evento.campos_padrao_desativados || []; %>
+              <% var _temCatraca = !_cpd.includes('catraca'), _temInstituicao = !_cpd.includes('instituicao'); %>
               <div class="sec-title">Información personal</div>
               <div class="grid2" style="margin-bottom:14px">
                 <div class="campo" style="grid-column:1/-1"><label>Nombre Completo <span class="req">*</span></label><input name="nome" class="inp" required placeholder="Su nombre completo"></div>
                 <div class="campo"><label>Correo electrónico <span class="req">*</span></label><input name="email" class="inp" type="email" required placeholder="correo@ejemplo.com"></div>
+                <% if(!_cpd.includes('whatsapp')){ %>
                 <div class="campo"><label>WhatsApp <span class="req">*</span></label>
                   <div class="inp-group">
                     <select name="whatsapp_pais" class="inp" style="max-width:86px;flex-shrink:0"><option value="+595"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">PY</span> +595</option><option value="+55"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">BR</span> +55</option><option value="+54"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">AR</span> +54</option><option value="+598"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">UY</span> +598</option><option value="+1"><span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">US</span> +1</option></select>
                     <input name="whatsapp" class="inp" placeholder="99 999 9999" required>
                   </div>
                 </div>
+                <% } %>
+                <% if(!_cpd.includes('data_nascimento')){ %>
                 <div class="campo"><label>Fecha de Nacimiento <span class="req">*</span></label><input type="date" name="data_nascimento" class="inp" required></div>
+                <% } %>
+                <% if(!_cpd.includes('rg')){ %>
                 <div class="campo"><label>RG / CI <span class="req">*</span></label><input name="rg" class="inp" required placeholder="Número del documento"></div>
+                <% } %>
+                <% if(_temCatraca){ %>
                 <div class="campo" id="campo-catraca"><label>Catraca UCP <span class="req">*</span></label><input name="catraca" id="inp-catraca" class="inp" required placeholder="Número de la catraca"></div>
-                <div class="campo" id="campo-instituicao" style="display:none"><label>Institución <span class="req">*</span></label><input name="instituicao" id="inp-instituicao" class="inp" placeholder="Nombre de su universidad"></div>
+                <% } %>
+                <% if(_temInstituicao){ %>
+                <div class="campo" id="campo-instituicao" style="<%= _temCatraca?'display:none':'' %>"><label>Institución <span class="req">*</span></label><input name="instituicao" id="inp-instituicao" class="inp" <%= _temCatraca?'':'required' %> placeholder="Nombre de su universidad"></div>
+                <% } %>
+                <% if(!_cpd.includes('semestre')){ %>
                 <div class="campo"><label>Semestre <span class="req">*</span></label>
                   <select name="semestre" class="inp" required><option value="">Seleccione...</option><% for(let s=1;s<=12;s++){ %><option value="<%= s %>º"><%= s %>º Semestre</option><% } %></select>
                 </div>
+                <% } %>
+                <% if(!_cpd.includes('turma')){ %>
                 <div class="campo"><label>Sección <span class="req">*</span></label>
                   <select name="turma" class="inp" required><option value="">Seleccione...</option><% 'ABCDEFGHIJKLMNOP'.split('').forEach(t=>{ %><option value="<%= t %>">Sección <%= t %></option><% }) %></select>
                 </div>
+                <% } %>
               </div>
               <% if(campos&&campos.length>0){ %>
               <div class="sec-title" style="margin-top:8px">Información adicional</div>
@@ -900,9 +916,14 @@ function aplicarCatracaPorLote(l){
   var exige = !l || l.exige_catraca !== false;
   var cc=document.getElementById('campo-catraca'), ci=document.getElementById('campo-instituicao');
   var ic=document.getElementById('inp-catraca'), ii=document.getElementById('inp-instituicao');
-  document.getElementById('campo-tipo').value = exige ? 'ucp' : 'externo';
-  if(exige){ cc.style.display='block'; ci.style.display='none'; ic.required=true; ii.required=false; ii.value=''; }
-  else{ cc.style.display='none'; ci.style.display='block'; ic.required=false; ic.value=''; ii.required=true; }
+  var tipoEl=document.getElementById('campo-tipo');
+  if(tipoEl) tipoEl.value = exige ? 'ucp' : 'externo';
+  // Um dos dois campos (ou os dois) pode ter sido excluído do evento (aba Campos) — sem os
+  // dois pra alternar entre si, não tem o que fazer aqui, cada um fica sempre visível como
+  // já veio renderizado do servidor.
+  if(!cc || !ci) return;
+  if(exige){ cc.style.display='block'; ci.style.display='none'; if(ic)ic.required=true; if(ii){ii.required=false; ii.value='';} }
+  else{ cc.style.display='none'; ci.style.display='block'; if(ic){ic.required=false; ic.value='';} if(ii)ii.required=true; }
 }
 
 // Inicializar mostrando o qty-row do primeiro lote

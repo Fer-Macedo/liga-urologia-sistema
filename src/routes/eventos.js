@@ -969,6 +969,24 @@ router.post('/eventos/:id/campos/:cid/deletar', requireAuth, requirePermissao('e
   req.session.msg=['Campo removido!']; res.redirect('/eventos/'+req.params.id);
 });
 
+// Campos padrão são os mesmos pra toda a Liga hoje (catraca, RG...), mas nem toda
+// universidade/liga que vier a usar o sistema depois vai querer os mesmos — nome e email
+// nunca entram aqui, o sistema inteiro depende deles (confirmação, check-in, certificado).
+const CAMPOS_PADRAO_EXCLUIVEIS = ['whatsapp','data_nascimento','rg','semestre','turma','catraca','instituicao'];
+router.post('/eventos/:id/campos-padrao/:chave/deletar', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  const { chave } = req.params;
+  if (!CAMPOS_PADRAO_EXCLUIVEIS.includes(chave)) {
+    req.session.erro = ['Este campo não pode ser excluído.'];
+    return res.redirect('/eventos/'+req.params.id+'?tab=campos');
+  }
+  await query(
+    "UPDATE eventos SET campos_padrao_desativados = array_append(campos_padrao_desativados, $1) WHERE id=$2 AND NOT ($1 = ANY(campos_padrao_desativados))",
+    [chave, req.params.id]
+  );
+  req.session.msg=['Campo removido do formulário de inscrição!'];
+  res.redirect('/eventos/'+req.params.id+'?tab=campos');
+});
+
 router.post('/eventos/:id/lotes/:lid/editar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const {nome,preco,vagas,data_inicio,data_fim,exige_catraca} = req.body;
   await query('UPDATE evento_lotes SET nome=$1,preco=$2,vagas=$3,data_inicio=$4,data_fim=$5,exige_catraca=$6 WHERE id=$7',
