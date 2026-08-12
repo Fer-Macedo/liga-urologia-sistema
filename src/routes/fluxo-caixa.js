@@ -14,7 +14,9 @@ router.get('/fluxo-caixa', requireAuth, requirePermissao('fluxo-caixa'), async (
     const mesNome = mesesNomes[mes-1] + ' ' + ano;
 
     const lancamentos = await query(
-      `SELECT f.*, c.metodo_pagamento FROM fluxo_caixa f LEFT JOIN cobrancas c ON c.id=f.origem_cobranca_id
+      `SELECT f.*,
+        COALESCE(c.metodo_pagamento, substring(f.observacoes from 'Pago via (\\w+)')) AS metodo_pagamento
+       FROM fluxo_caixa f LEFT JOIN cobrancas c ON c.id=f.origem_cobranca_id
        WHERE EXTRACT(YEAR FROM f.data_lancamento)=$1 AND EXTRACT(MONTH FROM f.data_lancamento)=$2 ORDER BY f.data_lancamento DESC, f.id DESC`,
       [ano, mes]
     );
