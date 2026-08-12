@@ -1,3 +1,12 @@
+// Valor líquido (já descontada a taxa do PagBank) de um pagamento de evento. Mesma taxa usada
+// no lançamento real do fluxo de caixa: cartão 4%, PIX 1,9% (conforme extrato PagBank).
+// Exportada para os paineis de eventos (aba financeiro, relatório em PDF) não mostrarem
+// o bruto rotulado como "líquido" nem duplicarem a taxa com um número diferente.
+function calcularLiquidoEvento(bruto, metodo) {
+  const v = parseFloat(bruto) || 0;
+  return metodo === 'cartao' ? Math.round(v * 0.96 * 100) / 100 : Math.round(v * 0.981 * 100) / 100;
+}
+
 // Lança no fluxo de caixa o pagamento de uma inscrição de evento, evitando duplicar
 // (mesmo padrao usado em fluxo-mensalidade.js para mensalidades)
 async function lancarEventoNoFluxo(query, inscricaoId) {
@@ -14,7 +23,7 @@ async function lancarEventoNoFluxo(query, inscricaoId) {
     if (jaExiste.rows.length) return { ok: true, motivo: 'ja lancado' };
 
     const v = parseFloat(ep.valor) || 0;
-    const liquido = ep.metodo === 'cartao' ? Math.round(v * 0.96 * 100) / 100 : Math.round(v * 0.981 * 100) / 100;
+    const liquido = calcularLiquidoEvento(v, ep.metodo);
     const dataPag = new Date().toISOString().slice(0, 10);
     await query(
       `INSERT INTO fluxo_caixa (tipo,descricao,categoria,valor,data_lancamento,observacoes,criado_em) VALUES ('E',$1,'Eventos',$2,$3,$4,NOW())`,
@@ -28,4 +37,4 @@ async function lancarEventoNoFluxo(query, inscricaoId) {
   }
 }
 
-module.exports = { lancarEventoNoFluxo };
+module.exports = { lancarEventoNoFluxo, calcularLiquidoEvento };

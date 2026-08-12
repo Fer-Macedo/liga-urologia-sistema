@@ -739,14 +739,13 @@
       <div class="tab-content" id="tab-financeiro">
         <%
           const pagsPagos = pagamentos.filter(p => p.status === 'pago');
-          let bruto = 0, taxas = 0;
+          let bruto = 0, liquido = 0;
           pagsPagos.forEach(p => {
             const v = Number(p.valor) || 0;
             bruto += v;
-           if (p.metodo === 'pix') taxas += v * 0.018;
-            else if (p.metodo === 'cartao') taxas += v * 0.04;
+            liquido += calcularLiquidoEvento(v, p.metodo);
           });
-          const liquido = bruto - taxas;
+          const taxas = bruto - liquido;
           const taxaPct = bruto > 0 ? (taxas / bruto * 100) : 0;
         %>
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:20px">
@@ -758,7 +757,7 @@
           <div class="stat-box" style="border-top:3px solid #ef4444">
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--texto2);margin-bottom:6px">Taxas PagBank</div>
             <div style="font-size:24px;font-weight:700;color:#ef4444;font-family:'Outfit',sans-serif">R$ <%= taxas.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></div>
-         <div style="font-size:11px;color:var(--texto2);margin-top:4px"><%= taxaPct.toFixed(1) %>% · PIX 1,8% · Cartão 4,0%</div>
+         <div style="font-size:11px;color:var(--texto2);margin-top:4px"><%= taxaPct.toFixed(1) %>% · PIX 1,9% · Cartão 4,0%</div>
           </div>
           <div class="stat-box" style="border-top:3px solid #1a56db">
             <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--texto2);margin-bottom:6px">Receita Líquida</div>
@@ -773,10 +772,8 @@
             <tbody>
               <% pagsPagos.forEach(p => {
                 const v = Number(p.valor)||0;
-                let tx = 0;
-                if(p.metodo==='pix') tx = v*0.018;
-                else if(p.metodo==='cartao') tx = v*0.04;
-                const liq = v - tx;
+                const liq = calcularLiquidoEvento(v, p.metodo);
+                const tx = v - liq;
               %>
               <tr>
                 <td style="font-weight:600"><%= p.inscrito_nome %></td>

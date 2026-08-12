@@ -7,6 +7,7 @@ const { enviarEmail, emailBonito } = require('../services/email');
 const { criarPixEvento, consultarPagamento, obterChavePublica, pagarComCartao } = require('../services/pagbank');
 const { enviarEmailConfirmacaoEvento, TEXTO_CONFIRMACAO_PADRAO } = require('../services/eventos-email');
 const { limiterPagamentoCartao } = require('../services/rate-limiters');
+const { calcularLiquidoEvento } = require('../services/fluxo-eventos');
 
 // /inscricao e /checkout ficam de fora do rate-limit geral (src/routes/index.js) porque
 // alguém legitimamente pode recarregar/tentar de novo várias vezes numa fila de evento —
@@ -105,7 +106,7 @@ router.get('/eventos/:id', requireAuth, requirePermissao('eventos'), async (req,
   const stats = await getEventoStats(req.params.id);
   const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem',[req.params.id]);
   const cuponsR = await query('SELECT ec.*, ec.criado_em AS cupom_criado_em, ei.nome AS usado_nome, ei.criado_em AS usado_em, COALESCE(l.nome, d.nome, mb.nome) AS dono_nome FROM evento_cupons ec LEFT JOIN evento_inscricoes ei ON ei.id = ec.usado_por_inscricao_id LEFT JOIN ligantes l ON ec.ligante_id = l.id LEFT JOIN diretivos d ON ec.diretivo_id = d.id LEFT JOIN membros mb ON ec.membro_id = mb.id WHERE ec.evento_id=$1 ORDER BY ec.criado_em DESC',[req.params.id]);
-  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows, cupons: cuponsR.rows });
+  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows, cupons: cuponsR.rows, calcularLiquidoEvento });
 });
 
 router.post('/eventos/:id/editar', requireAuth, requirePermissao('eventos'), async (req, res) => {
@@ -596,13 +597,12 @@ router.get('/eventos/:id/relatorio-pdf', requireAuth, requirePermissao('eventos'
     const dataEv = ev.data_inicio?new Date(ev.data_inicio).toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}):'';
     const confirmados = inscritos.filter(i=>i.status==='confirmado').length;
     const checkins = inscritos.filter(i=>i.checkin_em).length;
-    let bruto=0, taxas=0;
+    let bruto=0, liquido=0;
     pagamentos.forEach(p=>{
       const v=Number(p.valor)||0; bruto+=v;
-     if(p.metodo==='pix') taxas+=v*0.018;
-      else if(p.metodo==='cartao') taxas+=v*0.04;
+      liquido+=calcularLiquidoEvento(v, p.metodo);
     });
-    const liquido = bruto-taxas;
+    const taxas = bruto-liquido;
     const brl = (v)=>Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
     const linhasInscritos = inscritos.map((i,idx)=>{
       const conf = i.status==='confirmado';
