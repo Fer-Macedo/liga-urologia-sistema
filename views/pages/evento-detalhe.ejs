@@ -291,6 +291,7 @@
         <a href="/inscricao/<%= evento.id %>" target="_blank" class="btn btn-sm" style="background:#059669;color:white">Pág. Pública</a>
         <a href="/eventos/<%= evento.id %>/checkin" class="btn btn-sm btn-primario">Check-in</a>
         <a href="/eventos/<%= evento.id %>/presencas" class="btn btn-sm" style="background:#8b5cf6;color:white">Presenças</a>
+        <button type="button" onclick="showTab('lista-assinatura')" class="btn btn-sm" style="background:#0f766e;color:white">Lista de Assinatura</button>
       </div>
     </div>
     <div class="content">
@@ -339,7 +340,6 @@
         <button class="tab-btn" onclick="showTab('patrocinadores',this)">Patrocinadores</button>
         <button class="tab-btn" onclick="showTab('cupons',this)">Cupons</button>
         <button class="tab-btn" onclick="showTab('certificados',this)">Certificados</button>
-        <button class="tab-btn" onclick="showTab('lista-assinatura',this)">Lista de Assinatura</button>
         <button class="tab-btn" onclick="showTab('checkout',this);carregarRelatorioCheckout()">Check-out</button>
         <button class="tab-btn" onclick="showTab('avancado',this)">Avançado</button>
       </div>
@@ -1114,7 +1114,8 @@
                 <option value="pendente">Somente pendentes</option>
               </select>
             </div>
-            <button type="button" class="btn btn-primario" onclick="gerarListaAssinatura()">Gerar e imprimir</button>
+            <button type="button" class="btn btn-sm" onclick="gerarListaAssinatura('visualizar')">Visualizar</button>
+            <button type="button" class="btn btn-primario" onclick="gerarListaAssinatura('imprimir')">Imprimir</button>
           </div>
         </div>
       </div>
@@ -1651,9 +1652,9 @@ function imprimirRelatorio() {
   w.print();
 }
 
-function gerarListaAssinatura() {
+function gerarListaAssinatura(modo) {
   const status = document.getElementById('la-status').value;
-  const url = '/eventos/<%= evento.id %>/lista-assinatura' + (status ? ('?status=' + status) : '');
+  const url = '/eventos/<%= evento.id %>/lista-assinatura/' + modo + (status ? ('?status=' + status) : '');
   window.open(url, '_blank');
 }
 
