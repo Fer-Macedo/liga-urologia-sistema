@@ -100,6 +100,12 @@ async function initSchema() {
     -- default true: lotes já cadastrados continuam pedindo catraca como pediam antes,
     -- nada muda pra quem já configurou um lote sem essa opção existir.
     ALTER TABLE evento_lotes ADD COLUMN IF NOT EXISTS exige_catraca BOOLEAN DEFAULT true;
+    -- Um cupom de isenção por pessoa por evento — a checagem em código (SELECT depois
+    -- INSERT) não é atômica, e já produziu duplicata de verdade em produção (11/08/2026,
+    -- 4 pares). Índice parcial (WHERE ligante_id/diretivo_id IS NOT NULL) porque cupom
+    -- genérico, sem pessoa vinculada, continua permitido.
+    CREATE UNIQUE INDEX IF NOT EXISTS evento_cupons_ligante_unico ON evento_cupons (evento_id, ligante_id) WHERE ligante_id IS NOT NULL;
+    CREATE UNIQUE INDEX IF NOT EXISTS evento_cupons_diretivo_unico ON evento_cupons (evento_id, diretivo_id) WHERE diretivo_id IS NOT NULL;
     ALTER TABLE listas_assinaturas ADD COLUMN IF NOT EXISTS tipo_publico TEXT DEFAULT 'todos';
     ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
