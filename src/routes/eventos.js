@@ -139,10 +139,10 @@ router.get('/eventos/:id/banner', async (req, res) => {
 });
 
 router.post('/eventos/:id/lotes', requireAuth, requirePermissao('eventos'), async (req, res) => {
-  const {nome,preco,vagas,data_inicio,data_fim} = req.body;
+  const {nome,preco,vagas,data_inicio,data_fim,exige_catraca} = req.body;
   const ordem = await query('SELECT COUNT(*) FROM evento_lotes WHERE evento_id=$1',[req.params.id]);
-  await query('INSERT INTO evento_lotes (evento_id,nome,preco,vagas,data_inicio,data_fim,ordem) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-    [req.params.id,nome,parseFloat(preco)||0,parseInt(vagas)||50,data_inicio||null,data_fim||null,parseInt(ordem.rows[0].count)+1]);
+  await query('INSERT INTO evento_lotes (evento_id,nome,preco,vagas,data_inicio,data_fim,ordem,exige_catraca) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+    [req.params.id,nome,parseFloat(preco)||0,parseInt(vagas)||50,data_inicio||null,data_fim||null,parseInt(ordem.rows[0].count)+1,exige_catraca==='on']);
   req.session.msg=['Lote criado!']; res.redirect('/eventos/'+req.params.id);
 });
 
@@ -900,9 +900,9 @@ router.post('/eventos/:id/campos/:cid/deletar', requireAuth, requirePermissao('e
 });
 
 router.post('/eventos/:id/lotes/:lid/editar', requireAuth, requirePermissao('eventos'), async (req, res) => {
-  const {nome,preco,vagas,data_inicio,data_fim} = req.body;
-  await query('UPDATE evento_lotes SET nome=$1,preco=$2,vagas=$3,data_inicio=$4,data_fim=$5 WHERE id=$6',
-    [nome,parseFloat(preco)||0,parseInt(vagas),data_inicio||null,data_fim||null,req.params.lid]);
+  const {nome,preco,vagas,data_inicio,data_fim,exige_catraca} = req.body;
+  await query('UPDATE evento_lotes SET nome=$1,preco=$2,vagas=$3,data_inicio=$4,data_fim=$5,exige_catraca=$6 WHERE id=$7',
+    [nome,parseFloat(preco)||0,parseInt(vagas),data_inicio||null,data_fim||null,exige_catraca==='on',req.params.lid]);
   req.session.msg=['Lote atualizado!']; res.redirect('/eventos/'+req.params.id);
 });
 

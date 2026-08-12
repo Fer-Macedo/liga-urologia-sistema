@@ -97,6 +97,9 @@ async function initSchema() {
     ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS telefone TEXT;
     ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS mfa_secret TEXT;
     ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS mfa_ativo BOOLEAN DEFAULT false;
+    -- default true: lotes já cadastrados continuam pedindo catraca como pediam antes,
+    -- nada muda pra quem já configurou um lote sem essa opção existir.
+    ALTER TABLE evento_lotes ADD COLUMN IF NOT EXISTS exige_catraca BOOLEAN DEFAULT true;
     ALTER TABLE listas_assinaturas ADD COLUMN IF NOT EXISTS tipo_publico TEXT DEFAULT 'todos';
     ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;

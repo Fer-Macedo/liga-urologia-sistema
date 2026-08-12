@@ -128,16 +128,6 @@
     .form-sec{overflow:hidden;max-height:0;opacity:0;transition:max-height .55s cubic-bezier(.4,0,.2,1),opacity .4s ease}
     .form-sec.open{max-height:6000px;opacity:1}
     .sec-title{font-size:11px;font-weight:700;color:var(--ink3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--bdr)}
-    .tipo-participante{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px}
-    .tipo-opt{border:1.5px solid var(--bdr);border-radius:var(--r);padding:14px 16px;cursor:pointer;transition:all .2s;text-align:center}
-    .tipo-opt:hover{border-color:var(--p)}
-    .tipo-opt.sel{border-color:var(--p);background:var(--p-light)}
-    .tipo-ic{width:36px;height:36px;border-radius:9px;background:var(--sur3);margin:0 auto 8px;display:flex;align-items:center;justify-content:center}
-    .tipo-opt.sel .tipo-ic{background:color-mix(in srgb,var(--p) 15%,white)}
-    .tipo-ic svg{width:18px;height:18px;fill:var(--ink3)}
-    .tipo-opt.sel .tipo-ic svg{fill:var(--p)}
-    .tipo-lbl{font-size:13px;font-weight:700;color:var(--ink)}
-    .tipo-sub{font-size:11px;color:var(--ink3);margin-top:2px}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     @media(max-width:500px){.grid2{grid-template-columns:1fr}}
     .campo label{display:block;font-size:11px;font-weight:600;color:var(--ink2);margin-bottom:5px;letter-spacing:.2px}
@@ -334,7 +324,6 @@
     .btn-sub:hover { background: #0F6E56 !important; opacity: 1 !important; transform: none !important; }
     .cupom-btn { border-radius: 2px !important; }
     .cupom-in { border-radius: 2px !important; }
-    .tipo-opt { border-radius: 2px !important; }
     .contact-btn { border-radius: 2px !important; transition: border-color .18s, background .18s, transform .15s !important; }
     .contact-btn:hover { transform: translateY(-2px) !important; }
     .prog-item { border-radius: 0 2px 2px 0 !important; transition: border-color .2s, background .2s, transform .15s !important; }
@@ -643,21 +632,6 @@
               <input type="hidden" name="quantidade" id="campo-qty" value="1">
               <input type="hidden" name="cupom_codigo" id="campo-cupom" value="">
               <input type="hidden" name="tipo_participante" id="campo-tipo" value="ucp">
-              <div style="margin-bottom:20px">
-                <div class="sec-title">Tipo de participante</div>
-                <div class="tipo-participante">
-                  <div class="tipo-opt sel" id="opt-ucp" onclick="selectTipo('ucp')">
-                    <div class="tipo-ic"><svg viewBox="0 0 24 24"><path d="M5 13.18v4L12 21l7-3.82v-4L12 17l-7-3.82zM12 3L1 9l11 6 9-4.91V17h2V9L12 3z"/></svg></div>
-                    <div class="tipo-lbl">Alumno UCP</div>
-                    <div class="tipo-sub">Universidad Central del Paraguay</div>
-                  </div>
-                  <div class="tipo-opt" id="opt-externo" onclick="selectTipo('externo')">
-                    <div class="tipo-ic"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg></div>
-                    <div class="tipo-lbl">Externo</div>
-                    <div class="tipo-sub">Otra institución</div>
-                  </div>
-                </div>
-              </div>
               <div class="sec-title">Información personal</div>
               <div class="grid2" style="margin-bottom:14px">
                 <div class="campo" style="grid-column:1/-1"><label>Nombre Completo <span class="req">*</span></label><input name="nome" class="inp" required placeholder="Su nombre completo"></div>
@@ -915,7 +889,20 @@ function selLote(id,el){
   });
   const l=lotesData.find(x=>String(x.id)===id);
   precoBase=l?parseFloat(l.preco):0;
+  aplicarCatracaPorLote(l);
   updRes(l);
+}
+
+// A catraca (UCP) só aparece pros lotes que a exigem — vem do lote escolhido, não de um
+// botão separado (era ali que alguém escolhia "Externo" no lote mas esquecia de trocar o
+// tipo, e o formulário seguia pedindo catraca de quem não tinha).
+function aplicarCatracaPorLote(l){
+  var exige = !l || l.exige_catraca !== false;
+  var cc=document.getElementById('campo-catraca'), ci=document.getElementById('campo-instituicao');
+  var ic=document.getElementById('inp-catraca'), ii=document.getElementById('inp-instituicao');
+  document.getElementById('campo-tipo').value = exige ? 'ucp' : 'externo';
+  if(exige){ cc.style.display='block'; ci.style.display='none'; ic.required=true; ii.required=false; ii.value=''; }
+  else{ cc.style.display='none'; ci.style.display='block'; ic.required=false; ic.value=''; ii.required=true; }
 }
 
 // Inicializar mostrando o qty-row do primeiro lote
@@ -925,6 +912,7 @@ window.addEventListener('DOMContentLoaded',function(){
     var firstId=String(first.id);
     var row=document.getElementById('qty-row-'+firstId);
     if(row) row.style.display='flex';
+    aplicarCatracaPorLote(first);
     updRes(first);
   }
 });
@@ -967,15 +955,6 @@ function updRes(l){
 })();
 <% } %>
 
-function selectTipo(tipo){
-  document.getElementById('campo-tipo').value=tipo;
-  document.getElementById('opt-ucp').classList.toggle('sel',tipo==='ucp');
-  document.getElementById('opt-externo').classList.toggle('sel',tipo==='externo');
-  const cc=document.getElementById('campo-catraca'),ci=document.getElementById('campo-instituicao');
-  const ic=document.getElementById('inp-catraca'),ii=document.getElementById('inp-instituicao');
-  if(tipo==='ucp'){cc.style.display='block';ci.style.display='none';ic.required=true;ii.required=false;ii.value='';}
-  else{cc.style.display='none';ci.style.display='block';ic.required=false;ic.value='';ii.required=true;}
-}
 function abrirForm(){
   const fs=document.getElementById('form-sec');
   fs.classList.add('open');

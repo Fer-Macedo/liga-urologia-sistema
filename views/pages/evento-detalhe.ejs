@@ -402,11 +402,11 @@
             <div class="lote-item">
               <div>
                 <div style="font-weight:600"><%= l.nome %></div>
-                <div style="font-size:12px;color:var(--texto2)">R$ <%= Number(l.preco).toFixed(2) %> · <%= l.vagas %> vagas · <%= l.inscritos||0 %> inscritos</div>
+                <div style="font-size:12px;color:var(--texto2)">R$ <%= Number(l.preco).toFixed(2) %> · <%= l.vagas %> vagas · <%= l.inscritos||0 %> inscritos <% if(!l.exige_catraca){%>· <span style="color:var(--texto2)">sem catraca</span><%}%></div>
                 <% if(l.data_inicio){%><div style="font-size:11px;color:var(--texto2);margin-top:2px"><%= new Date(l.data_inicio).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) %> até <%= new Date(l.data_fim).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) %></div><%}%>
               </div>
               <div style="display:flex;gap:6px">
-        <button onclick="editarLote(<%= l.id %>,'<%= l.nome %>',<%= l.preco %>,<%= l.vagas %>,'<%= l.data_inicio? new Date(new Date(l.data_inicio).getTime() - new Date(l.data_inicio).getTimezoneOffset()*60000).toISOString().slice(0,16):'' %>','<%= l.data_fim? new Date(new Date(l.data_fim).getTime() - new Date(l.data_fim).getTimezoneOffset()*60000).toISOString().slice(0,16):'' %>')" class="btn-xs azul">Editar</button>
+        <button onclick="editarLote(<%= l.id %>,'<%= l.nome %>',<%= l.preco %>,<%= l.vagas %>,'<%= l.data_inicio? new Date(new Date(l.data_inicio).getTime() - new Date(l.data_inicio).getTimezoneOffset()*60000).toISOString().slice(0,16):'' %>','<%= l.data_fim? new Date(new Date(l.data_fim).getTime() - new Date(l.data_fim).getTimezoneOffset()*60000).toISOString().slice(0,16):'' %>',<%= l.exige_catraca!==false %>)" class="btn-xs azul">Editar</button>
                 <form method="POST" action="/eventos/<%= evento.id %>/lotes/<%= l.id %>/deletar" onsubmit="var f=this; confirmarAcao('Excluir lote?', function(){ f.submit(); }); return false;" style="display:inline">
                   <button type="submit" class="btn-xs verm">Excluir</button>
                 </form>
@@ -425,8 +425,12 @@
                 <div class="campo"><label class="label">Vagas</label><input type="number" name="vagas" class="input" value="50" min="1"></div>
                 <div class="campo"><label class="label">Início</label><input type="datetime-local" name="data_inicio" class="input"></div>
                 <div class="campo"><label class="label">Fim</label><input type="datetime-local" name="data_fim" class="input"></div>
-                <div class="campo" style="display:flex;align-items:flex-end"><button type="submit" class="btn btn-primario" style="width:100%">Adicionar lote</button></div>
               </div>
+              <div class="campo" style="display:flex;align-items:center;gap:6px;margin-top:4px">
+                <input type="checkbox" name="exige_catraca" id="novo-exige-catraca" checked style="width:auto">
+                <label for="novo-exige-catraca" style="font-size:12.5px;color:var(--texto2)">Exige número de catraca (UCP) — desmarque pra lotes de outras instituições</label>
+              </div>
+              <div class="campo" style="margin-top:10px"><button type="submit" class="btn btn-primario">Adicionar lote</button></div>
             </form>
           </div>
         </div>
@@ -1205,6 +1209,10 @@
         <div class="campo"><label class="label">Início</label><input id="el-inicio" type="datetime-local" name="data_inicio" class="input"></div>
         <div class="campo"><label class="label">Fim</label><input id="el-fim" type="datetime-local" name="data_fim" class="input"></div>
       </div>
+      <div class="campo" style="display:flex;align-items:center;gap:6px;margin-top:4px">
+        <input type="checkbox" name="exige_catraca" id="el-exige-catraca" style="width:auto">
+        <label for="el-exige-catraca" style="font-size:12.5px;color:var(--texto2)">Exige número de catraca (UCP) — desmarque pra lotes de outras instituições</label>
+      </div>
       <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-editar-lote')">Cancelar</button><button type="submit" class="btn btn-primario">Salvar</button></div>
     </form>
   </div>
@@ -1467,12 +1475,13 @@ function buscarInscrito(q) {
   });
 }
 
-function editarLote(id, nome, preco, vagas, inicio, fim) {
+function editarLote(id, nome, preco, vagas, inicio, fim, exigeCatraca) {
   document.getElementById('el-nome').value = nome;
   document.getElementById('el-preco').value = preco;
   document.getElementById('el-vagas').value = vagas;
   document.getElementById('el-inicio').value = inicio;
   document.getElementById('el-fim').value = fim;
+  document.getElementById('el-exige-catraca').checked = exigeCatraca;
   document.getElementById('form-editar-lote').action = '/eventos/<%= evento.id %>/lotes/'+id+'/editar';
   abrirModal('modal-editar-lote');
 }
