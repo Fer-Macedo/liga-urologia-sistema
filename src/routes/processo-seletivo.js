@@ -8,6 +8,7 @@ const { requireAuth, requirePermissao } = require('../middleware/auth');
 const { getConfig } = require('../services/config');
 const { upload, uploadArquivo } = require('../services/arquivos');
 const { getUrlAssinada } = require('../services/desligamento');
+const { formatarNome } = require('../services/nomes');
 const { enviarEmail } = require('../services/notificacoes');
 const omr = require('../services/omr');
 const {
@@ -768,7 +769,7 @@ module.exports = function (router) {
         inscritos.forEach(i => { if (i.pagamento_status === 'confirmado') resumo.confirmados++; else resumo.pendentes++; });
         resumo.arrecadado = await _arrecadadoLiquidoPss(inscritos);
       }
-      res.render('pages/inscricoes-pss', { config, usuario: req.session.usuario, procs, vista, processo, inscritos, cupons, resumo, inscricaoBase: process.env.INSCRICAO_URL || 'https://inscricao.lauroucpcde.com', msg: req.session.msg || [], erro: req.session.erro || [] });
+      res.render('pages/inscricoes-pss', { config, usuario: req.session.usuario, procs, vista, processo, inscritos, cupons, resumo, inscricaoBase: process.env.INSCRICAO_URL || 'https://inscricao.lauroucpcde.com', msg: req.session.msg || [], erro: req.session.erro || [], formatarNome });
       req.session.msg = []; req.session.erro = [];
     } catch (e) { res.status(500).send('Erro: ' + e.message); }
   });

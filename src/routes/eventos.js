@@ -8,6 +8,7 @@ const { criarPixEvento, consultarPagamento, obterChavePublica, pagarComCartao } 
 const { enviarEmailConfirmacaoEvento, TEXTO_CONFIRMACAO_PADRAO } = require('../services/eventos-email');
 const { limiterPagamentoCartao } = require('../services/rate-limiters');
 const { calcularLiquidoEvento } = require('../services/fluxo-eventos');
+const { formatarNome } = require('../services/nomes');
 
 // /inscricao e /checkout ficam de fora do rate-limit geral (src/routes/index.js) porque
 // alguém legitimamente pode recarregar/tentar de novo várias vezes numa fila de evento —
@@ -120,7 +121,7 @@ router.get('/eventos/:id', requireAuth, requirePermissao('eventos'), async (req,
   const stats = await getEventoStats(req.params.id);
   const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem',[req.params.id]);
   const cuponsR = await query('SELECT ec.*, ec.criado_em AS cupom_criado_em, ei.nome AS usado_nome, ei.criado_em AS usado_em, COALESCE(l.nome, d.nome, mb.nome) AS dono_nome FROM evento_cupons ec LEFT JOIN evento_inscricoes ei ON ei.id = ec.usado_por_inscricao_id LEFT JOIN ligantes l ON ec.ligante_id = l.id LEFT JOIN diretivos d ON ec.diretivo_id = d.id LEFT JOIN membros mb ON ec.membro_id = mb.id WHERE ec.evento_id=$1 ORDER BY ec.criado_em DESC',[req.params.id]);
-  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows, cupons: cuponsR.rows, calcularLiquidoEvento });
+  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows, cupons: cuponsR.rows, calcularLiquidoEvento, formatarNome });
 });
 
 router.post('/eventos/:id/editar', requireAuth, requirePermissao('eventos'), async (req, res) => {
@@ -1860,7 +1861,7 @@ async function gerarHTMLListaAssinaturaEvento(eventoId, statusFiltro) {
   sql += ' ORDER BY LOWER(nome) ASC';
   const inscR = await query(sql, params);
   const pessoas = inscR.rows.map(p => ({
-    nome: (p.nome || '').toLowerCase().replace(/\p{L}[\p{L}'\u2019-]*/gu, w => w.charAt(0).toUpperCase() + w.slice(1)),
+    nome: formatarNome(p.nome),
     rg: p.rg,
     catraca: p.catraca
   }));

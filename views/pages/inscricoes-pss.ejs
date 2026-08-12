@@ -144,9 +144,7 @@
               <% if(!inscritos.length){ %><tr><td colspan="8" style="color:var(--texto2)">Nenhuma inscrição ainda.</td></tr><% } %>
               <tr id="sem-resultado" style="display:none"><td colspan="8" style="color:var(--texto2)">Nenhum resultado para o filtro.</td></tr>
               <% inscritos.forEach(function(i){ var conf=i.pagamento_status==='confirmado';
-                // Nomes chegam com grafia inconsistente (TUDO MAIÚSCULO, tudo minúsculo, misturado)
-                // — padroniza só na exibição, sem alterar o valor gravado no banco.
-                var nomeExibido = (i.nome||'').toLowerCase().replace(/\p{L}[\p{L}'’-]*/gu, function(p){ return p.charAt(0).toUpperCase()+p.slice(1); });
+                var nomeExibido = formatarNome(i.nome);
               %>
                 <tr class="insc-row" data-status="<%=i.pagamento_status%>" data-data="<%= i.criado_em ? new Date(i.criado_em).toISOString().slice(0,10) : '' %>" data-busca="<%=(i.nome+' '+(i.documento||'')+' '+(i.email||'')).toLowerCase().replace(/"/g,'')%>">
                   <td><span class="num3"><%= i.numero_lista?String(i.numero_lista).padStart(3,'0'):'—' %></span></td>

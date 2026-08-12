@@ -8,10 +8,7 @@ const path = require('path');
 const ejs = require('ejs');
 
 const RAIZ = path.join(__dirname, '..');
-
-function formatarNome(nome) {
-  return (nome || '').toLowerCase().replace(/\p{L}[\p{L}'’-]*/gu, p => p.charAt(0).toUpperCase() + p.slice(1));
-}
+const { formatarNome } = require(path.join(RAIZ, 'src/services/nomes.js'));
 
 test('formatarNome: maiúsculo, minúsculo e misto viram Primeira Letra Maiúscula', () => {
   assert.strictEqual(formatarNome('JOSIAS GOMES FERREIRA'), 'Josias Gomes Ferreira');
@@ -33,7 +30,7 @@ test('a página renderiza os nomes formatados, sem alterar o valor original em m
     config: {}, usuario: { nome: 'Admin' }, procs: [], vista: 'detalhe',
     processo: { id: 4, nome: 'Processo Teste' }, inscritos, cupons: [],
     resumo: { total: 2, confirmados: 2, pendentes: 0, arrecadado: 25 },
-    inscricaoBase: 'https://x', msg: [], erro: []
+    inscricaoBase: 'https://x', msg: [], erro: [], formatarNome
   });
   assert.ok(html.includes('<td>Josias Gomes Ferreira</td>'));
   assert.ok(html.includes('<td>Edmyla Malheiros</td>'));
