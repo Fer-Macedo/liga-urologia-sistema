@@ -155,8 +155,8 @@
     .prog-chevron{color:var(--ink4);font-size:11px;transition:transform .25s;flex-shrink:0;margin-top:2px}
     .prog-item.open .prog-chevron{transform:rotate(180deg)}
     .prog-desc{max-height:0;overflow:hidden;transition:max-height .3s ease}
-    .prog-desc.open{max-height:200px}
-    .prog-desc-inner{font-size:13px;color:var(--ink2);line-height:1.6;padding-top:10px}
+    .prog-desc.open{max-height:280px}
+    .prog-desc-inner{font-size:13px;color:var(--ink2);line-height:1.6;margin-top:10px;background:var(--sur);border:1px solid var(--bdr);border-radius:var(--r-sm);padding:12px 14px}
 
     /* PALESTRANTES — foto 130px quadrada */
     .pales-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:18px}
@@ -700,10 +700,17 @@
           <% programacao.forEach((p,i)=>{ %>
           <div class="prog-item" id="prog-item-<%= i %>" onclick="togProg(<%= i %>)">
             <div class="prog-item-hd">
-              <% if(p.foto_chave){ %><img src="/eventos/programacao/<%= p.id %>/foto" style="width:40px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0" alt=""><% } %>
+              <% if(p.foto_chave){ %><img src="/eventos/programacao/<%= p.id %>/foto" style="width:40px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0;margin-right:12px" alt=""><% } %>
               <div style="flex:1"><div class="prog-hora"><%= p.horario %><% if(p.local){ %> · <%= p.local %><% } %></div><div class="prog-titulo"><%= p.titulo %></div></div>
               <% if(p.descricao){ %><span class="prog-chevron"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg></span><% } %>
             </div>
+            <% if(p.palestrante_ids&&p.palestrante_ids.length){ %>
+            <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px">
+              <% p.palestrante_ids.forEach(pid => { const idx = palestrantes.findIndex(pp=>pp.id===pid); if(idx===-1) return; %>
+              <span onclick="event.stopPropagation();togPales(<%= idx %>)" style="font-size:11px;font-weight:700;color:var(--p);cursor:pointer;text-decoration:underline;text-underline-offset:2px">🎤 <%= palestrantes[idx].nome %></span>
+              <% }) %>
+            </div>
+            <% } %>
             <% if(p.descricao){ %><div class="prog-desc" id="prog-desc-<%= i %>"><div class="prog-desc-inner"><%- p.descricao %></div></div><% } %>
           </div>
           <% }) %>

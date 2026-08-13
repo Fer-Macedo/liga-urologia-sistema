@@ -115,6 +115,7 @@ async function initSchema() {
     -- (nome/email nunca entram aqui — o sistema todo depende deles).
     ALTER TABLE eventos ADD COLUMN IF NOT EXISTS campos_padrao_desativados TEXT[] DEFAULT '{}';
     ALTER TABLE evento_programacao ADD COLUMN IF NOT EXISTS foto_chave TEXT;
+    ALTER TABLE evento_programacao ADD COLUMN IF NOT EXISTS palestrante_ids INTEGER[] DEFAULT '{}';
     ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS sexo TEXT;

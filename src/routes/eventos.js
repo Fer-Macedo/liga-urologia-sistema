@@ -1074,9 +1074,12 @@ router.post('/eventos/:id/programacao', requireAuth, requirePermissao('eventos')
       const horario = horario_inicio + ' - ' + horario_fim;
       let fotoChave=null;
       if (req.file) { const r=await uploadArquivo(req.file.buffer,req.file.originalname,req.file.mimetype,'programacao'); fotoChave=r.chave; }
+      let palestranteIds = req.body.palestrante_ids || [];
+      if (!Array.isArray(palestranteIds)) palestranteIds = [palestranteIds];
+      palestranteIds = palestranteIds.map(x => parseInt(x)).filter(x => !isNaN(x));
       const ord = await query('SELECT COUNT(*) FROM evento_programacao WHERE evento_id=$1',[req.params.id]);
-      await query('INSERT INTO evento_programacao (evento_id,horario,titulo,descricao,local,foto_chave,ordem) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-        [req.params.id,horario,titulo,descricao||null,local||null,fotoChave,parseInt(ord.rows[0].count)+1]);
+      await query('INSERT INTO evento_programacao (evento_id,horario,titulo,descricao,local,foto_chave,palestrante_ids,ordem) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+        [req.params.id,horario,titulo,descricao||null,local||null,fotoChave,palestranteIds,parseInt(ord.rows[0].count)+1]);
       req.session.msg=['Item adicionado!']; res.redirect('/eventos/'+req.params.id);
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }

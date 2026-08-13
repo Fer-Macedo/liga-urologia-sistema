@@ -1,4 +1,4 @@
-// 13/08/2026: 3 correções na Programação do evento —
+// 13/08/2026: 4 correções na Programação do evento —
 // 1) horário era um texto livre (aceitava qualquer coisa); agora são dois campos <input
 //    type="time"> (início/fim), o próprio navegador só aceita números de hora válidos, e o
 //    servidor monta a string "HH:MM - HH:MM" como sempre foi exibida;
@@ -6,6 +6,9 @@
 //    palestrante, permitindo negrito/fonte/tamanho;
 // 3) não existia campo de foto pro item de programação; agora tem, seguindo o mesmo padrão
 //    de upload+foto_chave já usado em evento_palestrantes.
+// 4) não dava pra vincular um item da programação a palestrante(s) já cadastrado(s); agora dá
+//    (evento_programacao.palestrante_ids, INTEGER[]), e na página pública clicar no nome do
+//    palestrante dentro da programação abre o modal de biografia dele (togPales).
 // Tudo isso já aparecia na página pública (evento-inscricao-publica.ejs) — só faltava a foto
 // e a descrição precisava virar HTML não-escapado pra respeitar a formatação do Quill.
 const { test } = require('node:test');
@@ -102,9 +105,97 @@ test('página pública: descrição vira HTML não-escapado (respeita negrito/fo
   const html = ejs.render(fs.readFileSync(ARQUIVO, 'utf8'), {
     evento: { id: 1, nome: 'Congresso', cor_tema: '#1a3d2b' },
     lotes: [], sucesso: false, qrcode: null, campos: [], codigoInscricao: null,
-    config: {}, programacao: [{ id: 1, horario: '08:00 - 09:00', titulo: 'Abertura', local: '', descricao: '<strong>Traga documento</strong>', foto_chave: 'x' }],
+    config: {}, programacao: [{ id: 1, horario: '08:00 - 09:00', titulo: 'Abertura', local: '', descricao: '<strong>Traga documento</strong>', foto_chave: 'x', palestrante_ids: [] }],
     palestrantes: [], patrocinadores: [], pixData: null, cupomUrl: null, erro: null, encerrado: false
   }, { filename: ARQUIVO });
   assert.match(html, /<strong>Traga documento<\/strong>/, 'HTML do Quill deve renderizar formatado, não escapado');
   assert.match(html, /\/eventos\/programacao\/1\/foto/, 'foto do item de programação deve aparecer na página pública');
+});
+
+test('POST programação: seleção de palestrantes (checkboxes) vira array de IDs', async () => {
+  const { rotas, inserts } = montar();
+  const req = { params: { id: '5' }, body: { horario_inicio: '08:00', horario_fim: '09:00', titulo: 'Mesa redonda', descricao: '', local: '', palestrante_ids: ['3', '7'] }, session: {} };
+  const res = resRedirectAsync();
+  rotas['POST /eventos/:id/programacao'](req, res);
+  await res.done;
+  const [, , , , , , palestranteIds] = inserts[0];
+  assert.deepStrictEqual(palestranteIds, [3, 7]);
+});
+
+test('POST programação: um único palestrante marcado (Express manda string, não array)', async () => {
+  const { rotas, inserts } = montar();
+  const req = { params: { id: '5' }, body: { horario_inicio: '08:00', horario_fim: '09:00', titulo: 'Palestra solo', descricao: '', local: '', palestrante_ids: '4' }, session: {} };
+  const res = resRedirectAsync();
+  rotas['POST /eventos/:id/programacao'](req, res);
+  await res.done;
+  const [, , , , , , palestranteIds] = inserts[0];
+  assert.deepStrictEqual(palestranteIds, [4]);
+});
+
+test('POST programação: nenhum palestrante marcado vira array vazio', async () => {
+  const { rotas, inserts } = montar();
+  const req = { params: { id: '5' }, body: { horario_inicio: '08:00', horario_fim: '09:00', titulo: 'Sem palestrante', descricao: '', local: '' }, session: {} };
+  const res = resRedirectAsync();
+  rotas['POST /eventos/:id/programacao'](req, res);
+  await res.done;
+  const [, , , , , , palestranteIds] = inserts[0];
+  assert.deepStrictEqual(palestranteIds, []);
+});
+
+test('página pública: clicar no palestrante de um item de programação abre a bio dele (togPales pelo índice certo)', () => {
+  const ARQUIVO = path.join(RAIZ, 'views/pages/evento-inscricao-publica.ejs');
+  const html = ejs.render(fs.readFileSync(ARQUIVO, 'utf8'), {
+    evento: { id: 1, nome: 'Congresso', cor_tema: '#1a3d2b' },
+    lotes: [], sucesso: false, qrcode: null, campos: [], codigoInscricao: null,
+    config: {},
+    programacao: [{ id: 1, horario: '08:00 - 09:00', titulo: 'Mesa redonda', local: '', descricao: '', foto_chave: null, palestrante_ids: [55] }],
+    palestrantes: [{ id: 40, nome: 'Dra. Fulana', bio: '' }, { id: 55, nome: 'Dr. Beltrano', bio: '' }],
+    patrocinadores: [], pixData: null, cupomUrl: null, erro: null, encerrado: false
+  }, { filename: ARQUIVO });
+  // Dr. Beltrano é o SEGUNDO da lista (índice 1) — o link deve chamar togPales(1), não togPales(0)
+  assert.match(html, /togPales\(1\)[^>]*>🎤 Dr\. Beltrano/);
+});
+
+test('admin: formulário "Adicionar item" lista um checkbox por palestrante já cadastrado', () => {
+  const ARQUIVO = path.join(RAIZ, 'views/pages/evento-detalhe.ejs');
+  const evento = { id: 1, nome: 'Congresso', cor_tema: '#1a3d2b', vagas_total: 100, total_inscritos: 0 };
+  const html = ejs.render(fs.readFileSync(ARQUIVO, 'utf8'), {
+    config: {}, usuario: { nome: 'Teste', perfil: 'admin' }, msg: [], erro: [],
+    evento, lotes: [], inscricoes: [], pagamentos: [], certificados: [],
+    stats: { total: 0, confirmados: 0, checkins: 0, receita: 0 },
+    campos: [], programacao: [], palestrantes: [{ id: 40, nome: 'Dra. Fulana' }, { id: 55, nome: 'Dr. Beltrano' }],
+    patrocinadores: [], cupons: [], calcularLiquidoEvento: () => 0, formatarNome: (n) => n
+  }, { filename: ARQUIVO });
+  assert.match(html, /<input type="checkbox" name="palestrante_ids" value="40"[^>]*>\s*Dra\. Fulana/);
+  assert.match(html, /<input type="checkbox" name="palestrante_ids" value="55"[^>]*>\s*Dr\. Beltrano/);
+});
+
+test('admin: item de programação já vinculado mostra o nome do palestrante na lista', () => {
+  const ARQUIVO = path.join(RAIZ, 'views/pages/evento-detalhe.ejs');
+  const evento = { id: 1, nome: 'Congresso', cor_tema: '#1a3d2b', vagas_total: 100, total_inscritos: 0 };
+  const html = ejs.render(fs.readFileSync(ARQUIVO, 'utf8'), {
+    config: {}, usuario: { nome: 'Teste', perfil: 'admin' }, msg: [], erro: [],
+    evento, lotes: [], inscricoes: [], pagamentos: [], certificados: [],
+    stats: { total: 0, confirmados: 0, checkins: 0, receita: 0 },
+    campos: [],
+    programacao: [{ id: 1, horario: '08:00 - 09:00', titulo: 'Mesa redonda', local: '', descricao: '', foto_chave: null, palestrante_ids: [55] }],
+    palestrantes: [{ id: 40, nome: 'Dra. Fulana' }, { id: 55, nome: 'Dr. Beltrano' }],
+    patrocinadores: [], cupons: [], calcularLiquidoEvento: () => 0, formatarNome: (n) => n
+  }, { filename: ARQUIVO });
+  const iTab = html.indexOf('id="tab-programacao"');
+  const trecho = html.slice(iTab, html.indexOf('Adicionar item'));
+  assert.match(trecho, /🎤 Dr\. Beltrano/);
+  assert.ok(!trecho.includes('Dra. Fulana'), 'só o palestrante vinculado a ESTE item deve aparecer');
+});
+
+test('página pública: programação sem palestrante vinculado não quebra (array vazio)', () => {
+  const ARQUIVO = path.join(RAIZ, 'views/pages/evento-inscricao-publica.ejs');
+  const html = ejs.render(fs.readFileSync(ARQUIVO, 'utf8'), {
+    evento: { id: 1, nome: 'Congresso', cor_tema: '#1a3d2b' },
+    lotes: [], sucesso: false, qrcode: null, campos: [], codigoInscricao: null,
+    config: {},
+    programacao: [{ id: 1, horario: '08:00 - 09:00', titulo: 'Abertura', local: '', descricao: '', foto_chave: null, palestrante_ids: [] }],
+    palestrantes: [], patrocinadores: [], pixData: null, cupomUrl: null, erro: null, encerrado: false
+  }, { filename: ARQUIVO });
+  assert.ok(!html.includes('togPales(NaN)'));
 });
