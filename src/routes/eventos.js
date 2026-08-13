@@ -21,6 +21,14 @@ function voltarInscritos(req, eventoId) {
   return '/eventos/' + eventoId + '?' + params.toString();
 }
 
+// req.body.palestrante_ids vem string (1 marcado), array (vários) ou undefined (nenhum) —
+// normaliza pros 3 casos antes de gravar no INTEGER[] de evento_programacao.
+function parsePalestranteIds(body) {
+  let ids = body.palestrante_ids || [];
+  if (!Array.isArray(ids)) ids = [ids];
+  return ids.map(x => parseInt(x)).filter(x => !isNaN(x));
+}
+
 // /inscricao e /checkout ficam de fora do rate-limit geral (src/routes/index.js) porque
 // alguém legitimamente pode recarregar/tentar de novo várias vezes numa fila de evento —
 // mas isso não pode significar SEM limite nenhum. Um teto mais folgado que o geral, só
@@ -1074,13 +1082,31 @@ router.post('/eventos/:id/programacao', requireAuth, requirePermissao('eventos')
       const horario = horario_inicio + ' - ' + horario_fim;
       let fotoChave=null;
       if (req.file) { const r=await uploadArquivo(req.file.buffer,req.file.originalname,req.file.mimetype,'programacao'); fotoChave=r.chave; }
-      let palestranteIds = req.body.palestrante_ids || [];
-      if (!Array.isArray(palestranteIds)) palestranteIds = [palestranteIds];
-      palestranteIds = palestranteIds.map(x => parseInt(x)).filter(x => !isNaN(x));
+      const palestranteIds = parsePalestranteIds(req.body);
       const ord = await query('SELECT COUNT(*) FROM evento_programacao WHERE evento_id=$1',[req.params.id]);
       await query('INSERT INTO evento_programacao (evento_id,horario,titulo,descricao,local,foto_chave,palestrante_ids,ordem) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
         [req.params.id,horario,titulo,descricao||null,local||null,fotoChave,palestranteIds,parseInt(ord.rows[0].count)+1]);
       req.session.msg=['Item adicionado!']; res.redirect('/eventos/'+req.params.id);
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
+});
+
+router.post('/eventos/:id/programacao/:pid/editar', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  try {
+    const {upload,uploadArquivo} = require('../services/arquivos');
+    upload.single('foto')(req, res, async (err) => {
+      const {horario_inicio,horario_fim,titulo,descricao,local} = req.body;
+      const horario = horario_inicio + ' - ' + horario_fim;
+      const palestranteIds = parsePalestranteIds(req.body);
+      if (req.file) {
+        const r=await uploadArquivo(req.file.buffer,req.file.originalname,req.file.mimetype,'programacao');
+        await query('UPDATE evento_programacao SET horario=$1,titulo=$2,descricao=$3,local=$4,foto_chave=$5,palestrante_ids=$6 WHERE id=$7',
+          [horario,titulo,descricao||null,local||null,r.chave,palestranteIds,req.params.pid]);
+      } else {
+        await query('UPDATE evento_programacao SET horario=$1,titulo=$2,descricao=$3,local=$4,palestrante_ids=$5 WHERE id=$6',
+          [horario,titulo,descricao||null,local||null,palestranteIds,req.params.pid]);
+      }
+      req.session.msg=['Item atualizado!']; res.redirect('/eventos/'+req.params.id);
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
 });

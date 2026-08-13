@@ -22,11 +22,13 @@ const MODULO = path.join(RAIZ, 'src/routes/eventos.js');
 
 function montar() {
   const inserts = [];
+  const updates = [];
   const rq = require.resolve(path.join(RAIZ, 'src/models/database.js'));
   require.cache[rq] = { id: rq, filename: rq, loaded: true, exports: {
     query: async (sql, params) => {
       if (/SELECT COUNT\(\*\) FROM evento_programacao/.test(sql)) return { rows: [{ count: '0' }] };
       if (/INSERT INTO evento_programacao/.test(sql)) { inserts.push(params); return { rows: [] }; }
+      if (/UPDATE evento_programacao/.test(sql)) { updates.push({ sql, params }); return { rows: [] }; }
       return { rows: [] };
     }
   }};
@@ -50,7 +52,7 @@ function montar() {
   const router = { get: (rota, ...fns) => { rotas['GET '+rota] = fns[fns.length-1]; }, post: (rota, ...fns) => { rotas['POST '+rota] = fns[fns.length-1]; } };
   delete require.cache[require.resolve(MODULO)];
   require(MODULO)(router);
-  return { rotas, inserts };
+  return { rotas, inserts, updates };
 }
 
 // A rota chama upload.single(...)(req,res,cb) sem "await" (é o padrão multer real: o callback
@@ -198,4 +200,53 @@ test('página pública: programação sem palestrante vinculado não quebra (arr
     palestrantes: [], patrocinadores: [], pixData: null, cupomUrl: null, erro: null, encerrado: false
   }, { filename: ARQUIVO });
   assert.ok(!html.includes('togPales(NaN)'));
+});
+
+// 13/08/2026: só dava pra Excluir um item de programação já salvo, sem jeito de corrigir
+// horário/título/descrição/palestrantes depois. Adiciona edição de verdade, no mesmo padrão
+// já usado pra editar palestrante (modal + rota POST /editar).
+test('POST programação/:pid/editar: atualiza horário, título, descrição e palestrantes', async () => {
+  const { rotas, updates } = montar();
+  const req = { params: { id: '5', pid: '9' }, body: { horario_inicio: '14:00', horario_fim: '15:30', titulo: 'Novo título', descricao: '<em>editado</em>', local: 'Sala B', palestrante_ids: ['3', '7'] }, session: {} };
+  const res = resRedirectAsync();
+  rotas['POST /eventos/:id/programacao/:pid/editar'](req, res);
+  await res.done;
+  assert.strictEqual(updates.length, 1);
+  const upd = updates[0];
+  assert.match(upd.sql, /UPDATE evento_programacao SET horario=\$1,titulo=\$2,descricao=\$3,local=\$4,palestrante_ids=\$5/);
+  assert.strictEqual(upd.params[0], '14:00 - 15:30');
+  assert.strictEqual(upd.params[1], 'Novo título');
+  assert.strictEqual(upd.params[2], '<em>editado</em>');
+  assert.strictEqual(upd.params[3], 'Sala B');
+  assert.deepStrictEqual(upd.params[4], [3, 7]);
+  assert.strictEqual(upd.params[5], '9');
+});
+
+test('POST programação/:pid/editar: com nova foto, também atualiza foto_chave', async () => {
+  const { rotas, updates } = montar();
+  const req = { params: { id: '5', pid: '9' }, file: { buffer: Buffer.from('x'), originalname: 'b.jpg', mimetype: 'image/jpeg' }, body: { horario_inicio: '08:00', horario_fim: '09:00', titulo: 'T', descricao: '', local: '' }, session: {} };
+  const res = resRedirectAsync();
+  rotas['POST /eventos/:id/programacao/:pid/editar'](req, res);
+  await res.done;
+  assert.match(updates[0].sql, /foto_chave=\$5/);
+  assert.strictEqual(updates[0].params[4], 'programacao/foto-teste.jpg');
+});
+
+test('admin: cada item de programação tem um botão Editar, e prog-data traz os dados pro JS pré-preencher o modal', () => {
+  const ARQUIVO = path.join(RAIZ, 'views/pages/evento-detalhe.ejs');
+  const evento = { id: 1, nome: 'Congresso', cor_tema: '#1a3d2b', vagas_total: 100, total_inscritos: 0 };
+  const html = ejs.render(fs.readFileSync(ARQUIVO, 'utf8'), {
+    config: {}, usuario: { nome: 'Teste', perfil: 'admin' }, msg: [], erro: [],
+    evento, lotes: [], inscricoes: [], pagamentos: [], certificados: [],
+    stats: { total: 0, confirmados: 0, checkins: 0, receita: 0 },
+    campos: [],
+    programacao: [{ id: 9, horario: '14:00 - 15:30', titulo: 'Mesa redonda', local: 'Sala B', descricao: '<em>editado</em>', foto_chave: null, palestrante_ids: [55] }],
+    palestrantes: [{ id: 55, nome: 'Dr. Beltrano' }],
+    patrocinadores: [], cupons: [], calcularLiquidoEvento: () => 0, formatarNome: (n) => n
+  }, { filename: ARQUIVO });
+  assert.match(html, /onclick="editarProgramacao\(9\)"/);
+  const iData = html.indexOf('id="prog-data"');
+  const trecho = html.slice(iData, html.indexOf('</script>', iData));
+  const dados = JSON.parse(trecho.slice(trecho.indexOf('>') + 1));
+  assert.deepStrictEqual(dados, [{ id: 9, horario: '14:00 - 15:30', titulo: 'Mesa redonda', local: 'Sala B', descricao: '<em>editado</em>', palestranteIds: [55] }]);
 });

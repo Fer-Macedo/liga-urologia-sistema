@@ -870,14 +870,18 @@
                   <% if(_nomes.length){ %><div style="font-size:11px;color:var(--cor-primaria);font-weight:600;margin-top:3px">🎤 <%= _nomes.join(', ') %></div><%}%>
                   <%}%>
                 </div>
-                <form method="POST" action="/eventos/<%= evento.id %>/programacao/<%= p.id %>/deletar" style="display:inline" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;">
-                  <button type="submit" class="btn-xs verm">Excluir</button>
-                </form>
+                <div style="display:flex;gap:6px;flex-shrink:0">
+                  <button type="button" onclick="editarProgramacao(<%= p.id %>)" class="btn-xs azul">Editar</button>
+                  <form method="POST" action="/eventos/<%= evento.id %>/programacao/<%= p.id %>/deletar" style="display:inline" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;">
+                    <button type="submit" class="btn-xs verm">Excluir</button>
+                  </form>
+                </div>
               </div>
             </div>
             <% }) %>
           </div>
         </div>
+        <script id="prog-data" type="application/json"><%- JSON.stringify(programacao.map(function(p){return {id:p.id,horario:p.horario||'',titulo:p.titulo,local:p.local||'',descricao:p.descricao||'',palestranteIds:p.palestrante_ids||[]};})).replace(/</g,"<") %></script>
         <div class="section-card">
           <div class="section-header">Adicionar item</div>
           <div class="section-body">
@@ -1321,6 +1325,38 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="modal-editar-programacao" style="display:none">
+  <div class="modal">
+    <div class="modal-header"><span class="modal-titulo">Editar item da programação</span><button class="icon-btn" onclick="fecharModal('modal-editar-programacao')">&#10005;</button></div>
+    <form id="form-editar-programacao" method="POST" enctype="multipart/form-data" onsubmit="document.getElementById('ep-prog-desc-hidden').value=_qProgEditar.root.innerHTML;">
+      <div class="grid-2">
+        <div class="campo"><label class="label">Início</label><input type="time" name="horario_inicio" id="ep-prog-inicio" class="input" required></div>
+        <div class="campo"><label class="label">Fim</label><input type="time" name="horario_fim" id="ep-prog-fim" class="input" required></div>
+        <div class="campo"><label class="label">Título</label><input name="titulo" id="ep-prog-titulo" class="input" required></div>
+        <div class="campo"><label class="label">Local (opcional)</label><input name="local" id="ep-prog-local" class="input"></div>
+        <div class="campo" style="grid-column:1/-1"><label class="label">Descrição (opcional)</label><div id="quill-prog-editar" style="background:#fff;min-height:100px"></div><textarea name="descricao" id="ep-prog-desc-hidden" hidden></textarea></div>
+        <div class="campo" style="grid-column:1/-1"><label class="label">Trocar foto <span style="font-size:11px;font-weight:400;color:var(--texto2)">(opcional)</span></label><input type="file" name="foto" class="input" accept="image/*" style="padding:8px"></div>
+        <div class="campo" style="grid-column:1/-1">
+          <label class="label">Palestrantes (opcional)</label>
+          <% if(palestrantes.length===0){ %>
+          <p style="font-size:12px;color:var(--texto2)">Nenhum palestrante cadastrado ainda — adicione na aba Palestrantes.</p>
+          <% } else { %>
+          <div id="ep-prog-palestrantes" style="display:flex;flex-wrap:wrap;gap:10px;border:1px solid var(--borda);border-radius:8px;padding:10px;max-height:140px;overflow-y:auto">
+            <% palestrantes.forEach(p => { %>
+            <label style="display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer">
+              <input type="checkbox" name="palestrante_ids" value="<%= p.id %>" style="width:auto">
+              <%= p.nome %>
+            </label>
+            <% }) %>
+          </div>
+          <% } %>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-editar-programacao')">Cancelar</button><button type="submit" class="btn btn-primario">Salvar</button></div>
+    </form>
+  </div>
+</div>
+
 <!-- MODAL EDITAR INSCRITO -->
 <div class="modal-overlay" id="modal-editar-inscrito" style="display:none">
   <div class="modal">
@@ -1401,7 +1437,9 @@ function initQuilMassaEv() {
 var _qBioAdd = document.getElementById('quill-bio-add') ? new Quill('#quill-bio-add', { theme:'snow', placeholder:'Biografia do palestrante...', modules:{ toolbar:[[{'font':[]},{'size':['small',false,'large','huge']}],['bold','italic','underline','strike'],[{'color':[]},{'background':[]}],[{'align':[]}],[{'list':'ordered'},{'list':'bullet'}],['link','image'],['clean']] } }) : null;
 var _qProgAdd = document.getElementById('quill-prog-add') ? new Quill('#quill-prog-add', { theme:'snow', placeholder:'Detalhes da programação...', modules:{ toolbar:[[{'font':[]},{'size':['small',false,'large','huge']}],['bold','italic','underline','strike'],[{'color':[]},{'background':[]}],[{'align':[]}],[{'list':'ordered'},{'list':'bullet'}],['link','image'],['clean']] } }) : null;
 var _qBioEditar = document.getElementById('quill-bio-editar') ? new Quill('#quill-bio-editar', { theme:'snow', modules:{ toolbar:[[{'font':[]},{'size':['small',false,'large','huge']}],['bold','italic','underline','strike'],[{'color':[]},{'background':[]}],[{'align':[]}],[{'list':'ordered'},{'list':'bullet'}],['link','image'],['clean']] } }) : null;
+var _qProgEditar = document.getElementById('quill-prog-editar') ? new Quill('#quill-prog-editar', { theme:'snow', modules:{ toolbar:[[{'font':[]},{'size':['small',false,'large','huge']}],['bold','italic','underline','strike'],[{'color':[]},{'background':[]}],[{'align':[]}],[{'list':'ordered'},{'list':'bullet'}],['link','image'],['clean']] } }) : null;
 var _PALES = (function(){ try { var el=document.getElementById('pales-data'); return el?JSON.parse(el.textContent):[]; } catch(e){ return []; } })();
+var _PROG = (function(){ try { var el=document.getElementById('prog-data'); return el?JSON.parse(el.textContent):[]; } catch(e){ return []; } })();
 function editarPalestrante(id){
   var p = _PALES.find(function(x){return x.id===id;});
   if(!p) return;
@@ -1410,6 +1448,21 @@ function editarPalestrante(id){
   if(_qBioEditar){ _qBioEditar.root.innerHTML = p.bio||''; }
   document.getElementById('form-editar-palestrante').action = '/eventos/<%= evento.id %>/palestrantes/'+id+'/editar';
   abrirModal('modal-editar-palestrante');
+}
+function editarProgramacao(id){
+  var p = _PROG.find(function(x){return x.id===id;});
+  if(!p) return;
+  var partes = (p.horario||'').split(' - ');
+  document.getElementById('ep-prog-inicio').value = partes[0]||'';
+  document.getElementById('ep-prog-fim').value = partes[1]||'';
+  document.getElementById('ep-prog-titulo').value = p.titulo||'';
+  document.getElementById('ep-prog-local').value = p.local||'';
+  if(_qProgEditar){ _qProgEditar.root.innerHTML = p.descricao||''; }
+  document.querySelectorAll('#ep-prog-palestrantes input[type=checkbox]').forEach(function(cb){
+    cb.checked = p.palestranteIds.indexOf(parseInt(cb.value)) !== -1;
+  });
+  document.getElementById('form-editar-programacao').action = '/eventos/<%= evento.id %>/programacao/'+id+'/editar';
+  abrirModal('modal-editar-programacao');
 }
 var _qTermos = document.getElementById('editor-termos') ? new Quill('#editor-termos', { theme:'snow', modules:{ toolbar:[[{'header':[1,2,3,false]}],['bold','italic','underline'],[{'list':'ordered'},{'list':'bullet'}],[{'align':[]}],['link','clean']] } }) : null;
   var _qLgpd = document.getElementById('editor-lgpd') ? new Quill('#editor-lgpd', { theme:'snow', modules:{ toolbar:[[{'header':[1,2,3,false]}],['bold','italic','underline'],[{'list':'ordered'},{'list':'bullet'}],[{'align':[]}],['link','clean']] } }) : null;
