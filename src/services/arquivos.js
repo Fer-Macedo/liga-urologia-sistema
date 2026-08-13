@@ -48,13 +48,13 @@ function categoriaArquivo(mimetype) {
 }
 
 function iconeArquivo(mimetype) {
-  if (mimetype.startsWith('image/')) return '🖼️';
-  if (mimetype.startsWith('video/')) return '🎬';
-  if (mimetype === 'application/pdf') return '📄';
-  if (mimetype.includes('word') || mimetype.includes('document')) return '📝';
-  if (mimetype.includes('excel') || mimetype.includes('spreadsheet') || mimetype === 'text/csv') return '📊';
-  if (mimetype.includes('powerpoint') || mimetype.includes('presentation')) return '📑';
-  return '📁';
+  if (mimetype.startsWith('image/')) return '';
+  if (mimetype.startsWith('video/')) return '';
+  if (mimetype === 'application/pdf') return '';
+  if (mimetype.includes('word') || mimetype.includes('document')) return '';
+  if (mimetype.includes('excel') || mimetype.includes('spreadsheet') || mimetype === 'text/csv') return '';
+  if (mimetype.includes('powerpoint') || mimetype.includes('presentation')) return '';
+  return '';
 }
 
 // ─── ASSINATURA REAL DO ARQUIVO (magic bytes) ────────────────────────────────

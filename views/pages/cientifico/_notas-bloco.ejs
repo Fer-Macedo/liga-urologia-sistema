@@ -24,7 +24,7 @@
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px">
       <% lista.forEach(function(n){ %>
       <div style="background:<%=n.cor||'#fff3b0'%>;border:1px solid rgba(0,0,0,.08);padding:12px 14px;display:flex;flex-direction:column;gap:8px">
-        <% if (n.fixado) { %><div style="font-size:12px">📌</div><% } %>
+        <% if (n.fixado) { %><div style="font-size:12px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg></div><% } %>
         <div style="font-size:13px;color:#1f2937;line-height:1.55;white-space:pre-wrap;word-break:break-word"><%=n.texto%></div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;padding-top:8px;border-top:1px solid rgba(0,0,0,.08)">
           <span style="font-size:10px;color:#6b7280"><%=new Date(n.criado_em).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})%></span>

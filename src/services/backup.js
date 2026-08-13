@@ -93,7 +93,7 @@ async function executarBackup() {
     const rot = await rotacionar();
     const resumo = await resumoTabelas();
 
-    console.log(`[BACKUP] ✅ ${nomeArquivo} — ${tamKB}KB — guardados ${rot.mantidos}, removidos ${rot.removidos} antigo(s)`);
+    console.log(`[BACKUP] ${nomeArquivo} — ${tamKB}KB — guardados ${rot.mantidos}, removidos ${rot.removidos} antigo(s)`);
 
     if (!emailDestino) {
       console.warn('[BACKUP] Backup salvo em disco, mas nenhum e-mail configurado para a cópia off-site.');
@@ -108,7 +108,7 @@ async function executarBackup() {
 
     await enviarEmail({
       para: emailDestino,
-      assunto: `🗄️ Backup LAURO — ${stamp.slice(0, 10)} (${tamKB}KB)`,
+      assunto: `Backup LAURO — ${stamp.slice(0, 10)} (${tamKB}KB)`,
       titulo: 'Backup automático do banco de dados',
       faixaLabel: 'BACKUP',
       texto: `Backup automático do banco — ${stamp}. Arquivo: ${nomeArquivo} (${tamKB}KB). No servidor mantemos os últimos ${MANTER} dias.`,
@@ -126,13 +126,13 @@ async function executarBackup() {
     });
     console.log(`[BACKUP] Cópia off-site enviada para ${emailDestino}.`);
   } catch (e) {
-    console.error('[BACKUP] ❌ Erro no backup:', e.message);
+    console.error('[BACKUP] Erro no backup:', e.message);
     // Falha de backup não pode passar em silêncio — avisa por e-mail (se der).
     if (emailDestino) {
       try {
         await enviarEmail({
           para: emailDestino,
-          assunto: '⚠️ FALHA no backup do banco — LAURO',
+          assunto: 'FALHA no backup do banco — LAURO',
           titulo: 'Falha no backup automático',
           faixaLabel: 'ALERTA',
           html: `<p>O backup automático do banco <strong>falhou</strong> em ${new Date().toLocaleString('pt-BR')}.</p>

@@ -4,6 +4,13 @@ const { query } = require('../models/database');
 const { criarCobranca, consultarPagamento, consultarCheckout, detectarMetodo, extrairDataPagamento, extrairValorPago } = require('./pagbank');
 const { notificarCobranca, notificarAniversario } = require('./notificacoes');
 
+// Emoji é permitido só no WhatsApp — algumas mensagens são reaproveitadas como fallback de
+// texto puro do e-mail (campo "texto:") ou interpoladas direto num badge de HTML, que
+// precisam ficar sem emoji nenhum.
+function semEmoji(str) {
+  return String(str || '').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu, '').replace(/[ \t]{2,}/g, ' ').trim();
+}
+
 async function getConfig() {
   const r = await query('SELECT chave, valor FROM configuracoes');
   const cfg = {};
@@ -58,7 +65,7 @@ async function gerarCobrancasMes() {
        pag.charge_id || null, pag.checkout_link || pag.link || null,
        pag.pix_copia_cola || null, pag.pix_qr_image || null]
     );
-    console.log('Cobrança PagBank gerada:', membro.nome, ref, pag.ok ? '✅' : '⚠️ sem gateway');
+    console.log('Cobrança PagBank gerada:', membro.nome, ref, pag.ok ? 'ok' : 'sem gateway');
   }
 }
 
@@ -369,7 +376,7 @@ async function enviarFrequenciaMensal() {
   // Bloco comum aos e-mails de ligantes e diretivos: estimula o acesso ao Portal de
   // Membros, onde da pra ver o detalhamento da frequencia (nao so o resumo do e-mail)
   // e os demais servicos do portal.
-  const portalPromo = '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:16px 20px;margin-bottom:16px"><p style="margin:0 0 10px;font-size:13px;color:#0c4a6e;line-height:1.6">📋 Accedé al <strong>Portal de Membros</strong> para ver el detalle completo de tu frecuencia y los demás servicios disponibles.</p><a href="https://membro.lauroucpcde.com" style="display:inline-block;background:#0F6E56;color:#fff;padding:10px 22px;text-decoration:none;font-weight:700;font-size:13px;border-radius:6px">Acceder al Portal</a></div>';
+  const portalPromo = '<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:16px 20px;margin-bottom:16px"><p style="margin:0 0 10px;font-size:13px;color:#0c4a6e;line-height:1.6">Accedé al <strong>Portal de Membros</strong> para ver el detalle completo de tu frecuencia y los demás servicios disponibles.</p><a href="https://membro.lauroucpcde.com" style="display:inline-block;background:#0F6E56;color:#fff;padding:10px 22px;text-decoration:none;font-weight:700;font-size:13px;border-radius:6px">Acceder al Portal</a></div>';
 
   const turmas = await query('SELECT * FROM turmas WHERE ativo=1');
   for (const turma of turmas.rows) {
@@ -385,6 +392,8 @@ async function enviarFrequenciaMensal() {
     for (const m of membros.rows) {
       const pct = m.total_atividades > 0 ? Math.round((m.presencas / m.total_atividades) * 100) : 0;
       const faltas = m.total_atividades - m.presencas;
+      // whatsapp-only:inicio — status/msg vão pro WhatsApp abaixo; o badge de e-mail e o
+      // fallback de texto puro do e-mail usam semEmoji(status)/semEmoji(msg) à parte.
       const status = pct >= 75 ? 'APTO ✅' : pct >= 50 ? 'EM RISCO ⚠️' : 'NÃO APTO ❌';
 
       const jaEnviouHoje = await query(
@@ -405,6 +414,7 @@ async function enviarFrequenciaMensal() {
           : pct >= 50 ? '¡Atención! Estás en riesgo. No faltes a las próximas actividades. ⚠️'
           : 'Estás por debajo del mínimo requerido (75%). ❌')
         + '\n\n¿Dudas? Comunícate con la secretaría.';
+      // whatsapp-only:fim
 
       if (m.whatsapp) {
         try {
@@ -417,12 +427,12 @@ async function enviarFrequenciaMensal() {
       if (m.email) {
         const corStatus = pct>=75?'#22c55e':pct>=50?'#f59e0b':'#ef4444';
         const alertaBox = pct>=75
-          ? '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#166534">🎉 Parabéns! Você está apto para o certificado anual.</p></div>'
+          ? '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#166534">Parabéns! Você está apto para o certificado anual.</p></div>'
           : pct>=50
-            ? '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#92400e">⚠️ Atenção! Você está em risco. Não falte às próximas atividades.</p></div>'
-            : '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#991b1b">❌ Você está abaixo do mínimo exigido de 75%.</p></div>';
-        const html = `<h2 style="margin:0 0 8px;font-size:20px;color:#0f172a">¡Hola, ${m.nome.split(' ')[0]}!</h2><p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">Aquí está tu reporte de frecuencia correspondiente al grupo <strong>${turma.nome}</strong>.</p><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 24px"><tr style="background:#f8fafc"><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Actividades realizadas</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#0f172a">${m.total_atividades}</td></tr><tr><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Asistencias</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#22c55e">${m.presencas}</td></tr><tr style="background:#f8fafc"><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Ausencias</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#ef4444">${faltas}</td></tr><tr><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Frecuencia</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#0f172a;font-size:16px">${pct}%</td></tr><tr style="background:#f8fafc"><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Estado</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:${corStatus}">${status}</td></tr></table>${alertaBox}${portalPromo}<p style="margin:0;font-size:12px;color:#94a3b8">Dúvidas? Entre em contato com a secretaria da ${orgNome}.</p>`;
-        try { await enviarEmail({ para: m.email, assunto: '📊 Reporte de Frecuencia — ' + turma.nome, html, texto: msg, faixaLabel: 'RELATÓRIO DE FREQUÊNCIA' }); } catch(e) {}
+            ? '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#92400e">Atenção! Você está em risco. Não falte às próximas atividades.</p></div>'
+            : '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#991b1b">Você está abaixo do mínimo exigido de 75%.</p></div>';
+        const html = `<h2 style="margin:0 0 8px;font-size:20px;color:#0f172a">¡Hola, ${m.nome.split(' ')[0]}!</h2><p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">Aquí está tu reporte de frecuencia correspondiente al grupo <strong>${turma.nome}</strong>.</p><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 24px"><tr style="background:#f8fafc"><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Actividades realizadas</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#0f172a">${m.total_atividades}</td></tr><tr><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Asistencias</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#22c55e">${m.presencas}</td></tr><tr style="background:#f8fafc"><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Ausencias</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#ef4444">${faltas}</td></tr><tr><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Frecuencia</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#0f172a;font-size:16px">${pct}%</td></tr><tr style="background:#f8fafc"><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Estado</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:${corStatus}">${semEmoji(status)}</td></tr></table>${alertaBox}${portalPromo}<p style="margin:0;font-size:12px;color:#94a3b8">Dúvidas? Entre em contato com a secretaria da ${orgNome}.</p>`;
+        try { await enviarEmail({ para: m.email, assunto: 'Reporte de Frecuencia — ' + turma.nome, html, texto: semEmoji(msg), faixaLabel: 'RELATÓRIO DE FREQUÊNCIA' }); } catch(e) {}
       }
     }
     console.log('Frequência enviada para turma:', turma.nome);
@@ -444,6 +454,8 @@ async function enviarFrequenciaMensal() {
     for (const d of diretivos.rows) {
       const pct = d.total_atividades > 0 ? Math.round((d.presencas / d.total_atividades) * 100) : 0;
       const faltas = d.total_atividades - d.presencas;
+      // whatsapp-only:inicio — status/msg vão pro WhatsApp abaixo; o badge de e-mail e o
+      // fallback de texto puro do e-mail usam semEmoji(status)/semEmoji(msg) à parte.
       const status = pct >= 75 ? 'APTO ✅' : pct >= 50 ? 'EM RISCO ⚠️' : 'NÃO APTO ❌';
 
       const jaEnviouHoje = await query(
@@ -464,6 +476,7 @@ async function enviarFrequenciaMensal() {
           : pct >= 50 ? '¡Atención! Estás en riesgo. No faltes a las próximas actividades. ⚠️'
           : 'Estás por debajo del mínimo requerido (75%). ❌')
         + '\n\n¿Dudas? Comunícate con la presidencia.';
+      // whatsapp-only:fim
 
       if (d.whatsapp) {
         try {
@@ -476,12 +489,12 @@ async function enviarFrequenciaMensal() {
       if (d.email) {
         const corStatus = pct>=75?'#22c55e':pct>=50?'#f59e0b':'#ef4444';
         const alertaBox = pct>=75
-          ? '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#166534">🎉 Parabéns! Você está apto para o certificado anual da diretoria.</p></div>'
+          ? '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#166534">Parabéns! Você está apto para o certificado anual da diretoria.</p></div>'
           : pct>=50
-            ? '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#92400e">⚠️ Atenção! Você está em risco. Não falte às próximas atividades.</p></div>'
-            : '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#991b1b">❌ Você está abaixo do mínimo exigido de 75%.</p></div>';
-        const html = `<h2 style="margin:0 0 8px;font-size:20px;color:#0f172a">¡Hola, ${d.nome.split(' ')[0]}!</h2><p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">Aquí está tu reporte de frecuencia correspondiente a la directiva <strong>${turma.nome}</strong>.</p><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 24px"><tr style="background:#f8fafc"><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Actividades realizadas</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#0f172a">${d.total_atividades}</td></tr><tr><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Asistencias</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#22c55e">${d.presencas}</td></tr><tr style="background:#f8fafc"><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Ausencias</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#ef4444">${faltas}</td></tr><tr><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Frecuencia</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#0f172a;font-size:16px">${pct}%</td></tr><tr style="background:#f8fafc"><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Estado</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:${corStatus}">${status}</td></tr></table>${alertaBox}${portalPromo}<p style="margin:0;font-size:12px;color:#94a3b8">Dúvidas? Entre em contato com a presidência da ${orgNome}.</p>`;
-        try { await enviarEmail({ para: d.email, assunto: '📊 Reporte de Frecuencia — Directiva ' + turma.nome, html, texto: msg, faixaLabel: 'RELATÓRIO DE FREQUÊNCIA — DIRETORIA' }); } catch(e) {}
+            ? '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#92400e">Atenção! Você está em risco. Não falte às próximas atividades.</p></div>'
+            : '<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#991b1b">Você está abaixo do mínimo exigido de 75%.</p></div>';
+        const html = `<h2 style="margin:0 0 8px;font-size:20px;color:#0f172a">¡Hola, ${d.nome.split(' ')[0]}!</h2><p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">Aquí está tu reporte de frecuencia correspondiente a la directiva <strong>${turma.nome}</strong>.</p><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 24px"><tr style="background:#f8fafc"><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Actividades realizadas</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#0f172a">${d.total_atividades}</td></tr><tr><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Asistencias</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#22c55e">${d.presencas}</td></tr><tr style="background:#f8fafc"><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Ausencias</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#ef4444">${faltas}</td></tr><tr><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Frecuencia</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:#0f172a;font-size:16px">${pct}%</td></tr><tr style="background:#f8fafc"><td style="padding:12px 16px;border:1px solid #e2e8f0;font-size:13px;color:#475569">Estado</td><td style="padding:12px 16px;border:1px solid #e2e8f0;text-align:center;font-weight:700;color:${corStatus}">${semEmoji(status)}</td></tr></table>${alertaBox}${portalPromo}<p style="margin:0;font-size:12px;color:#94a3b8">Dúvidas? Entre em contato com a presidência da ${orgNome}.</p>`;
+        try { await enviarEmail({ para: d.email, assunto: 'Reporte de Frecuencia — Directiva ' + turma.nome, html, texto: semEmoji(msg), faixaLabel: 'RELATÓRIO DE FREQUÊNCIA — DIRETORIA' }); } catch(e) {}
       }
     }
     console.log('Frequência enviada para diretivo_turma:', turma.nome);
@@ -508,7 +521,9 @@ async function enviarLembreteInscricaoPendente(inscricaoId) {
   if (!ei) return { ok: false, motivo: 'Inscrição não encontrada.' };
 
   const linkPag = `${inscUrl}/pagamento/${ei.id}`;
+  // whatsapp-only:inicio — texto vai pro WhatsApp abaixo; o e-mail usa semEmoji(msg) à parte.
   const msg = `*${orgNome}*\n\nHola, *${ei.nome.split(' ')[0]}*! 👋\n\nNotamos que tu inscripción en el evento:\n*${ei.evento_nome}*\n\n...aún está pendiente de pago.\n\n💳 Completa tu inscripción aquí:\n${linkPag}\n\n_¡No pierdas tu lugar!_`;
+  // whatsapp-only:fim
 
   let wppOk = false, emailOk = false;
 
@@ -519,7 +534,7 @@ async function enviarLembreteInscricaoPendente(inscricaoId) {
   if (ei.email) {
     const html = `<h2 style="color:#0f172a">¡Completa tu inscripción!</h2><p style="color:#475569">Hola, <strong>${ei.nome.split(' ')[0]}</strong>! Tu inscripción en <strong>${ei.evento_nome}</strong> está pendiente.</p><div style="text-align:center;margin:24px 0"><a href="${linkPag}" style="background:#1a3d2b;color:white;padding:14px 36px;border-radius:8px;text-decoration:none;font-weight:700">Completar inscripción</a></div>`;
     try {
-      await enviarEmail({ para: ei.email, assunto: `⏳ Completa tu inscripción — ${ei.evento_nome}`, html, texto: msg, faixaLabel: '⏳ INSCRIPCIÓN PENDIENTE' });
+      await enviarEmail({ para: ei.email, assunto: `Completa tu inscripción — ${ei.evento_nome}`, html, texto: semEmoji(msg), faixaLabel: 'INSCRIPCIÓN PENDIENTE' });
       emailOk = true;
     } catch(e) {}
   }

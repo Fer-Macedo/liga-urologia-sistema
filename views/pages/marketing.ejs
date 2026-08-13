@@ -405,7 +405,7 @@
             <div class="campo">
               <label class="label">Data e hora da publicação *</label>
               <input type="datetime-local" name="agendado_para" class="input" required>
-              <div style="font-size:11.5px;color:var(--texto2);margin-top:4px">⚠️ Por ora, no máximo 23 horas à frente — é o tempo de validade do link da imagem</div>
+              <div style="font-size:11.5px;color:var(--texto2);margin-top:4px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Por ora, no máximo 23 horas à frente — é o tempo de validade do link da imagem</div>
             </div>
             <button type="submit" class="btn btn-primario" style="justify-content:center">Agendar publicação</button>
           </form>
@@ -454,7 +454,7 @@
       </div>
       <div class="mkt-section" id="tab-revalida">
         <div class="card">
-          <div class="card-titulo" style="margin-bottom:4px">📋 Momento Revalida Brasil</div>
+          <div class="card-titulo" style="margin-bottom:4px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Momento Revalida Brasil</div>
           <p style="font-size:12px;color:var(--texto2);margin-bottom:16px">
             Quadro híbrido: o sistema envia as artes por e-mail <b>terça e sexta às 6h</b> e a equipe publica
             pelo aplicativo, encaixando a enquete. Só sai o que estiver <b>aprovado</b>.
@@ -487,8 +487,8 @@
                   <span style="font-weight:700;color:<%=cor%>"><%= q.ordem %>º</span>
                   <span style="font-weight:600;font-size:13.5px"><%= q.fonte %></span>
                   <span class="rede-badge" style="background:var(--fundo);color:var(--texto2)">gabarito <%= q.gabarito %></span>
-                  <% if (q.publicado) { %><span style="font-size:11px;font-weight:700;color:#10b981">✓ PUBLICADO <%= q.publicado %></span>
-                  <% } else if (q.enviado) { %><span style="font-size:11px;font-weight:700;color:#2563eb">✉ ENVIADO <%= q.enviado %></span>
+                  <% if (q.publicado) { %><span style="font-size:11px;font-weight:700;color:#10b981"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><polyline points="20 6 9 17 4 12"/></svg>PUBLICADO <%= q.publicado %></span>
+                  <% } else if (q.enviado) { %><span style="font-size:11px;font-weight:700;color:#2563eb"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>ENVIADO <%= q.enviado %></span>
                   <% } else if (q.status==='aprovada') { %><span style="font-size:11px;font-weight:700;color:#10b981">APROVADA<%= q.aprovado_por ? ' · ' + q.aprovado_por : '' %></span>
                   <% } %>
                 </div>
@@ -518,7 +518,7 @@
         <div class="card">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
             <div>
-              <div class="card-titulo">🧠 Análise estratégica (IA)</div>
+              <div class="card-titulo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Análise estratégica (IA)</div>
               <div id="estrat-meta" style="font-size:12px;color:var(--texto2)"></div>
             </div>
             <button class="btn btn-primario btn-sm" id="btn-estrat" onclick="gerarEstrategiaIG()">Gerar nova análise</button>
@@ -529,7 +529,7 @@
         <div class="card" style="margin-top:20px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;flex-wrap:wrap;gap:8px">
             <div>
-              <div class="card-titulo">🗓️ Cronograma sugerido</div>
+              <div class="card-titulo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Cronograma sugerido</div>
               <div style="font-size:12px;color:var(--texto2)">A IA propõe os temas; a equipe aceita, recusa ou comenta.</div>
             </div>
             <button class="btn btn-primario btn-sm" id="btn-crono" onclick="gerarCronograma()">Gerar sugestões</button>
@@ -580,7 +580,7 @@
                       continuavam na tela e a pessoa achava que a aprovacao nao tinha sido salva. %>
                   <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap">
                     <div style="font-size:12.5px;font-weight:700;color:<%=cor%>">
-                      <%= s.status === 'aceita' ? '✓ Aprovada' : '✕ Recusada' %>
+                      <%- s.status === 'aceita' ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><polyline points="20 6 9 17 4 12"/></svg>Aprovada' : '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Recusada' %>
                       <span style="font-weight:400;color:var(--texto2)">
                         por <%= s.respondido_por || '—' %><%= s.respondido ? ' em ' + s.respondido : '' %>
                       </span>
@@ -594,7 +594,7 @@
           <% } %>
         </div>
         <div class="card" style="margin-top:20px">
-          <div class="card-titulo">💬 Falar com a IA sobre marketing</div>
+          <div class="card-titulo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>Falar com a IA sobre marketing</div>
           <div style="font-size:12px;color:var(--texto2);margin-bottom:12px">
             Discuta pauta, questione o cronograma, proponha outra ideia. A IA vê os números da conta
             e o cronograma atual. A conversa fica registrada para toda a equipe.
@@ -673,7 +673,7 @@
             <div class="interno-notas-grid">
               <%notas.forEach(function(n){%>
               <div class="interno-nota" style="background:<%=n.cor%>">
-                <%if(n.fixado){%><div class="interno-nota-pin">&#128204;</div><%}%>
+                <%if(n.fixado){%><div class="interno-nota-pin"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0Z"/><circle cx="12" cy="10" r="3"/></svg></div><%}%>
                 <div class="interno-nota-texto"><%=n.texto%></div>
                 <div class="interno-nota-rodape">
                   <span><%=n.criado_por_nome||'Equipe'%></span>
@@ -1138,7 +1138,7 @@
 
         <!-- PERFIL INSTAGRAM -->
         <div class="ig-perfil-box" id="ig-perfil-box">
-          <div style="width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:24px">📸</div>
+          <div style="width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:24px"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div>
           <div>
             <div style="font-weight:700;font-size:16px">@lauroucp.cde</div>
             <div style="font-size:13px;opacity:.85">Carregando perfil...</div>
@@ -1328,7 +1328,7 @@
         <!-- Desempenho REAL da conta do Instagram (dados da API oficial da Meta) -->
         <div class="card" style="margin-bottom:16px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-            <div class="card-titulo">📊 Desempenho da conta no Instagram</div>
+            <div class="card-titulo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:5px"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Desempenho da conta no Instagram</div>
             <button class="btn btn-sm" onclick="carregarAnaliseIG()">Atualizar</button>
           </div>
           <div id="ig-analise"><p style="color:var(--texto2);font-size:13px">Carregando dados da conta…</p></div>
@@ -1732,8 +1732,8 @@ function carregarIgFeed() {
           <div style="font-size:11px;color:#374151;line-height:1.4;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical">${p.caption||'(sem legenda)'}</div>
           <div>
             <div class="ig-feed-stats">
-              <span>❤️ ${p.like_count||0}</span>
-              <span>💬 ${p.comments_count||0}</span>
+              <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:middle;margin-right:3px"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>${p.like_count||0}</span>
+              <span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>${p.comments_count||0}</span>
             </div>
             <div style="font-size:10px;color:#94a3b8;margin-top:4px">${new Date(p.timestamp).toLocaleDateString('pt-BR')}</div>
           </div>
@@ -2071,11 +2071,11 @@ function carregarAnaliseIG(){
     var tops=(d.topPosts||[]).map(function(p){
       return '<a href="'+(p.permalink||'#')+'" target="_blank" rel="noopener" style="display:flex;gap:10px;align-items:center;padding:8px;border:1px solid var(--borda);border-radius:var(--rad);text-decoration:none;color:inherit;margin-bottom:6px">'
         +(p.thumb?'<img src="'+p.thumb+'" style="width:42px;height:42px;border-radius:6px;object-fit:cover">':'')
-        +'<div style="flex:1;min-width:0"><div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(p.legenda||'(sem legenda)')+'</div><div style="font-size:11px;color:var(--texto2)">'+p.tipo+' · ❤ '+p.likes+' · 💬 '+p.comentarios+'</div></div>'
+        +'<div style="flex:1;min-width:0"><div style="font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(p.legenda||'(sem legenda)')+'</div><div style="font-size:11px;color:var(--texto2)">'+p.tipo+' · <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block;vertical-align:middle;margin-right:2px"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>'+p.likes+' · <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:2px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>'+p.comentarios+'</div></div>'
         +'<div style="font-weight:700;color:var(--cor-primaria)">'+p.engaj+'</div></a>';
     }).join('');
     var topBox='<div style="margin-bottom:16px"><div style="font-size:12px;font-weight:600;margin-bottom:8px">Posts com mais engajamento</div>'+tops+'</div>';
-    var recs='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:var(--rad);padding:12px"><div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:6px">💡 Recomendações</div><ul style="margin:0;padding-left:18px;font-size:12px;color:#78350f;line-height:1.6">'+(d.recomendacoes||[]).map(function(r){return '<li>'+r+'</li>';}).join('')+'</ul></div>';
+    var recs='<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:var(--rad);padding:12px"><div style="font-size:12px;font-weight:700;color:#92400e;margin-bottom:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.5.4.8 1 .9 1.6h6.2c.1-.6.4-1.2.9-1.6A7 7 0 0 0 12 2z"/></svg>Recomendações</div><ul style="margin:0;padding-left:18px;font-size:12px;color:#78350f;line-height:1.6">'+(d.recomendacoes||[]).map(function(r){return '<li>'+r+'</li>';}).join('')+'</ul></div>';
     box.innerHTML=kpis+grow+pub+topBox+recs;
   }).catch(function(){ box.innerHTML='<p style="color:#dc2626;font-size:13px">Erro ao carregar a análise.</p>'; });
 }
@@ -2188,7 +2188,7 @@ function verArteRevalida(id){
     m.className = 'modal-overlay';
     m.innerHTML = '<div class="modal" style="max-width:820px">'
       + '<div class="modal-header"><span class="modal-titulo">Artes do envio</span>'
-      + '<button class="icon-btn" onclick="document.getElementById(\'modal-arte-revalida\').style.display=\'none\'">✕</button></div>'
+      + '<button class="icon-btn" onclick="document.getElementById(\'modal-arte-revalida\').style.display=\'none\'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>'
       + '<div style="padding:16px"><p style="font-size:12px;color:var(--texto2);margin-bottom:12px">'
       + 'São exatamente as imagens que vão anexadas no e-mail. A geração leva alguns segundos.</p>'
       + '<div id="arte-rev-box" style="display:grid;grid-template-columns:1fr 1fr;gap:14px"></div></div></div>';

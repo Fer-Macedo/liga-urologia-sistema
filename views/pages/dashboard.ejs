@@ -381,7 +381,7 @@ var pode = function(mod){ return !perms || perms.indexOf(mod) !== -1; };
             %>
             <div class="row<%= isHoje ? ' aniv-today' : '' %>">
               <div class="row-ic cake<%= isHoje ? ' today' : '' %>"><svg viewBox="0 0 24 24" class="ic"><rect x="4" y="9" width="16" height="11"/><path d="M4 13h16M12 9V6"/></svg></div>
-              <div class="row-main"><b><%= a.nome || 'Membro' %><%= isHoje ? ' 🎉' : '' %></b><span><%= tipoTxt %></span></div>
+              <div class="row-main"><b><%= a.nome || 'Membro' %><%- isHoje ? ' <svg viewBox="0 0 24 24" class="ic" style="width:12px;height:12px;display:inline-block;vertical-align:middle"><polygon points="12 2 15 9 22 9.5 17 14.5 18.5 21.5 12 18 5.5 21.5 7 14.5 2 9.5 9 9"/></svg>' : '' %></b><span><%= tipoTxt %></span></div>
               <div style="text-align:right"><span class="pill <%= isHoje ? 'today' : 'soon' %>"><%= isHoje ? 'HOJE' : diaTxt %></span></div>
             </div>
             <% }); %>

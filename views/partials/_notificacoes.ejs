@@ -124,7 +124,7 @@
         // Enquanto trabalha: se CHEGOU uma pendência nova, mostra banner central
         if (d.count > ultimoCount && ultimoCount >= 0) {
           mostrarBannerPendencia(d);
-          try { document.title = '(⚠ ' + d.count + ') ' + document.title.replace(/^\(.*?\)\s*/, ''); } catch(e){}
+          try { document.title = '(!' + d.count + ') ' + document.title.replace(/^\(.*?\)\s*/, ''); } catch(e){}
         } else if (d.count === 0) {
           try { document.title = document.title.replace(/^\(.*?\)\s*/, ''); } catch(e){}
         }

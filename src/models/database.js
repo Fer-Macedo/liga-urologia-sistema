@@ -318,7 +318,7 @@ async function initSchema() {
     ['desconto_padrao','10'],
     ['dia_vencimento_padrao','5'],
     ['multa_atraso','2'],
-    ['msg_aniversario','Parabéns pelo seu aniversário, {nome}! A equipe da Liga Acadêmica de Urologia deseja um dia muito especial para você. 🎉'],
+    ['msg_aniversario','Parabéns pelo seu aniversário, {nome}! A equipe da Liga Acadêmica de Urologia deseja um dia muito especial para você.'],
     ['msg_cobranca_pre','Olá {nome}! Sua mensalidade da Liga Acadêmica de Urologia vence em {dias} dias ({data}). Valor com desconto: R$ {valor_desc}. Pague agora: {link}'],
     ['msg_cobranca_dia','Olá {nome}! Hoje é o último dia para pagar sua mensalidade com desconto (R$ {valor_desc}). Após hoje o valor será R$ {valor_cheio}. Pague agora: {link}'],
     ['msg_cobranca_pos','Olá {nome}, sua mensalidade da Liga está em atraso desde {data}. Valor: R$ {valor_cheio}. Regularize agora: {link}'],
@@ -469,11 +469,11 @@ async function initSchema() {
       'INSERT INTO usuarios (nome, email, senha, perfil) VALUES ($1, $2, $3, $4)',
       ['Administrador', 'admin@liga.org.br', senha, 'admin']
     );
-    console.log('✅ Usuário admin criado: admin@liga.org.br');
-    console.log('⚠️  Defina ADMIN_SENHA_INICIAL no .env e TROQUE A SENHA APÓS O PRIMEIRO LOGIN!');
+    console.log('Usuário admin criado: admin@liga.org.br');
+    console.log('Defina ADMIN_SENHA_INICIAL no .env e TROQUE A SENHA APÓS O PRIMEIRO LOGIN!');
   }
 
-  console.log('✅ Banco de dados pronto!');
+  console.log('Banco de dados pronto!');
 }
 
 module.exports = { getDb, query, initSchema, pool };

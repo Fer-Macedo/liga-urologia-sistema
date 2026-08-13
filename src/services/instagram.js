@@ -207,7 +207,7 @@ async function avisarFalhaDePublicacao(post, motivo) {
   const trecho = String(post.legenda || '').slice(0, 120).replace(/[<>]/g, '');
   await enviarEmail({
     para: dest.rows.map(x => x.email).join(','),
-    assunto: '⚠️ Publicação do Instagram não saiu',
+    assunto: 'Publicação do Instagram não saiu',
     titulo: 'Publicação não saiu',
     faixaLabel: 'ALERTA',
     html: `<p>A publicação agendada para <strong>${quando}</strong> (${post.tipo}) <strong>não foi publicada</strong>.</p>
@@ -319,8 +319,8 @@ async function postarAniversariantesDoDia() {
     );
     if (jaPostou.rows.length > 0) continue;
 
-    const legenda = `🎂 Feliz aniversário, ${membro.nome.split(' ')[0]}!\n\n` +
-      `A Liga Acadêmica de Urologia — LAURO UCP CDE deseja a você um dia muito especial! 🎉\n\n` +
+    const legenda = `Feliz aniversário, ${membro.nome.split(' ')[0]}!\n\n` +
+      `A Liga Acadêmica de Urologia — LAURO UCP CDE deseja a você um dia muito especial!\n\n` +
       `#LAURO #LigaAcademica #Urologia #UCP #Aniversario`;
 
     if (config.instagram_aniversario_imagem) {

@@ -151,7 +151,7 @@ async function start() {
     // Staging roda com AGENDAMENTOS_OFF=true: sem cron de cobrança/lembrete e sem backup,
     // que são tarefas da produção e não devem rodar em duplicidade.
     if (process.env.AGENDAMENTOS_OFF === 'true') {
-      console.log('⏸  Agendamentos e backup DESLIGADOS (AGENDAMENTOS_OFF=true)');
+      console.log('Agendamentos e backup DESLIGADOS (AGENDAMENTOS_OFF=true)');
     } else {
       iniciarAgendamentos();
       agendarBackup();
@@ -160,8 +160,8 @@ async function start() {
     // sem isso o primeiro e-mail após o boot sairia com o valor padrão do código.
     require('./services/contato').aquecer();
     httpServer.listen(PORT, () => {
-      console.log('\n🏥 Liga Urologia — Sistema de Cobranças');
-      console.log('🌐 Porta: ' + PORT + '\n');
+      console.log('\nLiga Urologia — Sistema de Cobranças');
+      console.log('Porta: ' + PORT + '\n');
 
       // Keep-alive: evita que o Render durma o app no plano gratuito
       const APP_URL = process.env.APP_URL;
@@ -170,11 +170,11 @@ async function start() {
         setInterval(() => {
           https.get(APP_URL + '/health', () => {}).on('error', () => {});
         }, 14 * 60 * 1000);
-        console.log('💓 Keep-alive ativo → ' + APP_URL);
+        console.log('Keep-alive ativo → ' + APP_URL);
       }
     });
   } catch (err) {
-    console.error('❌ Erro ao iniciar:', err.message);
+    console.error('Erro ao iniciar:', err.message);
     process.exit(1);
   }
 }

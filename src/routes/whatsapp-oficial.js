@@ -46,7 +46,7 @@ module.exports = function (router) {
           try {
             const dest = await query("SELECT DISTINCT email FROM usuarios WHERE ativo=1 AND email IS NOT NULL AND email <> '' AND perfil IN ('admin','presidencia')");
             const aprovado = valor.event === 'APPROVED';
-            const assunto = (aprovado ? '✅ Modelo aprovado' : '⚠️ Modelo ' + valor.event) + ' — ' + valor.message_template_name;
+            const assunto = (aprovado ? 'Modelo aprovado' : 'Modelo ' + valor.event) + ' — ' + valor.message_template_name;
             const html = '<p>O modelo de WhatsApp <strong>' + valor.message_template_name + '</strong> (' + (valor.message_template_language || '') + ') mudou de status:</p>'
               + '<p style="font-size:18px"><strong>' + valor.event + '</strong></p>'
               + (valor.reason ? '<p>Motivo: ' + valor.reason + '</p>' : '')

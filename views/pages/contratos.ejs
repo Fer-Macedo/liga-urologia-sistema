@@ -76,9 +76,9 @@
     <div class="topbar">
       <h1 class="page-titulo">Contratos Ligantes</h1>
       <div class="topbar-acoes">
-        <button class="btn btn-sm" onclick="abrirModal('modal-timbrado')">&#128247; Timbrado</button>
-        <button class="btn btn-sm" onclick="abrirModal('modal-texto-global')">&#128196; Texto</button>
-        <button class="btn btn-sm" onclick="abrirModal('modal-turma')">&#128101; Gerar por Turma</button>
+        <button class="btn btn-sm" onclick="abrirModal('modal-timbrado')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Timbrado</button>
+        <button class="btn btn-sm" onclick="abrirModal('modal-texto-global')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Texto</button>
+        <button class="btn btn-sm" onclick="abrirModal('modal-turma')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Gerar por Turma</button>
         <button class="btn btn-primario btn-sm" onclick="abrirModal('modal-novo')">+ Novo Individual</button>
       </div>
     </div>
@@ -114,7 +114,7 @@
         </div>
         <div class="stat-card">
           <div class="stat-num" style="color:#475569"><%=rascunhos%></div>
-          <div class="stat-label">&#128196; Rascunho</div>
+          <div class="stat-label"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Rascunho</div>
         </div>
         <div class="stat-card">
           <div class="stat-num" style="color:#1e40af"><%=enviados%></div>
@@ -174,7 +174,7 @@
         </tr></thead><tbody>
         <%if(contratos.length===0){%>
         <tr><td colspan="6" style="text-align:center;padding:40px;color:var(--texto2)">
-          <div style="font-size:28px;margin-bottom:8px">&#128196;</div>
+          <div style="margin-bottom:8px;display:flex;justify-content:center"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
           <div style="font-weight:600">Nenhum contrato encontrado</div>
           <div style="font-size:12px;margin-top:4px">Use "Gerar por Turma" para criar os contratos</div>
         </td></tr><%}%>
@@ -202,7 +202,7 @@
             <a href="/contratos/<%=ct.id%>/imprimir" target="_blank" class="btn-xs roxo">Imprimir</a>
             <form method="POST" action="/contratos/<%=ct.id%>/enviar" style="display:inline;margin:0"><input type="hidden" name="turma" value="<%=turmaFiltro||''%>"><button type="submit" class="btn-xs verde">Enviar</button></form>
             <%if(ct.status==='enviado'||ct.status==='assinado'){%>
-            <button class="btn-xs amarelo" onclick="abrirUpload(<%=ct.id%>,'<%=ct.ligante_nome%>')">&#128206; Anexar Assinado</button>
+            <button class="btn-xs amarelo" onclick="abrirUpload(<%=ct.id%>,'<%=ct.ligante_nome%>')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg> Anexar Assinado</button>
             <%}%>
             <%if(ct.pdf_assinado_chave){%>
             <a href="/contratos/<%=ct.id%>/assinado" target="_blank" class="btn-xs azul">Ver Assinado</a>
@@ -221,7 +221,7 @@
 <!-- Modal Gerar por Turma -->
 <div class="modal-overlay" id="modal-turma" style="display:none">
   <div class="modal" style="max-width:480px">
-    <div class="modal-header"><span class="modal-titulo">&#128101; Gerar Contratos por Turma</span><button class="icon-btn" onclick="fecharModal('modal-turma')">&#x2715;</button></div>
+    <div class="modal-header"><span class="modal-titulo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg> Gerar Contratos por Turma</span><button class="icon-btn" onclick="fecharModal('modal-turma')">&#x2715;</button></div>
     <form action="/contratos" method="POST">
       <input type="hidden" name="ligante_id" value="">
       <div class="modal-body" style="display:flex;flex-direction:column;gap:14px;padding:20px 24px">
@@ -277,7 +277,7 @@
     <form id="form-upload" action="" method="POST" enctype="multipart/form-data">
       <input type="hidden" name="turma" id="upload-turma" value="<%=turmaFiltro||''%>">
       <div style="background:var(--fundo);border:2px dashed var(--borda);border-radius:10px;padding:20px;text-align:center;margin:16px 24px">
-        <div style="font-size:32px;margin-bottom:8px">&#128206;</div>
+        <div style="margin-bottom:8px;display:flex;justify-content:center"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg></div>
         <div style="font-size:13px;font-weight:600;margin-bottom:4px">Contrato assinado (PDF)</div>
         <div style="font-size:11px;color:var(--texto2);margin-bottom:10px">Selecione o PDF do contrato assinado</div>
         <input type="file" name="pdf_assinado" class="input" accept=".pdf" required>
@@ -293,7 +293,7 @@
 <!-- Modal Timbrado -->
 <div class="modal-overlay" id="modal-timbrado" style="display:none">
   <div class="modal" style="max-width:440px">
-    <div class="modal-header"><span class="modal-titulo">&#128247; Timbrado do Contrato</span><button class="icon-btn" onclick="fecharModal('modal-timbrado')">&#x2715;</button></div>
+    <div class="modal-header"><span class="modal-titulo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg> Timbrado do Contrato</span><button class="icon-btn" onclick="fecharModal('modal-timbrado')">&#x2715;</button></div>
     <form action="/contratos/timbrado" method="POST" enctype="multipart/form-data">
       <div style="background:var(--fundo);border:2px dashed var(--borda);border-radius:10px;padding:20px;text-align:center;margin:16px 24px">
         <input type="file" name="timbrado_contrato" class="input" accept="image/*" required>
@@ -310,7 +310,7 @@
 <!-- Modal Texto Global -->
 <div class="modal-overlay" id="modal-texto-global" style="display:none">
   <div class="modal" style="max-width:750px">
-    <div class="modal-header"><span class="modal-titulo">&#128196; Texto do Contrato</span><button class="icon-btn" onclick="fecharModal('modal-texto-global')">&#x2715;</button></div>
+    <div class="modal-header"><span class="modal-titulo"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Texto do Contrato</span><button class="icon-btn" onclick="fecharModal('modal-texto-global')">&#x2715;</button></div>
     <form id="form-texto-global" action="/contratos/texto-global" method="POST">
       <div style="font-size:12px;color:var(--texto2);margin:12px 24px;padding:8px;background:var(--fundo);border-radius:8px">
         Variaveis: <code>{nome}</code> <code>{rg}</code> <code>{catraca}</code> <code>{data_ingresso}</code> <code>{data}</code>

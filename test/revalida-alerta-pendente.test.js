@@ -55,7 +55,7 @@ test('sem pendência: o e-mail NÃO traz o bloco de alerta', async () => {
   await mod.enviarQuadroRevalida();
   assert.strictEqual(enviados.length, 1);
   assert.doesNotMatch(enviados[0].html, /Publicação anterior em aberto/);
-  assert.doesNotMatch(enviados[0].assunto, /⚠️/, 'assunto limpo quando não há pendência');
+  assert.doesNotMatch(enviados[0].assunto, /PENDÊNCIA/, 'assunto limpo quando não há pendência');
 });
 
 test('com pendência: alerta no topo, com a data e a fonte', async () => {
@@ -68,7 +68,7 @@ test('com pendência: alerta no topo, com a data e a fonte', async () => {
   assert.match(html, /17\/07/, 'precisa dizer quando foi enviada');
   assert.match(html, /questão 2/, 'precisa identificar qual questão');
   assert.match(html, /Marcar como publicado/, 'precisa dizer o que fazer');
-  assert.match(enviados[0].assunto, /⚠️/, 'assunto sinaliza a pendência');
+  assert.match(enviados[0].assunto, /PENDÊNCIA/, 'assunto sinaliza a pendência (texto, sem emoji — regra do projeto)');
   // o alerta tem que vir ANTES do conteúdo normal, senão passa despercebido
   assert.ok(html.indexOf('Publicação anterior em aberto') < html.indexOf('Como publicar'),
     'o alerta deve estar no topo do e-mail');

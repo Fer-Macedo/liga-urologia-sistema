@@ -56,7 +56,7 @@
             <% if (pixData.pix_qr_image) { %><img class="qr" src="<%= pixData.pix_qr_image %>" alt="PIX QR"><% } %>
             <% if (pixData.pix_copia_cola) { %>
               <div class="cc" id="cc"><%= pixData.pix_copia_cola %></div>
-              <button class="btn" onclick="navigator.clipboard.writeText(document.getElementById('cc').textContent);this.textContent='✅ Copiado';">Copiar código PIX</button>
+              <button class="btn" onclick="copiarPix(this)">Copiar código PIX</button>
             <% } %>
           <% } else { %>
             <p style="color:#b91c1c;margin-top:16px">No se pudo generar el pago. Contactá a la organización.</p>
@@ -94,7 +94,7 @@
         <p class="mut">Después de pagar, esta página se actualiza sola. Podés cerrarla; la confirmación llega por correo.</p>
       </div>
       <div class="ok" id="ok">
-        <div style="font-size:38px">✅</div>
+        <div><svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" fill="#dcfce7" stroke="#16a34a"/><polyline points="8 12 11 15 16 9" stroke="#16a34a" stroke-width="2" fill="none"/></svg></div>
         <h2 style="color:var(--cor);margin-top:8px">¡Pago confirmado!</h2>
         <p class="mut" style="margin-top:10px">Su número de inscripción</p>
         <div class="num" id="num">—</div>
@@ -107,6 +107,11 @@ var CID=<%= candidato.id %>, jaConf=<%= candidato.pagamento_status==='confirmado
 function mostrarOk(numero){ document.getElementById('pend').style.display='none'; var ok=document.getElementById('ok'); ok.style.display='block'; document.getElementById('num').textContent=numero?String(numero).padStart(3,'0'):'—'; }
 function checar(){ fetch('/pss/pagamento/'+CID+'/status',{credentials:'same-origin'}).then(r=>r.json()).then(d=>{ if(d.confirmado){ mostrarOk(d.numero); } else setTimeout(checar,4000); }).catch(()=>setTimeout(checar,6000)); }
 if(jaConf){ fetch('/pss/pagamento/'+CID+'/status').then(r=>r.json()).then(d=>mostrarOk(d.numero)); } else checar();
+
+function copiarPix(btn){
+  navigator.clipboard.writeText(document.getElementById('cc').textContent);
+  btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg>Copiado';
+}
 
 function selecionarAba(aba){
   document.getElementById('tab-pix').classList.toggle('ativo', aba==='pix');

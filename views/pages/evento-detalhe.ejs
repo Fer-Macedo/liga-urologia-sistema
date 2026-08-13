@@ -613,7 +613,7 @@
               <button class="btn btn-sm" onclick="abrirModal('modal-inscricao-manual')" style="white-space:nowrap">+ Manual</button>
               <button class="btn btn-sm" onclick="limparFiltrosInscritos()" style="white-space:nowrap">Limpar</button>
               <button class="btn btn-sm" onclick="imprimirInscritos()" style="white-space:nowrap;background:var(--cor-primaria);color:#fff;border-color:transparent">Imprimir filtrados</button>
-              <button class="btn btn-sm" onclick="exportarExcel()" style="white-space:nowrap;background:#166534;color:#fff;border-color:transparent">⬇ Excel / CSV</button>
+              <button class="btn btn-sm" onclick="exportarExcel()" style="white-space:nowrap;background:#166534;color:#fff;border-color:transparent"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Excel / CSV</button>
               <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/lembrete-pendentes" style="display:inline" onsubmit="var f=this; confirmarAcao('Enviar lembrete de pagamento para TODOS os inscritos pendentes deste evento?', function(){ prepararFiltroInscritos(f); f.submit(); }); return false;"><button type="submit" class="btn btn-sm" style="white-space:nowrap;background:#d97706;color:#fff;border-color:transparent">Lembrete a todos os pendentes</button></form>
             </div>
           </div>
@@ -1057,7 +1057,7 @@
                 <span class="cupom-cod"><%= c.codigo %></span>
                 <div>
                   <div style="font-size:12px;font-weight:600"><%= c.tipo==='percentual' ? c.valor+'% desconto' : 'R$ '+Number(c.valor).toFixed(2)+' desconto' %></div>
-                  <div style="font-size:11px;color:var(--texto2)">Usos: <%= c.usos_atual||0 %>/<%= c.usos_max %> <span style="margin-left:6px;background:<%= c.ativo?'#dcfce7':'#fee2e2' %>;color:<%= c.ativo?'#166534':'#991b1b' %>;padding:2px 6px;border-radius:4px;font-weight:700"><%= c.ativo?'ATIVO':'INATIVO' %></span> <span style="margin-left:4px;background:<%= c.usado_nome?'#dcfce7':'#fef3c7' %>;color:<%= c.usado_nome?'#166534':'#92400e' %>;padding:2px 6px;border-radius:4px;font-weight:700"><%= c.usado_nome?'✓ USADO':'PENDENTE' %></span></div>
+                  <div style="font-size:11px;color:var(--texto2)">Usos: <%= c.usos_atual||0 %>/<%= c.usos_max %> <span style="margin-left:6px;background:<%= c.ativo?'#dcfce7':'#fee2e2' %>;color:<%= c.ativo?'#166534':'#991b1b' %>;padding:2px 6px;border-radius:4px;font-weight:700"><%= c.ativo?'ATIVO':'INATIVO' %></span> <span style="margin-left:4px;background:<%= c.usado_nome?'#dcfce7':'#fef3c7' %>;color:<%= c.usado_nome?'#166534':'#92400e' %>;padding:2px 6px;border-radius:4px;font-weight:700"><%- c.usado_nome?'<svg width=\'10\' height=\'10\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'3\' stroke-linecap=\'round\' stroke-linejoin=\'round\' style=\'display:inline-block;vertical-align:middle;margin-right:2px\'><polyline points=\'20 6 9 17 4 12\'/></svg> USADO':'PENDENTE' %></span></div>
                     <% if(c.dono_nome){ %><div style="font-size:11px;color:var(--texto2);margin-top:3px">De: <strong><%= c.dono_nome %></strong></div><% } %><% if(c.usado_nome){ %><div style="font-size:11px;color:var(--cor-primaria);margin-top:3px">Usado por: <strong><%= c.usado_nome %></strong><% if(c.usado_em){ %> em <%= new Date(new Date(c.usado_em).getTime() - new Date(c.usado_em).getTimezoneOffset()*60000).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) %><% } %></div><% } %>
                 </div>
               </div>
@@ -1209,7 +1209,7 @@
             <span>Relatório de Presença</span>
             <span style="display:flex;gap:8px">
               <button class="btn btn-sm" onclick="carregarRelatorioCheckout()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Atualizar</button>
-              <a class="btn btn-sm" href="/eventos/<%= evento.id %>/checkout-export" style="background:var(--cor-primaria);color:#fff;border-color:transparent;text-decoration:none">⬇ Exportar Aptos (CSV)</a>
+              <a class="btn btn-sm" href="/eventos/<%= evento.id %>/checkout-export" style="background:var(--cor-primaria);color:#fff;border-color:transparent;text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar Aptos (CSV)</a>
             </span>
           </div>
           <div class="section-body">

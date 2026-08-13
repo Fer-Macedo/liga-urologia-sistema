@@ -187,7 +187,7 @@ router.post('/desligamentos', requireAuth, requirePermissao('desligamentos'), as
     const did = diretivo_id && diretivo_id !== '' && diretivo_id !== 'null' ? parseInt(diretivo_id) : null;
     await query('INSERT INTO desligamentos (membro_id, ligante_id, diretivo_id, data_solicitacao, motivo, tipo_membro, criado_por) VALUES ($1,$2,$3,$4,$5,$6,$7)', [mid, lid, did, data_solicitacao || new Date(), motivo || null, tipo_membro || 'LIGANTE', req.session.usuario.id]);
     await logAtividade(req.session.usuario.id, 'DESLIGAMENTO_CRIADO', 'Desligamento criado', req);
-    req.session.msg = ['Documento de desligamento criado! Clique em 📧 para enviar por email.'];
+    req.session.msg = ['Documento de desligamento criado! Clique para enviar por email.'];
     res.redirect('/desligamentos');
   } catch(e) { req.session.erro = ['Erro ao criar desligamento: ' + e.message]; res.redirect('/desligamentos'); }
 });

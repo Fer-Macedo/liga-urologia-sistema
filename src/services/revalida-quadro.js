@@ -159,7 +159,7 @@ function corpoEmail(q, pendentes) {
   // este ja sai duas vezes por semana — mais um e-mail so faria a equipe ignorar os dois.
   const alerta = (pendentes && pendentes.length) ? `
 <div style="border:2px solid #dc2626;background:#fef2f2;border-radius:8px;padding:14px 18px;margin-bottom:20px">
-  <div style="color:#dc2626;font-weight:700;font-size:15px;margin-bottom:6px">⚠️ Publicação anterior em aberto</div>
+  <div style="color:#dc2626;font-weight:700;font-size:15px;margin-bottom:6px">Publicação anterior em aberto</div>
   <div style="font-size:14px;line-height:1.55">
     ${pendentes.map(x => `A questão enviada em <strong>${x.enviado}</strong> (${x.fonte}) continua <strong>sem confirmação de publicação</strong>.`).join('<br>')}
     <br><br>
@@ -186,7 +186,7 @@ function corpoEmail(q, pendentes) {
 <p style="margin-top:14px"><strong>Resposta correta: ${q.gabarito}</strong> (gabarito oficial do INEP)</p>
 
 <p><strong>Legenda sugerida para o story da pergunta</strong><br>
-<em>${q.legenda || 'Sabe responder? Vota aí 👇 A resposta sai no próximo story.'}</em></p>
+<em>${q.legenda || 'Sabe responder? Vota aí A resposta sai no próximo story.'}</em></p>
 
 <p style="color:#64748b;font-size:13px;margin-top:18px">
 Conteúdo clínico revisado pela orientação médica da liga. Se identificar qualquer
@@ -224,7 +224,7 @@ async function enviarQuadroRevalida() {
   for (const d of destinatarios.rows) {
     const r = await enviarEmail({
       para: d.email,
-      assunto: (pend.rows.length ? '⚠️ ' : '') + `Momento Revalida Brasil — publicar hoje (${q.fonte})`,
+      assunto: (pend.rows.length ? 'PENDÊNCIA — ' : '') + `Momento Revalida Brasil — publicar hoje (${q.fonte})`,
       html: corpoEmail(q, pend.rows),
       anexos
     }).catch(e => ({ ok: false, erro: e.message }));

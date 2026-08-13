@@ -53,7 +53,7 @@
     <div class="card">
       <label>Cartón completado</label>
       <input type="file" id="foto" accept="image/*" capture="environment" style="display:none">
-      <button class="btn" id="btnAbrir">📷 Abrir cámara y leer cartón</button>
+      <button class="btn" id="btnAbrir"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:6px"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>Abrir cámara y leer cartón</button>
       <img id="preview" alt="vista previa">
       <p style="font-size:11px;color:#94a3b8;margin:8px 0 0">Apunte al cartón <b>entero</b> (con los cuadraditos negros de los laterales), recto y con buena luz. La lectura comienza <b>automáticamente</b> después de la foto. El candidato se identifica por el <b>Número de Registro</b>.</p>
     </div>
@@ -79,8 +79,8 @@
       <div class="aviso" id="rAviso"></div>
       <img id="rFoto" alt="foto del cartón">
       <div class="grid" id="rGrid"></div>
-      <button class="btn ok" id="btnConfirmar">✅ Confirmar y cargar en la clasificación</button>
-      <button class="btn sec" id="btnRefazer">↻ Nueva lectura</button>
+      <button class="btn ok" id="btnConfirmar"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:6px"><polyline points="20 6 9 17 4 12"/></svg>Confirmar y cargar en la clasificación</button>
+      <button class="btn sec" id="btnRefazer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:6px"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-.18-5"/></svg>Nueva lectura</button>
     </div>
   </div>
 
@@ -113,13 +113,13 @@ function lerCartao(){
       if(d.candidato){
         CANDID=d.candidato.id;
         id.className='ident ok';
-        id.innerHTML='✅ Candidato identificado<div class="nome">'+ (d.candidato.numero_lista?('#'+d.candidato.numero_lista+' · '):'') + d.candidato.nome +'</div><small>Fila '+d.candidato.fila+' · Nº registro leído: '+(d.numero_registro_lido||'?')+'. ¡Verifique si es la persona correcta!</small>';
+        id.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg>Candidato identificado<div class="nome">'+ (d.candidato.numero_lista?('#'+d.candidato.numero_lista+' · '):'') + d.candidato.nome +'</div><small>Fila '+d.candidato.fila+' · Nº registro leído: '+(d.numero_registro_lido||'?')+'. ¡Verifique si es la persona correcta!</small>';
         cand.value=d.candidato.id;
         document.getElementById('boxSelect').classList.remove('hide');
       } else {
         CANDID=null;
         id.className='ident no';
-        id.innerHTML='⚠️ Candidato NO identificado<small>Nº de registro leído: '+(d.numero_registro_lido||'no leído')+' — no coincidió con ningún candidato. Seleccione manualmente abajo.</small>';
+        id.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Candidato NO identificado<small>Nº de registro leído: '+(d.numero_registro_lido||'no leído')+' — no coincidió con ningún candidato. Seleccione manualmente abajo.</small>';
         document.getElementById('boxSelect').classList.remove('hide');
       }
       var alerta='VERIFIQUE cada pregunta contra la foto antes de cargar. Fila usada: '+d.fila+'.';
@@ -157,7 +157,7 @@ function render(){
       opts+='<div class="'+cls+'" onclick="setResp('+q+',\''+L+'\')">'+L+'</div>';
     });
     var inc=INCERTAS.indexOf(q)>=0;
-    grid.innerHTML += '<div class="q" style="'+(inc?'border-color:#fbbf24;box-shadow:0 0 0 1px #fbbf24':'')+'"><div class="qn">'+q+(inc?' <span style="color:#fbbf24">⚠</span>':'')+'</div><div class="opts">'+opts+'</div><div class="none'+(sel===null?' sel':'')+'" style="margin-top:4px;text-align:center" onclick="setResp('+q+',null)">en blanco</div></div>';
+    grid.innerHTML += '<div class="q" style="'+(inc?'border-color:#fbbf24;box-shadow:0 0 0 1px #fbbf24':'')+'"><div class="qn">'+q+(inc?' <span style="color:#fbbf24"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></span>':'')+'</div><div class="opts">'+opts+'</div><div class="none'+(sel===null?' sel':'')+'" style="margin-top:4px;text-align:center" onclick="setResp('+q+',null)">en blanco</div></div>';
   }
   var pct=TOTAL?Math.round(acertos/TOTAL*1000)/10:0, ap=pct>=NOTAMIN;
   document.getElementById('rNota').textContent=pct+'%';
@@ -179,7 +179,7 @@ document.getElementById('btnConfirmar').addEventListener('click',function(){
   }).then(function(r){return r.json();}).then(function(d){
     btn.disabled=false;
     if(!d.ok){ msg(d.erro||'Falla al cargar.','err'); return; }
-    msg('✅ ¡Cargado! '+(d.aprovado?'CLASIFICADO':'REPROBADO')+' ('+d.percentual+'%).','suc');
+    msg('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg>¡Cargado! '+(d.aprovado?'CLASIFICADO':'REPROBADO')+' ('+d.percentual+'%).','suc');
     document.getElementById('resultado').classList.add('hide'); foto.value=''; document.getElementById('preview').style.display='none'; cand.value=''; btnAbrir.disabled=false;
     window.scrollTo({top:0,behavior:'smooth'});
   }).catch(function(e){ btn.disabled=false; msg('Error de red: '+e.message,'err'); });

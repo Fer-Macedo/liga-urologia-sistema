@@ -23,8 +23,8 @@ router.get('/arquivos', requireAuth, requirePermissao('arquivos'), async (req, r
     const kb = (a.tamanho || 0) / 1024;
     a.tamanho_fmt = kb < 1024 ? kb.toFixed(0) + ' KB' : (kb/1024).toFixed(1) + ' MB';
     const ext = (a.nome_original || '').split('.').pop().toLowerCase();
-    const icons = { pdf:'📑', doc:'📝', docx:'📝', xls:'📊', xlsx:'📊', ppt:'📣', pptx:'📣', jpg:'🖼️', jpeg:'🖼️', png:'🖼️', gif:'🖼️', mp4:'🎬', mp3:'🎵', zip:'📦', rar:'📦' };
-    a.icone = a.tipo === 'google' ? '🔗' : (icons[ext] || '📄');
+    const icons = { pdf:'', doc:'', docx:'', xls:'', xlsx:'', ppt:'', pptx:'', jpg:'', jpeg:'', png:'', gif:'', mp4:'', mp3:'', zip:'', rar:'' };
+    a.icone = a.tipo === 'google' ? '' : (icons[ext] || '');
     return a;
   });
   res.render('pages/arquivos', { config, usuario: req.session.usuario, msg, erro, todasPastas, pastas: todasPastas, pastaAtual, arquivos, lixeiraMode, lixeiraCount: parseInt(lixeiraR.rows[0].n) });
@@ -63,7 +63,7 @@ router.post('/arquivos/pasta/:id/lixeira', requireAuth, async (req, res) => { aw
 
 router.post('/arquivos/pasta/:id/editar', requireAuth, async (req, res) => {
   const { nome, icone, cor } = req.body;
-  await query('UPDATE arquivo_pastas SET nome=$1, icone=$2, cor=$3 WHERE id=$4', [nome, icone||'📁', cor||null, req.params.id]);
+  await query('UPDATE arquivo_pastas SET nome=$1, icone=$2, cor=$3 WHERE id=$4', [nome, icone||'', cor||null, req.params.id]);
   req.session.msg = ['Pasta atualizada!'];
   const pasta = await query('SELECT pasta_pai_id FROM arquivo_pastas WHERE id=$1', [req.params.id]);
   const pid = pasta.rows[0]?.pasta_pai_id;

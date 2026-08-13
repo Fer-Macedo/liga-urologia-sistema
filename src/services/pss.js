@@ -123,7 +123,7 @@ async function enviarEmailBoasVindasPss(candidatoId) {
       + '<p>A partir de ahora formás parte de nuestra comunidad académica. En breve te contactaremos con los detalles de la <strong>jornada de inducción</strong> y los próximos pasos para el inicio de tu trayectoria como ligante.</p>'
       + '<p>¡Te damos la más cordial bienvenida!</p>'
       + '<p style="margin-top:16px">Atentamente,<br><strong>Dirección — LAURO</strong></p>';
-    await enviarEmail({ para: c.email, assunto: '¡Bienvenido/a a la LAURO! 🎉', titulo: '¡Felicitaciones! Fuiste seleccionado/a', html: corpo, faixaLabel: 'BIENVENIDO A LA LAURO' });
+    await enviarEmail({ para: c.email, assunto: '¡Bienvenido/a a la LAURO!', titulo: '¡Felicitaciones! Fuiste seleccionado/a', html: corpo, faixaLabel: 'BIENVENIDO A LA LAURO' });
     await query("UPDATE ps_candidatos SET boas_vindas_enviado=NOW() WHERE id=$1", [candidatoId]);
     return true;
   } catch (e) { console.error('enviarEmailBoasVindasPss ERRO:', e.message); return false; }

@@ -27,11 +27,11 @@ async function enviarLembreteAniversarioEquipe(momento) {
     const nomes = aniversariantes.rows.map(a => `• ${a.nome} (${a.tipo})`).join('\n');
     const dataFormatada = alvo.format('DD/MM');
     const avisoFoto = semFoto.length
-      ? `\n\n⚠️ Sem foto cadastrada: ${semFoto.map(a => a.nome).join(', ')}. Cadastre a foto até antes das 6h de amanhã, senão o Story automático dessa(s) pessoa(s) não sai.`
+      ? `\n\nSem foto cadastrada: ${semFoto.map(a => a.nome).join(', ')}. Cadastre a foto até antes das 6h de amanhã, senão o Story automático dessa(s) pessoa(s) não sai.`
       : '';
     const mensagem = momento === 'dia'
-      ? `🎂 *Aniversário hoje (${dataFormatada})*\n\n${nomes}\n\nNão esqueça de fazer o post de aniversário no grupo dos Ligantes e no grupo de Avisos!`
-      : `🎂 *Aniversário amanhã (${dataFormatada})*\n\n${nomes}\n\nJá deixe preparado o post de aniversário para amanhã, no grupo dos Ligantes e no grupo de Avisos!${avisoFoto}`;
+      ? `*Aniversário hoje (${dataFormatada})*\n\n${nomes}\n\nNão esqueça de fazer o post de aniversário no grupo dos Ligantes e no grupo de Avisos!`
+      : `*Aniversário amanhã (${dataFormatada})*\n\n${nomes}\n\nJá deixe preparado o post de aniversário para amanhã, no grupo dos Ligantes e no grupo de Avisos!${avisoFoto}`;
 
     const { enviarEmail } = require('./notificacoes');
 

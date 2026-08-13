@@ -630,7 +630,7 @@ function copiarLinkDiretivo(btn) {
   try {
     document.execCommand('copy');
     const orig = btn.innerHTML;
-    btn.innerHTML = '✅ Link copiado!';
+    btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="20 6 9 17 4 12"/></svg> Link copiado!';
     btn.style.background = '#22c55e';
     btn.style.color = '#fff';
     setTimeout(() => { btn.innerHTML = orig; btn.style.background = ''; btn.style.color = ''; }, 2000);

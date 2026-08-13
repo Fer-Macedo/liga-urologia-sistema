@@ -19,10 +19,10 @@ Regras:
 - Português do Brasil, tom direto e motivador, para a equipe interna.
 
 Responda APENAS com um fragmento HTML (sem <html>/<body>), usando SOMENTE estas tags: <h4>, <p>, <ul>, <li>, <strong>. Estruture nesta ordem exata:
-<h4>📊 Diagnóstico</h4> (2-4 frases do estado atual, com números)
-<h4>🎯 Plano de ação desta semana</h4> (lista de 4-6 ações concretas)
-<h4>💡 Ideias de conteúdo</h4> (lista de 4-6 pautas específicas de urologia/liga acadêmica)
-<h4>📈 Metas realistas</h4> (2-3 metas numéricas para a próxima semana/mês)
+<h4>Diagnóstico</h4> (2-4 frases do estado atual, com números)
+<h4>Plano de ação desta semana</h4> (lista de 4-6 ações concretas)
+<h4>Ideias de conteúdo</h4> (lista de 4-6 pautas específicas de urologia/liga acadêmica)
+<h4>Metas realistas</h4> (2-3 metas numéricas para a próxima semana/mês)
 Não escreva nada fora dessas seções nem fora do HTML.`;
 
 function resumoParaPrompt(a) {
@@ -78,7 +78,7 @@ async function enviarRelatorioEstrategico() {
   if (!emails) { console.warn('[IG ESTRATEGIA] sem destinatários.'); return; }
   await enviarEmail({
     para: emails,
-    assunto: '📈 Plano de ação do Instagram — resumo da semana',
+    assunto: 'Plano de ação do Instagram — resumo da semana',
     titulo: 'Estratégia do Instagram',
     faixaLabel: 'ESTRATÉGIA',
     html: g.html + '<p style="color:#6b7280;font-size:12px;margin-top:16px">Plano gerado automaticamente por IA a partir dos dados reais da conta. Veja e gere novas análises na aba Marketing → Estratégia.</p>'

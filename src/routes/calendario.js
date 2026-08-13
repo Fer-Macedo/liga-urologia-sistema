@@ -62,7 +62,7 @@ async function getAniversarios(anoRef) {
       const dataAniv = new Date(ano, mes, dia);
       aniversarios.push({
         id: `aniv-${m.tipo}-${m.nome}-${ano}`,
-        titulo: `🎂 Aniversário — ${m.nome}`,
+        titulo: `Aniversário — ${m.nome}`,
         descricao: `${m.tipo === 'membro' ? 'Ligante' : 'Diretivo'} ${m.nome} faz aniversário hoje!`,
         categoria: 'Aniversario',
         cor: '#f97316',

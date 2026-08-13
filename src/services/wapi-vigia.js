@@ -102,7 +102,7 @@ async function avisar() {
       <strong>não</strong> são afetados — eles usam a API Oficial, que é independente disso.</p>`;
     await enviarEmail({
       para: dest.rows.map(x => x.email).join(','),
-      assunto: '🔴 WhatsApp do atendimento desconectado',
+      assunto: 'WhatsApp do atendimento desconectado',
       titulo: 'Atendimento fora do ar',
       faixaLabel: 'ALERTA',
       html

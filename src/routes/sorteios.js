@@ -147,7 +147,7 @@ router.post('/sorteios/:id/validar', requireAuth, requirePermissao('sorteios'), 
       [isValidado, brinde||null, ganhador_contato||null, observacoes_validacao||null, tarefasCumpridas, req.params.id]
     );
 
-    req.flash('msg', [isValidado ? '✅ Ganhador validado e brinde registrado!' : '❌ Ganhador marcado como inválido.']);
+    req.flash('msg', [isValidado ? 'Ganhador validado e brinde registrado!' : 'Ganhador marcado como inválido.']);
     res.redirect('/sorteios/' + req.params.id);
   } catch(e) { req.flash('erro', [e.message]); res.redirect('/sorteios/' + req.params.id); }
 });

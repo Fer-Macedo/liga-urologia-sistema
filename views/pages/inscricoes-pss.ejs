@@ -45,7 +45,7 @@
       <% if (vista==='detalhe' && processo) { %>
         <a href="/inscricoes-pss" class="btn btn-sm" style="text-decoration:none">← Voltar</a>
         <h1 class="page-titulo" style="margin:0;font-size:18px"><%= processo.nome %></h1>
-        <div class="topbar-acoes"><button class="btn btn-sm" onclick="abrirModal('modal-editar-proc')">✏️ Editar processo</button></div>
+        <div class="topbar-acoes"><button class="btn btn-sm" onclick="abrirModal('modal-editar-proc')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar processo</button></div>
       <% } else { %>
         <h1 class="page-titulo">Inscrições PSS</h1>
         <div class="topbar-acoes"><button class="btn btn-primario btn-sm" onclick="abrirModal('modal-novo-proc')">+ Novo Processo</button></div>
@@ -99,8 +99,8 @@
           <div style="margin-top:12px"><label class="lb">Link público de inscrição</label>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
               <div class="link-pub" id="link-pub" style="flex:1;min-width:220px"><%= inscricaoBase %>/pss/<%=processo.id%>/inscricao</div>
-              <button type="button" class="btn btn-sm" onclick="copiarLink(this)">📋 Copiar link</button>
-              <a href="<%= inscricaoBase %>/pss/<%=processo.id%>/inscricao" target="_blank" rel="noopener" class="btn btn-sm">🔗 Abrir link</a>
+              <button type="button" class="btn btn-sm" onclick="copiarLink(this)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>Copiar link</button>
+              <a href="<%= inscricaoBase %>/pss/<%=processo.id%>/inscricao" target="_blank" rel="noopener" class="btn btn-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Abrir link</a>
             </div>
           </div>
         </div>
@@ -129,8 +129,8 @@
           <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
             <h3 style="margin:0">Inscritos</h3>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
-              <form method="POST" action="/inscricoes-pss/processo/<%=processo.id%>/lembrete-pendentes" style="display:inline" onsubmit="var f=this; confirmarAcao('Enviar e-mail de lembrete (oferecendo ajuda) a TODOS os inscritos pendentes deste processo?', function(){ f.submit(); }, {textoConfirmar:'Enviar', corConfirmar:'#d97706'}); return false;"><button class="btn btn-sm" style="background:#d97706;color:#fff">✉️ Lembrar pendentes</button></form>
-              <a href="/inscricoes-pss/relatorio?processo=<%=processo.id%>" target="_blank" class="btn btn-sm">🖨️ Gerar relatório</a>
+              <form method="POST" action="/inscricoes-pss/processo/<%=processo.id%>/lembrete-pendentes" style="display:inline" onsubmit="var f=this; confirmarAcao('Enviar e-mail de lembrete (oferecendo ajuda) a TODOS os inscritos pendentes deste processo?', function(){ f.submit(); }, {textoConfirmar:'Enviar', corConfirmar:'#d97706'}); return false;"><button class="btn btn-sm" style="background:#d97706;color:#fff"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Lembrar pendentes</button></form>
+              <a href="/inscricoes-pss/relatorio?processo=<%=processo.id%>" target="_blank" class="btn btn-sm"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Gerar relatório</a>
             </div>
           </div>
           <div class="flex" style="margin-bottom:12px">
@@ -260,8 +260,8 @@
           <div class="campo"><label class="lb">Valor da inscrição (R$)</label><input name="valor_inscricao" type="number" step="0.01" min="0" value="0"></div>
           <div class="campo"><label class="lb">Cor</label><input name="cor_tema" type="color" value="#2b6803" style="height:38px;padding:3px;width:56px"></div>
         </div>
-        <div class="campo"><label class="lb">Banner (imagem)</label><input type="file" name="banner" accept="image/*"><small style="display:block;margin-top:4px;color:#6b7280;font-size:11px">📐 Tamanho recomendado: <b>1200 × 400 px</b> (proporção 3:1, horizontal). Formatos JPG ou PNG. A imagem ocupa toda a largura do topo da página.</small></div>
-        <div class="campo"><label class="lb">Edital (PDF)</label><input type="file" name="edital" accept="application/pdf"><small style="display:block;margin-top:4px;color:#6b7280;font-size:11px">📄 Documento oficial do processo. Vira um link público bem visível na página de inscrição.</small></div>
+        <div class="campo"><label class="lb">Banner (imagem)</label><input type="file" name="banner" accept="image/*"><small style="display:block;margin-top:4px;color:#6b7280;font-size:11px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Tamanho recomendado: <b>1200 × 400 px</b> (proporção 3:1, horizontal). Formatos JPG ou PNG. A imagem ocupa toda a largura do topo da página.</small></div>
+        <div class="campo"><label class="lb">Edital (PDF)</label><input type="file" name="edital" accept="application/pdf"><small style="display:block;margin-top:4px;color:#6b7280;font-size:11px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Documento oficial do processo. Vira um link público bem visível na página de inscrição.</small></div>
         <div class="campo"><label class="lb">Grupo de WhatsApp (link)</label><input name="wpp_grupo" placeholder="https://chat.whatsapp.com/..."></div>
         <div class="campo"><label class="lb">Descrição (aparece na página pública)</label><textarea name="descricao" rows="3"></textarea></div>
         <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600"><input type="checkbox" name="inscricoes_abertas" style="width:auto"> Já abrir inscrições</label>
@@ -283,8 +283,8 @@
         </div>
         <div class="campo"><label class="lb">Local da prova</label><input name="local_prova" value="<%=processo.local_prova||''%>"></div>
         <div class="campo"><label class="lb">Cor do tema</label><input name="cor_tema" type="color" value="<%=processo.cor_tema||'#2b6803'%>" style="height:38px;padding:3px;width:56px"></div>
-        <div class="campo"><label class="lb">Trocar banner (deixe vazio p/ manter)</label><input type="file" name="banner" accept="image/*"><small style="display:block;margin-top:4px;color:#6b7280;font-size:11px">📐 Tamanho recomendado: <b>1200 × 400 px</b> (proporção 3:1, horizontal). Formatos JPG ou PNG. A imagem ocupa toda a largura do topo da página.</small></div>
-        <div class="campo"><label class="lb">Edital (PDF) <%if(processo.edital_chave){%><a href="/inscricoes-pss/processo/<%=processo.id%>/edital" target="_blank" style="font-size:11px;margin-left:6px">📄 ver atual</a><%}%></label><input type="file" name="edital" accept="application/pdf"><small style="display:block;margin-top:4px;color:#6b7280;font-size:11px">Deixe vazio p/ manter o atual. Vira um link público na página de inscrição.</small></div>
+        <div class="campo"><label class="lb">Trocar banner (deixe vazio p/ manter)</label><input type="file" name="banner" accept="image/*"><small style="display:block;margin-top:4px;color:#6b7280;font-size:11px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Tamanho recomendado: <b>1200 × 400 px</b> (proporção 3:1, horizontal). Formatos JPG ou PNG. A imagem ocupa toda a largura do topo da página.</small></div>
+        <div class="campo"><label class="lb">Edital (PDF) <%if(processo.edital_chave){%><a href="/inscricoes-pss/processo/<%=processo.id%>/edital" target="_blank" style="font-size:11px;margin-left:6px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>ver atual</a><%}%></label><input type="file" name="edital" accept="application/pdf"><small style="display:block;margin-top:4px;color:#6b7280;font-size:11px">Deixe vazio p/ manter o atual. Vira um link público na página de inscrição.</small></div>
         <div class="campo"><label class="lb">Grupo de WhatsApp (link)</label><input name="wpp_grupo" value="<%=processo.wpp_grupo||''%>"></div>
         <div class="campo"><label class="lb">Descrição</label><textarea name="descricao" rows="3"><%=processo.descricao||''%></textarea></div>
       </div>
@@ -346,7 +346,7 @@ function editarInsc(id){
 }
 function copiarLink(btn){
   var t=(document.getElementById('link-pub').textContent||'').trim();
-  function ok(){ var o=btn.textContent; btn.textContent='✅ Copiado'; setTimeout(function(){btn.textContent=o;},1500); }
+  function ok(){ var o=btn.innerHTML; btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg>Copiado'; setTimeout(function(){btn.innerHTML=o;},1500); }
   if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(ok).catch(function(){prompt('Copie o link:',t);}); }
   else { prompt('Copie o link:',t); }
 }

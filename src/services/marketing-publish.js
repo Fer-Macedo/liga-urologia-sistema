@@ -47,7 +47,7 @@ async function publicarPostMarketing(postId) {
     }
   }
 
-  // ⛔ Canal WhatsApp DESATIVADO (decisão da presidência, 2026-07-19). O código anterior
+  // Canal WhatsApp DESATIVADO (decisão da presidência, 2026-07-19). O código anterior
   // varria ligantes + diretivos e disparava para TODOS, um a um, sem confirmação nem
   // intervalo — o padrão de envio em massa que derruba número por spam.
   if (redes.includes('whatsapp')) {

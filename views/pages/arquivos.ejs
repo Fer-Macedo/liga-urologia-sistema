@@ -124,7 +124,7 @@
       <% if (lixeiraMode) { %>
       <div style="background:#fee2e2;padding:10px 20px;font-size:13px;color:#dc2626;font-weight:600;display:flex;justify-content:space-between;align-items:center">
         Visualizando lixeira — arquivos excluidos
-        <a href="/arquivos" class="btn" style="font-size:12px">← Voltar</a>
+        <a href="/arquivos" class="btn" style="font-size:12px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><polyline points="15 18 9 12 15 6"/></svg>Voltar</a>
       </div>
       <% } %>
 
@@ -220,7 +220,7 @@
                 <div class="pasta-card-acoes">
                   <button class="btn-mini" onclick="event.stopPropagation();editarPasta(<%=pasta.id%>,'<%=pasta.nome%>','<%=pasta.icone||''%>','<%=pasta.cor||''%>')" title="Editar">&#9998;</button>
                   <button class="btn-mini" onclick="event.stopPropagation();moverPasta(<%=pasta.id%>)" title="Mover">&#8645;</button>
-                  <button class="btn-mini" onclick="event.stopPropagation();excluirPasta(<%=pasta.id%>)" style="color:#dc2626" title="Excluir">&#128465;</button>
+                  <button class="btn-mini" onclick="event.stopPropagation();excluirPasta(<%=pasta.id%>)" style="color:#dc2626" title="Excluir"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
                 </div>
                 <div onclick="navegarPasta(<%= pasta.id %>)">
                   <div class="pasta-card-icone" style="font-size:0">
@@ -249,8 +249,8 @@
             <div class="files-grid" id="view-grid">
               <% if (arquivos.length === 0 && subPastasOrdenadas.length === 0) { %>
               <div style="grid-column:1/-1;text-align:center;padding:60px;color:var(--texto2)">
-                <div style="font-size:48px;color:var(--texto2)">
-                  <%if(lixeiraMode){%>&#128465;<%}else{%>&#128194;<%}%>
+                <div style="font-size:0;color:var(--texto2);display:flex;justify-content:center">
+                  <%if(lixeiraMode){%><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg><%}else{%><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg><%}%>
                 </div>
                 <div style="font-size:15px;font-weight:600;margin-top:10px"><%= lixeiraMode ? 'Lixeira vazia' : 'Pasta vazia' %></div>
               </div>
@@ -266,9 +266,9 @@
                   <% } %>
                   <% if (lixeiraMode) { %>
                   <button onclick="event.stopPropagation();restaurarArquivo(<%= a.id %>)" style="color:#16a34a" title="Restaurar">&#8617;</button>
-                  <button onclick="event.stopPropagation();excluirDefinitivo(<%= a.id %>)" style="color:#dc2626" title="Excluir definitivamente">&#128465;</button>
+                  <button onclick="event.stopPropagation();excluirDefinitivo(<%= a.id %>)" style="color:#dc2626" title="Excluir definitivamente"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
                   <% } else if (usuario.perfil === 'admin' || usuario.perfil === 'presidencia') { %>
-                  <button onclick="event.stopPropagation();moverLixeira(<%= a.id %>)" style="color:#dc2626" title="Lixeira">&#128465;</button>
+                  <button onclick="event.stopPropagation();moverLixeira(<%= a.id %>)" style="color:#dc2626" title="Lixeira"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
                   <% } %>
                 </div>
                 <div class="arquivo-icone" style="font-size:0;display:flex;justify-content:center;margin-bottom:8px">
@@ -296,7 +296,7 @@
             <div id="view-lista" style="display:none">
               <% arquivos.forEach(a => { %>
               <div class="lista-item" data-nome="<%= (a.nome_original||'').toLowerCase() %>" onclick="abrirArquivo(<%= a.id %>)">
-                <div class="icone" style="color:#6b7280">&#128196;</div>
+                <div class="icone" style="color:#6b7280"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
                 <div class="info">
                   <div class="nome"><%= a.nome_original %></div>
                   <div class="meta"><%= a.tamanho_fmt || '' %> • <%= new Date(a.criado_em).toLocaleDateString('pt-BR') %></div>
@@ -306,7 +306,7 @@
                   <% if (!lixeiraMode) { %>
                   <button onclick="moverLixeira(<%= a.id %>)" class="btn" style="font-size:11px;padding:4px 8px;color:#dc2626"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
                   <% } else { %>
-                  <button onclick="restaurarArquivo(<%= a.id %>)" class="btn" style="font-size:11px;padding:4px 8px;color:#16a34a">↩️</button>
+                  <button onclick="restaurarArquivo(<%= a.id %>)" class="btn" style="font-size:11px;padding:4px 8px;color:#16a34a"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg></button>
                   <% } %>
                 </div>
               </div>
@@ -323,7 +323,7 @@
 <div class="viewer-overlay" id="viewer">
   <div class="viewer-header">
     <span id="viewer-titulo" style="font-weight:600;flex:1"></span>
-    <a id="viewer-externo" href="#" target="_blank" style="color:#90cdf4;font-size:13px">↗ Abrir externamente</a>
+    <a id="viewer-externo" href="#" target="_blank" style="color:#90cdf4;font-size:13px"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:3px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>Abrir externamente</a>
     <a id="viewer-baixar" href="#" style="color:#90cdf4;font-size:13px;margin-left:12px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Baixar</a>
     <button onclick="fecharViewer()" style="background:#ef4444;border:none;color:white;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:14px;margin-left:12px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg> Fechar</button>
   </div>
@@ -408,7 +408,7 @@
 <div class="modal-overlay" id="modal-mover" style="display:none">
   <div class="modal" style="max-width:400px">
     <div class="modal-header">
-      <span class="modal-titulo">↕️ Mover para pasta</span>
+      <span class="modal-titulo"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Mover para pasta</span>
       <button class="icon-btn" onclick="document.getElementById('modal-mover').style.display='none'"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="campo" style="margin:16px 0">
@@ -422,7 +422,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn" onclick="document.getElementById('modal-mover').style.display='none'">Cancelar</button>
-      <button class="btn btn-primario" onclick="confirmarMover()">↕️ Mover</button>
+      <button class="btn btn-primario" onclick="confirmarMover()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;margin-right:4px"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Mover</button>
     </div>
   </div>
 </div>
