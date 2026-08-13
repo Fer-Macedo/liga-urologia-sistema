@@ -731,7 +731,7 @@
                 data-data="<%= pg.pago_em ? new Date(new Date(pg.pago_em).getTime() - new Date(pg.pago_em).getTimezoneOffset()*60000).toISOString().slice(0,10) : '' %>">
                 <td style="font-weight:600"><%= pg.inscrito_nome %></td>
                 <td>R$ <%= Number(pg.valor).toFixed(2) %></td>
-                <td><span style="background:<%= pg.metodo==='pix'?'#dcfce7':'#eff6ff' %>;color:<%= pg.metodo==='pix'?'#166534':'#1e40af' %>;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700"><%= pg.metodo==='pix'?'PIX':pg.metodo==='cartao'?'Cartão':'—' %></span></td>
+                <td><span style="background:<%= pg.metodo==='pix'?'#dcfce7':pg.metodo==='dinheiro'?'#fef3c7':'#eff6ff' %>;color:<%= pg.metodo==='pix'?'#166534':pg.metodo==='dinheiro'?'#b45309':'#1e40af' %>;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700"><%= pg.metodo==='pix'?'PIX':pg.metodo==='dinheiro'?'Dinheiro':pg.metodo==='cartao'?'Cartão':'—' %></span></td>
                 <td><span class="badge badge-<%= pg.status %>"><%= pg.status %></span></td>
                 <td style="color:var(--texto2)"><%= pg.pago_em?new Date(pg.pago_em).toLocaleDateString('pt-BR'):'—' %></td>
                 <td><% if(pg.status!=='pago'){%><form method="POST" action="/eventos/<%= evento.id %>/pagamentos/<%= pg.id %>/confirmar" style="display:inline"><button class="btn-xs verde">Confirmar</button></form><%}%></td>
@@ -784,7 +784,7 @@
               %>
               <tr>
                 <td style="font-weight:600"><%= p.inscrito_nome %></td>
-                <td><span style="background:<%= p.metodo==='pix'?'#dcfce7':'#eff6ff' %>;color:<%= p.metodo==='pix'?'#166534':'#1e40af' %>;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700"><%= p.metodo==='pix'?'PIX':'Cartão' %></span></td>
+                <td><span style="background:<%= p.metodo==='pix'?'#dcfce7':p.metodo==='dinheiro'?'#fef3c7':'#eff6ff' %>;color:<%= p.metodo==='pix'?'#166534':p.metodo==='dinheiro'?'#b45309':'#1e40af' %>;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700"><%= p.metodo==='pix'?'PIX':p.metodo==='dinheiro'?'Dinheiro':'Cartão' %></span></td>
                 <td style="color:#10b981;font-weight:600">R$ <%= v.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></td>
                 <td style="color:#ef4444;font-size:12px">R$ <%= tx.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></td>
                 <td style="font-weight:700;color:#1a56db">R$ <%= liq.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></td>
