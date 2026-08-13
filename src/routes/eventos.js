@@ -1067,16 +1067,33 @@ router.post('/eventos/:id/avancado', requireAuth, requirePermissao('eventos'), a
 });
 
 router.post('/eventos/:id/programacao', requireAuth, requirePermissao('eventos'), async (req, res) => {
-  const {horario,titulo,descricao,local} = req.body;
-  const ord = await query('SELECT COUNT(*) FROM evento_programacao WHERE evento_id=$1',[req.params.id]);
-  await query('INSERT INTO evento_programacao (evento_id,horario,titulo,descricao,local,ordem) VALUES ($1,$2,$3,$4,$5,$6)',
-    [req.params.id,horario,titulo,descricao||null,local||null,parseInt(ord.rows[0].count)+1]);
-  req.session.msg=['Item adicionado!']; res.redirect('/eventos/'+req.params.id);
+  try {
+    const {upload,uploadArquivo} = require('../services/arquivos');
+    upload.single('foto')(req, res, async (err) => {
+      const {horario_inicio,horario_fim,titulo,descricao,local} = req.body;
+      const horario = horario_inicio + ' - ' + horario_fim;
+      let fotoChave=null;
+      if (req.file) { const r=await uploadArquivo(req.file.buffer,req.file.originalname,req.file.mimetype,'programacao'); fotoChave=r.chave; }
+      const ord = await query('SELECT COUNT(*) FROM evento_programacao WHERE evento_id=$1',[req.params.id]);
+      await query('INSERT INTO evento_programacao (evento_id,horario,titulo,descricao,local,foto_chave,ordem) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [req.params.id,horario,titulo,descricao||null,local||null,fotoChave,parseInt(ord.rows[0].count)+1]);
+      req.session.msg=['Item adicionado!']; res.redirect('/eventos/'+req.params.id);
+    });
+  } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
 });
 
 router.post('/eventos/:id/programacao/:pid/deletar', requireAuth, requirePermissao('eventos'), async (req, res) => {
   await query('DELETE FROM evento_programacao WHERE id=$1',[req.params.pid]);
   req.session.msg=['Item removido!']; res.redirect('/eventos/'+req.params.id);
+});
+
+router.get('/eventos/programacao/:id/foto', async (req, res) => {
+  try {
+    const r = await query('SELECT foto_chave FROM evento_programacao WHERE id=$1',[req.params.id]);
+    if (!r.rows[0]?.foto_chave) return res.status(404).send('');
+    const {getUrlAssinada} = require('../services/desligamento');
+    res.redirect(await getUrlAssinada(r.rows[0].foto_chave));
+  } catch(e) { res.status(500).send(''); }
 });
 
 router.post('/eventos/:id/palestrantes', requireAuth, requirePermissao('eventos'), async (req, res) => {

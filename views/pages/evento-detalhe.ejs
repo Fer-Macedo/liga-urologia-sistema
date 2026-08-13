@@ -860,11 +860,12 @@
             <% if(programacao.length===0){%><p style="color:var(--texto2);font-size:13px">Nenhum item na programação.</p><%}%>
             <% programacao.forEach(p => { %>
             <div class="prog-item">
-              <div style="display:flex;justify-content:space-between;align-items:flex-start">
-                <div>
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+                <% if(p.foto_chave){%><img src="/eventos/programacao/<%= p.id %>/foto" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0"><%}%>
+                <div style="flex:1">
                   <div style="font-weight:700;font-size:14px"><%= p.titulo %></div>
                   <div style="font-size:12px;color:var(--cor-primaria);font-weight:600;margin-top:2px"><%= p.horario %><% if(p.local){%> · <%= p.local %><%}%></div>
-                  <% if(p.descricao){%><div style="font-size:12px;color:var(--texto2);margin-top:3px"><%= p.descricao %></div><%}%>
+                  <% if(p.descricao){ const _descTxt = p.descricao.replace(/<[^>]*>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim(); %><div style="font-size:12px;color:var(--texto2);margin-top:3px"><%= _descTxt.substring(0,120) %><%= _descTxt.length>120?'...':'' %></div><%}%>
                 </div>
                 <form method="POST" action="/eventos/<%= evento.id %>/programacao/<%= p.id %>/deletar" style="display:inline" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;">
                   <button type="submit" class="btn-xs verm">Excluir</button>
@@ -877,14 +878,19 @@
         <div class="section-card">
           <div class="section-header">Adicionar item</div>
           <div class="section-body">
-            <form action="/eventos/<%= evento.id %>/programacao" method="POST">
+            <form action="/eventos/<%= evento.id %>/programacao" method="POST" enctype="multipart/form-data" onsubmit="document.getElementById('prog-desc-hidden').value=_qProgAdd.root.innerHTML;">
               <div class="grid-2">
-                <div class="campo"><label class="label">Horário</label><input name="horario" class="input" placeholder="08:00 - 09:00" required></div>
+                <div class="campo"><label class="label">Início</label><input type="time" name="horario_inicio" class="input" required></div>
+                <div class="campo"><label class="label">Fim</label><input type="time" name="horario_fim" class="input" required></div>
                 <div class="campo"><label class="label">Título</label><input name="titulo" class="input" placeholder="Abertura / Palestra..." required></div>
                 <div class="campo"><label class="label">Local (opcional)</label><input name="local" class="input" placeholder="Sala A / Auditório..."></div>
-                <div class="campo"><label class="label">Descrição (opcional)</label><input name="descricao" class="input"></div>
+                <div class="campo" style="grid-column:1/-1"><label class="label">Descrição (opcional)</label><div id="quill-prog-add" style="background:#fff;min-height:100px"></div><textarea name="descricao" id="prog-desc-hidden" hidden></textarea></div>
+                <div class="campo" style="grid-column:1/-1">
+                  <label class="label">Foto (opcional)</label>
+                  <input type="file" name="foto" class="input" accept="image/*" style="padding:8px">
+                </div>
               </div>
-              <button type="submit" class="btn btn-primario" style="margin-top:8px" onclick="if(window._qBioAdd){document.getElementById(&quot;bio-add-hidden&quot;).value=_qBioAdd.root.innerHTML;}">Adicionar</button>
+              <button type="submit" class="btn btn-primario" style="margin-top:8px">Adicionar</button>
             </form>
           </div>
         </div>
@@ -1375,6 +1381,7 @@ function initQuilMassaEv() {
   });
 }
 var _qBioAdd = document.getElementById('quill-bio-add') ? new Quill('#quill-bio-add', { theme:'snow', placeholder:'Biografia do palestrante...', modules:{ toolbar:[[{'font':[]},{'size':['small',false,'large','huge']}],['bold','italic','underline','strike'],[{'color':[]},{'background':[]}],[{'align':[]}],[{'list':'ordered'},{'list':'bullet'}],['link','image'],['clean']] } }) : null;
+var _qProgAdd = document.getElementById('quill-prog-add') ? new Quill('#quill-prog-add', { theme:'snow', placeholder:'Detalhes da programação...', modules:{ toolbar:[[{'font':[]},{'size':['small',false,'large','huge']}],['bold','italic','underline','strike'],[{'color':[]},{'background':[]}],[{'align':[]}],[{'list':'ordered'},{'list':'bullet'}],['link','image'],['clean']] } }) : null;
 var _qBioEditar = document.getElementById('quill-bio-editar') ? new Quill('#quill-bio-editar', { theme:'snow', modules:{ toolbar:[[{'font':[]},{'size':['small',false,'large','huge']}],['bold','italic','underline','strike'],[{'color':[]},{'background':[]}],[{'align':[]}],[{'list':'ordered'},{'list':'bullet'}],['link','image'],['clean']] } }) : null;
 var _PALES = (function(){ try { var el=document.getElementById('pales-data'); return el?JSON.parse(el.textContent):[]; } catch(e){ return []; } })();
 function editarPalestrante(id){

@@ -700,10 +700,11 @@
           <% programacao.forEach((p,i)=>{ %>
           <div class="prog-item" id="prog-item-<%= i %>" onclick="togProg(<%= i %>)">
             <div class="prog-item-hd">
+              <% if(p.foto_chave){ %><img src="/eventos/programacao/<%= p.id %>/foto" style="width:40px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0" alt=""><% } %>
               <div style="flex:1"><div class="prog-hora"><%= p.horario %><% if(p.local){ %> · <%= p.local %><% } %></div><div class="prog-titulo"><%= p.titulo %></div></div>
               <% if(p.descricao){ %><span class="prog-chevron"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg></span><% } %>
             </div>
-            <% if(p.descricao){ %><div class="prog-desc" id="prog-desc-<%= i %>"><div class="prog-desc-inner"><%= p.descricao %></div></div><% } %>
+            <% if(p.descricao){ %><div class="prog-desc" id="prog-desc-<%= i %>"><div class="prog-desc-inner"><%- p.descricao %></div></div><% } %>
           </div>
           <% }) %>
         </div>

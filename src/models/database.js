@@ -114,6 +114,7 @@ async function initSchema() {
     -- toda universidade que vier a usar o sistema no futuro. Chaves em src/routes/eventos.js
     -- (nome/email nunca entram aqui — o sistema todo depende deles).
     ALTER TABLE eventos ADD COLUMN IF NOT EXISTS campos_padrao_desativados TEXT[] DEFAULT '{}';
+    ALTER TABLE evento_programacao ADD COLUMN IF NOT EXISTS foto_chave TEXT;
     ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS sexo TEXT;
