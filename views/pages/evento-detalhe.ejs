@@ -729,7 +729,7 @@
                 data-status="<%= pg.status %>"
                 data-metodo="<%= pg.metodo||'' %>"
                 data-data="<%= pg.pago_em ? new Date(new Date(pg.pago_em).getTime() - new Date(pg.pago_em).getTimezoneOffset()*60000).toISOString().slice(0,10) : '' %>">
-                <td style="font-weight:600"><%= pg.inscrito_nome %></td>
+                <td style="font-weight:600"><%= formatarNome(pg.inscrito_nome) %></td>
                 <td>R$ <%= Number(pg.valor).toFixed(2) %></td>
                 <td><span style="background:<%= pg.metodo==='pix'?'#dcfce7':pg.metodo==='dinheiro'?'#fef3c7':'#eff6ff' %>;color:<%= pg.metodo==='pix'?'#166534':pg.metodo==='dinheiro'?'#b45309':'#1e40af' %>;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700"><%= pg.metodo==='pix'?'PIX':pg.metodo==='dinheiro'?'Dinheiro':pg.metodo==='cartao'?'Cartão':'—' %></span></td>
                 <td><span class="badge badge-<%= pg.status %>"><%= pg.status %></span></td>
@@ -783,7 +783,7 @@
                 const tx = v - liq;
               %>
               <tr>
-                <td style="font-weight:600"><%= p.inscrito_nome %></td>
+                <td style="font-weight:600"><%= formatarNome(p.inscrito_nome) %></td>
                 <td><span style="background:<%= p.metodo==='pix'?'#dcfce7':p.metodo==='dinheiro'?'#fef3c7':'#eff6ff' %>;color:<%= p.metodo==='pix'?'#166534':p.metodo==='dinheiro'?'#b45309':'#1e40af' %>;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700"><%= p.metodo==='pix'?'PIX':p.metodo==='dinheiro'?'Dinheiro':'Cartão' %></span></td>
                 <td style="color:#10b981;font-weight:600">R$ <%= v.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></td>
                 <td style="color:#ef4444;font-size:12px">R$ <%= tx.toLocaleString('pt-BR',{minimumFractionDigits:2}) %></td>
@@ -1086,7 +1086,7 @@
             <tbody>
               <% certificados.forEach(cert => { %>
               <tr>
-                <td style="font-weight:600"><%= cert.inscrito_nome %></td>
+                <td style="font-weight:600"><%= formatarNome(cert.inscrito_nome) %></td>
                 <td style="color:var(--texto2)"><%= new Date(cert.emitido_em).toLocaleDateString('pt-BR') %></td>
                 <td style="text-align:center"><%- cert.enviado_email ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : '—' %></td>
                 <td style="text-align:center"><%- cert.enviado_wpp ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : '—' %></td>
