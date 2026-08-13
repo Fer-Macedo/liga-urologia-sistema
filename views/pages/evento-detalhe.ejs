@@ -579,7 +579,7 @@
                 <textarea name="mensagem" id="massa-mensagem-hidden" hidden></textarea>
               </div>
             </div>
-            <button type="submit" class="btn btn-primario" onclick="var f=this.form; confirmarAcao('Enviar email para todos os inscritos selecionados?', function(){ f.submit(); }); return false;">Enviar email em massa</button>
+            <button type="submit" class="btn btn-primario" onclick="var f=this.form; confirmarAcao('Enviar email para todos os inscritos selecionados?', function(){ prepararFiltroInscritos(f); f.submit(); }); return false;">Enviar email em massa</button>
           </form>
         </div>
 
@@ -614,6 +614,7 @@
               <button class="btn btn-sm" onclick="limparFiltrosInscritos()" style="white-space:nowrap">Limpar</button>
               <button class="btn btn-sm" onclick="imprimirInscritos()" style="white-space:nowrap;background:var(--cor-primaria);color:#fff;border-color:transparent">Imprimir filtrados</button>
               <button class="btn btn-sm" onclick="exportarExcel()" style="white-space:nowrap;background:#166534;color:#fff;border-color:transparent">⬇ Excel / CSV</button>
+              <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/lembrete-pendentes" style="display:inline" onsubmit="var f=this; confirmarAcao('Enviar lembrete de pagamento para TODOS os inscritos pendentes deste evento?', function(){ prepararFiltroInscritos(f); f.submit(); }); return false;"><button type="submit" class="btn btn-sm" style="white-space:nowrap;background:#d97706;color:#fff;border-color:transparent">📨 Lembrete a todos os pendentes</button></form>
             </div>
           </div>
           <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
@@ -650,10 +651,10 @@
                 <td>
                   <div style="display:flex;gap:4px;flex-wrap:wrap">
                     <button onclick="editarInscrito(<%= i.id %>)" class="btn-xs azul"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar</button>
-                    <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/confirmar" style="display:inline"><button class="btn-xs verde"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirmar</button></form>
+                    <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/confirmar" style="display:inline" onsubmit="prepararFiltroInscritos(this)"><button class="btn-xs verde"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirmar</button></form>
                     <a href="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/certificado" class="btn-xs roxo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>Cert.</a>
                     <a href="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/cracha" target="_blank" class="btn-xs cyan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M15 8h2M15 12h2M7 16h10"/></svg>Cracha</a>
-                    <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/deletar" style="display:inline" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ f.submit(); }); return false;"><button class="btn-xs verm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Excluir</button></form><% if(i.status==='pendente'){ %><form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/lembrete-pendente" style="display:inline" onsubmit="var f=this; confirmarAcao('Enviar lembrete de pagamento pendente para <%= i.nome %>?', function(){ f.submit(); }); return false;"><button class="btn-xs amarelo" title="Enviar lembrete de pagamento pendente (WhatsApp + e-mail)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Lembrete</button></form><% }else{ %><form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/reenviar-email" style="display:inline" onsubmit="var f=this; confirmarAcao('Reenviar e-mail de confirmação para <%= i.email %>?', function(){ f.submit(); }); return false;"><button class="btn-xs amarelo" title="Reenviar e-mail de confirmação"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Email</button></form><% } %>
+                    <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/deletar" style="display:inline" onsubmit="var f=this; confirmarAcao('Excluir?', function(){ prepararFiltroInscritos(f); f.submit(); }); return false;"><button class="btn-xs verm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Excluir</button></form><% if(i.status==='pendente'){ %><form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/lembrete-pendente" style="display:inline" onsubmit="var f=this; confirmarAcao('Enviar lembrete de pagamento pendente para <%= i.nome %>?', function(){ prepararFiltroInscritos(f); f.submit(); }); return false;"><button class="btn-xs amarelo" title="Enviar lembrete de pagamento pendente (WhatsApp + e-mail)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Lembrete</button></form><% }else{ %><form method="POST" action="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/reenviar-email" style="display:inline" onsubmit="var f=this; confirmarAcao('Reenviar e-mail de confirmação para <%= i.email %>?', function(){ prepararFiltroInscritos(f); f.submit(); }); return false;"><button class="btn-xs amarelo" title="Reenviar e-mail de confirmação"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>Email</button></form><% } %>
                   </div>
                 </td>
               </tr>
@@ -1504,11 +1505,17 @@ function showTab(id, btn) {
 
 window.addEventListener('DOMContentLoaded', () => {
   initDrag();
-  const tab = new URLSearchParams(window.location.search).get('tab');
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get('tab');
   if (tab) {
     const btn = document.querySelector(`.tab-btn[onclick*="'${tab}'"]`);
     if (btn) showTab(tab, btn);
   }
+  ['status', 'tipo', 'lote'].forEach(k => {
+    const v = params.get(k);
+    const el = document.getElementById('ins-' + k);
+    if (v && el) el.value = v;
+  });
 });
 
 function buscarInscrito(q) {
@@ -1685,6 +1692,20 @@ function enviarLinksLive() {
 // ===== Filtros + paginação + impressão da aba Inscritos =====
 var _insPagina = 1;
 var _insFiltradas = [];
+// Anexa o filtro atual (status/tipo/lote) na action do form ANTES de enviar — sem isso,
+// qualquer ação da linha (Confirmar, Excluir, Lembrete...) jogava a página de volta pra
+// "Todos" depois do redirect, perdendo o filtro de Pendentes que o admin tinha selecionado
+// pra disparar lembretes um a um (12/08/2026).
+function prepararFiltroInscritos(f) {
+  var status = document.getElementById('ins-status')?.value || '';
+  var tipo = document.getElementById('ins-tipo')?.value || '';
+  var lote = document.getElementById('ins-lote')?.value || '';
+  var url = new URL(f.action, window.location.origin);
+  status ? url.searchParams.set('status', status) : url.searchParams.delete('status');
+  tipo ? url.searchParams.set('tipo', tipo) : url.searchParams.delete('tipo');
+  lote ? url.searchParams.set('lote', lote) : url.searchParams.delete('lote');
+  f.action = url.toString();
+}
 function filtrarInscritos() {
   var busca = (document.getElementById('ins-busca')?.value || '').toLowerCase();
   var status = document.getElementById('ins-status')?.value || '';

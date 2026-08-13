@@ -10,6 +10,17 @@ const { limiterPagamentoCartao } = require('../services/rate-limiters');
 const { calcularLiquidoEvento } = require('../services/fluxo-eventos');
 const { formatarNome } = require('../services/nomes');
 
+// Volta pra aba Inscritos preservando o filtro (status/tipo/lote) que estava selecionado —
+// sem isso, qualquer ação da linha (Confirmar, Excluir, Lembrete, Reenviar e-mail) jogava
+// o admin de volta pra lista "Todos", perdendo o filtro de Pendentes que estava usando
+// pra disparar lembretes um a um (12/08/2026).
+function voltarInscritos(req, eventoId) {
+  const params = new URLSearchParams({ tab: 'inscritos' });
+  const q = req.query || {};
+  ['status', 'tipo', 'lote'].forEach(k => { if (q[k]) params.set(k, q[k]); });
+  return '/eventos/' + eventoId + '?' + params.toString();
+}
+
 // /inscricao e /checkout ficam de fora do rate-limit geral (src/routes/index.js) porque
 // alguém legitimamente pode recarregar/tentar de novo várias vezes numa fila de evento —
 // mas isso não pode significar SEM limite nenhum. Um teto mais folgado que o geral, só
@@ -210,15 +221,20 @@ router.post('/inscricao/:id', limiterInscricaoEvento, async (req, res) => {
     const rgNorm    = (rg || '').replace(/\D/g, '').trim();
 
     const dupEmail = await query(
-      "SELECT id FROM evento_inscricoes WHERE evento_id=$1 AND LOWER(TRIM(email))=$2 AND status != 'cancelado'",
+      "SELECT id, status FROM evento_inscricoes WHERE evento_id=$1 AND LOWER(TRIM(email))=$2 AND status != 'cancelado'",
       [req.params.id, emailNorm]
     );
     const dupRg = rgNorm ? await query(
-      "SELECT id FROM evento_inscricoes WHERE evento_id=$1 AND REGEXP_REPLACE(rg,'[^0-9]','','g')=$2 AND status != 'cancelado'",
+      "SELECT id, status FROM evento_inscricoes WHERE evento_id=$1 AND REGEXP_REPLACE(rg,'[^0-9]','','g')=$2 AND status != 'cancelado'",
       [req.params.id, rgNorm]
     ) : { rows: [] };
 
-    if (dupEmail.rows.length > 0 || dupRg.rows.length > 0) {
+    const duplicatas = [...dupEmail.rows, ...dupRg.rows];
+    // Quem começou a se inscrever mas não concluiu o pagamento fica com status 'pendente' —
+    // barrar de novo com "já existe inscrição" impedia essa pessoa de voltar e concluir.
+    // Só quem já está 'confirmado' é de fato duplicata (12/08/2026).
+    const pendente = duplicatas.find(d => d.status === 'pendente');
+    if (duplicatas.some(d => d.status === 'confirmado')) {
       const motivo = dupEmail.rows.length > 0 ? 'e-mail' : 'RG/CI';
       const config = await getConfig();
       const [camposR, progR, palesR, patrocR, lotesR] = await Promise.all([
@@ -236,6 +252,7 @@ router.post('/inscricao/:id', limiterInscricaoEvento, async (req, res) => {
         erro: `Já existe uma inscrição neste evento com este ${motivo}. Cada participante pode se inscrever apenas uma vez para garantir a unicidade do certificado.`
       });
     }
+    if (pendente) return res.redirect('/pagamento/' + pendente.id);
 
     const qrcode = 'LAURO-' + req.params.id + '-' + Date.now();
     const cupomCodigo = (req.body.cupom_codigo || '').toUpperCase().trim();
@@ -483,7 +500,7 @@ router.post('/eventos/:id/inscricoes/:iid/confirmar', requireAuth, requirePermis
   try {
     const insR = await query('SELECT * FROM evento_inscricoes WHERE id=$1', [iid]);
     const insc = insR.rows[0];
-    if (!insc) { req.session.erro=['Inscrição não encontrada.']; return res.redirect('/eventos/'+req.params.id); }
+    if (!insc) { req.session.erro=['Inscrição não encontrada.']; return res.redirect(voltarInscritos(req, req.params.id)); }
 
     await query("UPDATE evento_inscricoes SET status='confirmado' WHERE id=$1", [iid]);
 
@@ -511,7 +528,7 @@ router.post('/eventos/:id/inscricoes/:iid/confirmar', requireAuth, requirePermis
     console.error('confirmar inscricao manual erro:', e.message);
     req.session.erro=['Erro ao confirmar: '+e.message];
   }
-  res.redirect('/eventos/'+req.params.id);
+  res.redirect(voltarInscritos(req, req.params.id));
 });
 
 router.post('/eventos/:id/inscricoes/:iid/deletar', requireAuth, requirePermissao('eventos'), async (req, res) => {
@@ -522,7 +539,7 @@ router.post('/eventos/:id/inscricoes/:iid/deletar', requireAuth, requirePermissa
     await query('DELETE FROM evento_inscricoes WHERE id=$1',[iid]);
     req.session.msg=['Inscrição excluída com sucesso!'];
   } catch(e) { req.session.erro=['Erro ao excluir: '+e.message]; }
-  res.redirect('/eventos/'+req.params.id+'?tab=inscritos');
+  res.redirect(voltarInscritos(req, req.params.id));
   // Notificar lista de espera em background (sem bloquear resposta)
   setImmediate(async () => {
     try {
@@ -600,7 +617,7 @@ router.post('/eventos/:id/inscricoes/:iid/reenviar-email', requireAuth, requireP
   } catch(e) {
     req.session.erro = ['Erro ao reenviar e-mail: ' + e.message];
   }
-  res.redirect('/eventos/' + req.params.id + '?tab=inscritos');
+  res.redirect(voltarInscritos(req, req.params.id));
 });
 // Dispara na hora o mesmo lembrete (WhatsApp + email) que o cron horário manda sozinho pra
 // inscrições pendentes há 2-48h — pra equipe poder cutucar alguém específico sem esperar.
@@ -613,7 +630,30 @@ router.post('/eventos/:id/inscricoes/:iid/lembrete-pendente', requireAuth, requi
   } catch(e) {
     req.session.erro = ['Erro ao enviar lembrete: ' + e.message];
   }
-  res.redirect('/eventos/' + req.params.id + '?tab=inscritos');
+  res.redirect(voltarInscritos(req, req.params.id));
+});
+
+// Mesmo lembrete de cima, mas pra TODOS os pendentes do evento de uma vez — em segundo
+// plano (mesmo motivo do 504 já corrigido na geração de cupons: esperar dezenas de envios
+// de WhatsApp/e-mail um por um travaria a resposta HTTP).
+router.post('/eventos/:id/inscricoes/lembrete-pendentes', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  const eventoId = req.params.id;
+  const pendentesR = await query("SELECT id FROM evento_inscricoes WHERE evento_id=$1 AND status='pendente'", [eventoId]);
+  const total = pendentesR.rows.length;
+  req.session.msg = [total
+    ? `Enviando lembrete para ${total} pendente(s) em segundo plano — atualize a página em alguns minutos.`
+    : 'Não há inscrições pendentes neste evento.'];
+  res.redirect(voltarInscritos(req, eventoId));
+  if (!total) return;
+  (async () => {
+    const { enviarLembreteInscricaoPendente } = require('../services/agendamentos');
+    let enviados = 0;
+    for (const p of pendentesR.rows) {
+      try { const r = await enviarLembreteInscricaoPendente(p.id); if (r.ok) enviados++; }
+      catch(e) { console.error('[LEMBRETE-TODOS] inscricao ' + p.id + ' erro:', e.message); }
+    }
+    console.log(`[LEMBRETE-TODOS] evento ${eventoId}: ${enviados}/${total} lembretes enviados.`);
+  })().catch(e => console.error('[LEMBRETE-TODOS] erro geral:', e.message));
 });
 
 router.post('/eventos/:id/inscricoes/:iid/checkin', requireAuth, requirePermissao('eventos'), async (req, res) => {
@@ -1278,7 +1318,7 @@ router.post('/eventos/:id/inscricoes/:iid/editar', requireAuth, requirePermissao
     [nome, email, whatsapp||null, cpf||null, instituicao||null, status, rg||null, semestre||null, turma||null, catraca||null, tipo_participante||'externo', lote_id||null, cupom_codigo||null, isento==='true', req.params.iid]
   );
   req.session.msg=['Inscrito atualizado!'];
-  res.redirect('/eventos/'+req.params.id+'?tab=inscritos');
+  res.redirect(voltarInscritos(req, req.params.id));
 });
 
 // ─── EMAIL EM MASSA PARA INSCRITOS ────────────────────────────────────────────
@@ -1399,7 +1439,7 @@ router.post('/eventos/:id/email-massa', requireAuth, requirePermissao('eventos')
   } catch(e) {
     req.session.erro=['Erro: '+e.message];
   }
-  res.redirect('/eventos/'+req.params.id+'?tab=inscritos');
+  res.redirect(voltarInscritos(req, req.params.id));
 });
 
 // ─── SALVAR LGPD NO EVENTO (via avançado) ────────────────────────────────────
