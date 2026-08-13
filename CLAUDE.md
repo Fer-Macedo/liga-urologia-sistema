@@ -14,3 +14,8 @@ Regras permanentes deste projeto. Valem para TODO o projeto e devem ser respeita
 - Não crie arquivos genéricos como `utils.ts`, `helpers.ts` ou `common.ts` para responsabilidades sem relação.
 - Antes de criar um novo módulo, verifique se a responsabilidade pertence a um módulo já existente.
 - Alterações devem respeitar os limites arquiteturais e os padrões de importação do projeto.
+
+## Emojis
+
+- NUNCA usar emoji em nada que este sistema produz: botões, títulos, mensagens de e-mail/WhatsApp, PDFs, páginas públicas ou painel interno.
+- Regra vale para todo código NOVO, em qualquer módulo. Se precisar de um indicador visual, usar ícone SVG (já é o padrão do projeto) ou texto simples.

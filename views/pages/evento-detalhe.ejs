@@ -614,7 +614,7 @@
               <button class="btn btn-sm" onclick="limparFiltrosInscritos()" style="white-space:nowrap">Limpar</button>
               <button class="btn btn-sm" onclick="imprimirInscritos()" style="white-space:nowrap;background:var(--cor-primaria);color:#fff;border-color:transparent">Imprimir filtrados</button>
               <button class="btn btn-sm" onclick="exportarExcel()" style="white-space:nowrap;background:#166534;color:#fff;border-color:transparent">⬇ Excel / CSV</button>
-              <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/lembrete-pendentes" style="display:inline" onsubmit="var f=this; confirmarAcao('Enviar lembrete de pagamento para TODOS os inscritos pendentes deste evento?', function(){ prepararFiltroInscritos(f); f.submit(); }); return false;"><button type="submit" class="btn btn-sm" style="white-space:nowrap;background:#d97706;color:#fff;border-color:transparent">📨 Lembrete a todos os pendentes</button></form>
+              <form method="POST" action="/eventos/<%= evento.id %>/inscricoes/lembrete-pendentes" style="display:inline" onsubmit="var f=this; confirmarAcao('Enviar lembrete de pagamento para TODOS os inscritos pendentes deste evento?', function(){ prepararFiltroInscritos(f); f.submit(); }); return false;"><button type="submit" class="btn btn-sm" style="white-space:nowrap;background:#d97706;color:#fff;border-color:transparent">Lembrete a todos os pendentes</button></form>
             </div>
           </div>
           <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
@@ -864,10 +864,10 @@
                 <% if(p.foto_chave){%><img src="/eventos/programacao/<%= p.id %>/foto" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex-shrink:0"><%}%>
                 <div style="flex:1">
                   <div style="font-weight:700;font-size:14px"><%= p.titulo %></div>
-                  <div style="font-size:12px;color:var(--cor-primaria);font-weight:600;margin-top:2px"><%= p.horario %><% if(p.local){%> · <%= p.local %><%}%></div>
+                  <div style="font-size:12px;color:var(--cor-primaria);font-weight:600;margin-top:2px"><% if(p.data){ %><%= new Date(p.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) %> · <% } %><%= p.horario %><% if(p.local){%> · <%= p.local %><%}%></div>
                   <% if(p.descricao){ const _descTxt = p.descricao.replace(/<[^>]*>/g,' ').replace(/&nbsp;/g,' ').replace(/\s+/g,' ').trim(); %><div style="font-size:12px;color:var(--texto2);margin-top:3px"><%= _descTxt.substring(0,120) %><%= _descTxt.length>120?'...':'' %></div><%}%>
                   <% if(p.palestrante_ids && p.palestrante_ids.length){ const _nomes = p.palestrante_ids.map(pid => { const pp = palestrantes.find(x=>x.id===pid); return pp?pp.nome:null; }).filter(Boolean); %>
-                  <% if(_nomes.length){ %><div style="font-size:11px;color:var(--cor-primaria);font-weight:600;margin-top:3px">🎤 <%= _nomes.join(', ') %></div><%}%>
+                  <% if(_nomes.length){ %><div style="font-size:11px;color:var(--cor-primaria);font-weight:600;margin-top:3px">Com: <%= _nomes.join(', ') %></div><%}%>
                   <%}%>
                 </div>
                 <div style="display:flex;gap:6px;flex-shrink:0">
@@ -881,12 +881,17 @@
             <% }) %>
           </div>
         </div>
-        <script id="prog-data" type="application/json"><%- JSON.stringify(programacao.map(function(p){return {id:p.id,horario:p.horario||'',titulo:p.titulo,local:p.local||'',descricao:p.descricao||'',palestranteIds:p.palestrante_ids||[]};})).replace(/</g,"<") %></script>
+        <script id="prog-data" type="application/json"><%- JSON.stringify(programacao.map(function(p){
+          var dataStr = '';
+          if(p.data){ var d=new Date(p.data); dataStr = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+          return {id:p.id,data:dataStr,horario:p.horario||'',titulo:p.titulo,local:p.local||'',descricao:p.descricao||'',palestranteIds:p.palestrante_ids||[]};
+        })).replace(/</g,"<") %></script>
         <div class="section-card">
           <div class="section-header">Adicionar item</div>
           <div class="section-body">
             <form action="/eventos/<%= evento.id %>/programacao" method="POST" enctype="multipart/form-data" onsubmit="document.getElementById('prog-desc-hidden').value=_qProgAdd.root.innerHTML;">
               <div class="grid-2">
+                <div class="campo"><label class="label">Data</label><input type="date" name="data" class="input" required></div>
                 <div class="campo"><label class="label">Início</label><input type="time" name="horario_inicio" class="input" required></div>
                 <div class="campo"><label class="label">Fim</label><input type="time" name="horario_fim" class="input" required></div>
                 <div class="campo"><label class="label">Título</label><input name="titulo" class="input" placeholder="Abertura / Palestra..." required></div>
@@ -1330,6 +1335,7 @@
     <div class="modal-header"><span class="modal-titulo">Editar item da programação</span><button class="icon-btn" onclick="fecharModal('modal-editar-programacao')">&#10005;</button></div>
     <form id="form-editar-programacao" method="POST" enctype="multipart/form-data" onsubmit="document.getElementById('ep-prog-desc-hidden').value=_qProgEditar.root.innerHTML;">
       <div class="grid-2">
+        <div class="campo"><label class="label">Data</label><input type="date" name="data" id="ep-prog-data" class="input" required></div>
         <div class="campo"><label class="label">Início</label><input type="time" name="horario_inicio" id="ep-prog-inicio" class="input" required></div>
         <div class="campo"><label class="label">Fim</label><input type="time" name="horario_fim" id="ep-prog-fim" class="input" required></div>
         <div class="campo"><label class="label">Título</label><input name="titulo" id="ep-prog-titulo" class="input" required></div>
@@ -1452,6 +1458,7 @@ function editarPalestrante(id){
 function editarProgramacao(id){
   var p = _PROG.find(function(x){return x.id===id;});
   if(!p) return;
+  document.getElementById('ep-prog-data').value = p.data||'';
   var partes = (p.horario||'').split(' - ');
   document.getElementById('ep-prog-inicio').value = partes[0]||'';
   document.getElementById('ep-prog-fim').value = partes[1]||'';

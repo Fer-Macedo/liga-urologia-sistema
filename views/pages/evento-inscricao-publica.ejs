@@ -697,21 +697,27 @@
       <div class="card">
         <div class="card-hd"><div class="card-hd-l"><div class="card-hd-ic"><svg viewBox="0 0 24 24"><path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM5 8V6h14v2H5z"/></svg></div><h2>Programa</h2></div></div>
         <div class="card-bd">
-          <% programacao.forEach((p,i)=>{ %>
+          <% programacao.forEach((p,i)=>{ const _temPales = p.palestrante_ids&&p.palestrante_ids.length; const _temDetalhe = p.descricao || _temPales; %>
           <div class="prog-item" id="prog-item-<%= i %>" onclick="togProg(<%= i %>)">
             <div class="prog-item-hd">
               <% if(p.foto_chave){ %><img src="/eventos/programacao/<%= p.id %>/foto" style="width:40px;height:40px;object-fit:cover;border-radius:6px;flex-shrink:0;margin-right:12px" alt=""><% } %>
-              <div style="flex:1"><div class="prog-hora"><%= p.horario %><% if(p.local){ %> · <%= p.local %><% } %></div><div class="prog-titulo"><%= p.titulo %></div></div>
-              <% if(p.descricao){ %><span class="prog-chevron"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg></span><% } %>
+              <div style="flex:1"><div class="prog-hora"><% if(p.data){ %><%= new Date(p.data).toLocaleDateString('es',{day:'2-digit',month:'2-digit'}) %> · <% } %><%= p.horario %><% if(p.local){ %> · <%= p.local %><% } %></div><div class="prog-titulo"><%= p.titulo %></div></div>
+              <% if(_temDetalhe){ %><span class="prog-chevron"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="6 9 12 15 18 9"/></svg></span><% } %>
             </div>
-            <% if(p.palestrante_ids&&p.palestrante_ids.length){ %>
-            <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:8px">
-              <% p.palestrante_ids.forEach(pid => { const idx = palestrantes.findIndex(pp=>pp.id===pid); if(idx===-1) return; %>
-              <span onclick="event.stopPropagation();togPales(<%= idx %>)" style="font-size:11px;font-weight:700;color:var(--p);cursor:pointer;text-decoration:underline;text-underline-offset:2px">🎤 <%= palestrantes[idx].nome %></span>
-              <% }) %>
+            <% if(_temDetalhe){ %>
+            <div class="prog-desc" id="prog-desc-<%= i %>">
+              <div class="prog-desc-inner">
+                <% if(_temPales){ %>
+                <div style="margin-bottom:10px;display:flex;flex-wrap:wrap;gap:10px">
+                  <% p.palestrante_ids.forEach(pid => { const idx = palestrantes.findIndex(pp=>pp.id===pid); if(idx===-1) return; %>
+                  <span onclick="event.stopPropagation();togPales(<%= idx %>)" style="font-size:12px;font-weight:700;color:var(--p);cursor:pointer;text-decoration:underline;text-underline-offset:2px">Con: <%= palestrantes[idx].nome %></span>
+                  <% }) %>
+                </div>
+                <% } %>
+                <% if(p.descricao){ %><%- p.descricao %><% } %>
+              </div>
             </div>
             <% } %>
-            <% if(p.descricao){ %><div class="prog-desc" id="prog-desc-<%= i %>"><div class="prog-desc-inner"><%- p.descricao %></div></div><% } %>
           </div>
           <% }) %>
         </div>

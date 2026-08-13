@@ -1078,14 +1078,14 @@ router.post('/eventos/:id/programacao', requireAuth, requirePermissao('eventos')
   try {
     const {upload,uploadArquivo} = require('../services/arquivos');
     upload.single('foto')(req, res, async (err) => {
-      const {horario_inicio,horario_fim,titulo,descricao,local} = req.body;
+      const {horario_inicio,horario_fim,titulo,descricao,local,data} = req.body;
       const horario = horario_inicio + ' - ' + horario_fim;
       let fotoChave=null;
       if (req.file) { const r=await uploadArquivo(req.file.buffer,req.file.originalname,req.file.mimetype,'programacao'); fotoChave=r.chave; }
       const palestranteIds = parsePalestranteIds(req.body);
       const ord = await query('SELECT COUNT(*) FROM evento_programacao WHERE evento_id=$1',[req.params.id]);
-      await query('INSERT INTO evento_programacao (evento_id,horario,titulo,descricao,local,foto_chave,palestrante_ids,ordem) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
-        [req.params.id,horario,titulo,descricao||null,local||null,fotoChave,palestranteIds,parseInt(ord.rows[0].count)+1]);
+      await query('INSERT INTO evento_programacao (evento_id,data,horario,titulo,descricao,local,foto_chave,palestrante_ids,ordem) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+        [req.params.id,data||null,horario,titulo,descricao||null,local||null,fotoChave,palestranteIds,parseInt(ord.rows[0].count)+1]);
       req.session.msg=['Item adicionado!']; res.redirect('/eventos/'+req.params.id);
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
@@ -1095,16 +1095,16 @@ router.post('/eventos/:id/programacao/:pid/editar', requireAuth, requirePermissa
   try {
     const {upload,uploadArquivo} = require('../services/arquivos');
     upload.single('foto')(req, res, async (err) => {
-      const {horario_inicio,horario_fim,titulo,descricao,local} = req.body;
+      const {horario_inicio,horario_fim,titulo,descricao,local,data} = req.body;
       const horario = horario_inicio + ' - ' + horario_fim;
       const palestranteIds = parsePalestranteIds(req.body);
       if (req.file) {
         const r=await uploadArquivo(req.file.buffer,req.file.originalname,req.file.mimetype,'programacao');
-        await query('UPDATE evento_programacao SET horario=$1,titulo=$2,descricao=$3,local=$4,foto_chave=$5,palestrante_ids=$6 WHERE id=$7',
-          [horario,titulo,descricao||null,local||null,r.chave,palestranteIds,req.params.pid]);
+        await query('UPDATE evento_programacao SET data=$1,horario=$2,titulo=$3,descricao=$4,local=$5,foto_chave=$6,palestrante_ids=$7 WHERE id=$8',
+          [data||null,horario,titulo,descricao||null,local||null,r.chave,palestranteIds,req.params.pid]);
       } else {
-        await query('UPDATE evento_programacao SET horario=$1,titulo=$2,descricao=$3,local=$4,palestrante_ids=$5 WHERE id=$6',
-          [horario,titulo,descricao||null,local||null,palestranteIds,req.params.pid]);
+        await query('UPDATE evento_programacao SET data=$1,horario=$2,titulo=$3,descricao=$4,local=$5,palestrante_ids=$6 WHERE id=$7',
+          [data||null,horario,titulo,descricao||null,local||null,palestranteIds,req.params.pid]);
       }
       req.session.msg=['Item atualizado!']; res.redirect('/eventos/'+req.params.id);
     });

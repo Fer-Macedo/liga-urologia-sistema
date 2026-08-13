@@ -67,14 +67,15 @@ function resRedirectAsync() {
   return r;
 }
 
-test('POST programação: combina horario_inicio/horario_fim numa string única "HH:MM - HH:MM"', async () => {
+test('POST programação: combina horario_inicio/horario_fim numa string única "HH:MM - HH:MM", e grava a data', async () => {
   const { rotas, inserts } = montar();
-  const req = { params: { id: '5' }, body: { horario_inicio: '08:00', horario_fim: '09:30', titulo: 'Abertura', descricao: '<p><strong>importante</strong></p>', local: 'Auditório' }, session: {} };
+  const req = { params: { id: '5' }, body: { data: '2026-08-17', horario_inicio: '08:00', horario_fim: '09:30', titulo: 'Abertura', descricao: '<p><strong>importante</strong></p>', local: 'Auditório' }, session: {} };
   const res = resRedirectAsync();
   rotas['POST /eventos/:id/programacao'](req, res);
   await res.done;
   assert.strictEqual(inserts.length, 1);
-  const [, horario, titulo, descricao, local, fotoChave] = inserts[0];
+  const [, data, horario, titulo, descricao, local, fotoChave] = inserts[0];
+  assert.strictEqual(data, '2026-08-17', 'sem data não dava pra saber qual dia é cada item, num evento de vários dias');
   assert.strictEqual(horario, '08:00 - 09:30');
   assert.strictEqual(titulo, 'Abertura');
   assert.strictEqual(descricao, '<p><strong>importante</strong></p>', 'descrição rica (HTML do Quill) deve ser salva como veio');
@@ -84,11 +85,11 @@ test('POST programação: combina horario_inicio/horario_fim numa string única 
 
 test('POST programação: com foto enviada, grava foto_chave', async () => {
   const { rotas, inserts } = montar();
-  const req = { params: { id: '5' }, file: { buffer: Buffer.from('x'), originalname: 'a.jpg', mimetype: 'image/jpeg' }, body: { horario_inicio: '10:00', horario_fim: '11:00', titulo: 'Palestra', descricao: '', local: '' }, session: {} };
+  const req = { params: { id: '5' }, file: { buffer: Buffer.from('x'), originalname: 'a.jpg', mimetype: 'image/jpeg' }, body: { data: '2026-08-17', horario_inicio: '10:00', horario_fim: '11:00', titulo: 'Palestra', descricao: '', local: '' }, session: {} };
   const res = resRedirectAsync();
   rotas['POST /eventos/:id/programacao'](req, res);
   await res.done;
-  const [, , , , , fotoChave] = inserts[0];
+  const [, , , , , , fotoChave] = inserts[0];
   assert.strictEqual(fotoChave, 'programacao/foto-teste.jpg');
 });
 
@@ -120,7 +121,7 @@ test('POST programação: seleção de palestrantes (checkboxes) vira array de I
   const res = resRedirectAsync();
   rotas['POST /eventos/:id/programacao'](req, res);
   await res.done;
-  const [, , , , , , palestranteIds] = inserts[0];
+  const [, , , , , , , palestranteIds] = inserts[0];
   assert.deepStrictEqual(palestranteIds, [3, 7]);
 });
 
@@ -130,7 +131,7 @@ test('POST programação: um único palestrante marcado (Express manda string, n
   const res = resRedirectAsync();
   rotas['POST /eventos/:id/programacao'](req, res);
   await res.done;
-  const [, , , , , , palestranteIds] = inserts[0];
+  const [, , , , , , , palestranteIds] = inserts[0];
   assert.deepStrictEqual(palestranteIds, [4]);
 });
 
@@ -140,7 +141,7 @@ test('POST programação: nenhum palestrante marcado vira array vazio', async ()
   const res = resRedirectAsync();
   rotas['POST /eventos/:id/programacao'](req, res);
   await res.done;
-  const [, , , , , , palestranteIds] = inserts[0];
+  const [, , , , , , , palestranteIds] = inserts[0];
   assert.deepStrictEqual(palestranteIds, []);
 });
 
@@ -155,7 +156,16 @@ test('página pública: clicar no palestrante de um item de programação abre a
     patrocinadores: [], pixData: null, cupomUrl: null, erro: null, encerrado: false
   }, { filename: ARQUIVO });
   // Dr. Beltrano é o SEGUNDO da lista (índice 1) — o link deve chamar togPales(1), não togPales(0)
-  assert.match(html, /togPales\(1\)[^>]*>🎤 Dr\. Beltrano/);
+  assert.match(html, /togPales\(1\)[^>]*>Con: Dr\. Beltrano/);
+  assert.ok(!html.includes('🎤'), 'sem emoji em lugar nenhum do sistema (regra do projeto)');
+  // o nome só pode aparecer DENTRO do painel colapsável (prog-desc), nunca exposto no cabeçalho
+  // sempre visível (prog-item-hd) — só deve aparecer quando a pessoa abre o item
+  const iHd = html.indexOf('prog-item-hd');
+  const iHdFim = html.indexOf('</div>', html.indexOf('prog-titulo', iHd));
+  const cabecalho = html.slice(iHd, iHdFim);
+  assert.ok(!cabecalho.includes('Beltrano'), 'nome do palestrante não pode estar exposto no cabeçalho sempre visível');
+  const iDesc = html.indexOf('prog-desc-inner');
+  assert.ok(html.slice(iDesc).includes('Beltrano'), 'nome do palestrante deve estar dentro do painel que só abre ao clicar');
 });
 
 test('admin: formulário "Adicionar item" lista um checkbox por palestrante já cadastrado', () => {
@@ -186,7 +196,8 @@ test('admin: item de programação já vinculado mostra o nome do palestrante na
   }, { filename: ARQUIVO });
   const iTab = html.indexOf('id="tab-programacao"');
   const trecho = html.slice(iTab, html.indexOf('Adicionar item'));
-  assert.match(trecho, /🎤 Dr\. Beltrano/);
+  assert.match(trecho, /Com: Dr\. Beltrano/);
+  assert.ok(!trecho.includes('🎤'), 'sem emoji em lugar nenhum do sistema (regra do projeto)');
   assert.ok(!trecho.includes('Dra. Fulana'), 'só o palestrante vinculado a ESTE item deve aparecer');
 });
 
@@ -205,31 +216,32 @@ test('página pública: programação sem palestrante vinculado não quebra (arr
 // 13/08/2026: só dava pra Excluir um item de programação já salvo, sem jeito de corrigir
 // horário/título/descrição/palestrantes depois. Adiciona edição de verdade, no mesmo padrão
 // já usado pra editar palestrante (modal + rota POST /editar).
-test('POST programação/:pid/editar: atualiza horário, título, descrição e palestrantes', async () => {
+test('POST programação/:pid/editar: atualiza data, horário, título, descrição e palestrantes', async () => {
   const { rotas, updates } = montar();
-  const req = { params: { id: '5', pid: '9' }, body: { horario_inicio: '14:00', horario_fim: '15:30', titulo: 'Novo título', descricao: '<em>editado</em>', local: 'Sala B', palestrante_ids: ['3', '7'] }, session: {} };
+  const req = { params: { id: '5', pid: '9' }, body: { data: '2026-08-18', horario_inicio: '14:00', horario_fim: '15:30', titulo: 'Novo título', descricao: '<em>editado</em>', local: 'Sala B', palestrante_ids: ['3', '7'] }, session: {} };
   const res = resRedirectAsync();
   rotas['POST /eventos/:id/programacao/:pid/editar'](req, res);
   await res.done;
   assert.strictEqual(updates.length, 1);
   const upd = updates[0];
-  assert.match(upd.sql, /UPDATE evento_programacao SET horario=\$1,titulo=\$2,descricao=\$3,local=\$4,palestrante_ids=\$5/);
-  assert.strictEqual(upd.params[0], '14:00 - 15:30');
-  assert.strictEqual(upd.params[1], 'Novo título');
-  assert.strictEqual(upd.params[2], '<em>editado</em>');
-  assert.strictEqual(upd.params[3], 'Sala B');
-  assert.deepStrictEqual(upd.params[4], [3, 7]);
-  assert.strictEqual(upd.params[5], '9');
+  assert.match(upd.sql, /UPDATE evento_programacao SET data=\$1,horario=\$2,titulo=\$3,descricao=\$4,local=\$5,palestrante_ids=\$6/);
+  assert.strictEqual(upd.params[0], '2026-08-18');
+  assert.strictEqual(upd.params[1], '14:00 - 15:30');
+  assert.strictEqual(upd.params[2], 'Novo título');
+  assert.strictEqual(upd.params[3], '<em>editado</em>');
+  assert.strictEqual(upd.params[4], 'Sala B');
+  assert.deepStrictEqual(upd.params[5], [3, 7]);
+  assert.strictEqual(upd.params[6], '9');
 });
 
 test('POST programação/:pid/editar: com nova foto, também atualiza foto_chave', async () => {
   const { rotas, updates } = montar();
-  const req = { params: { id: '5', pid: '9' }, file: { buffer: Buffer.from('x'), originalname: 'b.jpg', mimetype: 'image/jpeg' }, body: { horario_inicio: '08:00', horario_fim: '09:00', titulo: 'T', descricao: '', local: '' }, session: {} };
+  const req = { params: { id: '5', pid: '9' }, file: { buffer: Buffer.from('x'), originalname: 'b.jpg', mimetype: 'image/jpeg' }, body: { data: '2026-08-18', horario_inicio: '08:00', horario_fim: '09:00', titulo: 'T', descricao: '', local: '' }, session: {} };
   const res = resRedirectAsync();
   rotas['POST /eventos/:id/programacao/:pid/editar'](req, res);
   await res.done;
-  assert.match(updates[0].sql, /foto_chave=\$5/);
-  assert.strictEqual(updates[0].params[4], 'programacao/foto-teste.jpg');
+  assert.match(updates[0].sql, /foto_chave=\$6/);
+  assert.strictEqual(updates[0].params[5], 'programacao/foto-teste.jpg');
 });
 
 test('admin: cada item de programação tem um botão Editar, e prog-data traz os dados pro JS pré-preencher o modal', () => {
@@ -240,13 +252,20 @@ test('admin: cada item de programação tem um botão Editar, e prog-data traz o
     evento, lotes: [], inscricoes: [], pagamentos: [], certificados: [],
     stats: { total: 0, confirmados: 0, checkins: 0, receita: 0 },
     campos: [],
-    programacao: [{ id: 9, horario: '14:00 - 15:30', titulo: 'Mesa redonda', local: 'Sala B', descricao: '<em>editado</em>', foto_chave: null, palestrante_ids: [55] }],
+    // data como Date local (new Date(ano,mes-1,dia)) — é assim que o driver pg entrega uma
+    // coluna DATE de volta; usar string ISO aqui mascararia o bug de fuso (parse de string
+    // "YYYY-MM-DD" é UTC, parse de Date já construído é local) que motivou essa regra.
+    programacao: [{ id: 9, data: new Date(2026, 7, 18), horario: '14:00 - 15:30', titulo: 'Mesa redonda', local: 'Sala B', descricao: '<em>editado</em>', foto_chave: null, palestrante_ids: [55] }],
     palestrantes: [{ id: 55, nome: 'Dr. Beltrano' }],
     patrocinadores: [], cupons: [], calcularLiquidoEvento: () => 0, formatarNome: (n) => n
   }, { filename: ARQUIVO });
   assert.match(html, /onclick="editarProgramacao\(9\)"/);
+  // a data formatada (18\/08) precisa aparecer na lista — sem isso, 2 itens no mesmo horário
+  // em dias diferentes de um evento de vários dias ficam indistinguíveis
+  const iTab = html.indexOf('id="tab-programacao"');
+  assert.match(html.slice(iTab, html.indexOf('Adicionar item')), /18\/08 · 14:00 - 15:30/);
   const iData = html.indexOf('id="prog-data"');
   const trecho = html.slice(iData, html.indexOf('</script>', iData));
   const dados = JSON.parse(trecho.slice(trecho.indexOf('>') + 1));
-  assert.deepStrictEqual(dados, [{ id: 9, horario: '14:00 - 15:30', titulo: 'Mesa redonda', local: 'Sala B', descricao: '<em>editado</em>', palestranteIds: [55] }]);
+  assert.deepStrictEqual(dados, [{ id: 9, data: '2026-08-18', horario: '14:00 - 15:30', titulo: 'Mesa redonda', local: 'Sala B', descricao: '<em>editado</em>', palestranteIds: [55] }]);
 });
