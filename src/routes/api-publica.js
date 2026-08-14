@@ -14,7 +14,7 @@ module.exports = function (router) {
 router.get('/api/eventos-publicos', corsPublico, limiterApiPublica, async (req, res) => {
   try {
     const { gerarUrlInline } = require('../services/arquivos');
-    const r = await query(`SELECT id, nome, descricao, data_inicio, data_fim, local, endereco, banner_chave, vagas_total, tipo_evento, carga_horaria, youtube_url, inscricao_gratuita_auto, checkout_fecha_em FROM eventos WHERE status='publicado' AND publico=true AND (checkout_fecha_em IS NULL OR checkout_fecha_em > NOW()) ORDER BY data_inicio ASC LIMIT 20`);
+    const r = await query(`SELECT id, nome, descricao, data_inicio, data_fim, local, endereco, banner_chave, vagas_total, tipo_evento, carga_horaria, youtube_url, inscricao_gratuita_auto, checkout_fecha_em FROM eventos WHERE status='ativo' AND publico=true AND (checkout_fecha_em IS NULL OR checkout_fecha_em > NOW()) ORDER BY data_inicio ASC LIMIT 20`);
     const eventos = await Promise.all(r.rows.map(async ev => {
       let banner_url = null;
       if (ev.banner_chave) { try { banner_url = await gerarUrlInline(ev.banner_chave); } catch(e) {} }
@@ -66,7 +66,7 @@ router.get('/api/stats-publicas', corsPublico, limiterApiPublica, async (req, re
   try {
     const [ligsR, evsR] = await Promise.all([
       query("SELECT COUNT(*) as total FROM ligantes WHERE ativo=1 AND pendente=false"),
-      query("SELECT COUNT(*) as total FROM eventos WHERE status='publicado'")
+      query("SELECT COUNT(*) as total FROM eventos WHERE status IN ('ativo','encerrado')")
     ]);
     res.json({ ligantes: parseInt(ligsR.rows[0].total)||0, eventos: parseInt(evsR.rows[0].total)||0 });
   } catch(e) { res.json({ ligantes: 48, eventos: 14 }); }
