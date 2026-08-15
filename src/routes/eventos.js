@@ -35,6 +35,33 @@ function semEmoji(str) {
   return String(str || '').replace(/[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2B00}-\u{2BFF}\u{FE0F}]/gu, '').replace(/[ \t]{2,}/g, ' ').trim();
 }
 
+// Filtra uma lista de inscritos pra só quem é ligante/diretivo cadastrado — usado no teste
+// restrito de transmissão online (mandar link só pro pessoal da Liga antes de abrir pro público
+// geral). Casa por CPF normalizado (só dígitos) ou e-mail (trim+lowercase), igual à checagem de
+// duplicata em ligantes.js — mesmo CPF pode estar formatado diferente em cada tabela.
+async function filtrarPorTipoMembro(query, inscritos, filtro) {
+  if (filtro === 'todos' || !filtro) return inscritos;
+  const normCpf = c => (c || '').replace(/\D/g, '');
+  const normEmail = e => (e || '').trim().toLowerCase();
+  const [ligR, dirR] = await Promise.all([
+    query('SELECT cpf, email FROM ligantes'),
+    query('SELECT cpf, email FROM diretivos')
+  ]);
+  const cpfsLig = new Set(ligR.rows.map(r => normCpf(r.cpf)).filter(Boolean));
+  const emailsLig = new Set(ligR.rows.map(r => normEmail(r.email)).filter(Boolean));
+  const cpfsDir = new Set(dirR.rows.map(r => normCpf(r.cpf)).filter(Boolean));
+  const emailsDir = new Set(dirR.rows.map(r => normEmail(r.email)).filter(Boolean));
+  return inscritos.filter(insc => {
+    const cpfN = normCpf(insc.cpf), emailN = normEmail(insc.email);
+    const eLigante = (cpfN && cpfsLig.has(cpfN)) || (emailN && emailsLig.has(emailN));
+    const eDiretivo = (cpfN && cpfsDir.has(cpfN)) || (emailN && emailsDir.has(emailN));
+    if (filtro === 'ligantes') return eLigante;
+    if (filtro === 'diretivos') return eDiretivo;
+    if (filtro === 'membros') return eLigante || eDiretivo;
+    return true;
+  });
+}
+
 // /inscricao e /checkout ficam de fora do rate-limit geral (src/routes/index.js) porque
 // alguém legitimamente pode recarregar/tentar de novo várias vezes numa fila de evento —
 // mas isso não pode significar SEM limite nenhum. Um teto mais folgado que o geral, só
@@ -916,6 +943,18 @@ router.get('/eventos/:id/inscricoes/:iid/certificado', requireAuth, requirePermi
   try {
     const [inscR, evR, config] = await Promise.all([query('SELECT * FROM evento_inscricoes WHERE id=$1',[req.params.iid]), query('SELECT * FROM eventos WHERE id=$1',[req.params.id]), getConfig()]);
     const insc=inscR.rows[0]; const ev=evR.rows[0];
+    // O botão "Emitir" só aparecia pra quem bateu o mínimo de frequência, mas essa rota em si
+    // nunca conferia nada — dava pra emitir certificado de qualquer inscrito digitando a URL
+    // direto. Só bloqueia quando o evento REALMENTE tem dado de frequência configurado (dia
+    // fechado com duração, ou evento.duracao_minutos) — eventos sem controle de presença
+    // continuam liberados como sempre foram, pra não quebrar certificado de evento presencial
+    // simples que nunca usou essa checagem.
+    const { buscarDadosPresenca, calcularPercentual, LIMIAR_FREQUENCIA } = require('../services/eventos-presenca');
+    const dadosPresenca = await buscarDadosPresenca(query, req.params.id);
+    const presencaCalc = calcularPercentual(req.params.iid, dadosPresenca);
+    if (presencaCalc.temDadosSuficientes && !presencaCalc.apto) {
+      return res.status(403).send('Este inscrito está com ' + presencaCalc.pctGeral + '% de frequência — abaixo do mínimo de ' + LIMIAR_FREQUENCIA + '% exigido para emissão do certificado.');
+    }
     const {imagemBase64} = require('../services/desligamento');
     config.timbrado_b64 = await imagemBase64(config.timbrado_chave);
     config.assinatura_presidente_b64 = await imagemBase64(config.assinatura_presidente_chave);
@@ -991,9 +1030,21 @@ router.get('/eventos/:id/cert-bg', async (req, res) => {
   } catch(e) { res.status(500).send('Erro'); }
 });
 router.post('/eventos/:id/certificados/emitir-todos', requireAuth, requirePermissao('eventos'), async (req, res) => {
-  const inscritos = await query("SELECT id FROM evento_inscricoes WHERE evento_id=$1 AND checkin_em IS NOT NULL",[req.params.id]);
-  for (const i of inscritos.rows) { await query('INSERT INTO evento_certificados (inscricao_id) VALUES ($1) ON CONFLICT DO NOTHING',[i.id]); }
-  req.session.msg=['Certificados emitidos para '+inscritos.rows.length+' participantes!']; res.redirect('/eventos/'+req.params.id);
+  // Antes só olhava checkin_em (presencial) — quem só assistiu online nunca entrava aqui, mesmo
+  // batendo 75%. Agora usa a mesma regra de frequência da tela "Ver presenças" pros dois casos;
+  // evento sem NENHUM controle de presença configurado continua liberado pra todo confirmado,
+  // como sempre foi.
+  const { buscarDadosPresenca, calcularPercentual } = require('../services/eventos-presenca');
+  const dadosPresenca = await buscarDadosPresenca(query, req.params.id);
+  const inscritos = await query("SELECT id FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado'",[req.params.id]);
+  let emitidos = 0;
+  for (const i of inscritos.rows) {
+    const calc = calcularPercentual(i.id, dadosPresenca);
+    if (calc.temDadosSuficientes && !calc.apto) continue;
+    await query('INSERT INTO evento_certificados (inscricao_id) VALUES ($1) ON CONFLICT DO NOTHING',[i.id]);
+    emitidos++;
+  }
+  req.session.msg=['Certificados emitidos para '+emitidos+' participantes!']; res.redirect('/eventos/'+req.params.id);
 });
 
 router.post('/eventos/:id/campos', requireAuth, requirePermissao('eventos'), async (req, res) => {
@@ -1115,6 +1166,17 @@ router.post('/eventos/:id/programacao/:pid/editar', requireAuth, requirePermissa
       req.session.msg=['Item atualizado!']; res.redirect('/eventos/'+req.params.id);
     });
   } catch(e) { req.session.erro=[e.message]; res.redirect('/eventos/'+req.params.id); }
+});
+
+// Formulário rápido da aba Online/Live pra configurar a transmissão de UM dia (URL + duração),
+// sem passar pelo modal completo de edição de programação. Duração normalmente só é preenchida
+// DEPOIS que a aula termina — não dá pra saber o tempo real antes.
+router.post('/eventos/:id/programacao/:pid/transmissao', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  const { youtube_url, duracao_minutos } = req.body;
+  await query('UPDATE evento_programacao SET youtube_url=$1, duracao_minutos=$2 WHERE id=$3 AND evento_id=$4',
+    [youtube_url||null, duracao_minutos?parseInt(duracao_minutos):null, req.params.pid, req.params.id]);
+  req.session.msg = ['Transmissão do dia atualizada!'];
+  res.redirect('/eventos/'+req.params.id+'?tab=online');
 });
 
 router.post('/eventos/:id/programacao/:pid/deletar', requireAuth, requirePermissao('eventos'), async (req, res) => {
@@ -1504,25 +1566,91 @@ router.post('/eventos/:id/email-massa', requireAuth, requirePermissao('eventos')
 
 
 // ─── LIVE / PRESENÇAS ONLINE / CERTIFICADO / AVALIAÇÃO / LISTA DE ESPERA ────
+// Resolve qual dia de programação corresponde a "hoje" pra um evento — usado tanto na
+// GET (decidir o vídeo a mostrar) quanto no ping (decidir onde acumular o tempo). Evento de um
+// dia só (sem nenhum item de Programação com data) devolve null nos dois — cai no modo legado.
+async function resolverDiaTransmissao(eventoId) {
+  const hojeR = await query(
+    "SELECT id, titulo, horario, youtube_url, duracao_minutos FROM evento_programacao WHERE evento_id=$1 AND data=CURRENT_DATE ORDER BY ordem LIMIT 1",
+    [eventoId]
+  );
+  if (hojeR.rows[0]) return { dia: hojeR.rows[0], hoje: true };
+  const proxR = await query(
+    "SELECT id, titulo, horario, youtube_url, duracao_minutos, data FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL ORDER BY ABS(data - CURRENT_DATE) ASC, data ASC LIMIT 1",
+    [eventoId]
+  );
+  if (proxR.rows[0]) return { dia: proxR.rows[0], hoje: false };
+  return { dia: null, hoje: false };
+}
+
 router.get('/live/:token', async (req, res) => {
   try {
     const r = await query('SELECT epo.*, i.nome, i.email, e.nome as evento_nome, e.youtube_url, e.duracao_minutos FROM evento_presencas_online epo JOIN evento_inscricoes i ON i.id=epo.inscricao_id JOIN eventos e ON e.id=epo.evento_id WHERE epo.token=$1',[req.params.token]);
     if (!r.rows[0]) return res.status(404).send('Link invalido ou expirado.');
     const p = r.rows[0];
-    if (!p.primeiro_acesso) { await query("UPDATE evento_presencas_online SET primeiro_acesso=NOW(),ativo=true WHERE token=$1",[req.params.token]); }
-    else { await query("UPDATE evento_presencas_online SET ativo=true,ultimo_ping=NOW() WHERE token=$1",[req.params.token]); }
+    const sessao = require('crypto').randomBytes(12).toString('hex');
+    if (!p.primeiro_acesso) { await query("UPDATE evento_presencas_online SET primeiro_acesso=NOW(),ativo=true,sessao_atual=$2 WHERE token=$1",[req.params.token,sessao]); }
+    else { await query("UPDATE evento_presencas_online SET ativo=true,ultimo_ping=NOW(),sessao_atual=$2 WHERE token=$1",[req.params.token,sessao]); }
+
+    const { dia, hoje } = await resolverDiaTransmissao(p.evento_id);
+    let segundosIniciais = 0;
+    if (dia) {
+      const segR = await query('SELECT tempo_total_segundos FROM evento_presencas_online_dias WHERE presenca_id=$1 AND programacao_id=$2',[p.id, dia.id]);
+      segundosIniciais = segR.rows[0]?.tempo_total_segundos || 0;
+    } else {
+      segundosIniciais = p.tempo_total_segundos || 0; // modo legado (evento de 1 dia, sem Programação por data)
+    }
+    const youtubeUrl = dia?.youtube_url || p.youtube_url; // item do dia tem prioridade, cai pro do evento se vazio
+    const tituloDia = dia?.titulo || p.evento_nome;
+
     const config = await getConfig();
     const patrocR = await query('SELECT * FROM evento_patrocinadores WHERE evento_id=$1 ORDER BY id', [p.evento_id]);
-    res.render('pages/evento-live', { token: req.params.token, presenca: p, config, patrocinadores: patrocR.rows });
+    res.render('pages/evento-live', {
+      token: req.params.token, presenca: { ...p, youtube_url: youtubeUrl }, config, patrocinadores: patrocR.rows,
+      sessao, segundosIniciais, tituloDia, transmiteHoje: dia ? hoje : true, temDiaProgramado: !!dia
+    });
   } catch(e) { console.error('GET /live:', e.message); res.status(500).send('Erro ao carregar transmissão.'); }
 });
 router.post('/live/:token/ping', async (req, res) => {
   try {
-    const rp = await query("UPDATE evento_presencas_online SET ultimo_ping=NOW(),ativo=true,tempo_total_segundos=tempo_total_segundos+120 WHERE token=$1 RETURNING tempo_total_segundos,ultimo_ping",[req.params.token]);
-    const total = rp.rows[0]?.tempo_total_segundos || 0;
-    const ult = rp.rows[0]?.ultimo_ping;
-    res.json({ok:true, total, ultimoPing: ult});
-  } catch(e) { res.json({ok:false}); }
+    const presR = await query('SELECT id, evento_id, sessao_atual, tempo_total_segundos FROM evento_presencas_online WHERE token=$1',[req.params.token]);
+    const presenca = presR.rows[0];
+    if (!presenca) return res.json({ ok:false, motivo:'token_invalido' });
+    if (req.body.sessao && presenca.sessao_atual && req.body.sessao !== presenca.sessao_atual) {
+      // Outra aba com o mesmo link ficou ativa depois desta — essa aqui para de contar (evita
+      // dobrar o tempo quando a mesma pessoa abre o link em 2 abas/dispositivos ao mesmo tempo).
+      return res.json({ ok:false, motivo:'sessao_substituida' });
+    }
+    await query('UPDATE evento_presencas_online SET ativo=true WHERE id=$1',[presenca.id]);
+
+    const { dia } = await resolverDiaTransmissao(presenca.evento_id);
+    // Só acumula em dias sem Programação alguma cadastrada (modo legado) OU no dia de HOJE —
+    // um link aberto fora da janela do evento (ex: testando antes de começar) só faz preview,
+    // não conta tempo, senão o teste contaminaria a frequência real.
+    if (!dia) {
+      const rp = await query(
+        `UPDATE evento_presencas_online SET
+           tempo_total_segundos = tempo_total_segundos + CASE WHEN ultimo_ping IS NULL OR ultimo_ping < NOW() - INTERVAL '90 seconds' THEN 120 ELSE 0 END,
+           ultimo_ping = CASE WHEN ultimo_ping IS NULL OR ultimo_ping < NOW() - INTERVAL '90 seconds' THEN NOW() ELSE ultimo_ping END
+         WHERE id=$1 RETURNING tempo_total_segundos, ultimo_ping`,
+        [presenca.id]
+      );
+      return res.json({ ok:true, total: rp.rows[0]?.tempo_total_segundos||0, ultimoPing: rp.rows[0]?.ultimo_ping });
+    }
+    const hojeR = await query("SELECT 1 FROM evento_programacao WHERE id=$1 AND data=CURRENT_DATE",[dia.id]);
+    if (!hojeR.rows.length) return res.json({ ok:true, total: 0, preview:true });
+
+    const rd = await query(
+      `INSERT INTO evento_presencas_online_dias (presenca_id, programacao_id, tempo_total_segundos, ultimo_ping)
+       VALUES ($1,$2,120,NOW())
+       ON CONFLICT (presenca_id, programacao_id) DO UPDATE SET
+         tempo_total_segundos = evento_presencas_online_dias.tempo_total_segundos + CASE WHEN evento_presencas_online_dias.ultimo_ping IS NULL OR evento_presencas_online_dias.ultimo_ping < NOW() - INTERVAL '90 seconds' THEN 120 ELSE 0 END,
+         ultimo_ping = CASE WHEN evento_presencas_online_dias.ultimo_ping IS NULL OR evento_presencas_online_dias.ultimo_ping < NOW() - INTERVAL '90 seconds' THEN NOW() ELSE evento_presencas_online_dias.ultimo_ping END
+       RETURNING tempo_total_segundos, ultimo_ping`,
+      [presenca.id, dia.id]
+    );
+    res.json({ ok:true, total: rd.rows[0]?.tempo_total_segundos||0, ultimoPing: rd.rows[0]?.ultimo_ping });
+  } catch(e) { console.error('POST /live/ping:', e.message); res.json({ok:false, motivo:'erro'}); }
 });
 router.post('/live/:token/sair', async (req, res) => {
   try {
@@ -1540,55 +1668,58 @@ router.post('/eventos/:id/enviar-link-live', requireAuth, requirePermissao('even
     const ev = evR.rows[0];
     if (!ev) return res.json({ok:false,msg:'Evento nao encontrado'});
     const inscrR = await query("SELECT * FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado'",[req.params.id]);
-    let enviados = 0;
-    for (const insc of inscrR.rows) {
+    const filtro = req.body.filtro || 'todos'; // 'todos' | 'ligantes' | 'diretivos' | 'membros'
+    const inscritos = await filtrarPorTipoMembro(query, inscrR.rows, filtro);
+    let enviadosWpp = 0, enviadosEmail = 0;
+    for (const insc of inscritos) {
       let token = crypto.randomBytes(24).toString('hex');
       const existe = await query('SELECT token FROM evento_presencas_online WHERE inscricao_id=$1 AND evento_id=$2',[insc.id,ev.id]);
       if (existe.rows.length > 0) { token = existe.rows[0].token; }
       else { await query('INSERT INTO evento_presencas_online (inscricao_id,evento_id,token) VALUES ($1,$2,$3)',[insc.id,ev.id,token]); }
       const link = appUrl+'/live/'+token;
+      // whatsapp-only:inicio — texto enviado via enviarWhatsApp abaixo; o e-mail (mesmo envio)
+      // usa seu próprio HTML, não reaproveita essa string, então não precisa de semEmoji aqui.
       const msg = (config.org_nome||'LAURO')+'\n\nOla, '+insc.nome.split(' ')[0]+'!\n\nSeu link de acesso ao evento '+ev.nome+':\n\n'+link+'\n\nAcesse para assistir e registrar sua presenca automaticamente.';
-      if (insc.whatsapp) { try { await enviarWhatsApp(insc.whatsapp,msg); enviados++; } catch(e){} }
+      // whatsapp-only:fim
+      if (insc.whatsapp) { try { await enviarWhatsApp(insc.whatsapp,msg); enviadosWpp++; } catch(e){} }
       if (insc.email) {
         const html = '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:20px"><h2>'+ev.nome+'</h2><p>Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p><p>Clique para assistir e ter sua presenca registrada:</p><div style="text-align:center;margin:24px 0"><a href="'+link+'" style="background:#1a56db;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700">Assistir ao evento</a></div><p style="font-size:12px;color:#6b7280">Link exclusivo — nao compartilhe.</p></div>';
-        try { await enviarEmail({para:insc.email,assunto:'Seu link de acesso — '+ev.nome,html,texto:msg}); } catch(e){}
+        try { await enviarEmail({para:insc.email,assunto:'Seu link de acesso — '+ev.nome,html,texto:semEmoji(msg)}); enviadosEmail++; } catch(e){}
       }
     }
-    res.json({ok:true,msg:enviados+' links enviados!'});
+    const filtroLabel = filtro==='ligantes'?' (só Ligantes)':filtro==='diretivos'?' (só Diretivos)':filtro==='membros'?' (só Ligantes/Diretivos)':'';
+    res.json({ok:true,msg:`${enviadosWpp} WhatsApp e ${enviadosEmail} e-mails enviados de ${inscritos.length} pessoas${filtroLabel}.`});
   } catch(e) { res.json({ok:false,msg:e.message}); }
 });
 router.get('/eventos/:id/presencas', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
+    const { buscarDadosPresenca, calcularPercentual, LIMIAR_FREQUENCIA } = require('../services/eventos-presenca');
     const config = await getConfig();
     const evR = await query('SELECT * FROM eventos WHERE id=$1',[req.params.id]);
     const ev = evR.rows[0];
     if (!ev) return res.redirect('/eventos');
-    const inscrR = await query(
-      `SELECT i.*,
-        COALESCE((SELECT SUM(EXTRACT(EPOCH FROM (COALESCE(saida_em,NOW())-entrada_em))) FROM evento_presencas_tempo WHERE inscricao_id=i.id),0) as segundos_presencial,
-        COALESCE((SELECT tempo_total_segundos FROM evento_presencas_online WHERE inscricao_id=i.id AND evento_id=$1),0) as segundos_online
-       FROM evento_inscricoes i WHERE i.evento_id=$1 AND i.status='confirmado' ORDER BY i.nome`,
-      [ev.id]
-    );
-    const duracaoSeg = (ev.duracao_minutos||0)*60;
-    res.render('pages/evento-presencas',{config,evento:ev,inscricoes:inscrR.rows,duracaoSeg,usuario:req.session.usuario,msg:req.flash('msg')});
+    const inscrR = await query("SELECT * FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado' ORDER BY nome",[ev.id]);
+    const dadosPresenca = await buscarDadosPresenca(query, ev.id);
+    const inscricoes = inscrR.rows.map(i => ({ ...i, presenca: calcularPercentual(i.id, dadosPresenca) }));
+    res.render('pages/evento-presencas',{
+      config, evento: ev, inscricoes, diasFechados: dadosPresenca.diasFechados, LIMIAR_FREQUENCIA,
+      usuario: req.session.usuario, msg: req.flash('msg')
+    });
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 router.get('/eventos/:id/presencas-pdf', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
+    const { buscarDadosPresenca, calcularPercentual, LIMIAR_FREQUENCIA } = require('../services/eventos-presenca');
     const config = await getConfig();
     const evR = await query('SELECT * FROM eventos WHERE id=$1',[req.params.id]);
     const ev = evR.rows[0];
     if (!ev) return res.status(404).send('Evento nao encontrado');
-    const inscrR = await query(
-      `SELECT i.*,
-        COALESCE((SELECT SUM(EXTRACT(EPOCH FROM (COALESCE(saida_em,NOW())-entrada_em))) FROM evento_presencas_tempo WHERE inscricao_id=i.id),0) as segundos_presencial,
-        COALESCE((SELECT tempo_total_segundos FROM evento_presencas_online WHERE inscricao_id=i.id AND evento_id=$1),0) as segundos_online
-       FROM evento_inscricoes i WHERE i.evento_id=$1 AND i.status='confirmado' ORDER BY i.nome`,
-      [ev.id]
-    );
-    const inscricoes = inscrR.rows;
-    const duracaoSeg = (ev.duracao_minutos||0)*60;
+    const inscrR = await query("SELECT * FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado' ORDER BY nome",[ev.id]);
+    const dadosPresenca = await buscarDadosPresenca(query, ev.id);
+    const inscricoes = inscrR.rows.map(i => ({ ...i, presenca: calcularPercentual(i.id, dadosPresenca) }));
+    const duracaoSeg = dadosPresenca.diasFechados.length
+      ? dadosPresenca.diasFechados.reduce((s,d)=>s+d.duracao_minutos*60,0)
+      : (dadosPresenca.duracaoEventoMinutos||0)*60;
     const orgNome = config.org_nome||'LAURO';
     const orgLogo = config.org_logo||null;
     const tipoEv = ev.tipo_evento||'presencial';
@@ -1596,19 +1727,19 @@ router.get('/eventos/:id/presencas-pdf', requireAuth, requirePermissao('eventos'
     const fmtDur = (seg)=>{ const m=Math.floor(seg/60); const h=Math.floor(m/60); const mm=m%60; return h>0?(h+'h '+mm+'min'):(mm+'min'); };
     let aptos=0, risco=0, naoApt=0;
     const linhas = inscricoes.map((i,idx)=>{
-      const segP=Number(i.segundos_presencial||0), segO=Number(i.segundos_online||0);
+      const segP=i.presenca.segundosPresencial, segO=i.presenca.segundosOnlineTotal;
       const seg=Math.max(segP,segO);
       const tipo = segP>segO ? 'presencial' : segO>segP ? 'online' : (tipoEv==='hibrido'?'':tipoEv);
       const tipoLabel = tipo==='presencial'?'Presencial':tipo==='online'?'Online':'—';
-      const pct = duracaoSeg>0 ? Math.min(100, Math.round(seg/duracaoSeg*100)) : 0;
+      const pct = i.presenca.pctGeral ?? 0;
       let stTxt, stBg, stCo;
-      if (pct>=75){ stTxt='Apto'; stBg='#EDF6F1'; stCo='#23704F'; aptos++; }
+      if (pct>=LIMIAR_FREQUENCIA){ stTxt='Apto'; stBg='#EDF6F1'; stCo='#23704F'; aptos++; }
       else if (pct>=50){ stTxt='Em risco'; stBg='#FBF3E0'; stCo='#C98A1E'; risco++; }
       else { stTxt='Não apto'; stBg='#FBE9E7'; stCo='#C0392B'; naoApt++; }
-      const corPct = pct>=75?'#23704F':pct>=50?'#C98A1E':'#C0392B';
-      return `<tr style="background:${idx%2===0?'#F6F8F5':'#ffffff'}"><td style="padding:7px 10px;font-size:10.5px;color:#74837C">${idx+1}</td><td style="padding:7px 10px;font-size:11px;font-weight:600;color:#10201A">${i.nome}<div style="font-size:9px;color:#74837C;font-weight:400">${i.email||''}</div></td><td style="padding:7px 10px;text-align:center"><span style="font-family:'IBM Plex Mono';font-size:9px;color:#3A4A43;border:1px solid #CDD4CE;padding:2px 7px">${tipoLabel}</span></td><td style="padding:7px 10px;font-size:10.5px;text-align:center;color:#3A4A43">${seg>0?fmtDur(seg):'—'}</td><td style="padding:7px 10px;text-align:center;font-family:'Archivo';font-weight:700;font-size:11px;color:${corPct}">${pct}%</td><td style="padding:7px 10px;text-align:center"><span style="background:${stBg};color:${stCo};padding:2px 8px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${stTxt}</span></td></tr>`;
+      const corPct = pct>=LIMIAR_FREQUENCIA?'#23704F':pct>=50?'#C98A1E':'#C0392B';
+      return `<tr style="background:${idx%2===0?'#F6F8F5':'#ffffff'}"><td style="padding:7px 10px;font-size:10.5px;color:#74837C">${idx+1}</td><td style="padding:7px 10px;font-size:11px;font-weight:600;color:#10201A">${i.nome}<div style="font-size:9px;color:#74837C;font-weight:400">${i.email||''}</div></td><td style="padding:7px 10px;text-align:center"><span style="font-family:'IBM Plex Mono';font-size:9px;color:#3A4A43;border:1px solid #CDD4CE;padding:2px 7px">${tipoLabel}</span></td><td style="padding:7px 10px;font-size:10.5px;text-align:center;color:#3A4A43">${seg>0?fmtDur(seg):'—'}</td><td style="padding:7px 10px;text-align:center;font-family:'Archivo';font-weight:700;font-size:11px;color:${corPct}">${i.presenca.pctGeral===null?'—':pct+'%'}</td><td style="padding:7px 10px;text-align:center"><span style="background:${stBg};color:${stCo};padding:2px 8px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px">${stTxt}</span></td></tr>`;
     }).join('');
-    const minPct = 75;
+    const minPct = LIMIAR_FREQUENCIA;
     const minSeg = Math.round(duracaoSeg*minPct/100);
     const estilos=`*{margin:0;padding:0;box-sizing:border-box}@page{size:A4;margin:0}body{font-family:'IBM Plex Sans',Arial,sans-serif;color:#10201A;-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{.np{display:none}}.wrap{max-width:820px;margin:0 auto}.header{background:linear-gradient(135deg,#103024,#0C231B);padding:26px 34px;color:#fff;display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{display:flex;align-items:center;gap:14px}.logo-chip{width:54px;height:54px;background:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}.logo-chip img{width:54px;height:54px;object-fit:cover;border-radius:50%}.org{font-family:'Archivo';font-weight:800;font-size:15px;letter-spacing:.3px;line-height:1.15}.org small{display:block;font-family:'IBM Plex Mono';font-size:8.5px;letter-spacing:2px;color:#37C98B;text-transform:uppercase;margin-top:4px;font-weight:500}.ev{text-align:right}.ev .nm{font-family:'Archivo';font-size:18px;font-weight:800;line-height:1.15}.ev .dt{font-size:11.5px;color:#A9C2B6;margin-top:5px;text-transform:capitalize}.ev .lc{font-size:10.5px;color:#7E988B;margin-top:1px}.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:18px 34px;background:#F2F4F0;border-bottom:1px solid #E2E6E1}.stat{background:#fff;border:1px solid #E2E6E1;padding:13px 14px;position:relative;overflow:hidden}.stat::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--bar,#2FA873)}.stat .n{font-family:'Archivo';font-size:21px;font-weight:800;letter-spacing:-.5px;color:var(--c,#15402F)}.stat .l{font-family:'IBM Plex Mono';font-size:8.5px;color:#74837C;font-weight:500;text-transform:uppercase;letter-spacing:1px;margin-top:4px}.section{padding:20px 34px}.sec-title{font-family:'Archivo';font-size:13px;font-weight:800;letter-spacing:.2px;text-transform:uppercase;margin-bottom:12px;padding-bottom:7px;border-bottom:2px solid #2FA873;color:#10201A}.dur{display:flex;gap:40px;border:1px solid #E2E6E1;padding:16px 20px}.dur .l{font-family:'IBM Plex Mono';font-size:9px;color:#74837C;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}.dur .v{font-family:'Archivo';font-size:16px;font-weight:800;color:#15402F}table{width:100%;border-collapse:collapse;border:1px solid #E2E6E1}thead{display:table-header-group}thead th{background:#15402F;color:#fff;padding:9px 10px;font-family:'IBM Plex Mono';font-size:9px;text-align:left;text-transform:uppercase;letter-spacing:1px;font-weight:600}tbody td{border-bottom:1px solid #EDEFEC}tbody tr{page-break-inside:avoid}.foot{padding:16px 34px;border-top:1px solid #E2E6E1;font-family:'IBM Plex Mono';font-size:9px;color:#74837C;text-transform:uppercase;letter-spacing:1px;display:flex;justify-content:space-between;gap:12px}.btn-p{position:fixed;bottom:22px;right:22px;padding:12px 22px;background:#2FA873;color:#0C231B;border:none;cursor:pointer;font-family:'IBM Plex Sans';font-size:13px;font-weight:700;box-shadow:0 8px 24px -8px rgba(47,168,115,.8)}@media print{@page{margin:14mm 0 12mm}@page :first{margin:0 0 12mm}}`;
     const html=`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet"><style>${estilos}</style></head><body>
@@ -1621,6 +1752,9 @@ router.get('/eventos/:id/presencas-pdf', requireAuth, requirePermissao('eventos'
     <div class="stat" style="--bar:#C0392B;--c:#C0392B"><div class="n">${naoApt}</div><div class="l">Não aptos (&lt;50%)</div></div>
   </div>
   <div class="section"><div class="dur"><div><div class="l">Duração total do evento</div><div class="v">${duracaoSeg>0?fmtDur(duracaoSeg):'Não definida'}</div></div><div><div class="l">Mínimo para certificado</div><div class="v" style="color:#23704F">${minPct}% — ${duracaoSeg>0?fmtDur(minSeg):'—'}</div></div></div></div>
+  ${dadosPresenca.diasFechados.length ? `<div class="section"><div class="sec-title">Duração por dia (${dadosPresenca.diasFechados.length})</div>
+    <table><thead><tr><th>Dia</th><th style="text-align:center;width:100px">Data</th><th style="text-align:center;width:100px">Duração</th></tr></thead><tbody>${dadosPresenca.diasFechados.map((d,idx)=>`<tr style="background:${idx%2===0?'#F6F8F5':'#ffffff'}"><td style="padding:7px 10px;font-size:11px;font-weight:600;color:#10201A">${d.titulo||('Dia '+(idx+1))}</td><td style="padding:7px 10px;font-size:10.5px;text-align:center;color:#3A4A43">${d.data?new Date(d.data).toLocaleDateString('pt-BR'):'—'}</td><td style="padding:7px 10px;font-size:10.5px;text-align:center;color:#3A4A43">${fmtDur(d.duracao_minutos*60)}</td></tr>`).join('')}</tbody></table>
+  </div>` : ''}
   <div class="section"><div class="sec-title">Lista de presenças (${inscricoes.length})</div>
     <table><thead><tr><th style="width:34px">#</th><th>Participante</th><th style="text-align:center;width:78px">Tipo</th><th style="text-align:center;width:90px">Tempo assistido</th><th style="text-align:center;width:64px">% Presença</th><th style="text-align:center;width:80px">Status</th></tr></thead><tbody>${linhas}</tbody></table>
   </div>

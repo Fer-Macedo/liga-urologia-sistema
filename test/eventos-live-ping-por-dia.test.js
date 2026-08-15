@@ -1,0 +1,169 @@
+// 15/08/2026: transmissão online de evento de vários dias (ex: jornada de 4 dias) precisa
+// contar o tempo assistido SEPARADO POR DIA (cada dia com seu próprio vídeo/duração, só
+// preenchida depois que a aula termina). Também corrige 2 falhas reais de fraude/duplicação:
+// - ping sem limite: um script batendo em /ping repetidamente inflava o tempo sem a pessoa
+//   sequer abrir a página — agora só conta 1x a cada 90s de verdade.
+// - duas abas com o mesmo link contavam tempo em dobro — agora só a aba mais recente conta
+//   (sessao_atual), a mais antiga para de acumular quando outra assume.
+const { test } = require('node:test');
+const assert = require('node:assert');
+const path = require('path');
+
+const RAIZ = path.join(__dirname, '..');
+const MODULO = path.join(RAIZ, 'src/routes/eventos.js');
+
+function montar({ presenca, hojeProgramacao, proximaProgramacao, diaSegundos, mock } = {}) {
+  const chamadasSQL = [];
+  const rq = require.resolve(path.join(RAIZ, 'src/models/database.js'));
+  require.cache[rq] = { id: rq, filename: rq, loaded: true, exports: {
+    query: async (sql, params) => {
+      chamadasSQL.push({ sql, params });
+      if (mock) { const r = mock(sql, params); if (r !== undefined) return r; }
+      if (/SELECT epo\.\*, i\.nome, i\.email, e\.nome as evento_nome/.test(sql)) return { rows: presenca ? [presenca] : [] };
+      if (/UPDATE evento_presencas_online SET primeiro_acesso/.test(sql)) return { rows: [] };
+      if (/UPDATE evento_presencas_online SET ativo=true,ultimo_ping=NOW\(\),sessao_atual/.test(sql)) return { rows: [] };
+      if (/SELECT id, evento_id, sessao_atual, tempo_total_segundos FROM evento_presencas_online WHERE token/.test(sql)) return { rows: presenca ? [presenca] : [] };
+      if (/UPDATE evento_presencas_online SET ativo=true WHERE id/.test(sql)) return { rows: [] };
+      if (/WHERE evento_id=\$1 AND data=CURRENT_DATE/.test(sql)) return { rows: hojeProgramacao ? [hojeProgramacao] : [] };
+      if (/WHERE evento_id=\$1 AND data IS NOT NULL ORDER BY ABS/.test(sql)) return { rows: proximaProgramacao ? [proximaProgramacao] : [] };
+      if (/SELECT 1 FROM evento_programacao WHERE id=\$1 AND data=CURRENT_DATE/.test(sql)) return { rows: (hojeProgramacao && hojeProgramacao.id === params[0]) ? [{}] : [] };
+      if (/SELECT tempo_total_segundos FROM evento_presencas_online_dias WHERE presenca_id=\$1 AND programacao_id=\$2/.test(sql)) return { rows: diaSegundos !== undefined ? [{ tempo_total_segundos: diaSegundos }] : [] };
+      if (/INSERT INTO evento_presencas_online_dias/.test(sql)) return { rows: [{ tempo_total_segundos: (diaSegundos||0)+120, ultimo_ping: new Date() }] };
+      if (/UPDATE evento_presencas_online SET\s+tempo_total_segundos = tempo_total_segundos \+ CASE/.test(sql)) return { rows: [{ tempo_total_segundos: (presenca?.tempo_total_segundos||0)+120, ultimo_ping: new Date() }] };
+      if (/UPDATE evento_presencas_online SET ativo=false/.test(sql)) return { rows: [] };
+      if (/SELECT \* FROM evento_patrocinadores/.test(sql)) return { rows: [] };
+      return { rows: [] };
+    }
+  }};
+  const rau = require.resolve(path.join(RAIZ, 'src/middleware/auth.js'));
+  require.cache[rau] = { id: rau, filename: rau, loaded: true, exports: { requireAuth: (q,s,n)=>n(), requireAdmin: (q,s,n)=>n(), requirePermissao: () => (q,s,n)=>n() } };
+  const rcfg = require.resolve(path.join(RAIZ, 'src/services/config.js'));
+  require.cache[rcfg] = { id: rcfg, filename: rcfg, loaded: true, exports: { getConfig: async () => ({}) } };
+  const re = require.resolve(path.join(RAIZ, 'src/services/email.js'));
+  require.cache[re] = { id: re, filename: re, loaded: true, exports: { enviarEmail: async () => {}, emailBonito: () => '' } };
+  const rpg = require.resolve(path.join(RAIZ, 'src/services/pagbank.js'));
+  require.cache[rpg] = { id: rpg, filename: rpg, loaded: true, exports: { criarPixEvento: async () => ({}), consultarPagamento: async () => ({}), obterChavePublica: async () => ({}), pagarComCartao: async () => ({}) } };
+  const rev = require.resolve(path.join(RAIZ, 'src/services/eventos-email.js'));
+  require.cache[rev] = { id: rev, filename: rev, loaded: true, exports: { enviarEmailConfirmacaoEvento: async () => {}, TEXTO_CONFIRMACAO_PADRAO: 'x' } };
+  const rrl = require.resolve(path.join(RAIZ, 'src/services/rate-limiters.js'));
+  require.cache[rrl] = { id: rrl, filename: rrl, loaded: true, exports: { limiterPagamentoCartao: (q,s,n)=>n() } };
+  const rfx = require.resolve(path.join(RAIZ, 'src/services/fluxo-eventos.js'));
+  require.cache[rfx] = { id: rfx, filename: rfx, loaded: true, exports: { calcularLiquidoEvento: (v) => v } };
+
+  const rotas = {};
+  const router = { get: (rota, ...fns) => { rotas['GET '+rota] = fns[fns.length-1]; }, post: (rota, ...fns) => { rotas['POST '+rota] = fns[fns.length-1]; } };
+  delete require.cache[require.resolve(MODULO)];
+  require(MODULO)(router);
+  return { rotas, chamadasSQL };
+}
+
+function resJson() { const r = {}; r.json = (b) => { r._body = b; return r; }; return r; }
+function resRender() { const r = {}; r.render = (view, locals) => { r._view = view; r._locals = locals; return r; }; r.status = (c) => ({ send: (b) => { r._status = c; r._body = b; } }); return r; }
+
+test('GET /live/:token: dia de hoje encontrado — usa vídeo do dia e semente com segundos JÁ acumulados hoje', async () => {
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc', nome: 'João', email: 'j@x.com', evento_nome: 'Jornada', youtube_url: 'https://youtube.com/watch?v=eventoFallback1', tempo_total_segundos: 0, primeiro_acesso: null },
+    hojeProgramacao: { id: 10, titulo: 'Día 2', horario: '19:00', youtube_url: 'https://youtube.com/watch?v=dia2video12', duracao_minutos: null },
+    diaSegundos: 3600
+  });
+  const res = resRender();
+  await rotas['GET /live/:token']({ params: { token: 'abc' } }, res);
+  assert.strictEqual(res._locals.transmiteHoje, true);
+  assert.strictEqual(res._locals.segundosIniciais, 3600, 'deve usar os segundos do DIA, não os do evento inteiro');
+  assert.strictEqual(res._locals.presenca.youtube_url, 'https://youtube.com/watch?v=dia2video12', 'vídeo do dia tem prioridade sobre o do evento');
+  assert.strictEqual(res._locals.tituloDia, 'Día 2');
+});
+
+test('GET /live/:token: sem sessão de hoje, cai pro dia mais próximo em modo PREVIEW (não conta tempo real)', async () => {
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc', nome: 'João', email: 'j@x.com', evento_nome: 'Jornada', youtube_url: null, tempo_total_segundos: 0, primeiro_acesso: null },
+    hojeProgramacao: null,
+    proximaProgramacao: { id: 11, titulo: 'Día 1', youtube_url: 'https://youtube.com/watch?v=dia1preview1', duracao_minutos: null, data: '2026-08-17' }
+  });
+  const res = resRender();
+  await rotas['GET /live/:token']({ params: { token: 'abc' } }, res);
+  assert.strictEqual(res._locals.transmiteHoje, false, 'fora do dia real, é só pré-visualização');
+  assert.strictEqual(res._locals.presenca.youtube_url, 'https://youtube.com/watch?v=dia1preview1');
+});
+
+test('GET /live/:token: evento sem NENHUM item de Programação com data — modo legado (vídeo/duração do evento)', async () => {
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc', nome: 'João', email: 'j@x.com', evento_nome: 'Palestra única', youtube_url: 'https://youtube.com/watch?v=legado12345', tempo_total_segundos: 900, primeiro_acesso: new Date() },
+    hojeProgramacao: null,
+    proximaProgramacao: null
+  });
+  const res = resRender();
+  await rotas['GET /live/:token']({ params: { token: 'abc' } }, res);
+  assert.strictEqual(res._locals.temDiaProgramado, false);
+  assert.strictEqual(res._locals.segundosIniciais, 900, 'sem Programação nenhuma, usa o total acumulado do evento (legado)');
+  assert.strictEqual(res._locals.presenca.youtube_url, 'https://youtube.com/watch?v=legado12345');
+});
+
+test('GET /live/:token: token inválido dá 404', async () => {
+  const { rotas } = montar({ presenca: null });
+  const res = resRender();
+  await rotas['GET /live/:token']({ params: { token: 'naoexiste' } }, res);
+  assert.strictEqual(res._status, 404);
+});
+
+test('POST /live/:token/ping: acumula no dia certo quando é hoje de verdade', async () => {
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc', sessao_atual: 'sess1', tempo_total_segundos: 0 },
+    hojeProgramacao: { id: 10, titulo: 'Día 2', duracao_minutos: null }
+  });
+  const res = resJson();
+  await rotas['POST /live/:token/ping']({ params: { token: 'abc' }, body: { sessao: 'sess1' } }, res);
+  assert.strictEqual(res._body.ok, true);
+  assert.strictEqual(res._body.total, 120);
+});
+
+test('POST /live/:token/ping: sessão diferente da atual (outra aba assumiu) é recusado', async () => {
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc', sessao_atual: 'sess-nova', tempo_total_segundos: 0 },
+    hojeProgramacao: { id: 10, titulo: 'Día 2', duracao_minutos: null }
+  });
+  const res = resJson();
+  await rotas['POST /live/:token/ping']({ params: { token: 'abc' }, body: { sessao: 'sess-velha' } }, res);
+  assert.strictEqual(res._body.ok, false);
+  assert.strictEqual(res._body.motivo, 'sessao_substituida');
+});
+
+test('POST /live/:token/ping: fora do dia real (preview) NÃO acumula tempo', async () => {
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc', sessao_atual: 'sess1', tempo_total_segundos: 0 },
+    hojeProgramacao: null,
+    proximaProgramacao: { id: 11, titulo: 'Día 1', duracao_minutos: null, data: '2026-08-17' }
+  });
+  const res = resJson();
+  await rotas['POST /live/:token/ping']({ params: { token: 'abc' }, body: { sessao: 'sess1' } }, res);
+  assert.strictEqual(res._body.ok, true);
+  assert.strictEqual(res._body.total, 0, 'preview não conta — dia resolvido existe mas não é hoje');
+  assert.strictEqual(res._body.preview, true);
+});
+
+test('POST /live/:token/ping: sem NENHUM item de Programação, acumula no total legado do evento', async () => {
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc', sessao_atual: 'sess1', tempo_total_segundos: 300 },
+    hojeProgramacao: null,
+    proximaProgramacao: null
+  });
+  const res = resJson();
+  await rotas['POST /live/:token/ping']({ params: { token: 'abc' }, body: { sessao: 'sess1' } }, res);
+  assert.strictEqual(res._body.ok, true);
+  assert.strictEqual(res._body.total, 420, '300 + 120 do ping, no acumulador antigo (evento de 1 dia só)');
+});
+
+test('POST /live/:token/ping: token inexistente não quebra', async () => {
+  const { rotas } = montar({ presenca: null });
+  const res = resJson();
+  await rotas['POST /live/:token/ping']({ params: { token: 'xxx' }, body: {} }, res);
+  assert.strictEqual(res._body.ok, false);
+  assert.strictEqual(res._body.motivo, 'token_invalido');
+});
+
+test('POST /live/:token/sair: marca ativo=false sem quebrar', async () => {
+  const { rotas } = montar({ presenca: { id: 1, evento_id: 5, token: 'abc' } });
+  const res = resJson();
+  await rotas['POST /live/:token/sair']({ params: { token: 'abc' } }, res);
+  assert.strictEqual(res._body.ok, true);
+});

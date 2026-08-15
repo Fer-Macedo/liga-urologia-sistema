@@ -123,11 +123,134 @@ async function initSchema() {
     -- toda universidade que vier a usar o sistema no futuro. Chaves em src/routes/eventos.js
     -- (nome/email nunca entram aqui — o sistema todo depende deles).
     ALTER TABLE eventos ADD COLUMN IF NOT EXISTS campos_padrao_desativados TEXT[] DEFAULT '{}';
+    -- 15/08/2026: eventos, evento_programacao, evento_inscricoes, evento_certificados,
+    -- evento_presencas_online e evento_presencas_tempo só existiam no banco de produção, nunca
+    -- tiveram CREATE TABLE no código (um ambiente novo quebraria no primeiro uso). IF NOT EXISTS
+    -- é inofensivo no banco de hoje — só fecha essa lacuna pra qualquer ambiente futuro.
+    CREATE TABLE IF NOT EXISTS eventos (
+      id SERIAL PRIMARY KEY,
+      nome VARCHAR(200) NOT NULL,
+      descricao TEXT,
+      data_inicio TIMESTAMP,
+      data_fim TIMESTAMP,
+      local VARCHAR(200),
+      endereco TEXT,
+      banner_chave TEXT,
+      vagas_total INTEGER DEFAULT 0,
+      status VARCHAR(20) DEFAULT 'rascunho',
+      publico BOOLEAN DEFAULT false,
+      criado_por INTEGER,
+      criado_em TIMESTAMP DEFAULT NOW(),
+      cor_tema VARCHAR(20) DEFAULT '#1a3d2b',
+      tipo_evento VARCHAR(20) DEFAULT 'presencial',
+      email_inscricao TEXT,
+      email_confirmacao TEXT,
+      termos_texto TEXT,
+      wpp_grupo TEXT,
+      inscricao_unica BOOLEAN DEFAULT false,
+      inscricao_gratuita_auto BOOLEAN DEFAULT true,
+      notif_email VARCHAR(200),
+      mostra_programacao BOOLEAN DEFAULT true,
+      mostra_palestrantes BOOLEAN DEFAULT true,
+      lgpd_texto TEXT,
+      carga_horaria INTEGER DEFAULT 0,
+      tipo_publico VARCHAR(20) DEFAULT 'misto',
+      youtube_url TEXT,
+      duracao_minutos INTEGER,
+      cert_bg_chave TEXT,
+      checkout_aberto BOOLEAN DEFAULT false,
+      checkout_fecha_em TIMESTAMP
+    );
+    CREATE TABLE IF NOT EXISTS evento_programacao (
+      id SERIAL PRIMARY KEY,
+      evento_id INTEGER REFERENCES eventos(id) ON DELETE CASCADE,
+      horario VARCHAR(20),
+      titulo VARCHAR(200),
+      descricao TEXT,
+      local VARCHAR(200),
+      ordem INTEGER DEFAULT 1
+    );
+    CREATE TABLE IF NOT EXISTS evento_inscricoes (
+      id SERIAL PRIMARY KEY,
+      evento_id INTEGER REFERENCES eventos(id),
+      lote_id INTEGER,
+      nome VARCHAR(200),
+      email VARCHAR(200),
+      whatsapp VARCHAR(30),
+      cpf VARCHAR(20),
+      instituicao VARCHAR(200),
+      dados_extras JSONB,
+      status VARCHAR(20) DEFAULT 'pendente',
+      qrcode TEXT,
+      checkin_em TIMESTAMP,
+      criado_em TIMESTAMP DEFAULT NOW(),
+      rg TEXT,
+      tipo_participante TEXT DEFAULT 'externo',
+      catraca TEXT,
+      semestre TEXT,
+      turma TEXT,
+      cupom_codigo VARCHAR(50),
+      isento BOOLEAN DEFAULT false
+    );
+    CREATE TABLE IF NOT EXISTS evento_certificados (
+      id SERIAL PRIMARY KEY,
+      inscricao_id INTEGER REFERENCES evento_inscricoes(id),
+      chave TEXT,
+      emitido_em TIMESTAMP DEFAULT NOW(),
+      codigo_validacao VARCHAR(64) UNIQUE,
+      enviado_email BOOLEAN DEFAULT false,
+      enviado_wpp BOOLEAN DEFAULT false
+    );
+    CREATE TABLE IF NOT EXISTS evento_presencas_online (
+      id SERIAL PRIMARY KEY,
+      inscricao_id INTEGER NOT NULL,
+      evento_id INTEGER NOT NULL,
+      token VARCHAR(64) NOT NULL UNIQUE,
+      primeiro_acesso TIMESTAMP,
+      ultimo_ping TIMESTAMP,
+      tempo_total_segundos INTEGER DEFAULT 0,
+      ativo BOOLEAN DEFAULT false,
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_epo_inscricao ON evento_presencas_online (inscricao_id);
+    CREATE INDEX IF NOT EXISTS idx_epo_token ON evento_presencas_online (token);
+    CREATE TABLE IF NOT EXISTS evento_presencas_tempo (
+      id SERIAL PRIMARY KEY,
+      inscricao_id INTEGER NOT NULL,
+      evento_id INTEGER NOT NULL,
+      entrada_em TIMESTAMP NOT NULL DEFAULT NOW(),
+      saida_em TIMESTAMP,
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
+    CREATE INDEX IF NOT EXISTS idx_ept_evento ON evento_presencas_tempo (evento_id);
+    CREATE INDEX IF NOT EXISTS idx_ept_inscricao ON evento_presencas_tempo (inscricao_id);
     ALTER TABLE evento_programacao ADD COLUMN IF NOT EXISTS foto_chave TEXT;
     ALTER TABLE evento_programacao ADD COLUMN IF NOT EXISTS palestrante_ids INTEGER[] DEFAULT '{}';
     -- eventos de vários dias (ex: jornada de 3 dias) tinham 2+ itens de programação com o
     -- MESMO horário (só a hora, sem data) e não dava pra saber qual item era de qual dia.
     ALTER TABLE evento_programacao ADD COLUMN IF NOT EXISTS data DATE;
+    -- Transmissão de evento com vários dias: cada dia tem seu próprio vídeo/duração, preenchida
+    -- SÓ DEPOIS que a aula termina (a duração real só se sabe no final, não dá pra prever antes).
+    -- evento.youtube_url/duracao_minutos (campo único, sem dia) continua existindo como fallback
+    -- pra eventos de um dia só que não usam a Programação por data.
+    ALTER TABLE evento_programacao ADD COLUMN IF NOT EXISTS youtube_url TEXT;
+    ALTER TABLE evento_programacao ADD COLUMN IF NOT EXISTS duracao_minutos INTEGER;
+    -- Presença online quebrada por dia (programacao_id), pra somar por dia E pelo total do
+    -- evento (ex: jornada de 4 dias — precisa saber se bateu 75% em CADA dia consultado E
+    -- também 75% da carga horária total somada).
+    CREATE TABLE IF NOT EXISTS evento_presencas_online_dias (
+      id SERIAL PRIMARY KEY,
+      presenca_id INTEGER NOT NULL REFERENCES evento_presencas_online(id) ON DELETE CASCADE,
+      programacao_id INTEGER NOT NULL REFERENCES evento_programacao(id) ON DELETE CASCADE,
+      tempo_total_segundos INTEGER NOT NULL DEFAULT 0,
+      ultimo_ping TIMESTAMP,
+      criado_em TIMESTAMP DEFAULT NOW(),
+      UNIQUE(presenca_id, programacao_id)
+    );
+    -- Identifica a aba/sessão de navegador mais recente pra cada pessoa: um ping só conta se
+    -- a sessão bater com a mais recente, senão a mesma pessoa com 2 abertas contava tempo em
+    -- dobro (cada aba mandando seu próprio ping independente).
+    ALTER TABLE evento_presencas_online ADD COLUMN IF NOT EXISTS sessao_atual TEXT;
     ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS sexo TEXT;

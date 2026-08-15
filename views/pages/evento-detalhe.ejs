@@ -812,40 +812,68 @@
           </div>
           <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
             <div style="font-size:13px;color:rgba(255,255,255,.8)">
-              URL YouTube: <strong><%= evento.youtube_url || 'Não configurada — defina na aba Informações' %></strong>
+              URL YouTube padrão: <strong><%= evento.youtube_url || 'Não configurada' %></strong>
+              <span style="color:rgba(255,255,255,.5)"> (usada em evento de 1 dia só — em evento com vários dias, cada dia tem sua própria URL abaixo)</span>
             </div>
-            <button onclick="enviarLinksLive()" class="btn btn-sm" style="background:#2FA873;color:#0C231B;font-weight:700;margin-left:auto;border-color:transparent">
-              Enviar links de acesso
-            </button>
-            <a href="/eventos/<%= evento.id %>/presencas" class="btn btn-sm" style="background:rgba(255,255,255,.2);color:white">
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px">
+            <span style="font-size:12px;color:rgba(255,255,255,.6);font-weight:600">Enviar links de acesso:</span>
+            <button onclick="enviarLinksLive('todos')" class="btn btn-sm" style="background:#2FA873;color:#0C231B;font-weight:700;border-color:transparent">Todos os confirmados</button>
+            <button onclick="enviarLinksLive('membros')" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:white">Só Ligantes + Diretivos</button>
+            <button onclick="enviarLinksLive('ligantes')" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:white">Só Ligantes</button>
+            <button onclick="enviarLinksLive('diretivos')" class="btn btn-sm" style="background:rgba(255,255,255,.15);color:white">Só Diretivos</button>
+            <a href="/eventos/<%= evento.id %>/presencas" class="btn btn-sm" style="background:rgba(255,255,255,.2);color:white;margin-left:auto">
               Ver presenças
             </a>
           </div>
           <div id="live-resultado" style="margin-top:12px;font-size:13px;color:rgba(255,255,255,.8)"></div>
         </div>
+
+        <% const diasComData = programacao.filter(p => p.data); %>
+        <% if (diasComData.length) { %>
+        <div class="section-card">
+          <div class="section-header">Transmissão por dia</div>
+          <div class="section-body">
+            <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">
+              Cada dia tem seu próprio vídeo. A <strong>Duração</strong> só dá pra saber depois que a aula termina — preencha aqui assim que cada dia acabar; o sistema calcula automaticamente a frequência de cada dia e a frequência somada dos <%= diasComData.length %> dias no final.
+            </p>
+            <% diasComData.forEach(dia => { %>
+            <form method="POST" action="/eventos/<%= evento.id %>/programacao/<%= dia.id %>/transmissao" style="display:grid;grid-template-columns:auto 1fr 140px auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--borda)">
+              <div style="font-size:13px;font-weight:700;min-width:130px">
+                <%= new Date(dia.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) %> — <%= dia.titulo %>
+              </div>
+              <input type="url" name="youtube_url" class="input" placeholder="URL do YouTube deste dia" value="<%= dia.youtube_url||'' %>" style="font-size:12px">
+              <input type="number" name="duracao_minutos" class="input" placeholder="Duração (min)" value="<%= dia.duracao_minutos||'' %>" style="font-size:12px">
+              <button type="submit" class="btn-xs azul">Salvar</button>
+            </form>
+            <% }) %>
+          </div>
+        </div>
+        <% } %>
+
         <div class="section-card">
           <div class="section-header">Como funciona</div>
           <div class="section-body">
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
               <div style="background:var(--fundo);border-radius:10px;padding:16px;border:1px solid var(--borda)">
                 <div style="font-size:20px;font-weight:700;color:var(--cor-primaria);font-family:'Outfit',sans-serif;margin-bottom:6px">1</div>
-                <div style="font-weight:600;margin-bottom:4px">Configure o evento</div>
-                <div style="font-size:12px;color:var(--texto2)">Adicione a URL do YouTube e a duração total do evento na aba Informações.</div>
+                <div style="font-weight:600;margin-bottom:4px">Configure o(s) dia(s)</div>
+                <div style="font-size:12px;color:var(--texto2)">Evento de 1 dia: URL na aba Informações. Vários dias: URL de cada dia aqui embaixo (duração só depois da aula).</div>
               </div>
               <div style="background:var(--fundo);border-radius:10px;padding:16px;border:1px solid var(--borda)">
                 <div style="font-size:20px;font-weight:700;color:var(--cor-primaria);font-family:'Outfit',sans-serif;margin-bottom:6px">2</div>
                 <div style="font-weight:600;margin-bottom:4px">Envie os links</div>
-                <div style="font-size:12px;color:var(--texto2)">Cada inscrito confirmado recebe um link único por WhatsApp e email.</div>
+                <div style="font-size:12px;color:var(--texto2)">Cada inscrito confirmado recebe UM link único (o mesmo pros 4 dias) por WhatsApp e email.</div>
               </div>
               <div style="background:var(--fundo);border-radius:10px;padding:16px;border:1px solid var(--borda)">
                 <div style="font-size:20px;font-weight:700;color:var(--cor-primaria);font-family:'Outfit',sans-serif;margin-bottom:6px">3</div>
                 <div style="font-weight:600;margin-bottom:4px">Presença automática</div>
-                <div style="font-size:12px;color:var(--texto2)">O sistema registra o tempo de assistência a cada 2 minutos. Se fechar a aba, para de contar.</div>
+                <div style="font-size:12px;color:var(--texto2)">O sistema registra o tempo de assistência a cada 2 minutos, separado por dia. Se fechar a aba, para de contar.</div>
               </div>
               <div style="background:var(--fundo);border-radius:10px;padding:16px;border:1px solid var(--borda)">
                 <div style="font-size:20px;font-weight:700;color:var(--cor-primaria);font-family:'Outfit',sans-serif;margin-bottom:6px">4</div>
                 <div style="font-weight:600;margin-bottom:4px">Relatório final</div>
-                <div style="font-size:12px;color:var(--texto2)">Veja quem assistiu 75% ou mais e emita os certificados automaticamente.</div>
+                <div style="font-size:12px;color:var(--texto2)">Veja quem assistiu 75% ou mais (por dia e no total do evento) e emita os certificados automaticamente.</div>
               </div>
             </div>
           </div>
@@ -1755,20 +1783,25 @@ function gerarListaAssinatura(modo) {
   window.open(url, '_blank');
 }
 
-function enviarLinksLive() {
+function enviarLinksLive(filtro) {
   const btn = event.target;
+  const textoOriginal = btn.textContent;
   btn.textContent = 'Enviando...';
   btn.disabled = true;
-  fetch('/eventos/<%= evento.id %>/enviar-link-live', { method: 'POST' })
+  fetch('/eventos/<%= evento.id %>/enviar-link-live', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ filtro: filtro || 'todos' })
+  })
     .then(r => r.json())
     .then(d => {
       document.getElementById('live-resultado').textContent = d.msg || (d.ok ? 'Links enviados!' : 'Erro: '+d.msg);
-      btn.textContent = 'Enviar links de acesso';
+      btn.textContent = textoOriginal;
       btn.disabled = false;
     })
     .catch(() => {
       document.getElementById('live-resultado').textContent = 'Erro de conexão.';
-      btn.textContent = 'Enviar links de acesso';
+      btn.textContent = textoOriginal;
       btn.disabled = false;
     });
 }

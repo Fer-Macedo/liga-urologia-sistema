@@ -121,8 +121,12 @@
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
-    <div class="live-badge"><div class="live-dot"></div>En vivo</div>
-    <div class="status-badge on" id="status-badge">Conectado</div>
+    <% if (typeof transmiteHoje !== 'undefined' && !transmiteHoje) { %>
+      <div class="status-badge off">Vista previa — no cuenta tiempo</div>
+    <% } else { %>
+      <div class="live-badge"><div class="live-dot"></div>En vivo</div>
+      <div class="status-badge on" id="status-badge">Conectado</div>
+    <% } %>
   </div>
 </div>
 
@@ -130,6 +134,14 @@
 <div class="main-grid" id="main-content" style="display:none">
 
   <div class="video-section">
+    <% if (typeof transmiteHoje !== 'undefined' && !transmiteHoje) { %>
+    <div style="background:#78350f;color:#fde68a;padding:10px 20px;font-size:13px;text-align:center">
+      Todavía no es el día de <strong><%= tituloDia %></strong> — esto es solo una vista previa, el tiempo no se está contando.
+    </div>
+    <% } %>
+    <div id="ping-erro" style="display:none;background:#7f1d1d;color:#fecaca;padding:10px 20px;font-size:13px;text-align:center">
+      Sin conexión con el servidor — su tiempo de visualización no se está registrando en este momento.
+    </div>
     <!-- VIDEO -->
     <div class="video-wrap">
       <% let ytId = '';
@@ -151,7 +163,7 @@
     <!-- INFO -->
     <div class="info-strip">
       <div class="info-item"><div class="info-label">Tiempo en esta sesión</div><div class="info-valor" id="tempo-sessao">00:00:00</div></div>
-      <div class="info-item"><div class="info-label">Total acumulado</div><div class="info-valor" id="tempo-total">00:00:00</div></div>
+      <div class="info-item"><div class="info-label">Total de hoy<% if (typeof tituloDia !== 'undefined' && tituloDia) { %> — <%= tituloDia %><% } %></div><div class="info-valor" id="tempo-total">00:00:00</div></div>
       <div class="info-item"><div class="info-label">Último acceso</div><div class="info-valor" style="font-size:13px" id="primeiro-acesso">—</div></div>
     </div>
 
@@ -224,15 +236,17 @@
 
 <script>
 const token = '<%= token %>';
+const sessao = '<%= sessao %>';
 const emailInscrito = '<%= presenca.email %>'.toLowerCase().trim();
 const nomeInscrito = '<%= presenca.nome %>';
-const segundosIniciais = <%= presenca.tempo_total_segundos || 0 %>;
+const segundosIniciais = <%= typeof segundosIniciais !== 'undefined' ? segundosIniciais : 0 %>;
 const primeiroAcessoStr = '<%= presenca.primeiro_acesso ? new Date(presenca.primeiro_acesso).toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"}) : "" %>';
 const ultimoPingStr = '<%= presenca.ultimo_ping ? new Date(presenca.ultimo_ping).toLocaleTimeString("pt-BR", {hour:"2-digit",minute:"2-digit"}) : "" %>';
 
 let online = true;
+let sessaoValida = true; // fica false se outra aba assumiu (2 abas com o mesmo link)
 let segundosSessao = 0;
-let segundosAcumulados = segundosIniciais; // total salvo no banco ao entrar
+let segundosAcumulados = segundosIniciais; // total de HOJE salvo no banco ao entrar
 
 function fmt(seg) {
   seg = Math.max(0, Math.round(seg));
@@ -264,33 +278,46 @@ function validarAcesso() {
   }, 1000);
 
   // Ping a cada 2 min — sincroniza total com banco
-  setInterval(() => {
-    if (online) {
-      fetch('/live/'+token+'/ping', {method:'POST'})
-        .then(r=>r.json())
-        .then(d=>{
-          if (d.ok && d.total !== undefined) {
-            // total do banco ja inclui os 120s do ping atual
-            // recalcula: acumulado = total_banco - segundos_desta_sessao
-            segundosAcumulados = Math.max(0, d.total - segundosSessao);
-            // atualiza ultimo acesso com horario do ping
-            if (d.ultimoPing) {
-              const dt = new Date(d.ultimoPing);
-              document.getElementById('primeiro-acesso').textContent =
-                dt.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
-            }
-          }
-        });
-    }
-  }, 120000);
+  setInterval(() => { if (online) enviarPing(); }, 120000);
+}
+
+function enviarPing() {
+  fetch('/live/'+token+'/ping', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({sessao})})
+    .then(r=>r.json())
+    .then(d=>{
+      document.getElementById('ping-erro').style.display = 'none';
+      if (d.motivo === 'sessao_substituida') {
+        // A mesma pessoa abriu o link em outra aba/dispositivo — essa aqui para de contar
+        // tempo (evita dobrar a presença) mas continua mostrando o vídeo normalmente.
+        sessaoValida = false; online = false;
+        const b = document.getElementById('status-badge');
+        if (b) { b.className='status-badge off'; b.textContent='Abierto en otra pestaña'; }
+        return;
+      }
+      if (d.ok && d.total !== undefined && sessaoValida) {
+        // total do banco ja inclui os 120s do ping atual
+        // recalcula: acumulado = total_banco - segundos_desta_sessao
+        segundosAcumulados = Math.max(0, d.total - segundosSessao);
+        if (d.ultimoPing) {
+          const dt = new Date(d.ultimoPing);
+          document.getElementById('primeiro-acesso').textContent =
+            dt.toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
+        }
+      }
+    })
+    .catch(() => {
+      // rede bloqueada (VPN/ad-blocker) — avisa a pessoa que o tempo dela pode não estar
+      // sendo contado, em vez de falhar calado e ela achar que está tudo certo.
+      document.getElementById('ping-erro').style.display = 'block';
+    });
 }
 
 document.getElementById('login-email').addEventListener('keypress', e => { if(e.key==='Enter') validarAcesso(); });
 
 document.addEventListener('visibilitychange', () => {
   const b = document.getElementById('status-badge');
-  if (document.hidden) { online=false; b.className='status-badge off'; b.textContent='Pausado'; fetch('/live/'+token+'/sair',{method:'POST'}); }
-  else { online=true; b.className='status-badge on'; b.textContent='Conectado'; fetch('/live/'+token+'/ping',{method:'POST'}); }
+  if (document.hidden) { online=false; if(b){b.className='status-badge off'; b.textContent='Pausado';} fetch('/live/'+token+'/sair',{method:'POST'}); }
+  else { online=true; if(b){b.className='status-badge on'; b.textContent='Conectado';} if (sessaoValida) enviarPing(); }
 });
 window.addEventListener('beforeunload', () => navigator.sendBeacon('/live/'+token+'/sair'));
 
