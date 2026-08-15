@@ -27,6 +27,21 @@ router.use(helmet({
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 
+// Pular o limite geral pra rotas publicas de fluxo unico (varias pessoas atras do MESMO IP —
+// rede da faculdade, dormitorio, operadora de celular — nao podem somar no mesmo teto e
+// derrubar gente de verdade). /live/ inclui /live/:token/ping, que bate a cada 2min por pessoa
+// assistindo; a propria rota /ping ja tem seu limite por token (90s entre contagens), entao
+// tirar do limite geral aqui nao abre brecha de abuso. Extraída como função própria (em vez de
+// inline) pra dar pra testar sem montar o rate-limiter inteiro — mesmo teste de carga real que
+// já pegou /checkout derrubando 11 de 100 simultâneos do mesmo IP (12/08/2026).
+function deveSkipLimiteGeral(req) {
+  var p = req.path || '';
+  if (p.indexOf('/checkout') === 0 || p.indexOf('/inscricao') === 0 || p.indexOf('/webhook') === 0) return true;
+  if (p.indexOf('/live/') === 0) return true;
+  if (req.session && req.session.usuario) return true; // admin autenticado — sem limite
+  return false;
+}
+
 // Rate limit geral
 const limiterGeral = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -34,13 +49,7 @@ const limiterGeral = rateLimit({
   message: { erro: 'Muitas requisições. Tente novamente em 15 minutos.' },
   standardHeaders: true,
   legacyHeaders: false,
-  skip: function(req){
-    var p = req.path || '';
-    // Pular rate limit para rotas publicas e para usuarios autenticados
-    if (p.indexOf('/checkout') === 0 || p.indexOf('/inscricao') === 0 || p.indexOf('/webhook') === 0) return true;
-    if (req.session && req.session.usuario) return true; // admin autenticado — sem limite
-    return false;
-  }
+  skip: deveSkipLimiteGeral
 });
 
 router.use(limiterGeral);
