@@ -85,11 +85,17 @@ router.get('/ligantes/:id/aprovar', requireAuth, requirePermissao('ligantes'), a
     const ligR = await query('SELECT * FROM ligantes WHERE id=$1', [req.params.id]);
     const lig = ligR.rows[0];
     if (lig) {
-      const cpfVal = lig.cpf || '';
-      const emailVal = lig.email || '';
+      // CPF comparado sem pontuacao dos dois lados — "098.227.956-61" (como o membro antigo
+      // guardava) e "09822795661" (como ligantes guarda) sao o MESMO CPF, mas a comparacao
+      // exata de string nunca batia, deixando esse cadastro automatico criar um membro
+      // duplicado toda vez que o formato divergia (achado 15/08/2026: 3 duplicatas reais).
+      const cpfVal = (lig.cpf || '').replace(/\D/g, '');
+      const emailVal = (lig.email || '').trim().toLowerCase();
       const jaExiste = await query(
-        'SELECT id FROM membros WHERE (cpf IS NOT NULL AND cpf <> $3 AND cpf = $1) OR (email IS NOT NULL AND email <> $3 AND email = $2)',
-        [cpfVal, emailVal, '']
+        `SELECT id FROM membros WHERE
+           ($1 <> '' AND REGEXP_REPLACE(COALESCE(cpf,''), '[^0-9]', '', 'g') = $1)
+           OR ($2 <> '' AND LOWER(TRIM(COALESCE(email,''))) = $2)`,
+        [cpfVal, emailVal]
       );
       if (jaExiste.rows.length === 0) {
         await query(

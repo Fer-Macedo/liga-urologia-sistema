@@ -97,6 +97,15 @@ async function initSchema() {
       END IF;
     END $$;
     ALTER TABLE membros ALTER COLUMN dia_vencimento SET DEFAULT 15;
+    -- 15/08/2026: achado cadastro duplicado (mesmo CPF, dois ids de membro) originado de um
+    -- reimport em 2026-06-15 que não checou se a pessoa já existia — gerou mensalidade e
+    -- presença fragmentadas entre os dois ids. CPF vazio continua permitido (NULL não colide
+    -- com NULL em UNIQUE), só bloqueia um CPF repetido de verdade.
+    DO $$ BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'membros_cpf_key') THEN
+        ALTER TABLE membros ADD CONSTRAINT membros_cpf_key UNIQUE (cpf);
+      END IF;
+    END $$;
     ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS telefone TEXT;
     ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS mfa_secret TEXT;
     ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS mfa_ativo BOOLEAN DEFAULT false;
