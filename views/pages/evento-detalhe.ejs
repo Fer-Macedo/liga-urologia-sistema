@@ -1033,7 +1033,7 @@
         <div class="section-card" style="margin-bottom:16px;border:1.5px solid #d1fae5">
           <div class="section-header" style="background:#f0fdf4">Cupons de isenção para ligantes e diretivos</div>
           <div class="section-body">
-            <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Gera 1 cupom individual (100% desconto) por pessoa e envia via WhatsApp e/ou email. Pode apertar de novo quantas vezes quiser pra sincronizar: quem já recebeu não recebe outra vez, e quem estava bloqueado por 2+ mensalidades atrasadas e já regularizou entra automaticamente nessa nova rodada.</p>
+            <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Gera 1 cupom individual (100% desconto) por pessoa e envia via WhatsApp e/ou email. Pode apertar quantas vezes quiser: é seguro, funciona como sincronização — quem já recebeu não recebe outra vez, e quem estava bloqueado por 2+ mensalidades atrasadas e já regularizou entra automaticamente nessa nova rodada.</p>
             <form action="/eventos/<%= evento.id %>/cupons/gerar-ligantes" method="POST">
               <div class="grid-2" style="margin-bottom:12px">
                 <div class="campo"><label class="label">Prefixo do código</label><input name="prefixo" class="input" value="LAURO" maxlength="8" style="text-transform:uppercase"></div>
@@ -1053,7 +1053,7 @@
                   <input type="checkbox" name="enviar_email" style="width:16px;height:16px;accent-color:var(--cor-primaria)"> Email
                 </label>
               </div>
-              <button type="submit" class="btn btn-primario" onclick="var f=this.form; confirmarAcao('Gerar e enviar cupons?', function(){ f.submit(); }); return false;">Gerar e enviar cupons</button>
+              <button type="submit" class="btn btn-primario" onclick="var f=this.form; confirmarAcao('Sincronizar cupons? Vai gerar e enviar só pra quem ainda não recebeu.', function(){ f.submit(); }); return false;">Sincronizar cupons</button>
             </form>
           </div>
         </div>
