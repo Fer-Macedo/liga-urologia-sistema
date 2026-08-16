@@ -1036,7 +1036,7 @@
             <p style="font-size:13px;color:var(--texto2);margin-bottom:14px">Gera 1 cupom individual (100% desconto) por pessoa e envia via WhatsApp e/ou email.</p>
             <form id="form-cupons-gerar" action="/eventos/<%= evento.id %>/cupons/gerar-ligantes" method="POST">
               <div class="grid-2" style="margin-bottom:12px">
-                <div class="campo"><label class="label">Prefixo do código</label><input name="prefixo" class="input" value="LAURO" maxlength="8" style="text-transform:uppercase"></div>
+                <div class="campo"><label class="label">Prefixo do código</label><input name="prefixo" class="input" value="<%= prefixoCupomEvento %>" maxlength="8" style="text-transform:uppercase"></div>
                 <div class="campo"><label class="label">Enviar para</label>
                   <select name="destino" class="input">
                     <option value="ligantes">Ligantes em dia</option>

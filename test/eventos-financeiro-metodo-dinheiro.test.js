@@ -17,7 +17,7 @@ function renderizar(pagamentos) {
     config: {}, usuario: { nome: 'Teste', perfil: 'admin' }, msg: [], erro: [],
     evento, lotes: [], inscricoes: [], pagamentos, certificados: [],
     stats: { total: 0, confirmados: 0, checkins: 0, receita: 0 },
-    campos: [], programacao: [], palestrantes: [], patrocinadores: [], cupons: [],
+    campos: [], programacao: [], palestrantes: [], patrocinadores: [], cupons: [], prefixoCupomEvento: 'LAURO',
     calcularLiquidoEvento, formatarNome: (n) => n
   };
   return ejs.render(fs.readFileSync(ARQUIVO, 'utf8'), locals, { filename: ARQUIVO });

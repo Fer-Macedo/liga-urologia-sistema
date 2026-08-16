@@ -42,6 +42,9 @@ function montar({ ligantes, atrasosPorCpfOuEmail, jaExistentes }) {
         const [, ligId] = params;
         return existentes.has(ligId) ? { rows: [existentes.get(ligId)] } : { rows: [] };
       }
+      if (/SELECT codigo FROM evento_cupons WHERE evento_id=\$1 AND \(ligante_id IS NOT NULL OR diretivo_id IS NOT NULL\)/.test(sql)) {
+        return { rows: Array.from(existentes.values()).map(v => ({ codigo: v.codigo })) };
+      }
       if (/INSERT INTO evento_cupons/.test(sql)) {
         cupomInserts.push(params);
         const [, codigo, ligId] = params;
@@ -148,6 +151,39 @@ test('sincronizar: quem já recebeu o cupom (notificado_em setado) NÃO recebe W
   assert.strictEqual(emailEnviados.length, 0, 'já tinha notificado_em — não reenvia');
   assert.strictEqual(wppEnviados.length, 0, 'já tinha notificado_em — não reenvia');
   assert.strictEqual(notificadoUpdates.length, 0, 'não mexe no notificado_em de quem já tinha');
+});
+
+// 16/08/2026: pedido do usuário — o prefixo é do EVENTO, não do clique. Sincronizar um evento
+// cujos cupons já existentes são "JORNADA-..." tem que continuar gerando "JORNADA-...", mesmo
+// que o campo do formulário tenha ficado com o valor padrão "LAURO" (bug real: 2 pessoas
+// receberam cupom LAURO- num evento onde os outros 57 eram JORNADA-).
+test('sincronizar: usa o prefixo já estabelecido do evento, ignora o texto digitado no formulário', async () => {
+  const novoElegivel = { ...ligantes[2], id: 3 };
+  const { rotas, cupomInserts } = montar({
+    ligantes: [novoElegivel],
+    atrasosPorCpfOuEmail: { '33333333333': 1 },
+    jaExistentes: [
+      { ligante_id: 10, codigo: 'JORNADA-AAAAAA', notificado_em: new Date() },
+      { ligante_id: 11, codigo: 'JORNADA-BBBBBB', notificado_em: new Date() }
+    ]
+  });
+  // formulário mandou "LAURO" (valor padrão) mesmo o evento já usando "JORNADA"
+  const req = { params: { id: '1' }, body: { prefixo: 'LAURO', destino: 'ligantes', enviar_wpp: 'off', enviar_email: 'off' }, session: {} };
+  await rotas['/eventos/:id/cupons/gerar-ligantes'](req, resRedirect());
+  await esperarSegundoPlano();
+  assert.strictEqual(cupomInserts.length, 1);
+  assert.match(cupomInserts[0][1], /^JORNADA-/, 'segue o prefixo já estabelecido do evento, não o texto do formulário');
+});
+
+test('1ª geração (evento sem nenhum cupom ainda) usa o prefixo digitado no formulário', async () => {
+  const { rotas, cupomInserts } = montar({
+    ligantes: [ligantes[0]],
+    atrasosPorCpfOuEmail: { '11111111111': 0 }
+  });
+  const req = { params: { id: '1' }, body: { prefixo: 'CONGRESSO', destino: 'ligantes', enviar_wpp: 'off', enviar_email: 'off' }, session: {} };
+  await rotas['/eventos/:id/cupons/gerar-ligantes'](req, resRedirect());
+  await esperarSegundoPlano();
+  assert.match(cupomInserts[0][1], /^CONGRESSO-/, 'sem histórico prévio, usa o que foi digitado');
 });
 
 test('sincronizar: ligante que quitou o atraso e NUNCA recebeu cupom (bloqueado antes) recebe normalmente, e só ele', async () => {

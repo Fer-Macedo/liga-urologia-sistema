@@ -62,6 +62,22 @@ async function filtrarPorTipoMembro(query, inscritos, filtro) {
   });
 }
 
+// Prefixo de cupom é por evento, não por clique: uma vez estabelecido (ex: "JORNADA-XXXXXX"),
+// toda geração/sincronização seguinte tem que usar o MESMO prefixo, senão o texto que ficou no
+// campo do formulário (padrão "LAURO") diverge do que a turma já recebeu. Pega o prefixo mais
+// frequente entre os códigos existentes — ignora outliers isolados (ex: 2 cupons LAURO-...
+// gerados por engano num evento cujos outros 57 são JORNADA-...).
+function prefixoDominanteCupons(codigos) {
+  const contagem = {};
+  for (const cod of codigos) {
+    const p = (cod.split('-')[0] || '').toUpperCase();
+    if (p) contagem[p] = (contagem[p] || 0) + 1;
+  }
+  let melhor = null, max = 0;
+  for (const p in contagem) { if (contagem[p] > max) { max = contagem[p]; melhor = p; } }
+  return melhor;
+}
+
 // /inscricao e /checkout ficam de fora do rate-limit geral (src/routes/index.js) porque
 // alguém legitimamente pode recarregar/tentar de novo várias vezes numa fila de evento —
 // mas isso não pode significar SEM limite nenhum. Um teto mais folgado que o geral, só
@@ -173,7 +189,8 @@ router.get('/eventos/:id', requireAuth, requirePermissao('eventos'), async (req,
   const stats = await getEventoStats(req.params.id);
   const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem',[req.params.id]);
   const cuponsR = await query('SELECT ec.*, ec.criado_em AS cupom_criado_em, ei.nome AS usado_nome, ei.criado_em AS usado_em, COALESCE(l.nome, d.nome, mb.nome) AS dono_nome FROM evento_cupons ec LEFT JOIN evento_inscricoes ei ON ei.id = ec.usado_por_inscricao_id LEFT JOIN ligantes l ON ec.ligante_id = l.id LEFT JOIN diretivos d ON ec.diretivo_id = d.id LEFT JOIN membros mb ON ec.membro_id = mb.id WHERE ec.evento_id=$1 ORDER BY ec.criado_em DESC',[req.params.id]);
-  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows, cupons: cuponsR.rows, calcularLiquidoEvento, formatarNome });
+  const prefixoCupomEvento = prefixoDominanteCupons(cuponsR.rows.filter(c => c.ligante_id || c.diretivo_id).map(c => c.codigo)) || 'LAURO';
+  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows, cupons: cuponsR.rows, prefixoCupomEvento, calcularLiquidoEvento, formatarNome });
 });
 
 router.post('/eventos/:id/editar', requireAuth, requirePermissao('eventos'), async (req, res) => {
@@ -1333,8 +1350,18 @@ router.get('/eventos/:id/cupons/contagem', requireAuth, requirePermissao('evento
 // Gerar cupons em lote para ligantes EM DIA e diretivos com envio via WhatsApp/email
 router.post('/eventos/:id/cupons/gerar-ligantes', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const { prefixo, destino, enviar_wpp, enviar_email } = req.body;
-  const pref = (prefixo||'LAURO').toUpperCase().replace(/[^A-Z0-9]/g,'');
   const eventoId = req.params.id;
+  let pref = (prefixo||'LAURO').toUpperCase().replace(/[^A-Z0-9]/g,'');
+
+  // Prefixo já estabelecido pro evento tem prioridade sobre o que veio no formulário — ver
+  // comentário de prefixoDominanteCupons(). Só usa o valor digitado quando é a 1ª geração
+  // (nenhum cupom de ligante/diretivo ainda existe pra esse evento).
+  const existentesR = await query(
+    `SELECT codigo FROM evento_cupons WHERE evento_id=$1 AND (ligante_id IS NOT NULL OR diretivo_id IS NOT NULL)`,
+    [eventoId]
+  );
+  const prefixoEstabelecido = prefixoDominanteCupons(existentesR.rows.map(r => r.codigo));
+  if (prefixoEstabelecido) pref = prefixoEstabelecido;
 
   let pessoas = [];
 
