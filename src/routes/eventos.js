@@ -1309,6 +1309,9 @@ router.post('/eventos/:id/cupons/:cid/reenviar', requireAuth, requirePermissao('
       const html = (function(){var cor='#1a3d2b';var pn=pessoa.nome.split(' ')[0];var linkCupom=appUrl+'/inscricao/'+req.params.id+'?cupom='+encodeURIComponent(codigoFinal);return '<div style="border-left:3px solid '+cor+';padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:'+cor+';letter-spacing:1.5px;text-transform:uppercase">Tu invitaci&oacute;n gratuita</p><h2 style="margin:4px 0 0;font-size:20px;font-weight:700;color:#0f172a">'+evento.nome+'</h2></div>'+'<p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">&iexcl;Hola, <strong>'+pn+'</strong>! Tienes un <strong>cup&oacute;n de exenci&oacute;n 100%</strong> para participar gratuitamente en este evento.</p>'+'<div style="text-align:center;margin:24px 0;padding:24px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0"><p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">Tu c&oacute;digo de cup&oacute;n</p><div style="font-size:30px;font-weight:900;font-family:monospace;color:'+cor+';letter-spacing:4px">'+codigoFinal+'</div><p style="margin:12px 0 0;font-size:12px;color:'+cor+';font-weight:700">Copiar cup&oacute;n</p><p style="margin:4px 0 0;font-size:11px;color:#94a3b8">V&aacute;lido para 1 inscripci&oacute;n</p></div>'+'<div style="text-align:center;padding-top:8px"><a href="'+linkCupom+'" style="display:inline-block;background:'+cor+';color:white;padding:13px 36px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.5px;text-transform:uppercase">Inscribirme con el cup&oacute;n aplicado</a></div>';})();
       try { await enviarEmail({ para: pessoa.email, assunto: `Seu cupom gratuito — ${evento.nome}`, html, texto: semEmoji(msg), faixaLabel: 'CUPOM GRATUITO' }); okEmail=true; } catch(e) {}
     }
+    if (okWpp || okEmail) {
+      await query('UPDATE evento_cupons SET notificado_em=NOW() WHERE id=$1', [cupom.id]);
+    }
     const canais = [okWpp?'WhatsApp':null, okEmail?'email':null].filter(Boolean).join(' e ');
     req.session.msg=[canais ? `Cupom reenviado para ${pessoa.nome} via ${canais}.` : `Não foi possível reenviar (pessoa sem WhatsApp/email).`];
     res.redirect('/eventos/'+req.params.id+'?tab=cupons');
@@ -1378,16 +1381,22 @@ async function processarGeracaoCupons(eventoId, pessoas, pref, enviar_wpp, envia
   const orgNome = config.org_nome || 'LAURO';
   const appUrl = process.env.APP_URL || 'https://liga-urologia.onrender.com';
 
-  let criados = 0, enviados = 0;
+  let criados = 0, enviados = 0, jaNotificados = 0;
 
   for (const p of pessoas) {
     const campo_pessoa = p.tipo === 'ligante' ? 'ligante_id' : 'diretivo_id';
     let codigoFinal;
+    let jaNotificado = false;
 
     try {
-      const existenteR = await query('SELECT codigo FROM evento_cupons WHERE evento_id=$1 AND '+campo_pessoa+'=$2', [eventoId, p.id]);
+      const existenteR = await query('SELECT codigo, notificado_em FROM evento_cupons WHERE evento_id=$1 AND '+campo_pessoa+'=$2', [eventoId, p.id]);
       if (existenteR.rows.length > 0) {
         codigoFinal = existenteR.rows[0].codigo;
+        // Cupom é único por pessoa/evento: quem já recebeu não recebe de novo quando o botão
+        // roda de novo (ex: pra sincronizar quem quitou o atraso e passou a ser elegível).
+        // Só reenvia quem nunca chegou a ser notificado (1ª tentativa sem whatsapp/email, ou
+        // cupom criado sem marcar de fato o envio).
+        jaNotificado = !!existenteR.rows[0].notificado_em;
       } else {
         // Gera sufixo sem caracteres ambíguos (sem 0,O,1,I,L,8,B,5,S,2,Z)
         const _chars = 'ACDEFGHJKMNPQRTUVWXY3467';
@@ -1412,21 +1421,27 @@ async function processarGeracaoCupons(eventoId, pessoas, pref, enviar_wpp, envia
       }
       criados++;
 
+      if (jaNotificado) { jaNotificados++; continue; }
+
       // whatsapp-only:inicio — mesma lógica: e-mail (abaixo) usa semEmoji(msg) à parte.
       const msg = `💚💙 *${orgNome}* 💚💙\n\nOlá, *${p.nome.split(' ')[0]}*! 🎉\n\nVocê tem um *cupom de isenção 100%* 🎫 para o evento:\n*${evento.nome}*\n\n🎟️ Seu cupom: *${codigoFinal}*\n\n👉 Inscreva-se pelo link abaixo (o cupom já vem aplicado, é só finalizar):\n${appUrl}/inscricao/${eventoId}?cupom=${encodeURIComponent(codigoFinal)}\n\n_Cupom válido para uma inscrição._ ✨`;
       // whatsapp-only:fim
 
+      let algumEnvio = false;
       if (enviar_wpp === 'on' && p.whatsapp) {
-        try { await enviarWhatsApp(p.whatsapp, msg); enviados++; } catch(e) {}
+        try { await enviarWhatsApp(p.whatsapp, msg); enviados++; algumEnvio = true; } catch(e) {}
       }
       if (enviar_email === 'on' && p.email) {
         const html = (function(){var cor='#1a3d2b';var pn=p.nome.split(' ')[0];var linkCupom=appUrl+'/inscricao/'+eventoId+'?cupom='+encodeURIComponent(codigoFinal);return '<div style="border-left:3px solid '+cor+';padding-left:14px;margin-bottom:24px"><p style="margin:0;font-size:11px;font-weight:700;color:'+cor+';letter-spacing:1.5px;text-transform:uppercase">Tu invitaci&oacute;n gratuita</p><h2 style="margin:4px 0 0;font-size:20px;font-weight:700;color:#0f172a">'+evento.nome+'</h2></div>'+'<p style="margin:0 0 24px;font-size:14px;color:#475569;line-height:1.7">&iexcl;Hola, <strong>'+pn+'</strong>! Tienes un <strong>cup&oacute;n de exenci&oacute;n 100%</strong> para participar gratuitamente en este evento.</p>'+'<div style="text-align:center;margin:24px 0;padding:24px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0"><p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px">Tu c&oacute;digo de cup&oacute;n</p><div style="font-size:30px;font-weight:900;font-family:monospace;color:'+cor+';letter-spacing:4px">'+codigoFinal+'</div><p style="margin:12px 0 0;font-size:12px;color:'+cor+';font-weight:700">Copiar cup&oacute;n</p><p style="margin:4px 0 0;font-size:11px;color:#94a3b8">V&aacute;lido para 1 inscripci&oacute;n</p></div>'+'<div style="text-align:center;padding-top:8px"><a href="'+linkCupom+'" style="display:inline-block;background:'+cor+';color:white;padding:13px 36px;border-radius:6px;text-decoration:none;font-weight:700;font-size:13px;letter-spacing:0.5px;text-transform:uppercase">Inscribirme con el cup&oacute;n aplicado</a></div>';})();
-        try { await enviarEmail({ para: p.email, assunto: `Seu cupom gratuito — ${evento.nome}`, html, texto: semEmoji(msg), faixaLabel: 'CUPOM GRATUITO' }); } catch(e) {}
+        try { await enviarEmail({ para: p.email, assunto: `Seu cupom gratuito — ${evento.nome}`, html, texto: semEmoji(msg), faixaLabel: 'CUPOM GRATUITO' }); algumEnvio = true; } catch(e) {}
+      }
+      if (algumEnvio) {
+        await query('UPDATE evento_cupons SET notificado_em=NOW() WHERE evento_id=$1 AND '+campo_pessoa+'=$2', [eventoId, p.id]);
       }
     } catch(e) { console.error('[CUPONS] pessoa ' + p.id + ' (' + p.tipo + ') erro:', e.message); }
   }
 
-  console.log(`[CUPONS] Geração concluída — evento ${eventoId}: ${criados} cupons, ${enviados} notificações enviadas.`);
+  console.log(`[CUPONS] Geração concluída — evento ${eventoId}: ${criados} cupons, ${enviados} notificações enviadas, ${jaNotificados} já haviam recebido (pulados).`);
 }
 
 // ─── EDITAR INSCRITO ──────────────────────────────────────────────────────────

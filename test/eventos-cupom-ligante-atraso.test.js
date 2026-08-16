@@ -19,7 +19,11 @@ const MODULO = path.join(RAIZ, 'src/routes/eventos.js');
 
 function montar({ ligantes, atrasosPorCpfOuEmail, jaExistentes }) {
   const cupomInserts = [];
-  const existentes = new Map((jaExistentes || []).map(e => [e.ligante_id, e.codigo])); // simula unicidade real do banco
+  const notificadoUpdates = []; // ligante_id que teve notificado_em marcado nessa rodada
+  const wppEnviados = [];
+  const emailEnviados = [];
+  // simula unicidade real do banco + a coluna notificado_em (controla quem já recebeu de fato)
+  const existentes = new Map((jaExistentes || []).map(e => [e.ligante_id, { codigo: e.codigo, notificado_em: e.notificado_em || null }]));
   const rq = require.resolve(path.join(RAIZ, 'src/models/database.js'));
   require.cache[rq] = { id: rq, filename: rq, loaded: true, exports: {
     query: async (sql, params) => {
@@ -34,16 +38,22 @@ function montar({ ligantes, atrasosPorCpfOuEmail, jaExistentes }) {
       if (/SELECT \* FROM eventos WHERE id=\$1/.test(sql)) return { rows: [{ id: 1, nome: 'Congresso Teste' }] };
       if (/SELECT chave,valor FROM configuracoes/.test(sql)) return { rows: [] };
       if (/'diretivo' as tipo FROM diretivos/.test(sql)) return { rows: [] };
-      if (/SELECT codigo FROM evento_cupons WHERE evento_id=\$1 AND ligante_id=\$2/.test(sql)) {
+      if (/SELECT codigo, notificado_em FROM evento_cupons WHERE evento_id=\$1 AND ligante_id=\$2/.test(sql)) {
         const [, ligId] = params;
-        return existentes.has(ligId) ? { rows: [{ codigo: existentes.get(ligId) }] } : { rows: [] };
+        return existentes.has(ligId) ? { rows: [existentes.get(ligId)] } : { rows: [] };
       }
       if (/INSERT INTO evento_cupons/.test(sql)) {
         cupomInserts.push(params);
         const [, codigo, ligId] = params;
         if (existentes.has(ligId)) return { rows: [] }; // ON CONFLICT ... DO NOTHING
-        existentes.set(ligId, codigo);
+        existentes.set(ligId, { codigo, notificado_em: null });
         return { rows: [{ codigo }] };
+      }
+      if (/UPDATE evento_cupons SET notificado_em=NOW\(\) WHERE evento_id=\$1 AND ligante_id=\$2/.test(sql)) {
+        const [, ligId] = params;
+        notificadoUpdates.push(ligId);
+        if (existentes.has(ligId)) existentes.get(ligId).notificado_em = new Date();
+        return { rows: [] };
       }
       return { rows: [] };
     }
@@ -59,13 +69,16 @@ function montar({ ligantes, atrasosPorCpfOuEmail, jaExistentes }) {
   const rpg = require.resolve(path.join(RAIZ, 'src/services/pagbank.js'));
   require.cache[rpg] = { id: rpg, filename: rpg, loaded: true, exports: { criarPixEvento: async () => ({}), consultarPagamento: async () => ({}), obterChavePublica: async () => ({}), pagarComCartao: async () => ({}) } };
   const rnt = require.resolve(path.join(RAIZ, 'src/services/notificacoes.js'));
-  require.cache[rnt] = { id: rnt, filename: rnt, loaded: true, exports: { enviarWhatsApp: async () => {}, enviarEmail: async () => {} } };
+  require.cache[rnt] = { id: rnt, filename: rnt, loaded: true, exports: {
+    enviarWhatsApp: async (numero) => { wppEnviados.push(numero); },
+    enviarEmail: async (opts) => { emailEnviados.push(opts.para); }
+  }};
 
   const rotas = {};
   const router = { get: () => {}, post: (rota, ...fns) => { rotas[rota] = fns[fns.length-1]; } };
   delete require.cache[require.resolve(MODULO)];
   require(MODULO)(router);
-  return { rotas, cupomInserts };
+  return { rotas, cupomInserts, notificadoUpdates, wppEnviados, emailEnviados };
 }
 
 function resRedirect() {
@@ -111,10 +124,44 @@ test('quem já tem cupom pro evento não ganha um segundo — reaproveita o cód
   const { rotas, cupomInserts } = montar({
     ligantes: [ligantes[0]],
     atrasosPorCpfOuEmail: { '11111111111': 0 },
-    jaExistentes: [{ ligante_id: 1, codigo: 'TESTE-JAEXISTE' }]
+    jaExistentes: [{ ligante_id: 1, codigo: 'TESTE-JAEXISTE', notificado_em: new Date() }]
   });
   const req = { params: { id: '1' }, body: { prefixo: 'TESTE', destino: 'ligantes', enviar_wpp: 'off', enviar_email: 'off' }, session: {} };
   await rotas['/eventos/:id/cupons/gerar-ligantes'](req, resRedirect());
   await esperarSegundoPlano();
   assert.strictEqual(cupomInserts.length, 0, 'não insere linha nova pra quem já tinha cupom nesse evento');
+});
+
+// 16/08/2026: pedido do usuário — botão de "sincronizar" pra rodar de novo depois que alguém
+// bloqueado (2+ atrasos) quita a dívida e passa a ser elegível. Regra explícita: quem já
+// recebeu o cupom NUNCA pode receber de novo nessa sincronia; só quem nunca foi notificado
+// (novo elegível, ou cupom criado sem conseguir enviar da 1ª vez) recebe.
+test('sincronizar: quem já recebeu o cupom (notificado_em setado) NÃO recebe WhatsApp/email de novo', async () => {
+  const { rotas, wppEnviados, emailEnviados, notificadoUpdates } = montar({
+    ligantes: [ligantes[0]], // 'Zero atrasos', tem whatsapp? não — usa email
+    atrasosPorCpfOuEmail: { '11111111111': 0 },
+    jaExistentes: [{ ligante_id: 1, codigo: 'TESTE-JAENVIADO', notificado_em: new Date('2026-08-01') }]
+  });
+  const req = { params: { id: '1' }, body: { prefixo: 'TESTE', destino: 'ligantes', enviar_wpp: 'on', enviar_email: 'on' }, session: {} };
+  await rotas['/eventos/:id/cupons/gerar-ligantes'](req, resRedirect());
+  await esperarSegundoPlano();
+  assert.strictEqual(emailEnviados.length, 0, 'já tinha notificado_em — não reenvia');
+  assert.strictEqual(wppEnviados.length, 0, 'já tinha notificado_em — não reenvia');
+  assert.strictEqual(notificadoUpdates.length, 0, 'não mexe no notificado_em de quem já tinha');
+});
+
+test('sincronizar: ligante que quitou o atraso e NUNCA recebeu cupom (bloqueado antes) recebe normalmente, e só ele', async () => {
+  const jaRecebeu = { ...ligantes[0], id: 1 }; // já tinha cupom + notificado_em
+  const novoElegivel = { ...ligantes[2], id: 3 }; // 'Dois atrasos' na fixture, mas agora quitou pra 1
+  const { rotas, wppEnviados: _w, emailEnviados, notificadoUpdates, cupomInserts } = montar({
+    ligantes: [jaRecebeu, novoElegivel],
+    atrasosPorCpfOuEmail: { '11111111111': 0, '33333333333': 1 }, // ambos elegíveis agora (<=1)
+    jaExistentes: [{ ligante_id: 1, codigo: 'TESTE-JAENVIADO', notificado_em: new Date('2026-08-01') }]
+  });
+  const req = { params: { id: '1' }, body: { prefixo: 'TESTE', destino: 'ligantes', enviar_wpp: 'off', enviar_email: 'on' }, session: {} };
+  await rotas['/eventos/:id/cupons/gerar-ligantes'](req, resRedirect());
+  await esperarSegundoPlano();
+  assert.deepStrictEqual(cupomInserts.map(p => p[2]), [3], 'só cria cupom novo pro que nunca tinha recebido');
+  assert.deepStrictEqual(emailEnviados, ['dois@x.com'], 'só o recém-elegível recebe o e-mail');
+  assert.deepStrictEqual(notificadoUpdates, [3], 'notificado_em só é marcado pra quem recebeu agora');
 });
