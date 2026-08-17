@@ -64,7 +64,7 @@ function resRedirect() { const r = {}; r.redirect = (u) => { r._redirect = u; re
 
 const EVENTO = { id: 5, nome: 'Jornada', checkout_aberto: false, checkout_fecha_em: null };
 
-test('GET /checkout/:id: dia de hoje com checkout aberto — aberto=true, mostra o título do dia', async () => {
+test('GET /checkout/:id: dia de hoje com checkout aberto — aberto=true', async () => {
   const { rotas } = montar({
     evento: EVENTO,
     hojeProgramacao: { id: 10, titulo: 'Día 2', checkout_aberto: true, checkout_fecha_em: null }
@@ -72,7 +72,10 @@ test('GET /checkout/:id: dia de hoje com checkout aberto — aberto=true, mostra
   const res = resRender();
   await rotas['GET /checkout/:id']({ params: { id: '5' } }, res);
   assert.strictEqual(res._locals.aberto, true);
-  assert.strictEqual(res._locals.tituloDia, 'Día 2');
+  // 17/08/2026: a página pública NUNCA deve mostrar o título de dia específico — só o nome
+  // real do evento. Mostrar "Promoción y Prevención de la Salud del Hombre" (título do dia 1)
+  // como se fosse o nome do evento confundiu o cliente, que achou que era outro evento.
+  assert.strictEqual(res._locals.tituloDia, undefined, 'tituloDia não pode mais existir nesta rota');
 });
 
 test('GET /checkout/:id: dia de hoje existe mas está com checkout ENCERRADO — aberto=false', async () => {
@@ -104,7 +107,6 @@ test('GET /checkout/:id: evento SEM nenhum item de Programação com data — mo
   const res = resRender();
   await rotas['GET /checkout/:id']({ params: { id: '6' } }, res);
   assert.strictEqual(res._locals.aberto, true);
-  assert.strictEqual(res._locals.tituloDia, null);
 });
 
 test('POST /checkout/:id: dia de hoje aberto — grava o check-out com o programacao_id do dia', async () => {
@@ -250,4 +252,22 @@ test('GET /eventos/:id/checkout-qrcode: serviço externo fora do ar devolve 502,
     await rotas['GET /eventos/:id/checkout-qrcode']({ params: { id: '5' } }, res);
     assert.strictEqual(res._status, 502);
   } finally { delete global.fetch; }
+});
+
+// 17/08/2026: BUG GRAVE relatado pelo usuário — a página pública de check-out mostrava o
+// título do dia (ex: "Promoción y Prevención de la Salud del Hombre") junto da frase de
+// confirmação, e isso pareceu pro cliente o nome de um evento DIFERENTE do real ("II Jornada
+// de Salud del Hombre"). A página só pode mostrar o nome real do evento — nunca o título do
+// dia — em nenhum evento, agora nem no futuro.
+test('página pública de check-out: NUNCA mostra o título do dia, só o nome real do evento', () => {
+  const ejs = require('ejs');
+  const fs = require('fs');
+  const ARQUIVO = path.join(RAIZ, 'views/pages/evento-checkout-publico.ejs');
+  const html = ejs.render(fs.readFileSync(ARQUIVO, 'utf8'), {
+    evento: { id: 5, nome: 'II Jornada de Salud del Hombre' }, config: {},
+    aberto: true, sucesso: false, jaConfirmado: false, erro: null, nome: null,
+    tituloDia: 'Promoción y Prevención de la Salud del Hombre' // mesmo se alguém reintroduzir a variável...
+  }, { filename: ARQUIVO });
+  assert.match(html, /II Jornada de Salud del Hombre/, 'precisa mostrar o nome real do evento');
+  assert.ok(!html.includes('Promoción y Prevención de la Salud del Hombre'), 'NUNCA pode mostrar o título do dia — confunde o cliente com outro evento');
 });

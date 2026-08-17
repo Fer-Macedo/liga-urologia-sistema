@@ -1941,16 +1941,15 @@ router.get('/checkout/:id', limiterVisualizacaoEvento, async (req, res) => {
     const evento = evR.rows[0];
     const cfgPub = await getConfig();
     const { dia, hoje } = await resolverDiaTransmissao(req.params.id);
-    let aberto, tituloDia = null;
+    let aberto;
     if (dia) {
-      tituloDia = dia.titulo;
       aberto = hoje && dia.checkout_aberto === true;
       if (aberto && dia.checkout_fecha_em && new Date(dia.checkout_fecha_em) < new Date()) aberto = false;
     } else {
       aberto = evento.checkout_aberto === true;
       if (aberto && evento.checkout_fecha_em && new Date(evento.checkout_fecha_em) < new Date()) aberto = false;
     }
-    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto, sucesso: false, jaConfirmado: false, erro: null, nome: null, tituloDia });
+    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto, sucesso: false, jaConfirmado: false, erro: null, nome: null });
   } catch(e) { console.error('Checkout GET erro:', e.message); res.status(500).send('Erro ao carregar.'); }
 });
 
@@ -1964,9 +1963,8 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
 
     // Revalida no servidor qual dia está em jogo e se está aberto (nunca confia no cliente)
     const { dia, hoje } = await resolverDiaTransmissao(req.params.id);
-    let aberto, tituloDia = null;
+    let aberto;
     if (dia) {
-      tituloDia = dia.titulo;
       aberto = hoje && dia.checkout_aberto === true;
       if (aberto && dia.checkout_fecha_em && new Date(dia.checkout_fecha_em) < new Date()) aberto = false;
     } else {
@@ -1974,13 +1972,13 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
       if (aberto && evento.checkout_fecha_em && new Date(evento.checkout_fecha_em) < new Date()) aberto = false;
     }
     if (!aberto) {
-      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: false, sucesso: false, jaConfirmado: false, erro: 'O check-out deste evento está encerrado.', nome: null, tituloDia });
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: false, sucesso: false, jaConfirmado: false, erro: 'O check-out deste evento está encerrado.', nome: null });
     }
 
     const email = (req.body.email || '').trim().toLowerCase();
     const docLimpo = (req.body.documento || req.body.rg || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     if (!email || !docLimpo) {
-      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Completa el correo y el RG/CI/DNI.', nome: null, tituloDia });
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Completa el correo y el RG/CI/DNI.', nome: null });
     }
 
     // Busca a inscrição por email OU documento (RG/CI/DNI) no evento
@@ -2003,7 +2001,7 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
     }
     if (jaExiste.rows.length > 0) {
       const nomeJa = inscricao ? inscricao.nome.split(' ')[0] : null;
-      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: true, erro: null, nome: nomeJa, tituloDia });
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: true, erro: null, nome: nomeJa });
     }
 
     // Registra o check-out (vinculando à inscrição e ao dia, se houver)
@@ -2025,7 +2023,7 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
       } catch(e) { console.error('Email checkout falhou:', e.message); }
     }
 
-    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: true, jaConfirmado: false, erro: null, nome, tituloDia });
+    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: true, jaConfirmado: false, erro: null, nome });
   } catch(e) { console.error('Checkout POST erro:', e.message); res.status(500).send('Erro ao registrar.'); }
 });
 
