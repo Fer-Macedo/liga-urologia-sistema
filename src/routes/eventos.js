@@ -1625,22 +1625,13 @@ async function resolverDiaTransmissao(eventoId) {
   return { dia: null, hoje: false };
 }
 
-// Diz se um dia é o ÚLTIMO dia com data marcada do evento — usado só pelo check-out, pra saber
-// quando embutir a avaliação obrigatória (pedido do usuário: só no check-out do dia final, não
-// em todos os dias). Evento sem NENHUM dia com data (legado, 1 dia só) conta como "último dia"
-// sempre, já chamado assim pelos callers sem precisar consultar o banco de novo.
-async function ehUltimoDiaEvento(eventoId, diaData) {
-  if (!diaData) return false;
-  const r = await query('SELECT MAX(data) as ultima FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL', [eventoId]);
-  const ultima = r.rows[0]?.ultima;
-  if (!ultima) return false;
-  return new Date(diaData).toDateString() === new Date(ultima).toDateString();
-}
-
-// Perguntas padrão da avaliação obrigatória do último dia — usadas até o admin customizar
+// Perguntas padrão da avaliação obrigatória de check-out — usadas até o admin customizar
 // (evento.avaliacao_perguntas). Pedido do usuário 17/08/2026: precisa dar pra adicionar/excluir
 // perguntas por evento, por isso não são colunas fixas — a lista vigente fica em JSON no evento,
 // e cada resposta (evento_checkouts.aval_respostas) guarda as notas na mesma ordem/tamanho.
+// 17/08/2026 (2ª rodada): virou obrigatória em TODO dia de check-out, não só no último — cada
+// evento_checkouts já grava o programacao_id do dia junto, então as respostas ficam organizadas
+// por data do evento automaticamente (relatório e export agrupam por dia usando esse vínculo).
 const PERGUNTAS_AVALIACAO_PADRAO = [
   'Evaluación del tema abordado',
   'Acerca del tiempo para la clase, considere',
@@ -1971,18 +1962,16 @@ router.get('/checkout/:id', limiterVisualizacaoEvento, async (req, res) => {
     const evento = evR.rows[0];
     const cfgPub = await getConfig();
     const { dia, hoje } = await resolverDiaTransmissao(req.params.id);
-    let aberto, ultimoDia;
+    let aberto;
     if (dia) {
       aberto = hoje && dia.checkout_aberto === true;
       if (aberto && dia.checkout_fecha_em && new Date(dia.checkout_fecha_em) < new Date()) aberto = false;
-      ultimoDia = await ehUltimoDiaEvento(req.params.id, dia.data);
     } else {
       aberto = evento.checkout_aberto === true;
       if (aberto && evento.checkout_fecha_em && new Date(evento.checkout_fecha_em) < new Date()) aberto = false;
-      ultimoDia = true; // legado: evento sem Programação por data só tem 1 dia — é sempre o último
     }
-    const perguntasAvaliacao = ultimoDia ? perguntasAvaliacaoDoEvento(evento) : [];
-    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto, sucesso: false, jaConfirmado: false, erro: null, nome: null, ultimoDia, perguntasAvaliacao });
+    const perguntasAvaliacao = perguntasAvaliacaoDoEvento(evento);
+    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto, sucesso: false, jaConfirmado: false, erro: null, nome: null, perguntasAvaliacao });
   } catch(e) { console.error('Checkout GET erro:', e.message); res.status(500).send('Erro ao carregar.'); }
 });
 
@@ -1997,48 +1986,43 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
     // A prévia (admin) usa este MESMO formulário — se alguém enviar por engano enquanto só
     // está olhando, não pode gravar um check-out/avaliação falso em cima dos dados reais.
     if (req.body.previa) {
-      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Isso é só uma prévia — nada foi salvo de verdade.', nome: null, ultimoDia: true, perguntasAvaliacao: perguntasAvaliacaoDoEvento(evento), previa: true });
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Isso é só uma prévia — nada foi salvo de verdade.', nome: null, perguntasAvaliacao: perguntasAvaliacaoDoEvento(evento), previa: true });
     }
 
     // Revalida no servidor qual dia está em jogo e se está aberto (nunca confia no cliente)
     const { dia, hoje } = await resolverDiaTransmissao(req.params.id);
-    let aberto, ultimoDia;
+    let aberto;
     if (dia) {
       aberto = hoje && dia.checkout_aberto === true;
       if (aberto && dia.checkout_fecha_em && new Date(dia.checkout_fecha_em) < new Date()) aberto = false;
-      ultimoDia = await ehUltimoDiaEvento(req.params.id, dia.data);
     } else {
       aberto = evento.checkout_aberto === true;
       if (aberto && evento.checkout_fecha_em && new Date(evento.checkout_fecha_em) < new Date()) aberto = false;
-      ultimoDia = true;
     }
-    const perguntasAvaliacao = ultimoDia ? perguntasAvaliacaoDoEvento(evento) : [];
+    const perguntasAvaliacao = perguntasAvaliacaoDoEvento(evento);
     if (!aberto) {
-      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: false, sucesso: false, jaConfirmado: false, erro: 'O check-out deste evento está encerrado.', nome: null, ultimoDia, perguntasAvaliacao });
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: false, sucesso: false, jaConfirmado: false, erro: 'O check-out deste evento está encerrado.', nome: null, perguntasAvaliacao });
     }
 
     const email = (req.body.email || '').trim().toLowerCase();
     const docLimpo = (req.body.documento || req.body.rg || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     if (!email || !docLimpo) {
-      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Completa el correo y el RG/CI/DNI.', nome: null, ultimoDia, perguntasAvaliacao });
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Completa el correo y el RG/CI/DNI.', nome: null, perguntasAvaliacao });
     }
 
-    // Avaliação obrigatória SÓ no check-out do último dia do evento — pedido explícito do
-    // usuário: panorama geral do evento pra encaminhar pra coordenação de ligas, não uma
-    // pesquisa repetida em cada um dos dias. Perguntas são configuráveis por evento — por isso
-    // as respostas viram um array (mesma ordem/tamanho de perguntasAvaliacao), não colunas fixas.
-    let avalRespostas = null, avalSugestoes = null;
-    if (ultimoDia) {
-      // Cada pergunta tem seu próprio radio group (aval_resposta_0, aval_resposta_1, ...) —
-      // usar o mesmo name pra todas juntaria os rádios de perguntas diferentes num grupo só.
-      const notas = perguntasAvaliacao.map((_, i) => parseInt(req.body['aval_resposta_' + i]));
-      avalSugestoes = (req.body.aval_sugestoes || '').trim() || null;
-      const notasValidas = notas.length === perguntasAvaliacao.length && notas.every(n => Number.isInteger(n) && n >= 1 && n <= 6);
-      if (!notasValidas) {
-        return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Completa todas las preguntas de evaluación obligatorias.', nome: null, ultimoDia, perguntasAvaliacao });
-      }
-      avalRespostas = JSON.stringify(notas);
+    // Avaliação obrigatória em TODO check-out, de qualquer dia do evento — pedido do usuário
+    // 17/08/2026 (2ª rodada): antes só no último dia, agora em cada um. Perguntas são
+    // configuráveis por evento — por isso as respostas viram um array (mesma ordem/tamanho de
+    // perguntasAvaliacao), não colunas fixas. Cada pergunta tem seu próprio radio group
+    // (aval_resposta_0, aval_resposta_1, ...) — usar o mesmo name pra todas juntaria os rádios
+    // de perguntas diferentes num grupo só.
+    const notas = perguntasAvaliacao.map((_, i) => parseInt(req.body['aval_resposta_' + i]));
+    const avalSugestoes = (req.body.aval_sugestoes || '').trim() || null;
+    const notasValidas = notas.length === perguntasAvaliacao.length && notas.every(n => Number.isInteger(n) && n >= 1 && n <= 6);
+    if (!notasValidas) {
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Completa todas las preguntas de evaluación obligatorias.', nome: null, perguntasAvaliacao });
     }
+    const avalRespostas = JSON.stringify(notas);
 
     // Busca a inscrição por email OU documento (RG/CI/DNI) no evento
     const insR = await query(
@@ -2060,11 +2044,10 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
     }
     if (jaExiste.rows.length > 0) {
       const nomeJa = inscricao ? inscricao.nome.split(' ')[0] : null;
-      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: true, erro: null, nome: nomeJa, ultimoDia, perguntasAvaliacao });
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: true, erro: null, nome: nomeJa, perguntasAvaliacao });
     }
 
-    // Registra o check-out (vinculando à inscrição e ao dia, se houver) + a avaliação, quando
-    // for o check-out do último dia
+    // Registra o check-out (vinculando à inscrição e ao dia, se houver) + a avaliação daquele dia
     await query(
       'INSERT INTO evento_checkouts (evento_id, programacao_id, inscricao_id, email, cpf, nome_informado, ip, aval_respostas, aval_sugestoes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
       [req.params.id, diaId, inscricao ? inscricao.id : null, email, docLimpo, inscricao ? inscricao.nome : null, (req.headers['x-forwarded-for']||req.ip||'').toString().split(',')[0].trim(), avalRespostas, avalSugestoes]
@@ -2072,7 +2055,8 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
 
     const nome = inscricao ? inscricao.nome.split(' ')[0] : null;
 
-    // Email de confirmação (só quando bateu com inscrição válida)
+    // Email de confirmação (só quando bateu com inscrição válida) — enviado em TODO check-out,
+    // de cada dia do evento, não só no último
     if (inscricao && inscricao.email) {
       try {
         const { enviarEmail } = require('../services/notificacoes');
@@ -2083,11 +2067,11 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
       } catch(e) { console.error('Email checkout falhou:', e.message); }
     }
 
-    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: true, jaConfirmado: false, erro: null, nome, ultimoDia, perguntasAvaliacao });
+    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: true, jaConfirmado: false, erro: null, nome, perguntasAvaliacao });
   } catch(e) { console.error('Checkout POST erro:', e.message); res.status(500).send('Erro ao registrar.'); }
 });
 
-// Configurar as perguntas da avaliação obrigatória do último dia (painel) — pedido do usuário:
+// Configurar as perguntas da avaliação obrigatória de check-out (painel) — pedido do usuário:
 // dá pra adicionar/excluir perguntas por evento. Lista vazia/ausente = usa a lista padrão.
 router.post('/eventos/:id/avaliacao-perguntas', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
@@ -2183,39 +2167,41 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
     aptos.sort(_ord);
     naoCompareceu.sort(_ord);
 
-    // Avaliação obrigatória do ÚLTIMO DIA (evento legado sem Programação: todo check-out já
-    // é "do último dia", só existe 1). diasR já vem ordenado por data ASC — o último item é
-    // o dia final, sem precisar de outra consulta.
-    const ultimoDiaId = diasR.rows.length ? diasR.rows[diasR.rows.length - 1].id : null;
-    const checkoutsUltimoDia = diasR.rows.length
-      ? checkouts.rows.filter(c => c.programacao_id === ultimoDiaId)
-      : checkouts.rows;
-    const respondidasAval = checkoutsUltimoDia.filter(c => c.aval_respostas !== null).map(c => ({ ...c, notas: JSON.parse(c.aval_respostas) }));
-    // Uma distribuição por PERGUNTA (não por coluna fixa — a lista de perguntas pode ter
-    // mudado ao longo do evento; cada resposta só conta pras perguntas que ela de fato tem).
-    const distribuicoes = perguntas.map((_, i) => {
-      const contagem = [0, 0, 0, 0, 0, 0]; // índice 0 = nota 1 (Péssimo) .. índice 5 = nota 6 (Excelente)
-      respondidasAval.forEach(c => { const n = c.notas[i]; if (n >= 1 && n <= 6) contagem[n - 1]++; });
-      return contagem;
+    // Avaliação obrigatória em TODO dia do evento — pedido do usuário 17/08/2026 (2ª rodada):
+    // uma seção por dia, não mais uma seção só do último. diasR já vem ordenado por data ASC.
+    // Evento legado (sem Programação por data) vira um grupo único.
+    const gruposDia = diasR.rows.length
+      ? diasR.rows.map(d => ({ programacao_id: d.id, titulo: d.titulo, data: d.data }))
+      : [{ programacao_id: null, titulo: evR.rows[0].nome, data: null }];
+    const avaliacaoPorDia = gruposDia.map(g => {
+      const checkoutsDia = checkouts.rows.filter(c => c.programacao_id === g.programacao_id);
+      const respondidas = checkoutsDia.filter(c => c.aval_respostas !== null).map(c => ({ ...c, notas: JSON.parse(c.aval_respostas) }));
+      // Uma distribuição por PERGUNTA (não por coluna fixa — a lista de perguntas pode ter
+      // mudado ao longo do evento; cada resposta só conta pras perguntas que ela de fato tem).
+      const distribuicoes = perguntas.map((_, i) => {
+        const contagem = [0, 0, 0, 0, 0, 0]; // índice 0 = nota 1 (Péssimo) .. índice 5 = nota 6 (Excelente)
+        respondidas.forEach(c => { const n = c.notas[i]; if (n >= 1 && n <= 6) contagem[n - 1]++; });
+        return contagem;
+      });
+      return {
+        programacao_id: g.programacao_id,
+        titulo: g.titulo,
+        data: g.data,
+        total: checkoutsDia.length,
+        respondidas: respondidas.length,
+        percentual: checkoutsDia.length ? Math.round(respondidas.length / checkoutsDia.length * 100) : 0,
+        distribuicoes,
+        sugestoes: respondidas.map(c => c.aval_sugestoes).filter(Boolean),
+        // Respostas individuais — pra tabela filtrável e exportação (pedido do usuário 17/08/2026)
+        respostas: respondidas.map(c => ({ nome: c.nome_informado, email: c.email, quando: c.criado_em, notas: c.notas, sugestao: c.aval_sugestoes || '' }))
+      };
     });
-    // Respostas individuais — pra tabela filtrável e exportação (pedido do usuário 17/08/2026)
-    const respostasIndividuais = respondidasAval.map(c => ({
-      nome: c.nome_informado, email: c.email, quando: c.criado_em, notas: c.notas, sugestao: c.aval_sugestoes || ''
-    }));
-    const avaliacao = {
-      total: checkoutsUltimoDia.length,
-      respondidas: respondidasAval.length,
-      percentual: checkoutsUltimoDia.length ? Math.round(respondidasAval.length / checkoutsUltimoDia.length * 100) : 0,
-      perguntas, distribuicoes,
-      sugestoes: respondidasAval.map(c => c.aval_sugestoes).filter(Boolean),
-      respostas: respostasIndividuais
-    };
 
     res.json({
       ok: true,
       evento: evR.rows[0],
       resumo: { aptos: aptos.length, nao_compareceu: naoCompareceu.length, sem_inscricao: semInscricao.length, total_checkouts: checkouts.rows.length },
-      aptos, naoCompareceu, semInscricao, porDia, avaliacao
+      aptos, naoCompareceu, semInscricao, porDia, perguntas, avaliacaoPorDia
     });
   } catch(e) { console.error('Relatorio checkout erro:', e.message); res.json({ok:false, erro:e.message}); }
 });
@@ -2244,10 +2230,9 @@ router.get('/eventos/:id/checkout-qrcode', requireAuth, requirePermissao('evento
   } catch(e) { console.error('Checkout QR erro:', e.message); res.status(500).send('Erro ao gerar QR Code.'); }
 });
 
-// Prévia (só admin) de como o participante vê o check-out do ÚLTIMO DIA, com a avaliação —
-// pedido do usuário: poder conferir o formulário sem esperar o dia real chegar nem precisar
-// abrir o check-out de verdade. Renderiza a mesma página pública, forçando ultimoDia/aberto,
-// mas não grava nada (é só visualização).
+// Prévia (só admin) de como o participante vê o check-out (com a avaliação) — pedido do
+// usuário: poder conferir o formulário sem precisar abrir o check-out de verdade. Renderiza a
+// mesma página pública, forçando aberto=true, mas não grava nada (é só visualização).
 router.get('/eventos/:id/checkout-preview', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
@@ -2255,7 +2240,7 @@ router.get('/eventos/:id/checkout-preview', requireAuth, requirePermissao('event
     const evento = evR.rows[0];
     const cfgPub = await getConfig();
     const perguntasAvaliacao = perguntasAvaliacaoDoEvento(evento);
-    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: null, nome: null, ultimoDia: true, perguntasAvaliacao, previa: true });
+    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: null, nome: null, perguntasAvaliacao, previa: true });
   } catch(e) { console.error('Checkout preview erro:', e.message); res.status(500).send('Erro ao carregar prévia.'); }
 });
 
@@ -2299,28 +2284,30 @@ router.get('/eventos/:id/checkout-export', requireAuth, requirePermissao('evento
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
-// Exportar as respostas da avalia\u00E7\u00E3o do \u00FAltimo dia (CSV, abre no Excel) \u2014 pedido do usu\u00E1rio
-// 17/08/2026. Mesmo padr\u00E3o do /checkout-export (";" como separador, BOM UTF-8 pro Excel n\u00E3o
-// bagun\u00E7ar os acentos).
+// Exportar as respostas da avalia\u00E7\u00E3o de TODOS os dias (CSV, abre no Excel) \u2014 pedido do
+// usu\u00E1rio 17/08/2026 (2\u00AA rodada: virou obrigat\u00F3ria em cada dia, ent\u00E3o o export traz uma
+// coluna "Dia" pra organizar por data do evento). Mesmo padr\u00E3o do /checkout-export (";" como
+// separador, BOM UTF-8 pro Excel n\u00E3o bagun\u00E7ar os acentos).
 router.get('/eventos/:id/avaliacao-export', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const evR = await query('SELECT nome, avaliacao_perguntas FROM eventos WHERE id=$1', [req.params.id]);
     if (!evR.rows[0]) return res.status(404).send('Evento n\u00E3o encontrado.');
     const perguntas = perguntasAvaliacaoDoEvento(evR.rows[0]);
-    const diasR = await query('SELECT id FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL ORDER BY data', [req.params.id]);
-    const ultimoDiaId = diasR.rows.length ? diasR.rows[diasR.rows.length - 1].id : null;
+    const diasR = await query('SELECT id, titulo, data FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL ORDER BY data', [req.params.id]);
+    const diaLabel = new Map(diasR.rows.map(d => [d.id, (d.data ? new Date(d.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) + ' \u2014 ' : '') + d.titulo]));
     const checkoutsR = await query(
-      `SELECT nome_informado, email, criado_em, aval_respostas, aval_sugestoes FROM evento_checkouts
-       WHERE evento_id=$1 AND aval_respostas IS NOT NULL AND programacao_id IS NOT DISTINCT FROM $2
-       ORDER BY criado_em`,
-      [req.params.id, ultimoDiaId]
+      `SELECT nome_informado, email, criado_em, programacao_id, aval_respostas, aval_sugestoes FROM evento_checkouts
+       WHERE evento_id=$1 AND aval_respostas IS NOT NULL
+       ORDER BY programacao_id NULLS FIRST, criado_em`,
+      [req.params.id]
     );
     const nomeEv = (evR.rows[0].nome || 'evento').replace(/[^a-z0-9]/gi,'_').substring(0,30);
-    const cabecalho = ['Nome', 'Email', ...perguntas, 'Sugest\u00F5es', 'Respondido em'];
+    const cabecalho = ['Dia', 'Nome', 'Email', ...perguntas, 'Sugest\u00F5es', 'Respondido em'];
     let csv = cabecalho.join(';') + '\n';
     checkoutsR.rows.forEach(r => {
       const notas = JSON.parse(r.aval_respostas);
-      csv += [r.nome_informado || '', r.email || '', ...notas, r.aval_sugestoes || '', new Date(r.criado_em).toLocaleString('pt-BR')]
+      const dia = r.programacao_id ? (diaLabel.get(r.programacao_id) || '') : '\u00DAnico dia';
+      csv += [dia, r.nome_informado || '', r.email || '', ...notas, r.aval_sugestoes || '', new Date(r.criado_em).toLocaleString('pt-BR')]
         .map(v => '"' + String(v).replace(/"/g,'""') + '"').join(';') + '\n';
     });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');

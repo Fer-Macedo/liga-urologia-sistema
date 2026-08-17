@@ -85,11 +85,11 @@
           <label>RG / CI / DNI</label>
           <input type="text" name="documento" placeholder="Tu documento de identidad" required>
 
-          <% if(typeof ultimoDia !== 'undefined' && ultimoDia && perguntasAvaliacao && perguntasAvaliacao.length){
+          <% if(typeof perguntasAvaliacao !== 'undefined' && perguntasAvaliacao && perguntasAvaliacao.length){
             const escala = ['Péssimo','Ruim','Regular','Bom','Muito bom','Excelente'];
           %>
           <div class="aval-titulo">Evaluación de la clase de forma general</div>
-          <div class="aval-sub">Para cerrar tu check-out del último día, responde esta breve evaluación. Es obligatoria.</div>
+          <div class="aval-sub">Para completar tu check-out de hoy, responde esta breve evaluación. Es obligatoria.</div>
           <% perguntasAvaliacao.forEach(function(titulo, qi){ %>
           <div class="likert">
             <div class="likert-titulo"><%= titulo %> <span class="req">*</span></div>

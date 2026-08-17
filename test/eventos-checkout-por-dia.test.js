@@ -12,7 +12,7 @@ const path = require('path');
 const RAIZ = path.join(__dirname, '..');
 const MODULO = path.join(RAIZ, 'src/routes/eventos.js');
 
-function montar({ evento, hojeProgramacao, proximaProgramacao, inscricao, checkoutExistente, maxData, mock } = {}) {
+function montar({ evento, hojeProgramacao, proximaProgramacao, inscricao, checkoutExistente, mock } = {}) {
   const inserts = [];
   const updates = [];
   const rq = require.resolve(path.join(RAIZ, 'src/models/database.js'));
@@ -22,7 +22,6 @@ function montar({ evento, hojeProgramacao, proximaProgramacao, inscricao, checko
       if (/SELECT \* FROM eventos WHERE id=\$1/.test(sql)) return { rows: evento ? [evento] : [] };
       if (/WHERE evento_id=\$1 AND data=CURRENT_DATE/.test(sql)) return { rows: hojeProgramacao ? [hojeProgramacao] : [] };
       if (/WHERE evento_id=\$1 AND data IS NOT NULL ORDER BY ABS/.test(sql)) return { rows: proximaProgramacao ? [proximaProgramacao] : [] };
-      if (/SELECT MAX\(data\) as ultima FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [{ ultima: maxData || null }] };
       if (/SELECT id, nome, status, isento, email, rg FROM evento_inscricoes/.test(sql)) return { rows: inscricao ? [inscricao] : [] };
       if (/SELECT id FROM evento_checkouts WHERE evento_id=\$1 AND inscricao_id=\$2 AND programacao_id IS NOT DISTINCT FROM \$3/.test(sql)) {
         return { rows: checkoutExistente ? [{ id: 1 }] : [] };
@@ -117,7 +116,7 @@ test('POST /checkout/:id: dia de hoje aberto — grava o check-out com o program
     inscricao: { id: 42, nome: 'Fulano de Tal', email: 'f@x.com', status: 'confirmado', isento: false, rg: '123456' }
   });
   const res = resRender();
-  await rotas['POST /checkout/:id']({ params: { id: '5' }, body: { email: 'f@x.com', documento: '123456' }, headers: {}, ip: '1.2.3.4' }, res);
+  await rotas['POST /checkout/:id']({ params: { id: '5' }, body: { email: 'f@x.com', documento: '123456', aval_resposta_0: '5', aval_resposta_1: '5', aval_resposta_2: '5', aval_resposta_3: '5' }, headers: {}, ip: '1.2.3.4' }, res);
   assert.strictEqual(inserts.length, 1);
   const [eventoId, programacaoId, inscricaoId] = inserts[0];
   assert.strictEqual(eventoId, '5');
@@ -147,12 +146,12 @@ test('POST /checkout/:id: mesma pessoa, mesmo dia, 2ª tentativa — bloqueia co
     checkoutExistente: true
   });
   const res = resRender();
-  await rotas['POST /checkout/:id']({ params: { id: '5' }, body: { email: 'f@x.com', documento: '123456' }, headers: {}, ip: '1.2.3.4' }, res);
+  await rotas['POST /checkout/:id']({ params: { id: '5' }, body: { email: 'f@x.com', documento: '123456', aval_resposta_0: '5', aval_resposta_1: '5', aval_resposta_2: '5', aval_resposta_3: '5' }, headers: {}, ip: '1.2.3.4' }, res);
   assert.strictEqual(inserts.length, 0);
   assert.strictEqual(res._locals.jaConfirmado, true);
 });
 
-test('POST /checkout/:id: sem nenhum item de Programação — modo legado grava programacao_id nulo (e exige avaliação, pois é sempre "o último dia")', async () => {
+test('POST /checkout/:id: sem nenhum item de Programação — modo legado grava programacao_id nulo (e exige avaliação, como qualquer check-out)', async () => {
   const { rotas, inserts } = montar({
     evento: { id: 6, nome: 'Palestra única', checkout_aberto: true, checkout_fecha_em: null },
     hojeProgramacao: null, proximaProgramacao: null,
@@ -274,97 +273,67 @@ test('página pública de check-out: NUNCA mostra o título do dia, só o nome r
 });
 
 // 17/08/2026: pedido do usuário — avaliação obrigatória (4 notas de 1-6 + sugestão livre)
-// embutida no check-out, mas SÓ no check-out do ÚLTIMO DIA do evento (panorama geral pra
-// coordenação de ligas, não uma pesquisa repetida em cada um dos 4 dias).
-test('GET /checkout/:id: dia é o de data mais recente do evento — ultimoDia=true', async () => {
-  const { rotas } = montar({
-    evento: EVENTO,
-    hojeProgramacao: { id: 10, titulo: 'Día 4', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-20' },
-    maxData: '2026-08-20'
-  });
-  const res = resRender();
-  await rotas['GET /checkout/:id']({ params: { id: '5' } }, res);
-  assert.strictEqual(res._locals.ultimoDia, true);
-});
-
-test('GET /checkout/:id: dia NÃO é o último do evento — ultimoDia=false', async () => {
-  const { rotas } = montar({
-    evento: EVENTO,
-    hojeProgramacao: { id: 10, titulo: 'Día 2', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-18' },
-    maxData: '2026-08-20'
-  });
-  const res = resRender();
-  await rotas['GET /checkout/:id']({ params: { id: '5' } }, res);
-  assert.strictEqual(res._locals.ultimoDia, false);
-});
-
-test('GET /checkout/:id: evento legado (sem Programação por data) — ultimoDia sempre true, só existe 1 dia', async () => {
-  const { rotas } = montar({ evento: { id: 6, nome: 'Palestra única', checkout_aberto: true, checkout_fecha_em: null }, hojeProgramacao: null, proximaProgramacao: null });
-  const res = resRender();
-  await rotas['GET /checkout/:id']({ params: { id: '6' } }, res);
-  assert.strictEqual(res._locals.ultimoDia, true);
-});
-
-test('POST /checkout/:id: último dia SEM alguma nota de avaliação — recusa, não grava check-out', async () => {
+// embutida no check-out.
+// 17/08/2026 (2ª rodada): antes valia só no check-out do ÚLTIMO DIA; agora é obrigatória em
+// TODO dia do evento (cada resposta já sai marcada com o dia — programacao_id — pra ficar
+// organizada por data).
+test('POST /checkout/:id: dia comum (não é o último) SEM alguma nota de avaliação — recusa, não grava check-out', async () => {
   const { rotas, inserts } = montar({
     evento: EVENTO,
-    hojeProgramacao: { id: 10, titulo: 'Día 4', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-20' },
-    maxData: '2026-08-20',
+    hojeProgramacao: { id: 10, titulo: 'Día 2', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-18' },
     inscricao: { id: 42, nome: 'Fulano', email: 'f@x.com', status: 'confirmado', isento: false, rg: '123456' }
   });
   const res = resRender();
   await rotas['POST /checkout/:id']({ params: { id: '5' }, body: { email: 'f@x.com', documento: '123456', aval_resposta_0: '5', aval_resposta_1: '4' /* faltam as perguntas 2 e 3 */ }, headers: {}, ip: '1.2.3.4' }, res);
-  assert.strictEqual(inserts.length, 0, 'não pode gravar o check-out sem a avaliação completa no último dia');
+  assert.strictEqual(inserts.length, 0, 'avaliação agora é obrigatória em QUALQUER dia, não só no último');
   assert.ok(res._locals.erro);
 });
 
-test('POST /checkout/:id: último dia com avaliação completa — grava check-out + as 5 notas', async () => {
+test('POST /checkout/:id: dia comum com avaliação completa — grava check-out + as notas, marcado com o dia', async () => {
   const { rotas, inserts } = montar({
     evento: EVENTO,
-    hojeProgramacao: { id: 10, titulo: 'Día 4', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-20' },
-    maxData: '2026-08-20',
+    hojeProgramacao: { id: 10, titulo: 'Día 2', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-18' },
     inscricao: { id: 42, nome: 'Fulano', email: 'f@x.com', status: 'confirmado', isento: false, rg: '123456' }
   });
   const res = resRender();
   await rotas['POST /checkout/:id']({ params: { id: '5' }, body: { email: 'f@x.com', documento: '123456', aval_resposta_0: '6', aval_resposta_1: '5', aval_resposta_2: '6', aval_resposta_3: '4', aval_sugestoes: 'Mais tiempo para preguntas' }, headers: {}, ip: '1.2.3.4' }, res);
   assert.strictEqual(inserts.length, 1);
-  const [, , , , , , , avalRespostas, avalSugestoes] = inserts[0];
+  const [, programacaoId, , , , , , avalRespostas, avalSugestoes] = inserts[0];
+  assert.strictEqual(programacaoId, 10, 'a resposta fica marcada com o dia — organizada por data do evento');
   assert.deepStrictEqual(JSON.parse(avalRespostas), [6, 5, 6, 4], 'perguntas padrão (4), respostas na mesma ordem');
   assert.strictEqual(avalSugestoes, 'Mais tiempo para preguntas');
   assert.strictEqual(res._locals.sucesso, true);
 });
 
-test('POST /checkout/:id: dia que NÃO é o último — não exige nem grava avaliação', async () => {
+test('POST /checkout/:id: dia final (último) também exige a avaliação — não é mais um caso especial', async () => {
   const { rotas, inserts } = montar({
     evento: EVENTO,
-    hojeProgramacao: { id: 10, titulo: 'Día 2', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-18' },
-    maxData: '2026-08-20',
+    hojeProgramacao: { id: 11, titulo: 'Día 4', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-20' },
     inscricao: { id: 42, nome: 'Fulano', email: 'f@x.com', status: 'confirmado', isento: false, rg: '123456' }
   });
   const res = resRender();
   await rotas['POST /checkout/:id']({ params: { id: '5' }, body: { email: 'f@x.com', documento: '123456' }, headers: {}, ip: '1.2.3.4' }, res);
-  assert.strictEqual(inserts.length, 1, 'check-out de dia comum continua funcionando sem avaliação nenhuma');
-  const [, , , , , , , avalRespostas] = inserts[0];
-  assert.strictEqual(avalRespostas, null);
+  assert.strictEqual(inserts.length, 0, 'sem avaliação, nenhum dia grava check-out — inclusive o último');
+  assert.ok(res._locals.erro);
 });
 
 // 17/08/2026: perguntas agora são configuráveis por evento (pedido do usuário: dá pra
 // adicionar/excluir), então não são mais colunas fixas — viram um array de respostas na
 // mesma ordem/tamanho da lista de perguntas vigente.
-test('página pública: mostra o bloco de avaliação obrigatória (perguntas dinâmicas) só quando é o último dia', () => {
+test('página pública: sempre mostra o bloco de avaliação obrigatória (perguntas dinâmicas), em qualquer dia', () => {
   const ejs = require('ejs');
   const fs = require('fs');
   const ARQUIVO = path.join(RAIZ, 'views/pages/evento-checkout-publico.ejs');
   const perguntas = ['Pergunta customizada 1', 'Pergunta customizada 2'];
   const base = { evento: { id: 5, nome: 'Jornada' }, config: {}, aberto: true, sucesso: false, jaConfirmado: false, erro: null, nome: null };
-  const comAval = ejs.render(fs.readFileSync(ARQUIVO, 'utf8'), { ...base, ultimoDia: true, perguntasAvaliacao: perguntas }, { filename: ARQUIVO });
-  const semAval = ejs.render(fs.readFileSync(ARQUIVO, 'utf8'), { ...base, ultimoDia: false, perguntasAvaliacao: [] }, { filename: ARQUIVO });
-  assert.match(comAval, /Pergunta customizada 1/, 'último dia mostra as perguntas configuradas pro evento');
+  const comAval = ejs.render(fs.readFileSync(ARQUIVO, 'utf8'), { ...base, perguntasAvaliacao: perguntas }, { filename: ARQUIVO });
+  const semAval = ejs.render(fs.readFileSync(ARQUIVO, 'utf8'), { ...base, perguntasAvaliacao: [] }, { filename: ARQUIVO });
+  assert.match(comAval, /Pergunta customizada 1/, 'mostra as perguntas configuradas pro evento');
   assert.match(comAval, /aval_resposta_0/, 'radios indexados por pergunta (0..N-1), não um name fixo compartilhado');
-  assert.ok(!semAval.includes('aval_resposta_0'), 'dia comum não mostra avaliação nenhuma');
+  assert.ok(!semAval.includes('aval_resposta_0'), 'sem perguntas configuradas, não mostra avaliação nenhuma');
 });
 
-test('GET /eventos/:id/checkout-relatorio: calcula a distribuição das notas e o % de resposta do último dia', async () => {
+test('GET /eventos/:id/checkout-relatorio: calcula a distribuição das notas e o % de resposta POR DIA', async () => {
   const { rotas } = montar({
     evento: EVENTO,
     mock: (sql) => {
@@ -373,7 +342,7 @@ test('GET /eventos/:id/checkout-relatorio: calcula a distribuição das notas e 
       if (/SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id, aval_respostas/.test(sql)) return { rows: [
         { inscricao_id: 1, email: 'a@x.com', cpf: null, nome_informado: 'A', criado_em: new Date(), programacao_id: 11, aval_respostas: JSON.stringify([6, 5, 6, 4]), aval_sugestoes: 'Excelente evento' },
         { inscricao_id: 2, email: 'b@x.com', cpf: null, nome_informado: 'B', criado_em: new Date(), programacao_id: 11, aval_respostas: null, aval_sugestoes: null }, // fez check-out mas não respondeu
-        { inscricao_id: 3, email: 'c@x.com', cpf: null, nome_informado: 'C', criado_em: new Date(), programacao_id: 10, aval_respostas: JSON.stringify([1, 1, 1, 1]), aval_sugestoes: null } // dia 1, não conta pro último dia
+        { inscricao_id: 3, email: 'c@x.com', cpf: null, nome_informado: 'C', criado_em: new Date(), programacao_id: 10, aval_respostas: JSON.stringify([1, 1, 1, 1]), aval_sugestoes: null } // Día 1, entra na SEÇÃO do Día 1
       ] };
       if (/SELECT id, titulo, data FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
         { id: 10, titulo: 'Día 1', data: '2026-08-17' },
@@ -384,16 +353,19 @@ test('GET /eventos/:id/checkout-relatorio: calcula a distribuição das notas e 
   });
   const res = { json: (b) => { res._body = b; } };
   await rotas['GET /eventos/:id/checkout-relatorio']({ params: { id: '5' } }, res);
-  const av = res._body.avaliacao;
-  assert.strictEqual(av.total, 2, 'só os 2 check-outs do último dia (Día 4), o do Día 1 não conta');
-  assert.strictEqual(av.respondidas, 1);
-  assert.strictEqual(av.percentual, 50);
-  assert.strictEqual(av.perguntas.length, 4, 'perguntas padrão do evento (não customizadas)');
-  assert.deepStrictEqual(av.distribuicoes[0], [0, 0, 0, 0, 0, 1], 'pergunta 0 (tema): nota 6 (índice 5) recebeu 1 resposta');
-  assert.deepStrictEqual(av.sugestoes, ['Excelente evento']);
-  assert.strictEqual(av.respostas.length, 1, 'só a resposta de A entra na tabela individual do último dia');
-  assert.strictEqual(av.respostas[0].nome, 'A');
-  assert.deepStrictEqual(av.respostas[0].notas, [6, 5, 6, 4]);
+  assert.strictEqual(res._body.perguntas.length, 4, 'perguntas padrão do evento (não customizadas)');
+  const [dia1, dia4] = res._body.avaliacaoPorDia;
+  assert.strictEqual(dia1.titulo, 'Día 1');
+  assert.strictEqual(dia1.total, 1);
+  assert.strictEqual(dia1.respondidas, 1);
+  assert.deepStrictEqual(dia1.respostas[0].notas, [1, 1, 1, 1], 'a resposta de C fica na seção do próprio dia, não misturada com a do Día 4');
+  assert.strictEqual(dia4.titulo, 'Día 4');
+  assert.strictEqual(dia4.total, 2);
+  assert.strictEqual(dia4.respondidas, 1);
+  assert.strictEqual(dia4.percentual, 50);
+  assert.deepStrictEqual(dia4.distribuicoes[0], [0, 0, 0, 0, 0, 1], 'pergunta 0 (tema): nota 6 (índice 5) recebeu 1 resposta no Día 4');
+  assert.deepStrictEqual(dia4.sugestoes, ['Excelente evento']);
+  assert.strictEqual(dia4.respostas[0].nome, 'A');
 });
 
 // 17/08/2026: pedido do usuário — dá pra adicionar/excluir perguntas por evento. O check-out
@@ -403,7 +375,6 @@ test('POST /checkout/:id: evento com perguntas customizadas (2, não as 4 padrã
   const { rotas, inserts } = montar({
     evento: eventoCustom,
     hojeProgramacao: { id: 10, titulo: 'Día 4', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-20' },
-    maxData: '2026-08-20',
     inscricao: { id: 42, nome: 'Fulano', email: 'f@x.com', status: 'confirmado', isento: false, rg: '123456' }
   });
   const res = resRender();
@@ -417,7 +388,6 @@ test('POST /checkout/:id: evento com perguntas customizadas — resposta 3ª per
   const { rotas, inserts } = montar({
     evento: eventoCustom,
     hojeProgramacao: { id: 10, titulo: 'Día 4', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-20' },
-    maxData: '2026-08-20',
     inscricao: { id: 42, nome: 'Fulano', email: 'f@x.com', status: 'confirmado', isento: false, rg: '123456' }
   });
   const res = resRender();
@@ -450,14 +420,16 @@ test('POST /eventos/:id/avaliacao-perguntas: lista vazia grava null (volta a usa
   assert.strictEqual(updates[0][0], null);
 });
 
-test('GET /eventos/:id/avaliacao-export: gera CSV com as perguntas como cabeçalho e as respostas em linhas', async () => {
+// 17/08/2026 (2ª rodada): avaliação passou a valer em todo dia, então o export ganhou uma
+// coluna "Dia" e traz as respostas de TODOS os dias, não só do último.
+test('GET /eventos/:id/avaliacao-export: gera CSV com coluna "Dia" e as perguntas como cabeçalho, respostas de todos os dias', async () => {
   const eventoCustom = { nome: 'Jornada Teste', avaliacao_perguntas: JSON.stringify(['Tema', 'Tempo']) };
   const { rotas } = montar({
     mock: (sql) => {
       if (/SELECT nome, avaliacao_perguntas FROM eventos WHERE id=\$1/.test(sql)) return { rows: [eventoCustom] };
-      if (/SELECT id FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL ORDER BY data/.test(sql)) return { rows: [{ id: 11 }] };
-      if (/SELECT nome_informado, email, criado_em, aval_respostas, aval_sugestoes FROM evento_checkouts/.test(sql)) return { rows: [
-        { nome_informado: 'Ana Confirmada', email: 'ana@x.com', criado_em: new Date('2026-08-20T20:00:00Z'), aval_respostas: JSON.stringify([6, 5]), aval_sugestoes: 'Muy bueno' }
+      if (/SELECT id, titulo, data FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL ORDER BY data/.test(sql)) return { rows: [{ id: 11, titulo: 'Día 4', data: '2026-08-20' }] };
+      if (/SELECT nome_informado, email, criado_em, programacao_id, aval_respostas, aval_sugestoes FROM evento_checkouts/.test(sql)) return { rows: [
+        { nome_informado: 'Ana Confirmada', email: 'ana@x.com', criado_em: new Date('2026-08-20T20:00:00Z'), programacao_id: 11, aval_respostas: JSON.stringify([6, 5]), aval_sugestoes: 'Muy bueno' }
       ] };
       return undefined;
     }
@@ -466,19 +438,18 @@ test('GET /eventos/:id/avaliacao-export: gera CSV com as perguntas como cabeçal
   await rotas['GET /eventos/:id/avaliacao-export']({ params: { id: '5' } }, res);
   assert.match(res._headers['Content-Type'], /text\/csv/);
   assert.match(res._headers['Content-Disposition'], /attachment; filename="avaliacao-Jornada_Teste\.csv"/);
-  assert.match(res._body, /Nome;Email;Tema;Tempo;Sugestões;Respondido em/, 'cabeçalho usa as perguntas configuradas');
-  assert.match(res._body, /Ana Confirmada.*ana@x\.com.*"6".*"5".*Muy bueno/);
+  assert.match(res._body, /Dia;Nome;Email;Tema;Tempo;Sugestões;Respondido em/, 'cabeçalho usa as perguntas configuradas, com a coluna Dia na frente');
+  assert.match(res._body, /Día 4.*Ana Confirmada.*ana@x\.com.*"6".*"5".*Muy bueno/);
 });
 
 // 17/08/2026: pedido do usuário — poder ver a página que o participante vai ver, sem precisar
-// esperar o dia real chegar. Reaproveita a MESMA página pública (evento-checkout-publico),
-// só que forçando ultimoDia/aberto — mas como é o mesmo formulário/rota real, um envio
-// acidental durante a visualização não pode gravar um check-out ou avaliação falsos.
-test('GET /eventos/:id/checkout-preview: renderiza a página pública com ultimoDia forçado, sem gravar nada', async () => {
+// abrir o check-out de verdade. Reaproveita a MESMA página pública (evento-checkout-publico),
+// só que forçando aberto=true — mas como é o mesmo formulário/rota real, um envio acidental
+// durante a visualização não pode gravar um check-out ou avaliação falsos.
+test('GET /eventos/:id/checkout-preview: renderiza a página pública com aberto forçado, sem gravar nada', async () => {
   const { rotas } = montar({ evento: { ...EVENTO, avaliacao_perguntas: JSON.stringify(['Pergunta única']) } });
   const res = resRender();
   await rotas['GET /eventos/:id/checkout-preview']({ params: { id: '5' } }, res);
-  assert.strictEqual(res._locals.ultimoDia, true);
   assert.strictEqual(res._locals.aberto, true);
   assert.strictEqual(res._locals.previa, true);
   assert.deepStrictEqual(res._locals.perguntasAvaliacao, ['Pergunta única']);
@@ -488,7 +459,6 @@ test('POST /checkout/:id: campo previa=1 (enviado da tela de prévia) NUNCA grav
   const { rotas, inserts } = montar({
     evento: EVENTO,
     hojeProgramacao: { id: 10, titulo: 'Día 4', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-20' },
-    maxData: '2026-08-20',
     inscricao: { id: 42, nome: 'Fulano', email: 'f@x.com', status: 'confirmado', isento: false, rg: '123456' }
   });
   const res = resRender();

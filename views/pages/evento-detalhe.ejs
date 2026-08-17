@@ -1281,11 +1281,11 @@
 
         <div class="section-card" style="margin-bottom:16px">
           <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
-            <span>Perguntas da avaliação (obrigatória no check-out do último dia)</span>
+            <span>Perguntas da avaliação (obrigatória no check-out de todos os dias do evento)</span>
             <a class="btn btn-sm" href="/eventos/<%= evento.id %>/checkout-preview" target="_blank" style="background:var(--cor-primaria);color:#fff;border-color:transparent;text-decoration:none">Visualizar prévia (como o participante vê)</a>
           </div>
           <div class="section-body">
-            <p style="font-size:12px;color:var(--texto2);margin-bottom:10px">Cada linha abaixo vira uma pergunta de escala <strong>obrigatória</strong> (<span style="color:#dc2626;font-weight:700">*</span> — o participante não consegue enviar o check-out sem responder todas) no dia final. Adicione ou remova conforme precisar.</p>
+            <p style="font-size:12px;color:var(--texto2);margin-bottom:10px">Cada linha abaixo vira uma pergunta de escala <strong>obrigatória</strong> (<span style="color:#dc2626;font-weight:700">*</span> — o participante não consegue enviar o check-out sem responder todas) em TODOS os dias do evento. Adicione ou remova conforme precisar.</p>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:10px 12px;background:var(--fundo);border-radius:8px;border:1px solid var(--borda)">
               <span style="font-size:11px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px">Escala das respostas (fixa, vale pra todas):</span>
               <% ['Péssimo','Ruim','Regular','Bom','Muito bom','Excelente'].forEach(function(op, i){ %>
@@ -1690,52 +1690,70 @@ function carregarRelatorioCheckout(){
       }
 
       rel.innerHTML = html;
-      renderizarAvaliacao(d.avaliacao);
+      renderizarAvaliacao(d.perguntas, d.avaliacaoPorDia);
     })
     .catch(function(e){ rel.innerHTML = '<span style="color:#991b1b">Erro: '+e.message+'</span>'; });
 }
 function escHtml(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
 var _avalCharts = {};
-var _avalRespostas = []; // cache pro filtro não precisar buscar de novo
 var _avalPerguntas = [];
-function renderizarAvaliacao(a){
+var _avalDados = []; // cache por dia, pro filtro de cada dia não precisar buscar de novo
+// A avaliação é obrigatória em TODO dia do evento (pedido do usuário 17/08/2026) — o relatório
+// mostra uma seção por dia, cada uma com seus próprios gráficos e tabela filtrável, pra deixar
+// claro que as respostas ficam organizadas por data do evento.
+function renderizarAvaliacao(perguntas, avaliacaoPorDia){
   var el = document.getElementById('ck-avaliacao');
-  if(!a || a.total === 0){ el.innerHTML = '<div style="color:#94a3b8;font-size:12px">Ninguém fez check-out no último dia ainda.</div>'; return; }
-  var html = '<div style="margin-bottom:16px;font-size:13px"><strong>'+a.respondidas+'</strong> de <strong>'+a.total+'</strong> responderam a avaliação do último dia (<strong>'+a.percentual+'%</strong>).</div>';
-  if(a.respondidas === 0){ el.innerHTML = html + '<div style="color:#94a3b8;font-size:12px">Nenhuma resposta ainda.</div>'; return; }
-  _avalRespostas = a.respostas || [];
-  _avalPerguntas = a.perguntas || [];
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:20px">';
-  a.perguntas.forEach(function(titulo, i){ html += '<div><div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">'+escHtml(titulo)+'</div><canvas id="chartAval_'+i+'" height="140"></canvas></div>'; });
-  html += '</div>';
-  if(a.sugestoes && a.sugestoes.length){
-    html += '<h3 style="font-size:13px;color:#0f172a;margin:16px 0 8px">Sugestões ('+a.sugestoes.length+')</h3>';
-    html += '<div style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:20px">';
-    a.sugestoes.forEach(function(s){ html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:12px;color:#374151">'+escHtml(s)+'</div>'; });
-    html += '</div>';
-  }
-  html += '<h3 style="font-size:13px;color:#0f172a;margin:16px 0 8px">Respostas individuais</h3>';
-  html += '<input type="text" id="avalFiltro" class="input" placeholder="Filtrar por nome, e-mail ou sugestão..." style="margin-bottom:10px;font-size:13px" oninput="filtrarAvaliacoes()">';
-  html += '<div id="avalTabelaWrap" style="overflow-x:auto"></div>';
-  el.innerHTML = html;
+  if(!avaliacaoPorDia || !avaliacaoPorDia.length){ el.innerHTML = '<div style="color:#94a3b8;font-size:12px">Ainda não há check-outs registrados.</div>'; return; }
+  _avalPerguntas = perguntas || [];
+  _avalDados = avaliacaoPorDia;
   var labels = ['Péssimo','Ruim','Regular','Bom','Muito bom','Excelente'];
   var cores = ['#ef4444','#f97316','#f59e0b','#84cc16','#22c55e','#15803d'];
-  a.perguntas.forEach(function(titulo, i){
-    var ctxId = 'chartAval_'+i;
-    if(_avalCharts[ctxId]) _avalCharts[ctxId].destroy();
-    _avalCharts[ctxId] = new Chart(document.getElementById(ctxId), {
-      type: 'bar',
-      data: { labels: labels, datasets: [{ data: a.distribuicoes[i], backgroundColor: cores }] },
-      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { ticks: { font: { size: 9 } } } } }
-    });
+  var html = '';
+  avaliacaoPorDia.forEach(function(dia, di){
+    var dataFmt = dia.data ? new Date(dia.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'})+' — ' : '';
+    html += '<div style="margin-bottom:24px;padding-bottom:20px'+(di < avaliacaoPorDia.length-1 ? ';border-bottom:1px solid var(--borda)' : '')+'">';
+    html += '<h3 style="font-size:14px;color:#0f172a;margin:0 0 8px">'+dataFmt+escHtml(dia.titulo||'Avaliação')+'</h3>';
+    html += '<div style="margin-bottom:12px;font-size:13px"><strong>'+dia.respondidas+'</strong> de <strong>'+dia.total+'</strong> responderam a avaliação desse dia (<strong>'+dia.percentual+'%</strong>).</div>';
+    if(dia.respondidas === 0){
+      html += '<div style="color:#94a3b8;font-size:12px">Nenhuma resposta ainda.</div></div>';
+      return;
+    }
+    html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:16px">';
+    perguntas.forEach(function(titulo, pi){ html += '<div><div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">'+escHtml(titulo)+'</div><canvas id="chartAval_'+di+'_'+pi+'" height="140"></canvas></div>'; });
+    html += '</div>';
+    if(dia.sugestoes && dia.sugestoes.length){
+      html += '<h4 style="font-size:12px;color:#0f172a;margin:12px 0 6px">Sugestões ('+dia.sugestoes.length+')</h4>';
+      html += '<div style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;margin-bottom:14px">';
+      dia.sugestoes.forEach(function(s){ html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:12px;color:#374151">'+escHtml(s)+'</div>'; });
+      html += '</div>';
+    }
+    html += '<input type="text" id="avalFiltro_'+di+'" class="input" placeholder="Filtrar por nome, e-mail ou sugestão..." style="margin-bottom:8px;font-size:13px" oninput="filtrarAvaliacoes('+di+')">';
+    html += '<div id="avalTabelaWrap_'+di+'" style="overflow-x:auto"></div>';
+    html += '</div>';
   });
-  filtrarAvaliacoes();
+  el.innerHTML = html;
+  avaliacaoPorDia.forEach(function(dia, di){
+    if(!dia.respondidas) return;
+    perguntas.forEach(function(titulo, pi){
+      var ctxId = 'chartAval_'+di+'_'+pi;
+      var canvas = document.getElementById(ctxId);
+      if(!canvas) return;
+      if(_avalCharts[ctxId]) _avalCharts[ctxId].destroy();
+      _avalCharts[ctxId] = new Chart(canvas, {
+        type: 'bar',
+        data: { labels: labels, datasets: [{ data: dia.distribuicoes[pi], backgroundColor: cores }] },
+        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { ticks: { font: { size: 9 } } } } }
+      });
+    });
+    filtrarAvaliacoes(di);
+  });
 }
-function filtrarAvaliacoes(){
-  var wrap = document.getElementById('avalTabelaWrap');
-  if(!wrap) return;
-  var q = (document.getElementById('avalFiltro') ? document.getElementById('avalFiltro').value : '').toLowerCase();
-  var filtradas = _avalRespostas.filter(function(r){
+function filtrarAvaliacoes(di){
+  var wrap = document.getElementById('avalTabelaWrap_'+di);
+  var dia = _avalDados[di];
+  if(!wrap || !dia) return;
+  var q = (document.getElementById('avalFiltro_'+di) ? document.getElementById('avalFiltro_'+di).value : '').toLowerCase();
+  var filtradas = dia.respostas.filter(function(r){
     if(!q) return true;
     return (r.nome||'').toLowerCase().includes(q) || (r.email||'').toLowerCase().includes(q) || (r.sugestao||'').toLowerCase().includes(q);
   });
