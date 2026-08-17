@@ -1261,8 +1261,11 @@
             <div style="display:flex;gap:8px;align-items:center">
               <input id="ck-link" class="input" readonly value="https://inscricao.lauroucpcde.com/checkout/<%= evento.id %>" style="flex:1;font-family:monospace;font-size:12px">
               <button class="btn btn-sm" onclick="navigator.clipboard.writeText(document.getElementById('ck-link').value);this.textContent='Copiado!';setTimeout(()=>this.textContent='Copiar',1500)">Copiar</button>
+              <a class="btn btn-sm" href="/eventos/<%= evento.id %>/checkout-qrcode" style="background:var(--cor-primaria);color:#fff;border-color:transparent;text-decoration:none">Baixar QR Code (PNG)</a>
             </div>
-            <div style="font-size:11px;color:var(--texto2);margin-top:6px">Compartilhe este link no evento (QR code, grupo, etc) para os participantes confirmarem presença.</div>
+            <div style="font-size:11px;color:var(--texto2);margin-top:6px">
+              É o MESMO link e o MESMO QR Code todo dia do evento — o sistema identifica sozinho qual dia é hoje, então dá pra deixar esse QR fixo numa lâmina da apresentação e reusar nos <%= ckDias.length || 1 %> dias. Só é aceito quando o check-out daquele dia estiver ABERTO (acima).
+            </div>
           </div>
         </div>
 

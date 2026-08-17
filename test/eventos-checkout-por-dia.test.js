@@ -214,3 +214,40 @@ test('schema: evento_checkouts tem CREATE TABLE no código e as colunas de check
   assert.match(src, /ALTER TABLE evento_programacao ADD COLUMN IF NOT EXISTS checkout_fecha_em TIMESTAMP/);
   assert.match(src, /ALTER TABLE evento_checkouts ADD COLUMN IF NOT EXISTS programacao_id INTEGER/);
 });
+
+// 17/08/2026: pedido do usuário — baixar o QR Code do link de check-out (o link é o MESMO nos
+// 4 dias, o servidor resolve sozinho qual dia é hoje) pra colocar fixo na apresentação.
+function resBuffer() {
+  const r = { _headers: {} };
+  r.set = (k, v) => { r._headers[k] = v; return r; };
+  r.status = (c) => { r._status = c; return r; };
+  r.send = (b) => { r._body = b; return r; };
+  return r;
+}
+
+test('GET /eventos/:id/checkout-qrcode: baixa o PNG do QR do link público (mesmo link, sem depender do dia)', async () => {
+  const { rotas } = montar({ evento: EVENTO });
+  const chamadas = [];
+  global.fetch = async (url) => {
+    chamadas.push(url);
+    return { ok: true, arrayBuffer: async () => Buffer.from('fake-png-bytes') };
+  };
+  try {
+    const res = resBuffer();
+    await rotas['GET /eventos/:id/checkout-qrcode']({ params: { id: '5' } }, res);
+    assert.strictEqual(res._headers['Content-Type'], 'image/png');
+    assert.match(res._headers['Content-Disposition'], /attachment; filename="checkout-qr-evento-5\.png"/);
+    assert.match(chamadas[0], /data=https%3A%2F%2Finscricao\.lauroucpcde\.com%2Fcheckout%2F5/, 'pede o QR do mesmo link público mostrado no painel');
+    assert.ok(Buffer.isBuffer(res._body));
+  } finally { delete global.fetch; }
+});
+
+test('GET /eventos/:id/checkout-qrcode: serviço externo fora do ar devolve 502, não quebra', async () => {
+  const { rotas } = montar({ evento: EVENTO });
+  global.fetch = async () => ({ ok: false });
+  try {
+    const res = resBuffer();
+    await rotas['GET /eventos/:id/checkout-qrcode']({ params: { id: '5' } }, res);
+    assert.strictEqual(res._status, 502);
+  } finally { delete global.fetch; }
+});

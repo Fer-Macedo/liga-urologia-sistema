@@ -2127,6 +2127,23 @@ router.post('/eventos/:id/inscricao/:inscricao_id/desfazer-checkout', requireAut
   } catch(e) { res.json({ok:false, erro:e.message}); }
 });
 
+// QR Code (PNG) do link de check-out — pra imprimir/colocar na apresentação. O link é o MESMO
+// nos 4 dias do evento (o servidor resolve sozinho qual dia é hoje), então 1 QR serve pra tudo.
+// Reaproveita o mesmo serviço externo já usado nos crachás/emails de inscrição (api.qrserver.com)
+// em vez de trazer uma lib nova só pra isso.
+router.get('/eventos/:id/checkout-qrcode', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  try {
+    const link = 'https://inscricao.lauroucpcde.com/checkout/' + req.params.id;
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&data=' + encodeURIComponent(link);
+    const r = await fetch(qrUrl);
+    if (!r.ok) return res.status(502).send('Erro ao gerar QR Code.');
+    const buf = Buffer.from(await r.arrayBuffer());
+    res.set('Content-Type', 'image/png');
+    res.set('Content-Disposition', 'attachment; filename="checkout-qr-evento-' + req.params.id + '.png"');
+    res.send(buf);
+  } catch(e) { console.error('Checkout QR erro:', e.message); res.status(500).send('Erro ao gerar QR Code.'); }
+});
+
 // Exportar lista de aptos em CSV (painel)
 router.get('/eventos/:id/checkout-export', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
