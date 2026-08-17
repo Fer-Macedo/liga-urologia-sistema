@@ -468,9 +468,10 @@ test('POST /checkout/:id: campo previa=1 (enviado da tela de prévia) NUNCA grav
 });
 
 // 17/08/2026 (3ª rodada): pedido do usuário — com o check-out valendo em todo dia, ele quer
-// saber DE QUAL DIA foi cada check-out. Cada apto agora carrega os rótulos dos dias em que fez
-// check-out, pra filtrar/mostrar no painel.
-test('GET /eventos/:id/checkout-relatorio: cada apto vem com a lista de dias em que fez check-out', async () => {
+// saber DE QUAL DIA foi cada check-out. Cada apto agora carrega {programacao_id, label} de
+// cada dia em que fez check-out — o id é o que permite desfazer check-out de UM dia só (4ª
+// rodada), não só mostrar o texto.
+test('GET /eventos/:id/checkout-relatorio: cada apto vem com {programacao_id, label} de cada dia em que fez check-out', async () => {
   const { rotas } = montar({
     evento: EVENTO,
     mock: (sql) => {
@@ -493,8 +494,37 @@ test('GET /eventos/:id/checkout-relatorio: cada apto vem com a lista de dias em 
   await rotas['GET /eventos/:id/checkout-relatorio']({ params: { id: '5' } }, res);
   const a = res._body.aptos[0];
   assert.strictEqual(a.dias.length, 2, 'A fez check-out em 2 dias diferentes');
-  assert.ok(a.dias.some(d => d.includes('Día 1')));
-  assert.ok(a.dias.some(d => d.includes('Día 2')));
+  assert.ok(a.dias.some(d => d.programacao_id === 10 && d.label.includes('Día 1')));
+  assert.ok(a.dias.some(d => d.programacao_id === 11 && d.label.includes('Día 2')));
+});
+
+// 17/08/2026 (4ª rodada): pedido do usuário — "Remover" apagava TODOS os check-outs da pessoa
+// de uma vez (todos os dias juntos); agora só apaga o dia informado no corpo da requisição.
+test('POST /eventos/:id/inscricao/:inscricao_id/desfazer-checkout: com programacao_id, apaga só o check-out DAQUELE dia', async () => {
+  const deletes = [];
+  const { rotas } = montar({ evento: EVENTO, mock: (sql, params) => {
+    if (/DELETE FROM evento_checkouts/.test(sql)) { deletes.push({ sql, params }); return { rows: [] }; }
+    return undefined;
+  }});
+  const res = { json: (b) => { res._body = b; } };
+  await rotas['POST /eventos/:id/inscricao/:inscricao_id/desfazer-checkout']({ params: { id: '5', inscricao_id: '42' }, body: { programacao_id: 11 } }, res);
+  assert.strictEqual(deletes.length, 1);
+  assert.match(deletes[0].sql, /AND programacao_id=\$3/, 'delete escopado ao dia — não apaga os outros dias da mesma pessoa');
+  assert.deepStrictEqual(deletes[0].params, ['5', '42', 11]);
+  assert.strictEqual(res._body.ok, true);
+});
+
+test('POST /eventos/:id/inscricao/:inscricao_id/desfazer-checkout: sem programacao_id (evento legado), apaga só o check-out único (programacao_id NULL)', async () => {
+  const deletes = [];
+  const { rotas } = montar({ evento: EVENTO, mock: (sql, params) => {
+    if (/DELETE FROM evento_checkouts/.test(sql)) { deletes.push({ sql, params }); return { rows: [] }; }
+    return undefined;
+  }});
+  const res = { json: (b) => { res._body = b; } };
+  await rotas['POST /eventos/:id/inscricao/:inscricao_id/desfazer-checkout']({ params: { id: '6', inscricao_id: '50' }, body: {} }, res);
+  assert.strictEqual(deletes.length, 1);
+  assert.match(deletes[0].sql, /AND programacao_id IS NULL/, 'sem dia informado, só mexe no check-out legado (sem dia)');
+  assert.deepStrictEqual(deletes[0].params, ['6', '50']);
 });
 
 // 17/08/2026 (3ª rodada): pedido do usuário — o export de aptos ganhou coluna "Dia" e passou a

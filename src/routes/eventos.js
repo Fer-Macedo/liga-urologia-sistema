@@ -2166,14 +2166,16 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
 
     // Rótulo de cada dia (pra mostrar "Día 2 — 18/08" em vez de só o id) e, pra cada inscrito,
     // EM QUAIS dias ele fez check-out — pedido do usuário 17/08/2026 (3ª rodada): com check-out
-    // valendo em todo dia, precisa dar pra filtrar/saber de qual dia cada check-out é.
+    // valendo em todo dia, precisa dar pra filtrar/saber de qual dia cada check-out é. Guarda o
+    // programacao_id junto do rótulo (não só o texto) pra dar pra desfazer check-out DE UM DIA
+    // só (4ª rodada — antes só dava pra apagar todos os dias da pessoa de uma vez).
     const diaLabel = new Map(diasR.rows.map(d => [d.id, diaLabelCheckout(d)]));
-    const diasPorInscricao = new Map(); // inscricao_id -> Set(rótulos)
+    const diasPorInscricao = new Map(); // inscricao_id -> Map(programacao_id -> rótulo)
     checkouts.rows.forEach(c => {
       if (!c.inscricao_id) return;
       const label = c.programacao_id ? (diaLabel.get(c.programacao_id) || 'Dia desconhecido') : 'Único dia';
-      if (!diasPorInscricao.has(c.inscricao_id)) diasPorInscricao.set(c.inscricao_id, new Set());
-      diasPorInscricao.get(c.inscricao_id).add(label);
+      if (!diasPorInscricao.has(c.inscricao_id)) diasPorInscricao.set(c.inscricao_id, new Map());
+      diasPorInscricao.get(c.inscricao_id).set(c.programacao_id, label);
     });
 
     // Conjunto de inscrição_ids que fizeram check-out (em QUALQUER dia — "apto" aqui é "veio
@@ -2185,7 +2187,7 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
     inscritos.rows.forEach(i => {
       const valida = i.status === 'confirmado'; // confirmado cobre pago e isento (ambos ficam confirmado)
       if (!valida) return;
-      if (fezCheckout.has(i.id)) aptos.push({ id: i.id, nome: i.nome, email: i.email, isento: i.isento, dias: Array.from(diasPorInscricao.get(i.id) || []) });
+      if (fezCheckout.has(i.id)) aptos.push({ id: i.id, nome: i.nome, email: i.email, isento: i.isento, dias: Array.from((diasPorInscricao.get(i.id) || new Map()).entries()).map(([programacao_id, label]) => ({ programacao_id, label })) });
       else naoCompareceu.push({ nome: i.nome, email: i.email, isento: i.isento });
     });
 
@@ -2243,9 +2245,18 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
   } catch(e) { console.error('Relatorio checkout erro:', e.message); res.json({ok:false, erro:e.message}); }
 });
 
+// Desfazer check-out de UM DIA específico — pedido do usuário 17/08/2026 (4ª rodada): antes
+// apagava TODOS os check-outs da pessoa de uma vez (todos os dias juntos), o que virou perigoso
+// assim que passou a existir um check-out por dia. Sem programacao_id no corpo (evento legado,
+// sem Programação por data), cai no check-out único (programacao_id NULL no banco).
 router.post('/eventos/:id/inscricao/:inscricao_id/desfazer-checkout', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
-    await query('DELETE FROM evento_checkouts WHERE evento_id=$1 AND inscricao_id=$2', [req.params.id, req.params.inscricao_id]);
+    const diaId = req.body.programacao_id || null;
+    if (diaId) {
+      await query('DELETE FROM evento_checkouts WHERE evento_id=$1 AND inscricao_id=$2 AND programacao_id=$3', [req.params.id, req.params.inscricao_id, diaId]);
+    } else {
+      await query('DELETE FROM evento_checkouts WHERE evento_id=$1 AND inscricao_id=$2 AND programacao_id IS NULL', [req.params.id, req.params.inscricao_id]);
+    }
     res.json({ok:true});
   } catch(e) { res.json({ok:false, erro:e.message}); }
 });

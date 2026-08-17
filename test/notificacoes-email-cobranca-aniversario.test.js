@@ -97,6 +97,16 @@ test('notificarAniversario: usa o layout genérico, não o de cobrança', async 
   assert.doesNotMatch(html, /PIX/i, 'nada de instrução de PIX numa mensagem de aniversário');
 });
 
+// 17/08/2026: o layout de e-mail (htmlSimples/htmlCobranca) não declarava font-family em
+// lugar nenhum — o e-mail saía com a fonte padrão do cliente (ex: Times New Roman, serifada),
+// diferente da fonte usada no resto do sistema. Corrigido no body e na tabela raiz do wrap.
+test('notificarAniversario: e-mail sai com font-family definida, não com a fonte padrão do cliente', async () => {
+  const { mod, emailsEnviados } = montar();
+  await mod.notificarAniversario({ membro: { id: 1, nome: 'Ellen Cordeiro', email: 'ellen@teste.com', whatsapp: null } });
+  const html = emailsEnviados[0].html;
+  assert.match(html, /font-family:'Segoe UI',Arial,sans-serif/, 'precisa declarar a fonte usada no resto do sistema, não deixar o cliente de e-mail escolher');
+});
+
 test('notificarAniversario: o corpo da mensagem de parabéns continua presente', async () => {
   const { mod, emailsEnviados } = montar();
   await mod.notificarAniversario({ membro: { id: 1, nome: 'Ellen Cordeiro', email: 'ellen@teste.com', whatsapp: null } });
@@ -116,6 +126,14 @@ test('notificarCobranca: pede pra sair de Enviados (alto volume, diário)', asyn
   assert.strictEqual(trashes[0].id, 'GMAIL_MSG_1');
   assert.strictEqual(modifies.length, 0,
     'NUNCA usar messages.modify pra isso — o Gmail recusa remover o rótulo SENT (foi o bug do primeiro deploy)');
+});
+
+test('notificarCobranca: e-mail (htmlCobranca) também sai com a font-family corrigida', async () => {
+  const { mod, emailsEnviados } = montar();
+  const membro = { id: 1, nome: 'Fulano', email: 'fulano@teste.com', whatsapp: null };
+  const cobranca = { id: 10, data_vencimento: '2026-07-15', valor_desconto: 20, valor_cheio: 25 };
+  await mod.notificarCobranca({ membro, cobranca, tipo: 'pos' });
+  assert.match(emailsEnviados[0].html, /font-family:'Segoe UI',Arial,sans-serif/);
 });
 
 test('notificarAniversario: NÃO tira de Enviados (baixo volume, um por vez)', async () => {

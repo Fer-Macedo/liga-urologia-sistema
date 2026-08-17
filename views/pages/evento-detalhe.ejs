@@ -1632,10 +1632,13 @@ function cupNum(n){var tp=Math.ceil(_cupFilt.length/25)||1;_cupPag=Math.max(1,Ma
 function cupPag(d){cupNum(_cupPag+d);}
 function limparCup(){['cup-busca','cup-situacao','cup-cr-de','cup-cr-ate','cup-us-de','cup-us-ate'].forEach(function(id){var e=document.getElementById(id); if(e)e.value='';});filtrarCupons();}
 function toTitleCase(s){ return s?s.toLowerCase().replace(/(^|[\s\-])(\S)/g,function(m,a,b){return a+b.toUpperCase();}):''; }
-function desfazerCheckout(inscricaoId, btn){
-  confirmarAcao('Remover este participante dos aptos? O check-out será desfeito.', function(){
+function desfazerCheckoutDia(inscricaoId, diaId, btn){
+  confirmarAcao('Remover o check-out desse dia? A avaliação respondida naquele dia também é apagada.', function(){
     btn.disabled=true;
-    fetch('/eventos/<%= evento.id %>/inscricao/'+inscricaoId+'/desfazer-checkout',{method:'POST'})
+    fetch('/eventos/<%= evento.id %>/inscricao/'+inscricaoId+'/desfazer-checkout',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ programacao_id: diaId })
+    })
       .then(function(r){return r.json();})
       .then(function(d){
         if(d.ok){ carregarRelatorioCheckout(); }
@@ -1707,19 +1710,25 @@ function carregarRelatorioCheckout(){
 }
 function escHtml(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
 var _ckAptos = [];
+// Cada dia vira um "chip" com seu próprio × — pedido do usuário 17/08/2026 (4ª rodada): remover
+// tinha que ser por dia específico, não apagar de uma vez todos os check-outs da pessoa.
 function renderizarAptos(){
   var wrap = document.getElementById('ckAptosWrap');
   if(!wrap) return;
   var sel = document.getElementById('ckFiltroDia');
   var filtro = sel ? sel.value : '';
-  var lista = filtro ? _ckAptos.filter(function(a){ return (a.dias||[]).indexOf(filtro) !== -1; }) : _ckAptos;
-  var temDias = _ckAptos.some(function(a){ return a.dias && a.dias.length; });
+  var lista = filtro ? _ckAptos.filter(function(a){ return (a.dias||[]).some(function(d){ return d.label === filtro; }); }) : _ckAptos;
   if(!lista.length){ wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">Ninguém apto '+(filtro?'nesse dia.':'ainda.')+'</div>'; return; }
-  var html = '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Nome</th><th style="text-align:left">Email</th><th>Tipo</th>'+(temDias?'<th style="text-align:left">Dia(s)</th>':'')+'<th>Ação</th></tr></thead><tbody>';
+  var html = '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Nome</th><th style="text-align:left">Email</th><th>Tipo</th><th style="text-align:left">Dia(s) — × desfaz só aquele dia</th></tr></thead><tbody>';
   lista.forEach(function(a){
-    html += '<tr><td>'+toTitleCase(a.nome)+'</td><td>'+a.email+'</td><td style="text-align:center">'+(a.isento?'Isento':'Pago')+'</td>'
-      + (temDias ? '<td>'+escHtml((a.dias||[]).join(', '))+'</td>' : '')
-      + '<td style="text-align:center"><button onclick="desfazerCheckout('+a.id+',this)" style="background:#ef4444;color:#fff;border:none;border-radius:5px;padding:3px 10px;cursor:pointer;font-size:11px;font-weight:600">Remover</button></td></tr>';
+    var diasDaLinha = filtro ? (a.dias||[]).filter(function(d){ return d.label === filtro; }) : (a.dias||[]);
+    var chips = diasDaLinha.map(function(d){
+      var diaArg = d.programacao_id === null ? 'null' : d.programacao_id;
+      return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--fundo);border:1px solid var(--borda);border-radius:12px;padding:2px 4px 2px 9px;margin:2px 4px 2px 0;font-size:11px">'
+        + escHtml(d.label)
+        + '<button onclick="desfazerCheckoutDia('+a.id+','+diaArg+',this)" title="Remover check-out desse dia" style="background:#ef4444;color:#fff;border:none;border-radius:50%;width:15px;height:15px;line-height:14px;text-align:center;cursor:pointer;font-size:10px;padding:0">×</button></span>';
+    }).join('');
+    html += '<tr><td>'+toTitleCase(a.nome)+'</td><td>'+a.email+'</td><td style="text-align:center">'+(a.isento?'Isento':'Pago')+'</td><td>'+chips+'</td></tr>';
   });
   html += '</tbody></table>';
   wrap.innerHTML = html;
