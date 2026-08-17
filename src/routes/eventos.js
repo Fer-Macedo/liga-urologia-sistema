@@ -1646,6 +1646,29 @@ function perguntasAvaliacaoDoEvento(evento) {
   } catch(e) { return PERGUNTAS_AVALIACAO_PADRAO; }
 }
 
+// Rótulo "Día X — DD/MM" de um dia de Programação, pra identificar qual check-out é (evento
+// legado, sem Programação por data, não tem rótulo). Usado no e-mail de confirmação e no
+// relatório/export do painel — pedido do usuário 17/08/2026 (3ª rodada): com a avaliação
+// obrigatória em todo dia, cada e-mail e cada linha de relatório precisa deixar claro DE QUAL
+// dia é aquele check-out.
+function diaLabelCheckout(dia) {
+  if (!dia || !dia.data) return '';
+  const dataFmt = new Date(dia.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
+  return (dia.titulo || 'Día') + ' — ' + dataFmt;
+}
+
+// Fragmento do corpo do e-mail de confirmação de check-out — usado tanto no envio real quanto
+// na prévia (admin). Mostra o dia (quando existe) pra quem recebe vários desses e-mails, um por
+// dia de um evento de vários dias, conseguir diferenciar qual confirmação é de qual dia.
+function htmlConfirmacaoCheckout(primeiroNome, nomeEvento, diaLabel) {
+  const linhaDia = diaLabel ? '<p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.5px">' + diaLabel + '</p>' : '';
+  return '<h2 style="margin:0 0 8px;font-size:20px;color:#0f172a">¡Hola, ' + primeiroNome + '!</h2>'
+    + '<p style="margin:0 0 12px;font-size:14px;color:#475569;line-height:1.7">Tu <strong>asistencia</strong> al evento <strong>' + nomeEvento + '</strong> fue registrada con éxito.</p>'
+    + linhaDia
+    + '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#166534">Este registro confirma que estuviste presente en el evento. Tu certificado será procesado conforme las reglas del evento.</p></div>'
+    + '<p style="margin:0;font-size:12px;color:#94a3b8">¿Dudas? Contáctanos por WhatsApp o responde a este correo.</p>';
+}
+
 router.get('/live/:token', async (req, res) => {
   try {
     const r = await query('SELECT epo.*, i.nome, i.email, e.nome as evento_nome, e.youtube_url, e.duracao_minutos FROM evento_presencas_online epo JOIN evento_inscricoes i ON i.id=epo.inscricao_id JOIN eventos e ON e.id=epo.evento_id WHERE epo.token=$1',[req.params.token]);
@@ -2056,13 +2079,15 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
     const nome = inscricao ? inscricao.nome.split(' ')[0] : null;
 
     // Email de confirmação (só quando bateu com inscrição válida) — enviado em TODO check-out,
-    // de cada dia do evento, não só no último
+    // de cada dia do evento, não só no último. Inclui o dia (quando existe) pra quem recebe um
+    // e-mail desses por dia conseguir diferenciar qual confirmação é de qual dia.
     if (inscricao && inscricao.email) {
       try {
         const { enviarEmail } = require('../services/notificacoes');
         const primeiro = inscricao.nome.split(' ')[0];
-        const htmlCk = '<h2 style="margin:0 0 8px;font-size:20px;color:#0f172a">¡Hola, '+primeiro+'!</h2><p style="margin:0 0 20px;font-size:14px;color:#475569;line-height:1.7">Tu <strong>asistencia</strong> al evento <strong>'+evento.nome+'</strong> fue registrada con éxito.</p><div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#166534">Este registro confirma que estuviste presente en el evento. Tu certificado será procesado conforme las reglas del evento.</p></div><p style="margin:0;font-size:12px;color:#94a3b8">¿Dudas? Contáctanos por WhatsApp o responde a este correo.</p>';
-        const textoCk = 'Hola, '+primeiro+'! Tu asistencia al evento '+evento.nome+' fue registrada con éxito.';
+        const label = diaLabelCheckout(dia);
+        const htmlCk = htmlConfirmacaoCheckout(primeiro, evento.nome, label);
+        const textoCk = 'Hola, '+primeiro+'! Tu asistencia al evento '+evento.nome+' fue registrada con éxito.'+(label ? ' ('+label+')' : '');
         enviarEmail({ para: inscricao.email, assunto: 'Asistencia confirmada — '+evento.nome, html: htmlCk, texto: textoCk, faixaLabel: 'ASISTENCIA CONFIRMADA' }).catch(function(e){ console.error('Email checkout erro:', e.message); });
       } catch(e) { console.error('Email checkout falhou:', e.message); }
     }
@@ -2139,8 +2164,20 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
       [req.params.id]
     );
 
+    // Rótulo de cada dia (pra mostrar "Día 2 — 18/08" em vez de só o id) e, pra cada inscrito,
+    // EM QUAIS dias ele fez check-out — pedido do usuário 17/08/2026 (3ª rodada): com check-out
+    // valendo em todo dia, precisa dar pra filtrar/saber de qual dia cada check-out é.
+    const diaLabel = new Map(diasR.rows.map(d => [d.id, diaLabelCheckout(d)]));
+    const diasPorInscricao = new Map(); // inscricao_id -> Set(rótulos)
+    checkouts.rows.forEach(c => {
+      if (!c.inscricao_id) return;
+      const label = c.programacao_id ? (diaLabel.get(c.programacao_id) || 'Dia desconhecido') : 'Único dia';
+      if (!diasPorInscricao.has(c.inscricao_id)) diasPorInscricao.set(c.inscricao_id, new Set());
+      diasPorInscricao.get(c.inscricao_id).add(label);
+    });
+
     // Conjunto de inscrição_ids que fizeram check-out (em QUALQUER dia — "apto" aqui é "veio
-    // pelo menos uma vez"; a quebra por dia embaixo mostra o detalhe de quem veio em qual dia)
+    // pelo menos uma vez"; o campo "dias" de cada um mostra o detalhe de quais dias específicos)
     const fezCheckout = new Set(checkouts.rows.filter(c => c.inscricao_id).map(c => c.inscricao_id));
 
     const aptos = [];        // inscrição válida + fez check-out
@@ -2148,7 +2185,7 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
     inscritos.rows.forEach(i => {
       const valida = i.status === 'confirmado'; // confirmado cobre pago e isento (ambos ficam confirmado)
       if (!valida) return;
-      if (fezCheckout.has(i.id)) aptos.push({ id: i.id, nome: i.nome, email: i.email, isento: i.isento });
+      if (fezCheckout.has(i.id)) aptos.push({ id: i.id, nome: i.nome, email: i.email, isento: i.isento, dias: Array.from(diasPorInscricao.get(i.id) || []) });
       else naoCompareceu.push({ nome: i.nome, email: i.email, isento: i.isento });
     });
 
@@ -2244,30 +2281,51 @@ router.get('/eventos/:id/checkout-preview', requireAuth, requirePermissao('event
   } catch(e) { console.error('Checkout preview erro:', e.message); res.status(500).send('Erro ao carregar prévia.'); }
 });
 
-// Exportar lista de aptos em CSV (painel)
+// Prévia (só admin) do e-mail de confirmação de check-out — pedido do usuário 17/08/2026 (3ª
+// rodada): ver exatamente como o participante vai visualizar a confirmação daquele dia. Usa o
+// MESMO wrap de e-mail (htmlSimples) que o envio real usa por baixo dos panos, com nome de
+// exemplo, e mostra o rótulo do dia resolvido pra hoje (mesma lógica do check-out de verdade).
+router.get('/eventos/:id/checkout-email-preview', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  try {
+    const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
+    if (!evR.rows[0]) return res.status(404).send('Evento não encontrado.');
+    const evento = evR.rows[0];
+    const cfgPub = await getConfig();
+    const { dia } = await resolverDiaTransmissao(req.params.id);
+    const { htmlSimples } = require('../services/notificacoes');
+    const htmlCk = htmlConfirmacaoCheckout('María', evento.nome, diaLabelCheckout(dia));
+    res.send(htmlSimples({ mensagem: htmlCk, faixaLabel: 'ASISTENCIA CONFIRMADA', config: cfgPub }));
+  } catch(e) { console.error('Checkout email preview erro:', e.message); res.status(500).send('Erro ao carregar prévia do e-mail.'); }
+});
+
+// Exportar lista de check-outs em CSV (painel) \u2014 pedido do usu\u00E1rio 17/08/2026 (3\u00AA rodada): com
+// check-out valendo em todo dia, uma pessoa pode ter v\u00E1rias linhas (uma por dia); a coluna "Dia"
+// deixa claro de qual check-out \u00E9 cada linha (antes disso, a query juntava sem essa distin\u00E7\u00E3o).
 router.get('/eventos/:id/checkout-export', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
-    const [evR, inscritos] = await Promise.all([
+    const [evR, diasR, checkoutsR] = await Promise.all([
       query('SELECT nome FROM eventos WHERE id=$1', [req.params.id]),
+      query('SELECT id, titulo, data FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL ORDER BY data', [req.params.id]),
       query(
-        `SELECT i.nome, i.email, i.cpf, i.rg, i.catraca, i.tipo_participante,
-                i.isento,
-                to_char(c.criado_em, 'DD/MM/YYYY HH24:MI') as checkout_em
+        `SELECT i.nome, i.email, i.cpf, i.rg, i.catraca, i.tipo_participante, i.isento,
+                c.programacao_id, to_char(c.criado_em, 'DD/MM/YYYY HH24:MI') as checkout_em
          FROM evento_inscricoes i
-         LEFT JOIN evento_checkouts c ON c.inscricao_id=i.id
+         JOIN evento_checkouts c ON c.inscricao_id=i.id
          WHERE i.evento_id=$1 AND i.status='confirmado'
-           AND EXISTS (SELECT 1 FROM evento_checkouts ec WHERE ec.inscricao_id=i.id)
-         ORDER BY i.nome`,
+         ORDER BY i.nome, c.criado_em`,
         [req.params.id]
       )
     ]);
+    const diaLabel = new Map(diasR.rows.map(d => [d.id, diaLabelCheckout(d)]));
     const nomeEv = (evR.rows[0]?.nome || 'evento').replace(/[^a-z0-9]/gi,'_').substring(0,30);
-    const cabecalho = ['Nome Completo','Email','CPF','RG','Catraca','Tipo Participante','Pagamento','Check-out em'];
+    const cabecalho = ['Dia','Nome Completo','Email','CPF','RG','Catraca','Tipo Participante','Pagamento','Check-out em'];
     let csv = cabecalho.join(';') + '\n';
-    inscritos.rows.forEach(r => {
+    checkoutsR.rows.forEach(r => {
       const tipoRaw = (r.tipo_participante || 'externo').toLowerCase().trim();
       const tipo = tipoRaw === 'ucp' ? 'Aluno UCP' : tipoRaw === 'externo' ? 'Externo' : r.tipo_participante || 'Externo';
+      const dia = r.programacao_id ? (diaLabel.get(r.programacao_id) || '') : '\u00DAnico dia';
       csv += [
+        dia,
         r.nome || '',
         r.email || '',
         r.cpf || '',
@@ -2294,7 +2352,7 @@ router.get('/eventos/:id/avaliacao-export', requireAuth, requirePermissao('event
     if (!evR.rows[0]) return res.status(404).send('Evento n\u00E3o encontrado.');
     const perguntas = perguntasAvaliacaoDoEvento(evR.rows[0]);
     const diasR = await query('SELECT id, titulo, data FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL ORDER BY data', [req.params.id]);
-    const diaLabel = new Map(diasR.rows.map(d => [d.id, (d.data ? new Date(d.data).toLocaleDateString('pt-BR', { timeZone: 'UTC' }) + ' \u2014 ' : '') + d.titulo]));
+    const diaLabel = new Map(diasR.rows.map(d => [d.id, diaLabelCheckout(d)]));
     const checkoutsR = await query(
       `SELECT nome_informado, email, criado_em, programacao_id, aval_respostas, aval_sugestoes FROM evento_checkouts
        WHERE evento_id=$1 AND aval_respostas IS NOT NULL

@@ -50,7 +50,7 @@ function montar({ evento, hojeProgramacao, proximaProgramacao, inscricao, checko
   const rfx = require.resolve(path.join(RAIZ, 'src/services/fluxo-eventos.js'));
   require.cache[rfx] = { id: rfx, filename: rfx, loaded: true, exports: { calcularLiquidoEvento: (v) => v } };
   const rnt = require.resolve(path.join(RAIZ, 'src/services/notificacoes.js'));
-  require.cache[rnt] = { id: rnt, filename: rnt, loaded: true, exports: { enviarWhatsApp: async () => {}, enviarEmail: async () => {} } };
+  require.cache[rnt] = { id: rnt, filename: rnt, loaded: true, exports: { enviarWhatsApp: async () => {}, enviarEmail: async () => {}, htmlSimples: (opts) => '<!DOCTYPE html><html><body data-faixa="'+(opts.faixaLabel||'')+'">'+opts.mensagem+'</body></html>' } };
 
   const rotas = {};
   const router = { get: (rota, ...fns) => { rotas['GET '+rota] = fns[fns.length-1]; }, post: (rota, ...fns) => { rotas['POST '+rota] = fns[fns.length-1]; } };
@@ -465,4 +465,76 @@ test('POST /checkout/:id: campo previa=1 (enviado da tela de prévia) NUNCA grav
   await rotas['POST /checkout/:id']({ params: { id: '5' }, body: { previa: '1', email: 'f@x.com', documento: '123456', aval_resposta_0: '6', aval_resposta_1: '5', aval_resposta_2: '6', aval_resposta_3: '4' }, headers: {}, ip: '1.2.3.4' }, res);
   assert.strictEqual(inserts.length, 0, 'previa nunca grava, nem com todos os campos preenchidos certinho');
   assert.strictEqual(res._locals.previa, true);
+});
+
+// 17/08/2026 (3ª rodada): pedido do usuário — com o check-out valendo em todo dia, ele quer
+// saber DE QUAL DIA foi cada check-out. Cada apto agora carrega os rótulos dos dias em que fez
+// check-out, pra filtrar/mostrar no painel.
+test('GET /eventos/:id/checkout-relatorio: cada apto vem com a lista de dias em que fez check-out', async () => {
+  const { rotas } = montar({
+    evento: EVENTO,
+    mock: (sql) => {
+      if (/SELECT id, nome, checkout_aberto, checkout_fecha_em, avaliacao_perguntas FROM eventos/.test(sql)) return { rows: [EVENTO] };
+      if (/SELECT id, nome, email, cpf, status, isento FROM evento_inscricoes/.test(sql)) return { rows: [
+        { id: 1, nome: 'A', email: 'a@x.com', status: 'confirmado', isento: false }
+      ] };
+      if (/SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id, aval_respostas/.test(sql)) return { rows: [
+        { inscricao_id: 1, email: 'a@x.com', cpf: null, nome_informado: 'A', criado_em: new Date(), programacao_id: 10, aval_respostas: null, aval_sugestoes: null },
+        { inscricao_id: 1, email: 'a@x.com', cpf: null, nome_informado: 'A', criado_em: new Date(), programacao_id: 11, aval_respostas: null, aval_sugestoes: null }
+      ] };
+      if (/SELECT id, titulo, data FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
+        { id: 10, titulo: 'Día 1', data: '2026-08-17' },
+        { id: 11, titulo: 'Día 2', data: '2026-08-18' }
+      ] };
+      return undefined;
+    }
+  });
+  const res = { json: (b) => { res._body = b; } };
+  await rotas['GET /eventos/:id/checkout-relatorio']({ params: { id: '5' } }, res);
+  const a = res._body.aptos[0];
+  assert.strictEqual(a.dias.length, 2, 'A fez check-out em 2 dias diferentes');
+  assert.ok(a.dias.some(d => d.includes('Día 1')));
+  assert.ok(a.dias.some(d => d.includes('Día 2')));
+});
+
+// 17/08/2026 (3ª rodada): pedido do usuário — o export de aptos ganhou coluna "Dia" e passou a
+// trazer uma linha POR CHECK-OUT (uma pessoa com check-out em vários dias aparece em várias
+// linhas, cada uma marcada com o dia certo — antes ficava ambíguo, sem coluna nenhuma pra isso).
+test('GET /eventos/:id/checkout-export: uma linha por check-out, com coluna Dia', async () => {
+  const { rotas } = montar({
+    mock: (sql) => {
+      if (/SELECT nome FROM eventos WHERE id=\$1/.test(sql)) return { rows: [{ nome: 'Jornada Teste' }] };
+      if (/SELECT id, titulo, data FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
+        { id: 10, titulo: 'Día 1', data: '2026-08-17' },
+        { id: 11, titulo: 'Día 2', data: '2026-08-18' }
+      ] };
+      if (/FROM evento_inscricoes i\s+JOIN evento_checkouts c/.test(sql)) return { rows: [
+        { nome: 'Ana', email: 'ana@x.com', cpf: '1', rg: '1', catraca: null, tipo_participante: 'externo', isento: false, programacao_id: 10, checkout_em: '17/08/2026 10:00' },
+        { nome: 'Ana', email: 'ana@x.com', cpf: '1', rg: '1', catraca: null, tipo_participante: 'externo', isento: false, programacao_id: 11, checkout_em: '18/08/2026 10:00' }
+      ] };
+      return undefined;
+    }
+  });
+  const res = { _headers: {}, setHeader: function(k,v){ this._headers[k]=v; }, send: function(b){ this._body = b; } };
+  await rotas['GET /eventos/:id/checkout-export']({ params: { id: '5' } }, res);
+  assert.match(res._body, /Dia;Nome Completo;Email;CPF;RG;Catraca;Tipo Participante;Pagamento;Check-out em/);
+  const linhas = res._body.split('\n').filter(l => l.includes('Ana'));
+  assert.strictEqual(linhas.length, 2, 'Ana aparece 2 vezes — uma linha por dia de check-out, não deduplicado');
+  assert.match(linhas[0], /Día 1/);
+  assert.match(linhas[1], /Día 2/);
+});
+
+// 17/08/2026 (3ª rodada): pedido do usuário — "quero visualizar a tela de como a pessoa vai
+// visualizar no email a confirmação de check-out daquele dia". Usa o wrap real (htmlSimples)
+// pra ser fiel ao e-mail de verdade, e mostra o rótulo do dia resolvido.
+test('GET /eventos/:id/checkout-email-preview: monta o e-mail completo (com wrap) e mostra o dia resolvido', async () => {
+  const { rotas } = montar({
+    evento: EVENTO,
+    hojeProgramacao: { id: 10, titulo: 'Día 2', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-18' }
+  });
+  const res = { _headers: {}, send: function(b){ this._body = b; } };
+  await rotas['GET /eventos/:id/checkout-email-preview']({ params: { id: '5' } }, res);
+  assert.match(res._body, /<!DOCTYPE html>/, 'usa o wrap completo do e-mail (htmlSimples), não só o fragmento');
+  assert.match(res._body, /data-faixa="ASISTENCIA CONFIRMADA"/);
+  assert.match(res._body, /Día 2/, 'mostra o dia resolvido, pra diferenciar de qual check-out é a confirmação');
 });
