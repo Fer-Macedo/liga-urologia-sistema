@@ -197,12 +197,6 @@
                     Editar
                   </button>
                   <% } %>
-                  <% if(s.tipo==='interno' && s.status !== 'sorteado'){ %>
-                  <a href="/sorteios/<%= s.id %>/realizar" class="btn-sorteio" style="background:#f59e0b;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
-                    Sortear
-                  </a>
-                  <% } %>
                 </div>
                 <button class="btn-sorteio btn-del" onclick="excluir(<%= s.id %>,'<%= s.nome.replace(/'/g,"\\'") %>')">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
@@ -353,22 +347,27 @@
           </div>
         </div>
 
-        <!-- SEÇÃO EXTERNO -->
+        <!-- SEÇÃO EXTERNO (só o Instagram, específico de giveaway público) -->
         <div class="secao-externo" id="secaoExterno">
           <div class="form-group">
             <label>Instagram da Liga</label>
             <input type="text" name="instagram_liga" id="fInstagramLiga" placeholder="@lauro_urologia">
           </div>
-          <div class="form-group">
-            <label>Tarefas de Engajamento</label>
-            <div class="tarefas-list" id="tarefasList">
-              <div class="tarefa-item">
-                <input type="text" name="tarefas[]" placeholder="Ex: Seguir @lauro_urologia no Instagram">
-                <button type="button" class="btn-rem-tarefa" onclick="remTarefa(this)">&#x2715;</button>
-              </div>
+        </div>
+
+        <!-- REQUISITOS PRA VALIDAR O GANHADOR — vale pra qualquer tipo de sorteio (interno ou
+             externo), não só giveaway. Vira um checkbox por item na hora de confirmar quem
+             ganhou (ex: "seguiu a liga", "seguiu o patrocinador", "postou e marcou"). -->
+        <div class="form-group">
+          <label>Requisitos para validar o ganhador (opcional)</label>
+          <div class="tarefas-list" id="tarefasList">
+            <div class="tarefa-item">
+              <input type="text" name="tarefas[]" placeholder="Ex: Seguir @lauro_urologia no Instagram">
+              <button type="button" class="btn-rem-tarefa" onclick="remTarefa(this)">&#x2715;</button>
             </div>
-            <button type="button" class="btn-add-tarefa" onclick="addTarefa()">+ Adicionar tarefa</button>
           </div>
+          <button type="button" class="btn-add-tarefa" onclick="addTarefa()">+ Adicionar requisito</button>
+          <div style="font-size:11px;color:#94a3b8;margin-top:4px">Cada item vira um checkbox pra você conferir um por um antes de confirmar o prêmio.</div>
         </div>
 
       </div>
@@ -435,8 +434,11 @@ function setTipo(tipo){
   document.getElementById('grpPublicoAlvo').style.display = tipo==='interno'?'':'none';
   document.getElementById('secaoExterno').style.display = tipo==='externo'?'block':'none';
 
-  // Mostrar campo manual se publico_alvo = manual
+  // Campo escondido continua sendo ENVIADO pelo navegador se não for "disabled" — foi isso
+  // que causou um sorteio Externo salvar com publico_alvo="ligantes" (valor padrão do select)
+  // e o servidor forçar de volta pra Interno. disabled=true tira o campo do envio de vez.
   const pa = document.getElementById('fPublicoAlvo');
+  pa.disabled = tipo !== 'interno';
   if(tipo==='interno') pa.addEventListener('change', toggleManual);
   toggleManual();
 }
