@@ -152,3 +152,31 @@ test('POST /sorteios/:id/editar: sorteio inexistente não quebra', async () => {
   await rotas['POST /sorteios/:id/editar'](req, resRedirect());
   assert.strictEqual(updates.length, 0);
 });
+
+// BUG REAL em produção 17/08/2026: o formulário deixou salvar publico_alvo='evento' com
+// tipo='externo' ao mesmo tempo (a seção "Qual evento" não era travada pelo tipo escolhido).
+// A tela mostrava "Público: Inscritos de evento — Jornada" certinho, mas a busca de
+// participantes olha só pro `tipo` pra decidir de onde puxar gente — como ficou 'externo',
+// caiu na tabela sorteio_participantes (vazia) e deu "Sem participantes". Corrigido: o
+// servidor NUNCA confia no campo tipo do formulário quando publico_alvo é um valor que só
+// existe pra sorteio interno — força tipo='interno' sempre, nesses casos.
+test('POST /sorteios/criar: publico_alvo=evento força tipo=interno mesmo se o form mandou "externo"', async () => {
+  const { rotas, inserts } = montar({});
+  const req = reqBase({ body: { tipo: 'externo', nome: 'Sorteio da Jornada', qtd_ganhadores: '1', publico_alvo: 'evento', origem_id: '5' } });
+  await rotas['POST /sorteios/criar'](req, resRedirect());
+  assert.strictEqual(inserts[0][0], 'interno', 'tipo tem que ser interno — é o publico_alvo que manda, não o campo tipo do form');
+});
+
+test('POST /sorteios/:id/editar: mesma proteção na edição — publico_alvo=pss força tipo=interno', async () => {
+  const { rotas, updates } = montar({ sorteio: { status: 'rascunho' } });
+  const req = reqBase({ params: { id: '9' }, body: { tipo: 'externo', nome: 'Sorteio PSS', qtd_ganhadores: '1', publico_alvo: 'pss', origem_id: '3' } });
+  await rotas['POST /sorteios/:id/editar'](req, resRedirect());
+  assert.strictEqual(updates[0][0], 'interno');
+});
+
+test('POST /sorteios/criar: publico_alvo realmente vazio (sorteio externo de verdade) mantém tipo=externo', async () => {
+  const { rotas, inserts } = montar({});
+  const req = reqBase({ body: { tipo: 'externo', nome: 'Giveaway Instagram', qtd_ganhadores: '1', instagram_liga: '@lauro_urologia' } });
+  await rotas['POST /sorteios/criar'](req, resRedirect());
+  assert.strictEqual(inserts[0][0], 'externo', 'sorteio externo de verdade (sem publico_alvo) não deve ser forçado pra interno');
+});

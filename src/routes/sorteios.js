@@ -71,7 +71,14 @@ function resolverCamposSorteio(body) {
   // quem concluir depois de criado o sorteio ficaria de fora.
   const origemTipo = (publico_alvo === 'evento' || publico_alvo === 'pss') ? publico_alvo : null;
   const origemId = origemTipo ? (parseInt(origem_id) || null) : null;
-  return { tipo, nome, descricao: descricao||null, qtdGanhadores: parseInt(qtd_ganhadores)||1, publicoAlvo: publico_alvo||null, partManual, instagramLiga: instagram_liga||null, tarefasJson, origemTipo, origemId };
+  // publico_alvo só existe/faz sentido pra sorteio 'interno' — se veio preenchido com um valor
+  // válido, o tipo TEM que ser 'interno', não importa o que o formulário mandou no campo tipo.
+  // Sem isso, um clique errado na tela deixa tipo='externo' com publico_alvo='evento' salvos
+  // juntos: a busca de participantes olha só pra tipo e usa a tabela errada (sorteio_participantes,
+  // vazia) — bug real que aconteceu em produção 17/08/2026.
+  const publicosInterno = ['ligantes', 'diretivos', 'ambos', 'evento', 'pss', 'selecao', 'manual'];
+  const tipoFinal = publicosInterno.includes(publico_alvo) ? 'interno' : tipo;
+  return { tipo: tipoFinal, nome, descricao: descricao||null, qtdGanhadores: parseInt(qtd_ganhadores)||1, publicoAlvo: publico_alvo||null, partManual, instagramLiga: instagram_liga||null, tarefasJson, origemTipo, origemId };
 }
 
 // Criar sorteio

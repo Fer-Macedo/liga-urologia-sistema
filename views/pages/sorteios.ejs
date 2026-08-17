@@ -438,13 +438,16 @@ function setTipo(tipo){
   // Mostrar campo manual se publico_alvo = manual
   const pa = document.getElementById('fPublicoAlvo');
   if(tipo==='interno') pa.addEventListener('change', toggleManual);
-  document.getElementById('secaoManual').style.display = 'none';
-  document.getElementById('secaoSelecao').style.maxHeight = '0';
-  document.getElementById('secaoSelecao').style.overflow = 'hidden';
+  toggleManual();
 }
 
 function toggleManual(){
-  const v = document.getElementById('fPublicoAlvo').value;
+  // Essas seções (evento/pss/manual/seleção) só existem pra sorteio Interno — se o tipo não
+  // é interno, nenhuma pode aparecer, senão dá pra escolher um evento com o tipo ainda em
+  // Externo (foi exatamente o que causou o bug real de 17/08/2026: publico_alvo='evento'
+  // salvo junto de tipo='externo', e a busca de participantes olhava só pro tipo errado).
+  const ehInterno = document.getElementById('fTipo').value === 'interno';
+  const v = ehInterno ? document.getElementById('fPublicoAlvo').value : null;
   document.getElementById('secaoManual').style.display = v==='manual'?'block':'none';
   document.getElementById('secaoSelecao').style.maxHeight = v==='selecao'?'800px':'0';
   document.getElementById('secaoSelecao').style.overflow = v==='selecao'?'visible':'hidden';
