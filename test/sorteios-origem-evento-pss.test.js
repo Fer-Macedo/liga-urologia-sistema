@@ -12,16 +12,19 @@ const MODULO = path.join(RAIZ, 'src/routes/sorteios.js');
 
 function montar({ sorteio, eventoInscritos, pssCandidatos, mock } = {}) {
   const inserts = [];
+  const updates = [];
   const rq = require.resolve(path.join(RAIZ, 'src/models/database.js'));
   require.cache[rq] = { id: rq, filename: rq, loaded: true, exports: {
     query: async (sql, params) => {
       if (mock) { const r = mock(sql, params); if (r !== undefined) return r; }
+      if (/SELECT status FROM sorteios WHERE id=\$1/.test(sql)) return { rows: sorteio ? [{ status: sorteio.status }] : [] };
       if (/SELECT \* FROM sorteios WHERE id=\$1/.test(sql)) return { rows: sorteio ? [sorteio] : [] };
       if (/SELECT nome FROM evento_inscricoes WHERE evento_id=\$1 AND status='confirmado'/.test(sql)) return { rows: eventoInscritos || [] };
       if (/SELECT nome FROM ps_candidatos WHERE processo_id=\$1 AND status='confirmado'/.test(sql)) return { rows: pssCandidatos || [] };
       if (/SELECT nome FROM eventos WHERE id=\$1/.test(sql)) return { rows: [{ nome: 'II Jornada de Salud del Hombre' }] };
       if (/SELECT nome FROM ps_processos WHERE id=\$1/.test(sql)) return { rows: [{ nome: 'PSS 2026.2' }] };
       if (/INSERT INTO sorteios/.test(sql)) { inserts.push(params); return { rows: [{ id: 99 }] }; }
+      if (/UPDATE sorteios SET tipo=\$1/.test(sql)) { updates.push(params); return { rows: [] }; }
       return { rows: [] };
     }
   }};
@@ -34,7 +37,7 @@ function montar({ sorteio, eventoInscritos, pssCandidatos, mock } = {}) {
   const router = { get: (rota, ...fns) => { rotas['GET '+rota] = fns[fns.length-1]; }, post: (rota, ...fns) => { rotas['POST '+rota] = fns[fns.length-1]; } };
   delete require.cache[require.resolve(MODULO)];
   require(MODULO)(router);
-  return { rotas, inserts };
+  return { rotas, inserts, updates };
 }
 
 function resRender() { const r = {}; r.render = (view, locals) => { r._view = view; r._locals = locals; return r; }; return r; }
@@ -119,4 +122,33 @@ test('GET /sorteios: traz eventosDisponiveis e processosDisponiveis com contagem
   await rotas['GET /sorteios'](reqBase({}), res);
   assert.deepStrictEqual(res._locals.eventosDisponiveis, [{ id: 5, nome: 'Jornada', concluidos: '57' }]);
   assert.deepStrictEqual(res._locals.processosDisponiveis, [{ id: 3, nome: 'PSS 2026.2', concluidos: '13' }]);
+});
+
+// 17/08/2026: usuário criou um sorteio "Externo" achando que dava pra escolher o evento (o
+// seletor só aparece pra "Interno"), e não tinha nenhum jeito de editar o que já tinha criado
+// — só dava pra excluir e recomeçar. Corrigido: botão "Editar" reaproveita o mesmo formulário.
+test('POST /sorteios/:id/editar: troca de Externo pra Interno com evento — corrige sem precisar recriar', async () => {
+  const { rotas, updates } = montar({ sorteio: { status: 'rascunho' } });
+  const req = reqBase({ params: { id: '7' }, body: { tipo: 'interno', nome: 'Sorteio da Jornada', qtd_ganhadores: '1', publico_alvo: 'evento', origem_id: '5' } });
+  await rotas['POST /sorteios/:id/editar'](req, resRedirect());
+  assert.strictEqual(updates.length, 1);
+  const p = updates[0];
+  assert.strictEqual(p[0], 'interno', 'tipo corrigido pra interno');
+  assert.strictEqual(p[8], 'evento', 'origem_tipo');
+  assert.strictEqual(p[9], 5, 'origem_id');
+  assert.strictEqual(p[10], '7', 'WHERE id do sorteio certo');
+});
+
+test('POST /sorteios/:id/editar: sorteio já sorteado recusa edição (precisa resetar antes)', async () => {
+  const { rotas, updates } = montar({ sorteio: { status: 'sorteado' } });
+  const req = reqBase({ params: { id: '7' }, body: { tipo: 'interno', nome: 'X', qtd_ganhadores: '1', publico_alvo: 'ligantes' } });
+  await rotas['POST /sorteios/:id/editar'](req, resRedirect());
+  assert.strictEqual(updates.length, 0, 'não altera um sorteio já com ganhador definido');
+});
+
+test('POST /sorteios/:id/editar: sorteio inexistente não quebra', async () => {
+  const { rotas, updates } = montar({ sorteio: null });
+  const req = reqBase({ params: { id: '999' }, body: { tipo: 'interno', nome: 'X', qtd_ganhadores: '1', publico_alvo: 'ligantes' } });
+  await rotas['POST /sorteios/:id/editar'](req, resRedirect());
+  assert.strictEqual(updates.length, 0);
 });

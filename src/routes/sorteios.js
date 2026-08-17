@@ -46,48 +46,65 @@ router.get('/sorteios/roleta', requireAuth, requirePermissao('sorteios'), async 
   } catch(e) { res.send('ERRO: ' + e.message); }
 });
 
+// Monta os campos comuns a criar/editar a partir do body do form — usado pelas duas rotas
+// pra não duplicar a lógica de resolução de participantes/origem.
+function resolverCamposSorteio(body) {
+  const { tipo, nome, descricao, qtd_ganhadores, publico_alvo, participantes_manual, instagram_liga, origem_id } = body;
+  const tarefas = body['tarefas[]'] ? (Array.isArray(body['tarefas[]']) ? body['tarefas[]'] : [body['tarefas[]']]) : [];
+  const tarefasJson = tarefas.length ? JSON.stringify(tarefas.filter(t => t.trim())) : null;
+  // Se publico_alvo='selecao', pegar nomes dos checkboxes selecionados
+  let partManual = null;
+  if (publico_alvo === 'selecao') {
+    const selecionados = body['participantes_selecao[]']
+      ? (Array.isArray(body['participantes_selecao[]']) ? body['participantes_selecao[]'] : [body['participantes_selecao[]']])
+      : [];
+    const extras = body['participantes_extra']
+      ? body['participantes_extra'].split('\n').map(n=>n.trim()).filter(n=>n)
+      : [];
+    const todos = [...selecionados, ...extras];
+    partManual = todos.length ? JSON.stringify(todos) : null;
+  } else if (participantes_manual) {
+    partManual = JSON.stringify(participantes_manual.split('\n').map(n=>n.trim()).filter(n=>n));
+  }
+  // 'evento'/'pss': participantes são resolvidos NA HORA (ver GET /sorteios/:id) direto dos
+  // inscritos/candidatos com status='confirmado' — nunca guarda uma lista fixa aqui, senão
+  // quem concluir depois de criado o sorteio ficaria de fora.
+  const origemTipo = (publico_alvo === 'evento' || publico_alvo === 'pss') ? publico_alvo : null;
+  const origemId = origemTipo ? (parseInt(origem_id) || null) : null;
+  return { tipo, nome, descricao: descricao||null, qtdGanhadores: parseInt(qtd_ganhadores)||1, publicoAlvo: publico_alvo||null, partManual, instagramLiga: instagram_liga||null, tarefasJson, origemTipo, origemId };
+}
+
 // Criar sorteio
 router.post('/sorteios/criar', requireAuth, requirePermissao('sorteios'), async (req, res) => {
   try {
-    console.log('[SORTEIO DEBUG] body:', JSON.stringify({
-      publico_alvo: req.body.publico_alvo,
-      selecao: req.body['participantes_selecao[]'],
-      extra: req.body['participantes_extra'],
-      manual: req.body['participantes_manual']
-    }));
-    const { tipo, nome, descricao, qtd_ganhadores, publico_alvo, participantes_manual, instagram_liga, origem_id } = req.body;
-    const tarefas = req.body['tarefas[]'] ? (Array.isArray(req.body['tarefas[]']) ? req.body['tarefas[]'] : [req.body['tarefas[]']]) : [];
-    const tarefasJson = tarefas.length ? JSON.stringify(tarefas.filter(t => t.trim())) : null;
-    // Se publico_alvo='selecao', pegar nomes dos checkboxes selecionados
-    let partManual = null;
-    if (publico_alvo === 'selecao') {
-      // Checkboxes selecionados
-      const selecionados = req.body['participantes_selecao[]']
-        ? (Array.isArray(req.body['participantes_selecao[]']) ? req.body['participantes_selecao[]'] : [req.body['participantes_selecao[]']])
-        : [];
-      // Nomes extras digitados manualmente
-      const extras = req.body['participantes_extra']
-        ? req.body['participantes_extra'].split('\n').map(n=>n.trim()).filter(n=>n)
-        : [];
-      const todos = [...selecionados, ...extras];
-      partManual = todos.length ? JSON.stringify(todos) : null;
-    } else if (participantes_manual) {
-      partManual = JSON.stringify(participantes_manual.split('\n').map(n=>n.trim()).filter(n=>n));
-    }
-    // 'evento'/'pss': participantes são resolvidos NA HORA (ver GET /sorteios/:id) direto dos
-    // inscritos/candidatos com status='confirmado' — nunca guarda uma lista fixa aqui, senão
-    // quem concluir depois de criado o sorteio ficaria de fora.
-    const origemTipo = (publico_alvo === 'evento' || publico_alvo === 'pss') ? publico_alvo : null;
-    const origemId = origemTipo ? (parseInt(origem_id) || null) : null;
-
+    const c = resolverCamposSorteio(req.body);
     const r = await query(
       `INSERT INTO sorteios (tipo,nome,descricao,qtd_ganhadores,publico_alvo,participantes_manual,instagram_liga,tarefas,status,criado_por,origem_tipo,origem_id)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,'rascunho',$9,$10,$11) RETURNING id`,
-      [tipo, nome, descricao||null, parseInt(qtd_ganhadores)||1, publico_alvo||null, partManual, instagram_liga||null, tarefasJson, req.session.usuario.id, origemTipo, origemId]
+      [c.tipo, c.nome, c.descricao, c.qtdGanhadores, c.publicoAlvo, c.partManual, c.instagramLiga, c.tarefasJson, req.session.usuario.id, c.origemTipo, c.origemId]
     );
     req.flash('msg', ['Sorteio criado com sucesso!']);
     res.redirect('/sorteios/' + r.rows[0].id);
   } catch(e) { req.flash('erro', [e.message]); res.redirect('/sorteios'); }
+});
+
+// Editar sorteio (só antes de sortear — depois de ter ganhador, usar "Resetar" primeiro)
+router.post('/sorteios/:id/editar', requireAuth, requirePermissao('sorteios'), async (req, res) => {
+  try {
+    const atual = await query('SELECT status FROM sorteios WHERE id=$1', [req.params.id]);
+    if (!atual.rows.length) { req.flash('erro', ['Sorteio não encontrado.']); return res.redirect('/sorteios'); }
+    if (atual.rows[0].status === 'sorteado') {
+      req.flash('erro', ['Este sorteio já foi realizado — resete antes de editar.']);
+      return res.redirect('/sorteios/' + req.params.id);
+    }
+    const c = resolverCamposSorteio(req.body);
+    await query(
+      `UPDATE sorteios SET tipo=$1,nome=$2,descricao=$3,qtd_ganhadores=$4,publico_alvo=$5,participantes_manual=$6,instagram_liga=$7,tarefas=$8,origem_tipo=$9,origem_id=$10 WHERE id=$11`,
+      [c.tipo, c.nome, c.descricao, c.qtdGanhadores, c.publicoAlvo, c.partManual, c.instagramLiga, c.tarefasJson, c.origemTipo, c.origemId, req.params.id]
+    );
+    req.flash('msg', ['Sorteio atualizado com sucesso!']);
+    res.redirect('/sorteios/' + req.params.id);
+  } catch(e) { req.flash('erro', [e.message]); res.redirect('/sorteios/' + req.params.id); }
 });
 
 // Detalhe do sorteio

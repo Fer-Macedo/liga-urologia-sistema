@@ -122,7 +122,7 @@
               <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2b6803" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
             </div>
             <div class="tipo-card-titulo">Sorteio Interno</div>
-            <div class="tipo-card-desc">Entre ligantes, diretivos ou lista manual. Roleta animada para telão.</div>
+            <div class="tipo-card-desc">Entre ligantes, diretivos, inscritos de um evento/processo seletivo ou lista manual. Roleta animada para telão.</div>
           </div>
           <div class="tipo-card" onclick="abrirModalNovo('externo')">
             <div class="tipo-card-icon" style="background:#eff6ff;">
@@ -191,6 +191,12 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     Abrir
                   </a>
+                  <% if(s.status !== 'sorteado'){ %>
+                  <button type="button" class="btn-sorteio" style="background:#0f766e" onclick="abrirModalEditar(<%= s.id %>)">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    Editar
+                  </button>
+                  <% } %>
                   <% if(s.tipo==='interno' && s.status !== 'sorteado'){ %>
                   <a href="/sorteios/<%= s.id %>/realizar" class="btn-sorteio" style="background:#f59e0b;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/></svg>
@@ -207,6 +213,16 @@
           </div>
         <% } %>
 
+        <script id="sorteios-data" type="application/json"><%- JSON.stringify(sorteios.map(function(s){
+          return {
+            id: s.id, tipo: s.tipo, nome: s.nome, descricao: s.descricao||'',
+            qtd_ganhadores: s.qtd_ganhadores, publico_alvo: s.publico_alvo||'ligantes',
+            participantes_manual: s.participantes_manual ? JSON.parse(s.participantes_manual) : [],
+            instagram_liga: s.instagram_liga||'', origem_id: s.origem_id||'',
+            tarefas: s.tarefas ? JSON.parse(s.tarefas) : []
+          };
+        })) %></script>
+
       </div>
     </div>
   </main>
@@ -216,7 +232,7 @@
 <div class="modal-overlay" id="modalNovo">
   <div class="modal-box">
     <div class="modal-head">
-      <h3><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> Novo Sorteio</h3>
+      <h3 id="modalTitulo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> <span id="modalTituloTexto">Novo Sorteio</span></h3>
       <button class="modal-close" onclick="fecharModal()">&#x2715;</button>
     </div>
     <form method="POST" action="/sorteios/criar" id="formNovo">
@@ -235,16 +251,16 @@
 
         <div class="form-group">
           <label>Nome do Sorteio *</label>
-          <input type="text" name="nome" placeholder="Ex: Sorteio de Natal da Liga" required maxlength="255">
+          <input type="text" name="nome" id="fNome" placeholder="Ex: Sorteio de Natal da Liga" required maxlength="255">
         </div>
         <div class="form-group">
           <label>Descrição</label>
-          <textarea name="descricao" placeholder="Descreva o sorteio..."></textarea>
+          <textarea name="descricao" id="fDescricao" placeholder="Descreva o sorteio..."></textarea>
         </div>
         <div class="form-row">
           <div class="form-group">
             <label>Qtd. Ganhadores</label>
-            <input type="number" name="qtd_ganhadores" value="1" min="1" max="50">
+            <input type="number" name="qtd_ganhadores" id="fQtdGanhadores" value="1" min="1" max="50">
           </div>
           <div class="form-group" id="grpPublicoAlvo">
             <label>Público (sorteio interno)</label>
@@ -333,7 +349,7 @@
         <div class="secao-interno" id="secaoManual">
           <div class="form-group">
             <label>Participantes (um por linha)</label>
-            <textarea name="participantes_manual" placeholder="João Silva&#10;Maria Santos&#10;Pedro Lima" style="min-height:120px;"></textarea>
+            <textarea name="participantes_manual" id="fParticipantesManual" placeholder="João Silva&#10;Maria Santos&#10;Pedro Lima" style="min-height:120px;"></textarea>
           </div>
         </div>
 
@@ -341,7 +357,7 @@
         <div class="secao-externo" id="secaoExterno">
           <div class="form-group">
             <label>Instagram da Liga</label>
-            <input type="text" name="instagram_liga" placeholder="@lauro_urologia">
+            <input type="text" name="instagram_liga" id="fInstagramLiga" placeholder="@lauro_urologia">
           </div>
           <div class="form-group">
             <label>Tarefas de Engajamento</label>
@@ -358,7 +374,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn-cancelar" onclick="fecharModal()">Cancelar</button>
-        <button type="submit" class="btn-salvar">Criar Sorteio</button>
+        <button type="submit" class="btn-salvar" id="btnSalvarSorteio">Criar Sorteio</button>
       </div>
       <div id="hidden-selecao-container"></div>
     </form>
@@ -368,10 +384,47 @@
 <script src="/js/app.js"></script>
 <script>
 function abrirModalNovo(tipo){
+  document.getElementById('formNovo').reset();
+  document.getElementById('formNovo').action = '/sorteios/criar';
+  document.getElementById('modalTituloTexto').textContent = 'Novo Sorteio';
+  document.getElementById('btnSalvarSorteio').textContent = 'Criar Sorteio';
   document.getElementById('modalNovo').classList.add('open');
-  if(tipo) setTipo(tipo);
+  setTipo(tipo || 'interno');
 }
 function fecharModal(){ document.getElementById('modalNovo').classList.remove('open'); }
+
+var _SORTEIOS = (function(){ try { var el=document.getElementById('sorteios-data'); return el?JSON.parse(el.textContent):[]; } catch(e){ return []; } })();
+function abrirModalEditar(id){
+  var s = _SORTEIOS.find(function(x){ return x.id === id; });
+  if(!s) return;
+  document.getElementById('formNovo').reset();
+  document.getElementById('formNovo').action = '/sorteios/' + id + '/editar';
+  document.getElementById('modalTituloTexto').textContent = 'Editar Sorteio';
+  document.getElementById('btnSalvarSorteio').textContent = 'Salvar Alterações';
+  document.getElementById('modalNovo').classList.add('open');
+  setTipo(s.tipo);
+  document.getElementById('fNome').value = s.nome;
+  document.getElementById('fDescricao').value = s.descricao;
+  document.getElementById('fQtdGanhadores').value = s.qtd_ganhadores;
+  document.getElementById('fPublicoAlvo').value = s.publico_alvo;
+  toggleManual();
+  if(s.publico_alvo === 'manual') document.getElementById('fParticipantesManual').value = s.participantes_manual.join('\n');
+  if(s.publico_alvo === 'evento'){ document.getElementById('fOrigemEvento').value = s.origem_id; document.getElementById('fOrigemId').value = s.origem_id; }
+  if(s.publico_alvo === 'pss'){ document.getElementById('fOrigemPss').value = s.origem_id; document.getElementById('fOrigemId').value = s.origem_id; }
+  // ponytail: "selecao" (checkboxes de ligantes/diretivos) não é pré-marcada ao editar — a
+  // pessoa reseleciona se precisar mudar. Cobre o caso mais comum (trocar tipo/público/evento).
+  document.getElementById('fInstagramLiga').value = s.instagram_liga;
+  var listaTarefas = document.getElementById('tarefasList');
+  listaTarefas.innerHTML = '';
+  var tarefasParaMostrar = s.tarefas.length ? s.tarefas : [''];
+  tarefasParaMostrar.forEach(function(t){
+    var div = document.createElement('div');
+    div.className = 'tarefa-item';
+    div.innerHTML = '<input type="text" name="tarefas[]" placeholder="Ex: Seguir @lauro_urologia no Instagram"><button type="button" class="btn-rem-tarefa" onclick="remTarefa(this)">&#x2715;</button>';
+    div.querySelector('input').value = t;
+    listaTarefas.appendChild(div);
+  });
+}
 
 // checkboxes enviados diretamente — sem intercept necessario
 
