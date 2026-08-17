@@ -297,6 +297,49 @@ async function initSchema() {
       checkin_por INTEGER REFERENCES usuarios(id),
       UNIQUE(candidato_id, ocasiao)
     );
+    -- sorteios/sorteio_participantes só existiam no banco (sem CREATE no código) — mesma
+    -- lacuna já fechada pras outras tabelas.
+    CREATE TABLE IF NOT EXISTS sorteios (
+      id SERIAL PRIMARY KEY,
+      nome VARCHAR(255) NOT NULL,
+      tipo VARCHAR(30) NOT NULL,
+      descricao TEXT,
+      status VARCHAR(20) DEFAULT 'rascunho',
+      publico_alvo VARCHAR(20),
+      participantes_manual TEXT,
+      instagram_liga VARCHAR(100),
+      tarefas TEXT,
+      qtd_ganhadores INTEGER DEFAULT 1,
+      ganhador_id INTEGER,
+      ganhador_nome VARCHAR(255),
+      ganhador_contato VARCHAR(255),
+      brinde TEXT,
+      validado BOOLEAN DEFAULT false,
+      tarefas_cumpridas TEXT,
+      observacoes_validacao TEXT,
+      criado_por INTEGER,
+      criado_em TIMESTAMP DEFAULT NOW(),
+      sorteado_em TIMESTAMP,
+      sorteado_por INTEGER
+    );
+    CREATE TABLE IF NOT EXISTS sorteio_participantes (
+      id SERIAL PRIMARY KEY,
+      sorteio_id INTEGER REFERENCES sorteios(id) ON DELETE CASCADE,
+      nome VARCHAR(255) NOT NULL,
+      email VARCHAR(255),
+      instagram VARCHAR(100),
+      whatsapp VARCHAR(50),
+      tarefas_marcadas TEXT,
+      prints TEXT,
+      chances INTEGER DEFAULT 1,
+      validado BOOLEAN,
+      criado_em TIMESTAMP DEFAULT NOW()
+    );
+    -- Sorteio direto dos inscritos CONCLUÍDOS (status='confirmado') de um evento ou processo
+    -- seletivo — pedido do usuário 17/08/2026: puxar automaticamente em vez de digitar nomes
+    -- na mão. origem_tipo diz de onde vêm ('evento' -> evento_inscricoes, 'pss' -> ps_candidatos).
+    ALTER TABLE sorteios ADD COLUMN IF NOT EXISTS origem_tipo VARCHAR(20);
+    ALTER TABLE sorteios ADD COLUMN IF NOT EXISTS origem_id INTEGER;
 
     CREATE TABLE IF NOT EXISTS cadastro_correcoes (
       id SERIAL PRIMARY KEY,

@@ -252,11 +252,42 @@
               <option value="ligantes">Ligantes ativos</option>
               <option value="diretivos">Diretivos ativos</option>
               <option value="ambos">Ligantes + Diretivos</option>
+              <option value="evento">Inscritos de um evento</option>
+              <option value="pss">Candidatos de um processo seletivo</option>
               <option value="selecao">Selecionar individualmente</option>
               <option value="manual">Lista manual</option>
             </select>
           </div>
         </div>
+
+        <!-- SEÇÃO EVENTO -->
+        <div class="secao-interno" id="secaoEvento">
+          <div class="form-group">
+            <label>Qual evento</label>
+            <select id="fOrigemEvento" onchange="document.getElementById('fOrigemId').value=this.value">
+              <option value="">Selecione...</option>
+              <% (eventosDisponiveis||[]).forEach(function(e){ %>
+              <option value="<%= e.id %>"><%= e.nome %> (<%= e.concluidos %> concluído<%= e.concluidos==1?'':'s' %>)</option>
+              <% }) %>
+            </select>
+            <div style="font-size:11px;color:#94a3b8;margin-top:4px">Puxa automaticamente quem concluiu a inscrição (pago/isento). Quem está pendente não entra.</div>
+          </div>
+        </div>
+
+        <!-- SEÇÃO PROCESSO SELETIVO -->
+        <div class="secao-interno" id="secaoPss">
+          <div class="form-group">
+            <label>Qual processo seletivo</label>
+            <select id="fOrigemPss" onchange="document.getElementById('fOrigemId').value=this.value">
+              <option value="">Selecione...</option>
+              <% (processosDisponiveis||[]).forEach(function(p){ %>
+              <option value="<%= p.id %>"><%= p.nome %> (<%= p.concluidos %> concluído<%= p.concluidos==1?'':'s' %>)</option>
+              <% }) %>
+            </select>
+            <div style="font-size:11px;color:#94a3b8;margin-top:4px">Puxa automaticamente quem concluiu a inscrição (pago/isento). Quem está pendente não entra.</div>
+          </div>
+        </div>
+        <input type="hidden" name="origem_id" id="fOrigemId" value="">
 
         <!-- SEÇÃO SELEÇÃO INDIVIDUAL -->
         <div class="secao-interno" id="secaoSelecao" style="max-height:0;overflow:hidden;transition:max-height 0.3s ease">
@@ -364,6 +395,12 @@ function toggleManual(){
   document.getElementById('secaoManual').style.display = v==='manual'?'block':'none';
   document.getElementById('secaoSelecao').style.maxHeight = v==='selecao'?'800px':'0';
   document.getElementById('secaoSelecao').style.overflow = v==='selecao'?'visible':'hidden';
+  document.getElementById('secaoEvento').style.display = v==='evento'?'block':'none';
+  document.getElementById('secaoPss').style.display = v==='pss'?'block':'none';
+  // troca de público: zera a origem escolhida antes (não deixa vazar o evento/pss anterior)
+  document.getElementById('fOrigemEvento').value = '';
+  document.getElementById('fOrigemPss').value = '';
+  document.getElementById('fOrigemId').value = '';
 }
 var _selecionados = [];
 function selecionarTodos(marcar){

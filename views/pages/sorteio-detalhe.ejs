@@ -243,7 +243,8 @@
               </div>
               <div class="info-card-body" style="font-size:13px;color:#374151;display:flex;flex-direction:column;gap:8px;">
                 <div><strong>Tipo:</strong> <%= sorteio.tipo === 'interno' ? 'Interno' : 'Externo' %></div>
-                <div><strong>Público:</strong> <%= sorteio.publico_alvo || '—' %></div>
+                <% const _rotulosPublico = {ligantes:'Ligantes ativos', diretivos:'Diretivos ativos', ambos:'Ligantes + Diretivos', evento:'Inscritos de evento', pss:'Candidatos de processo seletivo', selecao:'Seleção individual', manual:'Lista manual'}; %>
+                <div><strong>Público:</strong> <%= _rotulosPublico[sorteio.publico_alvo] || sorteio.publico_alvo || '—' %><% if(typeof origemNome !== 'undefined' && origemNome){ %> — <%= origemNome %><% } %></div>
                 <div><strong>Ganhadores:</strong> <%= sorteio.qtd_ganhadores %></div>
                 <div><strong>Criado:</strong> <%= new Date(sorteio.criado_em).toLocaleDateString('pt-BR') %></div>
                 <% if(sorteio.sorteado_em){ %>
