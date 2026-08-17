@@ -70,19 +70,39 @@ test('GET /participar/:id: sorteio inexistente — 404, não quebra', async () =
   assert.strictEqual(res._status, 404);
 });
 
-test('POST /participar/:id: inscrição válida grava em sorteio_participantes', async () => {
+// 17/08/2026: pedido do usuário — Instagram e WhatsApp (com DDI, muita gente é do Brasil/
+// Argentina/outros países) passam a ser obrigatórios também, não só nome/e-mail.
+test('POST /participar/:id: inscrição válida (com DDI) grava em sorteio_participantes', async () => {
   const { rotas, inserts } = montar({ sorteio: EXTERNO });
-  const req = { params: { id: '9' }, body: { nome: 'Maria Silva', email: 'maria@x.com', instagram: '@maria', whatsapp: '595111' } };
+  const req = { params: { id: '9' }, body: { nome: 'Maria Silva', email: 'maria@x.com', instagram: '@maria', ddi: '+55', whatsapp_num: '(11) 98765-4321' } };
   const res = resRender();
   await rotas['POST /participar/:id'](req, res);
   assert.strictEqual(inserts.length, 1);
-  assert.deepStrictEqual(inserts[0], ['9', 'Maria Silva', 'maria@x.com', '@maria', '595111']);
+  assert.deepStrictEqual(inserts[0], ['9', 'Maria Silva', 'maria@x.com', '@maria', '+5511987654321'], 'DDI + só os dígitos do número, sem máscara');
   assert.strictEqual(res._locals.sucesso, true);
+});
+
+test('POST /participar/:id: falta Instagram — recusa sem gravar (agora obrigatório)', async () => {
+  const { rotas, inserts } = montar({ sorteio: EXTERNO });
+  const req = { params: { id: '9' }, body: { nome: 'Maria Silva', email: 'maria@x.com', instagram: '', ddi: '+595', whatsapp_num: '981111111' } };
+  const res = resRender();
+  await rotas['POST /participar/:id'](req, res);
+  assert.strictEqual(inserts.length, 0);
+  assert.ok(res._locals.erro);
+});
+
+test('POST /participar/:id: falta WhatsApp — recusa sem gravar (agora obrigatório)', async () => {
+  const { rotas, inserts } = montar({ sorteio: EXTERNO });
+  const req = { params: { id: '9' }, body: { nome: 'Maria Silva', email: 'maria@x.com', instagram: '@maria', ddi: '+595', whatsapp_num: '' } };
+  const res = resRender();
+  await rotas['POST /participar/:id'](req, res);
+  assert.strictEqual(inserts.length, 0);
+  assert.ok(res._locals.erro);
 });
 
 test('POST /participar/:id: falta nome ou email — recusa sem gravar', async () => {
   const { rotas, inserts } = montar({ sorteio: EXTERNO });
-  const req = { params: { id: '9' }, body: { nome: '', email: 'maria@x.com' } };
+  const req = { params: { id: '9' }, body: { nome: '', email: 'maria@x.com', instagram: '@maria', ddi: '+595', whatsapp_num: '981111111' } };
   const res = resRender();
   await rotas['POST /participar/:id'](req, res);
   assert.strictEqual(inserts.length, 0);
@@ -91,7 +111,7 @@ test('POST /participar/:id: falta nome ou email — recusa sem gravar', async ()
 
 test('POST /participar/:id: mesmo e-mail 2ª vez — não duplica, avisa que já está participando', async () => {
   const { rotas, inserts } = montar({ sorteio: EXTERNO, participanteExistente: true });
-  const req = { params: { id: '9' }, body: { nome: 'Maria Silva', email: 'maria@x.com' } };
+  const req = { params: { id: '9' }, body: { nome: 'Maria Silva', email: 'maria@x.com', instagram: '@maria', ddi: '+595', whatsapp_num: '981111111' } };
   const res = resRender();
   await rotas['POST /participar/:id'](req, res);
   assert.strictEqual(inserts.length, 0);
@@ -117,4 +137,22 @@ test('GET /sorteios/:id/qrcode: baixa o PNG do link público de inscrição', as
     assert.match(chamadas[0], /data=https%3A%2F%2Finscricao\.lauroucpcde\.com%2Fparticipar%2F9/);
     assert.ok(Buffer.isBuffer(res._body));
   } finally { delete global.fetch; }
+});
+
+test('página pública: os 4 campos são obrigatórios e o WhatsApp tem seletor de DDI', () => {
+  const ejs = require('ejs');
+  const fs = require('fs');
+  const ARQUIVO = path.join(RAIZ, 'views/pages/sorteio-participar-publico.ejs');
+  const html = ejs.render(fs.readFileSync(ARQUIVO, 'utf8'), {
+    sorteio: EXTERNO, tarefas: [], config: {}, aberto: true, sucesso: false, jaInscrito: false, erro: null, nome: null
+  }, { filename: ARQUIVO });
+  ['nome', 'email', 'instagram', 'whatsapp_num'].forEach(campo => {
+    const m = html.match(new RegExp('name="' + campo + '"[^>]*'));
+    assert.ok(m, 'campo ' + campo + ' precisa existir');
+    assert.match(m[0], /required/, 'campo ' + campo + ' precisa ser obrigatório');
+  });
+  assert.match(html, /name="ddi"/, 'precisa ter o seletor de DDI');
+  assert.match(html, /\+55</, 'Brasil precisa estar nas opções de DDI');
+  assert.match(html, /\+54</, 'Argentina precisa estar nas opções de DDI');
+  assert.match(html, /\+595"[^>]*selected/, 'Paraguai (sede da liga) vem selecionado por padrão');
 });

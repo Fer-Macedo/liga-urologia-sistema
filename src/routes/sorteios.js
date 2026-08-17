@@ -282,9 +282,10 @@ router.post('/participar/:id', limiterParticiparSorteio, async (req, res) => {
     const nome = (req.body.nome || '').trim();
     const email = (req.body.email || '').trim().toLowerCase();
     const instagram = (req.body.instagram || '').trim();
-    const whatsapp = (req.body.whatsapp || '').trim();
-    if (!nome || !email) {
-      return res.render('pages/sorteio-participar-publico', { sorteio, tarefas, config: cfgPub, aberto: true, sucesso: false, jaInscrito: false, erro: 'Preencha nome e e-mail.', nome: null });
+    const whatsappNum = (req.body.whatsapp_num || '').replace(/\D/g, '');
+    const whatsapp = whatsappNum ? (req.body.ddi || '+595') + whatsappNum : '';
+    if (!nome || !email || !instagram || !whatsappNum) {
+      return res.render('pages/sorteio-participar-publico', { sorteio, tarefas, config: cfgPub, aberto: true, sucesso: false, jaInscrito: false, erro: 'Completa todos los campos.', nome: null });
     }
 
     const jaExiste = await query('SELECT id FROM sorteio_participantes WHERE sorteio_id=$1 AND LOWER(email)=$2', [req.params.id, email]);

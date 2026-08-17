@@ -80,10 +80,22 @@
           <input type="text" name="nome" placeholder="Tu nombre" required>
           <label>Correo electrónico</label>
           <input type="email" name="email" placeholder="tu@correo.com" required>
-          <label>Instagram (opcional)</label>
-          <input type="text" name="instagram" placeholder="@tu_usuario">
-          <label>WhatsApp (opcional)</label>
-          <input type="text" name="whatsapp" placeholder="Tu número">
+          <label>Instagram</label>
+          <input type="text" name="instagram" placeholder="@tu_usuario" required>
+          <label>WhatsApp</label>
+          <div style="display:flex;gap:8px;margin-bottom:18px">
+            <select name="ddi" style="width:110px;flex-shrink:0;padding:12px 8px;border:1.5px solid var(--bd);border-radius:8px;font-size:13px;background:#f9fafb">
+              <option value="+595" selected>PY +595</option>
+              <option value="+55">BR +55</option>
+              <option value="+54">AR +54</option>
+              <option value="+1">US +1</option>
+              <option value="+351">PT +351</option>
+              <option value="+598">UY +598</option>
+              <option value="+56">CL +56</option>
+              <option value="+57">CO +57</option>
+            </select>
+            <input type="text" name="whatsapp_num" placeholder="Tu número" required style="flex:1;margin-bottom:0">
+          </div>
           <button type="submit">Quiero participar</button>
         </form>
       <% } %>
