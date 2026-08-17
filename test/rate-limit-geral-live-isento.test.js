@@ -45,3 +45,9 @@ test('isenções pré-existentes continuam funcionando (checkout/inscricao/webho
 test('admin autenticado (sessão com usuário) sempre isento, em qualquer rota', () => {
   assert.strictEqual(deveSkip({ path: '/eventos/5', session: { usuario: { id: 1 } } }), true);
 });
+
+// 17/08/2026: inscrição pública de sorteio Externo — mesma classe de risco do checkout
+// (várias pessoas atrás do mesmo IP se inscrevendo pro sorteio ao mesmo tempo).
+test('/participar/:id (inscrição pública de sorteio) fica isento do limite geral por IP', () => {
+  assert.strictEqual(deveSkip({ path: '/participar/9' }), true);
+});

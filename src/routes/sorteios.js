@@ -2,6 +2,22 @@
 const { query } = require('../models/database');
 const { requireAuth, requirePermissao } = require('../middleware/auth');
 const { getConfig } = require('../services/config');
+const rateLimit = require('express-rate-limit');
+
+const limiterVisualizacaoSorteio = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  message: { erro: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
+const limiterParticiparSorteio = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: { erro: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
+  standardHeaders: true,
+  legacyHeaders: false
+});
 
 module.exports = function (router) {
 
@@ -220,6 +236,68 @@ router.post('/sorteios/:id/excluir', requireAuth, requirePermissao('sorteios'), 
     req.flash('msg', ['Sorteio excluído.']);
     res.redirect('/sorteios');
   } catch(e) { req.flash('erro', [e.message]); res.redirect('/sorteios'); }
+});
+
+// QR Code (PNG) do link de inscrição pública — mesmo padrão já usado no check-out de eventos
+// (reaproveita o mesmo serviço externo, api.qrserver.com, em vez de trazer lib nova).
+router.get('/sorteios/:id/qrcode', requireAuth, requirePermissao('sorteios'), async (req, res) => {
+  try {
+    const link = 'https://inscricao.lauroucpcde.com/participar/' + req.params.id;
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&data=' + encodeURIComponent(link);
+    const r = await fetch(qrUrl);
+    if (!r.ok) return res.status(502).send('Erro ao gerar QR Code.');
+    const buf = Buffer.from(await r.arrayBuffer());
+    res.set('Content-Type', 'image/png');
+    res.set('Content-Disposition', 'attachment; filename="sorteio-qr-' + req.params.id + '.png"');
+    res.send(buf);
+  } catch(e) { console.error('Sorteio QR erro:', e.message); res.status(500).send('Erro ao gerar QR Code.'); }
+});
+
+// ─── PÁGINA PÚBLICA DE INSCRIÇÃO (sorteio Externo) ──────────────────────────────
+// Único lugar do sistema onde uma pessoa de FORA se cadastra sem estar em nenhuma
+// tabela (ligante/diretivo/inscrito de evento). Fecha assim que o sorteio é sorteado.
+router.get('/participar/:id', limiterVisualizacaoSorteio, async (req, res) => {
+  try {
+    const r = await query('SELECT * FROM sorteios WHERE id=$1', [req.params.id]);
+    const sorteio = r.rows[0];
+    if (!sorteio || sorteio.tipo !== 'externo') return res.status(404).send('Sorteio não encontrado.');
+    const aberto = sorteio.status !== 'sorteado';
+    const tarefas = sorteio.tarefas ? JSON.parse(sorteio.tarefas) : [];
+    res.render('pages/sorteio-participar-publico', { sorteio, tarefas, config: await getConfig(), aberto, sucesso: false, jaInscrito: false, erro: null, nome: null });
+  } catch(e) { console.error('Participar GET erro:', e.message); res.status(500).send('Erro ao carregar.'); }
+});
+
+router.post('/participar/:id', limiterParticiparSorteio, async (req, res) => {
+  try {
+    const r = await query('SELECT * FROM sorteios WHERE id=$1', [req.params.id]);
+    const sorteio = r.rows[0];
+    if (!sorteio || sorteio.tipo !== 'externo') return res.status(404).send('Sorteio não encontrado.');
+    const cfgPub = await getConfig();
+    const tarefas = sorteio.tarefas ? JSON.parse(sorteio.tarefas) : [];
+    const aberto = sorteio.status !== 'sorteado';
+    if (!aberto) {
+      return res.render('pages/sorteio-participar-publico', { sorteio, tarefas, config: cfgPub, aberto: false, sucesso: false, jaInscrito: false, erro: 'As inscrições deste sorteio já foram encerradas.', nome: null });
+    }
+
+    const nome = (req.body.nome || '').trim();
+    const email = (req.body.email || '').trim().toLowerCase();
+    const instagram = (req.body.instagram || '').trim();
+    const whatsapp = (req.body.whatsapp || '').trim();
+    if (!nome || !email) {
+      return res.render('pages/sorteio-participar-publico', { sorteio, tarefas, config: cfgPub, aberto: true, sucesso: false, jaInscrito: false, erro: 'Preencha nome e e-mail.', nome: null });
+    }
+
+    const jaExiste = await query('SELECT id FROM sorteio_participantes WHERE sorteio_id=$1 AND LOWER(email)=$2', [req.params.id, email]);
+    if (jaExiste.rows.length > 0) {
+      return res.render('pages/sorteio-participar-publico', { sorteio, tarefas, config: cfgPub, aberto: true, sucesso: false, jaInscrito: true, erro: null, nome: nome.split(' ')[0] });
+    }
+
+    await query(
+      'INSERT INTO sorteio_participantes (sorteio_id, nome, email, instagram, whatsapp) VALUES ($1,$2,$3,$4,$5)',
+      [req.params.id, nome, email, instagram || null, whatsapp || null]
+    );
+    res.render('pages/sorteio-participar-publico', { sorteio, tarefas, config: cfgPub, aberto: true, sucesso: true, jaInscrito: false, erro: null, nome: nome.split(' ')[0] });
+  } catch(e) { console.error('Participar POST erro:', e.message); res.status(500).send('Erro ao inscrever.'); }
 });
 
 };

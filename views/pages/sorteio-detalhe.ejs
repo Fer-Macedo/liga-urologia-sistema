@@ -167,6 +167,24 @@
           <!-- PAINEL LATERAL -->
           <div class="sorteio-info">
 
+            <!-- LINK DE INSCRIÇÃO (só sorteio Externo) -->
+            <% if(sorteio.tipo === 'externo'){ %>
+            <div class="info-card">
+              <div class="info-card-head">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                Link de Inscrição
+              </div>
+              <div class="info-card-body">
+                <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px">
+                  <input id="sort-link" readonly value="https://inscricao.lauroucpcde.com/participar/<%= sorteio.id %>" style="flex:1;font-family:monospace;font-size:11px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc">
+                  <button type="button" onclick="navigator.clipboard.writeText(document.getElementById('sort-link').value);this.textContent='Copiado!';setTimeout(()=>this.textContent='Copiar',1500)" style="font-size:11px;padding:8px 10px;border:1px solid #e2e8f0;border-radius:6px;background:#fff;cursor:pointer;white-space:nowrap">Copiar</button>
+                </div>
+                <a href="/sorteios/<%= sorteio.id %>/qrcode" style="display:block;text-align:center;font-size:12px;font-weight:600;padding:8px;border-radius:6px;background:#1a3d2b;color:#fff;text-decoration:none">Baixar QR Code (PNG)</a>
+                <div style="font-size:11px;color:#94a3b8;margin-top:6px">Compartilhe este link (ou o QR) pra qualquer pessoa se inscrever, sem precisar estar cadastrada no sistema. Fecha automaticamente assim que o sorteio for realizado.</div>
+              </div>
+            </div>
+            <% } %>
+
             <!-- PARTICIPANTES -->
             <div class="info-card">
               <div class="info-card-head">

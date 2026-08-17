@@ -38,6 +38,7 @@ function deveSkipLimiteGeral(req) {
   var p = req.path || '';
   if (p.indexOf('/checkout') === 0 || p.indexOf('/inscricao') === 0 || p.indexOf('/webhook') === 0) return true;
   if (p.indexOf('/live/') === 0) return true;
+  if (p.indexOf('/participar/') === 0) return true; // inscrição pública de sorteio Externo
   if (req.session && req.session.usuario) return true; // admin autenticado — sem limite
   return false;
 }
