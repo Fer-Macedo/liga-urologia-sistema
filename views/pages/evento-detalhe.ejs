@@ -1282,7 +1282,13 @@
         <div class="section-card" style="margin-bottom:16px">
           <div class="section-header">Perguntas da avaliação (obrigatória no check-out do último dia)</div>
           <div class="section-body">
-            <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">Cada linha vira uma pergunta de escala (Péssimo a Excelente) no check-out do último dia. Adicione ou remova conforme precisar — a sugestão livre no final é fixa, não precisa cadastrar aqui.</p>
+            <p style="font-size:12px;color:var(--texto2);margin-bottom:10px">Cada linha vira uma pergunta de escala no check-out do último dia. Adicione ou remova conforme precisar — a sugestão livre no final é fixa, não precisa cadastrar aqui.</p>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:10px 12px;background:var(--fundo);border-radius:8px;border:1px solid var(--borda)">
+              <span style="font-size:11px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px">Escala das respostas (fixa, vale pra todas):</span>
+              <% ['Péssimo','Ruim','Regular','Bom','Muito bom','Excelente'].forEach(function(op, i){ %>
+              <span style="font-size:11px;font-weight:600;padding:3px 9px;border-radius:12px;background:<%= ['#fee2e2','#fed7aa','#fef08a','#d9f99d','#bbf7d0','#86efac'][i] %>;color:<%= ['#991b1b','#9a3412','#854d0e','#3f6212','#166534','#14532d'][i] %>"><%= i+1 %>. <%= op %></span>
+              <% }) %>
+            </div>
             <form method="POST" action="/eventos/<%= evento.id %>/avaliacao-perguntas">
               <div id="perguntasAvalList">
                 <% perguntasAvaliacaoAtuais.forEach(function(p){ %>
