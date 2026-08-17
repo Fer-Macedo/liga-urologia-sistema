@@ -1279,10 +1279,32 @@
           </div>
         </div>
 
-        <div class="section-card">
-          <div class="section-header">Avaliação do evento (obrigatória no check-out do último dia)</div>
+        <div class="section-card" style="margin-bottom:16px">
+          <div class="section-header">Perguntas da avaliação (obrigatória no check-out do último dia)</div>
           <div class="section-body">
-            <div id="ck-avaliacao" style="font-size:13px;color:var(--texto2)">Clique em "Atualizar" (acima) pra carregar.</div>
+            <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">Cada linha vira uma pergunta de escala (Péssimo a Excelente) no check-out do último dia. Adicione ou remova conforme precisar — a sugestão livre no final é fixa, não precisa cadastrar aqui.</p>
+            <form method="POST" action="/eventos/<%= evento.id %>/avaliacao-perguntas">
+              <div id="perguntasAvalList">
+                <% perguntasAvaliacaoAtuais.forEach(function(p){ %>
+                <div style="display:flex;gap:8px;margin-bottom:8px">
+                  <input type="text" name="perguntas[]" value="<%= p %>" class="input" style="flex:1">
+                  <button type="button" onclick="this.parentElement.remove()" class="btn-xs" style="background:#fee2e2;color:#991b1b">Remover</button>
+                </div>
+                <% }) %>
+              </div>
+              <button type="button" class="btn btn-sm" style="margin-bottom:14px" onclick="var d=document.createElement('div');d.style.cssText='display:flex;gap:8px;margin-bottom:8px';d.innerHTML='<input type=\'text\' name=\'perguntas[]\' class=\'input\' style=\'flex:1\' placeholder=\'Nova pergunta\'><button type=\'button\' onclick=\'this.parentElement.remove()\' class=\'btn-xs\' style=\'background:#fee2e2;color:#991b1b\'>Remover</button>';document.getElementById('perguntasAvalList').appendChild(d)">+ Adicionar pergunta</button>
+              <button type="submit" class="btn btn-primario" style="display:block">Salvar perguntas</button>
+            </form>
+          </div>
+        </div>
+
+        <div class="section-card">
+          <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
+            <span>Respostas da avaliação</span>
+            <a class="btn btn-sm" href="/eventos/<%= evento.id %>/avaliacao-export" style="background:var(--cor-primaria);color:#fff;border-color:transparent;text-decoration:none">Exportar (Excel/CSV)</a>
+          </div>
+          <div class="section-body">
+            <div id="ck-avaliacao" style="font-size:13px;color:var(--texto2)">Clique em "Atualizar" (no relatório acima) pra carregar.</div>
           </div>
         </div>
       </div>
@@ -1658,38 +1680,60 @@ function carregarRelatorioCheckout(){
 }
 function escHtml(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
 var _avalCharts = {};
+var _avalRespostas = []; // cache pro filtro não precisar buscar de novo
+var _avalPerguntas = [];
 function renderizarAvaliacao(a){
   var el = document.getElementById('ck-avaliacao');
   if(!a || a.total === 0){ el.innerHTML = '<div style="color:#94a3b8;font-size:12px">Ninguém fez check-out no último dia ainda.</div>'; return; }
   var html = '<div style="margin-bottom:16px;font-size:13px"><strong>'+a.respondidas+'</strong> de <strong>'+a.total+'</strong> responderam a avaliação do último dia (<strong>'+a.percentual+'%</strong>).</div>';
   if(a.respondidas === 0){ el.innerHTML = html + '<div style="color:#94a3b8;font-size:12px">Nenhuma resposta ainda.</div>'; return; }
-  var perguntas = [
-    { campo: 'tema', titulo: 'Tema abordado' },
-    { campo: 'tempo', titulo: 'Tiempo de la clase' },
-    { campo: 'palestrante', titulo: 'Competencia del ponente' },
-    { campo: 'suporte', titulo: 'Soporte al participante' }
-  ];
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:16px">';
-  perguntas.forEach(function(p){ html += '<div><div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">'+p.titulo+'</div><canvas id="chartAval_'+p.campo+'" height="140"></canvas></div>'; });
+  _avalRespostas = a.respostas || [];
+  _avalPerguntas = a.perguntas || [];
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:20px">';
+  a.perguntas.forEach(function(titulo, i){ html += '<div><div style="font-size:12px;font-weight:600;color:#374151;margin-bottom:6px">'+escHtml(titulo)+'</div><canvas id="chartAval_'+i+'" height="140"></canvas></div>'; });
   html += '</div>';
   if(a.sugestoes && a.sugestoes.length){
     html += '<h3 style="font-size:13px;color:#0f172a;margin:16px 0 8px">Sugestões ('+a.sugestoes.length+')</h3>';
-    html += '<div style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:8px">';
+    html += '<div style="max-height:220px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:20px">';
     a.sugestoes.forEach(function(s){ html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:12px;color:#374151">'+escHtml(s)+'</div>'; });
     html += '</div>';
   }
+  html += '<h3 style="font-size:13px;color:#0f172a;margin:16px 0 8px">Respostas individuais</h3>';
+  html += '<input type="text" id="avalFiltro" class="input" placeholder="Filtrar por nome, e-mail ou sugestão..." style="margin-bottom:10px;font-size:13px" oninput="filtrarAvaliacoes()">';
+  html += '<div id="avalTabelaWrap" style="overflow-x:auto"></div>';
   el.innerHTML = html;
   var labels = ['Péssimo','Ruim','Regular','Bom','Muito bom','Excelente'];
   var cores = ['#ef4444','#f97316','#f59e0b','#84cc16','#22c55e','#15803d'];
-  perguntas.forEach(function(p){
-    var ctxId = 'chartAval_'+p.campo;
+  a.perguntas.forEach(function(titulo, i){
+    var ctxId = 'chartAval_'+i;
     if(_avalCharts[ctxId]) _avalCharts[ctxId].destroy();
     _avalCharts[ctxId] = new Chart(document.getElementById(ctxId), {
       type: 'bar',
-      data: { labels: labels, datasets: [{ data: a[p.campo], backgroundColor: cores }] },
+      data: { labels: labels, datasets: [{ data: a.distribuicoes[i], backgroundColor: cores }] },
       options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { ticks: { font: { size: 9 } } } } }
     });
   });
+  filtrarAvaliacoes();
+}
+function filtrarAvaliacoes(){
+  var wrap = document.getElementById('avalTabelaWrap');
+  if(!wrap) return;
+  var q = (document.getElementById('avalFiltro') ? document.getElementById('avalFiltro').value : '').toLowerCase();
+  var filtradas = _avalRespostas.filter(function(r){
+    if(!q) return true;
+    return (r.nome||'').toLowerCase().includes(q) || (r.email||'').toLowerCase().includes(q) || (r.sugestao||'').toLowerCase().includes(q);
+  });
+  var html = '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Nome</th><th style="text-align:left">Email</th>';
+  _avalPerguntas.forEach(function(p){ html += '<th>'+escHtml(p.length > 24 ? p.slice(0,24)+'…' : p)+'</th>'; });
+  html += '<th style="text-align:left">Sugestão</th></tr></thead><tbody>';
+  if(!filtradas.length){ html += '<tr><td colspan="'+(3+_avalPerguntas.length)+'" style="text-align:center;color:#94a3b8;padding:12px">Nenhuma resposta encontrada.</td></tr>'; }
+  filtradas.forEach(function(r){
+    html += '<tr><td>'+escHtml(toTitleCase(r.nome||''))+'</td><td>'+escHtml(r.email||'')+'</td>';
+    r.notas.forEach(function(n){ html += '<td style="text-align:center">'+n+'</td>'; });
+    html += '<td>'+escHtml(r.sugestao||'')+'</td></tr>';
+  });
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
 }
 function showTab(id, btn) {
   if (id === 'mala-direta') { initQuilMala(); carregarHistorico(); }

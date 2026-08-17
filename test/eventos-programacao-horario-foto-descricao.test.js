@@ -176,7 +176,7 @@ test('admin: formulário "Adicionar item" lista um checkbox por palestrante já 
     evento, lotes: [], inscricoes: [], pagamentos: [], certificados: [],
     stats: { total: 0, confirmados: 0, checkins: 0, receita: 0 },
     campos: [], programacao: [], palestrantes: [{ id: 40, nome: 'Dra. Fulana' }, { id: 55, nome: 'Dr. Beltrano' }],
-    patrocinadores: [], cupons: [], prefixoCupomEvento: 'LAURO', calcularLiquidoEvento: () => 0, formatarNome: (n) => n
+    patrocinadores: [], cupons: [], prefixoCupomEvento: 'LAURO', perguntasAvaliacaoAtuais: [], calcularLiquidoEvento: () => 0, formatarNome: (n) => n
   }, { filename: ARQUIVO });
   assert.match(html, /<input type="checkbox" name="palestrante_ids" value="40"[^>]*>\s*Dra\. Fulana/);
   assert.match(html, /<input type="checkbox" name="palestrante_ids" value="55"[^>]*>\s*Dr\. Beltrano/);
@@ -192,7 +192,7 @@ test('admin: item de programação já vinculado mostra o nome do palestrante na
     campos: [],
     programacao: [{ id: 1, horario: '08:00 - 09:00', titulo: 'Mesa redonda', local: '', descricao: '', foto_chave: null, palestrante_ids: [55] }],
     palestrantes: [{ id: 40, nome: 'Dra. Fulana' }, { id: 55, nome: 'Dr. Beltrano' }],
-    patrocinadores: [], cupons: [], prefixoCupomEvento: 'LAURO', calcularLiquidoEvento: () => 0, formatarNome: (n) => n
+    patrocinadores: [], cupons: [], prefixoCupomEvento: 'LAURO', perguntasAvaliacaoAtuais: [], calcularLiquidoEvento: () => 0, formatarNome: (n) => n
   }, { filename: ARQUIVO });
   const iTab = html.indexOf('id="tab-programacao"');
   const trecho = html.slice(iTab, html.indexOf('Adicionar item'));
@@ -257,7 +257,7 @@ test('admin: cada item de programação tem um botão Editar, e prog-data traz o
     // "YYYY-MM-DD" é UTC, parse de Date já construído é local) que motivou essa regra.
     programacao: [{ id: 9, data: new Date(2026, 7, 18), horario: '14:00 - 15:30', titulo: 'Mesa redonda', local: 'Sala B', descricao: '<em>editado</em>', foto_chave: null, palestrante_ids: [55] }],
     palestrantes: [{ id: 55, nome: 'Dr. Beltrano' }],
-    patrocinadores: [], cupons: [], prefixoCupomEvento: 'LAURO', calcularLiquidoEvento: () => 0, formatarNome: (n) => n
+    patrocinadores: [], cupons: [], prefixoCupomEvento: 'LAURO', perguntasAvaliacaoAtuais: [], calcularLiquidoEvento: () => 0, formatarNome: (n) => n
   }, { filename: ARQUIVO });
   assert.match(html, /onclick="editarProgramacao\(9\)"/);
   // a data formatada (18\/08) precisa aparecer na lista — sem isso, 2 itens no mesmo horário

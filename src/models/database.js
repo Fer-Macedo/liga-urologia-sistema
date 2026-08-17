@@ -273,13 +273,17 @@ async function initSchema() {
     ALTER TABLE evento_programacao ADD COLUMN IF NOT EXISTS checkout_fecha_em TIMESTAMP;
     ALTER TABLE evento_checkouts ADD COLUMN IF NOT EXISTS programacao_id INTEGER REFERENCES evento_programacao(id) ON DELETE CASCADE;
     -- Avaliação obrigatória do evento, embutida no check-out do ÚLTIMO DIA (pedido do
-    -- usuário 17/08/2026: 4 perguntas de escala 1-6 [Péssimo..Excelente] + sugestões livre,
-    -- pra gerar panorama do evento pra coordenação de ligas). Guardada na própria linha do
-    -- check-out — cada pessoa só é obrigada a responder uma vez, no check-out do dia final.
-    ALTER TABLE evento_checkouts ADD COLUMN IF NOT EXISTS aval_tema INTEGER CHECK (aval_tema IS NULL OR (aval_tema BETWEEN 1 AND 6));
-    ALTER TABLE evento_checkouts ADD COLUMN IF NOT EXISTS aval_tempo INTEGER CHECK (aval_tempo IS NULL OR (aval_tempo BETWEEN 1 AND 6));
-    ALTER TABLE evento_checkouts ADD COLUMN IF NOT EXISTS aval_palestrante INTEGER CHECK (aval_palestrante IS NULL OR (aval_palestrante BETWEEN 1 AND 6));
-    ALTER TABLE evento_checkouts ADD COLUMN IF NOT EXISTS aval_suporte INTEGER CHECK (aval_suporte IS NULL OR (aval_suporte BETWEEN 1 AND 6));
+    -- usuário 17/08/2026, perguntas de escala 1-6 [Péssimo..Excelente] + sugestões livre, pra
+    -- gerar panorama do evento pra coordenação de ligas). As perguntas são CONFIGURÁVEIS por
+    -- evento (pedido do usuário 17/08/2026: poder adicionar/excluir perguntas) — por isso não
+    -- são colunas fixas, ficam como JSON (avaliacao_perguntas no evento, aval_respostas no
+    -- check-out, na mesma ordem das perguntas vigentes quando a pessoa respondeu).
+    ALTER TABLE eventos ADD COLUMN IF NOT EXISTS avaliacao_perguntas TEXT;
+    ALTER TABLE evento_checkouts DROP COLUMN IF EXISTS aval_tema;
+    ALTER TABLE evento_checkouts DROP COLUMN IF EXISTS aval_tempo;
+    ALTER TABLE evento_checkouts DROP COLUMN IF EXISTS aval_palestrante;
+    ALTER TABLE evento_checkouts DROP COLUMN IF EXISTS aval_suporte;
+    ALTER TABLE evento_checkouts ADD COLUMN IF NOT EXISTS aval_respostas TEXT;
     ALTER TABLE evento_checkouts ADD COLUMN IF NOT EXISTS aval_sugestoes TEXT;
     ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;

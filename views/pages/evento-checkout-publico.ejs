@@ -81,24 +81,18 @@
           <label>RG / CI / DNI</label>
           <input type="text" name="documento" placeholder="Tu documento de identidad" required>
 
-          <% if(typeof ultimoDia !== 'undefined' && ultimoDia){
+          <% if(typeof ultimoDia !== 'undefined' && ultimoDia && perguntasAvaliacao && perguntasAvaliacao.length){
             const escala = ['Péssimo','Ruim','Regular','Bom','Muito bom','Excelente'];
-            const perguntas = [
-              { campo: 'aval_tema', titulo: 'Evaluación del tema abordado' },
-              { campo: 'aval_tempo', titulo: 'Acerca del tiempo para la clase, considere' },
-              { campo: 'aval_palestrante', titulo: 'Acerca de la competencia del ponente, considere' },
-              { campo: 'aval_suporte', titulo: 'Evaluación acerca del soporte al participante, considere' }
-            ];
           %>
           <div class="aval-titulo">Evaluación de la clase de forma general</div>
           <div class="aval-sub">Para cerrar tu check-out del último día, responde esta breve evaluación. Es obligatoria.</div>
-          <% perguntas.forEach(function(p){ %>
+          <% perguntasAvaliacao.forEach(function(titulo, qi){ %>
           <div class="likert">
-            <div class="likert-titulo"><%= p.titulo %> <span class="req">*</span></div>
+            <div class="likert-titulo"><%= titulo %> <span class="req">*</span></div>
             <div class="likert-escala">
               <% escala.forEach(function(rotulo, i){ %>
               <label class="likert-opt">
-                <input type="radio" name="<%= p.campo %>" value="<%= i+1 %>" required>
+                <input type="radio" name="aval_resposta_<%= qi %>" value="<%= i+1 %>" required>
                 <span><%= rotulo %></span>
               </label>
               <% }) %>

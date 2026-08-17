@@ -190,7 +190,7 @@ router.get('/eventos/:id', requireAuth, requirePermissao('eventos'), async (req,
   const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem',[req.params.id]);
   const cuponsR = await query('SELECT ec.*, ec.criado_em AS cupom_criado_em, ei.nome AS usado_nome, ei.criado_em AS usado_em, COALESCE(l.nome, d.nome, mb.nome) AS dono_nome FROM evento_cupons ec LEFT JOIN evento_inscricoes ei ON ei.id = ec.usado_por_inscricao_id LEFT JOIN ligantes l ON ec.ligante_id = l.id LEFT JOIN diretivos d ON ec.diretivo_id = d.id LEFT JOIN membros mb ON ec.membro_id = mb.id WHERE ec.evento_id=$1 ORDER BY ec.criado_em DESC',[req.params.id]);
   const prefixoCupomEvento = prefixoDominanteCupons(cuponsR.rows.filter(c => c.ligante_id || c.diretivo_id).map(c => c.codigo)) || 'LAURO';
-  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows, cupons: cuponsR.rows, prefixoCupomEvento, calcularLiquidoEvento, formatarNome });
+  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows, cupons: cuponsR.rows, prefixoCupomEvento, perguntasAvaliacaoAtuais: perguntasAvaliacaoDoEvento(evR.rows[0]), calcularLiquidoEvento, formatarNome });
 });
 
 router.post('/eventos/:id/editar', requireAuth, requirePermissao('eventos'), async (req, res) => {
@@ -1637,6 +1637,24 @@ async function ehUltimoDiaEvento(eventoId, diaData) {
   return new Date(diaData).toDateString() === new Date(ultima).toDateString();
 }
 
+// Perguntas padrão da avaliação obrigatória do último dia — usadas até o admin customizar
+// (evento.avaliacao_perguntas). Pedido do usuário 17/08/2026: precisa dar pra adicionar/excluir
+// perguntas por evento, por isso não são colunas fixas — a lista vigente fica em JSON no evento,
+// e cada resposta (evento_checkouts.aval_respostas) guarda as notas na mesma ordem/tamanho.
+const PERGUNTAS_AVALIACAO_PADRAO = [
+  'Evaluación del tema abordado',
+  'Acerca del tiempo para la clase, considere',
+  'Acerca de la competencia del ponente, considere',
+  'Evaluación acerca del soporte al participante, considere'
+];
+function perguntasAvaliacaoDoEvento(evento) {
+  if (!evento.avaliacao_perguntas) return PERGUNTAS_AVALIACAO_PADRAO;
+  try {
+    const lista = JSON.parse(evento.avaliacao_perguntas);
+    return Array.isArray(lista) && lista.length ? lista : PERGUNTAS_AVALIACAO_PADRAO;
+  } catch(e) { return PERGUNTAS_AVALIACAO_PADRAO; }
+}
+
 router.get('/live/:token', async (req, res) => {
   try {
     const r = await query('SELECT epo.*, i.nome, i.email, e.nome as evento_nome, e.youtube_url, e.duracao_minutos FROM evento_presencas_online epo JOIN evento_inscricoes i ON i.id=epo.inscricao_id JOIN eventos e ON e.id=epo.evento_id WHERE epo.token=$1',[req.params.token]);
@@ -1963,7 +1981,8 @@ router.get('/checkout/:id', limiterVisualizacaoEvento, async (req, res) => {
       if (aberto && evento.checkout_fecha_em && new Date(evento.checkout_fecha_em) < new Date()) aberto = false;
       ultimoDia = true; // legado: evento sem Programação por data só tem 1 dia — é sempre o último
     }
-    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto, sucesso: false, jaConfirmado: false, erro: null, nome: null, ultimoDia });
+    const perguntasAvaliacao = ultimoDia ? perguntasAvaliacaoDoEvento(evento) : [];
+    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto, sucesso: false, jaConfirmado: false, erro: null, nome: null, ultimoDia, perguntasAvaliacao });
   } catch(e) { console.error('Checkout GET erro:', e.message); res.status(500).send('Erro ao carregar.'); }
 });
 
@@ -1987,30 +2006,32 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
       if (aberto && evento.checkout_fecha_em && new Date(evento.checkout_fecha_em) < new Date()) aberto = false;
       ultimoDia = true;
     }
+    const perguntasAvaliacao = ultimoDia ? perguntasAvaliacaoDoEvento(evento) : [];
     if (!aberto) {
-      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: false, sucesso: false, jaConfirmado: false, erro: 'O check-out deste evento está encerrado.', nome: null, ultimoDia });
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: false, sucesso: false, jaConfirmado: false, erro: 'O check-out deste evento está encerrado.', nome: null, ultimoDia, perguntasAvaliacao });
     }
 
     const email = (req.body.email || '').trim().toLowerCase();
     const docLimpo = (req.body.documento || req.body.rg || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     if (!email || !docLimpo) {
-      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Completa el correo y el RG/CI/DNI.', nome: null, ultimoDia });
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Completa el correo y el RG/CI/DNI.', nome: null, ultimoDia, perguntasAvaliacao });
     }
 
     // Avaliação obrigatória SÓ no check-out do último dia do evento — pedido explícito do
     // usuário: panorama geral do evento pra encaminhar pra coordenação de ligas, não uma
-    // pesquisa repetida em cada um dos dias.
-    let avalTema = null, avalTempo = null, avalPalestrante = null, avalSuporte = null, avalSugestoes = null;
+    // pesquisa repetida em cada um dos dias. Perguntas são configuráveis por evento — por isso
+    // as respostas viram um array (mesma ordem/tamanho de perguntasAvaliacao), não colunas fixas.
+    let avalRespostas = null, avalSugestoes = null;
     if (ultimoDia) {
-      avalTema = parseInt(req.body.aval_tema);
-      avalTempo = parseInt(req.body.aval_tempo);
-      avalPalestrante = parseInt(req.body.aval_palestrante);
-      avalSuporte = parseInt(req.body.aval_suporte);
+      // Cada pergunta tem seu próprio radio group (aval_resposta_0, aval_resposta_1, ...) —
+      // usar o mesmo name pra todas juntaria os rádios de perguntas diferentes num grupo só.
+      const notas = perguntasAvaliacao.map((_, i) => parseInt(req.body['aval_resposta_' + i]));
       avalSugestoes = (req.body.aval_sugestoes || '').trim() || null;
-      const notasValidas = [avalTema, avalTempo, avalPalestrante, avalSuporte].every(n => Number.isInteger(n) && n >= 1 && n <= 6);
+      const notasValidas = notas.length === perguntasAvaliacao.length && notas.every(n => Number.isInteger(n) && n >= 1 && n <= 6);
       if (!notasValidas) {
-        return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Completa todas las preguntas de evaluación obligatorias.', nome: null, ultimoDia });
+        return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Completa todas las preguntas de evaluación obligatorias.', nome: null, ultimoDia, perguntasAvaliacao });
       }
+      avalRespostas = JSON.stringify(notas);
     }
 
     // Busca a inscrição por email OU documento (RG/CI/DNI) no evento
@@ -2033,14 +2054,14 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
     }
     if (jaExiste.rows.length > 0) {
       const nomeJa = inscricao ? inscricao.nome.split(' ')[0] : null;
-      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: true, erro: null, nome: nomeJa, ultimoDia });
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: true, erro: null, nome: nomeJa, ultimoDia, perguntasAvaliacao });
     }
 
     // Registra o check-out (vinculando à inscrição e ao dia, se houver) + a avaliação, quando
     // for o check-out do último dia
     await query(
-      'INSERT INTO evento_checkouts (evento_id, programacao_id, inscricao_id, email, cpf, nome_informado, ip, aval_tema, aval_tempo, aval_palestrante, aval_suporte, aval_sugestoes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)',
-      [req.params.id, diaId, inscricao ? inscricao.id : null, email, docLimpo, inscricao ? inscricao.nome : null, (req.headers['x-forwarded-for']||req.ip||'').toString().split(',')[0].trim(), avalTema, avalTempo, avalPalestrante, avalSuporte, avalSugestoes]
+      'INSERT INTO evento_checkouts (evento_id, programacao_id, inscricao_id, email, cpf, nome_informado, ip, aval_respostas, aval_sugestoes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+      [req.params.id, diaId, inscricao ? inscricao.id : null, email, docLimpo, inscricao ? inscricao.nome : null, (req.headers['x-forwarded-for']||req.ip||'').toString().split(',')[0].trim(), avalRespostas, avalSugestoes]
     );
 
     const nome = inscricao ? inscricao.nome.split(' ')[0] : null;
@@ -2056,8 +2077,21 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
       } catch(e) { console.error('Email checkout falhou:', e.message); }
     }
 
-    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: true, jaConfirmado: false, erro: null, nome, ultimoDia });
+    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: true, jaConfirmado: false, erro: null, nome, ultimoDia, perguntasAvaliacao });
   } catch(e) { console.error('Checkout POST erro:', e.message); res.status(500).send('Erro ao registrar.'); }
+});
+
+// Configurar as perguntas da avaliação obrigatória do último dia (painel) — pedido do usuário:
+// dá pra adicionar/excluir perguntas por evento. Lista vazia/ausente = usa a lista padrão.
+router.post('/eventos/:id/avaliacao-perguntas', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  try {
+    const bruto = req.body['perguntas[]'];
+    const lista = bruto ? (Array.isArray(bruto) ? bruto : [bruto]) : [];
+    const perguntas = lista.map(p => p.trim()).filter(Boolean);
+    await query('UPDATE eventos SET avaliacao_perguntas=$1 WHERE id=$2', [perguntas.length ? JSON.stringify(perguntas) : null, req.params.id]);
+    req.session.msg = ['Perguntas da avaliação atualizadas.'];
+  } catch(e) { req.session.erro = [e.message]; }
+  res.redirect('/eventos/' + req.params.id + '?tab=checkout');
 });
 
 // Abrir / Encerrar check-out (painel) — evento legado (sem Programação por data)
@@ -2095,8 +2129,9 @@ router.post('/eventos/:id/programacao/:pid/checkout-toggle', requireAuth, requir
 // Relatório de check-out (painel) — JSON consumido pela aba
 router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
-    const evR = await query('SELECT id, nome, checkout_aberto, checkout_fecha_em FROM eventos WHERE id=$1', [req.params.id]);
+    const evR = await query('SELECT id, nome, checkout_aberto, checkout_fecha_em, avaliacao_perguntas FROM eventos WHERE id=$1', [req.params.id]);
     if (!evR.rows[0]) return res.json({ok:false, erro:'Evento não encontrado'});
+    const perguntas = perguntasAvaliacaoDoEvento(evR.rows[0]);
 
     // Inscritos válidos (confirmado, pago ou isento)
     const inscritos = await query(
@@ -2105,7 +2140,7 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
     );
     // Check-outs do evento (com o dia, quando o evento tem Programação por data)
     const checkouts = await query(
-      `SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id, aval_tema, aval_tempo, aval_palestrante, aval_suporte, aval_sugestoes FROM evento_checkouts WHERE evento_id=$1 ORDER BY criado_em`,
+      `SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id, aval_respostas, aval_sugestoes FROM evento_checkouts WHERE evento_id=$1 ORDER BY criado_em`,
       [req.params.id]
     );
     // Dias do evento (pra rotular o check-out por dia, quando existir)
@@ -2149,21 +2184,25 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
     const checkoutsUltimoDia = diasR.rows.length
       ? checkouts.rows.filter(c => c.programacao_id === ultimoDiaId)
       : checkouts.rows;
-    const respondidasAval = checkoutsUltimoDia.filter(c => c.aval_tema !== null);
-    const distribuicao = campo => {
+    const respondidasAval = checkoutsUltimoDia.filter(c => c.aval_respostas !== null).map(c => ({ ...c, notas: JSON.parse(c.aval_respostas) }));
+    // Uma distribuição por PERGUNTA (não por coluna fixa — a lista de perguntas pode ter
+    // mudado ao longo do evento; cada resposta só conta pras perguntas que ela de fato tem).
+    const distribuicoes = perguntas.map((_, i) => {
       const contagem = [0, 0, 0, 0, 0, 0]; // índice 0 = nota 1 (Péssimo) .. índice 5 = nota 6 (Excelente)
-      respondidasAval.forEach(c => { const n = c[campo]; if (n >= 1 && n <= 6) contagem[n - 1]++; });
+      respondidasAval.forEach(c => { const n = c.notas[i]; if (n >= 1 && n <= 6) contagem[n - 1]++; });
       return contagem;
-    };
+    });
+    // Respostas individuais — pra tabela filtrável e exportação (pedido do usuário 17/08/2026)
+    const respostasIndividuais = respondidasAval.map(c => ({
+      nome: c.nome_informado, email: c.email, quando: c.criado_em, notas: c.notas, sugestao: c.aval_sugestoes || ''
+    }));
     const avaliacao = {
       total: checkoutsUltimoDia.length,
       respondidas: respondidasAval.length,
       percentual: checkoutsUltimoDia.length ? Math.round(respondidasAval.length / checkoutsUltimoDia.length * 100) : 0,
-      tema: distribuicao('aval_tema'),
-      tempo: distribuicao('aval_tempo'),
-      palestrante: distribuicao('aval_palestrante'),
-      suporte: distribuicao('aval_suporte'),
-      sugestoes: respondidasAval.map(c => c.aval_sugestoes).filter(Boolean)
+      perguntas, distribuicoes,
+      sugestoes: respondidasAval.map(c => c.aval_sugestoes).filter(Boolean),
+      respostas: respostasIndividuais
     };
 
     res.json({
@@ -2235,6 +2274,36 @@ router.get('/eventos/:id/checkout-export', requireAuth, requirePermissao('evento
     });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="aptos-' + nomeEv + '.csv"');
+    res.send('\uFEFF' + csv);
+  } catch(e) { res.status(500).send('Erro: ' + e.message); }
+});
+
+// Exportar as respostas da avalia\u00E7\u00E3o do \u00FAltimo dia (CSV, abre no Excel) \u2014 pedido do usu\u00E1rio
+// 17/08/2026. Mesmo padr\u00E3o do /checkout-export (";" como separador, BOM UTF-8 pro Excel n\u00E3o
+// bagun\u00E7ar os acentos).
+router.get('/eventos/:id/avaliacao-export', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  try {
+    const evR = await query('SELECT nome, avaliacao_perguntas FROM eventos WHERE id=$1', [req.params.id]);
+    if (!evR.rows[0]) return res.status(404).send('Evento n\u00E3o encontrado.');
+    const perguntas = perguntasAvaliacaoDoEvento(evR.rows[0]);
+    const diasR = await query('SELECT id FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL ORDER BY data', [req.params.id]);
+    const ultimoDiaId = diasR.rows.length ? diasR.rows[diasR.rows.length - 1].id : null;
+    const checkoutsR = await query(
+      `SELECT nome_informado, email, criado_em, aval_respostas, aval_sugestoes FROM evento_checkouts
+       WHERE evento_id=$1 AND aval_respostas IS NOT NULL AND programacao_id IS NOT DISTINCT FROM $2
+       ORDER BY criado_em`,
+      [req.params.id, ultimoDiaId]
+    );
+    const nomeEv = (evR.rows[0].nome || 'evento').replace(/[^a-z0-9]/gi,'_').substring(0,30);
+    const cabecalho = ['Nome', 'Email', ...perguntas, 'Sugest\u00F5es', 'Respondido em'];
+    let csv = cabecalho.join(';') + '\n';
+    checkoutsR.rows.forEach(r => {
+      const notas = JSON.parse(r.aval_respostas);
+      csv += [r.nome_informado || '', r.email || '', ...notas, r.aval_sugestoes || '', new Date(r.criado_em).toLocaleString('pt-BR')]
+        .map(v => '"' + String(v).replace(/"/g,'""') + '"').join(';') + '\n';
+    });
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="avaliacao-' + nomeEv + '.csv"');
     res.send('\uFEFF' + csv);
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
