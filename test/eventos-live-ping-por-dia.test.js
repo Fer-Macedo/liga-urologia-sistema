@@ -63,7 +63,10 @@ function resRender() { const r = {}; r.render = (view, locals) => { r._view = vi
 test('GET /live/:token: dia de hoje encontrado — usa vídeo do dia e semente com segundos JÁ acumulados hoje', async () => {
   const { rotas } = montar({
     presenca: { id: 1, evento_id: 5, token: 'abc', nome: 'João', email: 'j@x.com', evento_nome: 'Jornada', youtube_url: 'https://youtube.com/watch?v=eventoFallback1', tempo_total_segundos: 0, primeiro_acesso: null },
-    hojeProgramacao: { id: 10, titulo: 'Día 2', horario: '19:00', youtube_url: 'https://youtube.com/watch?v=dia2video12', duracao_minutos: null },
+    // sem "horario" aqui de propósito — esse teste é sobre seleção de vídeo/duração, não sobre
+    // o gate de horário (coberto em testes dedicados abaixo, com horário-limite pra não depender
+    // da hora real em que o teste roda)
+    hojeProgramacao: { id: 10, titulo: 'Día 2', youtube_url: 'https://youtube.com/watch?v=dia2video12', duracao_minutos: null },
     diaSegundos: 3600
   });
   const res = resRender();
@@ -159,6 +162,71 @@ test('POST /live/:token/ping: token inexistente não quebra', async () => {
   await rotas['POST /live/:token/ping']({ params: { token: 'xxx' }, body: {} }, res);
   assert.strictEqual(res._body.ok, false);
   assert.strictEqual(res._body.motivo, 'token_invalido');
+});
+
+// 17/08/2026: pedido do usuário — mandar o link com antecedência (ex: pra ligantes/diretivos
+// confirmarem recebimento) sem contar presença antes da hora cadastrada na Programação (ex:
+// "19:00 - 22:00"). Usa horários-limite (00:01 / 23:59) nos testes pra não depender da hora
+// real em que o teste roda — 00:01 já passou o dia inteiro, exceto no primeiro minuto do dia;
+// 23:59 não chegou o dia inteiro, exceto no último minuto.
+test('GET /live/:token: data bate mas o horário cadastrado ainda não chegou — vira prévia com mensagem específica', async () => {
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc', nome: 'João', email: 'j@x.com', evento_nome: 'Jornada', youtube_url: null, tempo_total_segundos: 0, primeiro_acesso: null },
+    hojeProgramacao: { id: 10, titulo: 'Día 2', horario: '23:59 - 23:59', youtube_url: 'https://youtube.com/watch?v=dia2video12', duracao_minutos: null }
+  });
+  const res = resRender();
+  await rotas['GET /live/:token']({ params: { token: 'abc' } }, res);
+  assert.strictEqual(res._locals.transmiteHoje, false, 'ainda não chegou a hora — não conta como transmitindo hoje');
+  assert.strictEqual(res._locals.aindaNaoComecou, true);
+  assert.strictEqual(res._locals.horarioInicio, '23:59');
+});
+
+test('GET /live/:token: data bate e o horário cadastrado já passou — transmite normalmente', async () => {
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc', nome: 'João', email: 'j@x.com', evento_nome: 'Jornada', youtube_url: null, tempo_total_segundos: 0, primeiro_acesso: null },
+    hojeProgramacao: { id: 10, titulo: 'Día 2', horario: '00:01 - 23:58', youtube_url: 'https://youtube.com/watch?v=dia2video12', duracao_minutos: null },
+    diaSegundos: 0
+  });
+  const res = resRender();
+  await rotas['GET /live/:token']({ params: { token: 'abc' } }, res);
+  assert.strictEqual(res._locals.transmiteHoje, true);
+  assert.strictEqual(res._locals.aindaNaoComecou, false);
+});
+
+test('GET /live/:token: horário cadastrado em texto não reconhecido (ex: vazio) não bloqueia — mantém comportamento anterior', async () => {
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc', nome: 'João', email: 'j@x.com', evento_nome: 'Jornada', youtube_url: null, tempo_total_segundos: 0, primeiro_acesso: null },
+    hojeProgramacao: { id: 10, titulo: 'Día 2', horario: null, youtube_url: 'https://youtube.com/watch?v=dia2video12', duracao_minutos: null }
+  });
+  const res = resRender();
+  await rotas['GET /live/:token']({ params: { token: 'abc' } }, res);
+  assert.strictEqual(res._locals.transmiteHoje, true, 'sem horário cadastrado parseável, não trava — conta assim que a data bate');
+  assert.strictEqual(res._locals.aindaNaoComecou, false);
+});
+
+test('POST /live/:token/ping: data bate mas o horário ainda não chegou — NÃO acumula, mesmo com a data certa', async () => {
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc', sessao_atual: 'sess1', tempo_total_segundos: 0 },
+    hojeProgramacao: { id: 10, titulo: 'Día 2', horario: '23:59 - 23:59', duracao_minutos: null }
+  });
+  const res = resJson();
+  await rotas['POST /live/:token/ping']({ params: { token: 'abc' }, body: { sessao: 'sess1' } }, res);
+  assert.strictEqual(res._body.ok, true);
+  assert.strictEqual(res._body.total, 0, 'antes do horário cadastrado, não conta — mesmo a data batendo certinho');
+  assert.strictEqual(res._body.preview, true);
+  assert.strictEqual(res._body.aindaNaoComecou, true);
+});
+
+test('POST /live/:token/ping: data bate e o horário já passou — acumula normalmente', async () => {
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc', sessao_atual: 'sess1', tempo_total_segundos: 0 },
+    hojeProgramacao: { id: 10, titulo: 'Día 2', horario: '00:01 - 23:58', duracao_minutos: null }
+  });
+  const res = resJson();
+  await rotas['POST /live/:token/ping']({ params: { token: 'abc' }, body: { sessao: 'sess1' } }, res);
+  assert.strictEqual(res._body.ok, true);
+  assert.strictEqual(res._body.total, 120);
+  assert.strictEqual(res._body.preview, undefined);
 });
 
 test('POST /live/:token/sair: marca ativo=false sem quebrar', async () => {

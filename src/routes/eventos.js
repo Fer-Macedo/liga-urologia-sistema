@@ -1675,6 +1675,31 @@ function htmlConfirmacaoCheckout(primeiroNome, nomeEvento, diaLabel) {
     + '<p style="margin:0;font-size:12px;color:#94a3b8">¿Dudas? Contáctanos por WhatsApp o responde a este correo.</p>';
 }
 
+// O campo "horario" da Programação é texto livre preenchido pelo admin (ex: "19:00 - 22:00",
+// "19h") — extrai só o HH:MM inicial. Pedido do usuário 17/08/2026: a contagem de presença
+// precisa começar só a partir do horário cadastrado, não assim que a data bate, pra dar pra
+// mandar o link com antecedência sem contaminar a frequência de quem testar antes da hora.
+// Texto que não bate com HH:MM (não conseguimos parsear) não bloqueia nada — mantém o
+// comportamento anterior (conta assim que a data bate), em vez de travar a contagem de vez.
+function horarioInicioMinutos(horario) {
+  if (!horario) return null;
+  const m = /(\d{1,2}):(\d{2})/.exec(horario);
+  if (!m) return null;
+  const h = parseInt(m[1], 10), min = parseInt(m[2], 10);
+  if (h > 23 || min > 59) return null;
+  return h * 60 + min;
+}
+function horarioInicioTexto(horario) {
+  const m = /(\d{1,2}:\d{2})/.exec(horario || '');
+  return m ? m[1] : (horario || '');
+}
+function transmissaoJaComecou(dia) {
+  const inicioMin = horarioInicioMinutos(dia && dia.horario);
+  if (inicioMin === null) return true;
+  const agora = new Date();
+  return (agora.getHours() * 60 + agora.getMinutes()) >= inicioMin;
+}
+
 router.get('/live/:token', async (req, res) => {
   try {
     const r = await query('SELECT epo.*, i.nome, i.email, e.nome as evento_nome, e.youtube_url, e.duracao_minutos FROM evento_presencas_online epo JOIN evento_inscricoes i ON i.id=epo.inscricao_id JOIN eventos e ON e.id=epo.evento_id WHERE epo.token=$1',[req.params.token]);
@@ -1694,12 +1719,16 @@ router.get('/live/:token', async (req, res) => {
     }
     const youtubeUrl = dia?.youtube_url || p.youtube_url; // item do dia tem prioridade, cai pro do evento se vazio
     const tituloDia = dia?.titulo || p.evento_nome;
+    // Data bate mas ainda não chegou o horário cadastrado — link aberto com antecedência não
+    // conta presença até a hora marcada (pedido do usuário 17/08/2026).
+    const aindaNaoComecou = !!(dia && hoje && !transmissaoJaComecou(dia));
 
     const config = await getConfig();
     const patrocR = await query('SELECT * FROM evento_patrocinadores WHERE evento_id=$1 ORDER BY id', [p.evento_id]);
     res.render('pages/evento-live', {
       token: req.params.token, presenca: { ...p, youtube_url: youtubeUrl }, config, patrocinadores: patrocR.rows,
-      sessao, segundosIniciais, tituloDia, transmiteHoje: dia ? hoje : true, temDiaProgramado: !!dia
+      sessao, segundosIniciais, tituloDia, transmiteHoje: dia ? (hoje && !aindaNaoComecou) : true, temDiaProgramado: !!dia,
+      aindaNaoComecou, horarioInicio: dia ? horarioInicioTexto(dia.horario) : ''
     });
   } catch(e) { console.error('GET /live:', e.message); res.status(500).send('Erro ao carregar transmissão.'); }
 });
@@ -1731,6 +1760,9 @@ router.post('/live/:token/ping', async (req, res) => {
     }
     const hojeR = await query("SELECT 1 FROM evento_programacao WHERE id=$1 AND data=CURRENT_DATE",[dia.id]);
     if (!hojeR.rows.length) return res.json({ ok:true, total: 0, preview:true });
+    // Data bate, mas ainda não chegou o horário cadastrado (ex: link aberto às 15h pra um
+    // evento marcado pras 19h) — segue como prévia, sem contar, até a hora certa chegar.
+    if (!transmissaoJaComecou(dia)) return res.json({ ok:true, total: 0, preview:true, aindaNaoComecou:true });
 
     const rd = await query(
       `INSERT INTO evento_presencas_online_dias (presenca_id, programacao_id, tempo_total_segundos, ultimo_ping)

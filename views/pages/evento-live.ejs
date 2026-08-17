@@ -136,7 +136,11 @@
   <div class="video-section">
     <% if (typeof transmiteHoje !== 'undefined' && !transmiteHoje) { %>
     <div style="background:#78350f;color:#fde68a;padding:10px 20px;font-size:13px;text-align:center">
-      Todavía no es el día de <strong><%= tituloDia %></strong> — esto es solo una vista previa, el tiempo no se está contando.
+      <% if (typeof aindaNaoComecou !== 'undefined' && aindaNaoComecou) { %>
+        El evento está programado para iniciar a las <strong><%= horarioInicio %></strong>. Vuelve a partir de ese horario para que empiece a contar tu frecuencia.
+      <% } else { %>
+        Todavía no es el día de <strong><%= tituloDia %></strong> — esto es solo una vista previa, el tiempo no se está contando.
+      <% } %>
     </div>
     <% } %>
     <div id="ping-erro" style="display:none;background:#7f1d1d;color:#fecaca;padding:10px 20px;font-size:13px;text-align:center">
