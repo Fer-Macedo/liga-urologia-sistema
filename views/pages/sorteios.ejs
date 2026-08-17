@@ -406,7 +406,7 @@ function abrirModalEditar(id){
   document.getElementById('fDescricao').value = s.descricao;
   document.getElementById('fQtdGanhadores').value = s.qtd_ganhadores;
   document.getElementById('fPublicoAlvo').value = s.publico_alvo;
-  toggleManual();
+  atualizarSecoesPublico();
   if(s.publico_alvo === 'manual') document.getElementById('fParticipantesManual').value = s.participantes_manual.join('\n');
   if(s.publico_alvo === 'evento'){ document.getElementById('fOrigemEvento').value = s.origem_id; document.getElementById('fOrigemId').value = s.origem_id; }
   if(s.publico_alvo === 'pss'){ document.getElementById('fOrigemPss').value = s.origem_id; document.getElementById('fOrigemId').value = s.origem_id; }
@@ -439,11 +439,14 @@ function setTipo(tipo){
   // e o servidor forçar de volta pra Interno. disabled=true tira o campo do envio de vez.
   const pa = document.getElementById('fPublicoAlvo');
   pa.disabled = tipo !== 'interno';
-  if(tipo==='interno') pa.addEventListener('change', toggleManual);
-  toggleManual();
+  if(tipo==='interno') pa.addEventListener('change', aoTrocarPublicoAlvo);
+  // Só atualiza QUAL SEÇÃO aparece — não mexe no evento/pss já escolhido. Trocar entre
+  // Interno/Externo e voltar não pode apagar uma seleção que a pessoa já tinha feito (era
+  // exatamente isso que fazia o evento escolhido sumir — bug real relatado 17/08/2026).
+  atualizarSecoesPublico();
 }
 
-function toggleManual(){
+function atualizarSecoesPublico(){
   // Essas seções (evento/pss/manual/seleção) só existem pra sorteio Interno — se o tipo não
   // é interno, nenhuma pode aparecer, senão dá pra escolher um evento com o tipo ainda em
   // Externo (foi exatamente o que causou o bug real de 17/08/2026: publico_alvo='evento'
@@ -455,10 +458,16 @@ function toggleManual(){
   document.getElementById('secaoSelecao').style.overflow = v==='selecao'?'visible':'hidden';
   document.getElementById('secaoEvento').style.display = v==='evento'?'block':'none';
   document.getElementById('secaoPss').style.display = v==='pss'?'block':'none';
-  // troca de público: zera a origem escolhida antes (não deixa vazar o evento/pss anterior)
+}
+
+// Só quando a PESSOA muda o "Público" de verdade (não quando só troca Interno/Externo) é que
+// zera o evento/pss já escolhido — faz sentido zerar aqui (mudou de "evento" pra "ligantes",
+// por exemplo, o evento anterior não se aplica mais), mas não ao alternar o tipo.
+function aoTrocarPublicoAlvo(){
   document.getElementById('fOrigemEvento').value = '';
   document.getElementById('fOrigemPss').value = '';
   document.getElementById('fOrigemId').value = '';
+  atualizarSecoesPublico();
 }
 var _selecionados = [];
 function selecionarTodos(marcar){
@@ -508,7 +517,7 @@ document.addEventListener('click',function(e){
   atualizarContador();
 });
 
-document.getElementById('fPublicoAlvo').addEventListener('change', toggleManual);
+document.getElementById('fPublicoAlvo').addEventListener('change', aoTrocarPublicoAlvo);
 
 function addTarefa(){
   const list = document.getElementById('tarefasList');
