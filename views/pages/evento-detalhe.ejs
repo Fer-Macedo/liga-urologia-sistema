@@ -1195,21 +1195,17 @@
         <div class="section-card" style="margin-bottom:16px">
           <div class="section-header">Status do Check-out por dia</div>
           <div class="section-body">
-            <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">O link público é o mesmo todo dia — o sistema resolve sozinho qual dia é hoje. Abra o check-out de cada dia na hora certa (ex: no fim daquela sessão) e encerre depois; o dia só aceita confirmação enquanto estiver ABERTO e for o dia de hoje.</p>
+            <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">O link público é o mesmo todo dia — o sistema resolve sozinho qual dia é hoje. Abra o check-out de cada dia quando quiser receber confirmações e encerre quando quiser parar; o dia só aceita confirmação enquanto estiver ABERTO e for o dia de hoje.</p>
             <% ckDias.forEach(function(dia){ %>
             <% var ckDiaAberto = dia.checkout_aberto === true; %>
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--borda)">
               <div>
                 <div style="font-weight:700;font-size:13px"><%= new Date(dia.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) %> — <%= dia.titulo %></div>
                 <span style="display:inline-block;margin-top:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;<%= ckDiaAberto ? 'background:#dcfce7;color:#15803d' : 'background:#fee2e2;color:#991b1b' %>"><%= ckDiaAberto ? 'ABERTO' : 'ENCERRADO' %></span>
-                <% if(ckDiaAberto && dia.checkout_fecha_em){ %>
-                  <span style="font-size:11px;color:var(--texto2);margin-left:6px">fecha em <%= new Date(dia.checkout_fecha_em).toLocaleString('pt-BR') %></span>
-                <% } %>
               </div>
               <% if(!ckDiaAberto){ %>
-                <form action="/eventos/<%= evento.id %>/programacao/<%= dia.id %>/checkout-toggle" method="POST" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+                <form action="/eventos/<%= evento.id %>/programacao/<%= dia.id %>/checkout-toggle" method="POST">
                   <input type="hidden" name="acao" value="abrir">
-                  <input type="datetime-local" name="fecha_em" class="input" style="width:auto;font-size:12px;padding:6px 8px" title="Fechamento automático (opcional)">
                   <button type="submit" class="btn-xs" style="background:#15803d;color:#fff">Abrir</button>
                 </form>
               <% } else { %>
