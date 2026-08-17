@@ -17,45 +17,60 @@ const path = require('path');
 const RAIZ = path.join(__dirname, '..');
 const MODULO = path.join(RAIZ, 'src/routes/eventos.js');
 
-function montar({ ligantes, atrasosPorCpfOuEmail, jaExistentes }) {
+function montar({ ligantes, diretivos, atrasosPorCpfOuEmail, jaExistentes }) {
   const cupomInserts = [];
-  const notificadoUpdates = []; // ligante_id que teve notificado_em marcado nessa rodada
+  const notificadoUpdates = []; // id (ligante_id ou diretivo_id) que teve notificado_em marcado nessa rodada
   const wppEnviados = [];
   const emailEnviados = [];
-  // simula unicidade real do banco + a coluna notificado_em (controla quem já recebeu de fato)
-  const existentes = new Map((jaExistentes || []).map(e => [e.ligante_id, { codigo: e.codigo, notificado_em: e.notificado_em || null }]));
+  // simula unicidade real do banco + a coluna notificado_em (controla quem já recebeu de fato).
+  // Chave composta tipo:id — ligante e diretivo são tabelas/sequências diferentes, então um
+  // ligante id=1 e um diretivo id=1 são pessoas distintas, não podem colidir no mock.
+  const chave = (tipo, id) => tipo + ':' + id;
+  const existentes = new Map((jaExistentes || []).map(e => {
+    const tipo = e.diretivo_id !== undefined ? 'diretivo' : 'ligante';
+    const id = e.diretivo_id !== undefined ? e.diretivo_id : e.ligante_id;
+    return [chave(tipo, id), { codigo: e.codigo, notificado_em: e.notificado_em || null }];
+  }));
   const rq = require.resolve(path.join(RAIZ, 'src/models/database.js'));
   require.cache[rq] = { id: rq, filename: rq, loaded: true, exports: {
     query: async (sql, params) => {
       if (/SELECT id, nome, email, whatsapp, cpf, 'ligante' as tipo FROM ligantes/.test(sql)) {
-        return { rows: ligantes };
+        return { rows: ligantes || [] };
+      }
+      if (/SELECT id, nome, email, whatsapp, cpf, 'diretivo' as tipo FROM diretivos/.test(sql)) {
+        return { rows: diretivos || [] };
       }
       if (/FROM cobrancas c JOIN membros m ON m\.id = c\.membro_id/.test(sql)) {
         const [cpf, email] = params;
-        const chave = (cpf && cpf !== '') ? cpf : email;
-        return { rows: [{ n: String(atrasosPorCpfOuEmail[chave] || 0) }] };
+        const k = (cpf && cpf !== '') ? cpf : email;
+        return { rows: [{ n: String((atrasosPorCpfOuEmail && atrasosPorCpfOuEmail[k]) || 0) }] };
       }
       if (/SELECT \* FROM eventos WHERE id=\$1/.test(sql)) return { rows: [{ id: 1, nome: 'Congresso Teste' }] };
       if (/SELECT chave,valor FROM configuracoes/.test(sql)) return { rows: [] };
-      if (/'diretivo' as tipo FROM diretivos/.test(sql)) return { rows: [] };
-      if (/SELECT codigo, notificado_em FROM evento_cupons WHERE evento_id=\$1 AND ligante_id=\$2/.test(sql)) {
-        const [, ligId] = params;
-        return existentes.has(ligId) ? { rows: [existentes.get(ligId)] } : { rows: [] };
+      if (/SELECT codigo, notificado_em FROM evento_cupons WHERE evento_id=\$1 AND (ligante_id|diretivo_id)=\$2/.test(sql)) {
+        const tipo = sql.includes('diretivo_id') ? 'diretivo' : 'ligante';
+        const [, id] = params;
+        const k = chave(tipo, id);
+        return existentes.has(k) ? { rows: [existentes.get(k)] } : { rows: [] };
       }
       if (/SELECT codigo FROM evento_cupons WHERE evento_id=\$1 AND \(ligante_id IS NOT NULL OR diretivo_id IS NOT NULL\)/.test(sql)) {
         return { rows: Array.from(existentes.values()).map(v => ({ codigo: v.codigo })) };
       }
       if (/INSERT INTO evento_cupons/.test(sql)) {
         cupomInserts.push(params);
-        const [, codigo, ligId] = params;
-        if (existentes.has(ligId)) return { rows: [] }; // ON CONFLICT ... DO NOTHING
-        existentes.set(ligId, { codigo, notificado_em: null });
+        const tipo = sql.includes('diretivo_id') ? 'diretivo' : 'ligante';
+        const [, codigo, id] = params;
+        const k = chave(tipo, id);
+        if (existentes.has(k)) return { rows: [] }; // ON CONFLICT ... DO NOTHING
+        existentes.set(k, { codigo, notificado_em: null });
         return { rows: [{ codigo }] };
       }
-      if (/UPDATE evento_cupons SET notificado_em=NOW\(\) WHERE evento_id=\$1 AND ligante_id=\$2/.test(sql)) {
-        const [, ligId] = params;
-        notificadoUpdates.push(ligId);
-        if (existentes.has(ligId)) existentes.get(ligId).notificado_em = new Date();
+      if (/UPDATE evento_cupons SET notificado_em=NOW\(\) WHERE evento_id=\$1 AND (ligante_id|diretivo_id)=\$2/.test(sql)) {
+        const tipo = sql.includes('diretivo_id') ? 'diretivo' : 'ligante';
+        const [, id] = params;
+        notificadoUpdates.push(id);
+        const k = chave(tipo, id);
+        if (existentes.has(k)) existentes.get(k).notificado_em = new Date();
         return { rows: [] };
       }
       return { rows: [] };
@@ -200,4 +215,55 @@ test('sincronizar: ligante que quitou o atraso e NUNCA recebeu cupom (bloqueado 
   assert.deepStrictEqual(cupomInserts.map(p => p[2]), [3], 'só cria cupom novo pro que nunca tinha recebido');
   assert.deepStrictEqual(emailEnviados, ['dois@x.com'], 'só o recém-elegível recebe o e-mail');
   assert.deepStrictEqual(notificadoUpdates, [3], 'notificado_em só é marcado pra quem recebeu agora');
+});
+
+// 17/08/2026: pedido do usuário — diretivo passava batido sem o crivo de atraso (entrava todo
+// diretivo ativo, inadimplente inclusive), e por isso também nunca dava pra "sincronizar" um
+// diretivo novo que ainda não tinha recebido cupom. Mesma regra do ligante: 0 ou 1 atraso
+// recebe, 2+ não.
+const diretivos = [
+  { id: 1, nome: 'Diretiva Nova', email: 'nova@x.com', whatsapp: null, cpf: '55555555555', tipo: 'diretivo' },
+  { id: 2, nome: 'Diretivo Um Atraso', email: 'umd@x.com', whatsapp: null, cpf: '66666666666', tipo: 'diretivo' },
+  { id: 3, nome: 'Diretivo Dois Atrasos', email: 'doisd@x.com', whatsapp: null, cpf: '77777777777', tipo: 'diretivo' }
+];
+
+test('destino=diretivos: 0 ou 1 mensalidade atrasada recebe cupom; 2+ não recebe (mesma regra do ligante)', async () => {
+  const { rotas, cupomInserts } = montar({
+    diretivos,
+    atrasosPorCpfOuEmail: { '55555555555': 0, '66666666666': 1, '77777777777': 2 }
+  });
+  const req = { params: { id: '1' }, body: { prefixo: 'TESTE', destino: 'diretivos', enviar_wpp: 'off', enviar_email: 'off' }, session: {} };
+  await rotas['/eventos/:id/cupons/gerar-ligantes'](req, resRedirect());
+  await esperarSegundoPlano();
+  const idsComCupom = cupomInserts.map(p => p[2]);
+  assert.deepStrictEqual(idsComCupom.sort(), [1, 2], 'só a diretiva nova (0 atrasos) e a de 1 atraso recebem — a de 2+ fica bloqueada');
+});
+
+test('destino=diretivos, sincronizar: diretiva nova que nunca recebeu cupom recebe agora, sem mexer em quem já tinha', async () => {
+  const jaRecebeu = { ...diretivos[1], id: 2 }; // já tinha cupom + notificado_em
+  const diretivaNova = { ...diretivos[0], id: 1 }; // acabou de entrar, nunca recebeu
+  const { rotas, emailEnviados, notificadoUpdates, cupomInserts } = montar({
+    diretivos: [jaRecebeu, diretivaNova],
+    atrasosPorCpfOuEmail: { '55555555555': 0, '66666666666': 0 },
+    jaExistentes: [{ diretivo_id: 2, codigo: 'TESTE-JAENVIADO', notificado_em: new Date('2026-08-01') }]
+  });
+  const req = { params: { id: '1' }, body: { prefixo: 'TESTE', destino: 'diretivos', enviar_wpp: 'off', enviar_email: 'on' }, session: {} };
+  await rotas['/eventos/:id/cupons/gerar-ligantes'](req, resRedirect());
+  await esperarSegundoPlano();
+  assert.deepStrictEqual(cupomInserts.map(p => p[2]), [1], 'só cria cupom novo pra diretiva que nunca tinha recebido');
+  assert.deepStrictEqual(emailEnviados, ['nova@x.com'], 'só a diretiva nova recebe o e-mail');
+  assert.deepStrictEqual(notificadoUpdates, [1], 'notificado_em só é marcado pra quem recebeu agora');
+});
+
+test('destino=todos: aplica o crivo de atraso tanto pra ligante quanto pra diretivo, ao mesmo tempo', async () => {
+  const { rotas, cupomInserts, emailEnviados } = montar({
+    ligantes: [ligantes[0], ligantes[2]], // zero atrasos (passa), dois atrasos (bloqueado)
+    diretivos: [diretivos[0], diretivos[2]], // zero atrasos (passa), dois atrasos (bloqueado)
+    atrasosPorCpfOuEmail: { '11111111111': 0, '33333333333': 2, '55555555555': 0, '77777777777': 2 }
+  });
+  const req = { params: { id: '1' }, body: { prefixo: 'TESTE', destino: 'todos', enviar_wpp: 'off', enviar_email: 'on' }, session: {} };
+  await rotas['/eventos/:id/cupons/gerar-ligantes'](req, resRedirect());
+  await esperarSegundoPlano();
+  assert.strictEqual(cupomInserts.length, 2, 'exatamente os 2 elegíveis, um de cada tipo — os 2 bloqueados (2+ atrasos) ficam de fora');
+  assert.deepStrictEqual(emailEnviados.sort(), ['nova@x.com', 'zero@x.com'], 'o ligante e o diretivo em dia recebem — os dois bloqueados nem aparecem aqui');
 });

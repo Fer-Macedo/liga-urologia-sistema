@@ -1371,30 +1371,35 @@ router.post('/eventos/:id/cupons/gerar-ligantes', requireAuth, requirePermissao(
 
   let pessoas = [];
 
-  // Ligantes "em dia" pra fim de cupom: até 1 mensalidade atrasada tudo bem, 2+ não recebe.
-  // Ligante não tem cobrança/mensalidade própria — o vínculo com o financeiro (tabela
-  // membros/cobrancas) é por CPF ou e-mail, mesmo padrão já usado em ligantes.js pra
-  // sincronizar status entre as duas tabelas.
+  // "Em dia" pra fim de cupom: até 1 mensalidade atrasada tudo bem, 2+ não recebe. Ligante/
+  // diretivo não têm cobrança/mensalidade própria — o vínculo com o financeiro (tabela
+  // membros/cobrancas) é por CPF ou e-mail, mesmo padrão já usado em ligantes.js/diretivos.js
+  // pra sincronizar status entre as tabelas. Mesmo crivo pros dois tipos (17/08/2026: antes só
+  // ligante passava por essa checagem — diretivo entrava todo mundo ativo, sem olhar atraso).
+  async function atrasosDaPessoa(cpf, email) {
+    const atrasoR = await query(
+      `SELECT COUNT(*) as n FROM cobrancas c JOIN membros m ON m.id = c.membro_id
+       WHERE c.status='atrasado' AND (
+         ($1 <> '' AND m.cpf IS NOT NULL AND regexp_replace(m.cpf,'[^0-9]','','g') = regexp_replace($1,'[^0-9]','','g'))
+         OR ($2 <> '' AND m.email IS NOT NULL AND LOWER(m.email) = LOWER($2))
+       )`,
+      [cpf || '', email || '']
+    );
+    return parseInt(atrasoR.rows[0].n) || 0;
+  }
+
   if (destino === 'ligantes' || destino === 'todos') {
     const ligR = await query(`SELECT id, nome, email, whatsapp, cpf, 'ligante' as tipo FROM ligantes WHERE ativo=1`);
     for (const lig of ligR.rows) {
-      const atrasoR = await query(
-        `SELECT COUNT(*) as n FROM cobrancas c JOIN membros m ON m.id = c.membro_id
-         WHERE c.status='atrasado' AND (
-           ($1 <> '' AND m.cpf IS NOT NULL AND regexp_replace(m.cpf,'[^0-9]','','g') = regexp_replace($1,'[^0-9]','','g'))
-           OR ($2 <> '' AND m.email IS NOT NULL AND LOWER(m.email) = LOWER($2))
-         )`,
-        [lig.cpf || '', lig.email || '']
-      );
-      const atrasos = parseInt(atrasoR.rows[0].n) || 0;
-      if (atrasos <= 1) pessoas.push(lig);
+      if ((await atrasosDaPessoa(lig.cpf, lig.email)) <= 1) pessoas.push(lig);
     }
   }
 
-  // Diretivos — todos (não pagam mensalidade)
   if (destino === 'diretivos' || destino === 'todos') {
-    const dirR = await query('SELECT id, nome, email, whatsapp, \'diretivo\' as tipo FROM diretivos WHERE ativo=1');
-    dirR.rows.forEach(d => pessoas.push(d));
+    const dirR = await query(`SELECT id, nome, email, whatsapp, cpf, 'diretivo' as tipo FROM diretivos WHERE ativo=1`);
+    for (const dir of dirR.rows) {
+      if ((await atrasosDaPessoa(dir.cpf, dir.email)) <= 1) pessoas.push(dir);
+    }
   }
 
   // Responde na hora e processa (cupom + WhatsApp/email de cada pessoa) depois — com 48+
