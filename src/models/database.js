@@ -251,6 +251,27 @@ async function initSchema() {
     -- a sessão bater com a mais recente, senão a mesma pessoa com 2 abertas contava tempo em
     -- dobro (cada aba mandando seu próprio ping independente).
     ALTER TABLE evento_presencas_online ADD COLUMN IF NOT EXISTS sessao_atual TEXT;
+    -- evento_checkouts só existia no banco (nunca teve CREATE no código) — fecha o mesmo tipo
+    -- de lacuna já corrigida pras tabelas de presença online.
+    CREATE TABLE IF NOT EXISTS evento_checkouts (
+      id SERIAL PRIMARY KEY,
+      evento_id INTEGER NOT NULL,
+      inscricao_id INTEGER,
+      email VARCHAR(255),
+      cpf VARCHAR(50),
+      nome_informado VARCHAR(255),
+      ip VARCHAR(60),
+      criado_em TIMESTAMP DEFAULT NOW(),
+      email_enviado_em TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_checkout_evento ON evento_checkouts (evento_id);
+    CREATE INDEX IF NOT EXISTS idx_checkout_inscricao ON evento_checkouts (inscricao_id);
+    -- Check-out por dia: evento de vários dias tinha só 1 status aberto/fechado pro evento
+    -- inteiro, mas cada dia tem sua própria sessão — precisa abrir/fechar e contar por dia,
+    -- mesmo raciocínio já aplicado à transmissão e à presença online por dia.
+    ALTER TABLE evento_programacao ADD COLUMN IF NOT EXISTS checkout_aberto BOOLEAN DEFAULT false;
+    ALTER TABLE evento_programacao ADD COLUMN IF NOT EXISTS checkout_fecha_em TIMESTAMP;
+    ALTER TABLE evento_checkouts ADD COLUMN IF NOT EXISTS programacao_id INTEGER REFERENCES evento_programacao(id) ON DELETE CASCADE;
     ALTER TABLE ligantes ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS foto_site_chave TEXT;
     ALTER TABLE diretivos ADD COLUMN IF NOT EXISTS sexo TEXT;

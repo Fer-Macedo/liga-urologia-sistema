@@ -63,7 +63,7 @@
           <p>El período de confirmación de asistencia de este evento ya fue cerrado.<br><br>En caso de duda, ponte en contacto con la organización.</p>
         </div>
       <% } else { %>
-        <p class="sub">Confirma tu asistencia a este evento ingresando el <strong>correo electrónico</strong> y el <strong>RG/CI/DNI</strong> usados en tu inscripción.</p>
+        <p class="sub">Confirma tu asistencia<% if(typeof tituloDia !== 'undefined' && tituloDia){ %> de hoy (<strong><%= tituloDia %></strong>)<% } %> a este evento ingresando el <strong>correo electrónico</strong> y el <strong>RG/CI/DNI</strong> usados en tu inscripción.</p>
         <% if(erro){ %><div class="erro"><%= erro %></div><% } %>
         <form method="POST" action="/checkout/<%= evento.id %>">
           <label>Correo electrónico</label>

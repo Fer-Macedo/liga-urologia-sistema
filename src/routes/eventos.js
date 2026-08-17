@@ -1613,12 +1613,12 @@ router.post('/eventos/:id/email-massa', requireAuth, requirePermissao('eventos')
 // dia só (sem nenhum item de Programação com data) devolve null nos dois — cai no modo legado.
 async function resolverDiaTransmissao(eventoId) {
   const hojeR = await query(
-    "SELECT id, titulo, horario, youtube_url, duracao_minutos FROM evento_programacao WHERE evento_id=$1 AND data=CURRENT_DATE ORDER BY ordem LIMIT 1",
+    "SELECT id, titulo, horario, youtube_url, duracao_minutos, checkout_aberto, checkout_fecha_em FROM evento_programacao WHERE evento_id=$1 AND data=CURRENT_DATE ORDER BY ordem LIMIT 1",
     [eventoId]
   );
   if (hojeR.rows[0]) return { dia: hojeR.rows[0], hoje: true };
   const proxR = await query(
-    "SELECT id, titulo, horario, youtube_url, duracao_minutos, data FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL ORDER BY ABS(data - CURRENT_DATE) ASC, data ASC LIMIT 1",
+    "SELECT id, titulo, horario, youtube_url, duracao_minutos, checkout_aberto, checkout_fecha_em, data FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL ORDER BY ABS(data - CURRENT_DATE) ASC, data ASC LIMIT 1",
     [eventoId]
   );
   if (proxR.rows[0]) return { dia: proxR.rows[0], hoje: false };
@@ -1931,17 +1931,26 @@ router.get('/eventos/:id/lista-espera', requireAuth, requirePermissao('eventos')
 // CHECK-OUT DE EVENTOS — confirmação de presença
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Página pública de check-out
+// Página pública de check-out — evento com Programação por data tem um check-out POR DIA
+// (mesma lógica de resolverDiaTransmissao: resolve o dia de HOJE, ou o mais próximo em modo
+// preview). Evento sem nenhum dia com data cai no modo legado, 1 check-out pro evento inteiro.
 router.get('/checkout/:id', limiterVisualizacaoEvento, async (req, res) => {
   try {
     const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
     if (!evR.rows[0]) return res.status(404).send('Evento não encontrado.');
     const evento = evR.rows[0];
     const cfgPub = await getConfig();
-    // Verifica se está aberto (flag manual) e dentro do prazo (se houver)
-    let aberto = evento.checkout_aberto === true;
-    if (aberto && evento.checkout_fecha_em && new Date(evento.checkout_fecha_em) < new Date()) aberto = false;
-    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto, sucesso: false, jaConfirmado: false, erro: null, nome: null });
+    const { dia, hoje } = await resolverDiaTransmissao(req.params.id);
+    let aberto, tituloDia = null;
+    if (dia) {
+      tituloDia = dia.titulo;
+      aberto = hoje && dia.checkout_aberto === true;
+      if (aberto && dia.checkout_fecha_em && new Date(dia.checkout_fecha_em) < new Date()) aberto = false;
+    } else {
+      aberto = evento.checkout_aberto === true;
+      if (aberto && evento.checkout_fecha_em && new Date(evento.checkout_fecha_em) < new Date()) aberto = false;
+    }
+    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto, sucesso: false, jaConfirmado: false, erro: null, nome: null, tituloDia });
   } catch(e) { console.error('Checkout GET erro:', e.message); res.status(500).send('Erro ao carregar.'); }
 });
 
@@ -1953,17 +1962,25 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
     const evento = evR.rows[0];
     const cfgPub = await getConfig();
 
-    // Revalida abertura no servidor (segurança)
-    let aberto = evento.checkout_aberto === true;
-    if (aberto && evento.checkout_fecha_em && new Date(evento.checkout_fecha_em) < new Date()) aberto = false;
+    // Revalida no servidor qual dia está em jogo e se está aberto (nunca confia no cliente)
+    const { dia, hoje } = await resolverDiaTransmissao(req.params.id);
+    let aberto, tituloDia = null;
+    if (dia) {
+      tituloDia = dia.titulo;
+      aberto = hoje && dia.checkout_aberto === true;
+      if (aberto && dia.checkout_fecha_em && new Date(dia.checkout_fecha_em) < new Date()) aberto = false;
+    } else {
+      aberto = evento.checkout_aberto === true;
+      if (aberto && evento.checkout_fecha_em && new Date(evento.checkout_fecha_em) < new Date()) aberto = false;
+    }
     if (!aberto) {
-      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: false, sucesso: false, jaConfirmado: false, erro: 'O check-out deste evento está encerrado.', nome: null });
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: false, sucesso: false, jaConfirmado: false, erro: 'O check-out deste evento está encerrado.', nome: null, tituloDia });
     }
 
     const email = (req.body.email || '').trim().toLowerCase();
     const docLimpo = (req.body.documento || req.body.rg || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     if (!email || !docLimpo) {
-      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Completa el correo y el RG/CI/DNI.', nome: null });
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Completa el correo y el RG/CI/DNI.', nome: null, tituloDia });
     }
 
     // Busca a inscrição por email OU documento (RG/CI/DNI) no evento
@@ -1973,23 +1990,26 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
       [req.params.id, email, docLimpo]
     );
     const inscricao = insR.rows[0] || null;
+    const diaId = dia ? dia.id : null;
 
-    // Verifica se já existe check-out para esta pessoa (evita duplicata)
+    // Verifica se já existe check-out pra essa pessoa NESSE DIA (evita duplicata do mesmo dia,
+    // mas permite check-out em cada um dos dias do evento — "IS NOT DISTINCT FROM" trata o
+    // modo legado, onde diaId é null, sem quebrar a comparação)
     let jaExiste;
     if (inscricao) {
-      jaExiste = await query('SELECT id FROM evento_checkouts WHERE evento_id=$1 AND inscricao_id=$2 LIMIT 1', [req.params.id, inscricao.id]);
+      jaExiste = await query('SELECT id FROM evento_checkouts WHERE evento_id=$1 AND inscricao_id=$2 AND programacao_id IS NOT DISTINCT FROM $3 LIMIT 1', [req.params.id, inscricao.id, diaId]);
     } else {
-      jaExiste = await query("SELECT id FROM evento_checkouts WHERE evento_id=$1 AND (LOWER(email)=$2 OR regexp_replace(LOWER(COALESCE(cpf,'')),'[^a-z0-9]','','g')=$3) LIMIT 1", [req.params.id, email, docLimpo]);
+      jaExiste = await query("SELECT id FROM evento_checkouts WHERE evento_id=$1 AND programacao_id IS NOT DISTINCT FROM $4 AND (LOWER(email)=$2 OR regexp_replace(LOWER(COALESCE(cpf,'')),'[^a-z0-9]','','g')=$3) LIMIT 1", [req.params.id, email, docLimpo, diaId]);
     }
     if (jaExiste.rows.length > 0) {
       const nomeJa = inscricao ? inscricao.nome.split(' ')[0] : null;
-      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: true, erro: null, nome: nomeJa });
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: true, erro: null, nome: nomeJa, tituloDia });
     }
 
-    // Registra o check-out (vinculando à inscrição se achou)
+    // Registra o check-out (vinculando à inscrição e ao dia, se houver)
     await query(
-      'INSERT INTO evento_checkouts (evento_id, inscricao_id, email, cpf, nome_informado, ip) VALUES ($1,$2,$3,$4,$5,$6)',
-      [req.params.id, inscricao ? inscricao.id : null, email, docLimpo, inscricao ? inscricao.nome : null, (req.headers['x-forwarded-for']||req.ip||'').toString().split(',')[0].trim()]
+      'INSERT INTO evento_checkouts (evento_id, programacao_id, inscricao_id, email, cpf, nome_informado, ip) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+      [req.params.id, diaId, inscricao ? inscricao.id : null, email, docLimpo, inscricao ? inscricao.nome : null, (req.headers['x-forwarded-for']||req.ip||'').toString().split(',')[0].trim()]
     );
 
     const nome = inscricao ? inscricao.nome.split(' ')[0] : null;
@@ -2005,11 +2025,11 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
       } catch(e) { console.error('Email checkout falhou:', e.message); }
     }
 
-    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: true, jaConfirmado: false, erro: null, nome });
+    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: true, jaConfirmado: false, erro: null, nome, tituloDia });
   } catch(e) { console.error('Checkout POST erro:', e.message); res.status(500).send('Erro ao registrar.'); }
 });
 
-// Abrir / Encerrar check-out (painel)
+// Abrir / Encerrar check-out (painel) — evento legado (sem Programação por data)
 router.post('/eventos/:id/checkout-toggle', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const acao = req.body.acao;
@@ -2020,6 +2040,22 @@ router.post('/eventos/:id/checkout-toggle', requireAuth, requirePermissao('event
     } else {
       await query('UPDATE eventos SET checkout_aberto=false WHERE id=$1', [req.params.id]);
       req.session.msg = ['Check-out ENCERRADO.'];
+    }
+  } catch(e) { req.session.erro = [e.message]; }
+  res.redirect('/eventos/' + req.params.id + '?tab=checkout');
+});
+
+// Abrir / Encerrar check-out de UM DIA (evento com Programação por data)
+router.post('/eventos/:id/programacao/:pid/checkout-toggle', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  try {
+    const acao = req.body.acao;
+    if (acao === 'abrir') {
+      const fecha = req.body.fecha_em ? req.body.fecha_em : null;
+      await query('UPDATE evento_programacao SET checkout_aberto=true, checkout_fecha_em=$1 WHERE id=$2 AND evento_id=$3', [fecha, req.params.pid, req.params.id]);
+      req.session.msg = ['Check-out do dia ABERTO para recebimento.'];
+    } else {
+      await query('UPDATE evento_programacao SET checkout_aberto=false WHERE id=$1 AND evento_id=$2', [req.params.pid, req.params.id]);
+      req.session.msg = ['Check-out do dia ENCERRADO.'];
     }
   } catch(e) { req.session.erro = [e.message]; }
   res.redirect('/eventos/' + req.params.id + '?tab=checkout');
@@ -2036,13 +2072,19 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
       `SELECT id, nome, email, cpf, status, isento FROM evento_inscricoes WHERE evento_id=$1`,
       [req.params.id]
     );
-    // Check-outs do evento
+    // Check-outs do evento (com o dia, quando o evento tem Programação por data)
     const checkouts = await query(
-      `SELECT inscricao_id, email, cpf, nome_informado, criado_em FROM evento_checkouts WHERE evento_id=$1 ORDER BY criado_em`,
+      `SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id FROM evento_checkouts WHERE evento_id=$1 ORDER BY criado_em`,
+      [req.params.id]
+    );
+    // Dias do evento (pra rotular o check-out por dia, quando existir)
+    const diasR = await query(
+      `SELECT id, titulo, data FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL ORDER BY data`,
       [req.params.id]
     );
 
-    // Conjunto de inscrição_ids que fizeram check-out
+    // Conjunto de inscrição_ids que fizeram check-out (em QUALQUER dia — "apto" aqui é "veio
+    // pelo menos uma vez"; a quebra por dia embaixo mostra o detalhe de quem veio em qual dia)
     const fezCheckout = new Set(checkouts.rows.filter(c => c.inscricao_id).map(c => c.inscricao_id));
 
     const aptos = [];        // inscrição válida + fez check-out
@@ -2053,6 +2095,14 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
       if (fezCheckout.has(i.id)) aptos.push({ id: i.id, nome: i.nome, email: i.email, isento: i.isento });
       else naoCompareceu.push({ nome: i.nome, email: i.email, isento: i.isento });
     });
+
+    // Quebra por dia: quantos check-outs cada dia teve
+    const porDia = diasR.rows.map(dia => ({
+      programacao_id: dia.id,
+      titulo: dia.titulo,
+      data: dia.data,
+      total: checkouts.rows.filter(c => c.programacao_id === dia.id).length
+    }));
 
     // Check-outs sem inscrição válida (não bateu) — pra revisar
     const semInscricao = checkouts.rows.filter(c => !c.inscricao_id).map(c => ({ email: c.email, cpf: c.cpf, quando: c.criado_em }));
@@ -2065,7 +2115,7 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
       ok: true,
       evento: evR.rows[0],
       resumo: { aptos: aptos.length, nao_compareceu: naoCompareceu.length, sem_inscricao: semInscricao.length, total_checkouts: checkouts.rows.length },
-      aptos, naoCompareceu, semInscricao
+      aptos, naoCompareceu, semInscricao, porDia
     });
   } catch(e) { console.error('Relatorio checkout erro:', e.message); res.json({ok:false, erro:e.message}); }
 });

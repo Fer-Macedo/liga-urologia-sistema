@@ -1190,6 +1190,39 @@
       <!-- AVANÇADO -->
       <!-- CHECK-OUT -->
       <div class="tab-content" id="tab-checkout">
+        <% var ckDias = programacao.filter(function(p){ return p.data; }); %>
+        <% if(ckDias.length){ %>
+        <div class="section-card" style="margin-bottom:16px">
+          <div class="section-header">Status do Check-out por dia</div>
+          <div class="section-body">
+            <p style="font-size:12px;color:var(--texto2);margin-bottom:14px">O link público é o mesmo todo dia — o sistema resolve sozinho qual dia é hoje. Abra o check-out de cada dia na hora certa (ex: no fim daquela sessão) e encerre depois; o dia só aceita confirmação enquanto estiver ABERTO e for o dia de hoje.</p>
+            <% ckDias.forEach(function(dia){ %>
+            <% var ckDiaAberto = dia.checkout_aberto === true; %>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--borda)">
+              <div>
+                <div style="font-weight:700;font-size:13px"><%= new Date(dia.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) %> — <%= dia.titulo %></div>
+                <span style="display:inline-block;margin-top:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;<%= ckDiaAberto ? 'background:#dcfce7;color:#15803d' : 'background:#fee2e2;color:#991b1b' %>"><%= ckDiaAberto ? 'ABERTO' : 'ENCERRADO' %></span>
+                <% if(ckDiaAberto && dia.checkout_fecha_em){ %>
+                  <span style="font-size:11px;color:var(--texto2);margin-left:6px">fecha em <%= new Date(dia.checkout_fecha_em).toLocaleString('pt-BR') %></span>
+                <% } %>
+              </div>
+              <% if(!ckDiaAberto){ %>
+                <form action="/eventos/<%= evento.id %>/programacao/<%= dia.id %>/checkout-toggle" method="POST" style="display:flex;gap:8px;align-items:end;flex-wrap:wrap">
+                  <input type="hidden" name="acao" value="abrir">
+                  <input type="datetime-local" name="fecha_em" class="input" style="width:auto;font-size:12px;padding:6px 8px" title="Fechamento automático (opcional)">
+                  <button type="submit" class="btn-xs" style="background:#15803d;color:#fff">Abrir</button>
+                </form>
+              <% } else { %>
+                <form action="/eventos/<%= evento.id %>/programacao/<%= dia.id %>/checkout-toggle" method="POST">
+                  <input type="hidden" name="acao" value="encerrar">
+                  <button type="submit" class="btn-xs" style="background:#991b1b;color:#fff">Encerrar</button>
+                </form>
+              <% } %>
+            </div>
+            <% }) %>
+          </div>
+        </div>
+        <% } else { %>
         <% var ckAberto = evento.checkout_aberto === true; %>
         <div class="section-card" style="margin-bottom:16px">
           <div class="section-header">Status do Check-out</div>
@@ -1220,6 +1253,7 @@
             <% } %>
           </div>
         </div>
+        <% } %>
 
         <div class="section-card" style="margin-bottom:16px">
           <div class="section-header">Link público de Check-out</div>
@@ -1575,6 +1609,16 @@ function carregarRelatorioCheckout(){
       resumo.innerHTML = box(d.resumo.aptos,'Aptos','#dcfce7') + box(d.resumo.nao_compareceu,'Não compareceram','#fef3c7') + box(d.resumo.sem_inscricao,'Sem inscrição','#fee2e2') + box(d.resumo.total_checkouts,'Total check-outs','#e0e7ff');
 
       var html = '';
+      // POR DIA (só quando o evento tem Programação por data)
+      if(d.porDia && d.porDia.length){
+        html += '<h3 style="font-size:14px;color:#0f172a;margin:0 0 8px">Check-outs por dia</h3>';
+        html += '<table class="tabela" style="width:100%;font-size:12px;margin-bottom:8px"><thead><tr><th style="text-align:left">Dia</th><th>Check-outs</th></tr></thead><tbody>';
+        d.porDia.forEach(function(dia){
+          var dataFmt = dia.data ? new Date(dia.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}) : '';
+          html += '<tr><td>'+dataFmt+' — '+dia.titulo+'</td><td style="text-align:center;font-weight:700">'+dia.total+'</td></tr>';
+        });
+        html += '</tbody></table>';
+      }
       // APTOS
       html += '<h3 style="font-size:14px;color:#15803d;margin:18px 0 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="#dcfce7" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><circle cx="12" cy="12" r="10" fill="#dcfce7" stroke="#16a34a"/><polyline points="8 12 11 15 16 9" stroke="#16a34a" fill="none"/></svg> Aptos ao certificado ('+d.aptos.length+')</h3>';
       if(d.aptos.length){
