@@ -15,6 +15,11 @@ function montar({ inscritos, ligantes = [], diretivos = [] }) {
   require.cache[rq] = { id: rq, filename: rq, loaded: true, exports: {
     query: async (sql, params) => {
       if (/SELECT \* FROM eventos WHERE id=\$1/.test(sql)) return { rows: [{ id: 5, nome: 'Jornada' }] };
+      if (/LOWER\(nome\) LIKE LOWER\(\$2\)/.test(sql)) {
+        // simula o ILIKE por trecho de nome/e-mail da rota de reenvio avulso
+        const termo = (params[1] || '').replace(/%/g, '').toLowerCase();
+        return { rows: inscritos.filter(i => (i.nome||'').toLowerCase().includes(termo) || (i.email||'').toLowerCase().includes(termo)) };
+      }
       if (/SELECT \* FROM evento_inscricoes WHERE evento_id=\$1 AND status='confirmado'/.test(sql)) return { rows: inscritos };
       if (/SELECT cpf, email FROM ligantes/.test(sql)) return { rows: ligantes };
       if (/SELECT cpf, email FROM diretivos/.test(sql)) return { rows: diretivos };
@@ -104,4 +109,54 @@ test('conta WhatsApp e e-mail SEPARADAMENTE (antes só contava WhatsApp, mensage
   await rotas['POST /eventos/:id/enviar-link-live']({ params: { id: '5' }, body: { filtro: 'todos' } }, res);
   assert.strictEqual(emailEnviados.length, 3);
   assert.match(res._body.msg, /3 WhatsApp e 3 e-mails/);
+});
+
+// 17/08/2026: pedido do usuário — gente reclamando que não recebeu o link, sem forma de
+// identificar quem recebeu de fato nem de reenviar só pra uma pessoa. A resposta do envio em
+// massa agora traz "logs" por pessoa (pra montar a tela de "quem recebeu"), e existe uma rota
+// de reenvio avulso por nome/e-mail.
+test('resposta do envio em massa traz "logs" com o status de cada pessoa (WhatsApp e e-mail)', async () => {
+  const { rotas } = montar({ inscritos: INSCRITOS, ligantes: [], diretivos: [] });
+  const res = resJson();
+  await rotas['POST /eventos/:id/enviar-link-live']({ params: { id: '5' }, body: { filtro: 'todos' } }, res);
+  assert.strictEqual(res._body.logs.length, 3);
+  const ana = res._body.logs.find(l => l.nome === 'Ana Externa');
+  assert.strictEqual(ana.wppStatus, 'enviado');
+  assert.strictEqual(ana.emailStatus, 'enviado');
+});
+
+test('reenviar-link-live: busca por trecho do nome (case-insensitive) e reenvia só pra quem bate', async () => {
+  const { rotas, wppEnviados, emailEnviados } = montar({ inscritos: INSCRITOS, ligantes: [], diretivos: [] });
+  const res = resJson();
+  await rotas['POST /eventos/:id/reenviar-link-live']({ params: { id: '5' }, body: { busca: 'carla' } }, res);
+  assert.strictEqual(res._body.ok, true);
+  assert.strictEqual(wppEnviados.length, 1);
+  assert.strictEqual(wppEnviados[0], '595333');
+  assert.strictEqual(emailEnviados[0], 'carla@x.com');
+  assert.strictEqual(res._body.logs.length, 1);
+});
+
+test('reenviar-link-live: busca por e-mail também funciona', async () => {
+  const { rotas, wppEnviados } = montar({ inscritos: INSCRITOS, ligantes: [], diretivos: [] });
+  const res = resJson();
+  await rotas['POST /eventos/:id/reenviar-link-live']({ params: { id: '5' }, body: { busca: 'bruno@x.com' } }, res);
+  assert.strictEqual(wppEnviados.length, 1);
+  assert.strictEqual(wppEnviados[0], '595222');
+});
+
+test('reenviar-link-live: ninguém encontrado — não quebra, avisa e não envia nada', async () => {
+  const { rotas, wppEnviados, emailEnviados } = montar({ inscritos: INSCRITOS, ligantes: [], diretivos: [] });
+  const res = resJson();
+  await rotas['POST /eventos/:id/reenviar-link-live']({ params: { id: '5' }, body: { busca: 'ninguem-com-esse-nome' } }, res);
+  assert.strictEqual(res._body.ok, false);
+  assert.strictEqual(wppEnviados.length, 0);
+  assert.strictEqual(emailEnviados.length, 0);
+});
+
+test('reenviar-link-live: busca vazia não faz nada, avisa pra digitar', async () => {
+  const { rotas, wppEnviados } = montar({ inscritos: INSCRITOS, ligantes: [], diretivos: [] });
+  const res = resJson();
+  await rotas['POST /eventos/:id/reenviar-link-live']({ params: { id: '5' }, body: { busca: '' } }, res);
+  assert.strictEqual(res._body.ok, false);
+  assert.strictEqual(wppEnviados.length, 0);
 });

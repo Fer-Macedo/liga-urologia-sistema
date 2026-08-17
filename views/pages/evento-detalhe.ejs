@@ -827,6 +827,12 @@
             </a>
           </div>
           <div id="live-resultado" style="margin-top:12px;font-size:13px;color:rgba(255,255,255,.8)"></div>
+          <div style="margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.15);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <span style="font-size:12px;color:rgba(255,255,255,.6);font-weight:600">Alguém não recebeu? Reenviar pra pessoa específica:</span>
+            <input type="text" id="reenvio-busca" placeholder="Nome ou e-mail" class="input" style="max-width:240px" onkeypress="if(event.key==='Enter') reenviarLinkLive()">
+            <button onclick="reenviarLinkLive()" class="btn btn-sm" style="background:#2FA873;color:#0C231B;font-weight:700;border-color:transparent">Reenviar</button>
+          </div>
+          <div id="reenvio-resultado" style="margin-top:8px;font-size:13px;color:rgba(255,255,255,.8)"></div>
         </div>
 
         <% const diasComData = programacao.filter(p => p.data); %>
@@ -1998,7 +2004,7 @@ function enviarLinksLive(filtro) {
   })
     .then(r => r.json())
     .then(d => {
-      document.getElementById('live-resultado').textContent = d.msg || (d.ok ? 'Links enviados!' : 'Erro: '+d.msg);
+      mostrarResultadoLinksLive('live-resultado', d);
       btn.textContent = textoOriginal;
       btn.disabled = false;
     })
@@ -2007,6 +2013,52 @@ function enviarLinksLive(filtro) {
       btn.textContent = textoOriginal;
       btn.disabled = false;
     });
+}
+
+// Reenvio pra uma pessoa específica (busca por nome/e-mail) — pedido do usuário 17/08/2026:
+// gente reclamando que não recebeu o link, sem forma de reenviar só pra ela.
+function reenviarLinkLive() {
+  const input = document.getElementById('reenvio-busca');
+  const busca = input.value.trim();
+  const res = document.getElementById('reenvio-resultado');
+  if (!busca) { res.textContent = 'Digite o nome ou e-mail da pessoa.'; return; }
+  res.textContent = 'Reenviando...';
+  fetch('/eventos/<%= evento.id %>/reenviar-link-live', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ busca })
+  })
+    .then(r => r.json())
+    .then(d => { mostrarResultadoLinksLive('reenvio-resultado', d); if (d.ok) input.value = ''; })
+    .catch(() => { res.textContent = 'Erro de conexão.'; });
+}
+
+// Mostra o resultado do envio (msg) + link "Ver detalhes" com uma tabela de quem recebeu por
+// WhatsApp/e-mail e quem falhou — antes não tinha nenhuma visibilidade disso.
+function mostrarResultadoLinksLive(elId, d) {
+  const el = document.getElementById(elId);
+  if (!d.ok) { el.textContent = 'Erro: ' + (d.msg || 'falha'); return; }
+  el.innerHTML = escHtmlLive(d.msg || 'Concluído.');
+  if (d.logs && d.logs.length) {
+    const btn = document.createElement('a');
+    btn.href = 'javascript:void(0)';
+    btn.textContent = ' Ver detalhes (quem recebeu)';
+    btn.style.cssText = 'color:#5eead4;text-decoration:underline;margin-left:6px;cursor:pointer';
+    btn.onclick = () => abrirDetalhesLinksLive(d.logs);
+    el.appendChild(btn);
+  }
+}
+function escHtmlLive(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+function abrirDetalhesLinksLive(logs) {
+  const rotulo = { enviado: 'Enviado', falhou: 'Falhou', sem_whatsapp: 'Sem WhatsApp', sem_email: 'Sem e-mail' };
+  const cor = { enviado: '#166534', falhou: '#991b1b', sem_whatsapp: '#94a3b8', sem_email: '#94a3b8' };
+  const w = window.open('', '_blank', 'width=760,height=520');
+  w.document.write('<html><head><title>Envio do link da aula</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}th,td{padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:13px}th{background:#f8fafc;font-size:12px}</style></head><body><h3>Quem recebeu o link</h3><table><thead><tr><th>Nome</th><th>E-mail</th><th>WhatsApp</th><th>E-mail (canal)</th></tr></thead><tbody>'
+    + logs.map(l => '<tr><td>'+escHtmlLive(l.nome)+'</td><td>'+escHtmlLive(l.email)+'</td>'
+      + '<td style="color:'+cor[l.wppStatus]+'">'+rotulo[l.wppStatus]+'</td>'
+      + '<td style="color:'+cor[l.emailStatus]+'">'+rotulo[l.emailStatus]+'</td></tr>').join('')
+    + '</tbody></table></body></html>');
+  w.document.close();
 }
 </script>
 <script>

@@ -1787,10 +1787,36 @@ router.post('/live/:token/sair', async (req, res) => {
     res.json({ok:true});
   } catch(e) { res.json({ok:false}); }
 });
+// Gera (ou reaproveita) o token de presença online de UMA pessoa e manda o link por WhatsApp/
+// e-mail — usado tanto no envio em massa quanto no reenvio avulso (pessoa específica). Devolve
+// o resultado de cada canal, pra dar visibilidade de quem recebeu de verdade (pedido do usuário
+// 17/08/2026: reclamação de gente que não recebeu o link e ninguém tinha como identificar quem,
+// nem reenviar só pra essa pessoa sem reenviar pra todo mundo de novo).
+async function enviarLinkLiveParaPessoa(ev, config, appUrl, insc) {
+  const crypto = require('crypto');
+  const { enviarWhatsApp, enviarEmail } = require('../services/notificacoes');
+  let token = crypto.randomBytes(24).toString('hex');
+  const existe = await query('SELECT token FROM evento_presencas_online WHERE inscricao_id=$1 AND evento_id=$2',[insc.id,ev.id]);
+  if (existe.rows.length > 0) { token = existe.rows[0].token; }
+  else { await query('INSERT INTO evento_presencas_online (inscricao_id,evento_id,token) VALUES ($1,$2,$3)',[insc.id,ev.id,token]); }
+  const link = appUrl+'/live/'+token;
+  // whatsapp-only:inicio — texto enviado via enviarWhatsApp abaixo; o e-mail (mesmo envio)
+  // usa seu próprio HTML, não reaproveita essa string, então não precisa de semEmoji aqui.
+  const msg = (config.org_nome||'LAURO')+'\n\nOla, '+insc.nome.split(' ')[0]+'!\n\nSeu link de acesso ao evento '+ev.nome+':\n\n'+link+'\n\nAcesse para assistir e registrar sua presenca automaticamente.';
+  // whatsapp-only:fim
+  let wppStatus = 'sem_whatsapp', emailStatus = 'sem_email';
+  if (insc.whatsapp) {
+    try { await enviarWhatsApp(insc.whatsapp,msg); wppStatus = 'enviado'; } catch(e){ wppStatus = 'falhou'; }
+  }
+  if (insc.email) {
+    const html = '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:20px"><h2>'+ev.nome+'</h2><p>Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p><p>Clique para assistir e ter sua presenca registrada:</p><div style="text-align:center;margin:24px 0"><a href="'+link+'" style="background:#1a56db;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700">Assistir ao evento</a></div><p style="font-size:12px;color:#6b7280">Link exclusivo — nao compartilhe.</p></div>';
+    try { await enviarEmail({para:insc.email,assunto:'Seu link de acesso — '+ev.nome,html,texto:semEmoji(msg)}); emailStatus = 'enviado'; } catch(e){ emailStatus = 'falhou'; }
+  }
+  return { id: insc.id, nome: insc.nome, email: insc.email||'', whatsapp: insc.whatsapp||'', wppStatus, emailStatus };
+}
+
 router.post('/eventos/:id/enviar-link-live', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
-    const crypto = require('crypto');
-    const { enviarWhatsApp, enviarEmail } = require('../services/notificacoes');
     const config = await getConfig();
     const appUrl = process.env.APP_URL || 'https://liga-urologia.onrender.com';
     const evR = await query('SELECT * FROM eventos WHERE id=$1',[req.params.id]);
@@ -1799,25 +1825,35 @@ router.post('/eventos/:id/enviar-link-live', requireAuth, requirePermissao('even
     const inscrR = await query("SELECT * FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado'",[req.params.id]);
     const filtro = req.body.filtro || 'todos'; // 'todos' | 'ligantes' | 'diretivos' | 'membros'
     const inscritos = await filtrarPorTipoMembro(query, inscrR.rows, filtro);
-    let enviadosWpp = 0, enviadosEmail = 0;
-    for (const insc of inscritos) {
-      let token = crypto.randomBytes(24).toString('hex');
-      const existe = await query('SELECT token FROM evento_presencas_online WHERE inscricao_id=$1 AND evento_id=$2',[insc.id,ev.id]);
-      if (existe.rows.length > 0) { token = existe.rows[0].token; }
-      else { await query('INSERT INTO evento_presencas_online (inscricao_id,evento_id,token) VALUES ($1,$2,$3)',[insc.id,ev.id,token]); }
-      const link = appUrl+'/live/'+token;
-      // whatsapp-only:inicio — texto enviado via enviarWhatsApp abaixo; o e-mail (mesmo envio)
-      // usa seu próprio HTML, não reaproveita essa string, então não precisa de semEmoji aqui.
-      const msg = (config.org_nome||'LAURO')+'\n\nOla, '+insc.nome.split(' ')[0]+'!\n\nSeu link de acesso ao evento '+ev.nome+':\n\n'+link+'\n\nAcesse para assistir e registrar sua presenca automaticamente.';
-      // whatsapp-only:fim
-      if (insc.whatsapp) { try { await enviarWhatsApp(insc.whatsapp,msg); enviadosWpp++; } catch(e){} }
-      if (insc.email) {
-        const html = '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:20px"><h2>'+ev.nome+'</h2><p>Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p><p>Clique para assistir e ter sua presenca registrada:</p><div style="text-align:center;margin:24px 0"><a href="'+link+'" style="background:#1a56db;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700">Assistir ao evento</a></div><p style="font-size:12px;color:#6b7280">Link exclusivo — nao compartilhe.</p></div>';
-        try { await enviarEmail({para:insc.email,assunto:'Seu link de acesso — '+ev.nome,html,texto:semEmoji(msg)}); enviadosEmail++; } catch(e){}
-      }
-    }
+    const logs = [];
+    for (const insc of inscritos) logs.push(await enviarLinkLiveParaPessoa(ev, config, appUrl, insc));
+    const enviadosWpp = logs.filter(l => l.wppStatus === 'enviado').length;
+    const enviadosEmail = logs.filter(l => l.emailStatus === 'enviado').length;
     const filtroLabel = filtro==='ligantes'?' (só Ligantes)':filtro==='diretivos'?' (só Diretivos)':filtro==='membros'?' (só Ligantes/Diretivos)':'';
-    res.json({ok:true,msg:`${enviadosWpp} WhatsApp e ${enviadosEmail} e-mails enviados de ${inscritos.length} pessoas${filtroLabel}.`});
+    res.json({ok:true,msg:`${enviadosWpp} WhatsApp e ${enviadosEmail} e-mails enviados de ${inscritos.length} pessoas${filtroLabel}.`, logs});
+  } catch(e) { res.json({ok:false,msg:e.message}); }
+});
+
+// Reenvio avulso (por nome ou e-mail) — pedido do usuário 17/08/2026: gente reclamando que não
+// recebeu o link, sem forma de identificar nem reenviar pra alguém específico sem reenviar pra
+// todo mundo de novo. Busca por trecho de nome OU e-mail entre os confirmados do evento.
+router.post('/eventos/:id/reenviar-link-live', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  try {
+    const busca = (req.body.busca || '').trim();
+    if (!busca) return res.json({ok:false,msg:'Digite o nome ou e-mail da pessoa.'});
+    const config = await getConfig();
+    const appUrl = process.env.APP_URL || 'https://liga-urologia.onrender.com';
+    const evR = await query('SELECT * FROM eventos WHERE id=$1',[req.params.id]);
+    const ev = evR.rows[0];
+    if (!ev) return res.json({ok:false,msg:'Evento nao encontrado'});
+    const inscrR = await query(
+      "SELECT * FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado' AND (LOWER(nome) LIKE LOWER($2) OR LOWER(email) LIKE LOWER($2))",
+      [req.params.id, '%'+busca+'%']
+    );
+    if (!inscrR.rows.length) return res.json({ok:false,msg:'Ninguém encontrado com esse nome/e-mail entre os confirmados.'});
+    const logs = [];
+    for (const insc of inscrR.rows) logs.push(await enviarLinkLiveParaPessoa(ev, config, appUrl, insc));
+    res.json({ok:true,msg:`Link reenviado para ${logs.length} pessoa(s).`, logs});
   } catch(e) { res.json({ok:false,msg:e.message}); }
 });
 router.get('/eventos/:id/presencas', requireAuth, requirePermissao('eventos'), async (req, res) => {
