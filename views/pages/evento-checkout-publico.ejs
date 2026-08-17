@@ -19,8 +19,18 @@
   .bd{padding:32px}
   .bd p.sub{font-size:14px;color:var(--ink2);line-height:1.6;margin-bottom:24px}
   label{display:block;font-size:13px;font-weight:600;color:var(--ink);margin-bottom:6px}
-  input{width:100%;padding:12px 14px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px;margin-bottom:18px;font-family:inherit}
-  input:focus{outline:none;border-color:var(--p)}
+  input,textarea{width:100%;padding:12px 14px;border:1.5px solid var(--bd);border-radius:8px;font-size:14px;margin-bottom:18px;font-family:inherit}
+  input:focus,textarea:focus{outline:none;border-color:var(--p)}
+  textarea{resize:vertical;min-height:70px}
+  .aval-titulo{font-size:15px;font-weight:700;color:var(--ink);margin:26px 0 4px;padding-top:18px;border-top:1px solid var(--bd)}
+  .aval-sub{font-size:12px;color:var(--ink2);margin-bottom:16px;line-height:1.5}
+  .likert{margin-bottom:20px}
+  .likert-titulo{font-size:13px;font-weight:600;color:var(--ink);margin-bottom:8px}
+  .likert-titulo .req{color:#dc2626}
+  .likert-escala{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+  .likert-opt{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:9px;color:var(--ink2);text-align:center;cursor:pointer;padding:6px 2px;border:1.5px solid var(--bd);border-radius:8px;line-height:1.2}
+  .likert-opt:has(input:checked){border-color:var(--p);background:#f0fdf4;color:var(--p);font-weight:700}
+  .likert-opt input{margin:0}
   button{width:100%;background:var(--p);color:#fff;border:none;padding:14px;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;font-family:inherit}
   button:hover{background:var(--p2)}
   .erro{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:20px}
@@ -70,6 +80,35 @@
           <input type="email" name="email" placeholder="tu@correo.com" required>
           <label>RG / CI / DNI</label>
           <input type="text" name="documento" placeholder="Tu documento de identidad" required>
+
+          <% if(typeof ultimoDia !== 'undefined' && ultimoDia){
+            const escala = ['Péssimo','Ruim','Regular','Bom','Muito bom','Excelente'];
+            const perguntas = [
+              { campo: 'aval_tema', titulo: 'Evaluación del tema abordado' },
+              { campo: 'aval_tempo', titulo: 'Acerca del tiempo para la clase, considere' },
+              { campo: 'aval_palestrante', titulo: 'Acerca de la competencia del ponente, considere' },
+              { campo: 'aval_suporte', titulo: 'Evaluación acerca del soporte al participante, considere' }
+            ];
+          %>
+          <div class="aval-titulo">Evaluación de la clase de forma general</div>
+          <div class="aval-sub">Para cerrar tu check-out del último día, responde esta breve evaluación. Es obligatoria.</div>
+          <% perguntas.forEach(function(p){ %>
+          <div class="likert">
+            <div class="likert-titulo"><%= p.titulo %> <span class="req">*</span></div>
+            <div class="likert-escala">
+              <% escala.forEach(function(rotulo, i){ %>
+              <label class="likert-opt">
+                <input type="radio" name="<%= p.campo %>" value="<%= i+1 %>" required>
+                <span><%= rotulo %></span>
+              </label>
+              <% }) %>
+            </div>
+          </div>
+          <% }) %>
+          <label>Sugerencias para la organización de futuros eventos</label>
+          <textarea name="aval_sugestoes" placeholder="Opcional"></textarea>
+          <% } %>
+
           <button type="submit">Confirmar mi asistencia</button>
         </form>
       <% } %>

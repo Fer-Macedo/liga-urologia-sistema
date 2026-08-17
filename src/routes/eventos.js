@@ -1613,7 +1613,7 @@ router.post('/eventos/:id/email-massa', requireAuth, requirePermissao('eventos')
 // dia só (sem nenhum item de Programação com data) devolve null nos dois — cai no modo legado.
 async function resolverDiaTransmissao(eventoId) {
   const hojeR = await query(
-    "SELECT id, titulo, horario, youtube_url, duracao_minutos, checkout_aberto, checkout_fecha_em FROM evento_programacao WHERE evento_id=$1 AND data=CURRENT_DATE ORDER BY ordem LIMIT 1",
+    "SELECT id, titulo, horario, youtube_url, duracao_minutos, checkout_aberto, checkout_fecha_em, data FROM evento_programacao WHERE evento_id=$1 AND data=CURRENT_DATE ORDER BY ordem LIMIT 1",
     [eventoId]
   );
   if (hojeR.rows[0]) return { dia: hojeR.rows[0], hoje: true };
@@ -1623,6 +1623,18 @@ async function resolverDiaTransmissao(eventoId) {
   );
   if (proxR.rows[0]) return { dia: proxR.rows[0], hoje: false };
   return { dia: null, hoje: false };
+}
+
+// Diz se um dia é o ÚLTIMO dia com data marcada do evento — usado só pelo check-out, pra saber
+// quando embutir a avaliação obrigatória (pedido do usuário: só no check-out do dia final, não
+// em todos os dias). Evento sem NENHUM dia com data (legado, 1 dia só) conta como "último dia"
+// sempre, já chamado assim pelos callers sem precisar consultar o banco de novo.
+async function ehUltimoDiaEvento(eventoId, diaData) {
+  if (!diaData) return false;
+  const r = await query('SELECT MAX(data) as ultima FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL', [eventoId]);
+  const ultima = r.rows[0]?.ultima;
+  if (!ultima) return false;
+  return new Date(diaData).toDateString() === new Date(ultima).toDateString();
 }
 
 router.get('/live/:token', async (req, res) => {
@@ -1941,15 +1953,17 @@ router.get('/checkout/:id', limiterVisualizacaoEvento, async (req, res) => {
     const evento = evR.rows[0];
     const cfgPub = await getConfig();
     const { dia, hoje } = await resolverDiaTransmissao(req.params.id);
-    let aberto;
+    let aberto, ultimoDia;
     if (dia) {
       aberto = hoje && dia.checkout_aberto === true;
       if (aberto && dia.checkout_fecha_em && new Date(dia.checkout_fecha_em) < new Date()) aberto = false;
+      ultimoDia = await ehUltimoDiaEvento(req.params.id, dia.data);
     } else {
       aberto = evento.checkout_aberto === true;
       if (aberto && evento.checkout_fecha_em && new Date(evento.checkout_fecha_em) < new Date()) aberto = false;
+      ultimoDia = true; // legado: evento sem Programação por data só tem 1 dia — é sempre o último
     }
-    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto, sucesso: false, jaConfirmado: false, erro: null, nome: null });
+    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto, sucesso: false, jaConfirmado: false, erro: null, nome: null, ultimoDia });
   } catch(e) { console.error('Checkout GET erro:', e.message); res.status(500).send('Erro ao carregar.'); }
 });
 
@@ -1963,22 +1977,40 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
 
     // Revalida no servidor qual dia está em jogo e se está aberto (nunca confia no cliente)
     const { dia, hoje } = await resolverDiaTransmissao(req.params.id);
-    let aberto;
+    let aberto, ultimoDia;
     if (dia) {
       aberto = hoje && dia.checkout_aberto === true;
       if (aberto && dia.checkout_fecha_em && new Date(dia.checkout_fecha_em) < new Date()) aberto = false;
+      ultimoDia = await ehUltimoDiaEvento(req.params.id, dia.data);
     } else {
       aberto = evento.checkout_aberto === true;
       if (aberto && evento.checkout_fecha_em && new Date(evento.checkout_fecha_em) < new Date()) aberto = false;
+      ultimoDia = true;
     }
     if (!aberto) {
-      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: false, sucesso: false, jaConfirmado: false, erro: 'O check-out deste evento está encerrado.', nome: null });
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: false, sucesso: false, jaConfirmado: false, erro: 'O check-out deste evento está encerrado.', nome: null, ultimoDia });
     }
 
     const email = (req.body.email || '').trim().toLowerCase();
     const docLimpo = (req.body.documento || req.body.rg || '').replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
     if (!email || !docLimpo) {
-      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Completa el correo y el RG/CI/DNI.', nome: null });
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Completa el correo y el RG/CI/DNI.', nome: null, ultimoDia });
+    }
+
+    // Avaliação obrigatória SÓ no check-out do último dia do evento — pedido explícito do
+    // usuário: panorama geral do evento pra encaminhar pra coordenação de ligas, não uma
+    // pesquisa repetida em cada um dos dias.
+    let avalTema = null, avalTempo = null, avalPalestrante = null, avalSuporte = null, avalSugestoes = null;
+    if (ultimoDia) {
+      avalTema = parseInt(req.body.aval_tema);
+      avalTempo = parseInt(req.body.aval_tempo);
+      avalPalestrante = parseInt(req.body.aval_palestrante);
+      avalSuporte = parseInt(req.body.aval_suporte);
+      avalSugestoes = (req.body.aval_sugestoes || '').trim() || null;
+      const notasValidas = [avalTema, avalTempo, avalPalestrante, avalSuporte].every(n => Number.isInteger(n) && n >= 1 && n <= 6);
+      if (!notasValidas) {
+        return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Completa todas las preguntas de evaluación obligatorias.', nome: null, ultimoDia });
+      }
     }
 
     // Busca a inscrição por email OU documento (RG/CI/DNI) no evento
@@ -2001,13 +2033,14 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
     }
     if (jaExiste.rows.length > 0) {
       const nomeJa = inscricao ? inscricao.nome.split(' ')[0] : null;
-      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: true, erro: null, nome: nomeJa });
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: true, erro: null, nome: nomeJa, ultimoDia });
     }
 
-    // Registra o check-out (vinculando à inscrição e ao dia, se houver)
+    // Registra o check-out (vinculando à inscrição e ao dia, se houver) + a avaliação, quando
+    // for o check-out do último dia
     await query(
-      'INSERT INTO evento_checkouts (evento_id, programacao_id, inscricao_id, email, cpf, nome_informado, ip) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-      [req.params.id, diaId, inscricao ? inscricao.id : null, email, docLimpo, inscricao ? inscricao.nome : null, (req.headers['x-forwarded-for']||req.ip||'').toString().split(',')[0].trim()]
+      'INSERT INTO evento_checkouts (evento_id, programacao_id, inscricao_id, email, cpf, nome_informado, ip, aval_tema, aval_tempo, aval_palestrante, aval_suporte, aval_sugestoes) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)',
+      [req.params.id, diaId, inscricao ? inscricao.id : null, email, docLimpo, inscricao ? inscricao.nome : null, (req.headers['x-forwarded-for']||req.ip||'').toString().split(',')[0].trim(), avalTema, avalTempo, avalPalestrante, avalSuporte, avalSugestoes]
     );
 
     const nome = inscricao ? inscricao.nome.split(' ')[0] : null;
@@ -2023,7 +2056,7 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
       } catch(e) { console.error('Email checkout falhou:', e.message); }
     }
 
-    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: true, jaConfirmado: false, erro: null, nome });
+    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: true, jaConfirmado: false, erro: null, nome, ultimoDia });
   } catch(e) { console.error('Checkout POST erro:', e.message); res.status(500).send('Erro ao registrar.'); }
 });
 
@@ -2072,7 +2105,7 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
     );
     // Check-outs do evento (com o dia, quando o evento tem Programação por data)
     const checkouts = await query(
-      `SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id FROM evento_checkouts WHERE evento_id=$1 ORDER BY criado_em`,
+      `SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id, aval_tema, aval_tempo, aval_palestrante, aval_suporte, aval_sugestoes FROM evento_checkouts WHERE evento_id=$1 ORDER BY criado_em`,
       [req.params.id]
     );
     // Dias do evento (pra rotular o check-out por dia, quando existir)
@@ -2109,11 +2142,35 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
     aptos.sort(_ord);
     naoCompareceu.sort(_ord);
 
+    // Avaliação obrigatória do ÚLTIMO DIA (evento legado sem Programação: todo check-out já
+    // é "do último dia", só existe 1). diasR já vem ordenado por data ASC — o último item é
+    // o dia final, sem precisar de outra consulta.
+    const ultimoDiaId = diasR.rows.length ? diasR.rows[diasR.rows.length - 1].id : null;
+    const checkoutsUltimoDia = diasR.rows.length
+      ? checkouts.rows.filter(c => c.programacao_id === ultimoDiaId)
+      : checkouts.rows;
+    const respondidasAval = checkoutsUltimoDia.filter(c => c.aval_tema !== null);
+    const distribuicao = campo => {
+      const contagem = [0, 0, 0, 0, 0, 0]; // índice 0 = nota 1 (Péssimo) .. índice 5 = nota 6 (Excelente)
+      respondidasAval.forEach(c => { const n = c[campo]; if (n >= 1 && n <= 6) contagem[n - 1]++; });
+      return contagem;
+    };
+    const avaliacao = {
+      total: checkoutsUltimoDia.length,
+      respondidas: respondidasAval.length,
+      percentual: checkoutsUltimoDia.length ? Math.round(respondidasAval.length / checkoutsUltimoDia.length * 100) : 0,
+      tema: distribuicao('aval_tema'),
+      tempo: distribuicao('aval_tempo'),
+      palestrante: distribuicao('aval_palestrante'),
+      suporte: distribuicao('aval_suporte'),
+      sugestoes: respondidasAval.map(c => c.aval_sugestoes).filter(Boolean)
+    };
+
     res.json({
       ok: true,
       evento: evR.rows[0],
       resumo: { aptos: aptos.length, nao_compareceu: naoCompareceu.length, sem_inscricao: semInscricao.length, total_checkouts: checkouts.rows.length },
-      aptos, naoCompareceu, semInscricao, porDia
+      aptos, naoCompareceu, semInscricao, porDia, avaliacao
     });
   } catch(e) { console.error('Relatorio checkout erro:', e.message); res.json({ok:false, erro:e.message}); }
 });

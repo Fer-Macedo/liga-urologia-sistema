@@ -12,7 +12,7 @@ const path = require('path');
 const RAIZ = path.join(__dirname, '..');
 const MODULO = path.join(RAIZ, 'src/routes/eventos.js');
 
-function montar({ evento, hojeProgramacao, proximaProgramacao, inscricao, checkoutExistente, mock } = {}) {
+function montar({ evento, hojeProgramacao, proximaProgramacao, inscricao, checkoutExistente, maxData, mock } = {}) {
   const inserts = [];
   const updates = [];
   const rq = require.resolve(path.join(RAIZ, 'src/models/database.js'));
@@ -22,6 +22,7 @@ function montar({ evento, hojeProgramacao, proximaProgramacao, inscricao, checko
       if (/SELECT \* FROM eventos WHERE id=\$1/.test(sql)) return { rows: evento ? [evento] : [] };
       if (/WHERE evento_id=\$1 AND data=CURRENT_DATE/.test(sql)) return { rows: hojeProgramacao ? [hojeProgramacao] : [] };
       if (/WHERE evento_id=\$1 AND data IS NOT NULL ORDER BY ABS/.test(sql)) return { rows: proximaProgramacao ? [proximaProgramacao] : [] };
+      if (/SELECT MAX\(data\) as ultima FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [{ ultima: maxData || null }] };
       if (/SELECT id, nome, status, isento, email, rg FROM evento_inscricoes/.test(sql)) return { rows: inscricao ? [inscricao] : [] };
       if (/SELECT id FROM evento_checkouts WHERE evento_id=\$1 AND inscricao_id=\$2 AND programacao_id IS NOT DISTINCT FROM \$3/.test(sql)) {
         return { rows: checkoutExistente ? [{ id: 1 }] : [] };
@@ -151,14 +152,14 @@ test('POST /checkout/:id: mesma pessoa, mesmo dia, 2ª tentativa — bloqueia co
   assert.strictEqual(res._locals.jaConfirmado, true);
 });
 
-test('POST /checkout/:id: sem nenhum item de Programação — modo legado grava programacao_id nulo', async () => {
+test('POST /checkout/:id: sem nenhum item de Programação — modo legado grava programacao_id nulo (e exige avaliação, pois é sempre "o último dia")', async () => {
   const { rotas, inserts } = montar({
     evento: { id: 6, nome: 'Palestra única', checkout_aberto: true, checkout_fecha_em: null },
     hojeProgramacao: null, proximaProgramacao: null,
     inscricao: { id: 50, nome: 'Ciclana', email: 'c@x.com', status: 'confirmado', isento: false, rg: '999' }
   });
   const res = resRender();
-  await rotas['POST /checkout/:id']({ params: { id: '6' }, body: { email: 'c@x.com', documento: '999' }, headers: {}, ip: '1.2.3.4' }, res);
+  await rotas['POST /checkout/:id']({ params: { id: '6' }, body: { email: 'c@x.com', documento: '999', aval_tema: '5', aval_tempo: '5', aval_palestrante: '5', aval_suporte: '5' }, headers: {}, ip: '1.2.3.4' }, res);
   assert.strictEqual(inserts.length, 1);
   assert.strictEqual(inserts[0][1], null, 'evento sem Programação por data não tem dia — programacao_id fica null');
 });
@@ -190,10 +191,10 @@ test('GET /eventos/:id/checkout-relatorio: traz a contagem por dia (porDia)', as
         { id: 1, nome: 'A', email: 'a@x.com', status: 'confirmado', isento: false },
         { id: 2, nome: 'B', email: 'b@x.com', status: 'confirmado', isento: false }
       ] };
-      if (/SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id FROM evento_checkouts/.test(sql)) return { rows: [
-        { inscricao_id: 1, email: 'a@x.com', cpf: null, nome_informado: 'A', criado_em: new Date(), programacao_id: 10 },
-        { inscricao_id: 1, email: 'a@x.com', cpf: null, nome_informado: 'A', criado_em: new Date(), programacao_id: 11 },
-        { inscricao_id: 2, email: 'b@x.com', cpf: null, nome_informado: 'B', criado_em: new Date(), programacao_id: 10 }
+      if (/SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id, aval_tema/.test(sql)) return { rows: [
+        { inscricao_id: 1, email: 'a@x.com', cpf: null, nome_informado: 'A', criado_em: new Date(), programacao_id: 10, aval_tema: null, aval_tempo: null, aval_palestrante: null, aval_suporte: null, aval_sugestoes: null },
+        { inscricao_id: 1, email: 'a@x.com', cpf: null, nome_informado: 'A', criado_em: new Date(), programacao_id: 11, aval_tema: null, aval_tempo: null, aval_palestrante: null, aval_suporte: null, aval_sugestoes: null },
+        { inscricao_id: 2, email: 'b@x.com', cpf: null, nome_informado: 'B', criado_em: new Date(), programacao_id: 10, aval_tema: null, aval_tempo: null, aval_palestrante: null, aval_suporte: null, aval_sugestoes: null }
       ] };
       if (/SELECT id, titulo, data FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
         { id: 10, titulo: 'Día 1', data: '2026-08-17' },
@@ -270,4 +271,117 @@ test('página pública de check-out: NUNCA mostra o título do dia, só o nome r
   }, { filename: ARQUIVO });
   assert.match(html, /II Jornada de Salud del Hombre/, 'precisa mostrar o nome real do evento');
   assert.ok(!html.includes('Promoción y Prevención de la Salud del Hombre'), 'NUNCA pode mostrar o título do dia — confunde o cliente com outro evento');
+});
+
+// 17/08/2026: pedido do usuário — avaliação obrigatória (4 notas de 1-6 + sugestão livre)
+// embutida no check-out, mas SÓ no check-out do ÚLTIMO DIA do evento (panorama geral pra
+// coordenação de ligas, não uma pesquisa repetida em cada um dos 4 dias).
+test('GET /checkout/:id: dia é o de data mais recente do evento — ultimoDia=true', async () => {
+  const { rotas } = montar({
+    evento: EVENTO,
+    hojeProgramacao: { id: 10, titulo: 'Día 4', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-20' },
+    maxData: '2026-08-20'
+  });
+  const res = resRender();
+  await rotas['GET /checkout/:id']({ params: { id: '5' } }, res);
+  assert.strictEqual(res._locals.ultimoDia, true);
+});
+
+test('GET /checkout/:id: dia NÃO é o último do evento — ultimoDia=false', async () => {
+  const { rotas } = montar({
+    evento: EVENTO,
+    hojeProgramacao: { id: 10, titulo: 'Día 2', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-18' },
+    maxData: '2026-08-20'
+  });
+  const res = resRender();
+  await rotas['GET /checkout/:id']({ params: { id: '5' } }, res);
+  assert.strictEqual(res._locals.ultimoDia, false);
+});
+
+test('GET /checkout/:id: evento legado (sem Programação por data) — ultimoDia sempre true, só existe 1 dia', async () => {
+  const { rotas } = montar({ evento: { id: 6, nome: 'Palestra única', checkout_aberto: true, checkout_fecha_em: null }, hojeProgramacao: null, proximaProgramacao: null });
+  const res = resRender();
+  await rotas['GET /checkout/:id']({ params: { id: '6' } }, res);
+  assert.strictEqual(res._locals.ultimoDia, true);
+});
+
+test('POST /checkout/:id: último dia SEM alguma nota de avaliação — recusa, não grava check-out', async () => {
+  const { rotas, inserts } = montar({
+    evento: EVENTO,
+    hojeProgramacao: { id: 10, titulo: 'Día 4', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-20' },
+    maxData: '2026-08-20',
+    inscricao: { id: 42, nome: 'Fulano', email: 'f@x.com', status: 'confirmado', isento: false, rg: '123456' }
+  });
+  const res = resRender();
+  await rotas['POST /checkout/:id']({ params: { id: '5' }, body: { email: 'f@x.com', documento: '123456', aval_tema: '5', aval_tempo: '4' /* faltam palestrante e suporte */ }, headers: {}, ip: '1.2.3.4' }, res);
+  assert.strictEqual(inserts.length, 0, 'não pode gravar o check-out sem a avaliação completa no último dia');
+  assert.ok(res._locals.erro);
+});
+
+test('POST /checkout/:id: último dia com avaliação completa — grava check-out + as 5 notas', async () => {
+  const { rotas, inserts } = montar({
+    evento: EVENTO,
+    hojeProgramacao: { id: 10, titulo: 'Día 4', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-20' },
+    maxData: '2026-08-20',
+    inscricao: { id: 42, nome: 'Fulano', email: 'f@x.com', status: 'confirmado', isento: false, rg: '123456' }
+  });
+  const res = resRender();
+  await rotas['POST /checkout/:id']({ params: { id: '5' }, body: { email: 'f@x.com', documento: '123456', aval_tema: '6', aval_tempo: '5', aval_palestrante: '6', aval_suporte: '4', aval_sugestoes: 'Mais tiempo para preguntas' }, headers: {}, ip: '1.2.3.4' }, res);
+  assert.strictEqual(inserts.length, 1);
+  const [, , , , , , , avalTema, avalTempo, avalPalestrante, avalSuporte, avalSugestoes] = inserts[0];
+  assert.deepStrictEqual([avalTema, avalTempo, avalPalestrante, avalSuporte, avalSugestoes], [6, 5, 6, 4, 'Mais tiempo para preguntas']);
+  assert.strictEqual(res._locals.sucesso, true);
+});
+
+test('POST /checkout/:id: dia que NÃO é o último — não exige nem grava avaliação', async () => {
+  const { rotas, inserts } = montar({
+    evento: EVENTO,
+    hojeProgramacao: { id: 10, titulo: 'Día 2', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-18' },
+    maxData: '2026-08-20',
+    inscricao: { id: 42, nome: 'Fulano', email: 'f@x.com', status: 'confirmado', isento: false, rg: '123456' }
+  });
+  const res = resRender();
+  await rotas['POST /checkout/:id']({ params: { id: '5' }, body: { email: 'f@x.com', documento: '123456' }, headers: {}, ip: '1.2.3.4' }, res);
+  assert.strictEqual(inserts.length, 1, 'check-out de dia comum continua funcionando sem avaliação nenhuma');
+  const [, , , , , , , avalTema] = inserts[0];
+  assert.strictEqual(avalTema, null);
+});
+
+test('página pública: mostra o bloco de avaliação obrigatória só quando é o último dia', () => {
+  const ejs = require('ejs');
+  const fs = require('fs');
+  const ARQUIVO = path.join(RAIZ, 'views/pages/evento-checkout-publico.ejs');
+  const base = { evento: { id: 5, nome: 'Jornada' }, config: {}, aberto: true, sucesso: false, jaConfirmado: false, erro: null, nome: null };
+  const comAval = ejs.render(fs.readFileSync(ARQUIVO, 'utf8'), { ...base, ultimoDia: true }, { filename: ARQUIVO });
+  const semAval = ejs.render(fs.readFileSync(ARQUIVO, 'utf8'), { ...base, ultimoDia: false }, { filename: ARQUIVO });
+  assert.match(comAval, /aval_tema/, 'último dia mostra as perguntas de avaliação');
+  assert.ok(!semAval.includes('aval_tema'), 'dia comum não mostra avaliação nenhuma');
+});
+
+test('GET /eventos/:id/checkout-relatorio: calcula a distribuição das notas e o % de resposta do último dia', async () => {
+  const { rotas } = montar({
+    evento: EVENTO,
+    mock: (sql) => {
+      if (/SELECT id, nome, checkout_aberto, checkout_fecha_em FROM eventos/.test(sql)) return { rows: [EVENTO] };
+      if (/SELECT id, nome, email, cpf, status, isento FROM evento_inscricoes/.test(sql)) return { rows: [] };
+      if (/SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id, aval_tema/.test(sql)) return { rows: [
+        { inscricao_id: 1, email: 'a@x.com', cpf: null, nome_informado: 'A', criado_em: new Date(), programacao_id: 11, aval_tema: 6, aval_tempo: 5, aval_palestrante: 6, aval_suporte: 4, aval_sugestoes: 'Excelente evento' },
+        { inscricao_id: 2, email: 'b@x.com', cpf: null, nome_informado: 'B', criado_em: new Date(), programacao_id: 11, aval_tema: null, aval_tempo: null, aval_palestrante: null, aval_suporte: null, aval_sugestoes: null }, // fez check-out mas não respondeu
+        { inscricao_id: 3, email: 'c@x.com', cpf: null, nome_informado: 'C', criado_em: new Date(), programacao_id: 10, aval_tema: 1, aval_tempo: 1, aval_palestrante: 1, aval_suporte: 1, aval_sugestoes: null } // dia 1, não conta pro último dia
+      ] };
+      if (/SELECT id, titulo, data FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
+        { id: 10, titulo: 'Día 1', data: '2026-08-17' },
+        { id: 11, titulo: 'Día 4', data: '2026-08-20' }
+      ] };
+      return undefined;
+    }
+  });
+  const res = { json: (b) => { res._body = b; } };
+  await rotas['GET /eventos/:id/checkout-relatorio']({ params: { id: '5' } }, res);
+  const av = res._body.avaliacao;
+  assert.strictEqual(av.total, 2, 'só os 2 check-outs do último dia (Día 4), o do Día 1 não conta');
+  assert.strictEqual(av.respondidas, 1);
+  assert.strictEqual(av.percentual, 50);
+  assert.deepStrictEqual(av.tema, [0, 0, 0, 0, 0, 1], 'nota 6 (índice 5) recebeu 1 resposta');
+  assert.deepStrictEqual(av.sugestoes, ['Excelente evento']);
 });
