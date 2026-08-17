@@ -1994,6 +1994,12 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
     const evento = evR.rows[0];
     const cfgPub = await getConfig();
 
+    // A prévia (admin) usa este MESMO formulário — se alguém enviar por engano enquanto só
+    // está olhando, não pode gravar um check-out/avaliação falso em cima dos dados reais.
+    if (req.body.previa) {
+      return res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: 'Isso é só uma prévia — nada foi salvo de verdade.', nome: null, ultimoDia: true, perguntasAvaliacao: perguntasAvaliacaoDoEvento(evento), previa: true });
+    }
+
     // Revalida no servidor qual dia está em jogo e se está aberto (nunca confia no cliente)
     const { dia, hoje } = await resolverDiaTransmissao(req.params.id);
     let aberto, ultimoDia;
@@ -2236,6 +2242,21 @@ router.get('/eventos/:id/checkout-qrcode', requireAuth, requirePermissao('evento
     res.set('Content-Disposition', 'attachment; filename="checkout-qr-evento-' + req.params.id + '.png"');
     res.send(buf);
   } catch(e) { console.error('Checkout QR erro:', e.message); res.status(500).send('Erro ao gerar QR Code.'); }
+});
+
+// Prévia (só admin) de como o participante vê o check-out do ÚLTIMO DIA, com a avaliação —
+// pedido do usuário: poder conferir o formulário sem esperar o dia real chegar nem precisar
+// abrir o check-out de verdade. Renderiza a mesma página pública, forçando ultimoDia/aberto,
+// mas não grava nada (é só visualização).
+router.get('/eventos/:id/checkout-preview', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  try {
+    const evR = await query('SELECT * FROM eventos WHERE id=$1', [req.params.id]);
+    if (!evR.rows[0]) return res.status(404).send('Evento não encontrado.');
+    const evento = evR.rows[0];
+    const cfgPub = await getConfig();
+    const perguntasAvaliacao = perguntasAvaliacaoDoEvento(evento);
+    res.render('pages/evento-checkout-publico', { evento, config: cfgPub, aberto: true, sucesso: false, jaConfirmado: false, erro: null, nome: null, ultimoDia: true, perguntasAvaliacao, previa: true });
+  } catch(e) { console.error('Checkout preview erro:', e.message); res.status(500).send('Erro ao carregar prévia.'); }
 });
 
 // Exportar lista de aptos em CSV (painel)

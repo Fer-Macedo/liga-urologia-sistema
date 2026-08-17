@@ -469,3 +469,30 @@ test('GET /eventos/:id/avaliacao-export: gera CSV com as perguntas como cabeçal
   assert.match(res._body, /Nome;Email;Tema;Tempo;Sugestões;Respondido em/, 'cabeçalho usa as perguntas configuradas');
   assert.match(res._body, /Ana Confirmada.*ana@x\.com.*"6".*"5".*Muy bueno/);
 });
+
+// 17/08/2026: pedido do usuário — poder ver a página que o participante vai ver, sem precisar
+// esperar o dia real chegar. Reaproveita a MESMA página pública (evento-checkout-publico),
+// só que forçando ultimoDia/aberto — mas como é o mesmo formulário/rota real, um envio
+// acidental durante a visualização não pode gravar um check-out ou avaliação falsos.
+test('GET /eventos/:id/checkout-preview: renderiza a página pública com ultimoDia forçado, sem gravar nada', async () => {
+  const { rotas } = montar({ evento: { ...EVENTO, avaliacao_perguntas: JSON.stringify(['Pergunta única']) } });
+  const res = resRender();
+  await rotas['GET /eventos/:id/checkout-preview']({ params: { id: '5' } }, res);
+  assert.strictEqual(res._locals.ultimoDia, true);
+  assert.strictEqual(res._locals.aberto, true);
+  assert.strictEqual(res._locals.previa, true);
+  assert.deepStrictEqual(res._locals.perguntasAvaliacao, ['Pergunta única']);
+});
+
+test('POST /checkout/:id: campo previa=1 (enviado da tela de prévia) NUNCA grava, mesmo com dados válidos', async () => {
+  const { rotas, inserts } = montar({
+    evento: EVENTO,
+    hojeProgramacao: { id: 10, titulo: 'Día 4', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-20' },
+    maxData: '2026-08-20',
+    inscricao: { id: 42, nome: 'Fulano', email: 'f@x.com', status: 'confirmado', isento: false, rg: '123456' }
+  });
+  const res = resRender();
+  await rotas['POST /checkout/:id']({ params: { id: '5' }, body: { previa: '1', email: 'f@x.com', documento: '123456', aval_resposta_0: '6', aval_resposta_1: '5', aval_resposta_2: '6', aval_resposta_3: '4' }, headers: {}, ip: '1.2.3.4' }, res);
+  assert.strictEqual(inserts.length, 0, 'previa nunca grava, nem com todos os campos preenchidos certinho');
+  assert.strictEqual(res._locals.previa, true);
+});

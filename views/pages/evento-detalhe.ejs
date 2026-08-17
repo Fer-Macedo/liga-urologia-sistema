@@ -1280,9 +1280,12 @@
         </div>
 
         <div class="section-card" style="margin-bottom:16px">
-          <div class="section-header">Perguntas da avaliação (obrigatória no check-out do último dia)</div>
+          <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
+            <span>Perguntas da avaliação (obrigatória no check-out do último dia)</span>
+            <a class="btn btn-sm" href="/eventos/<%= evento.id %>/checkout-preview" target="_blank" style="background:var(--cor-primaria);color:#fff;border-color:transparent;text-decoration:none">Visualizar prévia (como o participante vê)</a>
+          </div>
           <div class="section-body">
-            <p style="font-size:12px;color:var(--texto2);margin-bottom:10px">Cada linha vira uma pergunta de escala no check-out do último dia. Adicione ou remova conforme precisar — a sugestão livre no final é fixa, não precisa cadastrar aqui.</p>
+            <p style="font-size:12px;color:var(--texto2);margin-bottom:10px">Cada linha abaixo vira uma pergunta de escala <strong>obrigatória</strong> (<span style="color:#dc2626;font-weight:700">*</span> — o participante não consegue enviar o check-out sem responder todas) no dia final. Adicione ou remova conforme precisar.</p>
             <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px;padding:10px 12px;background:var(--fundo);border-radius:8px;border:1px solid var(--borda)">
               <span style="font-size:11px;font-weight:700;color:var(--texto2);text-transform:uppercase;letter-spacing:.5px">Escala das respostas (fixa, vale pra todas):</span>
               <% ['Péssimo','Ruim','Regular','Bom','Muito bom','Excelente'].forEach(function(op, i){ %>
@@ -1292,15 +1295,22 @@
             <form method="POST" action="/eventos/<%= evento.id %>/avaliacao-perguntas">
               <div id="perguntasAvalList">
                 <% perguntasAvaliacaoAtuais.forEach(function(p){ %>
-                <div style="display:flex;gap:8px;margin-bottom:8px">
+                <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+                  <span style="color:#dc2626;font-weight:700;font-size:14px" title="Obrigatória">*</span>
                   <input type="text" name="perguntas[]" value="<%= p %>" class="input" style="flex:1">
                   <button type="button" onclick="this.parentElement.remove()" class="btn-xs" style="background:#fee2e2;color:#991b1b">Remover</button>
                 </div>
                 <% }) %>
               </div>
-              <button type="button" class="btn btn-sm" style="margin-bottom:14px" onclick="var d=document.createElement('div');d.style.cssText='display:flex;gap:8px;margin-bottom:8px';d.innerHTML='<input type=\'text\' name=\'perguntas[]\' class=\'input\' style=\'flex:1\' placeholder=\'Nova pergunta\'><button type=\'button\' onclick=\'this.parentElement.remove()\' class=\'btn-xs\' style=\'background:#fee2e2;color:#991b1b\'>Remover</button>';document.getElementById('perguntasAvalList').appendChild(d)">+ Adicionar pergunta</button>
+              <button type="button" class="btn btn-sm" style="margin-bottom:14px" onclick="var d=document.createElement('div');d.style.cssText='display:flex;gap:8px;align-items:center;margin-bottom:8px';d.innerHTML='<span style=\'color:#dc2626;font-weight:700;font-size:14px\' title=\'Obrigatória\'>*</span><input type=\'text\' name=\'perguntas[]\' class=\'input\' style=\'flex:1\' placeholder=\'Nova pergunta\'><button type=\'button\' onclick=\'this.parentElement.remove()\' class=\'btn-xs\' style=\'background:#fee2e2;color:#991b1b\'>Remover</button>';document.getElementById('perguntasAvalList').appendChild(d)">+ Adicionar pergunta</button>
               <button type="submit" class="btn btn-primario" style="display:block">Salvar perguntas</button>
             </form>
+            <div style="display:flex;gap:8px;align-items:center;margin-top:16px;padding-top:14px;border-top:1px dashed var(--borda)">
+              <span style="color:#94a3b8;font-weight:700;font-size:14px" title="Opcional">○</span>
+              <div style="flex:1;padding:9px 12px;background:var(--fundo);border-radius:8px;color:var(--texto2);font-size:13px;font-style:italic">Sugerencias para la organización de futuros eventos</div>
+              <span style="font-size:11px;color:var(--texto2);white-space:nowrap">Fixa · opcional</span>
+            </div>
+            <div style="font-size:11px;color:var(--texto2);margin-top:6px">Essa última pergunta é de texto livre, sempre aparece no final do formulário e nunca é obrigatória — não dá pra editar nem remover aqui.</div>
           </div>
         </div>
 
