@@ -89,9 +89,15 @@ function prefixoDominanteCupons(codigos) {
 // O que precisa de teto apertado é o POST (inscrição repetida, tentativa de pagamento em
 // série) — foi misturar os dois no mesmo limite de 60 que derrubou gente de verdade numa
 // inscrição concorrida (11/08/2026).
+// 17/08/2026: achado num teste de carga em produção — o nginx de inscricao.lauroucpcde.com
+// não repassava X-Forwarded-For, então TODO mundo (qualquer IP real) caía no MESMO balde
+// desse limiter (corrigido na config do nginx). Mesmo com o IP real chegando certo agora,
+// o cenário de "muita gente atrás do mesmo IP" (rede do evento, operadora) continua real —
+// por isso o teto sobe de 300 para 1000, alinhado ao mesmo raciocínio que já tinha subido
+// o limite do POST de check-out (linha abaixo) depois do teste de carga de 12/08/2026.
 const limiterVisualizacaoEvento = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 300,
+  max: 1000,
   message: { erro: 'Muitas tentativas. Aguarde alguns minutos e tente novamente.' },
   standardHeaders: true,
   legacyHeaders: false

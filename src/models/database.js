@@ -8,11 +8,14 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL && process.env.DATABASE_URL.includes('render.com')
     ? { rejectUnauthorized: false }
     : false,
-  // Robustez para eventos com muitos acessos simultâneos. Roda em modo cluster (4
-  // processos no dia do evento) — cada processo tem seu próprio pool, então o teto
-  // real é max × processos. 15 × 4 = 60, com folga sob o limite de 100 do Postgres
-  // (11/08/2026: 25 × 4 = 100 esgotava as conexões — "reserved for SUPERUSER" sob carga).
-  max: 15,                        // até 15 conexões por processo (Postgres aceita 100 no total)
+  // Robustez para eventos com muitos acessos simultâneos. O modo cluster está DESLIGADO desde
+  // 12/08/2026 (sessão do assistente de WhatsApp quebra entre processos — religar exige migrar
+  // esse estado pro banco primeiro), então hoje só há 1 processo em produção usando este pool —
+  // 30 fica com folga grande sob o limite de 100 do Postgres (staging usa outros 15; sobra >50).
+  // 17/08/2026: subido de 15 pra 30 no dia do evento (~500 inscritos), pra reduzir o risco de
+  // connectionTimeoutMillis estourar num pico de check-out simultâneo. Se o cluster for religado
+  // no futuro, essa conta precisa ser revista (max × processos não pode passar de ~90).
+  max: 30,                        // até 30 conexões neste processo (Postgres aceita 100 no total)
   idleTimeoutMillis: 30000,       // libera conexão ociosa após 30s
   connectionTimeoutMillis: 5000,  // desiste de pegar conexão após 5s (evita travar)
   maxUses: 7500                   // recicla conexão após 7500 usos (evita memory leak)
