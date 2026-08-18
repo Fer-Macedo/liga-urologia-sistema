@@ -1794,12 +1794,24 @@ router.post('/live/:token/sair', async (req, res) => {
     res.json({ok:true});
   } catch(e) { res.json({ok:false}); }
 });
+// Resolve qual dia do evento este envio de link se refere (mesmo dia que a página /live vai
+// mostrar) e sua posição entre os dias com data (Día 1, 2, 3...) — pedido do usuário 17/08/2026:
+// o e-mail/WhatsApp do link não dizia qual dia era, virando "Segunda Jornada" solto na caixa de
+// entrada, sem dar pra saber se era do dia 1, 2, 3 ou 4 nem qual era o tema daquela aula.
+async function diaAtualParaEnvioLive(eventoId) {
+  const { dia } = await resolverDiaTransmissao(eventoId);
+  if (!dia) return { dia: null, numero: null, total: 0 };
+  const diasR = await query('SELECT id FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL ORDER BY data', [eventoId]);
+  const idx = diasR.rows.findIndex(d => d.id === dia.id);
+  return { dia, numero: idx >= 0 ? idx + 1 : null, total: diasR.rows.length };
+}
+
 // Gera (ou reaproveita) o token de presença online de UMA pessoa e manda o link por WhatsApp/
 // e-mail — usado tanto no envio em massa quanto no reenvio avulso (pessoa específica). Devolve
 // o resultado de cada canal, pra dar visibilidade de quem recebeu de verdade (pedido do usuário
 // 17/08/2026: reclamação de gente que não recebeu o link e ninguém tinha como identificar quem,
 // nem reenviar só pra essa pessoa sem reenviar pra todo mundo de novo).
-async function enviarLinkLiveParaPessoa(ev, config, appUrl, insc) {
+async function enviarLinkLiveParaPessoa(ev, config, appUrl, insc, diaInfo) {
   const crypto = require('crypto');
   const { enviarWhatsApp, enviarEmail } = require('../services/notificacoes');
   let token = crypto.randomBytes(24).toString('hex');
@@ -1807,17 +1819,32 @@ async function enviarLinkLiveParaPessoa(ev, config, appUrl, insc) {
   if (existe.rows.length > 0) { token = existe.rows[0].token; }
   else { await query('INSERT INTO evento_presencas_online (inscricao_id,evento_id,token) VALUES ($1,$2,$3)',[insc.id,ev.id,token]); }
   const link = appUrl+'/live/'+token;
+  const dia = diaInfo && diaInfo.dia;
+  const diaFmt = dia && dia.data ? new Date(dia.data).toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit', year:'numeric', timeZone:'UTC' }) : '';
+  const diaRotulo = dia ? ('Dia ' + diaInfo.numero + (diaInfo.total ? ' de ' + diaInfo.total : '') + (diaFmt ? ' — ' + diaFmt : '')) : '';
+  const temaDia = dia ? (dia.titulo || '') : '';
   // whatsapp-only:inicio — texto enviado via enviarWhatsApp abaixo; o e-mail (mesmo envio)
   // usa seu próprio HTML, não reaproveita essa string, então não precisa de semEmoji aqui.
-  const msg = (config.org_nome||'LAURO')+'\n\nOla, '+insc.nome.split(' ')[0]+'!\n\nSeu link de acesso ao evento '+ev.nome+':\n\n'+link+'\n\nAcesse para assistir e registrar sua presenca automaticamente.';
+  const msg = (config.org_nome||'LAURO')+'\n\nOla, '+insc.nome.split(' ')[0]+'!\n\nSeu link de acesso ao evento '+ev.nome+':'
+    + (diaRotulo ? '\n'+diaRotulo+(temaDia ? '\nTema: '+temaDia : '') : '')
+    + '\n\n'+link+'\n\nAcesse para assistir e registrar sua presenca automaticamente.';
   // whatsapp-only:fim
   let wppStatus = 'sem_whatsapp', emailStatus = 'sem_email';
   if (insc.whatsapp) {
     try { await enviarWhatsApp(insc.whatsapp,msg); wppStatus = 'enviado'; } catch(e){ wppStatus = 'falhou'; }
   }
   if (insc.email) {
-    const html = '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:20px"><h2>'+ev.nome+'</h2><p>Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p><p>Clique para assistir e ter sua presenca registrada:</p><div style="text-align:center;margin:24px 0"><a href="'+link+'" style="background:#1a56db;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700">Assistir ao evento</a></div><p style="font-size:12px;color:#6b7280">Link exclusivo — nao compartilhe.</p></div>';
-    try { await enviarEmail({para:insc.email,assunto:'Seu link de acesso — '+ev.nome,html,texto:semEmoji(msg)}); emailStatus = 'enviado'; } catch(e){ emailStatus = 'falhou'; }
+    const temaHtml = temaDia ? '<p style="margin:0 0 20px;font-size:14px;color:#374151"><strong>Tema da aula:</strong> '+temaDia+'</p>' : '';
+    const html = '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:20px"><h2>'+ev.nome+'</h2><p>Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p>'+temaHtml+'<p>Clique para assistir e ter sua presenca registrada:</p><div style="text-align:center;margin:24px 0"><a href="'+link+'" style="background:#1a56db;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700">Assistir ao evento</a></div><p style="font-size:12px;color:#6b7280">Link exclusivo — nao compartilhe.</p></div>';
+    try {
+      await enviarEmail({
+        para:insc.email,
+        assunto:'Seu link de acesso — '+ev.nome+(diaRotulo ? ' — '+diaRotulo : ''),
+        html, texto:semEmoji(msg),
+        faixaLabel: diaRotulo || 'LINK DE ACESSO'
+      });
+      emailStatus = 'enviado';
+    } catch(e){ emailStatus = 'falhou'; }
   }
   return { id: insc.id, nome: insc.nome, email: insc.email||'', whatsapp: insc.whatsapp||'', wppStatus, emailStatus };
 }
@@ -1832,8 +1859,9 @@ router.post('/eventos/:id/enviar-link-live', requireAuth, requirePermissao('even
     const inscrR = await query("SELECT * FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado'",[req.params.id]);
     const filtro = req.body.filtro || 'todos'; // 'todos' | 'ligantes' | 'diretivos' | 'membros'
     const inscritos = await filtrarPorTipoMembro(query, inscrR.rows, filtro);
+    const diaInfo = await diaAtualParaEnvioLive(ev.id);
     const logs = [];
-    for (const insc of inscritos) logs.push(await enviarLinkLiveParaPessoa(ev, config, appUrl, insc));
+    for (const insc of inscritos) logs.push(await enviarLinkLiveParaPessoa(ev, config, appUrl, insc, diaInfo));
     const enviadosWpp = logs.filter(l => l.wppStatus === 'enviado').length;
     const enviadosEmail = logs.filter(l => l.emailStatus === 'enviado').length;
     const filtroLabel = filtro==='ligantes'?' (só Ligantes)':filtro==='diretivos'?' (só Diretivos)':filtro==='membros'?' (só Ligantes/Diretivos)':'';
@@ -1858,8 +1886,9 @@ router.post('/eventos/:id/reenviar-link-live', requireAuth, requirePermissao('ev
       [req.params.id, '%'+busca+'%']
     );
     if (!inscrR.rows.length) return res.json({ok:false,msg:'Ninguém encontrado com esse nome/e-mail entre os confirmados.'});
+    const diaInfo = await diaAtualParaEnvioLive(ev.id);
     const logs = [];
-    for (const insc of inscrR.rows) logs.push(await enviarLinkLiveParaPessoa(ev, config, appUrl, insc));
+    for (const insc of inscrR.rows) logs.push(await enviarLinkLiveParaPessoa(ev, config, appUrl, insc, diaInfo));
     res.json({ok:true,msg:`Link reenviado para ${logs.length} pessoa(s).`, logs});
   } catch(e) { res.json({ok:false,msg:e.message}); }
 });

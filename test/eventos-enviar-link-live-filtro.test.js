@@ -9,8 +9,8 @@ const path = require('path');
 const RAIZ = path.join(__dirname, '..');
 const MODULO = path.join(RAIZ, 'src/routes/eventos.js');
 
-function montar({ inscritos, ligantes = [], diretivos = [] }) {
-  const wppEnviados = [], emailEnviados = [];
+function montar({ inscritos, ligantes = [], diretivos = [], hojeProgramacao = null, diasComData = [] }) {
+  const wppEnviados = [], emailEnviados = [], emailsCompletos = [];
   const rq = require.resolve(path.join(RAIZ, 'src/models/database.js'));
   require.cache[rq] = { id: rq, filename: rq, loaded: true, exports: {
     query: async (sql, params) => {
@@ -23,6 +23,11 @@ function montar({ inscritos, ligantes = [], diretivos = [] }) {
       if (/SELECT \* FROM evento_inscricoes WHERE evento_id=\$1 AND status='confirmado'/.test(sql)) return { rows: inscritos };
       if (/SELECT cpf, email FROM ligantes/.test(sql)) return { rows: ligantes };
       if (/SELECT cpf, email FROM diretivos/.test(sql)) return { rows: diretivos };
+      // resolverDiaTransmissao: dia de hoje / dia mais próximo (mesma lógica usada por /live)
+      if (/WHERE evento_id=\$1 AND data=CURRENT_DATE/.test(sql)) return { rows: hojeProgramacao ? [hojeProgramacao] : [] };
+      if (/WHERE evento_id=\$1 AND data IS NOT NULL ORDER BY ABS/.test(sql)) return { rows: [] };
+      // ordinal do dia (Día 1 de N) — diaAtualParaEnvioLive
+      if (/SELECT id FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL ORDER BY data/.test(sql)) return { rows: diasComData };
       if (/SELECT token FROM evento_presencas_online/.test(sql)) return { rows: [] };
       if (/INSERT INTO evento_presencas_online/.test(sql)) return { rows: [] };
       return { rows: [] };
@@ -42,17 +47,18 @@ function montar({ inscritos, ligantes = [], diretivos = [] }) {
   require.cache[rrl] = { id: rrl, filename: rrl, loaded: true, exports: { limiterPagamentoCartao: (q,s,n)=>n() } };
   const rfx = require.resolve(path.join(RAIZ, 'src/services/fluxo-eventos.js'));
   require.cache[rfx] = { id: rfx, filename: rfx, loaded: true, exports: { calcularLiquidoEvento: (v) => v } };
+  const wppMsgs = [];
   const rnt = require.resolve(path.join(RAIZ, 'src/services/notificacoes.js'));
   require.cache[rnt] = { id: rnt, filename: rnt, loaded: true, exports: {
-    enviarWhatsApp: async (numero, msg) => { wppEnviados.push(numero); },
-    enviarEmail: async (opts) => { emailEnviados.push(opts.para); }
+    enviarWhatsApp: async (numero, msg) => { wppEnviados.push(numero); wppMsgs.push(msg); },
+    enviarEmail: async (opts) => { emailEnviados.push(opts.para); emailsCompletos.push(opts); }
   }};
 
   const rotas = {};
   const router = { get: (rota, ...fns) => { rotas['GET '+rota] = fns[fns.length-1]; }, post: (rota, ...fns) => { rotas['POST '+rota] = fns[fns.length-1]; } };
   delete require.cache[require.resolve(MODULO)];
   require(MODULO)(router);
-  return { rotas, wppEnviados, emailEnviados };
+  return { rotas, wppEnviados, emailEnviados, wppMsgs, emailsCompletos };
 }
 
 function resJson() { const r = {}; r.json = (b) => { r._body = b; return r; }; return r; }
@@ -159,4 +165,38 @@ test('reenviar-link-live: busca vazia não faz nada, avisa pra digitar', async (
   await rotas['POST /eventos/:id/reenviar-link-live']({ params: { id: '5' }, body: { busca: '' } }, res);
   assert.strictEqual(res._body.ok, false);
   assert.strictEqual(wppEnviados.length, 0);
+});
+
+// 17/08/2026: pedido do usuário — o e-mail (e o WhatsApp) do link de acesso não dizia qual dia
+// do evento era, virando "Segunda Jornada" solto na caixa de entrada — impossível saber se era
+// dia 1, 2, 3 ou 4, nem qual o tema daquela aula específica. Agora o dia (Dia X de N — data) e
+// o tema entram no assunto, na faixa do topo e no corpo do e-mail, e no texto do WhatsApp.
+test('evento com Programação por data: e-mail e WhatsApp saem com "Dia X de N", a data e o tema da aula', async () => {
+  const { rotas, emailsCompletos, wppMsgs } = montar({
+    inscritos: [INSCRITOS[0]],
+    hojeProgramacao: { id: 10, titulo: 'Promoción y Prevención de la Salud del Hombre', youtube_url: 'https://youtube.com/live/abc', data: '2026-08-17' },
+    diasComData: [{ id: 9 }, { id: 10 }, { id: 11 }, { id: 12 }] // dia 10 é o 2º da lista
+  });
+  const res = resJson();
+  await rotas['POST /eventos/:id/enviar-link-live']({ params: { id: '5' }, body: { filtro: 'todos' } }, res);
+  const email = emailsCompletos[0];
+  assert.match(email.assunto, /Dia 2 de 4/, 'assunto (visível na caixa de entrada sem abrir o e-mail) precisa dizer qual dia é');
+  assert.match(email.assunto, /17\/08\/2026/);
+  assert.match(email.faixaLabel, /Dia 2 de 4/, 'faixa do topo do e-mail também mostra o dia');
+  assert.match(email.html, /Promoción y Prevención de la Salud del Hombre/, 'corpo do e-mail mostra o tema da aula');
+  assert.match(wppMsgs[0], /Dia 2 de 4/, 'WhatsApp também informa o dia');
+  assert.match(wppMsgs[0], /Promoción y Prevención de la Salud del Hombre/, 'WhatsApp também informa o tema');
+});
+
+test('evento legado (sem Programação por data): e-mail continua saindo normal, sem "Dia X de N" nenhum', async () => {
+  const { rotas, emailsCompletos } = montar({
+    inscritos: [INSCRITOS[0]],
+    hojeProgramacao: null,
+    diasComData: []
+  });
+  const res = resJson();
+  await rotas['POST /eventos/:id/enviar-link-live']({ params: { id: '5' }, body: { filtro: 'todos' } }, res);
+  const email = emailsCompletos[0];
+  assert.ok(!/Dia \d+ de \d+/.test(email.assunto), 'evento sem dias cadastrados não inventa um "Dia X de N"');
+  assert.strictEqual(email.faixaLabel, 'LINK DE ACESSO');
 });
