@@ -190,8 +190,10 @@ function preencherTemplate(tpl, dados) {
 }
 
 // ─── NOTIFICAR COBRANÇA ───────────────────────────────────────────────────────
-// Usa campos PagBank: pix_copia_cola, checkout_link (pagbank_link)
-// Compatível com cobranças antigas do MP (sem PIX/link — só envia o texto)
+// 18/08/2026: e-mail parou de mandar QR Code, código Pix copia-e-cola ou link de cartão — só
+// avisa a situação (vence em X dias / vence hoje / em atraso) e direciona pro Portal do Membro,
+// onde o pagamento acontece de fato (PIX, cartão, boleto — tudo já disponível lá). Mesma mudança
+// que já tinha sido feita no WhatsApp antes; agora os dois canais usam a mesma orientação.
 
 async function notificarCobranca(opts) {
   const membro   = opts.membro;
@@ -200,13 +202,6 @@ async function notificarCobranca(opts) {
   const config   = opts.config || await getConfig();
 
   const orgNome  = config.org_nome || 'Liga Academica de Urologia';
-  const orgCor   = config.org_cor  || '#1a56db';
-  const orgLogo  = config.org_logo || null;
-
-  // ── Campos PagBank (novos) — com fallback para campos antigos do MP
-  const pixCode    = cobranca.pix_copia_cola  || null;   // PagBank
-  const linkCartao = cobranca.checkout_link   ||         // PagBank
-                     cobranca.pagbank_link    || null;   // fallback
 
   const venc = new Date(cobranca.data_vencimento + 'T12:00:00');
   const diffDias = Math.ceil((venc - new Date()) / (1000 * 60 * 60 * 24));
@@ -282,18 +277,25 @@ async function notificarCobranca(opts) {
     );
   }
 
-  // ── Email
+  // ── Email — sem PIX/QR/link de cartão (ver comentário no topo da função). Layout genérico
+  // (htmlSimples), igual usado em aniversário/científico, com um botão só: ir pro portal.
   if (membro.email && opts.canal !== 'whatsapp') {
-    const msgHtml = htmlCobranca({
+    const faixaLabelMap = { pre: 'LEMBRETE DE COBRANÇA', dia: 'VENCIMENTO HOJE', pos: 'MENSALIDADE EM ATRASO' };
+    const valorHtml = tipo === 'pos'
+      ? '<p style="margin:0;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.5px">Valor</p><p style="margin:2px 0 0;font-size:22px;font-weight:800;color:#0f172a">' + dados.valor_cheio + '</p>'
+      : '<p style="margin:0;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.5px">Com desconto de pontualidade</p><p style="margin:2px 0 0;font-size:22px;font-weight:800;color:#0f172a">' + dados.valor_desc + '</p><p style="margin:4px 0 0;font-size:12px;color:#94a3b8">Sem desconto: ' + dados.valor_cheio + '</p>';
+    const valorBoxHtml = '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;margin:0 0 20px">' + valorHtml + '</div>';
+    const mensagemMap = {
+      pre: '<p style="margin:0 0 16px;font-size:14px;color:#475569;line-height:1.7">Prezado(a) <strong>' + dados.nome + '</strong>, sua mensalidade vence em <strong>' + dados.dias + ' dias</strong> (' + dados.data + ').</p>' + valorBoxHtml,
+      dia: '<p style="margin:0 0 16px;font-size:14px;color:#475569;line-height:1.7">Prezado(a) <strong>' + dados.nome + '</strong>, <strong>hoje</strong> é o último dia para pagar com desconto de pontualidade.</p>' + valorBoxHtml,
+      pos: '<p style="margin:0 0 16px;font-size:14px;color:#475569;line-height:1.7">Prezado(a) <strong>' + dados.nome + '</strong>, sua mensalidade está <strong>em atraso</strong> desde ' + dados.data + '.</p>' + valorBoxHtml
+    };
+    const msgHtml = htmlSimples({
       titulo:     tituloMap[tipo] || '',
-      mensagem:   'Prezado(a) ' + dados.nome + ', segue abaixo as opcoes para pagamento da sua mensalidade de ' + dados.valor_desc + ' (com desconto de pontualidade).',
-      linkCartao,
-      pixCode,
-      qrUrl: cobranca.pix_qr_image || null,
-      orgNome,
-      orgCor,
-      orgLogo,
-      tipoCob: tipo
+      mensagem:   mensagemMap[tipo] || '',
+      cta:        { label: 'Acessar Portal do Membro', url: 'https://membro.lauroucpcde.com' },
+      faixaLabel: faixaLabelMap[tipo] || 'AVISO',
+      config
     });
 
     const r = await enviarEmail({

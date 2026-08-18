@@ -128,12 +128,54 @@ test('notificarCobranca: pede pra sair de Enviados (alto volume, diário)', asyn
     'NUNCA usar messages.modify pra isso — o Gmail recusa remover o rótulo SENT (foi o bug do primeiro deploy)');
 });
 
-test('notificarCobranca: e-mail (htmlCobranca) também sai com a font-family corrigida', async () => {
+test('notificarCobranca: e-mail sai com a font-family corrigida', async () => {
   const { mod, emailsEnviados } = montar();
   const membro = { id: 1, nome: 'Fulano', email: 'fulano@teste.com', whatsapp: null };
   const cobranca = { id: 10, data_vencimento: '2026-07-15', valor_desconto: 20, valor_cheio: 25 };
   await mod.notificarCobranca({ membro, cobranca, tipo: 'pos' });
   assert.match(emailsEnviados[0].html, /font-family:'Segoe UI',Arial,sans-serif/);
+});
+
+// 18/08/2026: pedido do usuário — parar de mandar QR Code, código Pix copia-e-cola ou link de
+// cartão por e-mail. Só avisa a situação e direciona pro Portal do Membro, onde o pagamento
+// acontece de fato (mesma mudança já feita antes no WhatsApp).
+test('notificarCobranca: e-mail NÃO traz QR Code, código Pix nem link de cartão — só o link do portal', async () => {
+  const { mod, emailsEnviados } = montar();
+  const membro = { id: 1, nome: 'Fulano', email: 'fulano@teste.com', whatsapp: null };
+  const cobranca = {
+    id: 10, data_vencimento: '2026-07-15', valor_desconto: 20, valor_cheio: 25,
+    pix_copia_cola: '00020126580014BR.GOV.BCB.PIX-codigo-fake-nao-pode-aparecer',
+    checkout_link: 'https://checkout.pagbank.com/link-nao-pode-aparecer',
+    pix_qr_image: 'https://exemplo.com/qr-nao-pode-aparecer.png'
+  };
+  await mod.notificarCobranca({ membro, cobranca, tipo: 'pos' });
+  const html = emailsEnviados[0].html;
+  assert.ok(!html.includes('codigo-fake-nao-pode-aparecer'), 'código Pix não pode aparecer no e-mail');
+  assert.ok(!html.includes('link-nao-pode-aparecer'), 'link de checkout/cartão não pode aparecer no e-mail');
+  assert.ok(!html.includes('qr-nao-pode-aparecer'), 'QR Code não pode aparecer no e-mail');
+  assert.doesNotMatch(html, /Pagamento com Cart[aã]o de Cr[eé]dito/i);
+  assert.match(html, /membro\.lauroucpcde\.com/, 'precisa direcionar pro Portal do Membro');
+  assert.match(html, /Acessar Portal do Membro/);
+});
+
+test('notificarCobranca: os 3 tipos (pre/dia/pos) mostram valor e mensagem certos, sempre com o portal', async () => {
+  const { mod, emailsEnviados } = montar();
+  const membro = { id: 1, nome: 'Fulano', email: 'fulano@teste.com', whatsapp: null };
+  const vencimentoFuturo = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const cobranca = { id: 10, data_vencimento: vencimentoFuturo, valor_desconto: 20, valor_cheio: 25 };
+
+  await mod.notificarCobranca({ membro, cobranca, tipo: 'pre' });
+  assert.match(emailsEnviados[0].html, /vence em/i);
+  assert.match(emailsEnviados[0].html, /R\$ 20,00/);
+
+  await mod.notificarCobranca({ membro, cobranca, tipo: 'dia' });
+  assert.match(emailsEnviados[1].html, /último dia/i);
+
+  await mod.notificarCobranca({ membro, cobranca, tipo: 'pos' });
+  assert.match(emailsEnviados[2].html, /em atraso/i);
+  assert.match(emailsEnviados[2].html, /R\$ 25,00/, 'em atraso mostra o valor CHEIO, sem desconto de pontualidade');
+
+  emailsEnviados.forEach(e => assert.match(e.html, /membro\.lauroucpcde\.com/));
 });
 
 test('notificarAniversario: NÃO tira de Enviados (baixo volume, um por vez)', async () => {
