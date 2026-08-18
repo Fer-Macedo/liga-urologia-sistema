@@ -265,8 +265,13 @@ function atualizarUI() {
 function validarAcesso() {
   const email = document.getElementById('login-email').value.toLowerCase().trim();
   const erro = document.getElementById('login-erro');
-  if (!email) { erro.style.display='block'; erro.textContent='Ingrese su correo.'; return; }
-  if (email !== emailInscrito) { erro.style.display='block'; return; }
+  if (!email) { erro.textContent='Ingrese su correo.'; erro.style.display='block'; return; }
+  // Precisa bater com o e-mail EXATO da inscrição — quem digitar outro (mesmo que seja um
+  // e-mail válido de outro ligante/diretivo) fica bloqueado antes de ver vídeo/chat/contagem.
+  // Corrigido junto (18/08/2026): antes essa mensagem não era escrita de novo aqui, então se a
+  // pessoa primeiro deixasse o campo vazio ("Ingrese su correo.") e só depois digitasse um
+  // e-mail errado, a mensagem antiga ficava na tela, sem dizer que o problema agora era outro.
+  if (email !== emailInscrito) { erro.textContent='Este correo no coincide con el registrado en su inscripción. Verifique el correo utilizado al inscribirse en la Liga Académica e intente nuevamente.'; erro.style.display='block'; return; }
 
   document.getElementById('login-overlay').style.display = 'none';
   document.getElementById('main-header').style.display = 'flex';
