@@ -216,7 +216,7 @@
       Chat en vivo
     </div>
     <% if (ytId) { %>
-      <iframe class="chat-iframe" src="https://www.youtube.com/live_chat?v=<%= ytId %>&embed_domain=liga-urologia.onrender.com" allow="accelerometer; autoplay; clipboard-write; encrypted-media"></iframe>
+      <iframe class="chat-iframe" src="https://www.youtube.com/live_chat?v=<%= ytId %>&embed_domain=<%= typeof embedDomain !== 'undefined' && embedDomain ? embedDomain : 'sistema.lauroucpcde.com' %>" allow="accelerometer; autoplay; clipboard-write; encrypted-media"></iframe>
     <% } else { %>
       <div style="flex:1;display:flex;align-items:center;justify-content:center;color:var(--texto2);font-size:13px;padding:20px;text-align:center">Chat no disponible</div>
     <% } %>

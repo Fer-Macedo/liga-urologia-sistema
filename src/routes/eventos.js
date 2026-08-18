@@ -1730,10 +1730,17 @@ router.get('/live/:token', async (req, res) => {
 
     const config = await getConfig();
     const patrocR = await query('SELECT * FROM evento_patrocinadores WHERE evento_id=$1 ORDER BY id', [p.evento_id]);
+    // O chat ao vivo do YouTube (embutido abaixo) exige que embed_domain bata com o domínio real
+    // da página, senão o YouTube recusa carregar o chat — calculado a partir do MESMO APP_URL
+    // usado pra montar o link enviado por e-mail/WhatsApp, pra nunca ficar desalinhado de novo
+    // (achado 17/08/2026: estava fixo em "liga-urologia.onrender.com", domínio antigo de antes
+    // da migração pro domínio próprio — o chat nunca carregava, ninguém tinha percebido ainda).
+    const appUrl = process.env.APP_URL || 'https://liga-urologia.onrender.com';
+    const embedDomain = appUrl.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
     res.render('pages/evento-live', {
       token: req.params.token, presenca: { ...p, youtube_url: youtubeUrl }, config, patrocinadores: patrocR.rows,
       sessao, segundosIniciais, tituloDia, transmiteHoje: dia ? (hoje && !aindaNaoComecou) : true, temDiaProgramado: !!dia,
-      aindaNaoComecou, horarioInicio: dia ? horarioInicioTexto(dia.horario) : ''
+      aindaNaoComecou, horarioInicio: dia ? horarioInicioTexto(dia.horario) : '', embedDomain
     });
   } catch(e) { console.error('GET /live:', e.message); res.status(500).send('Erro ao carregar transmissão.'); }
 });

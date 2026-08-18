@@ -77,6 +77,25 @@ test('GET /live/:token: dia de hoje encontrado — usa vídeo do dia e semente c
   assert.strictEqual(res._locals.tituloDia, 'Día 2');
 });
 
+// 17/08/2026: achado em produção — o chat ao vivo do YouTube (embutido na página) exige que
+// embed_domain bata com o domínio real, senão o YouTube recusa carregar. Estava fixo em
+// "liga-urologia.onrender.com", domínio antigo de antes da migração pro domínio próprio — o
+// chat nunca carregava. Agora é calculado a partir do MESMO APP_URL usado pra montar o link
+// enviado por e-mail/WhatsApp, pra não desalinhar de novo se o domínio mudar no futuro.
+test('GET /live/:token: embedDomain do chat vem do APP_URL configurado, não fixo/hardcoded', async () => {
+  const original = process.env.APP_URL;
+  process.env.APP_URL = 'https://sistema.lauroucpcde.com';
+  try {
+    const { rotas } = montar({
+      presenca: { id: 1, evento_id: 5, token: 'abc', nome: 'João', email: 'j@x.com', evento_nome: 'Jornada', youtube_url: null, tempo_total_segundos: 0, primeiro_acesso: null },
+      hojeProgramacao: null, proximaProgramacao: null
+    });
+    const res = resRender();
+    await rotas['GET /live/:token']({ params: { token: 'abc' } }, res);
+    assert.strictEqual(res._locals.embedDomain, 'sistema.lauroucpcde.com');
+  } finally { process.env.APP_URL = original; }
+});
+
 test('GET /live/:token: sem sessão de hoje, cai pro dia mais próximo em modo PREVIEW (não conta tempo real)', async () => {
   const { rotas } = montar({
     presenca: { id: 1, evento_id: 5, token: 'abc', nome: 'João', email: 'j@x.com', evento_nome: 'Jornada', youtube_url: null, tempo_total_segundos: 0, primeiro_acesso: null },
