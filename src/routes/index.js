@@ -15,7 +15,12 @@ router.use(helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com"],
       imgSrc: ["'self'", "data:", "https:", "blob:"],
       connectSrc: ["'self'", "https://api.pagseguro.com", "https://graph.instagram.com"],
-      frameSrc: ["'self'", "https://view.officeapps.live.com"],
+      // youtube.com/-nocookie: embed da transmissão ao vivo do evento (/live/:token). Sem isso
+      // o navegador BLOQUEIA o iframe caladamente — a página carrega normal, a contagem de
+      // presença continua funcionando (é só fetch/ping, não passa pelo frame-src), mas o vídeo
+      // nunca aparece: tela preta o tempo todo (achado em produção 17/08/2026, Erro 153 do
+      // YouTube ao tentar embutir fora de um frame permitido).
+      frameSrc: ["'self'", "https://view.officeapps.live.com", "https://www.youtube.com", "https://www.youtube-nocookie.com"],
       objectSrc: ["'none'"],
       upgradeInsecureRequests: [],
     }
