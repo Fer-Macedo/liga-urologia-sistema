@@ -1680,8 +1680,10 @@ function carregarRelatorioCheckout(){
       // APTOS — com filtro por dia (pedido do usuário 17/08/2026, 3ª rodada: saber de qual dia
       // é cada check-out, já que a mesma pessoa pode ter um check-out por dia do evento)
       html += '<h3 style="font-size:14px;color:#15803d;margin:18px 0 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="#dcfce7" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><circle cx="12" cy="12" r="10" fill="#dcfce7" stroke="#16a34a"/><polyline points="8 12 11 15 16 9" stroke="#16a34a" fill="none"/></svg> Aptos ao certificado ('+d.aptos.length+')</h3>';
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">';
+      html += '<input type="text" id="ckBuscaNome" class="input" style="max-width:240px" placeholder="Buscar por nome ou e-mail..." oninput="buscarAptos()">';
       if(d.porDia && d.porDia.length){
-        html += '<select id="ckFiltroDia" class="input" style="max-width:280px;margin-bottom:8px" onchange="renderizarAptos()"><option value="">Todos os dias</option>';
+        html += '<select id="ckFiltroDia" class="input" style="max-width:280px" onchange="buscarAptos()"><option value="">Todos os dias</option>';
         d.porDia.forEach(function(dia){
           var dataFmt = dia.data ? new Date(dia.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}) : '';
           var label = dia.titulo+' — '+dataFmt;
@@ -1689,6 +1691,7 @@ function carregarRelatorioCheckout(){
         });
         html += '</select>';
       }
+      html += '</div>';
       html += '<div id="ckAptosWrap"></div>';
 
       // NÃO COMPARECEU
@@ -1715,19 +1718,57 @@ function carregarRelatorioCheckout(){
     .catch(function(e){ rel.innerHTML = '<span style="color:#991b1b">Erro: '+e.message+'</span>'; });
 }
 function escHtml(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+
+// Paginação genérica (25/página) — pedido do usuário 17/08/2026: check-out e avaliação
+// acumulam nomes rápido (evento de vários dias), a lista ficava enorme e cansativa de rolar/
+// procurar depois de encerrar o check-out de cada dia. onclickPrefix já vem com tudo que falta
+// antes do número da página no onclick (ex: "irParaPaginaAptos(" ou "irParaPaginaAval(2,").
+function paginacaoBotoesHtml(paginaAtual, totalItens, porPagina, onclickPrefix){
+  var totalP = Math.ceil(totalItens / porPagina) || 1;
+  if(totalP <= 1) return '';
+  var bs = 'display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 7px;border-radius:3px;border:1px solid var(--borda);background:var(--card);color:var(--texto2);font-size:11px;font-weight:600;cursor:pointer;';
+  var ba = 'display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:28px;padding:0 7px;border-radius:3px;border:1px solid var(--cor-primaria);background:var(--cor-primaria);color:#fff;font-size:11px;font-weight:700;cursor:pointer;';
+  var btn = function(p, label, ativo, desativado){ return '<button onclick="'+onclickPrefix+p+')" style="'+(ativo?ba:bs)+'" '+(desativado?'disabled':'')+'>'+label+'</button>'; };
+  var h = '<div style="display:flex;gap:4px;align-items:center;margin-top:10px;flex-wrap:wrap">';
+  h += btn(paginaAtual-1, '&#8592;', false, paginaAtual<=1);
+  var start = Math.max(1, paginaAtual-2), end = Math.min(totalP, start+4);
+  if (end-start<4) start = Math.max(1, end-4);
+  if (start>1) { h += btn(1,'1',false,false); if (start>2) h += '<span style="padding:0 4px;color:var(--texto2)">...</span>'; }
+  for (var p=start; p<=end; p++) h += btn(p, String(p), paginaAtual===p, false);
+  if (end<totalP) { if (end<totalP-1) h += '<span style="padding:0 4px;color:var(--texto2)">...</span>'; h += btn(totalP,String(totalP),false,false); }
+  h += btn(paginaAtual+1, '&#8594;', false, paginaAtual>=totalP);
+  h += '</div>';
+  return h;
+}
+
 var _ckAptos = [];
+var _ckPagina = 1;
+var CK_POR_PAGINA = 25;
+function buscarAptos(){ _ckPagina = 1; renderizarAptos(); }
+function irParaPaginaAptos(n){ _ckPagina = n; renderizarAptos(); }
 // Cada dia vira um "chip" com seu próprio × — pedido do usuário 17/08/2026 (4ª rodada): remover
 // tinha que ser por dia específico, não apagar de uma vez todos os check-outs da pessoa.
 function renderizarAptos(){
   var wrap = document.getElementById('ckAptosWrap');
   if(!wrap) return;
   var sel = document.getElementById('ckFiltroDia');
-  var filtro = sel ? sel.value : '';
-  var lista = filtro ? _ckAptos.filter(function(a){ return (a.dias||[]).some(function(d){ return d.label === filtro; }); }) : _ckAptos;
-  if(!lista.length){ wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">Ninguém apto '+(filtro?'nesse dia.':'ainda.')+'</div>'; return; }
-  var html = '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Nome</th><th style="text-align:left">Email</th><th>Tipo</th><th style="text-align:left">Dia(s) — × desfaz só aquele dia</th></tr></thead><tbody>';
-  lista.forEach(function(a){
-    var diasDaLinha = filtro ? (a.dias||[]).filter(function(d){ return d.label === filtro; }) : (a.dias||[]);
+  var filtroDia = sel ? sel.value : '';
+  var buscaEl = document.getElementById('ckBuscaNome');
+  var busca = buscaEl ? buscaEl.value.trim().toLowerCase() : '';
+  var lista = _ckAptos.filter(function(a){
+    if(filtroDia && !(a.dias||[]).some(function(d){ return d.label === filtroDia; })) return false;
+    if(busca && (a.nome||'').toLowerCase().indexOf(busca) < 0 && (a.email||'').toLowerCase().indexOf(busca) < 0) return false;
+    return true;
+  });
+  if(!lista.length){ wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">Ninguém apto '+((filtroDia||busca)?'com esse filtro.':'ainda.')+'</div>'; return; }
+  var totalP = Math.ceil(lista.length / CK_POR_PAGINA) || 1;
+  if(_ckPagina > totalP) _ckPagina = totalP;
+  var ini = (_ckPagina-1)*CK_POR_PAGINA, fim = ini+CK_POR_PAGINA;
+  var pagina = lista.slice(ini, fim);
+  var html = '<div style="font-size:11px;color:var(--texto2);margin-bottom:6px">Exibindo '+(ini+1)+'–'+Math.min(fim,lista.length)+' de '+lista.length+'</div>';
+  html += '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Nome</th><th style="text-align:left">Email</th><th>Tipo</th><th style="text-align:left">Dia(s) — × desfaz só aquele dia</th></tr></thead><tbody>';
+  pagina.forEach(function(a){
+    var diasDaLinha = filtroDia ? (a.dias||[]).filter(function(d){ return d.label === filtroDia; }) : (a.dias||[]);
     var chips = diasDaLinha.map(function(d){
       var diaArg = d.programacao_id === null ? 'null' : d.programacao_id;
       return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--fundo);border:1px solid var(--borda);border-radius:12px;padding:2px 4px 2px 9px;margin:2px 4px 2px 0;font-size:11px">'
@@ -1737,6 +1778,7 @@ function renderizarAptos(){
     html += '<tr><td>'+toTitleCase(a.nome)+'</td><td>'+a.email+'</td><td style="text-align:center">'+(a.isento?'Isento':'Pago')+'</td><td>'+chips+'</td></tr>';
   });
   html += '</tbody></table>';
+  html += paginacaoBotoesHtml(_ckPagina, lista.length, CK_POR_PAGINA, 'irParaPaginaAptos(');
   wrap.innerHTML = html;
 }
 var _avalCharts = {};
@@ -1771,7 +1813,7 @@ function renderizarAvaliacao(perguntas, avaliacaoPorDia){
       dia.sugestoes.forEach(function(s){ html += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 12px;font-size:12px;color:#374151">'+escHtml(s)+'</div>'; });
       html += '</div>';
     }
-    html += '<input type="text" id="avalFiltro_'+di+'" class="input" placeholder="Filtrar por nome, e-mail ou sugestão..." style="margin-bottom:8px;font-size:13px" oninput="filtrarAvaliacoes('+di+')">';
+    html += '<input type="text" id="avalFiltro_'+di+'" class="input" placeholder="Filtrar por nome, e-mail ou sugestão..." style="margin-bottom:8px;font-size:13px" oninput="buscarAvaliacoes('+di+')">';
     html += '<div id="avalTabelaWrap_'+di+'" style="overflow-x:auto"></div>';
     html += '</div>';
   });
@@ -1792,6 +1834,10 @@ function renderizarAvaliacao(perguntas, avaliacaoPorDia){
     filtrarAvaliacoes(di);
   });
 }
+var _avalPaginas = {}; // di -> página atual
+var AVAL_POR_PAGINA = 25;
+function buscarAvaliacoes(di){ _avalPaginas[di] = 1; filtrarAvaliacoes(di); }
+function irParaPaginaAval(di, n){ _avalPaginas[di] = n; filtrarAvaliacoes(di); }
 function filtrarAvaliacoes(di){
   var wrap = document.getElementById('avalTabelaWrap_'+di);
   var dia = _avalDados[di];
@@ -1801,16 +1847,24 @@ function filtrarAvaliacoes(di){
     if(!q) return true;
     return (r.nome||'').toLowerCase().includes(q) || (r.email||'').toLowerCase().includes(q) || (r.sugestao||'').toLowerCase().includes(q);
   });
-  var html = '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Nome</th><th style="text-align:left">Email</th>';
+  var paginaAtual = _avalPaginas[di] || 1;
+  var totalP = Math.ceil(filtradas.length / AVAL_POR_PAGINA) || 1;
+  if(paginaAtual > totalP) paginaAtual = totalP;
+  _avalPaginas[di] = paginaAtual;
+  var ini = (paginaAtual-1)*AVAL_POR_PAGINA, fim = ini+AVAL_POR_PAGINA;
+  var pagina = filtradas.slice(ini, fim);
+  var html = '<div style="font-size:11px;color:var(--texto2);margin-bottom:6px">Exibindo '+(filtradas.length?(ini+1):0)+'–'+Math.min(fim,filtradas.length)+' de '+filtradas.length+'</div>';
+  html += '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Nome</th><th style="text-align:left">Email</th>';
   _avalPerguntas.forEach(function(p){ html += '<th>'+escHtml(p.length > 24 ? p.slice(0,24)+'…' : p)+'</th>'; });
   html += '<th style="text-align:left">Sugestão</th></tr></thead><tbody>';
   if(!filtradas.length){ html += '<tr><td colspan="'+(3+_avalPerguntas.length)+'" style="text-align:center;color:#94a3b8;padding:12px">Nenhuma resposta encontrada.</td></tr>'; }
-  filtradas.forEach(function(r){
+  pagina.forEach(function(r){
     html += '<tr><td>'+escHtml(toTitleCase(r.nome||''))+'</td><td>'+escHtml(r.email||'')+'</td>';
     r.notas.forEach(function(n){ html += '<td style="text-align:center">'+n+'</td>'; });
     html += '<td>'+escHtml(r.sugestao||'')+'</td></tr>';
   });
   html += '</tbody></table>';
+  html += paginacaoBotoesHtml(paginaAtual, filtradas.length, AVAL_POR_PAGINA, 'irParaPaginaAval('+di+',');
   wrap.innerHTML = html;
 }
 function showTab(id, btn) {
