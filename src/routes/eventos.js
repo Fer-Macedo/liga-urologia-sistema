@@ -196,7 +196,11 @@ router.get('/eventos/:id', requireAuth, requirePermissao('eventos'), async (req,
   const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem',[req.params.id]);
   const cuponsR = await query('SELECT ec.*, ec.criado_em AS cupom_criado_em, ei.nome AS usado_nome, ei.criado_em AS usado_em, COALESCE(l.nome, d.nome, mb.nome) AS dono_nome FROM evento_cupons ec LEFT JOIN evento_inscricoes ei ON ei.id = ec.usado_por_inscricao_id LEFT JOIN ligantes l ON ec.ligante_id = l.id LEFT JOIN diretivos d ON ec.diretivo_id = d.id LEFT JOIN membros mb ON ec.membro_id = mb.id WHERE ec.evento_id=$1 ORDER BY ec.criado_em DESC',[req.params.id]);
   const prefixoCupomEvento = prefixoDominanteCupons(cuponsR.rows.filter(c => c.ligante_id || c.diretivo_id).map(c => c.codigo)) || 'LAURO';
-  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows, cupons: cuponsR.rows, prefixoCupomEvento, perguntasAvaliacaoAtuais: perguntasAvaliacaoDoEvento(evR.rows[0]), calcularLiquidoEvento, formatarNome });
+  // Pedido do usuário 18/08/2026: antes de clicar em "Enviar links de acesso" não dava pra saber
+  // qual dia seria enviado — resolve o mesmo dia que a página /live e o e-mail usam, pra mostrar
+  // isso explícito no painel ANTES do clique, não só depois.
+  const diaAtualEnvioLive = await diaAtualParaEnvioLive(req.params.id);
+  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows, cupons: cuponsR.rows, prefixoCupomEvento, perguntasAvaliacaoAtuais: perguntasAvaliacaoDoEvento(evR.rows[0]), calcularLiquidoEvento, formatarNome, diaAtualEnvioLive });
 });
 
 router.post('/eventos/:id/editar', requireAuth, requirePermissao('eventos'), async (req, res) => {
@@ -1799,11 +1803,11 @@ router.post('/live/:token/sair', async (req, res) => {
 // o e-mail/WhatsApp do link não dizia qual dia era, virando "Segunda Jornada" solto na caixa de
 // entrada, sem dar pra saber se era do dia 1, 2, 3 ou 4 nem qual era o tema daquela aula.
 async function diaAtualParaEnvioLive(eventoId) {
-  const { dia } = await resolverDiaTransmissao(eventoId);
-  if (!dia) return { dia: null, numero: null, total: 0 };
+  const { dia, hoje } = await resolverDiaTransmissao(eventoId);
+  if (!dia) return { dia: null, numero: null, total: 0, hoje: false };
   const diasR = await query('SELECT id FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL ORDER BY data', [eventoId]);
   const idx = diasR.rows.findIndex(d => d.id === dia.id);
-  return { dia, numero: idx >= 0 ? idx + 1 : null, total: diasR.rows.length };
+  return { dia, numero: idx >= 0 ? idx + 1 : null, total: diasR.rows.length, hoje };
 }
 
 // Gera (ou reaproveita) o token de presença online de UMA pessoa e manda o link por WhatsApp/
