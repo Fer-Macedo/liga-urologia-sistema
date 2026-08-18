@@ -247,7 +247,7 @@
             <div class="post-card" style="padding:10px;margin-bottom:8px">
               <div style="font-weight:600;font-size:13px"><%=p.titulo%></div>
               <div style="font-size:11px;color:var(--texto2);margin-top:3px">
-                <%=p.agendado_para?new Date(p.agendado_para).toLocaleString('pt-BR'):'&#8212;'%>
+                <%=p.agendado_para?new Date(p.agendado_para).toLocaleString('pt-BR'):'—'%>
               </div>
               <div style="margin-top:6px;display:flex;gap:4px">
                 <%(p.redes||[]).forEach(r=>{%>

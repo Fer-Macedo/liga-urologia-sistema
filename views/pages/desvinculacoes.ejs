@@ -96,7 +96,7 @@
           <%desvinculacoes.forEach(d=>{%>
           <tr class="desvinc-row">
             <td>
-              <div class="ligante-nome"><%=d.ligante_nome||'&#8212;'%></div>
+              <div class="ligante-nome"><%=d.ligante_nome||'—'%></div>
               <div class="ligante-email"><%=d.ligante_email||''%></div>
             </td>
             <td><span class="badge-tipo"><%=d.tipo_membro%></span></td>
@@ -113,8 +113,8 @@
               <%}else if(d.status==='enviado'){%><span class="badge-status badge-enviado">Enviado</span>
               <%}else{%><span class="badge-status badge-pendente">Pendente</span><%}%>
             </td>
-            <td style="color:var(--texto2);font-size:12px"><%=d.enviado_em?new Date(d.enviado_em).toLocaleDateString('pt-BR'):'&#8212;'%></td>
-            <td style="color:var(--texto2);font-size:12px"><%=d.assinado_em?new Date(d.assinado_em).toLocaleDateString('pt-BR'):'&#8212;'%></td>
+            <td style="color:var(--texto2);font-size:12px"><%=d.enviado_em?new Date(d.enviado_em).toLocaleDateString('pt-BR'):'—'%></td>
+            <td style="color:var(--texto2);font-size:12px"><%=d.assinado_em?new Date(d.assinado_em).toLocaleDateString('pt-BR'):'—'%></td>
             <td><div style="display:flex;gap:5px;flex-wrap:wrap">
               <button onclick="editarDesvinc(<%=d.id%>,<%=d.num_advertencias||3%>)" class="btn-xs azul">Editar</button>
               <a href="/desvinculacoes/<%=d.id%>/visualizar" target="_blank" class="btn-xs">Ver</a>

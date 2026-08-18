@@ -208,8 +208,8 @@
               <%}else if(d.status==='assinado'){%><span class="badge-status badge-assinado">Assinado</span>
               <%}else{%><span class="badge-status badge-concluido">Concluido</span><%}%>
             </td>
-            <td style="color:var(--texto2);font-size:12px"><%=d.enviado_em?new Date(d.enviado_em).toLocaleDateString('pt-BR'):'&#8212;'%></td>
-            <td style="color:var(--texto2);font-size:12px"><%=d.assinado_em?new Date(d.assinado_em).toLocaleDateString('pt-BR'):'&#8212;'%></td>
+            <td style="color:var(--texto2);font-size:12px"><%=d.enviado_em?new Date(d.enviado_em).toLocaleDateString('pt-BR'):'—'%></td>
+            <td style="color:var(--texto2);font-size:12px"><%=d.assinado_em?new Date(d.assinado_em).toLocaleDateString('pt-BR'):'—'%></td>
             <td><div style="display:flex;gap:5px;flex-wrap:wrap">
               <a href="/desligamentos/<%=d.id%>/visualizar" target="_blank" class="btn-xs">Ver</a>
               <a href="/desligamentos/<%=d.id%>/imprimir" target="_blank" class="btn-xs roxo">Imprimir</a>
