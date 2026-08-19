@@ -139,6 +139,14 @@ router.get('/sorteios/:id', requireAuth, requirePermissao('sorteios'), async (re
 
     // Buscar participantes conforme o tipo
     let participantes = [];
+    // 19/08/2026: pedido do usuário — sorteio EXTERNO (link público, sem precisar estar
+    // cadastrado no sistema) captura email/Instagram/WhatsApp no formulário de inscrição, mas
+    // essa tela só guardava o NOME até aqui (participantes = r.rows.map(p=>p.nome), linha
+    // abaixo) — o contato do ganhador nunca aparecia em lugar nenhum pro admin conseguir
+    // chamar a pessoa depois do sorteio. contatosExternos guarda os dados completos à parte,
+    // por nome, sem mexer em "participantes" (usado pela animação/roleta do sorteio, que
+    // continua recebendo só os nomes, como sempre funcionou).
+    let contatosExternos = {};
     if(sorteio.tipo === 'interno'){
       if(sorteio.publico_alvo === 'ligantes'){
         const r = await query("SELECT nome FROM membros WHERE ativo=1 ORDER BY nome");
@@ -167,6 +175,7 @@ router.get('/sorteios/:id', requireAuth, requirePermissao('sorteios'), async (re
     } else {
       const r = await query('SELECT * FROM sorteio_participantes WHERE sorteio_id=$1 ORDER BY criado_em', [sorteio.id]);
       participantes = r.rows.map(p=>p.nome);
+      r.rows.forEach(p => { contatosExternos[p.nome] = { email: p.email, instagram: p.instagram, whatsapp: p.whatsapp }; });
     }
 
     let origemNome = null;
@@ -183,7 +192,7 @@ router.get('/sorteios/:id', requireAuth, requirePermissao('sorteios'), async (re
     res.render('pages/sorteio-detalhe', {
       config: await getConfig(), usuario: req.session.usuario,
       paginaAtual: 'sorteios',
-      sorteio, participantes, ganhadores, origemNome,
+      sorteio, participantes, contatosExternos, ganhadores, origemNome,
       msg: req.flash('msg'), erro: req.flash('erro')
     });
   } catch(e) { res.send('ERRO: ' + e.message); }

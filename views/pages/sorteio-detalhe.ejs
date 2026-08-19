@@ -101,6 +101,23 @@
         <% if(msg&&msg.length){ %><div class="flash-ok"><%= msg[0] %></div><% } %>
         <% if(erro&&erro.length){ %><div class="flash-err"><%= erro[0] %></div><% } %>
 
+        <%
+        // 19/08/2026: pedido do usuário — sorteio externo captura email/Instagram/WhatsApp no
+        // formulário público, mas isso nunca aparecia em lugar nenhum pra falar com o ganhador
+        // depois. Junta os 3 campos por nome (só existe algo em contatosExternos pra sorteio
+        // tipo "externo" — pra "interno" fica {} e essa função sempre devolve vazio, sem mudar
+        // nada da tela de sorteio interno).
+        function contatoTexto(nome){
+          var c = contatosExternos && contatosExternos[nome];
+          if(!c) return '';
+          var partes = [];
+          if(c.email) partes.push(c.email);
+          if(c.instagram) partes.push('@'+String(c.instagram).replace(/^@/,''));
+          if(c.whatsapp) partes.push(c.whatsapp);
+          return partes.join(' · ');
+        }
+        %>
+
         <div class="sorteio-layout">
 
           <!-- ARENA PRINCIPAL -->
@@ -117,7 +134,8 @@
                   <div class="resultado-registrado">
                     <div class="trophy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></div>
                     <h3><%= sorteio.ganhador_nome %></h3>
-                    <% if(sorteio.ganhador_contato){ %><p style="font-size:13px;color:#4a7c2a"><%= sorteio.ganhador_contato %></p><% } %>
+                    <% ganhadores.forEach(function(g){ var ct = contatoTexto(g); if(ct){ %><p style="font-size:13px;color:#4a7c2a"><%= ganhadores.length > 1 ? g + ': ' : '' %><%= ct %></p><% } }) %>
+                    <% if(sorteio.ganhador_contato){ %><p style="font-size:12px;color:#94a3b8">Observação: <%= sorteio.ganhador_contato %></p><% } %>
                     <% if(sorteio.brinde){ %><span class="brinde-tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> <%= sorteio.brinde %></span><% } %>
                   </div>
                 </div>
@@ -151,10 +169,13 @@
                 <!-- GANHADORES (se múltiplos) -->
                 <% if(ganhadores && ganhadores.length > 1){ %>
                 <div class="ganhadores-lista">
-                  <% ganhadores.forEach((g,i) => { %>
+                  <% ganhadores.forEach((g,i) => { var ct = contatoTexto(g); %>
                   <div class="ganhador-item">
                     <div class="ganhador-num"><%= i+1 %></div>
-                    <div class="ganhador-nome"><%= g %></div>
+                    <div>
+                      <div class="ganhador-nome"><%= g %></div>
+                      <% if(ct){ %><div style="font-size:12px;color:#6b7280"><%= ct %></div><% } %>
+                    </div>
                   </div>
                   <% }) %>
                 </div>
@@ -196,10 +217,13 @@
                   <p style="font-size:13px;color:#9ca3af;text-align:center;padding:12px 0">Nenhum participante</p>
                 <% } else { %>
                 <div class="participantes-lista">
-                  <% participantes.forEach((p, i) => { %>
+                  <% participantes.forEach((p, i) => { var ctp = contatoTexto(p); %>
                   <div class="participante-item <%= sorteio.ganhador_nome===p?'participante-ganhador':'' %>">
                     <div class="participante-avatar"><%= p.charAt(0).toUpperCase() %></div>
-                    <span class="participante-nome"><%= p %></span>
+                    <div class="participante-nome">
+                      <div><%= p %></div>
+                      <% if(ctp){ %><div style="font-size:11px;color:#9ca3af"><%= ctp %></div><% } %>
+                    </div>
                     <% if(sorteio.ganhador_nome===p){ %><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></span><% } %>
                   </div>
                   <% }) %>
@@ -216,6 +240,9 @@
                 Validar Ganhador — <%= sorteio.ganhador_nome %>
               </div>
               <div class="info-card-body">
+                <% ganhadores.forEach(function(g){ var ct = contatoTexto(g); if(ct){ %>
+                <div style="font-size:12px;color:#4a7c2a;background:#f0f7eb;border-radius:8px;padding:8px 12px;margin-bottom:12px"><strong><%= g %>:</strong> <%= ct %></div>
+                <% } }) %>
                 <form method="POST" action="/sorteios/<%= sorteio.id %>/validar">
                   <div class="validacao-form">
                     <% const tarefas = sorteio.tarefas ? JSON.parse(sorteio.tarefas) : []; %>

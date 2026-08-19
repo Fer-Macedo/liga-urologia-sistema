@@ -66,6 +66,38 @@ test('GET /sorteios/:id: publico_alvo=pss resolve participantes de ps_candidatos
   assert.strictEqual(res._locals.origemNome, 'PSS 2026.2');
 });
 
+// 19/08/2026: pedido do usuário — sorteio EXTERNO (link público) captura email/Instagram/
+// WhatsApp no formulário de inscrição, mas isso nunca chegava na tela pro admin conseguir falar
+// com o ganhador depois. contatosExternos leva esses 3 campos até a view, por nome, sem alterar
+// "participantes" (continua só os nomes — é o que a roleta/animação do sorteio usa).
+test('GET /sorteios/:id: sorteio EXTERNO leva email/Instagram/WhatsApp de cada participante pra view (contatosExternos)', async () => {
+  const { rotas } = montar({
+    sorteio: { id: 7, tipo: 'externo', publico_alvo: null, origem_tipo: null, origem_id: null, ganhador_nome: null },
+    mock: (sql) => {
+      if (/SELECT \* FROM sorteio_participantes WHERE sorteio_id=\$1/.test(sql)) return { rows: [
+        { id: 1, nome: 'Ana Externa', email: 'ana@x.com', instagram: '@ana.ext', whatsapp: '+595994316286' },
+        { id: 2, nome: 'Bruno Externo', email: 'bruno@x.com', instagram: 'bruno.ext', whatsapp: '+595994316287' }
+      ] };
+      return undefined;
+    }
+  });
+  const res = resRender();
+  await rotas['GET /sorteios/:id'](reqBase({ params: { id: '7' } }), res);
+  assert.deepStrictEqual(res._locals.participantes, ['Ana Externa', 'Bruno Externo'], 'participantes continua só nomes (usado pela roleta)');
+  assert.deepStrictEqual(res._locals.contatosExternos['Ana Externa'], { email: 'ana@x.com', instagram: '@ana.ext', whatsapp: '+595994316286' });
+  assert.deepStrictEqual(res._locals.contatosExternos['Bruno Externo'], { email: 'bruno@x.com', instagram: 'bruno.ext', whatsapp: '+595994316287' });
+});
+
+test('GET /sorteios/:id: sorteio INTERNO não tem contatosExternos (fica vazio — só externo captura esses campos)', async () => {
+  const { rotas } = montar({
+    sorteio: { id: 5, tipo: 'interno', publico_alvo: 'evento', origem_tipo: 'evento', origem_id: 5, ganhador_nome: null },
+    eventoInscritos: [{ nome: 'Ana Confirmada' }]
+  });
+  const res = resRender();
+  await rotas['GET /sorteios/:id'](reqBase({ params: { id: '5' } }), res);
+  assert.deepStrictEqual(res._locals.contatosExternos, {});
+});
+
 test('GET /sorteios/:id: evento sem ninguém concluído ainda — lista vazia, não quebra', async () => {
   const { rotas } = montar({
     sorteio: { id: 5, tipo: 'interno', publico_alvo: 'evento', origem_tipo: 'evento', origem_id: 5, ganhador_nome: null },
