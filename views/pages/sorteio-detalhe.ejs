@@ -37,6 +37,11 @@
     .btn-sortear:disabled { opacity: .5; cursor: not-allowed; transform: none; }
     .btn-novo-sorteio { background: #f0f7eb; color: var(--cor-primaria); border: 1.5px solid var(--cor-primaria); border-radius: 10px; padding: 10px 22px; font-size: 14px; font-weight: 600; cursor: pointer; }
     .btn-novo-sorteio:hover { background: var(--cor-primaria); color: #fff; }
+    /* 19/08/2026 (3ª rodada): pedido do usuário — sortear e confirmar UM ganhador por vez (não
+       os N prêmios juntos), pra dar pra pular pra próxima pessoa quando quem foi chamado não
+       atende/não está presente, sem deixar nome errado registrado. */
+    .btn-confirmar-ganhador { background: var(--cor-primaria); color: #fff; border: none; border-radius: 12px; padding: 14px 28px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+    .btn-confirmar-ganhador:hover { filter: brightness(.9); }
 
     /* CONFETES */
     .confete { position: fixed; pointer-events: none; z-index: 9999; }
@@ -146,7 +151,7 @@
                 <div style="padding:32px 24px;text-align:center;">
                   <div class="resultado-registrado">
                     <div class="trophy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></div>
-                    <h3><%= sorteio.ganhador_nome %></h3>
+                    <h3><%= ganhadores.join(', ') %></h3>
                     <% ganhadores.forEach(function(g){ var ig = contatoInstagram(g); if(ig){ %><p style="font-size:17px;font-weight:700;color:#e1306c;margin:2px 0 6px"><%= ganhadores.length > 1 ? g + ': ' : '' %><%= ig %></p><% } }) %>
                     <% ganhadores.forEach(function(g){ var ct = contatoTexto(g); if(ct){ %><p style="font-size:13px;color:#4a7c2a"><%= ganhadores.length > 1 ? g + ': ' : '' %><%= ct %></p><% } }) %>
                     <% if(sorteio.ganhador_contato){ %><p style="font-size:12px;color:#94a3b8">Observação: <%= sorteio.ganhador_contato %></p><% } %>
@@ -155,17 +160,21 @@
                 </div>
               <% } else { %>
                 <!-- DISPLAY ANIMADO -->
+                <% var poolRestante = participantes.filter(function(p){ return ganhadores.indexOf(p) === -1; }); %>
                 <div class="sorteio-display">
+                  <% if(sorteio.qtd_ganhadores > 1 && sorteio.status !== 'sorteado'){ %>
+                  <div style="font-size:12px;font-weight:700;color:#6b7280;text-align:center;margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px">Prêmio <%= ganhadores.length + 1 %> de <%= sorteio.qtd_ganhadores %></div>
+                  <% } %>
                   <div class="sorteio-drum">
                     <div class="drum-label">Participante</div>
                     <div class="drum-nome" id="drumNome">
-                      <% if(sorteio.ganhador_nome){ %>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> <%= sorteio.ganhador_nome %>
+                      <% if(sorteio.status === 'sorteado' && sorteio.ganhador_nome){ %>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg> <%= ganhadores.join(', ') %>
                       <% } else { %>
                         Pronto para sortear...
                       <% } %>
                     </div>
-                    <% if(sorteio.ganhador_nome){ %>
+                    <% if(sorteio.status === 'sorteado' && sorteio.ganhador_nome){ %>
                     <div class="drum-instagram" id="drumInstagram">
                       <% var igDrum = contatoInstagram(ganhadores.length === 1 ? ganhadores[0] : ''); if(igDrum){ %><%= igDrum %><% } %>
                     </div>
@@ -175,20 +184,27 @@
                   </div>
 
                   <% if(sorteio.status !== 'sorteado'){ %>
-                    <button class="btn-sortear" id="btnSortear" onclick="iniciarSorteio()" <%= participantes.length === 0 ? 'disabled' : '' %>>
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-                      <%= participantes.length === 0 ? 'Sem participantes' : 'Sortear Agora!' %>
-                    </button>
+                    <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+                      <button class="btn-sortear" id="btnSortear" onclick="iniciarSorteio()" <%= poolRestante.length === 0 ? 'disabled' : '' %>>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+                        <%= poolRestante.length === 0 ? 'Sem participantes' : 'Sortear Agora!' %>
+                      </button>
+                      <div id="confirmacaoGanhador" style="display:none;gap:10px">
+                        <button type="button" class="btn-confirmar-ganhador" onclick="confirmarCandidato()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> Confirmar Ganhador</button>
+                        <button type="button" class="btn-novo-sorteio" onclick="sortearNovamente()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Não atendeu / Sortear de novo</button>
+                      </div>
+                    </div>
+                    <div style="font-size:11px;color:#94a3b8;margin-top:10px">Depois de girar, só confirme quando a pessoa realmente atender/estiver presente — senão sorteie de novo.</div>
                   <% } else { %>
                     <div style="text-align:center;margin-bottom:16px">
                       <div style="font-size:14px;color:#6b7280;margin-bottom:12px">Ganhador sorteado! Valide abaixo <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg></div>
-                      <button class="btn-novo-sorteio" onclick="confirmarAcao('Refazer o sorteio?', function(){ window.location='/sorteios/<%= sorteio.id %>/resetar' })"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refazer Sorteio</button>
+                      <button class="btn-novo-sorteio" onclick="confirmarAcao('Refazer o sorteio? Isso apaga os ganhadores já confirmados.', function(){ window.location='/sorteios/<%= sorteio.id %>/resetar' })"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refazer Sorteio</button>
                     </div>
                   <% } %>
                 </div>
 
-                <!-- GANHADORES (se múltiplos) -->
-                <% if(ganhadores && ganhadores.length > 1){ %>
+                <!-- GANHADORES JÁ CONFIRMADOS (sorteio com mais de 1 prêmio) -->
+                <% if(sorteio.qtd_ganhadores > 1 && ganhadores.length > 0){ %>
                 <div class="ganhadores-lista">
                   <% ganhadores.forEach((g,i) => { var ct = contatoTexto(g); %>
                   <div class="ganhador-item">
@@ -238,14 +254,14 @@
                   <p style="font-size:13px;color:#9ca3af;text-align:center;padding:12px 0">Nenhum participante</p>
                 <% } else { %>
                 <div class="participantes-lista">
-                  <% participantes.forEach((p, i) => { var ctp = contatoTexto(p); %>
-                  <div class="participante-item <%= sorteio.ganhador_nome===p?'participante-ganhador':'' %>">
+                  <% participantes.forEach((p, i) => { var ctp = contatoTexto(p); var jaGanhou = ganhadores.indexOf(p) !== -1; %>
+                  <div class="participante-item <%= jaGanhou?'participante-ganhador':'' %>">
                     <div class="participante-avatar"><%= p.charAt(0).toUpperCase() %></div>
                     <div class="participante-nome">
                       <div><%= p %></div>
                       <% if(ctp){ %><div style="font-size:11px;color:#9ca3af"><%= ctp %></div><% } %>
                     </div>
-                    <% if(sorteio.ganhador_nome===p){ %><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></span><% } %>
+                    <% if(jaGanhou){ %><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></span><% } %>
                   </div>
                   <% }) %>
                 </div>
@@ -253,12 +269,37 @@
               </div>
             </div>
 
+            <!-- REGISTRAR GANHADOR MANUALMENTE -->
+            <% if(sorteio.status !== 'sorteado'){ %>
+            <% var poolManual = participantes.filter(function(p){ return ganhadores.indexOf(p) === -1; }); %>
+            <div class="info-card">
+              <div class="info-card-head">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                Registrar Ganhador Manualmente
+              </div>
+              <div class="info-card-body">
+                <% if(poolManual.length === 0){ %>
+                  <p style="font-size:13px;color:#9ca3af;text-align:center;padding:8px 0">Nenhum participante disponível</p>
+                <% } else { %>
+                <form method="POST" action="/sorteios/<%= sorteio.id %>/confirmar-ganhador">
+                  <select name="nome" class="brinde-input" required>
+                    <option value="">Selecione quem realmente ganhou...</option>
+                    <% poolManual.forEach(function(p){ %><option value="<%= p %>"><%= p %></option><% }) %>
+                  </select>
+                  <button type="submit" class="btn-novo-sorteio" style="margin-top:10px;width:100%">Registrar como Ganhador</button>
+                </form>
+                <div style="font-size:11px;color:#94a3b8;margin-top:8px">Use quando o resultado ao vivo não bateu com o sorteio automático da roleta.</div>
+                <% } %>
+              </div>
+            </div>
+            <% } %>
+
             <!-- VALIDAÇÃO DO GANHADOR -->
             <% if(sorteio.status === 'sorteado' && !sorteio.validado){ %>
             <div class="info-card">
               <div class="info-card-head">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-                Validar Ganhador — <%= sorteio.ganhador_nome %>
+                Validar Ganhador — <%= ganhadores.join(', ') %>
               </div>
               <div class="info-card-body">
                 <% ganhadores.forEach(function(g){ var ct = contatoTexto(g); if(ct){ %>
@@ -341,38 +382,47 @@ function instagramDe(nome){
   return (c && c.instagram) ? '@'+String(c.instagram).replace(/^@/,'') : '';
 }
 const sorteioStatus = '<%= sorteio.status %>';
-const qtdGanhadores = <%= sorteio.qtd_ganhadores %>;
+// 19/08/2026 (3ª rodada): pedido do usuário — sortear e confirmar UM ganhador por vez, nunca os
+// N prêmios de uma vez (com ~500 pessoas era comum o 1º sorteado não atender/não estar presente,
+// e o sistema já tinha salvo o nome errado junto do certo). ganhadoresConfirmados vem do servidor
+// (já persistidos); participantesRestantes é a piscina de quem ainda pode ser sorteado pra esse
+// prêmio (exclui quem já ganhou outro prêmio deste sorteio).
+const ganhadoresConfirmados = <%- JSON.stringify(ganhadores).replace(/</g,"\\u003c") %>;
+const participantesRestantes = participantes.filter(p => !ganhadoresConfirmados.includes(p));
 let rodando = false;
-let ganhadores = [];
+let candidatoAtual = null;
 
 function iniciarSorteio(){
-  if(rodando || participantes.length === 0) return;
+  if(rodando || participantesRestantes.length === 0) return;
   rodando = true;
   document.getElementById('btnSortear').disabled = true;
+  const confirmacao = document.getElementById('confirmacaoGanhador');
+  if(confirmacao) confirmacao.style.display = 'none';
 
   const drum = document.getElementById('drumNome');
   const drumIg = document.getElementById('drumInstagram');
+  drum.classList.remove('ganhador');
   drum.classList.add('rolando');
 
   // Animação de rolagem
   let count = 0;
   const total = 100 + Math.floor(Math.random()*40);
   const interval = setInterval(() => {
-    const p = participantes[Math.floor(Math.random()*participantes.length)];
+    const p = participantesRestantes[Math.floor(Math.random()*participantesRestantes.length)];
     drum.textContent = p;
     if(drumIg) drumIg.textContent = instagramDe(p);
     count++;
     if(count >= total){
       clearInterval(interval);
-      finalizarSorteio();
+      pousarCandidato();
     }
   }, 60);
 }
 
-function finalizarSorteio(){
-  // Embaralhar e pegar ganhadores
-  const embaralhados = [...participantes].sort(()=>Math.random()-.5);
-  ganhadores = embaralhados.slice(0, qtdGanhadores);
+// Sorteia e MOSTRA um candidato, mas NÃO salva nada ainda — só depois de "Confirmar Ganhador"
+// (ou "Sortear de novo" se a pessoa não atender/não estiver presente).
+function pousarCandidato(){
+  candidatoAtual = participantesRestantes[Math.floor(Math.random()*participantesRestantes.length)];
 
   const drum = document.getElementById('drumNome');
   const drumIg = document.getElementById('drumInstagram');
@@ -382,24 +432,35 @@ function finalizarSorteio(){
   // monta com textContent num nó separado pra não abrir XSS se alguém cadastrar um nome com
   // HTML/script (achado ao mexer nesse trecho — o troféu em SVG continua fixo/seguro).
   drum.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:8px"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg><span id="drumNomeTexto"></span>';
-  document.getElementById('drumNomeTexto').textContent = ganhadores[0];
-  if(drumIg) drumIg.textContent = ganhadores.length === 1 ? instagramDe(ganhadores[0]) : '';
+  document.getElementById('drumNomeTexto').textContent = candidatoAtual;
+  if(drumIg) drumIg.textContent = instagramDe(candidatoAtual);
 
-  // Confetes!
   lancarConfetes();
+  rodando = false;
 
-  // Salvar no servidor
-  setTimeout(() => {
-    const f = document.createElement('form');
-    f.method = 'POST';
-    f.action = '/sorteios/<%= sorteio.id %>/salvar-resultado';
-    const inp = document.createElement('input');
-    inp.name = 'ganhadores';
-    inp.value = JSON.stringify(ganhadores);
-    f.appendChild(inp);
-    document.body.appendChild(f);
-    f.submit();
-  }, 3000);
+  document.getElementById('btnSortear').style.display = 'none';
+  const confirmacao = document.getElementById('confirmacaoGanhador');
+  if(confirmacao) confirmacao.style.display = 'flex';
+}
+
+function sortearNovamente(){
+  document.getElementById('btnSortear').style.display = 'flex';
+  document.getElementById('btnSortear').disabled = false;
+  iniciarSorteio();
+}
+
+// Só agora salva no servidor — um nome por vez (ver POST /sorteios/:id/confirmar-ganhador).
+function confirmarCandidato(){
+  if(!candidatoAtual) return;
+  const f = document.createElement('form');
+  f.method = 'POST';
+  f.action = '/sorteios/<%= sorteio.id %>/confirmar-ganhador';
+  const inp = document.createElement('input');
+  inp.name = 'nome';
+  inp.value = candidatoAtual;
+  f.appendChild(inp);
+  document.body.appendChild(f);
+  f.submit();
 }
 
 function lancarConfetes(){

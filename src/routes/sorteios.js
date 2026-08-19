@@ -97,6 +97,42 @@ function resolverCamposSorteio(body) {
   return { tipo: tipoFinal, nome, descricao: descricao||null, qtdGanhadores: parseInt(qtd_ganhadores)||1, publicoAlvo: publico_alvo||null, partManual, instagramLiga: instagram_liga||null, tarefasJson, origemTipo, origemId };
 }
 
+// Resolve a lista de participantes de um sorteio conforme tipo/publico_alvo — usado tanto pra
+// exibir a tela (GET /sorteios/:id) quanto pra validar, no confirmar-ganhador, que um nome
+// escolhido (sorteado ou manual) realmente pertence a esse sorteio.
+async function buscarParticipantesSorteio(sorteio) {
+  let participantes = [];
+  let contatosExternos = {};
+  if (sorteio.tipo === 'interno') {
+    if (sorteio.publico_alvo === 'ligantes') {
+      const r = await query("SELECT nome FROM membros WHERE ativo=1 ORDER BY nome");
+      participantes = r.rows.map(r => r.nome);
+    } else if (sorteio.publico_alvo === 'diretivos') {
+      const r = await query("SELECT nome FROM diretivos WHERE ativo=1 ORDER BY nome");
+      participantes = r.rows.map(r => r.nome);
+    } else if (sorteio.publico_alvo === 'ambos') {
+      const [lig, dir] = await Promise.all([
+        query("SELECT nome FROM membros WHERE ativo=1 ORDER BY nome"),
+        query("SELECT nome FROM diretivos WHERE ativo=1 ORDER BY nome")
+      ]);
+      participantes = [...lig.rows.map(r => r.nome), ...dir.rows.map(r => r.nome)];
+    } else if ((sorteio.publico_alvo === 'manual' || sorteio.publico_alvo === 'selecao') && sorteio.participantes_manual) {
+      participantes = JSON.parse(sorteio.participantes_manual);
+    } else if (sorteio.publico_alvo === 'evento' && sorteio.origem_id) {
+      const r = await query("SELECT nome FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado' ORDER BY nome", [sorteio.origem_id]);
+      participantes = r.rows.map(r => r.nome);
+    } else if (sorteio.publico_alvo === 'pss' && sorteio.origem_id) {
+      const r = await query("SELECT nome FROM ps_candidatos WHERE processo_id=$1 AND status='confirmado' ORDER BY nome", [sorteio.origem_id]);
+      participantes = r.rows.map(r => r.nome);
+    }
+  } else {
+    const r = await query('SELECT * FROM sorteio_participantes WHERE sorteio_id=$1 ORDER BY criado_em', [sorteio.id]);
+    participantes = r.rows.map(p => p.nome);
+    r.rows.forEach(p => { contatosExternos[p.nome] = { email: p.email, instagram: p.instagram, whatsapp: p.whatsapp }; });
+  }
+  return { participantes, contatosExternos };
+}
+
 // Criar sorteio
 router.post('/sorteios/criar', requireAuth, requirePermissao('sorteios'), async (req, res) => {
   try {
@@ -114,10 +150,14 @@ router.post('/sorteios/criar', requireAuth, requirePermissao('sorteios'), async 
 // Editar sorteio (só antes de sortear — depois de ter ganhador, usar "Resetar" primeiro)
 router.post('/sorteios/:id/editar', requireAuth, requirePermissao('sorteios'), async (req, res) => {
   try {
-    const atual = await query('SELECT status FROM sorteios WHERE id=$1', [req.params.id]);
+    const atual = await query('SELECT status, ganhador_nome FROM sorteios WHERE id=$1', [req.params.id]);
     if (!atual.rows.length) { req.flash('erro', ['Sorteio não encontrado.']); return res.redirect('/sorteios'); }
-    if (atual.rows[0].status === 'sorteado') {
-      req.flash('erro', ['Este sorteio já foi realizado — resete antes de editar.']);
+    // ganhador_nome pode estar preenchido mesmo com status ainda 'rascunho' — sorteio com mais
+    // de 1 prêmio, em andamento, com alguns já confirmados e outros por sortear (ver
+    // confirmar-ganhador). Editar nesse meio-tempo (trocar publico_alvo, qtd_ganhadores etc.)
+    // corromperia o progresso — bloqueia igual já bloqueava pra status='sorteado'.
+    if (atual.rows[0].status === 'sorteado' || atual.rows[0].ganhador_nome) {
+      req.flash('erro', ['Este sorteio já tem ganhador sorteado — resete antes de editar.']);
       return res.redirect('/sorteios/' + req.params.id);
     }
     const c = resolverCamposSorteio(req.body);
@@ -137,46 +177,7 @@ router.get('/sorteios/:id', requireAuth, requirePermissao('sorteios'), async (re
     if(!s.rows.length) return res.redirect('/sorteios');
     const sorteio = s.rows[0];
 
-    // Buscar participantes conforme o tipo
-    let participantes = [];
-    // 19/08/2026: pedido do usuário — sorteio EXTERNO (link público, sem precisar estar
-    // cadastrado no sistema) captura email/Instagram/WhatsApp no formulário de inscrição, mas
-    // essa tela só guardava o NOME até aqui (participantes = r.rows.map(p=>p.nome), linha
-    // abaixo) — o contato do ganhador nunca aparecia em lugar nenhum pro admin conseguir
-    // chamar a pessoa depois do sorteio. contatosExternos guarda os dados completos à parte,
-    // por nome, sem mexer em "participantes" (usado pela animação/roleta do sorteio, que
-    // continua recebendo só os nomes, como sempre funcionou).
-    let contatosExternos = {};
-    if(sorteio.tipo === 'interno'){
-      if(sorteio.publico_alvo === 'ligantes'){
-        const r = await query("SELECT nome FROM membros WHERE ativo=1 ORDER BY nome");
-        participantes = r.rows.map(r=>r.nome);
-      } else if(sorteio.publico_alvo === 'diretivos'){
-        const r = await query("SELECT nome FROM diretivos WHERE ativo=1 ORDER BY nome");
-        participantes = r.rows.map(r=>r.nome);
-      } else if(sorteio.publico_alvo === 'ambos'){
-        const [lig, dir] = await Promise.all([
-          query("SELECT nome FROM membros WHERE ativo=1 ORDER BY nome"),
-          query("SELECT nome FROM diretivos WHERE ativo=1 ORDER BY nome")
-        ]);
-        participantes = [...lig.rows.map(r=>r.nome), ...dir.rows.map(r=>r.nome)];
-      } else if((sorteio.publico_alvo === 'manual' || sorteio.publico_alvo === 'selecao') && sorteio.participantes_manual){
-        participantes = JSON.parse(sorteio.participantes_manual);
-      } else if(sorteio.publico_alvo === 'evento' && sorteio.origem_id){
-        // Só quem CONCLUIU a inscrição (status='confirmado') — pendente não entra no sorteio.
-        // Resolvido na hora (não é uma lista fixa): quem concluir depois de criado o sorteio
-        // já entra automaticamente na próxima vez que a página for aberta.
-        const r = await query("SELECT nome FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado' ORDER BY nome", [sorteio.origem_id]);
-        participantes = r.rows.map(r=>r.nome);
-      } else if(sorteio.publico_alvo === 'pss' && sorteio.origem_id){
-        const r = await query("SELECT nome FROM ps_candidatos WHERE processo_id=$1 AND status='confirmado' ORDER BY nome", [sorteio.origem_id]);
-        participantes = r.rows.map(r=>r.nome);
-      }
-    } else {
-      const r = await query('SELECT * FROM sorteio_participantes WHERE sorteio_id=$1 ORDER BY criado_em', [sorteio.id]);
-      participantes = r.rows.map(p=>p.nome);
-      r.rows.forEach(p => { contatosExternos[p.nome] = { email: p.email, instagram: p.instagram, whatsapp: p.whatsapp }; });
-    }
+    const { participantes, contatosExternos } = await buscarParticipantesSorteio(sorteio);
 
     let origemNome = null;
     if(sorteio.origem_tipo === 'evento' && sorteio.origem_id){
@@ -198,15 +199,53 @@ router.get('/sorteios/:id', requireAuth, requirePermissao('sorteios'), async (re
   } catch(e) { res.send('ERRO: ' + e.message); }
 });
 
-// Salvar resultado do sorteio
-router.post('/sorteios/:id/salvar-resultado', requireAuth, requirePermissao('sorteios'), async (req, res) => {
+// Confirma UM ganhador por vez (sorteado na roleta ou escolhido manualmente) — sempre ANEXA ao
+// ganhador_nome já existente, nunca substitui a lista inteira. 19/08/2026: pedido do usuário —
+// antes, um sorteio com qtd_ganhadores=2 sorteava e salvava os 2 nomes de uma vez só; na prática
+// (evento ao vivo, ~500 pessoas) é comum o 1º sorteado não atender/não estar presente, e o nome
+// errado ficava registrado como ganhador junto do certo. Agora cada prêmio é sorteado (ou
+// escolhido manualmente) e confirmado individualmente — só vira status='sorteado' (trava edição,
+// libera a validação) quando o último prêmio for confirmado.
+router.post('/sorteios/:id/confirmar-ganhador', requireAuth, requirePermissao('sorteios'), async (req, res) => {
   try {
-    const ganhadores = JSON.parse(req.body.ganhadores || '[]');
-    const ganhadorNome = ganhadores.join('|');
-    await query(
-      `UPDATE sorteios SET status='sorteado', ganhador_nome=$1, sorteado_em=NOW(), sorteado_por=$2 WHERE id=$3`,
-      [ganhadorNome, req.session.usuario.id, req.params.id]
-    );
+    const nome = (req.body.nome || '').trim();
+    if (!nome) {
+      req.flash('erro', ['Selecione um participante.']);
+      return res.redirect('/sorteios/' + req.params.id);
+    }
+
+    const s = await query('SELECT * FROM sorteios WHERE id=$1', [req.params.id]);
+    if (!s.rows.length) return res.redirect('/sorteios');
+    const sorteio = s.rows[0];
+
+    const atuais = sorteio.ganhador_nome ? sorteio.ganhador_nome.split('|') : [];
+    if (atuais.length >= sorteio.qtd_ganhadores) {
+      req.flash('erro', ['Todos os prêmios deste sorteio já têm ganhador confirmado.']);
+      return res.redirect('/sorteios/' + req.params.id);
+    }
+    if (atuais.includes(nome)) {
+      req.flash('erro', ['Essa pessoa já foi confirmada como ganhadora nesse sorteio.']);
+      return res.redirect('/sorteios/' + req.params.id);
+    }
+    // Nome tem que vir da lista real de participantes desse sorteio — vale tanto pro nome que
+    // veio do sorteio automático (roleta) quanto pro escolhido manualmente (select da tela).
+    const { participantes } = await buscarParticipantesSorteio(sorteio);
+    if (!participantes.includes(nome)) {
+      req.flash('erro', ['Participante não encontrado na lista deste sorteio.']);
+      return res.redirect('/sorteios/' + req.params.id);
+    }
+
+    const novos = [...atuais, nome];
+    const completo = novos.length >= sorteio.qtd_ganhadores;
+    if (completo) {
+      await query(
+        `UPDATE sorteios SET status='sorteado', ganhador_nome=$1, sorteado_em=NOW(), sorteado_por=$2 WHERE id=$3`,
+        [novos.join('|'), req.session.usuario.id, req.params.id]
+      );
+    } else {
+      await query(`UPDATE sorteios SET ganhador_nome=$1 WHERE id=$2`, [novos.join('|'), req.params.id]);
+    }
+    req.flash('msg', [completo ? 'Todos os prêmios têm ganhador — agora é só validar.' : 'Ganhador confirmado! Sorteie (ou registre) o próximo prêmio.']);
     res.redirect('/sorteios/' + req.params.id);
   } catch(e) { req.flash('erro', [e.message]); res.redirect('/sorteios/' + req.params.id); }
 });

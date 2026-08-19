@@ -10,21 +10,25 @@ const path = require('path');
 const RAIZ = path.join(__dirname, '..');
 const MODULO = path.join(RAIZ, 'src/routes/sorteios.js');
 
-function montar({ sorteio, eventoInscritos, pssCandidatos, mock } = {}) {
+function montar({ sorteio, eventoInscritos, pssCandidatos, membros, diretivos, mock } = {}) {
   const inserts = [];
   const updates = [];
   const rq = require.resolve(path.join(RAIZ, 'src/models/database.js'));
   require.cache[rq] = { id: rq, filename: rq, loaded: true, exports: {
     query: async (sql, params) => {
       if (mock) { const r = mock(sql, params); if (r !== undefined) return r; }
-      if (/SELECT status FROM sorteios WHERE id=\$1/.test(sql)) return { rows: sorteio ? [{ status: sorteio.status }] : [] };
+      if (/SELECT status, ganhador_nome FROM sorteios WHERE id=\$1/.test(sql)) return { rows: sorteio ? [{ status: sorteio.status, ganhador_nome: sorteio.ganhador_nome || null }] : [] };
       if (/SELECT \* FROM sorteios WHERE id=\$1/.test(sql)) return { rows: sorteio ? [sorteio] : [] };
+      if (/SELECT nome FROM membros WHERE ativo=1/.test(sql)) return { rows: membros || [] };
+      if (/SELECT nome FROM diretivos WHERE ativo=1/.test(sql)) return { rows: diretivos || [] };
       if (/SELECT nome FROM evento_inscricoes WHERE evento_id=\$1 AND status='confirmado'/.test(sql)) return { rows: eventoInscritos || [] };
       if (/SELECT nome FROM ps_candidatos WHERE processo_id=\$1 AND status='confirmado'/.test(sql)) return { rows: pssCandidatos || [] };
       if (/SELECT nome FROM eventos WHERE id=\$1/.test(sql)) return { rows: [{ nome: 'II Jornada de Salud del Hombre' }] };
       if (/SELECT nome FROM ps_processos WHERE id=\$1/.test(sql)) return { rows: [{ nome: 'PSS 2026.2' }] };
       if (/INSERT INTO sorteios/.test(sql)) { inserts.push(params); return { rows: [{ id: 99 }] }; }
       if (/UPDATE sorteios SET tipo=\$1/.test(sql)) { updates.push(params); return { rows: [] }; }
+      if (/UPDATE sorteios SET status='sorteado', ganhador_nome=\$1/.test(sql)) { updates.push(params); return { rows: [] }; }
+      if (/UPDATE sorteios SET ganhador_nome=\$1 WHERE id=\$2/.test(sql)) { updates.push(params); return { rows: [] }; }
       return { rows: [] };
     }
   }};
@@ -211,4 +215,100 @@ test('POST /sorteios/criar: publico_alvo realmente vazio (sorteio externo de ver
   const req = reqBase({ body: { tipo: 'externo', nome: 'Giveaway Instagram', qtd_ganhadores: '1', instagram_liga: '@lauro_urologia' } });
   await rotas['POST /sorteios/criar'](req, resRedirect());
   assert.strictEqual(inserts[0][0], 'externo', 'sorteio externo de verdade (sem publico_alvo) não deve ser forçado pra interno');
+});
+
+// 19/08/2026 (3ª rodada): pedido do usuário — sorteio com mais de 1 prêmio sorteava todos os
+// ganhadores de uma vez só; com ~500 pessoas era comum o 1º sorteado não atender/não estar
+// presente, e o nome errado ficava registrado como ganhador junto do certo. Agora cada prêmio é
+// confirmado individualmente via /confirmar-ganhador, que ANEXA ao ganhador_nome já existente.
+test('POST /sorteios/:id/confirmar-ganhador: 1º de 2 prêmios — anexa sem fechar o sorteio', async () => {
+  const { rotas, updates } = montar({
+    sorteio: { id: 20, tipo: 'interno', publico_alvo: 'ligantes', qtd_ganhadores: 2, ganhador_nome: null },
+    membros: [{ nome: 'Ana' }, { nome: 'Bruno' }]
+  });
+  const req = reqBase({ params: { id: '20' }, body: { nome: 'Ana' } });
+  await rotas['POST /sorteios/:id/confirmar-ganhador'](req, resRedirect());
+  assert.strictEqual(updates.length, 1);
+  assert.strictEqual(updates[0][0], 'Ana', 'ganhador_nome vira só "Ana" (1º prêmio)');
+  assert.strictEqual(updates[0].length, 2, 'UPDATE parcial não mexe em status/sorteado_em/sorteado_por');
+});
+
+test('POST /sorteios/:id/confirmar-ganhador: 2º de 2 prêmios — completa e fecha o sorteio (status=sorteado)', async () => {
+  const { rotas, updates } = montar({
+    sorteio: { id: 20, tipo: 'interno', publico_alvo: 'ligantes', qtd_ganhadores: 2, ganhador_nome: 'Ana' },
+    membros: [{ nome: 'Ana' }, { nome: 'Bruno' }]
+  });
+  const req = reqBase({ params: { id: '20' }, body: { nome: 'Bruno' } });
+  await rotas['POST /sorteios/:id/confirmar-ganhador'](req, resRedirect());
+  assert.strictEqual(updates.length, 1);
+  assert.strictEqual(updates[0][0], 'Ana|Bruno', 'anexa ao que já tinha, pipe-separado');
+  assert.strictEqual(updates[0][1], 1, 'sorteado_por = usuário da sessão');
+});
+
+test('POST /sorteios/:id/confirmar-ganhador: recusa nome que não está na lista de participantes desse sorteio', async () => {
+  const { rotas, updates } = montar({
+    sorteio: { id: 20, tipo: 'interno', publico_alvo: 'ligantes', qtd_ganhadores: 2, ganhador_nome: null },
+    membros: [{ nome: 'Ana' }]
+  });
+  const req = reqBase({ params: { id: '20' }, body: { nome: 'Alguém de Fora' } });
+  await rotas['POST /sorteios/:id/confirmar-ganhador'](req, resRedirect());
+  assert.strictEqual(updates.length, 0, 'não grava nome que não pertence ao sorteio');
+});
+
+test('POST /sorteios/:id/confirmar-ganhador: recusa a mesma pessoa duas vezes no mesmo sorteio', async () => {
+  const { rotas, updates } = montar({
+    sorteio: { id: 20, tipo: 'interno', publico_alvo: 'ligantes', qtd_ganhadores: 2, ganhador_nome: 'Ana' },
+    membros: [{ nome: 'Ana' }, { nome: 'Bruno' }]
+  });
+  const req = reqBase({ params: { id: '20' }, body: { nome: 'Ana' } });
+  await rotas['POST /sorteios/:id/confirmar-ganhador'](req, resRedirect());
+  assert.strictEqual(updates.length, 0, 'Ana já ganhou o 1º prêmio — não pode ganhar de novo');
+});
+
+test('POST /sorteios/:id/confirmar-ganhador: sorteio já com todos os prêmios confirmados recusa novo nome', async () => {
+  const { rotas, updates } = montar({
+    sorteio: { id: 20, tipo: 'interno', publico_alvo: 'ligantes', qtd_ganhadores: 2, ganhador_nome: 'Ana|Bruno' },
+    membros: [{ nome: 'Ana' }, { nome: 'Bruno' }, { nome: 'Carla' }]
+  });
+  const req = reqBase({ params: { id: '20' }, body: { nome: 'Carla' } });
+  await rotas['POST /sorteios/:id/confirmar-ganhador'](req, resRedirect());
+  assert.strictEqual(updates.length, 0);
+});
+
+test('POST /sorteios/:id/confirmar-ganhador: nome vazio recusa sem tocar no banco', async () => {
+  const { rotas, updates } = montar({
+    sorteio: { id: 20, tipo: 'interno', publico_alvo: 'ligantes', qtd_ganhadores: 1, ganhador_nome: null }
+  });
+  const req = reqBase({ params: { id: '20' }, body: { nome: '  ' } });
+  await rotas['POST /sorteios/:id/confirmar-ganhador'](req, resRedirect());
+  assert.strictEqual(updates.length, 0);
+});
+
+// Registro manual usa a MESMA rota — só muda quem escolhe o nome (o admin, num <select>, em vez
+// da roleta). Sorteio externo com Instagram: confere que o nome escolhido bate com quem realmente
+// se inscreveu (sorteio_participantes), não só com uma lista arbitrária.
+test('POST /sorteios/:id/confirmar-ganhador: registro manual funciona igual pra sorteio externo', async () => {
+  const { rotas, updates } = montar({
+    sorteio: { id: 21, tipo: 'externo', publico_alvo: null, qtd_ganhadores: 1, ganhador_nome: null },
+    mock: (sql) => {
+      if (/SELECT \* FROM sorteio_participantes WHERE sorteio_id=\$1/.test(sql)) return { rows: [
+        { nome: 'Laisa de Oliveira', email: 'laisa@x.com', instagram: '@laisa', whatsapp: '+595419200409' }
+      ] };
+      return undefined;
+    }
+  });
+  const req = reqBase({ params: { id: '21' }, body: { nome: 'Laisa de Oliveira' } });
+  await rotas['POST /sorteios/:id/confirmar-ganhador'](req, resRedirect());
+  assert.strictEqual(updates.length, 1);
+  assert.strictEqual(updates[0][0], 'Laisa de Oliveira');
+});
+
+// 19/08/2026 (3ª rodada): sorteio com mais de 1 prêmio fica ganhador_nome parcialmente
+// preenchido (1 de 2 confirmado) MAS status ainda 'rascunho' — editar nesse meio-tempo
+// corromperia o progresso. Bloqueia igual já bloqueava pra status='sorteado'.
+test('POST /sorteios/:id/editar: recusa edição com ganhador parcial mesmo status ainda "rascunho"', async () => {
+  const { rotas, updates } = montar({ sorteio: { status: 'rascunho', ganhador_nome: 'Ana' } });
+  const req = reqBase({ params: { id: '20' }, body: { tipo: 'interno', nome: 'X', qtd_ganhadores: '2', publico_alvo: 'ligantes' } });
+  await rotas['POST /sorteios/:id/editar'](req, resRedirect());
+  assert.strictEqual(updates.length, 0, 'não deixa editar com 1 de 2 prêmios já confirmados');
 });
