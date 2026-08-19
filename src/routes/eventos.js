@@ -39,13 +39,18 @@ function semEmoji(str) {
 // restrito de transmissão online (mandar link só pro pessoal da Liga antes de abrir pro público
 // geral). Casa por CPF normalizado (só dígitos) ou e-mail (trim+lowercase), igual à checagem de
 // duplicata em ligantes.js — mesmo CPF pode estar formatado diferente em cada tabela.
+// 19/08/2026: achado em produção — as duas consultas não filtravam ativo/pendente (mesma condição
+// "ativo=1 AND pendente=false" já usada nas telas de Ligantes/Diretivos pra "ativos"), então
+// ligante/diretivo INATIVO recebia o link igual, e quem tem um cadastro antigo inativo numa
+// tabela (ex: era ligante, virou diretivo) recebia o link DUAS vezes — uma pelo cadastro atual
+// ativo, outra pelo cadastro antigo que devia estar fora da contagem.
 async function filtrarPorTipoMembro(query, inscritos, filtro) {
   if (filtro === 'todos' || !filtro) return inscritos;
   const normCpf = c => (c || '').replace(/\D/g, '');
   const normEmail = e => (e || '').trim().toLowerCase();
   const [ligR, dirR] = await Promise.all([
-    query('SELECT cpf, email FROM ligantes'),
-    query('SELECT cpf, email FROM diretivos')
+    query('SELECT cpf, email FROM ligantes WHERE ativo=1 AND pendente=false'),
+    query('SELECT cpf, email FROM diretivos WHERE ativo=1 AND pendente=false')
   ]);
   const cpfsLig = new Set(ligR.rows.map(r => normCpf(r.cpf)).filter(Boolean));
   const emailsLig = new Set(ligR.rows.map(r => normEmail(r.email)).filter(Boolean));

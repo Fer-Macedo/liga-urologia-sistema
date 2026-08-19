@@ -21,8 +21,18 @@ function montar({ inscritos, ligantes = [], diretivos = [], hojeProgramacao = nu
         return { rows: inscritos.filter(i => (i.nome||'').toLowerCase().includes(termo) || (i.email||'').toLowerCase().includes(termo)) };
       }
       if (/SELECT \* FROM evento_inscricoes WHERE evento_id=\$1 AND status='confirmado'/.test(sql)) return { rows: inscritos };
-      if (/SELECT cpf, email FROM ligantes/.test(sql)) return { rows: ligantes };
-      if (/SELECT cpf, email FROM diretivos/.test(sql)) return { rows: diretivos };
+      // 19/08/2026: a query real agora tem "WHERE ativo=1 AND pendente=false" — o dublê aplica
+      // esse mesmo filtro nos fixtures (em vez de devolver tudo sempre), senão o teste não
+      // provaria nada sobre esse WHERE (só provaria que o código "chama a query", não que ela
+      // filtra certo).
+      if (/SELECT cpf, email FROM ligantes/.test(sql)) {
+        const filtrar = /WHERE ativo=1 AND pendente=false/.test(sql);
+        return { rows: filtrar ? ligantes.filter(l => l.ativo !== 0 && l.pendente !== true) : ligantes };
+      }
+      if (/SELECT cpf, email FROM diretivos/.test(sql)) {
+        const filtrar = /WHERE ativo=1 AND pendente=false/.test(sql);
+        return { rows: filtrar ? diretivos.filter(d => d.ativo !== 0 && d.pendente !== true) : diretivos };
+      }
       // resolverDiaTransmissao: dia de hoje / dia mais próximo (mesma lógica usada por /live)
       if (/WHERE evento_id=\$1 AND data=CURRENT_DATE/.test(sql)) return { rows: hojeProgramacao ? [hojeProgramacao] : [] };
       if (/WHERE evento_id=\$1 AND data IS NOT NULL ORDER BY ABS/.test(sql)) return { rows: [] };
@@ -100,6 +110,50 @@ test('filtro "membros": ligantes OU diretivos, exclui só o externo puro', async
   await rotas['POST /eventos/:id/enviar-link-live']({ params: { id: '5' }, body: { filtro: 'membros' } }, res);
   assert.strictEqual(wppEnviados.length, 2);
   assert.ok(!wppEnviados.includes('595111'), 'Ana (externa pura) não deve receber no filtro "membros"');
+});
+
+// 19/08/2026: achado em produção — ligante/diretivo INATIVO (ou cadastro ainda pendente de
+// aprovação) recebia o link igual, porque as consultas não filtravam ativo/pendente nenhum.
+test('ligante INATIVO não recebe o link, mesmo com CPF/e-mail batendo (regra: inativo não recebe nada)', async () => {
+  const { rotas, wppEnviados } = montar({
+    inscritos: INSCRITOS,
+    ligantes: [{ cpf: '11122233344', email: 'bruno@x.com', ativo: 0, pendente: false }],
+    diretivos: []
+  });
+  const res = resJson();
+  await rotas['POST /eventos/:id/enviar-link-live']({ params: { id: '5' }, body: { filtro: 'ligantes' } }, res);
+  assert.strictEqual(wppEnviados.length, 0, 'Bruno é ligante mas está INATIVO — não pode receber');
+});
+
+test('diretivo com cadastro PENDENTE (ainda não aprovado) não recebe o link', async () => {
+  const { rotas, wppEnviados } = montar({
+    inscritos: INSCRITOS,
+    ligantes: [],
+    diretivos: [{ cpf: '55566677788', email: 'carla@x.com', ativo: 1, pendente: true }]
+  });
+  const res = resJson();
+  await rotas['POST /eventos/:id/enviar-link-live']({ params: { id: '5' }, body: { filtro: 'diretivos' } }, res);
+  assert.strictEqual(wppEnviados.length, 0, 'cadastro pendente ainda não foi aprovado — não é diretivo de verdade ainda');
+});
+
+// Caso relatado pelo usuário: alguém que TROCOU de papel (ex: era ligante, virou diretivo — ou
+// o inverso) fica com um cadastro antigo INATIVO na tabela de onde saiu, e o cadastro novo ATIVO
+// na tabela pra onde foi. Antes da correção, o cadastro antigo inativo ainda contava — a pessoa
+// recebia o link DUAS vezes (uma por cada tabela) em vez de uma só, pelo papel atual.
+test('quem trocou de papel (ligante inativo + diretivo ativo, mesmo CPF) recebe o link só UMA vez, pelo papel atual', async () => {
+  const inscritos = [{ id: 9, nome: 'Renata Michelle', email: 'renata@x.com', whatsapp: '595999', cpf: '999.888.777-66', status: 'confirmado' }];
+  const { rotas, wppEnviados } = montar({
+    inscritos,
+    ligantes: [{ cpf: '99988877766', email: 'renata@x.com', ativo: 1, pendente: false }], // papel atual: ligante
+    diretivos: [{ cpf: '99988877766', email: 'renata@x.com', ativo: 0, pendente: false }] // cadastro antigo, agora inativo
+  });
+  const resMembros = resJson();
+  await rotas['POST /eventos/:id/enviar-link-live']({ params: { id: '5' }, body: { filtro: 'membros' } }, resMembros);
+  assert.strictEqual(wppEnviados.length, 1, '"membros" (ligantes OU diretivos) manda só 1 vez, não 2, mesmo tendo cadastro nas duas tabelas');
+
+  const resDiretivos = resJson();
+  await rotas['POST /eventos/:id/enviar-link-live']({ params: { id: '5' }, body: { filtro: 'diretivos' } }, resDiretivos);
+  assert.strictEqual(resDiretivos._body.logs?.length || 0, 0, 'o cadastro de diretivo dela está INATIVO — "Só Diretivos" não pode achá-la mais');
 });
 
 test('sem filtro no body (undefined): comporta como "todos" (retrocompatível)', async () => {
