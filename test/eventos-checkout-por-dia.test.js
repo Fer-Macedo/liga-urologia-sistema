@@ -614,6 +614,32 @@ test('GET /eventos/:id/checkout-relatorio: evento de 1 dia só (sem Programaçã
   assert.strictEqual(res._body.aptos[0].percentual, 100);
 });
 
+// 19/08/2026: pedido do usuário — dá pra filtrar "check-outs sem inscrição" por dia igual às
+// outras listas (ex: quantos check-outs sem inscrição válida teve especificamente no dia 18/08).
+// Cada linha é UM check-out (não uma pessoa), então carrega o dia daquele check-out específico.
+test('GET /eventos/:id/checkout-relatorio: cada check-out sem inscrição vem com o dia (programacao_id + diaLabel), não só email/cpf', async () => {
+  const { rotas } = montar({
+    evento: EVENTO,
+    mock: (sql) => {
+      if (/SELECT id, nome, checkout_aberto, checkout_fecha_em, avaliacao_perguntas FROM eventos/.test(sql)) return { rows: [EVENTO] };
+      if (/SELECT id, nome, email, cpf, status, isento FROM evento_inscricoes/.test(sql)) return { rows: [] };
+      if (/SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id, aval_respostas/.test(sql)) return { rows: [
+        { inscricao_id: null, email: 'fantasma@x.com', cpf: '999', nome_informado: null, criado_em: new Date(), programacao_id: 10, aval_respostas: null, aval_sugestoes: null }
+      ] };
+      if (/SELECT id, titulo, data FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
+        { id: 10, titulo: 'Día 1', data: '2026-08-17' },
+        { id: 11, titulo: 'Día 2', data: '2026-08-18' }
+      ] };
+      return undefined;
+    }
+  });
+  const res = { json: (b) => { res._body = b; } };
+  await rotas['GET /eventos/:id/checkout-relatorio']({ params: { id: '5' } }, res);
+  assert.strictEqual(res._body.semInscricao.length, 1);
+  assert.strictEqual(res._body.semInscricao[0].programacao_id, 10);
+  assert.match(res._body.semInscricao[0].diaLabel, /Día 1/);
+});
+
 // 17/08/2026 (4ª rodada): pedido do usuário — "Remover" apagava TODOS os check-outs da pessoa
 // de uma vez (todos os dias juntos); agora só apaga o dia informado no corpo da requisição.
 test('POST /eventos/:id/inscricao/:inscricao_id/desfazer-checkout: com programacao_id, apaga só o check-out DAQUELE dia', async () => {

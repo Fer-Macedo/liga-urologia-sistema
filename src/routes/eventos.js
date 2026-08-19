@@ -2458,8 +2458,14 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
       total: checkouts.rows.filter(c => c.programacao_id === dia.id).length
     }));
 
-    // Check-outs sem inscrição válida (não bateu) — pra revisar
-    const semInscricao = checkouts.rows.filter(c => !c.inscricao_id).map(c => ({ email: c.email, cpf: c.cpf, quando: c.criado_em }));
+    // Check-outs sem inscrição válida (não bateu) — pra revisar. Carrega o dia junto (pedido do
+    // usuário 19/08/2026: filtrar por dia igual às outras listas — cada linha aqui já é UM
+    // check-out específico, então tem um dia só, não uma lista de dias como em "aptos").
+    const semInscricao = checkouts.rows.filter(c => !c.inscricao_id).map(c => ({
+      email: c.email, cpf: c.cpf, quando: c.criado_em,
+      programacao_id: c.programacao_id,
+      diaLabel: c.programacao_id ? (diaLabel.get(c.programacao_id) || '') : ''
+    }));
     // Ordena alfabeticamente por nome (pt-BR, ignora acentos na ordenação)
     const _ord = (a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR', { sensitivity: 'base' });
     aptos.sort(_ord);

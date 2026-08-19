@@ -1701,6 +1701,8 @@ function carregarRelatorioCheckout(){
     .then(function(d){
       if(!d.ok){ rel.innerHTML = '<span style="color:#991b1b">Erro: '+(d.erro||'falha')+'</span>'; return; }
       _ckAptos = d.aptos || [];
+      _ckNaoCompareceu = d.naoCompareceu || [];
+      _ckSemInscricao = d.semInscricao || [];
       var box = function(num,lab,cor,view){ return '<div'+(view?' onclick="mostrarViewCheckout(\''+view+'\')" title="Ver lista"':'')+' style="flex:1;min-width:120px;background:'+cor+';border-radius:10px;padding:14px 16px;text-align:center'+(view?';cursor:pointer':'')+'"><div style="font-size:26px;font-weight:800;color:#0f172a">'+num+'</div><div style="font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:.5px;font-weight:600">'+lab+'</div></div>'; };
       resumo.innerHTML = box(d.resumo.apto_certificado,'Aptos ao certificado','#dcfce7','aptos') + box(d.resumo.abaixo_minimo,'Abaixo do mínimo','#fed7aa','aptos') + box(d.resumo.nao_compareceu,'Não compareceram','#fef3c7','naoCompareceu') + box(d.resumo.sem_inscricao,'Sem inscrição','#fee2e2','semInscricao') + box(d.resumo.total_checkouts,'Total check-outs','#e0e7ff',null);
 
@@ -1719,9 +1721,10 @@ function carregarRelatorioCheckout(){
       }
 
       // Uma linha só de filtro: Ver + Buscar + Dia — pedido do usuário 19/08/2026: o "Ver" ficava
-      // lá em cima, longe da busca/dia, sem bater um com o outro. Buscar/Dia só valem pra lista
-      // de check-outs realizados (as outras duas listas não têm recorte por dia), então ficam
-      // escondidos quando outra opção do "Ver" está selecionada (mostrarViewCheckout cuida disso).
+      // lá em cima, longe da busca/dia. Buscar e Dia valem pras 3 listas (não só "check-outs
+      // realizados" — pedido do usuário na sequência: as outras duas também precisam de busca e
+      // filtro por dia, pra dar pra ver, por exemplo, quantos check-outs sem inscrição teve num
+      // dia específico).
       html += '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px">';
       html += '<span style="display:flex;align-items:center;gap:8px"><label style="font-size:12px;font-weight:600;color:var(--texto2)">Ver:</label>';
       html += '<select id="ckFiltroInfo" class="input" style="max-width:320px" onchange="mostrarViewCheckout(this.value)">';
@@ -1729,10 +1732,10 @@ function carregarRelatorioCheckout(){
       html += '<option value="naoCompareceu"'+(_ckView==='naoCompareceu'?' selected':'')+'>Inscritos que não fizeram check-out ('+d.naoCompareceu.length+')</option>';
       html += '<option value="semInscricao"'+(_ckView==='semInscricao'?' selected':'')+'>Check-outs sem inscrição válida ('+d.semInscricao.length+')</option>';
       html += '</select></span>';
-      html += '<span id="ckAptosFiltros" style="display:'+(_ckView==='aptos'?'flex':'none')+';align-items:center;gap:8px;flex-wrap:wrap">';
-      html += '<input type="text" id="ckBuscaNome" class="input" style="max-width:240px" placeholder="Buscar por nome ou e-mail..." oninput="buscarAptos()">';
+      html += '<span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
+      html += '<input type="text" id="ckBuscaNome" class="input" style="max-width:240px" placeholder="Buscar por nome ou e-mail..." oninput="aplicarFiltroCheckout()">';
       if(d.porDia && d.porDia.length){
-        html += '<select id="ckFiltroDia" class="input" style="max-width:280px" onchange="buscarAptos()"><option value="">Todos os dias</option>';
+        html += '<select id="ckFiltroDia" class="input" style="max-width:280px" onchange="aplicarFiltroCheckout()"><option value="">Todos os dias</option>';
         d.porDia.forEach(function(dia){
           var dataFmt = dia.data ? new Date(dia.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}) : '';
           var label = dia.titulo+' — '+dataFmt;
@@ -1753,32 +1756,39 @@ function carregarRelatorioCheckout(){
       html += '<div id="ckAptosWrap"></div>';
       html += '</div>';
 
-      // NÃO COMPARECEU
+      // NÃO COMPARECEU — nunca fez check-out em nenhum dia, então o filtro por dia não muda a
+      // lista (faltou em todos igualmente); o campo continua disponível por consistência com as
+      // outras 2 listas, só não exclui ninguém.
       html += '<div id="ckView_naoCompareceu" style="display:'+(_ckView==='naoCompareceu'?'block':'none')+'">';
       html += '<h3 style="font-size:14px;color:#92400e;margin:0 0 8px">'+ICONE_ALERTA+' Inscritos que NÃO fizeram check-out ('+d.naoCompareceu.length+')</h3>';
-      if(d.naoCompareceu.length){
-        html += '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Nome</th><th style="text-align:left">Email</th></tr></thead><tbody>';
-        d.naoCompareceu.forEach(function(a){ html += '<tr><td>'+toTitleCase(a.nome)+'</td><td>'+a.email+'</td></tr>'; });
-        html += '</tbody></table>';
-      } else { html += '<div style="color:#94a3b8;font-size:12px">Todos os inscritos confirmaram presença.</div>'; }
+      html += '<div id="ckNaoCompareceuWrap"></div>';
       html += '</div>';
 
-      // SEM INSCRIÇÃO
+      // SEM INSCRIÇÃO — cada linha já é um check-out específico de UM dia (não uma lista de
+      // dias como em "aptos"), por isso tem coluna "Dia" fixa em vez de chips.
       html += '<div id="ckView_semInscricao" style="display:'+(_ckView==='semInscricao'?'block':'none')+'">';
       html += '<h3 style="font-size:14px;color:#991b1b;margin:0 0 8px">Check-outs sem inscrição válida ('+d.semInscricao.length+')</h3>';
-      if(d.semInscricao.length){
-        html += '<div style="font-size:11px;color:#94a3b8;margin-bottom:6px">Fizeram check-out mas não foram encontrados na lista de inscritos confirmados — revisar manualmente.</div>';
-        html += '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Email informado</th><th style="text-align:left">CPF</th></tr></thead><tbody>';
-        d.semInscricao.forEach(function(a){ html += '<tr><td>'+a.email+'</td><td>'+(a.cpf||'')+'</td></tr>'; });
-        html += '</tbody></table>';
-      } else { html += '<div style="color:#94a3b8;font-size:12px">Nenhum check-out sem inscrição válida.</div>'; }
+      html += '<div style="font-size:11px;color:#94a3b8;margin-bottom:6px">Fizeram check-out mas não foram encontrados na lista de inscritos confirmados — revisar manualmente.</div>';
+      html += '<div id="ckSemInscricaoWrap"></div>';
       html += '</div>';
 
       rel.innerHTML = html;
       renderizarAptos();
+      renderizarNaoCompareceu();
+      renderizarSemInscricao();
       renderizarAvaliacao(d.perguntas, d.avaliacaoPorDia);
     })
     .catch(function(e){ rel.innerHTML = '<span style="color:#991b1b">Erro: '+e.message+'</span>'; });
+}
+// Busca/dia valem pras 3 listas — reaplica no que estiver selecionado no "Ver" no momento.
+function aplicarFiltroCheckout(){
+  _ckPaginas[_ckView] = 1;
+  renderizarListaAtiva();
+}
+function renderizarListaAtiva(){
+  if(_ckView==='aptos') renderizarAptos();
+  else if(_ckView==='naoCompareceu') renderizarNaoCompareceu();
+  else if(_ckView==='semInscricao') renderizarSemInscricao();
 }
 function mostrarViewCheckout(view){
   _ckView = view;
@@ -1788,15 +1798,14 @@ function mostrarViewCheckout(view){
   });
   var sel = document.getElementById('ckFiltroInfo');
   if(sel) sel.value = view;
-  var filtrosAptos = document.getElementById('ckAptosFiltros');
-  if(filtrosAptos) filtrosAptos.style.display = (view==='aptos' ? 'flex' : 'none');
+  renderizarListaAtiva(); // reaplica a busca/dia já digitados na lista que acabou de aparecer
 }
 function escHtml(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
 
 // Paginação genérica (25/página) — pedido do usuário 17/08/2026: check-out e avaliação
 // acumulam nomes rápido (evento de vários dias), a lista ficava enorme e cansativa de rolar/
 // procurar depois de encerrar o check-out de cada dia. onclickPrefix já vem com tudo que falta
-// antes do número da página no onclick (ex: "irParaPaginaAptos(" ou "irParaPaginaAval(2,").
+// antes do número da página no onclick (ex: "irParaPaginaCheckout('aptos'," ou "irParaPaginaAval(2,").
 function paginacaoBotoesHtml(paginaAtual, totalItens, porPagina, onclickPrefix){
   var totalP = Math.ceil(totalItens / porPagina) || 1;
   if(totalP <= 1) return '';
@@ -1816,33 +1825,38 @@ function paginacaoBotoesHtml(paginaAtual, totalItens, porPagina, onclickPrefix){
 }
 
 var _ckAptos = [];
-var _ckPagina = 1;
+var _ckNaoCompareceu = [];
+var _ckSemInscricao = [];
+// Uma página por LISTA (não uma só global) — trocar de "Ver" não pode perder a página em que a
+// outra lista estava. Busca/dia (pedido do usuário 19/08/2026) agora valem pras 3.
+var _ckPaginas = { aptos: 1, naoCompareceu: 1, semInscricao: 1 };
 var CK_POR_PAGINA = 25;
-function buscarAptos(){ _ckPagina = 1; renderizarAptos(); }
-function irParaPaginaAptos(n){ _ckPagina = n; renderizarAptos(); }
+function irParaPaginaCheckout(view, n){ _ckPaginas[view] = n; renderizarListaAtiva(); }
+function filtroAtual(){
+  var selDia = document.getElementById('ckFiltroDia');
+  var buscaEl = document.getElementById('ckBuscaNome');
+  return { dia: selDia ? selDia.value : '', busca: buscaEl ? buscaEl.value.trim().toLowerCase() : '' };
+}
 // Cada dia vira um "chip" com seu próprio × — pedido do usuário 17/08/2026 (4ª rodada): remover
 // tinha que ser por dia específico, não apagar de uma vez todos os check-outs da pessoa.
 function renderizarAptos(){
   var wrap = document.getElementById('ckAptosWrap');
   if(!wrap) return;
-  var sel = document.getElementById('ckFiltroDia');
-  var filtroDia = sel ? sel.value : '';
-  var buscaEl = document.getElementById('ckBuscaNome');
-  var busca = buscaEl ? buscaEl.value.trim().toLowerCase() : '';
+  var f = filtroAtual();
   var lista = _ckAptos.filter(function(a){
-    if(filtroDia && !(a.dias||[]).some(function(d){ return d.label === filtroDia; })) return false;
-    if(busca && (a.nome||'').toLowerCase().indexOf(busca) < 0 && (a.email||'').toLowerCase().indexOf(busca) < 0) return false;
+    if(f.dia && !(a.dias||[]).some(function(d){ return d.label === f.dia; })) return false;
+    if(f.busca && (a.nome||'').toLowerCase().indexOf(f.busca) < 0 && (a.email||'').toLowerCase().indexOf(f.busca) < 0) return false;
     return true;
   });
-  if(!lista.length){ wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">Ninguém encontrado '+((filtroDia||busca)?'com esse filtro.':'ainda.')+'</div>'; return; }
+  if(!lista.length){ wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">Ninguém encontrado '+((f.dia||f.busca)?'com esse filtro.':'ainda.')+'</div>'; return; }
   var totalP = Math.ceil(lista.length / CK_POR_PAGINA) || 1;
-  if(_ckPagina > totalP) _ckPagina = totalP;
-  var ini = (_ckPagina-1)*CK_POR_PAGINA, fim = ini+CK_POR_PAGINA;
+  if(_ckPaginas.aptos > totalP) _ckPaginas.aptos = totalP;
+  var ini = (_ckPaginas.aptos-1)*CK_POR_PAGINA, fim = ini+CK_POR_PAGINA;
   var pagina = lista.slice(ini, fim);
   var html = '<div style="font-size:11px;color:var(--texto2);margin-bottom:6px">Exibindo '+(ini+1)+'–'+Math.min(fim,lista.length)+' de '+lista.length+'</div>';
   html += '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Nome</th><th style="text-align:left">Email</th><th>Tipo</th><th style="text-align:left">Dia(s) — × desfaz só aquele dia</th><th>Situação</th></tr></thead><tbody>';
   pagina.forEach(function(a){
-    var diasDaLinha = filtroDia ? (a.dias||[]).filter(function(d){ return d.label === filtroDia; }) : (a.dias||[]);
+    var diasDaLinha = f.dia ? (a.dias||[]).filter(function(d){ return d.label === f.dia; }) : (a.dias||[]);
     var chips = diasDaLinha.map(function(d){
       var diaArg = d.programacao_id === null ? 'null' : d.programacao_id;
       return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--fundo);border:1px solid var(--borda);border-radius:12px;padding:2px 4px 2px 9px;margin:2px 4px 2px 0;font-size:11px">'
@@ -1853,7 +1867,51 @@ function renderizarAptos(){
     html += '<tr><td>'+toTitleCase(a.nome)+'</td><td>'+a.email+'</td><td style="text-align:center">'+(a.isento?'Isento':'Pago')+'</td><td>'+chips+'</td><td style="text-align:center">'+situacao+'</td></tr>';
   });
   html += '</tbody></table>';
-  html += paginacaoBotoesHtml(_ckPagina, lista.length, CK_POR_PAGINA, 'irParaPaginaAptos(');
+  html += paginacaoBotoesHtml(_ckPaginas.aptos, lista.length, CK_POR_PAGINA, "irParaPaginaCheckout('aptos',");
+  wrap.innerHTML = html;
+}
+// Nunca fez check-out em nenhum dia — filtro por dia não exclui ninguém (faltou em todos), mas
+// fica disponível igual às outras 2 listas (pedido do usuário 19/08/2026).
+function renderizarNaoCompareceu(){
+  var wrap = document.getElementById('ckNaoCompareceuWrap');
+  if(!wrap) return;
+  var f = filtroAtual();
+  var lista = _ckNaoCompareceu.filter(function(a){
+    if(f.busca && (a.nome||'').toLowerCase().indexOf(f.busca) < 0 && (a.email||'').toLowerCase().indexOf(f.busca) < 0) return false;
+    return true;
+  });
+  if(!lista.length){ wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">'+(f.busca?'Ninguém encontrado com esse filtro.':'Todos os inscritos confirmaram presença.')+'</div>'; return; }
+  var totalP = Math.ceil(lista.length / CK_POR_PAGINA) || 1;
+  if(_ckPaginas.naoCompareceu > totalP) _ckPaginas.naoCompareceu = totalP;
+  var ini = (_ckPaginas.naoCompareceu-1)*CK_POR_PAGINA, fim = ini+CK_POR_PAGINA;
+  var pagina = lista.slice(ini, fim);
+  var html = '<div style="font-size:11px;color:var(--texto2);margin-bottom:6px">Exibindo '+(ini+1)+'–'+Math.min(fim,lista.length)+' de '+lista.length+'</div>';
+  html += '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Nome</th><th style="text-align:left">Email</th></tr></thead><tbody>';
+  pagina.forEach(function(a){ html += '<tr><td>'+toTitleCase(a.nome)+'</td><td>'+a.email+'</td></tr>'; });
+  html += '</tbody></table>';
+  html += paginacaoBotoesHtml(_ckPaginas.naoCompareceu, lista.length, CK_POR_PAGINA, "irParaPaginaCheckout('naoCompareceu',");
+  wrap.innerHTML = html;
+}
+// Cada linha é UM check-out específico de um dia só (não uma lista de dias por pessoa).
+function renderizarSemInscricao(){
+  var wrap = document.getElementById('ckSemInscricaoWrap');
+  if(!wrap) return;
+  var f = filtroAtual();
+  var lista = _ckSemInscricao.filter(function(a){
+    if(f.dia && a.diaLabel !== f.dia) return false;
+    if(f.busca && (a.email||'').toLowerCase().indexOf(f.busca) < 0 && (a.cpf||'').toLowerCase().indexOf(f.busca) < 0) return false;
+    return true;
+  });
+  if(!lista.length){ wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">'+((f.dia||f.busca)?'Ninguém encontrado com esse filtro.':'Nenhum check-out sem inscrição válida.')+'</div>'; return; }
+  var totalP = Math.ceil(lista.length / CK_POR_PAGINA) || 1;
+  if(_ckPaginas.semInscricao > totalP) _ckPaginas.semInscricao = totalP;
+  var ini = (_ckPaginas.semInscricao-1)*CK_POR_PAGINA, fim = ini+CK_POR_PAGINA;
+  var pagina = lista.slice(ini, fim);
+  var html = '<div style="font-size:11px;color:var(--texto2);margin-bottom:6px">Exibindo '+(ini+1)+'–'+Math.min(fim,lista.length)+' de '+lista.length+'</div>';
+  html += '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Dia</th><th style="text-align:left">Email informado</th><th style="text-align:left">CPF</th></tr></thead><tbody>';
+  pagina.forEach(function(a){ html += '<tr><td>'+escHtml(a.diaLabel||'Único dia')+'</td><td>'+a.email+'</td><td>'+(a.cpf||'')+'</td></tr>'; });
+  html += '</tbody></table>';
+  html += paginacaoBotoesHtml(_ckPaginas.semInscricao, lista.length, CK_POR_PAGINA, "irParaPaginaCheckout('semInscricao',");
   wrap.innerHTML = html;
 }
 var _avalCharts = {};
