@@ -2690,6 +2690,118 @@ router.get('/eventos/:id/avaliacao-export', requireAuth, requirePermissao('event
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
 
+// HTML do relat\u00F3rio de avalia\u00E7\u00E3o COM gr\u00E1ficos \u2014 usado s\u00F3 pelo /avaliacao-export-pdf abaixo.
+// Mesmos r\u00F3tulos/cores dos gr\u00E1ficos que j\u00E1 aparecem no painel (AVAL_LABELS/AVAL_CORES em
+// evento-detalhe.ejs), pra sair id\u00EAntico ao que a coordena\u00E7\u00E3o j\u00E1 v\u00EA na tela.
+function gerarHTMLRelatorioAvaliacaoPDF(nomeEvento, perguntas, avaliacaoPorDia) {
+  const escHtml = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const blocosDia = avaliacaoPorDia.map((dia, di) => {
+    const dataFmt = dia.data ? new Date(dia.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : '';
+    const graficos = perguntas.map((titulo, pi) =>
+      '<div class="grafico"><div class="titulo-pergunta">' + escHtml(titulo) + '</div><canvas id="c_' + di + '_' + pi + '" width="360" height="200"></canvas></div>'
+    ).join('');
+    const sugestoes = dia.sugestoes.length
+      ? '<div class="sugestoes"><h3>Sugest\u00F5es (' + dia.sugestoes.length + ')</h3>' + dia.sugestoes.map((s) => '<div class="sugestao">' + escHtml(s) + '</div>').join('') + '</div>'
+      : '';
+    return '<section class="dia' + (di > 0 ? ' quebra' : '') + '">'
+      + '<h2>' + (dataFmt ? escHtml(dataFmt) + ' \u2014 ' : '') + escHtml(dia.titulo || 'Avalia\u00E7\u00E3o') + '</h2>'
+      + '<p class="resumo-dia">' + dia.respondidas + ' resposta(s) registrada(s).</p>'
+      + (dia.respondidas ? '<div class="grid">' + graficos + '</div>' + sugestoes : '<p class="vazio">Nenhuma resposta ainda.</p>')
+      + '</section>';
+  }).join('');
+  return `<!DOCTYPE html><html><head><meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #0f172a; margin: 0; padding: 0 8mm; }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .subtitulo { font-size: 11px; color: #64748b; margin: 0 0 18px; }
+  h2 { font-size: 14px; margin: 0 0 4px; color: #0f172a; }
+  .resumo-dia { font-size: 12px; color: #475569; margin: 0 0 10px; }
+  .dia { margin-bottom: 24px; }
+  .dia.quebra { page-break-before: always; padding-top: 8mm; }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 12px; }
+  .grafico { border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; }
+  .titulo-pergunta { font-size: 11px; font-weight: 700; color: #374151; margin-bottom: 6px; }
+  .vazio { font-size: 12px; color: #94a3b8; }
+  .sugestoes h3 { font-size: 12px; margin: 10px 0 6px; }
+  .sugestao { font-size: 11px; color: #374151; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 10px; margin-bottom: 5px; }
+</style>
+</head><body>
+<h1>Relat\u00F3rio de avalia\u00E7\u00E3o \u2014 ${escHtml(nomeEvento)}</h1>
+<p class="subtitulo">Gerado em ${escHtml(new Date().toLocaleString('pt-BR'))}</p>
+${blocosDia}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  var LABELS = ['P\u00E9ssimo','Ruim','Regular','Bom','Muito bom','Excelente'];
+  var CORES = ['#ef4444','#f97316','#f59e0b','#84cc16','#22c55e','#15803d'];
+  var dados = ${JSON.stringify(avaliacaoPorDia.map(d => d.distribuicoes))};
+  dados.forEach(function(distribuicoes, di) {
+    distribuicoes.forEach(function(valores, pi) {
+      var canvas = document.getElementById('c_' + di + '_' + pi);
+      if (!canvas) return;
+      new Chart(canvas, {
+        type: 'bar',
+        data: { labels: LABELS, datasets: [{ data: valores, backgroundColor: CORES }] },
+        options: { responsive: false, animation: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { ticks: { font: { size: 9 } } } } }
+      });
+    });
+  });
+</script>
+</body></html>`;
+}
+
+// Exportar as respostas da avalia\u00E7\u00E3o em PDF COM os gr\u00E1ficos \u2014 pedido do usu\u00E1rio 19/08/2026: o
+// CSV (/avaliacao-export, acima) n\u00E3o carrega os gr\u00E1ficos, mas a coordena\u00E7\u00E3o da universidade
+// exige o relat\u00F3rio com os gr\u00E1ficos pra usar como m\u00E9trica. Gera o PDF no servidor com Chromium
+// headless (mesmo padr\u00E3o j\u00E1 usado em carta-cobranca.js/imprimir \u2014 HTML real + Chart.js de
+// verdade, convertido pra PDF), com os mesmos r\u00F3tulos/cores dos gr\u00E1ficos que j\u00E1 aparecem no
+// painel, um gr\u00E1fico por pergunta, por dia.
+router.get('/eventos/:id/avaliacao-export-pdf', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  try {
+    const evR = await query('SELECT nome, avaliacao_perguntas FROM eventos WHERE id=$1', [req.params.id]);
+    if (!evR.rows[0]) return res.status(404).send('Evento n\u00E3o encontrado.');
+    const evento = evR.rows[0];
+    const perguntas = perguntasAvaliacaoDoEvento(evento);
+    const diasR = await query('SELECT id, titulo, data FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL ORDER BY data', [req.params.id]);
+    const checkoutsR = await query(
+      `SELECT programacao_id, aval_respostas, aval_sugestoes FROM evento_checkouts WHERE evento_id=$1 AND aval_respostas IS NOT NULL`,
+      [req.params.id]
+    );
+    const gruposDia = diasR.rows.length
+      ? diasR.rows.map(d => ({ programacao_id: d.id, titulo: d.titulo, data: d.data }))
+      : [{ programacao_id: null, titulo: evento.nome, data: null }];
+    const avaliacaoPorDia = gruposDia.map(g => {
+      const respondidas = checkoutsR.rows.filter(c => c.programacao_id === g.programacao_id).map(c => ({ notas: JSON.parse(c.aval_respostas), sugestao: c.aval_sugestoes }));
+      const distribuicoes = perguntas.map((_, i) => {
+        const contagem = [0, 0, 0, 0, 0, 0];
+        respondidas.forEach(c => { const n = c.notas[i]; if (n >= 1 && n <= 6) contagem[n - 1]++; });
+        return contagem;
+      });
+      return { titulo: g.titulo, data: g.data, respondidas: respondidas.length, distribuicoes, sugestoes: respondidas.map(c => c.sugestao).filter(Boolean) };
+    });
+
+    const html = gerarHTMLRelatorioAvaliacaoPDF(evento.nome, perguntas, avaliacaoPorDia);
+    const puppeteer = require('puppeteer-core');
+    const chromium = require('@sparticuz/chromium');
+    chromium.setHeadlessMode = true;
+    chromium.setGraphicsMode = false;
+    const browser = await puppeteer.launch({
+      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu'],
+      executablePath: await chromium.executablePath(),
+      headless: 'new'
+    });
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    const pdf = await page.pdf({ format: 'A4', printBackground: true, margin: { top: '10mm', right: '0', bottom: '10mm', left: '0' } });
+    await browser.close();
+    const nomeEv = (evento.nome || 'evento').replace(/[^a-z0-9]/gi, '_').substring(0, 30);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', 'attachment; filename="avaliacao-' + nomeEv + '.pdf"');
+    // page.pdf() retorna Uint8Array; sem Buffer.from o Express serializa como JSON.
+    res.end(Buffer.from(pdf));
+  } catch(e) { console.error('Avaliacao PDF erro:', e.message); res.status(500).send('Erro ao gerar PDF: ' + e.message); }
+});
+
 // Lista de presen\u00E7a e firma do evento \u2014 mesmo papel timbrado + bloco de assinaturas j\u00E1
 // usado em /lista-assinaturas, mas com os inscritos do evento em vez de ligantes/diretivos.
 // ?status=confirmado|pendente filtra; sem o par\u00E2metro, traz todos.

@@ -1355,7 +1355,10 @@
         <div class="section-card">
           <div class="section-header" style="display:flex;justify-content:space-between;align-items:center">
             <span>Respostas da avaliação</span>
-            <a class="btn btn-sm" href="/eventos/<%= evento.id %>/avaliacao-export" style="background:var(--cor-primaria);color:#fff;border-color:transparent;text-decoration:none">Exportar (Excel/CSV)</a>
+            <span style="display:flex;gap:8px">
+              <a class="btn btn-sm" href="/eventos/<%= evento.id %>/avaliacao-export" style="background:var(--cor-primaria);color:#fff;border-color:transparent;text-decoration:none">Exportar (Excel/CSV)</a>
+              <a class="btn btn-sm" href="/eventos/<%= evento.id %>/avaliacao-export-pdf" style="background:#991b1b;color:#fff;border-color:transparent;text-decoration:none" title="Relatório em PDF com os gráficos, pra compartilhar com a coordenação">Exportar com gráficos (PDF)</a>
+            </span>
           </div>
           <div class="section-body">
             <div id="ck-avaliacao" style="font-size:13px;color:var(--texto2)">Clique em "Atualizar" (no relatório acima) pra carregar.</div>
