@@ -280,12 +280,12 @@ test('GET /eventos/:id/checkout-relatorio: porDia marca jaAconteceu=true pra dia
   assert.strictEqual(futuro.jaAconteceu, false, 'dia de amanhã ainda não aconteceu — não pode ter "ausentes"');
 });
 
-// 19/08/2026 (2ª rodada): pedido do usuário — filtrar "não fizeram check-out" por um dia
-// específico (17, 18...) mostrava sempre o mesmo total (o de quem faltou o evento INTEIRO), igual
-// pra todo dia. Precisa ser um número DIFERENTE por dia: quem faltou especificamente NAQUELE dia
-// — inclusive gente que foi em outro dia mas faltou só esse (não entra em "não fez check-out
-// nenhuma vez", mas precisa aparecer quando o filtro é esse dia específico).
-test('GET /eventos/:id/checkout-relatorio: porDia.naoFizeram traz quem faltou NAQUELE dia — inclusive quem foi em outro dia mas faltou só esse', async () => {
+// 19/08/2026 (3ª rodada): uma tentativa anterior calculava, por dia, quem faltou especificamente
+// AQUELE dia (incluindo gente que foi em outro dia) — o usuário rejeitou explicitamente ("não era
+// pra ter 59 no dia 18, era pra ter 24 ou menos"). naoCompareceu é (e precisa continuar sendo) só
+// UMA coisa: quem nunca fez check-out em NENHUM dia do evento — não existe um "porDia.naoFizeram"
+// à parte, nem um jeito de esse número passar do total geral.
+test('GET /eventos/:id/checkout-relatorio: naoCompareceu não tem recorte por dia — só existe o total de quem faltou o evento inteiro', async () => {
   const { rotas } = montar({
     evento: EVENTO,
     mock: (sql) => {
@@ -309,10 +309,10 @@ test('GET /eventos/:id/checkout-relatorio: porDia.naoFizeram traz quem faltou NA
   });
   const res = { json: (b) => { res._body = b; } };
   await rotas['GET /eventos/:id/checkout-relatorio']({ params: { id: '5' } }, res);
+  assert.deepStrictEqual(res._body.naoCompareceu.map(a => a.nome), ['Carla (nunca foi)'], 'só quem nunca fez check-out em dia nenhum — Bruno fez check-out no dia 1, não entra aqui');
   const [dia1, dia2] = res._body.porDia;
-  assert.deepStrictEqual(dia1.naoFizeram.map(a => a.nome).sort(), ['Carla (nunca foi)'], 'só Carla faltou o dia 1 — Ana e Bruno foram');
-  assert.deepStrictEqual(dia2.naoFizeram.map(a => a.nome).sort(), ['Bruno (só foi no dia 1)', 'Carla (nunca foi)'].sort(), 'Bruno foi no dia 1 mas faltou o dia 2 — precisa aparecer aqui, mesmo não estando em "naoCompareceu" (que é só quem faltou TUDO)');
-  assert.strictEqual(res._body.naoCompareceu.length, 1, 'naoCompareceu (evento inteiro) continua sendo só a Carla — Bruno fez check-out em pelo menos 1 dia');
+  assert.strictEqual(dia1.naoFizeram, undefined, 'não existe mais recorte por dia nessa lista');
+  assert.strictEqual(dia2.naoFizeram, undefined);
 });
 
 test('schema: evento_checkouts tem CREATE TABLE no código e as colunas de check-out por dia existem', () => {

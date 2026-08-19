@@ -1883,34 +1883,31 @@ function renderizarAptos(){
   html += paginacaoBotoesHtml(_ckPaginas.aptos, lista.length, CK_POR_PAGINA, "irParaPaginaCheckout('aptos',");
   wrap.innerHTML = html;
 }
-// Sem dia selecionado: "não fez check-out no evento INTEIRO" (_ckNaoCompareceu, fixo). Com um dia
-// selecionado — pedido do usuário 19/08/2026: o número precisa ser QUEM FALTOU NAQUELE DIA
-// específico (porDia[x].naoFizeram, já calculado no /checkout-relatorio), não sempre o mesmo
-// total geral repetido pra todo dia. Um dia que ainda não aconteceu não pode ter "ausentes" —
-// jaAconteceu (mesma regra de data+horário da transmissão online) zera a lista nesse caso.
-// 19/08/2026 (2ª rodada): o número muda de significado ao trocar "Todos os dias" por um dia
-// específico (passa a incluir quem foi em outro dia mas faltou só esse — por isso pode ficar
-// MAIOR que o total geral) — usuário achou confuso sem explicação. ckExplicacaoNaoCompareceu deixa
-// claro na tela o que aquele número representa a cada troca de filtro, pra não parecer bug.
+// 19/08/2026 (3ª rodada): a tentativa anterior calculava, por dia, um número MAIOR que o total
+// geral (incluía quem foi em outro dia mas faltou só esse) — o usuário rejeitou explicitamente:
+// "não era pra ter 59 no dia 18, era pra ter 24 ou menos". Essa lista é (e continua sendo) uma
+// coisa só: quem NUNCA fez check-out em NENHUM dia do evento inteiro (_ckNaoCompareceu, fixo).
+// Como essas pessoas faltaram TODOS os dias igualmente, filtrar por um dia que já aconteceu
+// mostra o mesmo grupo de sempre — só zera quando o dia selecionado ainda não rolou (não faz
+// sentido "faltar" de uma sessão futura). Não existe subconjunto "menor" por dia porque, pra esse
+// grupo especificamente, a ausência é a mesma em todos os dias.
 function renderizarNaoCompareceu(){
   var wrap = document.getElementById('ckNaoCompareceuWrap');
   var explicacao = document.getElementById('ckExplicacaoNaoCompareceu');
   if(!wrap) return;
   var f = filtroAtual();
-  var origem = _ckNaoCompareceu;
   if(f.dia){
     var diaInfo = _ckPorDia.find(function(d){ return String(d.programacao_id) === f.dia; });
-    if(explicacao) explicacao.textContent = 'Faltaram especificamente no dia selecionado ('+(diaInfo?labelDoDia(diaInfo):'')+') — inclui quem foi em outros dias do evento mas faltou só esse, por isso pode ser um número diferente do total de "faltou tudo".';
+    if(explicacao) explicacao.textContent = 'Faltaram em TODOS os dias do evento — como não fizeram check-out nenhuma vez, faltaram nesse dia selecionado também.';
     if(diaInfo && diaInfo.jaAconteceu === false){
       setContagem('ckContagemNaoCompareceu', 0);
       wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">Esse dia do evento ainda não aconteceu — ninguém pode ter faltado nele ainda.</div>';
       return;
     }
-    origem = (diaInfo && diaInfo.naoFizeram) || [];
   } else if(explicacao) {
     explicacao.textContent = 'Faltaram em TODOS os dias do evento (nunca fizeram check-out nenhuma vez).';
   }
-  var lista = origem.filter(function(a){
+  var lista = _ckNaoCompareceu.filter(function(a){
     if(f.busca && (a.nome||'').toLowerCase().indexOf(f.busca) < 0 && (a.email||'').toLowerCase().indexOf(f.busca) < 0) return false;
     return true;
   });
