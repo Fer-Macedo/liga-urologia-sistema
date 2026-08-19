@@ -1736,9 +1736,14 @@ function carregarRelatorioCheckout(){
       html += '<span style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">';
       html += '<input type="text" id="ckBuscaNome" class="input" style="max-width:240px" placeholder="Buscar por nome ou e-mail..." oninput="aplicarFiltroCheckout()">';
       if(d.porDia && d.porDia.length){
+        // 19/08/2026: pedido do usuário — filtrar por um dia que claramente tinha check-outs
+        // dele (dia 17, por exemplo) voltava "Ninguém encontrado". Raiz: o filtro comparava o
+        // RÓTULO formatado do dia (ex: "Título — 17/08/2026", montado no servidor com ano) contra
+        // o rótulo montado no navegador (sem ano) — bastava qualquer diferença de formatação pra
+        // nunca bater. Corrigido comparando pelo programacao_id (número estável), não mais texto.
         html += '<select id="ckFiltroDia" class="input" style="max-width:280px" onchange="aplicarFiltroCheckout()"><option value="">Todos os dias</option>';
         d.porDia.forEach(function(dia){
-          html += '<option value="'+escHtml(labelDoDia(dia))+'">'+escHtml(labelDoDia(dia))+'</option>';
+          html += '<option value="'+dia.programacao_id+'">'+escHtml(labelDoDia(dia))+'</option>';
         });
         html += '</select>';
       }
@@ -1850,7 +1855,7 @@ function renderizarAptos(){
   if(!wrap) return;
   var f = filtroAtual();
   var lista = _ckAptos.filter(function(a){
-    if(f.dia && !(a.dias||[]).some(function(d){ return d.label === f.dia; })) return false;
+    if(f.dia && !(a.dias||[]).some(function(d){ return String(d.programacao_id) === f.dia; })) return false;
     if(f.busca && (a.nome||'').toLowerCase().indexOf(f.busca) < 0 && (a.email||'').toLowerCase().indexOf(f.busca) < 0) return false;
     return true;
   });
@@ -1863,7 +1868,7 @@ function renderizarAptos(){
   var html = '<div style="font-size:11px;color:var(--texto2);margin-bottom:6px">Exibindo '+(ini+1)+'–'+Math.min(fim,lista.length)+' de '+lista.length+'</div>';
   html += '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Nome</th><th style="text-align:left">Email</th><th>Tipo</th><th style="text-align:left">Dia(s) — × desfaz só aquele dia</th><th>Situação</th></tr></thead><tbody>';
   pagina.forEach(function(a){
-    var diasDaLinha = f.dia ? (a.dias||[]).filter(function(d){ return d.label === f.dia; }) : (a.dias||[]);
+    var diasDaLinha = f.dia ? (a.dias||[]).filter(function(d){ return String(d.programacao_id) === f.dia; }) : (a.dias||[]);
     var chips = diasDaLinha.map(function(d){
       var diaArg = d.programacao_id === null ? 'null' : d.programacao_id;
       return '<span style="display:inline-flex;align-items:center;gap:4px;background:var(--fundo);border:1px solid var(--borda);border-radius:12px;padding:2px 4px 2px 9px;margin:2px 4px 2px 0;font-size:11px">'
@@ -1888,7 +1893,7 @@ function renderizarNaoCompareceu(){
   var f = filtroAtual();
   var origem = _ckNaoCompareceu;
   if(f.dia){
-    var diaInfo = _ckPorDia.find(function(d){ return labelDoDia(d) === f.dia; });
+    var diaInfo = _ckPorDia.find(function(d){ return String(d.programacao_id) === f.dia; });
     if(diaInfo && diaInfo.jaAconteceu === false){
       setContagem('ckContagemNaoCompareceu', 0);
       wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">Esse dia do evento ainda não aconteceu — ninguém pode ter faltado nele ainda.</div>';
@@ -1919,7 +1924,7 @@ function renderizarSemInscricao(){
   if(!wrap) return;
   var f = filtroAtual();
   var lista = _ckSemInscricao.filter(function(a){
-    if(f.dia && a.diaLabel !== f.dia) return false;
+    if(f.dia && String(a.programacao_id) !== f.dia) return false;
     if(f.busca && (a.email||'').toLowerCase().indexOf(f.busca) < 0 && (a.cpf||'').toLowerCase().indexOf(f.busca) < 0) return false;
     return true;
   });
