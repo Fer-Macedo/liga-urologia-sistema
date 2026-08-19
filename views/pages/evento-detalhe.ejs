@@ -1703,6 +1703,7 @@ function carregarRelatorioCheckout(){
       _ckAptos = d.aptos || [];
       _ckNaoCompareceu = d.naoCompareceu || [];
       _ckSemInscricao = d.semInscricao || [];
+      _ckPorDia = d.porDia || [];
       var box = function(num,lab,cor,view){ return '<div'+(view?' onclick="mostrarViewCheckout(\''+view+'\')" title="Ver lista"':'')+' style="flex:1;min-width:120px;background:'+cor+';border-radius:10px;padding:14px 16px;text-align:center'+(view?';cursor:pointer':'')+'"><div style="font-size:26px;font-weight:800;color:#0f172a">'+num+'</div><div style="font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:.5px;font-weight:600">'+lab+'</div></div>'; };
       resumo.innerHTML = box(d.resumo.apto_certificado,'Aptos ao certificado','#dcfce7','aptos') + box(d.resumo.abaixo_minimo,'Abaixo do mínimo','#fed7aa','aptos') + box(d.resumo.nao_compareceu,'Não compareceram','#fef3c7','naoCompareceu') + box(d.resumo.sem_inscricao,'Sem inscrição','#fee2e2','semInscricao') + box(d.resumo.total_checkouts,'Total check-outs','#e0e7ff',null);
 
@@ -1737,9 +1738,7 @@ function carregarRelatorioCheckout(){
       if(d.porDia && d.porDia.length){
         html += '<select id="ckFiltroDia" class="input" style="max-width:280px" onchange="aplicarFiltroCheckout()"><option value="">Todos os dias</option>';
         d.porDia.forEach(function(dia){
-          var dataFmt = dia.data ? new Date(dia.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}) : '';
-          var label = dia.titulo+' — '+dataFmt;
-          html += '<option value="'+escHtml(label)+'">'+escHtml(label)+'</option>';
+          html += '<option value="'+escHtml(labelDoDia(dia))+'">'+escHtml(labelDoDia(dia))+'</option>';
         });
         html += '</select>';
       }
@@ -1801,6 +1800,10 @@ function mostrarViewCheckout(view){
   renderizarListaAtiva(); // reaplica a busca/dia já digitados na lista que acabou de aparecer
 }
 function escHtml(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
+function labelDoDia(dia){
+  var dataFmt = dia.data ? new Date(dia.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}) : '';
+  return dia.titulo+' — '+dataFmt;
+}
 
 // Paginação genérica (25/página) — pedido do usuário 17/08/2026: check-out e avaliação
 // acumulam nomes rápido (evento de vários dias), a lista ficava enorme e cansativa de rolar/
@@ -1827,6 +1830,7 @@ function paginacaoBotoesHtml(paginaAtual, totalItens, porPagina, onclickPrefix){
 var _ckAptos = [];
 var _ckNaoCompareceu = [];
 var _ckSemInscricao = [];
+var _ckPorDia = [];
 // Uma página por LISTA (não uma só global) — trocar de "Ver" não pode perder a página em que a
 // outra lista estava. Busca/dia (pedido do usuário 19/08/2026) agora valem pras 3.
 var _ckPaginas = { aptos: 1, naoCompareceu: 1, semInscricao: 1 };
@@ -1870,12 +1874,23 @@ function renderizarAptos(){
   html += paginacaoBotoesHtml(_ckPaginas.aptos, lista.length, CK_POR_PAGINA, "irParaPaginaCheckout('aptos',");
   wrap.innerHTML = html;
 }
-// Nunca fez check-out em nenhum dia — filtro por dia não exclui ninguém (faltou em todos), mas
-// fica disponível igual às outras 2 listas (pedido do usuário 19/08/2026).
+// Nunca fez check-out em nenhum dia — logo, faltou em todos igualmente, então o filtro por dia
+// não muda QUEM aparece. Mas um dia que ainda não aconteceu não pode ter "ausentes" — pedido do
+// usuário 19/08/2026: selecionar um dia futuro do evento mostrava o total de sempre (24), como
+// se todo mundo já tivesse faltado numa sessão que nem começou. jaAconteceu (calculado no
+// /checkout-relatorio, mesma regra de data+horário usada na transmissão online) zera a lista
+// nesse caso.
 function renderizarNaoCompareceu(){
   var wrap = document.getElementById('ckNaoCompareceuWrap');
   if(!wrap) return;
   var f = filtroAtual();
+  if(f.dia){
+    var diaInfo = _ckPorDia.find(function(d){ return labelDoDia(d) === f.dia; });
+    if(diaInfo && diaInfo.jaAconteceu === false){
+      wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">Esse dia do evento ainda não aconteceu — ninguém pode ter faltado nele ainda.</div>';
+      return;
+    }
+  }
   var lista = _ckNaoCompareceu.filter(function(a){
     if(f.busca && (a.nome||'').toLowerCase().indexOf(f.busca) < 0 && (a.email||'').toLowerCase().indexOf(f.busca) < 0) return false;
     return true;

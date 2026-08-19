@@ -1786,6 +1786,23 @@ function transmissaoJaComecou(dia) {
   return (agora.getHours() * 60 + agora.getMinutes()) >= inicioMin;
 }
 
+// Um dia de Programação "já aconteceu" quando a data já passou, ou é hoje e o horário cadastrado
+// já começou (reaproveita transmissaoJaComecou pra essa parte). Diferente de transmissaoJaComecou
+// (que só compara o horário, assumindo que já é o dia certo), este também compara a DATA — pedido
+// do usuário 19/08/2026: o relatório de "não fizeram check-out" filtrado por dia mostrava o total
+// geral mesmo pra um dia FUTURO do evento (ex: dia 4 antes de o dia 4 sequer começar) — não faz
+// sentido contar alguém como "ausente" de uma sessão que ainda nem aconteceu.
+function diaJaAconteceu(dia) {
+  if (!dia || !dia.data) return true; // evento legado (sem data cadastrada) — sempre conta
+  const hoje = new Date();
+  const ymdHoje = hoje.getFullYear() + '-' + String(hoje.getMonth() + 1).padStart(2, '0') + '-' + String(hoje.getDate()).padStart(2, '0');
+  const dataDia = new Date(dia.data);
+  const ymdDia = dataDia.getUTCFullYear() + '-' + String(dataDia.getUTCMonth() + 1).padStart(2, '0') + '-' + String(dataDia.getUTCDate()).padStart(2, '0');
+  if (ymdDia < ymdHoje) return true;
+  if (ymdDia > ymdHoje) return false;
+  return transmissaoJaComecou(dia);
+}
+
 router.get('/live/:token', async (req, res) => {
   try {
     const r = await query('SELECT epo.*, i.nome, i.email, e.nome as evento_nome, e.youtube_url, e.duracao_minutos FROM evento_presencas_online epo JOIN evento_inscricoes i ON i.id=epo.inscricao_id JOIN eventos e ON e.id=epo.evento_id WHERE epo.token=$1',[req.params.token]);
@@ -2412,9 +2429,10 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
       `SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id, aval_respostas, aval_sugestoes FROM evento_checkouts WHERE evento_id=$1 ORDER BY criado_em`,
       [req.params.id]
     );
-    // Dias do evento (pra rotular o check-out por dia, quando existir)
+    // Dias do evento (pra rotular o check-out por dia, quando existir). Traz "horario" também —
+    // precisa pra diaJaAconteceu() saber se o dia de hoje já começou (não só a data).
     const diasR = await query(
-      `SELECT id, titulo, data FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL ORDER BY data`,
+      `SELECT id, titulo, data, horario FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL ORDER BY data`,
       [req.params.id]
     );
 
@@ -2455,7 +2473,8 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
       programacao_id: dia.id,
       titulo: dia.titulo,
       data: dia.data,
-      total: checkouts.rows.filter(c => c.programacao_id === dia.id).length
+      total: checkouts.rows.filter(c => c.programacao_id === dia.id).length,
+      jaAconteceu: diaJaAconteceu(dia)
     }));
 
     // Check-outs sem inscrição válida (não bateu) — pra revisar. Carrega o dia junto (pedido do

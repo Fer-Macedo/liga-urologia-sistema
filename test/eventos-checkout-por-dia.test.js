@@ -237,7 +237,7 @@ test('GET /eventos/:id/checkout-relatorio: traz a contagem por dia (porDia)', as
         { inscricao_id: 1, email: 'a@x.com', cpf: null, nome_informado: 'A', criado_em: new Date(), programacao_id: 11, aval_respostas: null, aval_sugestoes: null },
         { inscricao_id: 2, email: 'b@x.com', cpf: null, nome_informado: 'B', criado_em: new Date(), programacao_id: 10, aval_respostas: null, aval_sugestoes: null }
       ] };
-      if (/SELECT id, titulo, data FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
+      if (/SELECT id, titulo, data, horario FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
         { id: 10, titulo: 'Día 1', data: '2026-08-17' },
         { id: 11, titulo: 'Día 2', data: '2026-08-18' }
       ] };
@@ -249,6 +249,35 @@ test('GET /eventos/:id/checkout-relatorio: traz a contagem por dia (porDia)', as
   assert.strictEqual(res._body.ok, true);
   assert.deepStrictEqual(res._body.porDia.map(d => d.total), [2, 1], 'Día 1 teve 2 check-outs (A e B), Día 2 só 1 (A)');
   assert.strictEqual(res._body.resumo.aptos, 2, 'A e B fizeram check-out em pelo menos 1 dia cada');
+});
+
+// 19/08/2026: pedido do usuário — filtrou "não fizeram check-out" por um dia FUTURO do evento
+// (que ainda nem começou) e o painel mostrou o total de sempre (24), como se todo mundo já
+// tivesse faltado numa sessão que nem aconteceu. porDia agora carrega jaAconteceu por dia, pro
+// front-end zerar a lista quando o dia selecionado ainda não aconteceu.
+test('GET /eventos/:id/checkout-relatorio: porDia marca jaAconteceu=true pra dia passado e jaAconteceu=false pra dia futuro', async () => {
+  // 3 dias de folga (não só 1) pra não depender de fuso horário — perto da meia-noite UTC,
+  // "ontem"/"amanhã" calculado só com ±24h podia cair do lado errado por causa do fuso do Paraguai.
+  const ontem = new Date(Date.now() - 3 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const amanha = new Date(Date.now() + 3 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const { rotas } = montar({
+    evento: EVENTO,
+    mock: (sql) => {
+      if (/SELECT id, nome, checkout_aberto, checkout_fecha_em, avaliacao_perguntas FROM eventos/.test(sql)) return { rows: [EVENTO] };
+      if (/SELECT id, nome, email, cpf, status, isento FROM evento_inscricoes/.test(sql)) return { rows: [] };
+      if (/SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id, aval_respostas/.test(sql)) return { rows: [] };
+      if (/SELECT id, titulo, data, horario FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
+        { id: 10, titulo: 'Día passado', data: ontem, horario: null },
+        { id: 11, titulo: 'Día futuro', data: amanha, horario: null }
+      ] };
+      return undefined;
+    }
+  });
+  const res = { json: (b) => { res._body = b; } };
+  await rotas['GET /eventos/:id/checkout-relatorio']({ params: { id: '5' } }, res);
+  const [passado, futuro] = res._body.porDia;
+  assert.strictEqual(passado.jaAconteceu, true, 'dia de ontem já aconteceu');
+  assert.strictEqual(futuro.jaAconteceu, false, 'dia de amanhã ainda não aconteceu — não pode ter "ausentes"');
 });
 
 test('schema: evento_checkouts tem CREATE TABLE no código e as colunas de check-out por dia existem', () => {
@@ -386,7 +415,7 @@ test('GET /eventos/:id/checkout-relatorio: calcula a distribuição das notas e 
         { inscricao_id: 2, email: 'b@x.com', cpf: null, nome_informado: 'B', criado_em: new Date(), programacao_id: 11, aval_respostas: null, aval_sugestoes: null }, // fez check-out mas não respondeu
         { inscricao_id: 3, email: 'c@x.com', cpf: null, nome_informado: 'C', criado_em: new Date(), programacao_id: 10, aval_respostas: JSON.stringify([1, 1, 1, 1]), aval_sugestoes: null } // Día 1, entra na SEÇÃO do Día 1
       ] };
-      if (/SELECT id, titulo, data FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
+      if (/SELECT id, titulo, data, horario FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
         { id: 10, titulo: 'Día 1', data: '2026-08-17' },
         { id: 11, titulo: 'Día 4', data: '2026-08-20' }
       ] };
@@ -525,7 +554,7 @@ test('GET /eventos/:id/checkout-relatorio: cada apto vem com {programacao_id, la
         { inscricao_id: 1, email: 'a@x.com', cpf: null, nome_informado: 'A', criado_em: new Date(), programacao_id: 10, aval_respostas: null, aval_sugestoes: null },
         { inscricao_id: 1, email: 'a@x.com', cpf: null, nome_informado: 'A', criado_em: new Date(), programacao_id: 11, aval_respostas: null, aval_sugestoes: null }
       ] };
-      if (/SELECT id, titulo, data FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
+      if (/SELECT id, titulo, data, horario FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
         { id: 10, titulo: 'Día 1', data: '2026-08-17' },
         { id: 11, titulo: 'Día 2', data: '2026-08-18' }
       ] };
@@ -566,7 +595,7 @@ test('GET /eventos/:id/checkout-relatorio: evento de 4 dias — só quem fez che
         { inscricao_id: 3, email: 'carla@x.com', cpf: null, nome_informado: 'Carla', criado_em: new Date(), programacao_id: 10, aval_respostas: null, aval_sugestoes: null },
         { inscricao_id: 3, email: 'carla@x.com', cpf: null, nome_informado: 'Carla', criado_em: new Date(), programacao_id: 11, aval_respostas: null, aval_sugestoes: null }
       ] };
-      if (/SELECT id, titulo, data FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
+      if (/SELECT id, titulo, data, horario FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
         { id: 10, titulo: 'Día 1', data: '2026-08-17' },
         { id: 11, titulo: 'Día 2', data: '2026-08-18' },
         { id: 12, titulo: 'Día 3', data: '2026-08-19' },
@@ -603,7 +632,7 @@ test('GET /eventos/:id/checkout-relatorio: evento de 1 dia só (sem Programaçã
       if (/SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id, aval_respostas/.test(sql)) return { rows: [
         { inscricao_id: 1, email: 'f@x.com', cpf: null, nome_informado: 'Fulano', criado_em: new Date(), programacao_id: null, aval_respostas: null, aval_sugestoes: null }
       ] };
-      if (/SELECT id, titulo, data FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [] };
+      if (/SELECT id, titulo, data, horario FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [] };
       return undefined;
     }
   });
@@ -626,7 +655,7 @@ test('GET /eventos/:id/checkout-relatorio: cada check-out sem inscrição vem co
       if (/SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id, aval_respostas/.test(sql)) return { rows: [
         { inscricao_id: null, email: 'fantasma@x.com', cpf: '999', nome_informado: null, criado_em: new Date(), programacao_id: 10, aval_respostas: null, aval_sugestoes: null }
       ] };
-      if (/SELECT id, titulo, data FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
+      if (/SELECT id, titulo, data, horario FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
         { id: 10, titulo: 'Día 1', data: '2026-08-17' },
         { id: 11, titulo: 'Día 2', data: '2026-08-18' }
       ] };
