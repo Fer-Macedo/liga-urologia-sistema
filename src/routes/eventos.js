@@ -1696,25 +1696,47 @@ function perguntasAvaliacaoDoEvento(evento) {
   } catch(e) { return PERGUNTAS_AVALIACAO_PADRAO; }
 }
 
-// Rótulo "Día X — DD/MM" de um dia de Programação, pra identificar qual check-out é (evento
-// legado, sem Programação por data, não tem rótulo). Usado no e-mail de confirmação e no
-// relatório/export do painel — pedido do usuário 17/08/2026 (3ª rodada): com a avaliação
-// obrigatória em todo dia, cada e-mail e cada linha de relatório precisa deixar claro DE QUAL
-// dia é aquele check-out.
-function diaLabelCheckout(dia) {
+// Posição (1, 2, 3...) de um dia de Programação entre os dias com data do evento, e o total de
+// dias — pedido do usuário 18/08/2026: o rótulo do dia (abaixo) só mostrava o título/tema da
+// aula, sem dizer SE ERA o primeiro, segundo, terceiro ou quarto dia do evento, o que confundia
+// quem recebia várias confirmações de dias diferentes. Mesma lógica já usada no link de
+// transmissão (diaAtualParaEnvioLive), mas reaproveitável quando o dia já é conhecido de antemão
+// (não precisa ser "hoje").
+async function diasOrdenadosDoEvento(eventoId) {
+  const r = await query('SELECT id FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL ORDER BY data', [eventoId]);
+  return r.rows.map(d => d.id);
+}
+function posicaoDia(diasOrdenados, programacaoId) {
+  if (!programacaoId) return { numero: null, total: diasOrdenados.length };
+  const idx = diasOrdenados.indexOf(programacaoId);
+  return { numero: idx >= 0 ? idx + 1 : null, total: diasOrdenados.length };
+}
+
+// Rótulo "Día X de Y — DD/MM/AAAA" de um dia de Programação, pra identificar qual check-out é
+// (evento legado, sem Programação por data, não tem rótulo). Usado no e-mail de confirmação e no
+// relatório/export do painel. Quando diaInfo (posicaoDia) é informado, usa o número do dia em vez
+// do título — o título vira a linha "Tema" à parte (htmlConfirmacaoCheckout), pra não confundir
+// "qual dia" com "qual foi o assunto daquele dia".
+function diaLabelCheckout(dia, diaInfo) {
   if (!dia || !dia.data) return '';
-  const dataFmt = new Date(dia.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
-  return (dia.titulo || 'Día') + ' — ' + dataFmt;
+  const dataFmt = new Date(dia.data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
+  const numero = diaInfo && diaInfo.numero;
+  const rotulo = numero ? ('Día ' + numero + (diaInfo.total ? ' de ' + diaInfo.total : '')) : (dia.titulo || 'Día');
+  return rotulo + ' — ' + dataFmt;
 }
 
 // Fragmento do corpo do e-mail de confirmação de check-out — usado tanto no envio real quanto
 // na prévia (admin). Mostra o dia (quando existe) pra quem recebe vários desses e-mails, um por
-// dia de um evento de vários dias, conseguir diferenciar qual confirmação é de qual dia.
-function htmlConfirmacaoCheckout(primeiroNome, nomeEvento, diaLabel) {
-  const linhaDia = diaLabel ? '<p style="margin:0 0 12px;font-size:12px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.5px">' + diaLabel + '</p>' : '';
+// dia de um evento de vários dias, conseguir diferenciar qual confirmação é de qual dia — e o
+// tema da aula daquele dia, numa linha própria (pedido do usuário 18/08/2026: só o rótulo do dia
+// não deixava claro qual foi o assunto tratado).
+function htmlConfirmacaoCheckout(primeiroNome, nomeEvento, diaLabel, temaDia) {
+  const linhaDia = diaLabel ? '<p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.5px">' + diaLabel + '</p>' : '';
+  const linhaTema = temaDia ? '<p style="margin:0 0 12px;font-size:13px;color:#374151"><strong>Tema:</strong> ' + temaDia + '</p>' : '';
   return '<h2 style="margin:0 0 8px;font-size:20px;color:#0f172a">¡Hola, ' + primeiroNome + '!</h2>'
     + '<p style="margin:0 0 12px;font-size:14px;color:#475569;line-height:1.7">Tu <strong>asistencia</strong> al evento <strong>' + nomeEvento + '</strong> fue registrada con éxito.</p>'
     + linhaDia
+    + linhaTema
     + '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#166534">Este registro confirma que estuviste presente en el evento. Tu certificado será procesado conforme las reglas del evento.</p></div>'
     + '<p style="margin:0;font-size:12px;color:#94a3b8">¿Dudas? Contáctanos por WhatsApp o responde a este correo.</p>';
 }
@@ -2239,10 +2261,12 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
       try {
         const { enviarEmail } = require('../services/notificacoes');
         const primeiro = inscricao.nome.split(' ')[0];
-        const label = diaLabelCheckout(dia);
-        const htmlCk = htmlConfirmacaoCheckout(primeiro, evento.nome, label);
-        const textoCk = 'Hola, '+primeiro+'! Tu asistencia al evento '+evento.nome+' fue registrada con éxito.'+(label ? ' ('+label+')' : '');
-        enviarEmail({ para: inscricao.email, assunto: 'Asistencia confirmada — '+evento.nome, html: htmlCk, texto: textoCk, faixaLabel: 'ASISTENCIA CONFIRMADA' }).catch(function(e){ console.error('Email checkout erro:', e.message); });
+        const diaInfo = dia ? posicaoDia(await diasOrdenadosDoEvento(req.params.id), dia.id) : null;
+        const label = diaLabelCheckout(dia, diaInfo);
+        const temaDia = dia ? (dia.titulo || '') : '';
+        const htmlCk = htmlConfirmacaoCheckout(primeiro, evento.nome, label, temaDia);
+        const textoCk = 'Hola, '+primeiro+'! Tu asistencia al evento '+evento.nome+' fue registrada con éxito.'+(label ? ' ('+label+')' : '')+(temaDia ? '\nTema: '+temaDia : '');
+        enviarEmail({ para: inscricao.email, assunto: 'Asistencia confirmada — '+evento.nome+(label ? ' — '+label : ''), html: htmlCk, texto: textoCk, faixaLabel: 'ASISTENCIA CONFIRMADA' }).catch(function(e){ console.error('Email checkout erro:', e.message); });
       } catch(e) { console.error('Email checkout falhou:', e.message); }
     }
 
@@ -2298,37 +2322,57 @@ router.post('/eventos/:id/programacao/:pid/checkout-toggle', requireAuth, requir
 // Reenviar e-mail de confirmação de check-out — pedido do usuário 18/08/2026: queixa de que
 // "o colega recebeu, eu não" (Gmail derrubando envios sob rajada, já corrigido na raiz em
 // notificacoes.js). Como o check-out já fica fechado quando isso é usado, reenvia geral (todos
-// os dias) em vez de tentar adivinhar quem especificamente não recebeu — não existe coluna de
-// status de envio pra filtrar por "falhou". Roda em segundo plano (pode levar minutos com muita
-// gente) e cada envio já fica logado por enviarEmail() (pm2 logs mostram sucesso/erro por pessoa).
+// os dias, ou só um dia — pedido do usuário na sequência) em vez de tentar adivinhar quem
+// especificamente não recebeu — não existe coluna de status de envio pra filtrar por "falhou".
+// Roda em segundo plano (pode levar minutos com muita gente) e cada envio já fica logado por
+// enviarEmail() (pm2 logs mostram sucesso/erro por pessoa). programacaoId null = todos os dias.
+async function reenviarConfirmacoesCheckout(eventoId, programacaoId) {
+  const filtroDia = programacaoId ? ' AND c.programacao_id=$2' : '';
+  const params = programacaoId ? [eventoId, programacaoId] : [eventoId];
+  const rows = (await query(
+    `SELECT i.nome, i.email, p.id AS dia_id, p.titulo AS dia_titulo, p.data AS dia_data
+     FROM evento_checkouts c
+     JOIN evento_inscricoes i ON i.id = c.inscricao_id
+     LEFT JOIN evento_programacao p ON p.id = c.programacao_id
+     WHERE c.evento_id=$1 AND i.email IS NOT NULL AND i.email <> ''` + filtroDia,
+    params
+  )).rows;
+  const evR = await query('SELECT nome FROM eventos WHERE id=$1', [eventoId]);
+  const nomeEvento = evR.rows[0] ? evR.rows[0].nome : '';
+  const diasOrdenados = await diasOrdenadosDoEvento(eventoId);
+
+  (async () => {
+    const { enviarEmail } = require('../services/notificacoes');
+    for (const r of rows) {
+      const primeiro = r.nome.split(' ')[0];
+      const dia = r.dia_id ? { id: r.dia_id, data: r.dia_data, titulo: r.dia_titulo } : null;
+      const diaInfo = dia ? posicaoDia(diasOrdenados, dia.id) : null;
+      const label = diaLabelCheckout(dia, diaInfo);
+      const temaDia = dia ? (dia.titulo || '') : '';
+      const htmlCk = htmlConfirmacaoCheckout(primeiro, nomeEvento, label, temaDia);
+      const textoCk = 'Hola, ' + primeiro + '! Tu asistencia al evento ' + nomeEvento + ' fue registrada con éxito.' + (label ? ' (' + label + ')' : '') + (temaDia ? '\nTema: ' + temaDia : '');
+      await enviarEmail({ para: r.email, assunto: 'Asistencia confirmada — ' + nomeEvento + (label ? ' — ' + label : ''), html: htmlCk, texto: textoCk, faixaLabel: 'ASISTENCIA CONFIRMADA' });
+    }
+    console.log('Reenvio de confirmações de check-out concluído: ' + rows.length + ' processadas (evento ' + eventoId + (programacaoId ? ', dia ' + programacaoId : ', todos os dias') + ')');
+  })().catch(err => console.error('Reenvio de confirmações de check-out erro:', err.message));
+
+  return rows.length;
+}
+
 router.post('/eventos/:id/checkout-reenviar-confirmacoes', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
-    const rows = (await query(
-      `SELECT i.nome, i.email, p.id AS dia_id, p.titulo AS dia_titulo, p.data AS dia_data
-       FROM evento_checkouts c
-       JOIN evento_inscricoes i ON i.id = c.inscricao_id
-       LEFT JOIN evento_programacao p ON p.id = c.programacao_id
-       WHERE c.evento_id=$1 AND i.email IS NOT NULL AND i.email <> ''`,
-      [req.params.id]
-    )).rows;
-    const evR = await query('SELECT nome FROM eventos WHERE id=$1', [req.params.id]);
-    const nomeEvento = evR.rows[0] ? evR.rows[0].nome : '';
+    const n = await reenviarConfirmacoesCheckout(req.params.id, null);
+    req.session.msg = ['Reenvio iniciado em segundo plano: ' + n + ' confirmações na fila (todos os dias). Acompanhe pelos logs.'];
+  } catch(e) { req.session.erro = [e.message]; }
+  res.redirect('/eventos/' + req.params.id + '?tab=checkout');
+});
 
-    req.session.msg = ['Reenvio iniciado em segundo plano: ' + rows.length + ' confirmações na fila. Acompanhe pelos logs.'];
-    res.redirect('/eventos/' + req.params.id + '?tab=checkout');
-
-    (async () => {
-      const { enviarEmail } = require('../services/notificacoes');
-      for (const r of rows) {
-        const primeiro = r.nome.split(' ')[0];
-        const label = diaLabelCheckout(r.dia_id ? { data: r.dia_data, titulo: r.dia_titulo } : null);
-        const htmlCk = htmlConfirmacaoCheckout(primeiro, nomeEvento, label);
-        const textoCk = 'Hola, ' + primeiro + '! Tu asistencia al evento ' + nomeEvento + ' fue registrada con éxito.' + (label ? ' (' + label + ')' : '');
-        await enviarEmail({ para: r.email, assunto: 'Asistencia confirmada — ' + nomeEvento, html: htmlCk, texto: textoCk, faixaLabel: 'ASISTENCIA CONFIRMADA' });
-      }
-      console.log('Reenvio de confirmações de check-out concluído: ' + rows.length + ' processadas (evento ' + req.params.id + ')');
-    })().catch(err => console.error('Reenvio de confirmações de check-out erro:', err.message));
-  } catch(e) { req.session.erro = [e.message]; res.redirect('/eventos/' + req.params.id + '?tab=checkout'); }
+router.post('/eventos/:id/programacao/:pid/checkout-reenviar-confirmacoes', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  try {
+    const n = await reenviarConfirmacoesCheckout(req.params.id, parseInt(req.params.pid));
+    req.session.msg = ['Reenvio iniciado em segundo plano: ' + n + ' confirmações na fila (só esse dia). Acompanhe pelos logs.'];
+  } catch(e) { req.session.erro = [e.message]; }
+  res.redirect('/eventos/' + req.params.id + '?tab=checkout');
 });
 
 // Relatório de check-out (painel) — JSON consumido pela aba
@@ -2493,8 +2537,10 @@ router.get('/eventos/:id/checkout-email-preview', requireAuth, requirePermissao(
     const evento = evR.rows[0];
     const cfgPub = await getConfig();
     const { dia } = await resolverDiaTransmissao(req.params.id);
+    const diaInfo = dia ? posicaoDia(await diasOrdenadosDoEvento(req.params.id), dia.id) : null;
+    const label = diaLabelCheckout(dia, diaInfo);
     const { htmlSimples } = require('../services/notificacoes');
-    const htmlCk = htmlConfirmacaoCheckout('María', evento.nome, diaLabelCheckout(dia));
+    const htmlCk = htmlConfirmacaoCheckout('María', evento.nome, label, dia ? (dia.titulo || '') : '');
     res.send(htmlSimples({ mensagem: htmlCk, faixaLabel: 'ASISTENCIA CONFIRMADA', config: cfgPub }));
   } catch(e) { console.error('Checkout email preview erro:', e.message); res.status(500).send('Erro ao carregar prévia do e-mail.'); }
 });

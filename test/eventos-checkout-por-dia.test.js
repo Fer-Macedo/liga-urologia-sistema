@@ -126,6 +126,30 @@ test('POST /checkout/:id: dia de hoje aberto — grava o check-out com o program
   assert.strictEqual(res._locals.sucesso, true);
 });
 
+// 18/08/2026: pedido do usuário — o e-mail só mostrava o título/tema do dia como rótulo (ex:
+// "Promoción y Prevención de la Salud del Hombre — 18/08"), sem dizer SE ERA o 1º, 2º, 3º ou 4º
+// dia do evento. Agora o rótulo usa a posição real do dia (contada entre os dias com data do
+// evento) e o título vira uma linha "Tema" separada.
+test('POST /checkout/:id: e-mail de confirmação mostra "Día X de Y" (posição real) e o tema da aula em linha própria', async () => {
+  const { rotas, emailsEnviados } = montar({
+    evento: EVENTO,
+    hojeProgramacao: { id: 10, titulo: 'Promoción y Prevención de la Salud del Hombre', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-18' },
+    inscricao: { id: 42, nome: 'Fulano de Tal', email: 'f@x.com', status: 'confirmado', isento: false, rg: '123456' },
+    mock: (sql) => {
+      if (/SELECT id FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL ORDER BY data/.test(sql)) {
+        return { rows: [{ id: 9 }, { id: 10 }, { id: 11 }, { id: 12 }] };
+      }
+      return undefined;
+    }
+  });
+  const res = resRender();
+  await rotas['POST /checkout/:id']({ params: { id: '5' }, body: { email: 'f@x.com', documento: '123456', aval_resposta_0: '5', aval_resposta_1: '5', aval_resposta_2: '5', aval_resposta_3: '5' }, headers: {}, ip: '1.2.3.4' }, res);
+  assert.strictEqual(emailsEnviados.length, 1);
+  assert.match(emailsEnviados[0].html, /Día 2 de 4 — 18\/08\/2026/, 'mostra a posição real do dia (2º de 4), não o título usado como se fosse o rótulo do dia');
+  assert.match(emailsEnviados[0].html, /<strong>Tema:<\/strong> Promoción y Prevención de la Salud del Hombre/, 'o título/tema da aula aparece numa linha própria, separado do rótulo do dia');
+  assert.match(emailsEnviados[0].assunto, /Día 2 de 4/, 'o assunto do e-mail também deixa claro de qual dia é a confirmação');
+});
+
 test('POST /checkout/:id: dia fechado (checkout_aberto=false) recusa com mensagem de encerrado', async () => {
   const { rotas, inserts } = montar({
     evento: EVENTO,
@@ -620,4 +644,31 @@ test('POST /eventos/:id/checkout-reenviar-confirmacoes: check-out legado (sem di
   await esperarEmails(emailsEnviados, 1);
   assert.strictEqual(emailsEnviados.length, 1);
   assert.strictEqual(emailsEnviados[0].para, 'carla@x.com');
+});
+
+// 18/08/2026: pedido do usuário — além do botão geral (todos os dias), um botão POR DIA, pra
+// reenviar só pra quem confirmou presença naquele dia específico, sem mexer nos outros dias.
+test('POST /eventos/:id/programacao/:pid/checkout-reenviar-confirmacoes: reenvia só do dia informado, filtrando pelo programacao_id na query', async () => {
+  const chamadasSql = [];
+  const { rotas, emailsEnviados } = montar({
+    evento: EVENTO,
+    mock: (sql, params) => {
+      if (/SELECT nome FROM eventos WHERE id=\$1/.test(sql)) return { rows: [{ nome: 'Jornada Teste' }] };
+      if (/FROM evento_checkouts c\s+JOIN evento_inscricoes i/.test(sql)) {
+        chamadasSql.push({ sql, params });
+        return { rows: [{ nome: 'Ana Confirmada', email: 'ana@x.com', dia_id: 10, dia_titulo: 'Día 1', dia_data: '2026-08-17' }] };
+      }
+      return undefined;
+    }
+  });
+  const req = { params: { id: '5', pid: '10' }, session: {} };
+  const res = resRedirect();
+  await rotas['POST /eventos/:id/programacao/:pid/checkout-reenviar-confirmacoes'](req, res);
+  assert.match(res._redirect, /\/eventos\/5\?tab=checkout/);
+  assert.match(req.session.msg[0], /1 confirmações na fila \(só esse dia\)/);
+  assert.match(chamadasSql[0].sql, /AND c\.programacao_id=\$2/, 'query filtra pelo dia informado — não reenvia dos outros dias');
+  assert.deepStrictEqual(chamadasSql[0].params, ['5', 10]);
+  await esperarEmails(emailsEnviados, 1);
+  assert.strictEqual(emailsEnviados.length, 1);
+  assert.strictEqual(emailsEnviados[0].para, 'ana@x.com');
 });

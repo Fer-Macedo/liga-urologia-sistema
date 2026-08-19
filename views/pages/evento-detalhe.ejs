@@ -1230,17 +1230,22 @@
                 <div style="font-weight:700;font-size:13px"><%= new Date(dia.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) %> — <%= dia.titulo %></div>
                 <span style="display:inline-block;margin-top:4px;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;<%= ckDiaAberto ? 'background:#dcfce7;color:#15803d' : 'background:#fee2e2;color:#991b1b' %>"><%= ckDiaAberto ? 'ABERTO' : 'ENCERRADO' %></span>
               </div>
-              <% if(!ckDiaAberto){ %>
-                <form action="/eventos/<%= evento.id %>/programacao/<%= dia.id %>/checkout-toggle" method="POST">
-                  <input type="hidden" name="acao" value="abrir">
-                  <button type="submit" class="btn-xs" style="background:#15803d;color:#fff">Abrir</button>
+              <span style="display:flex;gap:8px">
+                <form method="POST" action="/eventos/<%= evento.id %>/programacao/<%= dia.id %>/checkout-reenviar-confirmacoes" style="display:inline" onsubmit="var f=this; confirmarAcao('Reenviar o e-mail de confirmação de check-out pra todo mundo que confirmou presença neste dia (<%= dia.titulo %>)?', function(){ f.submit(); }); return false;">
+                  <button type="submit" class="btn-xs" style="background:#d97706;color:#fff" title="Reenviar confirmações só deste dia">Reenviar confirmações</button>
                 </form>
-              <% } else { %>
-                <form action="/eventos/<%= evento.id %>/programacao/<%= dia.id %>/checkout-toggle" method="POST">
-                  <input type="hidden" name="acao" value="encerrar">
-                  <button type="submit" class="btn-xs" style="background:#991b1b;color:#fff">Encerrar</button>
-                </form>
-              <% } %>
+                <% if(!ckDiaAberto){ %>
+                  <form action="/eventos/<%= evento.id %>/programacao/<%= dia.id %>/checkout-toggle" method="POST">
+                    <input type="hidden" name="acao" value="abrir">
+                    <button type="submit" class="btn-xs" style="background:#15803d;color:#fff">Abrir</button>
+                  </form>
+                <% } else { %>
+                  <form action="/eventos/<%= evento.id %>/programacao/<%= dia.id %>/checkout-toggle" method="POST">
+                    <input type="hidden" name="acao" value="encerrar">
+                    <button type="submit" class="btn-xs" style="background:#991b1b;color:#fff">Encerrar</button>
+                  </form>
+                <% } %>
+              </span>
             </div>
             <% }) %>
           </div>
