@@ -37,29 +37,43 @@ function semEmoji(str) {
 
 // Filtra uma lista de inscritos pra só quem é ligante/diretivo cadastrado — usado no teste
 // restrito de transmissão online (mandar link só pro pessoal da Liga antes de abrir pro público
-// geral). Casa por CPF normalizado (só dígitos) ou e-mail (trim+lowercase), igual à checagem de
-// duplicata em ligantes.js — mesmo CPF pode estar formatado diferente em cada tabela.
+// geral). Casa por CPF normalizado (só dígitos), e-mail (trim+lowercase) ou nome completo
+// (sem acento, sem espaço duplicado) — igual à checagem de duplicata em ligantes.js — porque não
+// existe nenhum vínculo de verdade (chave estrangeira) entre a inscrição do evento e o cadastro
+// de ligante/diretivo, só esses 3 campos digitados em formulários diferentes, então nem sempre
+// batem.
 // 19/08/2026: achado em produção — as duas consultas não filtravam ativo/pendente (mesma condição
 // "ativo=1 AND pendente=false" já usada nas telas de Ligantes/Diretivos pra "ativos"), então
 // ligante/diretivo INATIVO recebia o link igual, e quem tem um cadastro antigo inativo numa
 // tabela (ex: era ligante, virou diretivo) recebia o link DUAS vezes — uma pelo cadastro atual
 // ativo, outra pelo cadastro antigo que devia estar fora da contagem.
+// 19/08/2026 (2ª rodada): achado em produção — Rafael de Lima Oliveira é ligante ativo e estava
+// inscrito no evento, mas não recebeu o link: o e-mail da inscrição (digitado por ele no
+// formulário público) é diferente do e-mail cadastrado como ligante, e o CPF da inscrição ficou
+// em branco — nem CPF nem e-mail bateram. O NOME é a única coisa que bate exatamente nos dois
+// cadastros, então virou um terceiro critério de correspondência (o risco de nome igual ser
+// pessoa diferente existe, mas o pior caso aqui é mandar um convite de transmissão a mais —
+// não é dado sensível nem ação irreversível, o custo de excluir por engano quem devia receber é
+// maior que o custo de incluir por engano quem não devia).
 async function filtrarPorTipoMembro(query, inscritos, filtro) {
   if (filtro === 'todos' || !filtro) return inscritos;
   const normCpf = c => (c || '').replace(/\D/g, '');
   const normEmail = e => (e || '').trim().toLowerCase();
+  const normNome = n => (n || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase().replace(/\s+/g, ' ');
   const [ligR, dirR] = await Promise.all([
-    query('SELECT cpf, email FROM ligantes WHERE ativo=1 AND pendente=false'),
-    query('SELECT cpf, email FROM diretivos WHERE ativo=1 AND pendente=false')
+    query('SELECT cpf, email, nome FROM ligantes WHERE ativo=1 AND pendente=false'),
+    query('SELECT cpf, email, nome FROM diretivos WHERE ativo=1 AND pendente=false')
   ]);
   const cpfsLig = new Set(ligR.rows.map(r => normCpf(r.cpf)).filter(Boolean));
   const emailsLig = new Set(ligR.rows.map(r => normEmail(r.email)).filter(Boolean));
+  const nomesLig = new Set(ligR.rows.map(r => normNome(r.nome)).filter(Boolean));
   const cpfsDir = new Set(dirR.rows.map(r => normCpf(r.cpf)).filter(Boolean));
   const emailsDir = new Set(dirR.rows.map(r => normEmail(r.email)).filter(Boolean));
+  const nomesDir = new Set(dirR.rows.map(r => normNome(r.nome)).filter(Boolean));
   return inscritos.filter(insc => {
-    const cpfN = normCpf(insc.cpf), emailN = normEmail(insc.email);
-    const eLigante = (cpfN && cpfsLig.has(cpfN)) || (emailN && emailsLig.has(emailN));
-    const eDiretivo = (cpfN && cpfsDir.has(cpfN)) || (emailN && emailsDir.has(emailN));
+    const cpfN = normCpf(insc.cpf), emailN = normEmail(insc.email), nomeN = normNome(insc.nome);
+    const eLigante = (cpfN && cpfsLig.has(cpfN)) || (emailN && emailsLig.has(emailN)) || (nomeN && nomesLig.has(nomeN));
+    const eDiretivo = (cpfN && cpfsDir.has(cpfN)) || (emailN && emailsDir.has(emailN)) || (nomeN && nomesDir.has(nomeN));
     if (filtro === 'ligantes') return eLigante;
     if (filtro === 'diretivos') return eDiretivo;
     if (filtro === 'membros') return eLigante || eDiretivo;

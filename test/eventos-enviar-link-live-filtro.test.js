@@ -25,11 +25,11 @@ function montar({ inscritos, ligantes = [], diretivos = [], hojeProgramacao = nu
       // esse mesmo filtro nos fixtures (em vez de devolver tudo sempre), senão o teste não
       // provaria nada sobre esse WHERE (só provaria que o código "chama a query", não que ela
       // filtra certo).
-      if (/SELECT cpf, email FROM ligantes/.test(sql)) {
+      if (/SELECT cpf, email, nome FROM ligantes/.test(sql)) {
         const filtrar = /WHERE ativo=1 AND pendente=false/.test(sql);
         return { rows: filtrar ? ligantes.filter(l => l.ativo !== 0 && l.pendente !== true) : ligantes };
       }
-      if (/SELECT cpf, email FROM diretivos/.test(sql)) {
+      if (/SELECT cpf, email, nome FROM diretivos/.test(sql)) {
         const filtrar = /WHERE ativo=1 AND pendente=false/.test(sql);
         return { rows: filtrar ? diretivos.filter(d => d.ativo !== 0 && d.pendente !== true) : diretivos };
       }
@@ -154,6 +154,36 @@ test('quem trocou de papel (ligante inativo + diretivo ativo, mesmo CPF) recebe 
   const resDiretivos = resJson();
   await rotas['POST /eventos/:id/enviar-link-live']({ params: { id: '5' }, body: { filtro: 'diretivos' } }, resDiretivos);
   assert.strictEqual(resDiretivos._body.logs?.length || 0, 0, 'o cadastro de diretivo dela está INATIVO — "Só Diretivos" não pode achá-la mais');
+});
+
+// 19/08/2026 (2ª rodada): caso relatado pelo usuário — Rafael de Lima Oliveira é ligante ativo e
+// estava inscrito no evento, mas não recebeu o link. Não existe vínculo de verdade (chave
+// estrangeira) entre a inscrição do evento e o cadastro de ligante — a inscrição foi preenchida
+// com um e-mail diferente do cadastrado como ligante, e o CPF ficou em branco (comum: o
+// formulário público de inscrição não exige CPF). Nem CPF nem e-mail bateram, só o NOME — que
+// virou o 3º critério de correspondência.
+test('CPF em branco + e-mail diferente na inscrição, mas nome idêntico ao cadastro de ligante — ainda assim recebe (caso real: Rafael de Lima Oliveira)', async () => {
+  const inscritos = [{ id: 344, nome: 'Rafael de Lima Oliveira', email: 'drrafael_oliveira@hotmail.com', whatsapp: '595777', cpf: '', status: 'confirmado' }];
+  const { rotas, wppEnviados } = montar({
+    inscritos,
+    ligantes: [{ cpf: '00881500119', email: 'drrafaelloliveira@gmail.com', nome: 'Rafael de Lima Oliveira', ativo: 1, pendente: false }],
+    diretivos: []
+  });
+  const res = resJson();
+  await rotas['POST /eventos/:id/enviar-link-live']({ params: { id: '5' }, body: { filtro: 'ligantes' } }, res);
+  assert.strictEqual(wppEnviados.length, 1, 'CPF vazio e e-mail diferente não podem excluir alguém cujo nome bate exatamente com o cadastro de ligante');
+});
+
+test('nome com acento/maiúsculas diferentes ainda bate (comparação ignora acento, caixa e espaço duplicado)', async () => {
+  const inscritos = [{ id: 1, nome: '  JOSÉ   ÁLVARES  ', email: 'diferente@x.com', whatsapp: '595555', cpf: '', status: 'confirmado' }];
+  const { rotas, wppEnviados } = montar({
+    inscritos,
+    ligantes: [{ cpf: '', email: 'outro@x.com', nome: 'José Álvares', ativo: 1, pendente: false }],
+    diretivos: []
+  });
+  const res = resJson();
+  await rotas['POST /eventos/:id/enviar-link-live']({ params: { id: '5' }, body: { filtro: 'ligantes' } }, res);
+  assert.strictEqual(wppEnviados.length, 1);
 });
 
 test('sem filtro no body (undefined): comporta como "todos" (retrocompatível)', async () => {
