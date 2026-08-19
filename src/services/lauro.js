@@ -28,6 +28,16 @@ function getSessao(numero) {
   return sessoes[numero];
 }
 
+// Heurística simples pra distinguir uma resposta real a "qual seu nome?" de alguém que
+// ignorou a pergunta e já mandou a reclamação/dúvida direto. Nome de verdade é curto e tem
+// poucas palavras — uma frase contando um problema não passa nesse filtro.
+function pareceNome(msg) {
+  const t = (msg || '').trim();
+  if (!t || t.length > 60) return false;
+  const palavras = t.split(/\s+/).filter(Boolean);
+  return palavras.length <= 6;
+}
+
 // Busca eventos ativos do banco
 async function getEventosAtivos() {
   try {
@@ -838,17 +848,27 @@ async function processarMensagem(numero, texto, midia) {
   // Salva mensagem do usuario
   await salvarConversa(numero, 'user', msg);
   sessao.historico.push({ papel: 'user', mensagem: msg });
-  // Etapa 'nome': contato informou nome -> entra no menu no idioma ja escolhido
+  // Etapa 'nome': contato informou nome -> entra no menu no idioma ja escolhido.
+  // 19/08/2026: BUG REAL em produção — quem ignora a pergunta "qual seu nome?" e já manda a
+  // reclamação (ex: "Não consegui fazer o check-out hoje...") tinha a mensagem INTEIRA salva
+  // como se fosse o nome, e isso aparecia em /atendimentos no lugar do nome/número da pessoa.
+  // pareceNome() é uma heurística simples pra filtrar isso: se não parece um nome de verdade,
+  // segue o atendimento normal com essa mensagem (cai pro fluxo de baixo) em vez de travar
+  // pedindo de novo ou guardar lixo como nome.
   if (sessao.etapa === 'nome') {
-    sessao.nome = msg.trim().substring(0, 80);
+    const texto = msg.trim();
+    if (pareceNome(texto)) {
+      sessao.nome = texto.substring(0, 80);
+      sessao.etapa = 'ativo';
+      const _bvN = sessao.idioma === 'es'
+        ? 'Perfecto, *' + sessao.nome + '*! Cuentame, en que puedo ayudarte hoy?'
+        : 'Perfeito, *' + sessao.nome + '*! Me conta, como posso te ajudar hoje?';
+      await enviarMensagem(numero, _bvN);
+      await salvarConversa(numero, 'assistant', _bvN);
+      sessao.historico.push({ papel: 'assistant', mensagem: _bvN });
+      return;
+    }
     sessao.etapa = 'ativo';
-    const _bvN = sessao.idioma === 'es'
-      ? 'Perfecto, *' + sessao.nome + '*! Cuentame, en que puedo ayudarte hoy?'
-      : 'Perfeito, *' + sessao.nome + '*! Me conta, como posso te ajudar hoje?';
-    await enviarMensagem(numero, _bvN);
-    await salvarConversa(numero, 'assistant', _bvN);
-    sessao.historico.push({ papel: 'assistant', mensagem: _bvN });
-    return;
   }
 
   // Primeira mensagem — pergunta idioma

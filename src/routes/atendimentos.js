@@ -73,7 +73,9 @@ router.get('/atendimentos/:id/conversa', requireAuth, requirePermissao('atendime
       }
     }
     if (!nomeMembro && atR.rows[0].nome_contato) nomeMembro = atR.rows[0].nome_contato;
-    res.json({ msgs: msgsR.rows, area, numero: '****'+numero_membro.slice(-4), idioma, nomeMembro, atendId: parseInt(req.params.id), encerrado: !!encerrado_em, origem });
+    // 19/08/2026: pedido do usuário — número mascarado não dava pra contatar a pessoa de
+    // verdade; mostra o número inteiro (mesmo padrão da lista em /atendimentos).
+    res.json({ msgs: msgsR.rows, area, numero: '+'+numero_membro, idioma, nomeMembro, atendId: parseInt(req.params.id), encerrado: !!encerrado_em, origem });
   } catch(e) { res.json({msgs:[], erro: e.message}); }
 });
 

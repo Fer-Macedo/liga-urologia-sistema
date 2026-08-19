@@ -150,8 +150,14 @@
           %>
           <tr class="at-row" data-status="<%=a.status%>" data-area="<%=a.area%>">
             <td style="font-family:monospace;font-weight:600">
-              <%= a.nome_membro || ("****" + a.numero_membro.slice(-4)) %>
+              <%= a.nome_membro || 'Contato não identificado' %>
               <%if(a.origem==='portal'){%><span style="font-size:9px;font-weight:700;background:#e0f2fe;color:#0369a1;border-radius:2px;padding:0 4px;margin-left:4px;font-family:inherit">PORTAL</span><%}%>
+              <%
+              // 19/08/2026: pedido do usuário — número mascarado ("****1234") não servia pra
+              // ninguém, precisa do número inteiro pra poder ligar/chamar no WhatsApp direto.
+              // origem='portal' guarda "portal-tipo-id" em numero_membro (não é telefone).
+              %>
+              <%if(a.origem!=='portal'){%><div style="font-size:11px;color:var(--texto2);font-weight:400">+<%=a.numero_membro%></div><%}%>
               <div style="font-size:10px;color:var(--texto2)"><%-a.idioma==='es'?'<span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">PY</span> ES':'<span style="font-size:9px;font-weight:700;background:var(--fundo,#f3f4f6);border:1px solid var(--borda,#e5e7eb);border-radius:2px;padding:0 3px;font-family:monospace">BR</span> PT'%></div>
             </td>
             <td><span class="area-badge area-<%=a.area%>"><%=a.area%></span></td>
