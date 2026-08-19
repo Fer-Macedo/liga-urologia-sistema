@@ -1705,33 +1705,31 @@ function carregarRelatorioCheckout(){
       resumo.innerHTML = box(d.resumo.apto_certificado,'Aptos ao certificado','#dcfce7','aptos') + box(d.resumo.abaixo_minimo,'Abaixo do mínimo','#fed7aa','aptos') + box(d.resumo.nao_compareceu,'Não compareceram','#fef3c7','naoCompareceu') + box(d.resumo.sem_inscricao,'Sem inscrição','#fee2e2','semInscricao') + box(d.resumo.total_checkouts,'Total check-outs','#e0e7ff',null);
 
       if(!{aptos:1,naoCompareceu:1,semInscricao:1}[_ckView]) _ckView = 'aptos';
-      var html = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">';
-      html += '<label style="font-size:12px;font-weight:600;color:var(--texto2)">Ver:</label>';
-      html += '<select id="ckFiltroInfo" class="input" style="max-width:320px" onchange="mostrarViewCheckout(this.value)">';
-      html += '<option value="aptos"'+(_ckView==='aptos'?' selected':'')+'>Check-outs realizados ('+d.aptos.length+')</option>';
-      html += '<option value="naoCompareceu"'+(_ckView==='naoCompareceu'?' selected':'')+'>Inscritos que não fizeram check-out ('+d.naoCompareceu.length+')</option>';
-      html += '<option value="semInscricao"'+(_ckView==='semInscricao'?' selected':'')+'>Check-outs sem inscrição válida ('+d.semInscricao.length+')</option>';
-      html += '</select></div>';
-
-      // APTOS — com filtro por dia (pedido do usuário 17/08/2026, 3ª rodada: saber de qual dia
-      // é cada check-out, já que a mesma pessoa pode ter um check-out por dia do evento). Coluna
-      // "Situação" (pedido do usuário 19/08/2026): apto ao certificado exige 75% de presença —
-      // pelo menos precisaDias dos totalDias do evento — não basta ter feito 1 check-out qualquer.
-      html += '<div id="ckView_aptos" style="display:'+(_ckView==='aptos'?'block':'none')+'">';
+      var html = '';
+      // Check-outs por dia — sempre visível (é contexto fixo, não depende de qual lista o "Ver"
+      // está mostrando) — pedido do usuário 19/08/2026: fica logo abaixo do resumo.
       if(d.porDia && d.porDia.length){
         html += '<h3 style="font-size:14px;color:#0f172a;margin:0 0 8px">Check-outs por dia</h3>';
-        html += '<table class="tabela" style="width:100%;font-size:12px;margin-bottom:8px"><thead><tr><th style="text-align:left">Dia</th><th>Check-outs</th></tr></thead><tbody>';
+        html += '<table class="tabela" style="width:100%;font-size:12px;margin-bottom:16px"><thead><tr><th style="text-align:left">Dia</th><th>Check-outs</th></tr></thead><tbody>';
         d.porDia.forEach(function(dia){
           var dataFmt = dia.data ? new Date(dia.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}) : '';
           html += '<tr><td>'+dataFmt+' — '+dia.titulo+'</td><td style="text-align:center;font-weight:700">'+dia.total+'</td></tr>';
         });
         html += '</tbody></table>';
       }
-      html += '<h3 style="font-size:14px;color:#15803d;margin:18px 0 4px">'+ICONE_APTOS+' Check-outs realizados ('+d.aptos.length+')</h3>';
-      if(d.totalDiasEvento > 1){
-        html += '<div style="font-size:11px;color:var(--texto2);margin-bottom:10px">Regra do certificado: precisa de check-out em pelo menos <strong>'+d.precisaDias+' de '+d.totalDiasEvento+' dias</strong> (75% de presença) para ficar Apto.</div>';
-      }
-      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">';
+
+      // Uma linha só de filtro: Ver + Buscar + Dia — pedido do usuário 19/08/2026: o "Ver" ficava
+      // lá em cima, longe da busca/dia, sem bater um com o outro. Buscar/Dia só valem pra lista
+      // de check-outs realizados (as outras duas listas não têm recorte por dia), então ficam
+      // escondidos quando outra opção do "Ver" está selecionada (mostrarViewCheckout cuida disso).
+      html += '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:16px">';
+      html += '<span style="display:flex;align-items:center;gap:8px"><label style="font-size:12px;font-weight:600;color:var(--texto2)">Ver:</label>';
+      html += '<select id="ckFiltroInfo" class="input" style="max-width:320px" onchange="mostrarViewCheckout(this.value)">';
+      html += '<option value="aptos"'+(_ckView==='aptos'?' selected':'')+'>Check-outs realizados ('+d.aptos.length+')</option>';
+      html += '<option value="naoCompareceu"'+(_ckView==='naoCompareceu'?' selected':'')+'>Inscritos que não fizeram check-out ('+d.naoCompareceu.length+')</option>';
+      html += '<option value="semInscricao"'+(_ckView==='semInscricao'?' selected':'')+'>Check-outs sem inscrição válida ('+d.semInscricao.length+')</option>';
+      html += '</select></span>';
+      html += '<span id="ckAptosFiltros" style="display:'+(_ckView==='aptos'?'flex':'none')+';align-items:center;gap:8px;flex-wrap:wrap">';
       html += '<input type="text" id="ckBuscaNome" class="input" style="max-width:240px" placeholder="Buscar por nome ou e-mail..." oninput="buscarAptos()">';
       if(d.porDia && d.porDia.length){
         html += '<select id="ckFiltroDia" class="input" style="max-width:280px" onchange="buscarAptos()"><option value="">Todos os dias</option>';
@@ -1742,7 +1740,16 @@ function carregarRelatorioCheckout(){
         });
         html += '</select>';
       }
-      html += '</div>';
+      html += '</span></div>';
+
+      // APTOS — coluna "Situação" (pedido do usuário 19/08/2026): apto ao certificado exige 75%
+      // de presença — pelo menos precisaDias dos totalDias do evento — não basta ter feito 1
+      // check-out qualquer.
+      html += '<div id="ckView_aptos" style="display:'+(_ckView==='aptos'?'block':'none')+'">';
+      html += '<h3 style="font-size:14px;color:#15803d;margin:0 0 4px">'+ICONE_APTOS+' Check-outs realizados ('+d.aptos.length+')</h3>';
+      if(d.totalDiasEvento > 1){
+        html += '<div style="font-size:11px;color:var(--texto2);margin-bottom:10px">Regra do certificado: precisa de check-out em pelo menos <strong>'+d.precisaDias+' de '+d.totalDiasEvento+' dias</strong> (75% de presença) para ficar Apto.</div>';
+      }
       html += '<div id="ckAptosWrap"></div>';
       html += '</div>';
 
@@ -1781,6 +1788,8 @@ function mostrarViewCheckout(view){
   });
   var sel = document.getElementById('ckFiltroInfo');
   if(sel) sel.value = view;
+  var filtrosAptos = document.getElementById('ckAptosFiltros');
+  if(filtrosAptos) filtrosAptos.style.display = (view==='aptos' ? 'flex' : 'none');
 }
 function escHtml(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
 
