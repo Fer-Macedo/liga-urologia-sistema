@@ -150,6 +150,23 @@ test('POST /checkout/:id: e-mail de confirmação mostra "Día X de Y" (posiçã
   assert.match(emailsEnviados[0].assunto, /Día 2 de 4/, 'o assunto do e-mail também deixa claro de qual dia é a confirmação');
 });
 
+// 18/08/2026: pedido do usuário — sem o nome completo estampado no PRÓPRIO registro, alguém
+// podia mandar a confirmação de um colega como se fosse a prova de que ELE participou (a
+// confirmação era genérica, só "Olá, Fulano!" no topo não é suficiente prova). Precisa aparecer
+// o nome completo dentro do quadro de confirmação, tanto no envio original quanto no reenvio.
+test('POST /checkout/:id: e-mail traz o NOME COMPLETO do participante, não só o primeiro nome do "Olá"', async () => {
+  const { rotas, emailsEnviados } = montar({
+    evento: EVENTO,
+    hojeProgramacao: { id: 10, titulo: 'Día 2', checkout_aberto: true, checkout_fecha_em: null, data: '2026-08-18' },
+    inscricao: { id: 42, nome: 'Fulano de Tal Sobrenome', email: 'f@x.com', status: 'confirmado', isento: false, rg: '123456' }
+  });
+  const res = resRender();
+  await rotas['POST /checkout/:id']({ params: { id: '5' }, body: { email: 'f@x.com', documento: '123456', aval_resposta_0: '5', aval_resposta_1: '5', aval_resposta_2: '5', aval_resposta_3: '5' }, headers: {}, ip: '1.2.3.4' }, res);
+  assert.strictEqual(emailsEnviados.length, 1);
+  assert.match(emailsEnviados[0].html, /<strong>Participante:<\/strong> Fulano de Tal Sobrenome/, 'nome completo tem que aparecer DENTRO do registro, não só na saudação');
+  assert.match(emailsEnviados[0].texto, /Participante: Fulano de Tal Sobrenome/);
+});
+
 test('POST /checkout/:id: dia fechado (checkout_aberto=false) recusa com mensagem de encerrado', async () => {
   const { rotas, inserts } = montar({
     evento: EVENTO,
@@ -624,8 +641,10 @@ test('POST /eventos/:id/checkout-reenviar-confirmacoes: reenvia pra todo mundo c
   assert.strictEqual(emailsEnviados.length, 2);
   assert.strictEqual(emailsEnviados[0].para, 'ana@x.com');
   assert.match(emailsEnviados[0].html, /Día 1/, 'e-mail continua marcado com o dia certo de cada check-out');
+  assert.match(emailsEnviados[0].html, /<strong>Participante:<\/strong> Ana Confirmada/, 'reenvio também estampa o nome completo — prova de quem é a confirmação');
   assert.strictEqual(emailsEnviados[1].para, 'bruno@x.com');
   assert.match(emailsEnviados[1].html, /Día 2/);
+  assert.match(emailsEnviados[1].html, /<strong>Participante:<\/strong> Bruno Silva/);
 });
 
 test('POST /eventos/:id/checkout-reenviar-confirmacoes: check-out legado (sem dia) reenvia normalmente, sem rótulo de dia', async () => {

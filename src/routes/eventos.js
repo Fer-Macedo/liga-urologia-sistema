@@ -1730,14 +1730,21 @@ function diaLabelCheckout(dia, diaInfo) {
 // dia de um evento de vários dias, conseguir diferenciar qual confirmação é de qual dia — e o
 // tema da aula daquele dia, numa linha própria (pedido do usuário 18/08/2026: só o rótulo do dia
 // não deixava claro qual foi o assunto tratado).
-function htmlConfirmacaoCheckout(primeiroNome, nomeEvento, diaLabel, temaDia) {
+// nomeCompleto aparece dentro do próprio quadro de confirmação (não só no "Olá, Fulano!" do
+// topo) — pedido do usuário 18/08/2026: sem o nome completo estampado no registro, alguém podia
+// mandar a confirmação de um colega como se fosse a prova de que ELE participou. Com o nome
+// completo ali dentro, o comprovante só serve pra provar a presença de quem está escrito nele.
+function htmlConfirmacaoCheckout(primeiroNome, nomeEvento, diaLabel, temaDia, nomeCompleto) {
   const linhaDia = diaLabel ? '<p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.5px">' + diaLabel + '</p>' : '';
   const linhaTema = temaDia ? '<p style="margin:0 0 12px;font-size:13px;color:#374151"><strong>Tema:</strong> ' + temaDia + '</p>' : '';
+  const linhaParticipante = nomeCompleto ? '<p style="margin:0 0 6px;font-size:13px;color:#166534"><strong>Participante:</strong> ' + nomeCompleto + '</p>' : '';
   return '<h2 style="margin:0 0 8px;font-size:20px;color:#0f172a">¡Hola, ' + primeiroNome + '!</h2>'
     + '<p style="margin:0 0 12px;font-size:14px;color:#475569;line-height:1.7">Tu <strong>asistencia</strong> al evento <strong>' + nomeEvento + '</strong> fue registrada con éxito.</p>'
     + linhaDia
     + linhaTema
-    + '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 20px;margin-bottom:24px"><p style="margin:0;font-size:13px;color:#166534">Este registro confirma que estuviste presente en el evento. Tu certificado será procesado conforme las reglas del evento.</p></div>'
+    + '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px 20px;margin-bottom:24px">'
+    + linhaParticipante
+    + '<p style="margin:0;font-size:13px;color:#166534">Este registro confirma que estuviste presente en el evento. Tu certificado será procesado conforme las reglas del evento.</p></div>'
     + '<p style="margin:0;font-size:12px;color:#94a3b8">¿Dudas? Contáctanos por WhatsApp o responde a este correo.</p>';
 }
 
@@ -2264,8 +2271,8 @@ router.post('/checkout/:id', limiterCheckoutEvento, async (req, res) => {
         const diaInfo = dia ? posicaoDia(await diasOrdenadosDoEvento(req.params.id), dia.id) : null;
         const label = diaLabelCheckout(dia, diaInfo);
         const temaDia = dia ? (dia.titulo || '') : '';
-        const htmlCk = htmlConfirmacaoCheckout(primeiro, evento.nome, label, temaDia);
-        const textoCk = 'Hola, '+primeiro+'! Tu asistencia al evento '+evento.nome+' fue registrada con éxito.'+(label ? ' ('+label+')' : '')+(temaDia ? '\nTema: '+temaDia : '');
+        const htmlCk = htmlConfirmacaoCheckout(primeiro, evento.nome, label, temaDia, inscricao.nome);
+        const textoCk = 'Hola, '+primeiro+'! Tu asistencia al evento '+evento.nome+' fue registrada con éxito.'+(label ? ' ('+label+')' : '')+(temaDia ? '\nTema: '+temaDia : '')+'\nParticipante: '+inscricao.nome;
         enviarEmail({ para: inscricao.email, assunto: 'Asistencia confirmada — '+evento.nome+(label ? ' — '+label : ''), html: htmlCk, texto: textoCk, faixaLabel: 'ASISTENCIA CONFIRMADA' }).catch(function(e){ console.error('Email checkout erro:', e.message); });
       } catch(e) { console.error('Email checkout falhou:', e.message); }
     }
@@ -2349,8 +2356,8 @@ async function reenviarConfirmacoesCheckout(eventoId, programacaoId) {
       const diaInfo = dia ? posicaoDia(diasOrdenados, dia.id) : null;
       const label = diaLabelCheckout(dia, diaInfo);
       const temaDia = dia ? (dia.titulo || '') : '';
-      const htmlCk = htmlConfirmacaoCheckout(primeiro, nomeEvento, label, temaDia);
-      const textoCk = 'Hola, ' + primeiro + '! Tu asistencia al evento ' + nomeEvento + ' fue registrada con éxito.' + (label ? ' (' + label + ')' : '') + (temaDia ? '\nTema: ' + temaDia : '');
+      const htmlCk = htmlConfirmacaoCheckout(primeiro, nomeEvento, label, temaDia, r.nome);
+      const textoCk = 'Hola, ' + primeiro + '! Tu asistencia al evento ' + nomeEvento + ' fue registrada con éxito.' + (label ? ' (' + label + ')' : '') + (temaDia ? '\nTema: ' + temaDia : '') + '\nParticipante: ' + r.nome;
       await enviarEmail({ para: r.email, assunto: 'Asistencia confirmada — ' + nomeEvento + (label ? ' — ' + label : ''), html: htmlCk, texto: textoCk, faixaLabel: 'ASISTENCIA CONFIRMADA' });
     }
     console.log('Reenvio de confirmações de check-out concluído: ' + rows.length + ' processadas (evento ' + eventoId + (programacaoId ? ', dia ' + programacaoId : ', todos os dias') + ')');
@@ -2540,7 +2547,7 @@ router.get('/eventos/:id/checkout-email-preview', requireAuth, requirePermissao(
     const diaInfo = dia ? posicaoDia(await diasOrdenadosDoEvento(req.params.id), dia.id) : null;
     const label = diaLabelCheckout(dia, diaInfo);
     const { htmlSimples } = require('../services/notificacoes');
-    const htmlCk = htmlConfirmacaoCheckout('María', evento.nome, label, dia ? (dia.titulo || '') : '');
+    const htmlCk = htmlConfirmacaoCheckout('María', evento.nome, label, dia ? (dia.titulo || '') : '', 'María González Ejemplo');
     res.send(htmlSimples({ mensagem: htmlCk, faixaLabel: 'ASISTENCIA CONFIRMADA', config: cfgPub }));
   } catch(e) { console.error('Checkout email preview erro:', e.message); res.status(500).send('Erro ao carregar prévia do e-mail.'); }
 });
