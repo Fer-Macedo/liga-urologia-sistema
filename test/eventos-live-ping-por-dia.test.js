@@ -12,7 +12,18 @@ const path = require('path');
 const RAIZ = path.join(__dirname, '..');
 const MODULO = path.join(RAIZ, 'src/routes/eventos.js');
 
-function montar({ presenca, hojeProgramacao, proximaProgramacao, diaSegundos, mock } = {}) {
+// Simula o LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - ultimo_ping))::int, 0), 600) da query real,
+// pra provar de verdade que o crédito é o tempo REAL decorrido (não mais um flat de 120) — sem
+// isso o dublê só provaria "a query foi chamada", não que ela credita certo (achado 19/08/2026:
+// esse é exatamente o tipo de teste que não teria pego a regressão original).
+const TEMPO_MAX_POR_PING = 600;
+function creditoSimulado(ultimoPingAnterior) {
+  if (!ultimoPingAnterior) return 120; // ultimo_ping IS NULL — primeiro ping, mesmo comportamento de sempre
+  const decorrido = Math.floor((Date.now() - ultimoPingAnterior.getTime()) / 1000);
+  return Math.min(TEMPO_MAX_POR_PING, Math.max(0, decorrido));
+}
+
+function montar({ presenca, hojeProgramacao, proximaProgramacao, diaSegundos, diaUltimoPing, mock } = {}) {
   const chamadasSQL = [];
   const rq = require.resolve(path.join(RAIZ, 'src/models/database.js'));
   require.cache[rq] = { id: rq, filename: rq, loaded: true, exports: {
@@ -28,8 +39,14 @@ function montar({ presenca, hojeProgramacao, proximaProgramacao, diaSegundos, mo
       if (/WHERE evento_id=\$1 AND data IS NOT NULL ORDER BY ABS/.test(sql)) return { rows: proximaProgramacao ? [proximaProgramacao] : [] };
       if (/SELECT 1 FROM evento_programacao WHERE id=\$1 AND data=CURRENT_DATE/.test(sql)) return { rows: (hojeProgramacao && hojeProgramacao.id === params[0]) ? [{}] : [] };
       if (/SELECT tempo_total_segundos FROM evento_presencas_online_dias WHERE presenca_id=\$1 AND programacao_id=\$2/.test(sql)) return { rows: diaSegundos !== undefined ? [{ tempo_total_segundos: diaSegundos }] : [] };
-      if (/INSERT INTO evento_presencas_online_dias/.test(sql)) return { rows: [{ tempo_total_segundos: (diaSegundos||0)+120, ultimo_ping: new Date() }] };
-      if (/UPDATE evento_presencas_online SET\s+tempo_total_segundos = tempo_total_segundos \+ CASE/.test(sql)) return { rows: [{ tempo_total_segundos: (presenca?.tempo_total_segundos||0)+120, ultimo_ping: new Date() }] };
+      if (/INSERT INTO evento_presencas_online_dias/.test(sql)) {
+        const credito = diaSegundos !== undefined ? creditoSimulado(diaUltimoPing) : 120;
+        return { rows: [{ tempo_total_segundos: (diaSegundos||0)+credito, ultimo_ping: new Date() }] };
+      }
+      if (/UPDATE evento_presencas_online SET\s+tempo_total_segundos = tempo_total_segundos \+ CASE/.test(sql)) {
+        const credito = creditoSimulado(presenca && presenca.ultimo_ping);
+        return { rows: [{ tempo_total_segundos: (presenca?.tempo_total_segundos||0)+credito, ultimo_ping: new Date() }] };
+      }
       if (/UPDATE evento_presencas_online SET ativo=false/.test(sql)) return { rows: [] };
       if (/SELECT \* FROM evento_patrocinadores/.test(sql)) return { rows: [] };
       return { rows: [] };
@@ -253,4 +270,64 @@ test('POST /live/:token/sair: marca ativo=false sem quebrar', async () => {
   const res = resJson();
   await rotas['POST /live/:token/sair']({ params: { token: 'abc' } }, res);
   assert.strictEqual(res._body.ok, true);
+});
+
+// 19/08/2026: queixa grave de produção — o crédito era um FLAT de 120s por ping, então qualquer
+// ping atrasado (tela do celular apaga durante a aula — comum, e o navegador SUSPENDE o
+// setInterval nesse caso, não tem como o JS evitar) fazia a pessoa perder o tempo real que
+// passou. Histórico real de ontem: gente com só 40-100min contados numa aula de ~3h. Corrigido
+// pra creditar o tempo REAL decorrido desde o último ping (capado, pra não creditar uma aba
+// esquecida por horas como se tivesse assistido tudo).
+test('POST /live/:token/ping (por dia): ping ATRASADO credita o tempo REAL decorrido, não mais um flat de 120s', async () => {
+  const ultimoPingHa6min = new Date(Date.now() - 6 * 60 * 1000); // tela apagou, ping só chegou 6min depois
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc', sessao_atual: 'sess1', tempo_total_segundos: 0 },
+    hojeProgramacao: { id: 10, titulo: 'Día 2', duracao_minutos: null },
+    diaSegundos: 1000,
+    diaUltimoPing: ultimoPingHa6min
+  });
+  const res = resJson();
+  await rotas['POST /live/:token/ping']({ params: { token: 'abc' }, body: { sessao: 'sess1' } }, res);
+  const creditado = res._body.total - 1000;
+  assert.ok(creditado >= 355 && creditado <= 365, 'creditou ~360s (6min) de verdade, não um flat de 120s — creditado='+creditado);
+});
+
+test('POST /live/:token/ping (por dia): ping no intervalo normal (~2min) credita ~120s — não regrediu com a correção', async () => {
+  const ultimoPingHa2min = new Date(Date.now() - 120 * 1000);
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc', sessao_atual: 'sess1', tempo_total_segundos: 0 },
+    hojeProgramacao: { id: 10, titulo: 'Día 2', duracao_minutos: null },
+    diaSegundos: 500,
+    diaUltimoPing: ultimoPingHa2min
+  });
+  const res = resJson();
+  await rotas['POST /live/:token/ping']({ params: { token: 'abc' }, body: { sessao: 'sess1' } }, res);
+  const creditado = res._body.total - 500;
+  assert.ok(creditado >= 115 && creditado <= 125, 'operação normal continua creditando ~120s — creditado='+creditado);
+});
+
+test('POST /live/:token/ping (por dia): gap ENORME (aba esquecida por 2h) fica CAPADO em 10min, não credita o dia inteiro de uma vez', async () => {
+  const ultimoPingHa2h = new Date(Date.now() - 2 * 3600 * 1000);
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc', sessao_atual: 'sess1', tempo_total_segundos: 0 },
+    hojeProgramacao: { id: 10, titulo: 'Día 2', duracao_minutos: null },
+    diaSegundos: 0,
+    diaUltimoPing: ultimoPingHa2h
+  });
+  const res = resJson();
+  await rotas['POST /live/:token/ping']({ params: { token: 'abc' }, body: { sessao: 'sess1' } }, res);
+  assert.strictEqual(res._body.total, 600, 'capado em 600s (10min) — não pode creditar as 2h inteiras de uma aba esquecida aberta');
+});
+
+test('POST /live/:token/ping (modo legado, sem Programação por dia): ping atrasado também credita o tempo real, não um flat de 120s', async () => {
+  const ultimoPingHa5min = new Date(Date.now() - 5 * 60 * 1000);
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc', sessao_atual: 'sess1', tempo_total_segundos: 300, ultimo_ping: ultimoPingHa5min },
+    hojeProgramacao: null,
+    proximaProgramacao: null
+  });
+  const res = resJson();
+  await rotas['POST /live/:token/ping']({ params: { token: 'abc' }, body: { sessao: 'sess1' } }, res);
+  const creditado = res._body.total - 300;
+  assert.ok(creditado >= 295 && creditado <= 305, 'modo legado também credita o tempo real (~300s), não um flat de 120s — creditado='+creditado);
 });

@@ -1822,6 +1822,13 @@ function diaJaAconteceu(dia) {
   return transmissaoJaComecou(dia);
 }
 
+// Teto de segundos creditados NUM ping só — o ping do cliente dispara a cada 2min (120s) mas
+// pode chegar atrasado ou ser perdido de verdade (tela do celular apaga, o navegador SUSPENDE o
+// setInterval em segundo plano — não tem como nosso JS evitar isso). Sem teto, uma aba esquecida
+// aberta por horas creditaria tudo de uma vez só no próximo ping; 10 minutos é generoso o
+// suficiente pra cobrir uma pausa real (tela apagou, trocou de app) sem inflar uma ausência longa.
+const TEMPO_MAX_POR_PING = 600;
+
 router.get('/live/:token', async (req, res) => {
   try {
     const r = await query('SELECT epo.*, i.nome, i.email, e.nome as evento_nome, e.youtube_url, e.duracao_minutos FROM evento_presencas_online epo JOIN evento_inscricoes i ON i.id=epo.inscricao_id JOIN eventos e ON e.id=epo.evento_id WHERE epo.token=$1',[req.params.token]);
@@ -1877,11 +1884,20 @@ router.post('/live/:token/ping', async (req, res) => {
     // Só acumula em dias sem Programação alguma cadastrada (modo legado) OU no dia de HOJE —
     // um link aberto fora da janela do evento (ex: testando antes de começar) só faz preview,
     // não conta tempo, senão o teste contaminaria a frequência real.
+    // 19/08/2026: achado em produção (queixa grave, muitos alunos) — o crédito era um FLAT de
+    // 120s por ping "válido" (>90s desde o último), então qualquer ping perdido ou atrasado (tela
+    // do celular apagou, app foi pra segundo plano — o navegador SUSPENDE o setInterval nesse
+    // caso, é comportamento do sistema, não dá pra evitar) fazia a pessoa perder o tempo real que
+    // passou, não só um ping — o histórico de ontem mostra gente com só 40-100min contados numa
+    // aula de ~3h. Agora credita o tempo REAL decorrido desde o último ping (LEAST/GREATEST:
+    // nunca negativo, nunca mais que TEMPO_MAX_POR_PING de uma vez, pra não creditar uma aba
+    // esquecida aberta por horas como se tivesse assistido tudo) — um ping atrasado credita o
+    // atraso de verdade, em vez de um valor fixo que ignora quanto tempo realmente passou.
     if (!dia) {
       const rp = await query(
         `UPDATE evento_presencas_online SET
-           tempo_total_segundos = tempo_total_segundos + CASE WHEN ultimo_ping IS NULL OR ultimo_ping < NOW() - INTERVAL '90 seconds' THEN 120 ELSE 0 END,
-           ultimo_ping = CASE WHEN ultimo_ping IS NULL OR ultimo_ping < NOW() - INTERVAL '90 seconds' THEN NOW() ELSE ultimo_ping END
+           tempo_total_segundos = tempo_total_segundos + CASE WHEN ultimo_ping IS NULL THEN 120 ELSE LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - ultimo_ping))::int, 0), ${TEMPO_MAX_POR_PING}) END,
+           ultimo_ping = NOW()
          WHERE id=$1 RETURNING tempo_total_segundos, ultimo_ping`,
         [presenca.id]
       );
@@ -1897,8 +1913,8 @@ router.post('/live/:token/ping', async (req, res) => {
       `INSERT INTO evento_presencas_online_dias (presenca_id, programacao_id, tempo_total_segundos, ultimo_ping)
        VALUES ($1,$2,120,NOW())
        ON CONFLICT (presenca_id, programacao_id) DO UPDATE SET
-         tempo_total_segundos = evento_presencas_online_dias.tempo_total_segundos + CASE WHEN evento_presencas_online_dias.ultimo_ping IS NULL OR evento_presencas_online_dias.ultimo_ping < NOW() - INTERVAL '90 seconds' THEN 120 ELSE 0 END,
-         ultimo_ping = CASE WHEN evento_presencas_online_dias.ultimo_ping IS NULL OR evento_presencas_online_dias.ultimo_ping < NOW() - INTERVAL '90 seconds' THEN NOW() ELSE evento_presencas_online_dias.ultimo_ping END
+         tempo_total_segundos = evento_presencas_online_dias.tempo_total_segundos + LEAST(GREATEST(EXTRACT(EPOCH FROM (NOW() - evento_presencas_online_dias.ultimo_ping))::int, 0), ${TEMPO_MAX_POR_PING}),
+         ultimo_ping = NOW()
        RETURNING tempo_total_segundos, ultimo_ping`,
       [presenca.id, dia.id]
     );

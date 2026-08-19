@@ -211,9 +211,19 @@
 
   <!-- CHAT -->
   <div class="chat-section">
-    <div class="chat-header">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      Chat en vivo
+    <div class="chat-header" style="justify-content:space-between">
+      <span style="display:flex;align-items:center;gap:8px">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Chat en vivo
+      </span>
+      <% if (ytId) { %>
+      <!-- Comentar dentro do chat embutido exige estar logado no Google DENTRO do iframe — em
+           navegadores que bloqueiam cookie de terceiro (Safari por padrão, e cada vez mais
+           Chrome), esse login não funciona e a pessoa só consegue LER o chat, não comentar. Não
+           tem correção possível do nosso lado (é o YouTube que exige isso) — este link abre o
+           vídeo direto no YouTube, onde comentar sempre funciona normalmente. -->
+      <a href="https://www.youtube.com/watch?v=<%= ytId %>" target="_blank" rel="noopener" style="font-size:11px;color:#60a5fa;text-decoration:none;white-space:nowrap">¿No puede comentar? Ábralo en YouTube ↗</a>
+      <% } %>
     </div>
     <% if (ytId) { %>
       <iframe class="chat-iframe" src="https://www.youtube.com/live_chat?v=<%= ytId %>&embed_domain=<%= typeof embedDomain !== 'undefined' && embedDomain ? embedDomain : 'sistema.lauroucpcde.com' %>" allow="accelerometer; autoplay; clipboard-write; encrypted-media"></iframe>
@@ -288,6 +298,23 @@ function validarAcesso() {
 
   // Ping a cada 2 min — sincroniza total com banco
   setInterval(() => { if (online) enviarPing(); }, 120000);
+
+  pedirWakeLock();
+}
+
+// 19/08/2026: achado em produção (queixa grave) — vídeo "travando" e tempo não sendo contado.
+// A causa real: quando a TELA DO CELULAR APAGA (comum em quem só está assistindo, sem tocar na
+// tela), o navegador suspende a aba em segundo plano — o vídeo para e nosso contador para junto
+// (isso NÃO acontece assistindo direto no app do YouTube, que tem permissão especial do sistema
+// pra continuar em segundo plano). Wake Lock pede pro navegador manter a TELA LIGADA enquanto
+// essa página estiver aberta, evitando o problema na raiz — suportado no Chrome/Android e Safari
+// recente; onde não é suportado, cai pro app.getContentText() catch abaixo sem quebrar nada (o
+// crédito de tempo por ping atrasado, corrigido no servidor, cobre esse caso também).
+let wakeLock = null;
+async function pedirWakeLock() {
+  try {
+    if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+  } catch (e) { /* não suportado ou negado — segue sem, não é crítico */ }
 }
 
 function enviarPing() {
@@ -326,7 +353,11 @@ document.getElementById('login-email').addEventListener('keypress', e => { if(e.
 document.addEventListener('visibilitychange', () => {
   const b = document.getElementById('status-badge');
   if (document.hidden) { online=false; if(b){b.className='status-badge off'; b.textContent='Pausado';} fetch('/live/'+token+'/sair',{method:'POST'}); }
-  else { online=true; if(b){b.className='status-badge on'; b.textContent='Conectado';} if (sessaoValida) enviarPing(); }
+  else {
+    online=true; if(b){b.className='status-badge on'; b.textContent='Conectado';}
+    if (sessaoValida) enviarPing(); // credita o tempo real que passou em segundo plano (servidor)
+    pedirWakeLock(); // o navegador libera o wake lock sozinho ao esconder a aba — pede de novo
+  }
 });
 window.addEventListener('beforeunload', () => navigator.sendBeacon('/live/'+token+'/sair'));
 
