@@ -2295,6 +2295,42 @@ router.post('/eventos/:id/programacao/:pid/checkout-toggle', requireAuth, requir
   res.redirect('/eventos/' + req.params.id + '?tab=checkout');
 });
 
+// Reenviar e-mail de confirmação de check-out — pedido do usuário 18/08/2026: queixa de que
+// "o colega recebeu, eu não" (Gmail derrubando envios sob rajada, já corrigido na raiz em
+// notificacoes.js). Como o check-out já fica fechado quando isso é usado, reenvia geral (todos
+// os dias) em vez de tentar adivinhar quem especificamente não recebeu — não existe coluna de
+// status de envio pra filtrar por "falhou". Roda em segundo plano (pode levar minutos com muita
+// gente) e cada envio já fica logado por enviarEmail() (pm2 logs mostram sucesso/erro por pessoa).
+router.post('/eventos/:id/checkout-reenviar-confirmacoes', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  try {
+    const rows = (await query(
+      `SELECT i.nome, i.email, p.id AS dia_id, p.titulo AS dia_titulo, p.data AS dia_data
+       FROM evento_checkouts c
+       JOIN evento_inscricoes i ON i.id = c.inscricao_id
+       LEFT JOIN evento_programacao p ON p.id = c.programacao_id
+       WHERE c.evento_id=$1 AND i.email IS NOT NULL AND i.email <> ''`,
+      [req.params.id]
+    )).rows;
+    const evR = await query('SELECT nome FROM eventos WHERE id=$1', [req.params.id]);
+    const nomeEvento = evR.rows[0] ? evR.rows[0].nome : '';
+
+    req.session.msg = ['Reenvio iniciado em segundo plano: ' + rows.length + ' confirmações na fila. Acompanhe pelos logs.'];
+    res.redirect('/eventos/' + req.params.id + '?tab=checkout');
+
+    (async () => {
+      const { enviarEmail } = require('../services/notificacoes');
+      for (const r of rows) {
+        const primeiro = r.nome.split(' ')[0];
+        const label = diaLabelCheckout(r.dia_id ? { data: r.dia_data, titulo: r.dia_titulo } : null);
+        const htmlCk = htmlConfirmacaoCheckout(primeiro, nomeEvento, label);
+        const textoCk = 'Hola, ' + primeiro + '! Tu asistencia al evento ' + nomeEvento + ' fue registrada con éxito.' + (label ? ' (' + label + ')' : '');
+        await enviarEmail({ para: r.email, assunto: 'Asistencia confirmada — ' + nomeEvento, html: htmlCk, texto: textoCk, faixaLabel: 'ASISTENCIA CONFIRMADA' });
+      }
+      console.log('Reenvio de confirmações de check-out concluído: ' + rows.length + ' processadas (evento ' + req.params.id + ')');
+    })().catch(err => console.error('Reenvio de confirmações de check-out erro:', err.message));
+  } catch(e) { req.session.erro = [e.message]; res.redirect('/eventos/' + req.params.id + '?tab=checkout'); }
+});
+
 // Relatório de check-out (painel) — JSON consumido pela aba
 router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {

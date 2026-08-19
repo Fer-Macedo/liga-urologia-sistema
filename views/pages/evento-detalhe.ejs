@@ -1298,6 +1298,9 @@
             <span style="display:flex;gap:8px">
               <button class="btn btn-sm" onclick="carregarRelatorioCheckout()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Atualizar</button>
               <a class="btn btn-sm" href="/eventos/<%= evento.id %>/checkout-export" style="background:var(--cor-primaria);color:#fff;border-color:transparent;text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar Aptos (CSV)</a>
+              <form method="POST" action="/eventos/<%= evento.id %>/checkout-reenviar-confirmacoes" style="display:inline" onsubmit="var f=this; confirmarAcao('Reenviar o e-mail de confirmação de check-out para TODOS que já confirmaram presença, em TODOS os dias do evento? Use isso se houver suspeita de que alguns e-mails não chegaram.', function(){ f.submit(); }); return false;">
+                <button type="submit" class="btn btn-sm" style="background:#d97706;color:#fff;border-color:transparent"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Reenviar confirmações (todos os dias)</button>
+              </form>
             </span>
           </div>
           <div class="section-body">

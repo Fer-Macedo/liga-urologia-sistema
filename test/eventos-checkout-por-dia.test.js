@@ -15,6 +15,7 @@ const MODULO = path.join(RAIZ, 'src/routes/eventos.js');
 function montar({ evento, hojeProgramacao, proximaProgramacao, inscricao, checkoutExistente, mock } = {}) {
   const inserts = [];
   const updates = [];
+  const emailsEnviados = [];
   const rq = require.resolve(path.join(RAIZ, 'src/models/database.js'));
   require.cache[rq] = { id: rq, filename: rq, loaded: true, exports: {
     query: async (sql, params) => {
@@ -50,13 +51,13 @@ function montar({ evento, hojeProgramacao, proximaProgramacao, inscricao, checko
   const rfx = require.resolve(path.join(RAIZ, 'src/services/fluxo-eventos.js'));
   require.cache[rfx] = { id: rfx, filename: rfx, loaded: true, exports: { calcularLiquidoEvento: (v) => v } };
   const rnt = require.resolve(path.join(RAIZ, 'src/services/notificacoes.js'));
-  require.cache[rnt] = { id: rnt, filename: rnt, loaded: true, exports: { enviarWhatsApp: async () => {}, enviarEmail: async () => {}, htmlSimples: (opts) => '<!DOCTYPE html><html><body data-faixa="'+(opts.faixaLabel||'')+'">'+opts.mensagem+'</body></html>' } };
+  require.cache[rnt] = { id: rnt, filename: rnt, loaded: true, exports: { enviarWhatsApp: async () => {}, enviarEmail: async (opts) => { emailsEnviados.push(opts); return { ok: true }; }, htmlSimples: (opts) => '<!DOCTYPE html><html><body data-faixa="'+(opts.faixaLabel||'')+'">'+opts.mensagem+'</body></html>' } };
 
   const rotas = {};
   const router = { get: (rota, ...fns) => { rotas['GET '+rota] = fns[fns.length-1]; }, post: (rota, ...fns) => { rotas['POST '+rota] = fns[fns.length-1]; } };
   delete require.cache[require.resolve(MODULO)];
   require(MODULO)(router);
-  return { rotas, inserts, updates };
+  return { rotas, inserts, updates, emailsEnviados };
 }
 
 function resRender() { const r = {}; r.render = (view, locals) => { r._view = view; r._locals = locals; return r; }; r.status = (c) => ({ send: (b) => { r._status = c; r._body = b; } }); return r; }
@@ -567,4 +568,56 @@ test('GET /eventos/:id/checkout-email-preview: monta o e-mail completo (com wrap
   assert.match(res._body, /<!DOCTYPE html>/, 'usa o wrap completo do e-mail (htmlSimples), não só o fragmento');
   assert.match(res._body, /data-faixa="ASISTENCIA CONFIRMADA"/);
   assert.match(res._body, /Día 2/, 'mostra o dia resolvido, pra diferenciar de qual check-out é a confirmação');
+});
+
+// 18/08/2026: queixa grave — "o colega recebeu a confirmação do check-out, eu não" (raiz era o
+// Gmail derrubando envios sob rajada, corrigida em notificacoes.js). Não existe coluna de status
+// de envio pra filtrar quem falhou, então o reenvio é geral (todos os dias) — o próprio usuário
+// aceitou essa saída já que o check-out fica fechado quando isso é usado.
+async function esperarEmails(arr, n) {
+  for (let i = 0; i < 30 && arr.length < n; i++) await new Promise(r => setImmediate(r));
+}
+
+test('POST /eventos/:id/checkout-reenviar-confirmacoes: reenvia pra todo mundo com check-out, de todos os dias, e responde sem esperar os envios', async () => {
+  const { rotas, emailsEnviados } = montar({
+    evento: EVENTO,
+    mock: (sql) => {
+      if (/SELECT nome FROM eventos WHERE id=\$1/.test(sql)) return { rows: [{ nome: 'Jornada Teste' }] };
+      if (/FROM evento_checkouts c\s+JOIN evento_inscricoes i/.test(sql)) return { rows: [
+        { nome: 'Ana Confirmada', email: 'ana@x.com', dia_id: 10, dia_titulo: 'Día 1', dia_data: '2026-08-17' },
+        { nome: 'Bruno Silva', email: 'bruno@x.com', dia_id: 11, dia_titulo: 'Día 2', dia_data: '2026-08-18' }
+      ] };
+      return undefined;
+    }
+  });
+  const req = { params: { id: '5' }, session: {} };
+  const res = resRedirect();
+  await rotas['POST /eventos/:id/checkout-reenviar-confirmacoes'](req, res);
+  assert.match(res._redirect, /\/eventos\/5\?tab=checkout/, 'responde de cara, não fica a resposta presa esperando os envios');
+  assert.match(req.session.msg[0], /2 confirmações na fila/);
+
+  await esperarEmails(emailsEnviados, 2);
+  assert.strictEqual(emailsEnviados.length, 2);
+  assert.strictEqual(emailsEnviados[0].para, 'ana@x.com');
+  assert.match(emailsEnviados[0].html, /Día 1/, 'e-mail continua marcado com o dia certo de cada check-out');
+  assert.strictEqual(emailsEnviados[1].para, 'bruno@x.com');
+  assert.match(emailsEnviados[1].html, /Día 2/);
+});
+
+test('POST /eventos/:id/checkout-reenviar-confirmacoes: check-out legado (sem dia) reenvia normalmente, sem rótulo de dia', async () => {
+  const { rotas, emailsEnviados } = montar({
+    evento: EVENTO,
+    mock: (sql) => {
+      if (/SELECT nome FROM eventos WHERE id=\$1/.test(sql)) return { rows: [{ nome: 'Palestra única' }] };
+      if (/FROM evento_checkouts c\s+JOIN evento_inscricoes i/.test(sql)) return { rows: [
+        { nome: 'Carla Dias', email: 'carla@x.com', dia_id: null, dia_titulo: null, dia_data: null }
+      ] };
+      return undefined;
+    }
+  });
+  const req = { params: { id: '6' }, session: {} };
+  await rotas['POST /eventos/:id/checkout-reenviar-confirmacoes'](req, resRedirect());
+  await esperarEmails(emailsEnviados, 1);
+  assert.strictEqual(emailsEnviados.length, 1);
+  assert.strictEqual(emailsEnviados[0].para, 'carla@x.com');
 });
