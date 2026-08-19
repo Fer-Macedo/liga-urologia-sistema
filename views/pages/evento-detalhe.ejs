@@ -1683,6 +1683,11 @@ function desfazerCheckoutDia(inscricaoId, diaId, btn){
   });
 }
 document.addEventListener('DOMContentLoaded',function(){ var ck=document.getElementById('tab-checkout'); if(ck&&ck.classList.contains('ativo')) carregarRelatorioCheckout(); });
+// 18/08/2026: pedido do usuário — o relatório inteiro (aptos + não fizeram check-out + sem
+// inscrição) ficava tudo empilhado, uma "folha corrida" enorme. Agora só UMA dessas 3 listas
+// fica visível por vez, trocada por abas (ou clicando direto no quadradinho de resumo) — o
+// filtro por dia continua valendo só pra Aptos, que é a única lista organizada por dia.
+var _ckView = 'aptos';
 function carregarRelatorioCheckout(){
   var resumo = document.getElementById('ck-resumo');
   var rel = document.getElementById('ck-relatorio');
@@ -1692,23 +1697,33 @@ function carregarRelatorioCheckout(){
     .then(function(d){
       if(!d.ok){ rel.innerHTML = '<span style="color:#991b1b">Erro: '+(d.erro||'falha')+'</span>'; return; }
       _ckAptos = d.aptos || [];
-      var box = function(num,lab,cor){ return '<div style="flex:1;min-width:120px;background:'+cor+';border-radius:10px;padding:14px 16px;text-align:center"><div style="font-size:26px;font-weight:800;color:#0f172a">'+num+'</div><div style="font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:.5px;font-weight:600">'+lab+'</div></div>'; };
-      resumo.innerHTML = box(d.resumo.aptos,'Aptos','#dcfce7') + box(d.resumo.nao_compareceu,'Não compareceram','#fef3c7') + box(d.resumo.sem_inscricao,'Sem inscrição','#fee2e2') + box(d.resumo.total_checkouts,'Total check-outs','#e0e7ff');
+      var box = function(num,lab,cor,view){ return '<div'+(view?' onclick="mostrarViewCheckout(\''+view+'\')" title="Ver lista"':'')+' style="flex:1;min-width:120px;background:'+cor+';border-radius:10px;padding:14px 16px;text-align:center'+(view?';cursor:pointer':'')+'"><div style="font-size:26px;font-weight:800;color:#0f172a">'+num+'</div><div style="font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:.5px;font-weight:600">'+lab+'</div></div>'; };
+      resumo.innerHTML = box(d.resumo.aptos,'Aptos','#dcfce7','aptos') + box(d.resumo.nao_compareceu,'Não compareceram','#fef3c7','naoCompareceu') + box(d.resumo.sem_inscricao,'Sem inscrição','#fee2e2','semInscricao') + box(d.resumo.total_checkouts,'Total check-outs','#e0e7ff',null);
 
-      var html = '';
-      // POR DIA (só quando o evento tem Programação por data)
+      var abas = [
+        { id: 'aptos', label: 'Aptos ao certificado', n: d.aptos.length },
+        { id: 'naoCompareceu', label: 'Não fizeram check-out', n: d.naoCompareceu.length },
+        { id: 'semInscricao', label: 'Sem inscrição válida', n: d.semInscricao.length }
+      ];
+      if(!abas.some(function(a){ return a.id === _ckView; })) _ckView = 'aptos';
+      var html = '<div id="ckAbas" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">';
+      abas.forEach(function(a){
+        var ativo = a.id === _ckView;
+        html += '<button type="button" onclick="mostrarViewCheckout(\''+a.id+'\')" id="ckAba_'+a.id+'" class="btn-xs" style="border:1px solid var(--borda);'+(ativo?'background:var(--cor-primaria);color:#fff':'background:var(--fundo);color:var(--texto2)')+'">'+a.label+' ('+a.n+')</button>';
+      });
+      html += '</div>';
+
+      // APTOS — com filtro por dia (pedido do usuário 17/08/2026, 3ª rodada: saber de qual dia
+      // é cada check-out, já que a mesma pessoa pode ter um check-out por dia do evento)
+      html += '<div id="ckView_aptos" style="display:'+(_ckView==='aptos'?'block':'none')+'">';
       if(d.porDia && d.porDia.length){
-        html += '<h3 style="font-size:14px;color:#0f172a;margin:0 0 8px">Check-outs por dia</h3>';
-        html += '<table class="tabela" style="width:100%;font-size:12px;margin-bottom:8px"><thead><tr><th style="text-align:left">Dia</th><th>Check-outs</th></tr></thead><tbody>';
+        html += '<table class="tabela" style="width:100%;font-size:12px;margin-bottom:14px"><thead><tr><th style="text-align:left">Dia</th><th>Check-outs</th></tr></thead><tbody>';
         d.porDia.forEach(function(dia){
           var dataFmt = dia.data ? new Date(dia.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'}) : '';
           html += '<tr><td>'+dataFmt+' — '+dia.titulo+'</td><td style="text-align:center;font-weight:700">'+dia.total+'</td></tr>';
         });
         html += '</tbody></table>';
       }
-      // APTOS — com filtro por dia (pedido do usuário 17/08/2026, 3ª rodada: saber de qual dia
-      // é cada check-out, já que a mesma pessoa pode ter um check-out por dia do evento)
-      html += '<h3 style="font-size:14px;color:#15803d;margin:18px 0 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="#dcfce7" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><circle cx="12" cy="12" r="10" fill="#dcfce7" stroke="#16a34a"/><polyline points="8 12 11 15 16 9" stroke="#16a34a" fill="none"/></svg> Aptos ao certificado ('+d.aptos.length+')</h3>';
       html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">';
       html += '<input type="text" id="ckBuscaNome" class="input" style="max-width:240px" placeholder="Buscar por nome ou e-mail..." oninput="buscarAptos()">';
       if(d.porDia && d.porDia.length){
@@ -1722,29 +1737,41 @@ function carregarRelatorioCheckout(){
       }
       html += '</div>';
       html += '<div id="ckAptosWrap"></div>';
+      html += '</div>';
 
       // NÃO COMPARECEU
-      html += '<h3 style="font-size:14px;color:#92400e;margin:22px 0 8px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>️ Inscritos que NÃO fizeram check-out ('+d.naoCompareceu.length+')</h3>';
+      html += '<div id="ckView_naoCompareceu" style="display:'+(_ckView==='naoCompareceu'?'block':'none')+'">';
       if(d.naoCompareceu.length){
         html += '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Nome</th><th style="text-align:left">Email</th></tr></thead><tbody>';
         d.naoCompareceu.forEach(function(a){ html += '<tr><td>'+toTitleCase(a.nome)+'</td><td>'+a.email+'</td></tr>'; });
         html += '</tbody></table>';
       } else { html += '<div style="color:#94a3b8;font-size:12px">Todos os inscritos confirmaram presença.</div>'; }
+      html += '</div>';
 
       // SEM INSCRIÇÃO
+      html += '<div id="ckView_semInscricao" style="display:'+(_ckView==='semInscricao'?'block':'none')+'">';
       if(d.semInscricao.length){
-        html += '<h3 style="font-size:14px;color:#991b1b;margin:22px 0 8px"> Check-outs sem inscrição válida ('+d.semInscricao.length+')</h3>';
         html += '<div style="font-size:11px;color:#94a3b8;margin-bottom:6px">Fizeram check-out mas não foram encontrados na lista de inscritos confirmados — revisar manualmente.</div>';
         html += '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Email informado</th><th style="text-align:left">CPF</th></tr></thead><tbody>';
         d.semInscricao.forEach(function(a){ html += '<tr><td>'+a.email+'</td><td>'+(a.cpf||'')+'</td></tr>'; });
         html += '</tbody></table>';
-      }
+      } else { html += '<div style="color:#94a3b8;font-size:12px">Nenhum check-out sem inscrição válida.</div>'; }
+      html += '</div>';
 
       rel.innerHTML = html;
       renderizarAptos();
       renderizarAvaliacao(d.perguntas, d.avaliacaoPorDia);
     })
     .catch(function(e){ rel.innerHTML = '<span style="color:#991b1b">Erro: '+e.message+'</span>'; });
+}
+function mostrarViewCheckout(view){
+  _ckView = view;
+  ['aptos','naoCompareceu','semInscricao'].forEach(function(v){
+    var bloco = document.getElementById('ckView_'+v);
+    if(bloco) bloco.style.display = (v===view ? 'block' : 'none');
+    var aba = document.getElementById('ckAba_'+v);
+    if(aba) aba.style.cssText = 'border:1px solid var(--borda);'+(v===view ? 'background:var(--cor-primaria);color:#fff' : 'background:var(--fundo);color:var(--texto2)');
+  });
 }
 function escHtml(s){ var d=document.createElement('div'); d.textContent=s||''; return d.innerHTML; }
 
@@ -1813,21 +1840,32 @@ function renderizarAptos(){
 var _avalCharts = {};
 var _avalPerguntas = [];
 var _avalDados = []; // cache por dia, pro filtro de cada dia não precisar buscar de novo
-// A avaliação é obrigatória em TODO dia do evento (pedido do usuário 17/08/2026) — o relatório
-// mostra uma seção por dia, cada uma com seus próprios gráficos e tabela filtrável, pra deixar
-// claro que as respostas ficam organizadas por data do evento.
+var _avalDiaAtivo = 0;
+var _avalDiasRenderizados = {}; // gráficos só são criados na hora em que o dia é aberto (accordion)
+var AVAL_LABELS = ['Péssimo','Ruim','Regular','Bom','Muito bom','Excelente'];
+var AVAL_CORES = ['#ef4444','#f97316','#f59e0b','#84cc16','#22c55e','#15803d'];
+// A avaliação é obrigatória em TODO dia do evento (pedido do usuário 17/08/2026). Antes as
+// seções de todos os dias ficavam empilhadas de uma vez — pedido do usuário 18/08/2026:
+// organizar como accordion (uma aba por dia), só o dia selecionado fica visível.
 function renderizarAvaliacao(perguntas, avaliacaoPorDia){
   var el = document.getElementById('ck-avaliacao');
   if(!avaliacaoPorDia || !avaliacaoPorDia.length){ el.innerHTML = '<div style="color:#94a3b8;font-size:12px">Ainda não há check-outs registrados.</div>'; return; }
   _avalPerguntas = perguntas || [];
   _avalDados = avaliacaoPorDia;
-  var labels = ['Péssimo','Ruim','Regular','Bom','Muito bom','Excelente'];
-  var cores = ['#ef4444','#f97316','#f59e0b','#84cc16','#22c55e','#15803d'];
-  var html = '';
+  _avalDiasRenderizados = {};
+  if(_avalDiaAtivo >= avaliacaoPorDia.length) _avalDiaAtivo = 0;
+
+  var html = '<div id="avalAbas" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">';
   avaliacaoPorDia.forEach(function(dia, di){
     var dataFmt = dia.data ? new Date(dia.data).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',timeZone:'UTC'})+' — ' : '';
-    html += '<div style="margin-bottom:24px;padding-bottom:20px'+(di < avaliacaoPorDia.length-1 ? ';border-bottom:1px solid var(--borda)' : '')+'">';
-    html += '<h3 style="font-size:14px;color:#0f172a;margin:0 0 8px">'+dataFmt+escHtml(dia.titulo||'Avaliação')+'</h3>';
+    var ativo = di === _avalDiaAtivo;
+    html += '<button type="button" onclick="mostrarDiaAvaliacao('+di+')" id="avalAba_'+di+'" class="btn-xs" style="border:1px solid var(--borda);'+(ativo?'background:var(--cor-primaria);color:#fff':'background:var(--fundo);color:var(--texto2)')+'">'+dataFmt+escHtml(dia.titulo||'Dia '+(di+1))+' ('+dia.respondidas+'/'+dia.total+')</button>';
+  });
+  html += '</div>';
+
+  avaliacaoPorDia.forEach(function(dia, di){
+    var ativo = di === _avalDiaAtivo;
+    html += '<div id="avalBloco_'+di+'" style="display:'+(ativo?'block':'none')+'">';
     html += '<div style="margin-bottom:12px;font-size:13px"><strong>'+dia.respondidas+'</strong> de <strong>'+dia.total+'</strong> responderam a avaliação desse dia (<strong>'+dia.percentual+'%</strong>).</div>';
     if(dia.respondidas === 0){
       html += '<div style="color:#94a3b8;font-size:12px">Nenhuma resposta ainda.</div></div>';
@@ -1847,21 +1885,32 @@ function renderizarAvaliacao(perguntas, avaliacaoPorDia){
     html += '</div>';
   });
   el.innerHTML = html;
-  avaliacaoPorDia.forEach(function(dia, di){
-    if(!dia.respondidas) return;
-    perguntas.forEach(function(titulo, pi){
-      var ctxId = 'chartAval_'+di+'_'+pi;
-      var canvas = document.getElementById(ctxId);
-      if(!canvas) return;
-      if(_avalCharts[ctxId]) _avalCharts[ctxId].destroy();
-      _avalCharts[ctxId] = new Chart(canvas, {
-        type: 'bar',
-        data: { labels: labels, datasets: [{ data: dia.distribuicoes[pi], backgroundColor: cores }] },
-        options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { ticks: { font: { size: 9 } } } } }
-      });
-    });
-    filtrarAvaliacoes(di);
+  mostrarDiaAvaliacao(_avalDiaAtivo);
+}
+function mostrarDiaAvaliacao(di){
+  _avalDiaAtivo = di;
+  _avalDados.forEach(function(_dia, i){
+    var bloco = document.getElementById('avalBloco_'+i);
+    if(bloco) bloco.style.display = (i===di ? 'block' : 'none');
+    var aba = document.getElementById('avalAba_'+i);
+    if(aba) aba.style.cssText = 'border:1px solid var(--borda);'+(i===di ? 'background:var(--cor-primaria);color:#fff' : 'background:var(--fundo);color:var(--texto2)');
   });
+  // gráficos só são criados quando o dia é aberto pela 1ª vez — canvas escondido (display:none)
+  // não tem largura pra desenhar, então não adianta criar todos de uma vez com o accordion.
+  if(_avalDiasRenderizados[di] || !_avalDados[di] || !_avalDados[di].respondidas) { filtrarAvaliacoes(di); return; }
+  _avalDiasRenderizados[di] = true;
+  _avalPerguntas.forEach(function(titulo, pi){
+    var ctxId = 'chartAval_'+di+'_'+pi;
+    var canvas = document.getElementById(ctxId);
+    if(!canvas) return;
+    if(_avalCharts[ctxId]) _avalCharts[ctxId].destroy();
+    _avalCharts[ctxId] = new Chart(canvas, {
+      type: 'bar',
+      data: { labels: AVAL_LABELS, datasets: [{ data: _avalDados[di].distribuicoes[pi], backgroundColor: AVAL_CORES }] },
+      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { ticks: { font: { size: 9 } } } } }
+    });
+  });
+  filtrarAvaliacoes(di);
 }
 var _avalPaginas = {}; // di -> página atual
 var AVAL_POR_PAGINA = 25;
