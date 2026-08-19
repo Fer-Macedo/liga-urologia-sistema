@@ -27,6 +27,10 @@
     @keyframes drumRoll { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-4px)} }
     .drum-nome.ganhador { animation: ganhadorPulse 1s ease infinite; color: #fbbf24; font-size: clamp(24px,4vw,40px); }
     @keyframes ganhadorPulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.05)} }
+    /* 19/08/2026: pedido do usuário — sorteio externo pede Instagram (regra costuma ser "seguir
+       o perfil"), e ao projetar a tela do sorteio o público precisa ver o @ do ganhador junto do
+       nome, pra quem quiser conferir que a pessoa realmente seguiu a regra consiga fazer isso. */
+    .drum-instagram { font-size: clamp(14px,2.2vw,18px); font-weight: 700; color: #f472b6; margin-top: 6px; min-height: 22px; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
     .btn-sortear { background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; border: none; border-radius: 12px; padding: 16px 40px; font-size: 18px; font-weight: 800; cursor: pointer; transition: all .2s; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 20px rgba(245,158,11,.4); }
     .btn-sortear:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(245,158,11,.5); }
@@ -116,6 +120,15 @@
           if(c.whatsapp) partes.push(c.whatsapp);
           return partes.join(' · ');
         }
+        // 19/08/2026 (2ª rodada): pedido do usuário — mostrar o @ do Instagram junto do nome na
+        // hora do sorteio (tela projetada), pra dar pra conferir publicamente que o ganhador
+        // seguiu a regra de seguir o perfil. Separado de contatoTexto (que junta os 3 campos
+        // pequenos pro admin, em outro lugar da tela) porque aqui precisa vir SÓ o @, grande e
+        // destacado.
+        function contatoInstagram(nome){
+          var c = contatosExternos && contatosExternos[nome];
+          return (c && c.instagram) ? '@'+String(c.instagram).replace(/^@/,'') : '';
+        }
         %>
 
         <div class="sorteio-layout">
@@ -134,6 +147,7 @@
                   <div class="resultado-registrado">
                     <div class="trophy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></div>
                     <h3><%= sorteio.ganhador_nome %></h3>
+                    <% ganhadores.forEach(function(g){ var ig = contatoInstagram(g); if(ig){ %><p style="font-size:17px;font-weight:700;color:#e1306c;margin:2px 0 6px"><%= ganhadores.length > 1 ? g + ': ' : '' %><%= ig %></p><% } }) %>
                     <% ganhadores.forEach(function(g){ var ct = contatoTexto(g); if(ct){ %><p style="font-size:13px;color:#4a7c2a"><%= ganhadores.length > 1 ? g + ': ' : '' %><%= ct %></p><% } }) %>
                     <% if(sorteio.ganhador_contato){ %><p style="font-size:12px;color:#94a3b8">Observação: <%= sorteio.ganhador_contato %></p><% } %>
                     <% if(sorteio.brinde){ %><span class="brinde-tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> <%= sorteio.brinde %></span><% } %>
@@ -151,6 +165,13 @@
                         Pronto para sortear...
                       <% } %>
                     </div>
+                    <% if(sorteio.ganhador_nome){ %>
+                    <div class="drum-instagram" id="drumInstagram">
+                      <% var igDrum = contatoInstagram(ganhadores.length === 1 ? ganhadores[0] : ''); if(igDrum){ %><%= igDrum %><% } %>
+                    </div>
+                    <% } else { %>
+                    <div class="drum-instagram" id="drumInstagram"></div>
+                    <% } %>
                   </div>
 
                   <% if(sorteio.status !== 'sorteado'){ %>
@@ -311,6 +332,14 @@
 <script src="/js/app.js"></script>
 <script>
 const participantes = <%- JSON.stringify(participantes).replace(/</g,"\\u003c") %>;
+// 19/08/2026 (2ª rodada): pedido do usuário — mostrar o @ do Instagram junto do nome na tela do
+// sorteio (projetada pro público), pra dar pra conferir que o ganhador seguiu a regra de seguir
+// o perfil. Só existe algo aqui pra sorteio externo (contatosExternos vem {} pro interno).
+const contatosExternos = <%- JSON.stringify(contatosExternos).replace(/</g,"\\u003c") %>;
+function instagramDe(nome){
+  const c = contatosExternos[nome];
+  return (c && c.instagram) ? '@'+String(c.instagram).replace(/^@/,'') : '';
+}
 const sorteioStatus = '<%= sorteio.status %>';
 const qtdGanhadores = <%= sorteio.qtd_ganhadores %>;
 let rodando = false;
@@ -322,6 +351,7 @@ function iniciarSorteio(){
   document.getElementById('btnSortear').disabled = true;
 
   const drum = document.getElementById('drumNome');
+  const drumIg = document.getElementById('drumInstagram');
   drum.classList.add('rolando');
 
   // Animação de rolagem
@@ -330,6 +360,7 @@ function iniciarSorteio(){
   const interval = setInterval(() => {
     const p = participantes[Math.floor(Math.random()*participantes.length)];
     drum.textContent = p;
+    if(drumIg) drumIg.textContent = instagramDe(p);
     count++;
     if(count >= total){
       clearInterval(interval);
@@ -344,9 +375,15 @@ function finalizarSorteio(){
   ganhadores = embaralhados.slice(0, qtdGanhadores);
 
   const drum = document.getElementById('drumNome');
+  const drumIg = document.getElementById('drumInstagram');
   drum.classList.remove('rolando');
   drum.classList.add('ganhador');
-  drum.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:8px"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg>' + ganhadores[0];
+  // Nome vem de um formulário público (sorteio externo) — nunca concatenar direto no innerHTML,
+  // monta com textContent num nó separado pra não abrir XSS se alguém cadastrar um nome com
+  // HTML/script (achado ao mexer nesse trecho — o troféu em SVG continua fixo/seguro).
+  drum.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:8px"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg><span id="drumNomeTexto"></span>';
+  document.getElementById('drumNomeTexto').textContent = ganhadores[0];
+  if(drumIg) drumIg.textContent = ganhadores.length === 1 ? instagramDe(ganhadores[0]) : '';
 
   // Confetes!
   lancarConfetes();
