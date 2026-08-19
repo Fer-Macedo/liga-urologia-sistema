@@ -1682,7 +1682,6 @@ function desfazerCheckoutDia(inscricaoId, diaId, btn){
       .catch(function(e){ alert('Erro: '+e.message); btn.disabled=false; });
   });
 }
-document.addEventListener('DOMContentLoaded',function(){ var ck=document.getElementById('tab-checkout'); if(ck&&ck.classList.contains('ativo')) carregarRelatorioCheckout(); });
 // 18/08/2026: pedido do usuário — o relatório inteiro (aptos + não fizeram check-out + sem
 // inscrição) ficava tudo empilhado, uma "folha corrida" enorme. Primeira tentativa trocou por
 // abas em botãozinho — o usuário reclamou que "sumiu tudo" (os títulos coloridos com ícone de
@@ -1957,6 +1956,7 @@ function filtrarAvaliacoes(di){
 function showTab(id, btn) {
   if (id === 'mala-direta') { initQuilMala(); carregarHistorico(); }
   if (id === 'inscritos') { initQuilMassaEv(); }
+  if (id === 'checkout') { carregarRelatorioCheckout(); }
   document.querySelectorAll('.tab-content').forEach(s => s.classList.remove('ativo'));
   document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('ativo'));
   document.getElementById('tab-'+id).classList.add('ativo');
