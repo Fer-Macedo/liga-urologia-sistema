@@ -101,34 +101,42 @@ function resolverCamposSorteio(body) {
 // exibir a tela (GET /sorteios/:id) quanto pra validar, no confirmar-ganhador, que um nome
 // escolhido (sorteado ou manual) realmente pertence a esse sorteio.
 async function buscarParticipantesSorteio(sorteio) {
+  // 19/08/2026: pedido do usuário — "Luciane Costa Rodrigues" aparecia certinho na lista mas o
+  // registro manual dizia "Participante não encontrado". Causa raiz: o nome dela no cadastro do
+  // evento tem um espaço sobrando no final ("Luciane Costa rodrigues ", artefato do formulário
+  // público de inscrição). O confirmar-ganhador dá trim() no nome que chega do form, mas
+  // comparava contra a lista de participantes SEM trim — "Luciane..." (trimado) nunca batia com
+  // "Luciane... " (com espaço) por igualdade exata. Normaliza uma vez aqui, na fonte, pra tela,
+  // roleta e confirmar-ganhador usarem sempre o mesmo nome "limpo".
+  const limpo = n => (n || '').trim();
   let participantes = [];
   let contatosExternos = {};
   if (sorteio.tipo === 'interno') {
     if (sorteio.publico_alvo === 'ligantes') {
       const r = await query("SELECT nome FROM membros WHERE ativo=1 ORDER BY nome");
-      participantes = r.rows.map(r => r.nome);
+      participantes = r.rows.map(r => limpo(r.nome));
     } else if (sorteio.publico_alvo === 'diretivos') {
       const r = await query("SELECT nome FROM diretivos WHERE ativo=1 ORDER BY nome");
-      participantes = r.rows.map(r => r.nome);
+      participantes = r.rows.map(r => limpo(r.nome));
     } else if (sorteio.publico_alvo === 'ambos') {
       const [lig, dir] = await Promise.all([
         query("SELECT nome FROM membros WHERE ativo=1 ORDER BY nome"),
         query("SELECT nome FROM diretivos WHERE ativo=1 ORDER BY nome")
       ]);
-      participantes = [...lig.rows.map(r => r.nome), ...dir.rows.map(r => r.nome)];
+      participantes = [...lig.rows.map(r => limpo(r.nome)), ...dir.rows.map(r => limpo(r.nome))];
     } else if ((sorteio.publico_alvo === 'manual' || sorteio.publico_alvo === 'selecao') && sorteio.participantes_manual) {
-      participantes = JSON.parse(sorteio.participantes_manual);
+      participantes = JSON.parse(sorteio.participantes_manual).map(limpo);
     } else if (sorteio.publico_alvo === 'evento' && sorteio.origem_id) {
       const r = await query("SELECT nome FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado' ORDER BY nome", [sorteio.origem_id]);
-      participantes = r.rows.map(r => r.nome);
+      participantes = r.rows.map(r => limpo(r.nome));
     } else if (sorteio.publico_alvo === 'pss' && sorteio.origem_id) {
       const r = await query("SELECT nome FROM ps_candidatos WHERE processo_id=$1 AND status='confirmado' ORDER BY nome", [sorteio.origem_id]);
-      participantes = r.rows.map(r => r.nome);
+      participantes = r.rows.map(r => limpo(r.nome));
     }
   } else {
     const r = await query('SELECT * FROM sorteio_participantes WHERE sorteio_id=$1 ORDER BY criado_em', [sorteio.id]);
-    participantes = r.rows.map(p => p.nome);
-    r.rows.forEach(p => { contatosExternos[p.nome] = { email: p.email, instagram: p.instagram, whatsapp: p.whatsapp }; });
+    participantes = r.rows.map(p => limpo(p.nome));
+    r.rows.forEach(p => { contatosExternos[limpo(p.nome)] = { email: p.email, instagram: p.instagram, whatsapp: p.whatsapp }; });
   }
   return { participantes, contatosExternos };
 }

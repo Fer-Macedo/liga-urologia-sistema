@@ -306,6 +306,23 @@ test('POST /sorteios/:id/confirmar-ganhador: registro manual funciona igual pra 
 // 19/08/2026 (3ª rodada): sorteio com mais de 1 prêmio fica ganhador_nome parcialmente
 // preenchido (1 de 2 confirmado) MAS status ainda 'rascunho' — editar nesse meio-tempo
 // corromperia o progresso. Bloqueia igual já bloqueava pra status='sorteado'.
+// BUG REAL em produção 19/08/2026: "Luciane Costa Rodrigues" aparecia certinho no select de
+// registro manual, mas confirmar dava "Participante não encontrado". Causa: o nome dela no
+// cadastro do evento tinha um espaço sobrando no final ("Luciane Costa Rodrigues ") — o
+// confirmar-ganhador dava trim() no nome recebido do form, mas comparava contra a lista de
+// participantes SEM trim, então o nome trimado nunca batia com o da lista (com espaço).
+// buscarParticipantesSorteio agora normaliza (trim) todo nome na fonte.
+test('POST /sorteios/:id/confirmar-ganhador: nome com espaço sobrando no cadastro do evento ainda é reconhecido', async () => {
+  const { rotas, updates } = montar({
+    sorteio: { id: 12, tipo: 'interno', publico_alvo: 'evento', origem_tipo: 'evento', origem_id: 5, qtd_ganhadores: 2, ganhador_nome: 'João Ricardo Rique' },
+    eventoInscritos: [{ nome: 'João Ricardo Rique' }, { nome: 'Luciane Costa rodrigues ' }]
+  });
+  const req = reqBase({ params: { id: '12' }, body: { nome: 'Luciane Costa rodrigues' } });
+  await rotas['POST /sorteios/:id/confirmar-ganhador'](req, resRedirect());
+  assert.strictEqual(updates.length, 1, 'reconhece o nome mesmo com o espaço sobrando no cadastro original');
+  assert.strictEqual(updates[0][0], 'João Ricardo Rique|Luciane Costa rodrigues');
+});
+
 test('POST /sorteios/:id/editar: recusa edição com ganhador parcial mesmo status ainda "rascunho"', async () => {
   const { rotas, updates } = montar({ sorteio: { status: 'rascunho', ganhador_nome: 'Ana' } });
   const req = reqBase({ params: { id: '20' }, body: { tipo: 'interno', nome: 'X', qtd_ganhadores: '2', publico_alvo: 'ligantes' } });
