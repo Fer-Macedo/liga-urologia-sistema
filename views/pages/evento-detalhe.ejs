@@ -1748,25 +1748,26 @@ function carregarRelatorioCheckout(){
       // de presença — pelo menos precisaDias dos totalDias do evento — não basta ter feito 1
       // check-out qualquer.
       html += '<div id="ckView_aptos" style="display:'+(_ckView==='aptos'?'block':'none')+'">';
-      html += '<h3 style="font-size:14px;color:#15803d;margin:0 0 4px">'+ICONE_APTOS+' Check-outs realizados ('+d.aptos.length+')</h3>';
+      html += '<h3 style="font-size:14px;color:#15803d;margin:0 0 4px">'+ICONE_APTOS+' Check-outs realizados (<span id="ckContagemAptos">'+d.aptos.length+'</span>)</h3>';
       if(d.totalDiasEvento > 1){
         html += '<div style="font-size:11px;color:var(--texto2);margin-bottom:10px">Regra do certificado: precisa de check-out em pelo menos <strong>'+d.precisaDias+' de '+d.totalDiasEvento+' dias</strong> (75% de presença) para ficar Apto.</div>';
       }
       html += '<div id="ckAptosWrap"></div>';
       html += '</div>';
 
-      // NÃO COMPARECEU — nunca fez check-out em nenhum dia, então o filtro por dia não muda a
-      // lista (faltou em todos igualmente); o campo continua disponível por consistência com as
-      // outras 2 listas, só não exclui ninguém.
+      // NÃO COMPARECEU — sem filtro de dia, é "não fez check-out no evento INTEIRO" (naoCompareceu,
+      // fixo). Com um dia selecionado, pedido do usuário 19/08/2026: precisa mostrar quem faltou
+      // NAQUELE dia específico (porDia[x].naoFizeram, calculado no /checkout-relatorio) — é um
+      // número DIFERENTE por dia, não o mesmo total de sempre repetido.
       html += '<div id="ckView_naoCompareceu" style="display:'+(_ckView==='naoCompareceu'?'block':'none')+'">';
-      html += '<h3 style="font-size:14px;color:#92400e;margin:0 0 8px">'+ICONE_ALERTA+' Inscritos que NÃO fizeram check-out ('+d.naoCompareceu.length+')</h3>';
+      html += '<h3 style="font-size:14px;color:#92400e;margin:0 0 8px">'+ICONE_ALERTA+' Inscritos que NÃO fizeram check-out (<span id="ckContagemNaoCompareceu">'+d.naoCompareceu.length+'</span>)</h3>';
       html += '<div id="ckNaoCompareceuWrap"></div>';
       html += '</div>';
 
       // SEM INSCRIÇÃO — cada linha já é um check-out específico de UM dia (não uma lista de
       // dias como em "aptos"), por isso tem coluna "Dia" fixa em vez de chips.
       html += '<div id="ckView_semInscricao" style="display:'+(_ckView==='semInscricao'?'block':'none')+'">';
-      html += '<h3 style="font-size:14px;color:#991b1b;margin:0 0 8px">Check-outs sem inscrição válida ('+d.semInscricao.length+')</h3>';
+      html += '<h3 style="font-size:14px;color:#991b1b;margin:0 0 8px">Check-outs sem inscrição válida (<span id="ckContagemSemInscricao">'+d.semInscricao.length+'</span>)</h3>';
       html += '<div style="font-size:11px;color:#94a3b8;margin-bottom:6px">Fizeram check-out mas não foram encontrados na lista de inscritos confirmados — revisar manualmente.</div>';
       html += '<div id="ckSemInscricaoWrap"></div>';
       html += '</div>';
@@ -1843,6 +1844,7 @@ function filtroAtual(){
 }
 // Cada dia vira um "chip" com seu próprio × — pedido do usuário 17/08/2026 (4ª rodada): remover
 // tinha que ser por dia específico, não apagar de uma vez todos os check-outs da pessoa.
+function setContagem(id, n){ var el = document.getElementById(id); if(el) el.textContent = n; }
 function renderizarAptos(){
   var wrap = document.getElementById('ckAptosWrap');
   if(!wrap) return;
@@ -1852,6 +1854,7 @@ function renderizarAptos(){
     if(f.busca && (a.nome||'').toLowerCase().indexOf(f.busca) < 0 && (a.email||'').toLowerCase().indexOf(f.busca) < 0) return false;
     return true;
   });
+  setContagem('ckContagemAptos', lista.length);
   if(!lista.length){ wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">Ninguém encontrado '+((f.dia||f.busca)?'com esse filtro.':'ainda.')+'</div>'; return; }
   var totalP = Math.ceil(lista.length / CK_POR_PAGINA) || 1;
   if(_ckPaginas.aptos > totalP) _ckPaginas.aptos = totalP;
@@ -1874,28 +1877,31 @@ function renderizarAptos(){
   html += paginacaoBotoesHtml(_ckPaginas.aptos, lista.length, CK_POR_PAGINA, "irParaPaginaCheckout('aptos',");
   wrap.innerHTML = html;
 }
-// Nunca fez check-out em nenhum dia — logo, faltou em todos igualmente, então o filtro por dia
-// não muda QUEM aparece. Mas um dia que ainda não aconteceu não pode ter "ausentes" — pedido do
-// usuário 19/08/2026: selecionar um dia futuro do evento mostrava o total de sempre (24), como
-// se todo mundo já tivesse faltado numa sessão que nem começou. jaAconteceu (calculado no
-// /checkout-relatorio, mesma regra de data+horário usada na transmissão online) zera a lista
-// nesse caso.
+// Sem dia selecionado: "não fez check-out no evento INTEIRO" (_ckNaoCompareceu, fixo). Com um dia
+// selecionado — pedido do usuário 19/08/2026: o número precisa ser QUEM FALTOU NAQUELE DIA
+// específico (porDia[x].naoFizeram, já calculado no /checkout-relatorio), não sempre o mesmo
+// total geral repetido pra todo dia. Um dia que ainda não aconteceu não pode ter "ausentes" —
+// jaAconteceu (mesma regra de data+horário da transmissão online) zera a lista nesse caso.
 function renderizarNaoCompareceu(){
   var wrap = document.getElementById('ckNaoCompareceuWrap');
   if(!wrap) return;
   var f = filtroAtual();
+  var origem = _ckNaoCompareceu;
   if(f.dia){
     var diaInfo = _ckPorDia.find(function(d){ return labelDoDia(d) === f.dia; });
     if(diaInfo && diaInfo.jaAconteceu === false){
+      setContagem('ckContagemNaoCompareceu', 0);
       wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">Esse dia do evento ainda não aconteceu — ninguém pode ter faltado nele ainda.</div>';
       return;
     }
+    origem = (diaInfo && diaInfo.naoFizeram) || [];
   }
-  var lista = _ckNaoCompareceu.filter(function(a){
+  var lista = origem.filter(function(a){
     if(f.busca && (a.nome||'').toLowerCase().indexOf(f.busca) < 0 && (a.email||'').toLowerCase().indexOf(f.busca) < 0) return false;
     return true;
   });
-  if(!lista.length){ wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">'+(f.busca?'Ninguém encontrado com esse filtro.':'Todos os inscritos confirmaram presença.')+'</div>'; return; }
+  setContagem('ckContagemNaoCompareceu', lista.length);
+  if(!lista.length){ wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">'+((f.busca||f.dia)?'Ninguém encontrado com esse filtro.':'Todos os inscritos confirmaram presença.')+'</div>'; return; }
   var totalP = Math.ceil(lista.length / CK_POR_PAGINA) || 1;
   if(_ckPaginas.naoCompareceu > totalP) _ckPaginas.naoCompareceu = totalP;
   var ini = (_ckPaginas.naoCompareceu-1)*CK_POR_PAGINA, fim = ini+CK_POR_PAGINA;
@@ -1917,6 +1923,7 @@ function renderizarSemInscricao(){
     if(f.busca && (a.email||'').toLowerCase().indexOf(f.busca) < 0 && (a.cpf||'').toLowerCase().indexOf(f.busca) < 0) return false;
     return true;
   });
+  setContagem('ckContagemSemInscricao', lista.length);
   if(!lista.length){ wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">'+((f.dia||f.busca)?'Ninguém encontrado com esse filtro.':'Nenhum check-out sem inscrição válida.')+'</div>'; return; }
   var totalP = Math.ceil(lista.length / CK_POR_PAGINA) || 1;
   if(_ckPaginas.semInscricao > totalP) _ckPaginas.semInscricao = totalP;

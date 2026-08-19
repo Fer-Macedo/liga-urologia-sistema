@@ -280,6 +280,41 @@ test('GET /eventos/:id/checkout-relatorio: porDia marca jaAconteceu=true pra dia
   assert.strictEqual(futuro.jaAconteceu, false, 'dia de amanhã ainda não aconteceu — não pode ter "ausentes"');
 });
 
+// 19/08/2026 (2ª rodada): pedido do usuário — filtrar "não fizeram check-out" por um dia
+// específico (17, 18...) mostrava sempre o mesmo total (o de quem faltou o evento INTEIRO), igual
+// pra todo dia. Precisa ser um número DIFERENTE por dia: quem faltou especificamente NAQUELE dia
+// — inclusive gente que foi em outro dia mas faltou só esse (não entra em "não fez check-out
+// nenhuma vez", mas precisa aparecer quando o filtro é esse dia específico).
+test('GET /eventos/:id/checkout-relatorio: porDia.naoFizeram traz quem faltou NAQUELE dia — inclusive quem foi em outro dia mas faltou só esse', async () => {
+  const { rotas } = montar({
+    evento: EVENTO,
+    mock: (sql) => {
+      if (/SELECT id, nome, checkout_aberto, checkout_fecha_em, avaliacao_perguntas FROM eventos/.test(sql)) return { rows: [EVENTO] };
+      if (/SELECT id, nome, email, cpf, status, isento FROM evento_inscricoes/.test(sql)) return { rows: [
+        { id: 1, nome: 'Ana (foi nos 2 dias)', email: 'ana@x.com', status: 'confirmado', isento: false },
+        { id: 2, nome: 'Bruno (só foi no dia 1)', email: 'bruno@x.com', status: 'confirmado', isento: false },
+        { id: 3, nome: 'Carla (nunca foi)', email: 'carla@x.com', status: 'confirmado', isento: false }
+      ] };
+      if (/SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id, aval_respostas/.test(sql)) return { rows: [
+        { inscricao_id: 1, email: 'ana@x.com', cpf: null, nome_informado: 'Ana', criado_em: new Date(), programacao_id: 10, aval_respostas: null, aval_sugestoes: null },
+        { inscricao_id: 1, email: 'ana@x.com', cpf: null, nome_informado: 'Ana', criado_em: new Date(), programacao_id: 11, aval_respostas: null, aval_sugestoes: null },
+        { inscricao_id: 2, email: 'bruno@x.com', cpf: null, nome_informado: 'Bruno', criado_em: new Date(), programacao_id: 10, aval_respostas: null, aval_sugestoes: null }
+      ] };
+      if (/SELECT id, titulo, data, horario FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
+        { id: 10, titulo: 'Día 1', data: '2026-08-17', horario: null },
+        { id: 11, titulo: 'Día 2', data: '2026-08-18', horario: null }
+      ] };
+      return undefined;
+    }
+  });
+  const res = { json: (b) => { res._body = b; } };
+  await rotas['GET /eventos/:id/checkout-relatorio']({ params: { id: '5' } }, res);
+  const [dia1, dia2] = res._body.porDia;
+  assert.deepStrictEqual(dia1.naoFizeram.map(a => a.nome).sort(), ['Carla (nunca foi)'], 'só Carla faltou o dia 1 — Ana e Bruno foram');
+  assert.deepStrictEqual(dia2.naoFizeram.map(a => a.nome).sort(), ['Bruno (só foi no dia 1)', 'Carla (nunca foi)'].sort(), 'Bruno foi no dia 1 mas faltou o dia 2 — precisa aparecer aqui, mesmo não estando em "naoCompareceu" (que é só quem faltou TUDO)');
+  assert.strictEqual(res._body.naoCompareceu.length, 1, 'naoCompareceu (evento inteiro) continua sendo só a Carla — Bruno fez check-out em pelo menos 1 dia');
+});
+
 test('schema: evento_checkouts tem CREATE TABLE no código e as colunas de check-out por dia existem', () => {
   const src = require('fs').readFileSync(path.join(RAIZ, 'src/models/database.js'), 'utf8');
   assert.match(src, /CREATE TABLE IF NOT EXISTS evento_checkouts \(/, 'evento_checkouts precisa ter CREATE TABLE no código');

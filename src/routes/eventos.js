@@ -2457,24 +2457,37 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
     const totalDiasEvento = diasR.rows.length || 1;
 
     const aptos = [];        // inscrição válida + fez check-out em pelo menos 1 dia
-    const naoCompareceu = []; // inscrição válida + NÃO fez check-out em nenhum dia
+    const naoCompareceu = []; // inscrição válida + NÃO fez check-out em NENHUM dia do evento
+    // Quem faltou em CADA dia específico — pedido do usuário 19/08/2026: filtrar "não fizeram
+    // check-out" por um dia (17, 18...) mostrava sempre o mesmo total (24, "não fez check-out no
+    // evento INTEIRO"), igual pra todo dia já acontecido — não é o número certo. Alguém que foi
+    // no dia 17 mas faltou só o 18 nem aparece em "naoCompareceu" (fez check-out em pelo menos um
+    // dia, conta como aptos), mas precisa aparecer aqui quando o filtro é especificamente o dia 18.
+    const naoFizeramPorDia = {};
+    diasR.rows.forEach(dia => { naoFizeramPorDia[dia.id] = []; });
     inscritos.rows.forEach(i => {
       const valida = i.status === 'confirmado'; // confirmado cobre pago e isento (ambos ficam confirmado)
       if (!valida) return;
+      const diasFeitos = diasPorInscricao.get(i.id) || new Map();
+      diasR.rows.forEach(dia => {
+        if (!diasFeitos.has(dia.id)) naoFizeramPorDia[dia.id].push({ nome: i.nome, email: i.email, isento: i.isento });
+      });
       if (fezCheckout.has(i.id)) {
-        const dias = Array.from((diasPorInscricao.get(i.id) || new Map()).entries()).map(([programacao_id, label]) => ({ programacao_id, label }));
+        const dias = Array.from(diasFeitos.entries()).map(([programacao_id, label]) => ({ programacao_id, label }));
         aptos.push({ id: i.id, nome: i.nome, email: i.email, isento: i.isento, dias, diasCheckout: dias.length, ...elegibilidadeCertificado(dias.length, totalDiasEvento) });
       }
       else naoCompareceu.push({ nome: i.nome, email: i.email, isento: i.isento });
     });
 
-    // Quebra por dia: quantos check-outs cada dia teve
+    // Quebra por dia: quantos check-outs cada dia teve, e quem faltou naquele dia específico (só
+    // faz sentido quando o dia já aconteceu — jaAconteceu decide isso no painel).
     const porDia = diasR.rows.map(dia => ({
       programacao_id: dia.id,
       titulo: dia.titulo,
       data: dia.data,
       total: checkouts.rows.filter(c => c.programacao_id === dia.id).length,
-      jaAconteceu: diaJaAconteceu(dia)
+      jaAconteceu: diaJaAconteceu(dia),
+      naoFizeram: naoFizeramPorDia[dia.id]
     }));
 
     // Check-outs sem inscrição válida (não bateu) — pra revisar. Carrega o dia junto (pedido do
