@@ -250,6 +250,18 @@ router.post('/eventos/:id/lotes/:lid/deletar', requireAuth, requirePermissao('ev
 });
 
 // INSCRIÇÕES - Página Pública
+// Lote só vale dentro da própria janela (data_inicio/data_fim) e com ativo=true — pedido do
+// usuário 18/08/2026: lote programado pra fechar às 18:59 continuava aceitando inscrição às
+// 20h+. Antes disso não havia NENHUMA checagem de data — data_fim só aparecia como texto
+// informativo ("Disponible hasta X") na tela pública, sem nunca ser comparado com a hora real,
+// nem aqui nem no POST que de fato grava a inscrição.
+function loteDentroDaJanela(l) {
+  const agora = new Date();
+  return l.ativo !== false
+    && (!l.data_inicio || new Date(l.data_inicio) <= agora)
+    && (!l.data_fim || new Date(l.data_fim) >= agora);
+}
+
 router.get('/inscricao/:id', limiterVisualizacaoEvento, async (req, res) => {
   try {
     const [evR, lotesR] = await Promise.all([
@@ -258,7 +270,10 @@ router.get('/inscricao/:id', limiterVisualizacaoEvento, async (req, res) => {
     ]);
     // Evento não existe de fato
     if (!evR.rows[0]) return res.status(404).send('Evento não encontrado.');
-    const _eventoEncerrado = evR.rows[0].status !== 'ativo';
+    const lotesValidos = lotesR.rows.filter(loteDentroDaJanela);
+    // Encerrado tanto pelo status manual do evento quanto por TODOS os lotes já terem saído da
+    // própria janela (evento com lote(s) cadastrado, mas nenhum vale mais agora).
+    const _eventoEncerrado = evR.rows[0].status !== 'ativo' || (lotesR.rows.length > 0 && lotesValidos.length === 0);
     const camposR = await query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem',[req.params.id]);
     const [progPubR, palesPubR, patrocPubR] = await Promise.all([
       query('SELECT * FROM evento_programacao WHERE evento_id=$1 ORDER BY ordem',[req.params.id]),
@@ -267,7 +282,7 @@ router.get('/inscricao/:id', limiterVisualizacaoEvento, async (req, res) => {
     ]);
     const cfgPub = await getConfig();
     const cupomUrl = req.query.cupom ? req.query.cupom.toUpperCase() : null;
-    res.render('pages/evento-inscricao-publica', { evento: evR.rows[0], lotes: lotesR.rows, sucesso: false, qrcode: null, campos: camposR.rows, codigoInscricao: null, config: cfgPub, programacao: progPubR.rows, palestrantes: palesPubR.rows, patrocinadores: patrocPubR.rows, pixData: null, cupomUrl, encerrado: _eventoEncerrado });
+    res.render('pages/evento-inscricao-publica', { evento: evR.rows[0], lotes: lotesValidos, sucesso: false, qrcode: null, campos: camposR.rows, codigoInscricao: null, config: cfgPub, programacao: progPubR.rows, palestrantes: palesPubR.rows, patrocinadores: patrocPubR.rows, pixData: null, cupomUrl, encerrado: _eventoEncerrado });
   } catch(e) { console.error('GET /inscricao:', e.message); res.status(500).send('Erro ao carregar a inscrição.'); }
 });
 
@@ -283,6 +298,26 @@ router.post('/inscricao/:id', limiterInscricaoEvento, async (req, res) => {
 
     const loteR = await query('SELECT * FROM evento_lotes WHERE id=$1', [lote_id]);
     const lote = loteR.rows[0];
+
+    // Mesma checagem de janela do GET, mas aqui é a que vale de verdade — sem ela, quem já
+    // tinha a página aberta ANTES do lote fechar (ou quem forjar o POST direto) conseguia se
+    // inscrever depois do prazo configurado (achado em produção 18/08/2026: lote fechava às
+    // 18:59, inscrição pública seguia aceitando às 20h+, sem nenhuma checagem de data no envio).
+    if (lote && !loteDentroDaJanela(lote)) {
+      const config = await getConfig();
+      const [camposR, progR, palesR, patrocR] = await Promise.all([
+        query('SELECT * FROM evento_campos WHERE evento_id=$1 ORDER BY ordem', [req.params.id]),
+        query('SELECT * FROM evento_programacao WHERE evento_id=$1 ORDER BY ordem', [req.params.id]),
+        query('SELECT * FROM evento_palestrantes WHERE evento_id=$1 ORDER BY ordem', [req.params.id]),
+        query('SELECT * FROM evento_patrocinadores WHERE evento_id=$1 ORDER BY ordem', [req.params.id])
+      ]);
+      return res.render('pages/evento-inscricao-publica', {
+        evento, lotes: [], sucesso: false, qrcode: null,
+        codigoInscricao: null, config, programacao: progR.rows,
+        palestrantes: palesR.rows, patrocinadores: patrocR.rows, pixData: null,
+        campos: camposR.rows, encerrado: true
+      });
+    }
 
     // ── VALIDAÇÃO DE DUPLICATA — email OU rg já cadastrado neste evento
     const emailNorm = (email || '').toLowerCase().trim();
@@ -310,10 +345,10 @@ router.post('/inscricao/:id', limiterInscricaoEvento, async (req, res) => {
         query('SELECT * FROM evento_programacao WHERE evento_id=$1 ORDER BY ordem', [req.params.id]),
         query('SELECT * FROM evento_palestrantes WHERE evento_id=$1 ORDER BY ordem', [req.params.id]),
         query('SELECT * FROM evento_patrocinadores WHERE evento_id=$1 ORDER BY ordem', [req.params.id]),
-        query('SELECT * FROM evento_lotes WHERE evento_id=$1 AND ativo=true ORDER BY ordem', [req.params.id])
+        query('SELECT * FROM evento_lotes WHERE evento_id=$1 ORDER BY ordem', [req.params.id])
       ]);
       return res.render('pages/evento-inscricao-publica', {
-        evento, lotes: lotesR.rows, sucesso: false, qrcode: null,
+        evento, lotes: lotesR.rows.filter(loteDentroDaJanela), sucesso: false, qrcode: null,
         codigoInscricao: null, config, programacao: progR.rows,
         palestrantes: palesR.rows, patrocinadores: patrocR.rows, pixData: null,
         campos: camposR.rows,
