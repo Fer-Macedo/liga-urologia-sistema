@@ -45,11 +45,12 @@ function montar({ falhaRemocao = false, achaMensagem = true } = {}) {
     }
   }};
 
+  const createTransportChamadas = { n: 0 }; // objeto (não primitivo) pra contar por referência
   const rnm = require.resolve('nodemailer');
   require.cache[rnm] = { id: rnm, filename: rnm, loaded: true, exports: {
-    createTransport: () => ({
+    createTransport: () => { createTransportChamadas.n++; return {
       sendMail: async (opts) => { emailsEnviados.push(opts); return { messageId: '<msg-teste-123@mail.gmail.com>' }; }
-    })
+    }; }
   }};
 
   const rgd = require.resolve(path.join(RAIZ, 'src/services/google-drive.js'));
@@ -81,8 +82,23 @@ function montar({ falhaRemocao = false, achaMensagem = true } = {}) {
 
   delete require.cache[require.resolve(MODULO)];
   const mod = require(MODULO);
-  return { mod, emailsEnviados, buscas, trashes, modifies };
+  return { mod, emailsEnviados, buscas, trashes, modifies, createTransportChamadas };
 }
+
+// ─── FALHA 3: um login SMTP novo por e-mail derrubava envios sob rajada ───────
+// 18/08/2026: participantes relatando "meu colega recebeu a confirmação do check-out, eu não" —
+// achado em produção: enviarEmail() chamava nodemailer.createTransport() (= um login novo no
+// Gmail) A CADA e-mail. Sob rajada (muita gente confirmando check-out ao mesmo tempo), isso
+// disparou "454-4.7.0 Too many login attempts" do próprio Gmail — 282 falhas contadas direto no
+// log, no mesmo dia. Corrigido com um transporter único (pool:true), criado uma vez só.
+test('createTransport é chamado só UMA vez, mesmo enviando vários e-mails — não pode logar de novo a cada envio', async () => {
+  const { mod, createTransportChamadas } = montar();
+  assert.strictEqual(createTransportChamadas.n, 1, 'o transporter já é criado ao carregar o módulo, não a cada e-mail');
+  await mod.notificarAniversario({ membro: { id: 1, nome: 'Ana', email: 'ana@teste.com', whatsapp: null } });
+  await mod.notificarAniversario({ membro: { id: 2, nome: 'Bruno', email: 'bruno@teste.com', whatsapp: null } });
+  await mod.notificarAniversario({ membro: { id: 3, nome: 'Carla', email: 'carla@teste.com', whatsapp: null } });
+  assert.strictEqual(createTransportChamadas.n, 1, 'depois de 3 envios, ainda é a MESMA conexão/login — é isso que evita o rate-limit do Gmail');
+});
 
 // ─── FALHA 1: aniversário no layout errado ────────────────────────────────────
 

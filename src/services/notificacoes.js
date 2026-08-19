@@ -14,6 +14,21 @@ async function enviarWhatsApp(numero, mensagem) {
   return await enviarTexto(numero, mensagem);
 }
 
+// Transporter ÚNICO, criado uma vez e reaproveitado em TODOS os envios — achado em produção
+// 18/08/2026 (queixa de participantes: "meu colega recebeu a confirmação do check-out, eu não"):
+// antes, enviarEmail() chamava nodemailer.createTransport() a cada e-mail, e cada transporter
+// novo faz um LOGIN SMTP novo no Gmail. Sob rajada (muita gente confirmando check-out ao mesmo
+// tempo, no fim do dia do evento), isso disparou o limite antiabuso do próprio Gmail — "454-4.7.0
+// Too many login attempts" — derrubando e-mails de gente que não tinha nada de errado (282
+// falhas desse tipo, contadas direto no log, no mesmo dia). pool:true faz o login UMA vez e
+// reaproveita a conexão entre os envios seguintes, em vez de reautenticar a cada e-mail.
+const transporter = nodemailer.createTransport({
+  host: 'smtp.gmail.com', port: 587, secure: false,
+  auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+  connectionTimeout: 15000, tls: { rejectUnauthorized: false },
+  pool: true, maxConnections: 3, maxMessages: 100
+});
+
 async function enviarEmail(opts) {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) return { ok: false };
   try {
@@ -27,12 +42,7 @@ async function enviarEmail(opts) {
         config: opts.config || await getConfig()
       });
     }
-    const t = nodemailer.createTransport({
-      host: 'smtp.gmail.com', port: 587, secure: false,
-      auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
-      connectionTimeout: 15000, tls: { rejectUnauthorized: false }
-    });
-    const info = await t.sendMail({
+    const info = await transporter.sendMail({
       from: process.env.EMAIL_FROM || process.env.EMAIL_USER,
       to: opts.para, subject: opts.assunto,
       text: opts.texto || '', html: html,
