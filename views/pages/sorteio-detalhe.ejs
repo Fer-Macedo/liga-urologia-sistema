@@ -42,6 +42,11 @@
        atende/não está presente, sem deixar nome errado registrado. */
     .btn-confirmar-ganhador { background: var(--cor-primaria); color: #fff; border: none; border-radius: 12px; padding: 14px 28px; font-size: 15px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; }
     .btn-confirmar-ganhador:hover { filter: brightness(.9); }
+    /* 19/08/2026: pedido do usuário — contato do ganhador (e-mail/whatsapp) pra combinar entrega
+       do brinde, mas sem ficar exposto direto na tela — só aparece ao clicar. */
+    .contato-toggle { cursor: pointer; border-bottom: 1px dashed currentColor; }
+    .contato-popover { display: none; margin-top: 6px; padding: 9px 12px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 12px; color: #374151; box-shadow: 0 4px 14px rgba(0,0,0,.08); }
+    .contato-popover.aberto { display: block; }
 
     /* CONFETES */
     .confete { position: fixed; pointer-events: none; z-index: 9999; }
@@ -116,8 +121,13 @@
         // depois. Junta os 3 campos por nome (só existe algo em contatosExternos pra sorteio
         // tipo "externo" — pra "interno" fica {} e essa função sempre devolve vazio, sem mudar
         // nada da tela de sorteio interno).
+        // 19/08/2026 (4ª rodada): pedido do usuário — sorteio INTERNO (ligantes/diretivos/evento/
+        // pss) não tinha contato nenhum pra view (contatosExternos só existe pra sorteio externo,
+        // com dado autodeclarado num formulário público). contatosGanhadores traz o contato do
+        // cadastro interno, mas só dos ganhadores JÁ CONFIRMADOS (ver buscarContatosGanhadores) —
+        // checa os dois porque nunca existem os dois ao mesmo tempo pro mesmo sorteio.
         function contatoTexto(nome){
-          var c = contatosExternos && contatosExternos[nome];
+          var c = (contatosExternos && contatosExternos[nome]) || (contatosGanhadores && contatosGanhadores[nome]);
           if(!c) return '';
           var partes = [];
           if(c.email) partes.push(c.email);
@@ -153,7 +163,10 @@
                     <div class="trophy"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></div>
                     <h3><%= ganhadores.join(', ') %></h3>
                     <% ganhadores.forEach(function(g){ var ig = contatoInstagram(g); if(ig){ %><p style="font-size:17px;font-weight:700;color:#e1306c;margin:2px 0 6px"><%= ganhadores.length > 1 ? g + ': ' : '' %><%= ig %></p><% } }) %>
-                    <% ganhadores.forEach(function(g){ var ct = contatoTexto(g); if(ct){ %><p style="font-size:13px;color:#4a7c2a"><%= ganhadores.length > 1 ? g + ': ' : '' %><%= ct %></p><% } }) %>
+                    <% ganhadores.forEach(function(g, gi){ var ct = contatoTexto(g); if(ct){ %>
+                    <p style="font-size:12px;margin:4px 0 0"><% if(ganhadores.length > 1){ %><%= g %>: <% } %><span class="contato-toggle" onclick="toggleContato('ctf-<%= gi %>')">ver contato</span></p>
+                    <div class="contato-popover" id="ctf-<%= gi %>" style="max-width:320px;margin:6px auto"><%= ct %></div>
+                    <% } }) %>
                     <% if(sorteio.ganhador_contato){ %><p style="font-size:12px;color:#94a3b8">Observação: <%= sorteio.ganhador_contato %></p><% } %>
                     <% if(sorteio.brinde){ %><span class="brinde-tag"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg> <%= sorteio.brinde %></span><% } %>
                   </div>
@@ -211,7 +224,10 @@
                     <div class="ganhador-num"><%= i+1 %></div>
                     <div>
                       <div class="ganhador-nome"><%= g %></div>
-                      <% if(ct){ %><div style="font-size:12px;color:#6b7280"><%= ct %></div><% } %>
+                      <% if(ct){ %>
+                      <div style="font-size:12px;color:#6b7280"><span class="contato-toggle" onclick="toggleContato('ctg-<%= i %>')">ver contato</span></div>
+                      <div class="contato-popover" id="ctg-<%= i %>"><%= ct %></div>
+                      <% } %>
                     </div>
                   </div>
                   <% }) %>
@@ -259,7 +275,10 @@
                     <div class="participante-avatar"><%= p.charAt(0).toUpperCase() %></div>
                     <div class="participante-nome">
                       <div><%= p %></div>
-                      <% if(ctp){ %><div style="font-size:11px;color:#9ca3af"><%= ctp %></div><% } %>
+                      <% if(ctp){ %>
+                      <div style="font-size:11px;color:#9ca3af"><span class="contato-toggle" onclick="toggleContato('ctp-<%= i %>')">ver contato</span></div>
+                      <div class="contato-popover" id="ctp-<%= i %>"><%= ctp %></div>
+                      <% } %>
                     </div>
                     <% if(jaGanhou){ %><span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89L17 22l-5-3-5 3 1.523-9.11"/></svg></span><% } %>
                   </div>
@@ -302,8 +321,11 @@
                 Validar Ganhador — <%= ganhadores.join(', ') %>
               </div>
               <div class="info-card-body">
-                <% ganhadores.forEach(function(g){ var ct = contatoTexto(g); if(ct){ %>
-                <div style="font-size:12px;color:#4a7c2a;background:#f0f7eb;border-radius:8px;padding:8px 12px;margin-bottom:12px"><strong><%= g %>:</strong> <%= ct %></div>
+                <% ganhadores.forEach(function(g, gi){ var ct = contatoTexto(g); if(ct){ %>
+                <div style="font-size:12px;background:#f0f7eb;border-radius:8px;padding:8px 12px;margin-bottom:12px">
+                  <strong style="color:#1a4002"><%= g %></strong> — <span class="contato-toggle" onclick="toggleContato('ctv-<%= gi %>')" style="color:#4a7c2a">ver contato</span>
+                  <div class="contato-popover" id="ctv-<%= gi %>"><%= ct %></div>
+                </div>
                 <% } }) %>
                 <form method="POST" action="/sorteios/<%= sorteio.id %>/validar">
                   <div class="validacao-form">
@@ -380,6 +402,13 @@ const contatosExternos = <%- JSON.stringify(contatosExternos).replace(/</g,"\\u0
 function instagramDe(nome){
   const c = contatosExternos[nome];
   return (c && c.instagram) ? '@'+String(c.instagram).replace(/^@/,'') : '';
+}
+// 19/08/2026 (4ª rodada): pedido do usuário — contato do ganhador (e-mail/whatsapp) fica
+// escondido até clicar, pra não ficar exposto na tela. O conteúdo já vem renderizado pelo
+// servidor (escondido via CSS) — aqui só alterna a classe que mostra/esconde.
+function toggleContato(id){
+  const el = document.getElementById(id);
+  if (el) el.classList.toggle('aberto');
 }
 const sorteioStatus = '<%= sorteio.status %>';
 // 19/08/2026 (3ª rodada): pedido do usuário — sortear e confirmar UM ganhador por vez, nunca os

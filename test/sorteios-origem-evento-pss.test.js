@@ -19,6 +19,10 @@ function montar({ sorteio, eventoInscritos, pssCandidatos, membros, diretivos, m
       if (mock) { const r = mock(sql, params); if (r !== undefined) return r; }
       if (/SELECT status, ganhador_nome FROM sorteios WHERE id=\$1/.test(sql)) return { rows: sorteio ? [{ status: sorteio.status, ganhador_nome: sorteio.ganhador_nome || null }] : [] };
       if (/SELECT \* FROM sorteios WHERE id=\$1/.test(sql)) return { rows: sorteio ? [sorteio] : [] };
+      if (/SELECT nome, email, whatsapp FROM membros WHERE ativo=1/.test(sql)) return { rows: membros || [] };
+      if (/SELECT nome, email, whatsapp FROM diretivos WHERE ativo=1/.test(sql)) return { rows: diretivos || [] };
+      if (/SELECT nome, email, whatsapp FROM evento_inscricoes WHERE evento_id=\$1 AND status='confirmado'/.test(sql)) return { rows: eventoInscritos || [] };
+      if (/SELECT nome, email, telefone AS whatsapp FROM ps_candidatos WHERE processo_id=\$1 AND status='confirmado'/.test(sql)) return { rows: pssCandidatos || [] };
       if (/SELECT nome FROM membros WHERE ativo=1/.test(sql)) return { rows: membros || [] };
       if (/SELECT nome FROM diretivos WHERE ativo=1/.test(sql)) return { rows: diretivos || [] };
       if (/SELECT nome FROM evento_inscricoes WHERE evento_id=\$1 AND status='confirmado'/.test(sql)) return { rows: eventoInscritos || [] };
@@ -110,6 +114,57 @@ test('GET /sorteios/:id: evento sem ninguém concluído ainda — lista vazia, n
   const res = resRender();
   await rotas['GET /sorteios/:id'](reqBase({ params: { id: '5' } }), res);
   assert.deepStrictEqual(res._locals.participantes, []);
+});
+
+// 19/08/2026 (4ª rodada): pedido do usuário — poder ver e-mail/whatsapp do ganhador pra combinar
+// entrega do brinde. Só busca contato dos ganhadores JÁ CONFIRMADOS, não dos ~500 participantes
+// (nem desempenho nem privacidade justificam trazer o contato de todo mundo).
+test('GET /sorteios/:id: sorteio interno (evento) com ganhador confirmado traz o contato SÓ dele', async () => {
+  const { rotas } = montar({
+    sorteio: { id: 12, tipo: 'interno', publico_alvo: 'evento', origem_tipo: 'evento', origem_id: 5, ganhador_nome: 'Ana Confirmada' },
+    eventoInscritos: [
+      { nome: 'Ana Confirmada', email: 'ana@x.com', whatsapp: '+595991111111' },
+      { nome: 'Bruno Confirmado', email: 'bruno@x.com', whatsapp: '+595992222222' }
+    ]
+  });
+  const res = resRender();
+  await rotas['GET /sorteios/:id'](reqBase({ params: { id: '12' } }), res);
+  assert.deepStrictEqual(res._locals.contatosGanhadores, { 'Ana Confirmada': { email: 'ana@x.com', whatsapp: '+595991111111' } });
+});
+
+test('GET /sorteios/:id: sorteio pss usa telefone como contato (não tem coluna whatsapp)', async () => {
+  const { rotas } = montar({
+    sorteio: { id: 6, tipo: 'interno', publico_alvo: 'pss', origem_tipo: 'pss', origem_id: 3, ganhador_nome: 'Carla Candidata' },
+    pssCandidatos: [{ nome: 'Carla Candidata', email: 'carla@x.com', whatsapp: '+595993333333' }]
+  });
+  const res = resRender();
+  await rotas['GET /sorteios/:id'](reqBase({ params: { id: '6' } }), res);
+  assert.deepStrictEqual(res._locals.contatosGanhadores['Carla Candidata'], { email: 'carla@x.com', whatsapp: '+595993333333' });
+});
+
+test('GET /sorteios/:id: sorteio sem ganhador ainda não tem contatosGanhadores (nem consulta o banco)', async () => {
+  const { rotas } = montar({
+    sorteio: { id: 12, tipo: 'interno', publico_alvo: 'evento', origem_tipo: 'evento', origem_id: 5, ganhador_nome: null },
+    eventoInscritos: [{ nome: 'Ana Confirmada', email: 'ana@x.com', whatsapp: '+595991111111' }]
+  });
+  const res = resRender();
+  await rotas['GET /sorteios/:id'](reqBase({ params: { id: '12' } }), res);
+  assert.deepStrictEqual(res._locals.contatosGanhadores, {});
+});
+
+test('GET /sorteios/:id: sorteio externo não usa contatosGanhadores (contato já vem por contatosExternos)', async () => {
+  const { rotas } = montar({
+    sorteio: { id: 7, tipo: 'externo', publico_alvo: null, origem_tipo: null, origem_id: null, ganhador_nome: 'Ana Externa' },
+    mock: (sql) => {
+      if (/SELECT \* FROM sorteio_participantes WHERE sorteio_id=\$1/.test(sql)) return { rows: [
+        { nome: 'Ana Externa', email: 'ana@x.com', instagram: '@ana', whatsapp: '+595994316286' }
+      ] };
+      return undefined;
+    }
+  });
+  const res = resRender();
+  await rotas['GET /sorteios/:id'](reqBase({ params: { id: '7' } }), res);
+  assert.deepStrictEqual(res._locals.contatosGanhadores, {});
 });
 
 test('POST /sorteios/criar: publico_alvo=evento grava origem_tipo e origem_id (não guarda lista fixa)', async () => {

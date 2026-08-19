@@ -141,6 +141,41 @@ async function buscarParticipantesSorteio(sorteio) {
   return { participantes, contatosExternos };
 }
 
+// Busca email/whatsapp dos ganhadores JÁ CONFIRMADOS de um sorteio interno — pra poder entrar
+// em contato e combinar a entrega do brinde. 19/08/2026: pedido do usuário. Só dos ganhadores
+// (não dos ~500 participantes): além de desnecessário, carregar o contato de todo mundo só pra
+// mostrar o de 1-2 pessoas seria expor dado sensível (e-mail/whatsapp de membro) sem motivo —
+// sorteio externo já tem isso resolvido à parte, em contatosExternos (dado autodeclarado num
+// formulário público, não o cadastro interno). PSS guarda telefone (não whatsapp) — alias pra
+// contatoTexto() na view não precisar saber a diferença.
+async function buscarContatosGanhadores(sorteio, ganhadores) {
+  const contatos = {};
+  if (sorteio.tipo !== 'interno' || !ganhadores.length) return contatos;
+  let r = null;
+  if (sorteio.publico_alvo === 'ligantes') {
+    r = await query("SELECT nome, email, whatsapp FROM membros WHERE ativo=1");
+  } else if (sorteio.publico_alvo === 'diretivos') {
+    r = await query("SELECT nome, email, whatsapp FROM diretivos WHERE ativo=1 AND pendente=false");
+  } else if (sorteio.publico_alvo === 'ambos') {
+    const [lig, dir] = await Promise.all([
+      query("SELECT nome, email, whatsapp FROM membros WHERE ativo=1"),
+      query("SELECT nome, email, whatsapp FROM diretivos WHERE ativo=1 AND pendente=false")
+    ]);
+    r = { rows: [...lig.rows, ...dir.rows] };
+  } else if (sorteio.publico_alvo === 'evento' && sorteio.origem_id) {
+    r = await query("SELECT nome, email, whatsapp FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado'", [sorteio.origem_id]);
+  } else if (sorteio.publico_alvo === 'pss' && sorteio.origem_id) {
+    r = await query("SELECT nome, email, telefone AS whatsapp FROM ps_candidatos WHERE processo_id=$1 AND status='confirmado'", [sorteio.origem_id]);
+  }
+  if (r) {
+    r.rows.forEach(row => {
+      const nome = (row.nome || '').trim();
+      if (ganhadores.includes(nome)) contatos[nome] = { email: row.email, whatsapp: row.whatsapp };
+    });
+  }
+  return contatos;
+}
+
 // Criar sorteio
 router.post('/sorteios/criar', requireAuth, requirePermissao('sorteios'), async (req, res) => {
   try {
@@ -197,11 +232,12 @@ router.get('/sorteios/:id', requireAuth, requirePermissao('sorteios'), async (re
     }
 
     const ganhadores = sorteio.ganhador_nome ? sorteio.ganhador_nome.split('|') : [];
+    const contatosGanhadores = await buscarContatosGanhadores(sorteio, ganhadores);
 
     res.render('pages/sorteio-detalhe', {
       config: await getConfig(), usuario: req.session.usuario,
       paginaAtual: 'sorteios',
-      sorteio, participantes, contatosExternos, ganhadores, origemNome,
+      sorteio, participantes, contatosExternos, contatosGanhadores, ganhadores, origemNome,
       msg: req.flash('msg'), erro: req.flash('erro')
     });
   } catch(e) { res.send('ERRO: ' + e.message); }
