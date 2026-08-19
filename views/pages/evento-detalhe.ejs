@@ -1302,7 +1302,7 @@
             <span>Relatório de Presença</span>
             <span style="display:flex;gap:8px">
               <button class="btn btn-sm" onclick="carregarRelatorioCheckout()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Atualizar</button>
-              <a class="btn btn-sm" href="/eventos/<%= evento.id %>/checkout-export" style="background:var(--cor-primaria);color:#fff;border-color:transparent;text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar Aptos (CSV)</a>
+              <a class="btn btn-sm" href="/eventos/<%= evento.id %>/checkout-export" style="background:var(--cor-primaria);color:#fff;border-color:transparent;text-decoration:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Exportar Certificado (CSV)</a>
               <form method="POST" action="/eventos/<%= evento.id %>/checkout-reenviar-confirmacoes" style="display:inline" onsubmit="var f=this; confirmarAcao('Reenviar o e-mail de confirmação de check-out para TODOS que já confirmaram presença, em TODOS os dias do evento? Use isso se houver suspeita de que alguns e-mails não chegaram.', function(){ f.submit(); }); return false;">
                 <button type="submit" class="btn btn-sm" style="background:#d97706;color:#fff;border-color:transparent"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg> Reenviar confirmações (todos os dias)</button>
               </form>
@@ -1702,19 +1702,21 @@ function carregarRelatorioCheckout(){
       if(!d.ok){ rel.innerHTML = '<span style="color:#991b1b">Erro: '+(d.erro||'falha')+'</span>'; return; }
       _ckAptos = d.aptos || [];
       var box = function(num,lab,cor,view){ return '<div'+(view?' onclick="mostrarViewCheckout(\''+view+'\')" title="Ver lista"':'')+' style="flex:1;min-width:120px;background:'+cor+';border-radius:10px;padding:14px 16px;text-align:center'+(view?';cursor:pointer':'')+'"><div style="font-size:26px;font-weight:800;color:#0f172a">'+num+'</div><div style="font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:.5px;font-weight:600">'+lab+'</div></div>'; };
-      resumo.innerHTML = box(d.resumo.aptos,'Aptos','#dcfce7','aptos') + box(d.resumo.nao_compareceu,'Não compareceram','#fef3c7','naoCompareceu') + box(d.resumo.sem_inscricao,'Sem inscrição','#fee2e2','semInscricao') + box(d.resumo.total_checkouts,'Total check-outs','#e0e7ff',null);
+      resumo.innerHTML = box(d.resumo.apto_certificado,'Aptos ao certificado','#dcfce7','aptos') + box(d.resumo.abaixo_minimo,'Abaixo do mínimo','#fed7aa','aptos') + box(d.resumo.nao_compareceu,'Não compareceram','#fef3c7','naoCompareceu') + box(d.resumo.sem_inscricao,'Sem inscrição','#fee2e2','semInscricao') + box(d.resumo.total_checkouts,'Total check-outs','#e0e7ff',null);
 
       if(!{aptos:1,naoCompareceu:1,semInscricao:1}[_ckView]) _ckView = 'aptos';
       var html = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">';
       html += '<label style="font-size:12px;font-weight:600;color:var(--texto2)">Ver:</label>';
       html += '<select id="ckFiltroInfo" class="input" style="max-width:320px" onchange="mostrarViewCheckout(this.value)">';
-      html += '<option value="aptos"'+(_ckView==='aptos'?' selected':'')+'>Aptos ao certificado ('+d.aptos.length+')</option>';
+      html += '<option value="aptos"'+(_ckView==='aptos'?' selected':'')+'>Check-outs realizados ('+d.aptos.length+')</option>';
       html += '<option value="naoCompareceu"'+(_ckView==='naoCompareceu'?' selected':'')+'>Inscritos que não fizeram check-out ('+d.naoCompareceu.length+')</option>';
       html += '<option value="semInscricao"'+(_ckView==='semInscricao'?' selected':'')+'>Check-outs sem inscrição válida ('+d.semInscricao.length+')</option>';
       html += '</select></div>';
 
       // APTOS — com filtro por dia (pedido do usuário 17/08/2026, 3ª rodada: saber de qual dia
-      // é cada check-out, já que a mesma pessoa pode ter um check-out por dia do evento)
+      // é cada check-out, já que a mesma pessoa pode ter um check-out por dia do evento). Coluna
+      // "Situação" (pedido do usuário 19/08/2026): apto ao certificado exige 75% de presença —
+      // pelo menos precisaDias dos totalDias do evento — não basta ter feito 1 check-out qualquer.
       html += '<div id="ckView_aptos" style="display:'+(_ckView==='aptos'?'block':'none')+'">';
       if(d.porDia && d.porDia.length){
         html += '<h3 style="font-size:14px;color:#0f172a;margin:0 0 8px">Check-outs por dia</h3>';
@@ -1725,7 +1727,10 @@ function carregarRelatorioCheckout(){
         });
         html += '</tbody></table>';
       }
-      html += '<h3 style="font-size:14px;color:#15803d;margin:18px 0 8px">'+ICONE_APTOS+' Aptos ao certificado ('+d.aptos.length+')</h3>';
+      html += '<h3 style="font-size:14px;color:#15803d;margin:18px 0 4px">'+ICONE_APTOS+' Check-outs realizados ('+d.aptos.length+')</h3>';
+      if(d.totalDiasEvento > 1){
+        html += '<div style="font-size:11px;color:var(--texto2);margin-bottom:10px">Regra do certificado: precisa de check-out em pelo menos <strong>'+d.precisaDias+' de '+d.totalDiasEvento+' dias</strong> (75% de presença) para ficar Apto.</div>';
+      }
       html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">';
       html += '<input type="text" id="ckBuscaNome" class="input" style="max-width:240px" placeholder="Buscar por nome ou e-mail..." oninput="buscarAptos()">';
       if(d.porDia && d.porDia.length){
@@ -1820,13 +1825,13 @@ function renderizarAptos(){
     if(busca && (a.nome||'').toLowerCase().indexOf(busca) < 0 && (a.email||'').toLowerCase().indexOf(busca) < 0) return false;
     return true;
   });
-  if(!lista.length){ wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">Ninguém apto '+((filtroDia||busca)?'com esse filtro.':'ainda.')+'</div>'; return; }
+  if(!lista.length){ wrap.innerHTML = '<div style="color:#94a3b8;font-size:12px">Ninguém encontrado '+((filtroDia||busca)?'com esse filtro.':'ainda.')+'</div>'; return; }
   var totalP = Math.ceil(lista.length / CK_POR_PAGINA) || 1;
   if(_ckPagina > totalP) _ckPagina = totalP;
   var ini = (_ckPagina-1)*CK_POR_PAGINA, fim = ini+CK_POR_PAGINA;
   var pagina = lista.slice(ini, fim);
   var html = '<div style="font-size:11px;color:var(--texto2);margin-bottom:6px">Exibindo '+(ini+1)+'–'+Math.min(fim,lista.length)+' de '+lista.length+'</div>';
-  html += '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Nome</th><th style="text-align:left">Email</th><th>Tipo</th><th style="text-align:left">Dia(s) — × desfaz só aquele dia</th></tr></thead><tbody>';
+  html += '<table class="tabela" style="width:100%;font-size:12px"><thead><tr><th style="text-align:left">Nome</th><th style="text-align:left">Email</th><th>Tipo</th><th style="text-align:left">Dia(s) — × desfaz só aquele dia</th><th>Situação</th></tr></thead><tbody>';
   pagina.forEach(function(a){
     var diasDaLinha = filtroDia ? (a.dias||[]).filter(function(d){ return d.label === filtroDia; }) : (a.dias||[]);
     var chips = diasDaLinha.map(function(d){
@@ -1835,7 +1840,8 @@ function renderizarAptos(){
         + escHtml(d.label)
         + '<button onclick="desfazerCheckoutDia('+a.id+','+diaArg+',this)" title="Remover check-out desse dia" style="background:#ef4444;color:#fff;border:none;border-radius:50%;width:15px;height:15px;line-height:14px;text-align:center;cursor:pointer;font-size:10px;padding:0">×</button></span>';
     }).join('');
-    html += '<tr><td>'+toTitleCase(a.nome)+'</td><td>'+a.email+'</td><td style="text-align:center">'+(a.isento?'Isento':'Pago')+'</td><td>'+chips+'</td></tr>';
+    var situacao = '<span style="display:inline-block;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:700;white-space:nowrap;'+(a.apto?'background:#dcfce7;color:#166534':'background:#fed7aa;color:#9a3412')+'">'+(a.apto?'Apto':'Abaixo do mínimo')+' ('+a.percentual+'%)</span>';
+    html += '<tr><td>'+toTitleCase(a.nome)+'</td><td>'+a.email+'</td><td style="text-align:center">'+(a.isento?'Isento':'Pago')+'</td><td>'+chips+'</td><td style="text-align:center">'+situacao+'</td></tr>';
   });
   html += '</tbody></table>';
   html += paginacaoBotoesHtml(_ckPagina, lista.length, CK_POR_PAGINA, 'irParaPaginaAptos(');

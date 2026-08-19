@@ -540,6 +540,80 @@ test('GET /eventos/:id/checkout-relatorio: cada apto vem com {programacao_id, la
   assert.ok(a.dias.some(d => d.programacao_id === 11 && d.label.includes('Día 2')));
 });
 
+// 19/08/2026: pedido do usuário — "apto ao certificado" tinha virado sinônimo de "fez check-out
+// pelo menos uma vez" (o painel chamava qualquer um que tivesse comparecido 1 dia de "Apto"), mas
+// a universidade exige 75% de presença. Num evento de 4 dias, isso é 3 dos 4 dias — pode faltar
+// só 1. Cada pessoa na lista de "aptos" (que na prática virou "fizeram check-out") agora carrega
+// percentual/apto calculados de verdade, e o resumo separa quem bate a regra de quem não bate.
+test('GET /eventos/:id/checkout-relatorio: evento de 4 dias — só quem fez check-out em 3+ dias (75%) é Apto; quem fez menos fica Abaixo do mínimo', async () => {
+  const { rotas } = montar({
+    evento: EVENTO,
+    mock: (sql) => {
+      if (/SELECT id, nome, checkout_aberto, checkout_fecha_em, avaliacao_perguntas FROM eventos/.test(sql)) return { rows: [EVENTO] };
+      if (/SELECT id, nome, email, cpf, status, isento FROM evento_inscricoes/.test(sql)) return { rows: [
+        { id: 1, nome: 'Ana (100%)', email: 'ana@x.com', status: 'confirmado', isento: false },
+        { id: 2, nome: 'Bruno (75%)', email: 'bruno@x.com', status: 'confirmado', isento: false },
+        { id: 3, nome: 'Carla (50%)', email: 'carla@x.com', status: 'confirmado', isento: false }
+      ] };
+      if (/SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id, aval_respostas/.test(sql)) return { rows: [
+        { inscricao_id: 1, email: 'ana@x.com', cpf: null, nome_informado: 'Ana', criado_em: new Date(), programacao_id: 10, aval_respostas: null, aval_sugestoes: null },
+        { inscricao_id: 1, email: 'ana@x.com', cpf: null, nome_informado: 'Ana', criado_em: new Date(), programacao_id: 11, aval_respostas: null, aval_sugestoes: null },
+        { inscricao_id: 1, email: 'ana@x.com', cpf: null, nome_informado: 'Ana', criado_em: new Date(), programacao_id: 12, aval_respostas: null, aval_sugestoes: null },
+        { inscricao_id: 1, email: 'ana@x.com', cpf: null, nome_informado: 'Ana', criado_em: new Date(), programacao_id: 13, aval_respostas: null, aval_sugestoes: null },
+        { inscricao_id: 2, email: 'bruno@x.com', cpf: null, nome_informado: 'Bruno', criado_em: new Date(), programacao_id: 10, aval_respostas: null, aval_sugestoes: null },
+        { inscricao_id: 2, email: 'bruno@x.com', cpf: null, nome_informado: 'Bruno', criado_em: new Date(), programacao_id: 11, aval_respostas: null, aval_sugestoes: null },
+        { inscricao_id: 2, email: 'bruno@x.com', cpf: null, nome_informado: 'Bruno', criado_em: new Date(), programacao_id: 12, aval_respostas: null, aval_sugestoes: null },
+        { inscricao_id: 3, email: 'carla@x.com', cpf: null, nome_informado: 'Carla', criado_em: new Date(), programacao_id: 10, aval_respostas: null, aval_sugestoes: null },
+        { inscricao_id: 3, email: 'carla@x.com', cpf: null, nome_informado: 'Carla', criado_em: new Date(), programacao_id: 11, aval_respostas: null, aval_sugestoes: null }
+      ] };
+      if (/SELECT id, titulo, data FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
+        { id: 10, titulo: 'Día 1', data: '2026-08-17' },
+        { id: 11, titulo: 'Día 2', data: '2026-08-18' },
+        { id: 12, titulo: 'Día 3', data: '2026-08-19' },
+        { id: 13, titulo: 'Día 4', data: '2026-08-20' }
+      ] };
+      return undefined;
+    }
+  });
+  const res = { json: (b) => { res._body = b; } };
+  await rotas['GET /eventos/:id/checkout-relatorio']({ params: { id: '5' } }, res);
+  assert.strictEqual(res._body.totalDiasEvento, 4);
+  assert.strictEqual(res._body.precisaDias, 3, 'precisa de 3 dos 4 dias — 75% exato já basta, não precisa de mais que isso');
+  const porNome = Object.fromEntries(res._body.aptos.map(a => [a.nome, a]));
+  assert.strictEqual(porNome['Ana (100%)'].apto, true);
+  assert.strictEqual(porNome['Ana (100%)'].percentual, 100);
+  assert.strictEqual(porNome['Bruno (75%)'].apto, true, '3 de 4 dias = 75% exato = Apto, não precisa passar de 75%');
+  assert.strictEqual(porNome['Bruno (75%)'].percentual, 75);
+  assert.strictEqual(porNome['Carla (50%)'].apto, false, '2 de 4 dias = 50% = abaixo do mínimo');
+  assert.strictEqual(porNome['Carla (50%)'].percentual, 50);
+  assert.strictEqual(res._body.resumo.apto_certificado, 2, 'Ana e Bruno');
+  assert.strictEqual(res._body.resumo.abaixo_minimo, 1, 'só Carla');
+});
+
+// Evento legado (sem Programação por data, ex: palestra de um dia só) precisa continuar tratando
+// 1 check-out como 100% de presença — não pode virar "abaixo do mínimo" por acidente.
+test('GET /eventos/:id/checkout-relatorio: evento de 1 dia só (sem Programação por data) — 1 check-out já é 100%, Apto', async () => {
+  const { rotas } = montar({
+    evento: { id: 6, nome: 'Palestra única', checkout_aberto: true, checkout_fecha_em: null },
+    mock: (sql) => {
+      if (/SELECT id, nome, checkout_aberto, checkout_fecha_em, avaliacao_perguntas FROM eventos/.test(sql)) return { rows: [{ id: 6, nome: 'Palestra única' }] };
+      if (/SELECT id, nome, email, cpf, status, isento FROM evento_inscricoes/.test(sql)) return { rows: [
+        { id: 1, nome: 'Fulano', email: 'f@x.com', status: 'confirmado', isento: false }
+      ] };
+      if (/SELECT inscricao_id, email, cpf, nome_informado, criado_em, programacao_id, aval_respostas/.test(sql)) return { rows: [
+        { inscricao_id: 1, email: 'f@x.com', cpf: null, nome_informado: 'Fulano', criado_em: new Date(), programacao_id: null, aval_respostas: null, aval_sugestoes: null }
+      ] };
+      if (/SELECT id, titulo, data FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [] };
+      return undefined;
+    }
+  });
+  const res = { json: (b) => { res._body = b; } };
+  await rotas['GET /eventos/:id/checkout-relatorio']({ params: { id: '6' } }, res);
+  assert.strictEqual(res._body.totalDiasEvento, 1);
+  assert.strictEqual(res._body.aptos[0].apto, true);
+  assert.strictEqual(res._body.aptos[0].percentual, 100);
+});
+
 // 17/08/2026 (4ª rodada): pedido do usuário — "Remover" apagava TODOS os check-outs da pessoa
 // de uma vez (todos os dias juntos); agora só apaga o dia informado no corpo da requisição.
 test('POST /eventos/:id/inscricao/:inscricao_id/desfazer-checkout: com programacao_id, apaga só o check-out DAQUELE dia', async () => {
@@ -569,31 +643,39 @@ test('POST /eventos/:id/inscricao/:inscricao_id/desfazer-checkout: sem programac
   assert.deepStrictEqual(deletes[0].params, ['6', '50']);
 });
 
-// 17/08/2026 (3ª rodada): pedido do usuário — o export de aptos ganhou coluna "Dia" e passou a
-// trazer uma linha POR CHECK-OUT (uma pessoa com check-out em vários dias aparece em várias
-// linhas, cada uma marcada com o dia certo — antes ficava ambíguo, sem coluna nenhuma pra isso).
-test('GET /eventos/:id/checkout-export: uma linha por check-out, com coluna Dia', async () => {
+// 19/08/2026: pedido do usuário — "apto ao certificado" tinha virado sinônimo de "fez check-out
+// pelo menos uma vez", mas a universidade exige 75% de presença. O export virou um relatório de
+// PESSOA (uma linha cada, não uma por check-out) com a situação real: Apto só quem chegou em
+// pelo menos 75% dos dias do evento (3 de 4, no caso de um evento de 4 dias — pode faltar 1).
+test('GET /eventos/:id/checkout-export: uma linha por PESSOA, com Situação calculada pelos 75% de presença (não por "fez check-out uma vez")', async () => {
   const { rotas } = montar({
     mock: (sql) => {
       if (/SELECT nome FROM eventos WHERE id=\$1/.test(sql)) return { rows: [{ nome: 'Jornada Teste' }] };
       if (/SELECT id, titulo, data FROM evento_programacao WHERE evento_id=\$1 AND data IS NOT NULL/.test(sql)) return { rows: [
         { id: 10, titulo: 'Día 1', data: '2026-08-17' },
-        { id: 11, titulo: 'Día 2', data: '2026-08-18' }
+        { id: 11, titulo: 'Día 2', data: '2026-08-18' },
+        { id: 12, titulo: 'Día 3', data: '2026-08-19' },
+        { id: 13, titulo: 'Día 4', data: '2026-08-20' }
       ] };
       if (/FROM evento_inscricoes i\s+JOIN evento_checkouts c/.test(sql)) return { rows: [
-        { nome: 'Ana', email: 'ana@x.com', cpf: '1', rg: '1', catraca: null, tipo_participante: 'externo', isento: false, programacao_id: 10, checkout_em: '17/08/2026 10:00' },
-        { nome: 'Ana', email: 'ana@x.com', cpf: '1', rg: '1', catraca: null, tipo_participante: 'externo', isento: false, programacao_id: 11, checkout_em: '18/08/2026 10:00' }
+        // Ana: check-out em 3 dos 4 dias — 75% — APTA
+        { id: 1, nome: 'Ana', email: 'ana@x.com', cpf: '1', rg: '1', catraca: null, tipo_participante: 'externo', isento: false, programacao_id: 10 },
+        { id: 1, nome: 'Ana', email: 'ana@x.com', cpf: '1', rg: '1', catraca: null, tipo_participante: 'externo', isento: false, programacao_id: 11 },
+        { id: 1, nome: 'Ana', email: 'ana@x.com', cpf: '1', rg: '1', catraca: null, tipo_participante: 'externo', isento: false, programacao_id: 12 },
+        // Bruno: check-out em 2 dos 4 dias — 50% — NÃO apto
+        { id: 2, nome: 'Bruno', email: 'bruno@x.com', cpf: '2', rg: '2', catraca: null, tipo_participante: 'externo', isento: false, programacao_id: 10 },
+        { id: 2, nome: 'Bruno', email: 'bruno@x.com', cpf: '2', rg: '2', catraca: null, tipo_participante: 'externo', isento: false, programacao_id: 11 }
       ] };
       return undefined;
     }
   });
   const res = { _headers: {}, setHeader: function(k,v){ this._headers[k]=v; }, send: function(b){ this._body = b; } };
   await rotas['GET /eventos/:id/checkout-export']({ params: { id: '5' } }, res);
-  assert.match(res._body, /Dia;Nome Completo;Email;CPF;RG;Catraca;Tipo Participante;Pagamento;Check-out em/);
-  const linhas = res._body.split('\n').filter(l => l.includes('Ana'));
-  assert.strictEqual(linhas.length, 2, 'Ana aparece 2 vezes — uma linha por dia de check-out, não deduplicado');
-  assert.match(linhas[0], /Día 1/);
-  assert.match(linhas[1], /Día 2/);
+  assert.match(res._body, /Nome Completo;Email;CPF;RG;Catraca;Tipo Participante;Pagamento;Dias do evento;Check-outs realizados;Percentual;Situação/);
+  const linhas = res._body.split('\n').filter(l => l.includes('Ana') || l.includes('Bruno'));
+  assert.strictEqual(linhas.length, 2, 'uma linha por pessoa, não por check-out');
+  assert.match(linhas[0], /"4";"3";"75%";"Apto"/, 'Ana: 3 de 4 dias = 75% = Apto');
+  assert.match(linhas[1], /"4";"2";"50%";"Não apto"/, 'Bruno: 2 de 4 dias = 50% = Não apto');
 });
 
 // 17/08/2026 (3ª rodada): pedido do usuário — "quero visualizar a tela de como a pessoa vai

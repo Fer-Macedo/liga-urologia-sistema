@@ -1712,6 +1712,19 @@ function posicaoDia(diasOrdenados, programacaoId) {
   return { numero: idx >= 0 ? idx + 1 : null, total: diasOrdenados.length };
 }
 
+// Regra do certificado (pedido do usuário 19/08/2026): "apto ao certificado" NÃO é "fez
+// check-out pelo menos uma vez" (o que o painel mostrava até aqui) — é ter pelo menos 75% de
+// presença, ou seja, check-out em pelo menos 75% dos dias do evento. Num evento de 4 dias isso
+// significa 3 dos 4 (pode faltar 1 dia); num evento de 1 dia só (sem Programação por data)
+// continua sendo o mesmo comportamento de antes (1 check-out = apto). Math.ceil garante que uma
+// fração exata de 75% (ex: 3 de 4) já basta — não exige "mais que 75%".
+function elegibilidadeCertificado(diasCheckout, totalDiasEvento) {
+  const total = totalDiasEvento || 1;
+  const precisaDias = Math.max(1, Math.ceil(total * 0.75));
+  const percentual = Math.round(diasCheckout / total * 100);
+  return { totalDiasEvento: total, precisaDias, percentual, apto: diasCheckout >= precisaDias };
+}
+
 // Rótulo "Día X de Y — DD/MM/AAAA" de um dia de Programação, pra identificar qual check-out é
 // (evento legado, sem Programação por data, não tem rótulo). Usado no e-mail de confirmação e no
 // relatório/export do painel. Quando diaInfo (posicaoDia) é informado, usa o número do dia em vez
@@ -2419,16 +2432,21 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
       diasPorInscricao.get(c.inscricao_id).set(c.programacao_id, label);
     });
 
-    // Conjunto de inscrição_ids que fizeram check-out (em QUALQUER dia — "apto" aqui é "veio
-    // pelo menos uma vez"; o campo "dias" de cada um mostra o detalhe de quais dias específicos)
+    // Conjunto de inscrição_ids que fizeram check-out em pelo menos 1 dia (o campo "dias" de
+    // cada um mostra o detalhe de quais dias específicos — é a CONTAGEM desses dias que decide
+    // se a pessoa é apta ao certificado, não só "veio pelo menos uma vez")
     const fezCheckout = new Set(checkouts.rows.filter(c => c.inscricao_id).map(c => c.inscricao_id));
+    const totalDiasEvento = diasR.rows.length || 1;
 
-    const aptos = [];        // inscrição válida + fez check-out
-    const naoCompareceu = []; // inscrição válida + NÃO fez check-out
+    const aptos = [];        // inscrição válida + fez check-out em pelo menos 1 dia
+    const naoCompareceu = []; // inscrição válida + NÃO fez check-out em nenhum dia
     inscritos.rows.forEach(i => {
       const valida = i.status === 'confirmado'; // confirmado cobre pago e isento (ambos ficam confirmado)
       if (!valida) return;
-      if (fezCheckout.has(i.id)) aptos.push({ id: i.id, nome: i.nome, email: i.email, isento: i.isento, dias: Array.from((diasPorInscricao.get(i.id) || new Map()).entries()).map(([programacao_id, label]) => ({ programacao_id, label })) });
+      if (fezCheckout.has(i.id)) {
+        const dias = Array.from((diasPorInscricao.get(i.id) || new Map()).entries()).map(([programacao_id, label]) => ({ programacao_id, label }));
+        aptos.push({ id: i.id, nome: i.nome, email: i.email, isento: i.isento, dias, diasCheckout: dias.length, ...elegibilidadeCertificado(dias.length, totalDiasEvento) });
+      }
       else naoCompareceu.push({ nome: i.nome, email: i.email, isento: i.isento });
     });
 
@@ -2480,7 +2498,12 @@ router.get('/eventos/:id/checkout-relatorio', requireAuth, requirePermissao('eve
     res.json({
       ok: true,
       evento: evR.rows[0],
-      resumo: { aptos: aptos.length, nao_compareceu: naoCompareceu.length, sem_inscricao: semInscricao.length, total_checkouts: checkouts.rows.length },
+      resumo: {
+        aptos: aptos.length, nao_compareceu: naoCompareceu.length, sem_inscricao: semInscricao.length, total_checkouts: checkouts.rows.length,
+        apto_certificado: aptos.filter(a => a.apto).length,
+        abaixo_minimo: aptos.filter(a => !a.apto).length
+      },
+      totalDiasEvento, precisaDias: elegibilidadeCertificado(0, totalDiasEvento).precisaDias,
       aptos, naoCompareceu, semInscricao, porDia, perguntas, avaliacaoPorDia
     });
   } catch(e) { console.error('Relatorio checkout erro:', e.message); res.json({ok:false, erro:e.message}); }
@@ -2552,46 +2575,57 @@ router.get('/eventos/:id/checkout-email-preview', requireAuth, requirePermissao(
   } catch(e) { console.error('Checkout email preview erro:', e.message); res.status(500).send('Erro ao carregar prévia do e-mail.'); }
 });
 
-// Exportar lista de check-outs em CSV (painel) \u2014 pedido do usu\u00E1rio 17/08/2026 (3\u00AA rodada): com
-// check-out valendo em todo dia, uma pessoa pode ter v\u00E1rias linhas (uma por dia); a coluna "Dia"
-// deixa claro de qual check-out \u00E9 cada linha (antes disso, a query juntava sem essa distin\u00E7\u00E3o).
+// Exportar relat\u00F3rio de elegibilidade ao certificado (painel) \u2014 uma linha por PESSOA, n\u00E3o por
+// check-out. Pedido do usu\u00E1rio 19/08/2026: "apto ao certificado" tinha virado sin\u00F4nimo de "fez
+// check-out pelo menos uma vez", mas a regra real \u00E9 ter 75% de presen\u00E7a (pelo menos 3 dos 4
+// dias, num evento de 4 dias) \u2014 corrigido na raiz com elegibilidadeCertificado(), reaproveitado
+// aqui e no /checkout-relatorio, pra nunca dessincronizar quem aparece como Apto num lugar e
+// n\u00E3o apto no outro.
 router.get('/eventos/:id/checkout-export', requireAuth, requirePermissao('eventos'), async (req, res) => {
   try {
     const [evR, diasR, checkoutsR] = await Promise.all([
       query('SELECT nome FROM eventos WHERE id=$1', [req.params.id]),
       query('SELECT id, titulo, data FROM evento_programacao WHERE evento_id=$1 AND data IS NOT NULL ORDER BY data', [req.params.id]),
       query(
-        `SELECT i.nome, i.email, i.cpf, i.rg, i.catraca, i.tipo_participante, i.isento,
-                c.programacao_id, to_char(c.criado_em, 'DD/MM/YYYY HH24:MI') as checkout_em
+        `SELECT i.id, i.nome, i.email, i.cpf, i.rg, i.catraca, i.tipo_participante, i.isento, c.programacao_id
          FROM evento_inscricoes i
          JOIN evento_checkouts c ON c.inscricao_id=i.id
          WHERE i.evento_id=$1 AND i.status='confirmado'
-         ORDER BY i.nome, c.criado_em`,
+         ORDER BY i.nome`,
         [req.params.id]
       )
     ]);
-    const diaLabel = new Map(diasR.rows.map(d => [d.id, diaLabelCheckout(d)]));
-    const nomeEv = (evR.rows[0]?.nome || 'evento').replace(/[^a-z0-9]/gi,'_').substring(0,30);
-    const cabecalho = ['Dia','Nome Completo','Email','CPF','RG','Catraca','Tipo Participante','Pagamento','Check-out em'];
-    let csv = cabecalho.join(';') + '\n';
+    const totalDiasEvento = diasR.rows.length || 1;
+    const porPessoa = new Map(); // inscricao_id -> { dados da pessoa, dias distintos com check-out }
     checkoutsR.rows.forEach(r => {
-      const tipoRaw = (r.tipo_participante || 'externo').toLowerCase().trim();
-      const tipo = tipoRaw === 'ucp' ? 'Aluno UCP' : tipoRaw === 'externo' ? 'Externo' : r.tipo_participante || 'Externo';
-      const dia = r.programacao_id ? (diaLabel.get(r.programacao_id) || '') : '\u00DAnico dia';
-      csv += [
-        dia,
-        r.nome || '',
-        r.email || '',
-        r.cpf || '',
-        r.rg || '',
-        r.catraca || '',
-        tipo,
-        r.isento ? 'Isento' : 'Pago',
-        r.checkout_em || ''
-      ].map(v => '"' + String(v).replace(/"/g,'""') + '"').join(';') + '\n';
+      if (!porPessoa.has(r.id)) porPessoa.set(r.id, { dados: r, dias: new Set() });
+      porPessoa.get(r.id).dias.add(r.programacao_id); // legado (sempre null) vira 1 elemento s\u00F3
     });
+    const nomeEv = (evR.rows[0]?.nome || 'evento').replace(/[^a-z0-9]/gi,'_').substring(0,30);
+    const cabecalho = ['Nome Completo','Email','CPF','RG','Catraca','Tipo Participante','Pagamento','Dias do evento','Check-outs realizados','Percentual','Situa\u00E7\u00E3o'];
+    let csv = cabecalho.join(';') + '\n';
+    Array.from(porPessoa.values())
+      .sort((a, b) => (a.dados.nome || '').localeCompare(b.dados.nome || '', 'pt-BR', { sensitivity: 'base' }))
+      .forEach(({ dados: r, dias }) => {
+        const tipoRaw = (r.tipo_participante || 'externo').toLowerCase().trim();
+        const tipo = tipoRaw === 'ucp' ? 'Aluno UCP' : tipoRaw === 'externo' ? 'Externo' : r.tipo_participante || 'Externo';
+        const elig = elegibilidadeCertificado(dias.size, totalDiasEvento);
+        csv += [
+          r.nome || '',
+          r.email || '',
+          r.cpf || '',
+          r.rg || '',
+          r.catraca || '',
+          tipo,
+          r.isento ? 'Isento' : 'Pago',
+          totalDiasEvento,
+          dias.size,
+          elig.percentual + '%',
+          elig.apto ? 'Apto' : 'N\u00E3o apto'
+        ].map(v => '"' + String(v).replace(/"/g,'""') + '"').join(';') + '\n';
+      });
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="aptos-' + nomeEv + '.csv"');
+    res.setHeader('Content-Disposition', 'attachment; filename="certificado-' + nomeEv + '.csv"');
     res.send('\uFEFF' + csv);
   } catch(e) { res.status(500).send('Erro: ' + e.message); }
 });
