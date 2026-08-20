@@ -146,6 +146,17 @@
     <div id="ping-erro" style="display:none;background:#7f1d1d;color:#fecaca;padding:10px 20px;font-size:13px;text-align:center">
       Sin conexión con el servidor — su tiempo de visualización no se está registrando en este momento.
     </div>
+    <!-- 19/08/2026 (2ª rodada): achado em produção com dado real — "sessao_substituida" (o
+         mesmo link aberto em outra aba/dispositivo, ex: pela pessoa ter o link tanto no WhatsApp
+         quanto no e-mail e abrir os dois em momentos diferentes) aconteceu 15 vezes numa única
+         noite (confirmado nos logs). Antes disso, a aba mais antiga só mudava um badge pequeno
+         no canto (fácil de não perceber) e PARAVA DE CONTAR PRA SEMPRE, sem nenhum jeito de saber
+         por quê nem de voltar a funcionar — isso é, muito provavelmente, boa parte do "travou e
+         não voltou mais" relatado. Agora avisa bem visível, com um botão pra recarregar. -->
+    <div id="sessao-substituida-aviso" style="display:none;background:#7c2d12;color:#fed7aa;padding:12px 20px;font-size:13px;text-align:center">
+      Este enlace fue abierto en otra pestaña o dispositivo — por eso el tiempo dejó de contarse en ESTA pantalla. Si quieres seguir viendo aquí, recarga la página.
+      <button onclick="location.reload()" style="margin-left:10px;padding:6px 14px;border-radius:6px;border:none;background:#fed7aa;color:#7c2d12;font-weight:700;cursor:pointer;font-family:inherit">Recargar página</button>
+    </div>
     <!-- VIDEO -->
     <div class="video-wrap">
       <% let ytId = '';
@@ -155,7 +166,7 @@
         }
       %>
       <% if (ytId) { %>
-        <iframe src="https://www.youtube.com/embed/<%= ytId %>?autoplay=1&rel=0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+        <iframe id="ytPlayer" src="https://www.youtube.com/embed/<%= ytId %>?autoplay=1&rel=0&enablejsapi=1&playsinline=1" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
       <% } else { %>
         <div class="video-placeholder">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
@@ -316,8 +327,27 @@ function validarAcesso() {
 let wakeLock = null;
 async function pedirWakeLock() {
   try {
-    if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+    if ('wakeLock' in navigator) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      // Pode ser liberado pelo sistema por outro motivo além de esconder a aba (ex: economia de
+      // bateria) — se a aba ainda estiver visível quando isso acontecer, tenta pedir de novo na
+      // hora, em vez de ficar sem até o próximo visibilitychange.
+      wakeLock.addEventListener('release', () => { if (!document.hidden) pedirWakeLock(); });
+    }
   } catch (e) { /* não suportado ou negado — segue sem, não é crítico */ }
+}
+
+// 19/08/2026 (2ª rodada): achado em produção — mesmo com a tela ligada (Wake Lock), só trocar de
+// app por alguns segundos (ver notificação do WhatsApp, por exemplo) já suspende a aba e pausa o
+// vídeo — comportamento do navegador, não dá pra evitar a pausa em si. O que dava pra corrigir:
+// o vídeo não retomava sozinho depois, ficava "travado" até a pessoa mexer na tela de novo.
+// Manda um comando explícito pro player do YouTube retomar assim que a aba volta a ficar visível
+// (exige enablejsapi=1 na URL do iframe, adicionado junto).
+function retomarVideo() {
+  const f = document.getElementById('ytPlayer');
+  if (f && f.contentWindow) {
+    try { f.contentWindow.postMessage(JSON.stringify({ event:'command', func:'playVideo', args:[] }), '*'); } catch(e) {}
+  }
 }
 
 function enviarPing() {
@@ -331,6 +361,8 @@ function enviarPing() {
         sessaoValida = false; online = false;
         const b = document.getElementById('status-badge');
         if (b) { b.className='status-badge off'; b.textContent='Abierto en otra pestaña'; }
+        const aviso = document.getElementById('sessao-substituida-aviso');
+        if (aviso) aviso.style.display = 'block';
         return;
       }
       if (d.ok && d.total !== undefined && sessaoValida) {
@@ -360,6 +392,7 @@ document.addEventListener('visibilitychange', () => {
     online=true; if(b){b.className='status-badge on'; b.textContent='Conectado';}
     if (sessaoValida) enviarPing(); // credita o tempo real que passou em segundo plano (servidor)
     pedirWakeLock(); // o navegador libera o wake lock sozinho ao esconder a aba — pede de novo
+    retomarVideo(); // o vídeo pausa sozinho ao suspender a aba e não retoma sozinho — força
   }
 });
 window.addEventListener('beforeunload', () => navigator.sendBeacon('/live/'+token+'/sair'));
