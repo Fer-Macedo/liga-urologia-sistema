@@ -121,7 +121,7 @@
       <div class="table-moderna">
         <div style="padding:14px 18px;border-bottom:1px solid var(--borda);display:flex;align-items:flex-end;flex-wrap:wrap;gap:10px">
           <span style="font-size:14px;font-weight:700;font-family:'Outfit',sans-serif;align-self:center;margin-right:auto">Lista de presenças</span>
-          <div style="min-width:160px"><label style="font-size:11px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px">Buscar</label><input type="text" class="input" id="pr-busca" placeholder="Buscar..." style="width:100%;font-size:13px;padding:7px 12px" oninput="filtrarPresencas()"></div><div style="min-width:130px"><label style="font-size:11px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px">Status</label><select id="pr-status" class="input" style="width:100%;font-size:13px;padding:7px 12px" onchange="filtrarPresencas()"><option value="">Todos</option><option value="apto">Apto</option><option value="risco">Em risco</option><option value="inapto">Nao apto</option><option value="sem-dados">Sem dado</option></select></div><div style="min-width:120px"><label style="font-size:11px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px">Tipo</label><select id="pr-tipo" class="input" style="width:100%;font-size:13px;padding:7px 12px" onchange="filtrarPresencas()"><option value="">Todos</option><option value="presencial">Presencial</option><option value="online">Online</option></select></div><div style="min-width:90px"><label style="font-size:11px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px">Por pag.</label><select id="pr-por-pagina" class="input" style="width:100%;font-size:13px;padding:7px 12px" onchange="filtrarPresencas()"><option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="9999">Todos</option></select></div><div style="margin-left:auto;font-size:12px;color:var(--texto2)">Exibindo <span id="pr-count-filt" style="font-weight:700;color:var(--cor-primaria)">0</span> de <span id="pr-count-tot"><%= inscricoes.length %></span></div>
+          <div style="min-width:160px"><label style="font-size:11px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px">Buscar</label><input type="text" class="input" id="pr-busca" placeholder="Buscar..." style="width:100%;font-size:13px;padding:7px 12px" oninput="filtrarPresencas()"></div><div style="min-width:130px"><label style="font-size:11px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px">Status</label><select id="pr-status" class="input" style="width:100%;font-size:13px;padding:7px 12px" onchange="filtrarPresencas()"><option value="">Todos</option><option value="apto">Apto</option><option value="risco">Em risco</option><option value="inapto">Nao apto</option><option value="sem-dados">Sem dado</option></select></div><div style="min-width:120px"><label style="font-size:11px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px">Tipo</label><select id="pr-tipo" class="input" style="width:100%;font-size:13px;padding:7px 12px" onchange="filtrarPresencas()"><option value="">Todos</option><option value="presencial">Presencial</option><option value="online">Online</option></select></div><div style="min-width:170px"><label style="font-size:11px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px">Membro</label><select id="pr-membro" class="input" style="width:100%;font-size:13px;padding:7px 12px" onchange="filtrarPresencas()"><option value="">Todos</option><option value="ligante">Ligantes</option><option value="diretivo">Diretivos</option><option value="membro">Ligantes + Diretivos</option></select></div><div style="min-width:90px"><label style="font-size:11px;font-weight:600;color:var(--texto2);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px">Por pag.</label><select id="pr-por-pagina" class="input" style="width:100%;font-size:13px;padding:7px 12px" onchange="filtrarPresencas()"><option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="9999">Todos</option></select></div><div style="margin-left:auto;font-size:12px;color:var(--texto2)">Exibindo <span id="pr-count-filt" style="font-weight:700;color:var(--cor-primaria)">0</span> de <span id="pr-count-tot"><%= inscricoes.length %></span></div>
         </div>
         <table>
           <thead>
@@ -149,7 +149,8 @@
               const _st = pct===null ? 'sem-dados' : pct >= LIMIAR_FREQUENCIA ? 'apto' : pct >= 50 ? 'risco' : 'inapto';
               const mostrarEmitir = !p.temDadosSuficientes || p.apto;
             %>
-            <tr class="pr-row" data-busca="<%= (i.nome + ' ' + (i.email||'')).toLowerCase() %>" data-status="<%= _st %>" data-tipo="<%= tipo %>">
+            <% var _membroTokens = (i._ligante ? 'ligante ' : '') + (i._diretivo ? 'diretivo ' : ''); %>
+            <tr class="pr-row" data-busca="<%= (i.nome + ' ' + (i.email||'')).toLowerCase() %>" data-status="<%= _st %>" data-tipo="<%= tipo %>" data-membro="<%= _membroTokens.trim() %>">
               <td>
                 <div style="font-weight:600"><%= i.nome %></div>
                 <div style="font-size:11px;color:var(--texto2)"><%= i.email %></div>
@@ -212,10 +213,16 @@ var _prPagina=1,_prFiltradas=[];
     var b=(document.getElementById('pr-busca').value||'').toLowerCase();
     var sv=document.getElementById('pr-status').value||'';
     var tv=document.getElementById('pr-tipo').value||'';
+    var mv=document.getElementById('pr-membro').value||'';
     _prFiltradas=Array.prototype.slice.call(document.querySelectorAll('#tbody tr.pr-row')).filter(function(r){
       if(b && (r.dataset.busca||'').indexOf(b)<0) return false;
       if(sv && r.dataset.status!==sv) return false;
       if(tv && r.dataset.tipo!==tv) return false;
+      if(mv){
+        var membros=(r.dataset.membro||'').split(' ').filter(Boolean);
+        if(mv==='membro'){ if(!membros.length) return false; }
+        else if(membros.indexOf(mv)<0) return false;
+      }
       return true;
     });
     _prPagina=1; renderPresencas();

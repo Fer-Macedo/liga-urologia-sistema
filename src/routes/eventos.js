@@ -55,8 +55,12 @@ function semEmoji(str) {
 // pessoa diferente existe, mas o pior caso aqui é mandar um convite de transmissão a mais —
 // não é dado sensível nem ação irreversível, o custo de excluir por engano quem devia receber é
 // maior que o custo de incluir por engano quem não devia).
-async function filtrarPorTipoMembro(query, inscritos, filtro) {
-  if (filtro === 'todos' || !filtro) return inscritos;
+// Classifica cada inscrito quanto a ser ligante e/ou diretivo (CPF, e-mail ou nome — não há FK
+// entre evento_inscricoes e ligantes/diretivos, ver comentário de filtrarPorTipoMembro). Devolve
+// os mesmos objetos com _ligante/_diretivo (booleans) anexados. Extraído de filtrarPorTipoMembro
+// pra também dar pra classificar sem filtrar nada fora — usado pela tela de Presenças, que
+// precisa MOSTRAR todo mundo mas deixar filtrar por Ligantes/Diretivos/Ligantes+Diretivos.
+async function classificarPorTipoMembro(query, inscritos) {
   const normCpf = c => (c || '').replace(/\D/g, '');
   const normEmail = e => (e || '').trim().toLowerCase();
   const normNome = n => (n || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase().replace(/\s+/g, ' ');
@@ -70,13 +74,21 @@ async function filtrarPorTipoMembro(query, inscritos, filtro) {
   const cpfsDir = new Set(dirR.rows.map(r => normCpf(r.cpf)).filter(Boolean));
   const emailsDir = new Set(dirR.rows.map(r => normEmail(r.email)).filter(Boolean));
   const nomesDir = new Set(dirR.rows.map(r => normNome(r.nome)).filter(Boolean));
-  return inscritos.filter(insc => {
+  return inscritos.map(insc => {
     const cpfN = normCpf(insc.cpf), emailN = normEmail(insc.email), nomeN = normNome(insc.nome);
-    const eLigante = (cpfN && cpfsLig.has(cpfN)) || (emailN && emailsLig.has(emailN)) || (nomeN && nomesLig.has(nomeN));
-    const eDiretivo = (cpfN && cpfsDir.has(cpfN)) || (emailN && emailsDir.has(emailN)) || (nomeN && nomesDir.has(nomeN));
-    if (filtro === 'ligantes') return eLigante;
-    if (filtro === 'diretivos') return eDiretivo;
-    if (filtro === 'membros') return eLigante || eDiretivo;
+    const _ligante = !!((cpfN && cpfsLig.has(cpfN)) || (emailN && emailsLig.has(emailN)) || (nomeN && nomesLig.has(nomeN)));
+    const _diretivo = !!((cpfN && cpfsDir.has(cpfN)) || (emailN && emailsDir.has(emailN)) || (nomeN && nomesDir.has(nomeN)));
+    return { ...insc, _ligante, _diretivo };
+  });
+}
+
+async function filtrarPorTipoMembro(query, inscritos, filtro) {
+  if (filtro === 'todos' || !filtro) return inscritos;
+  const classificados = await classificarPorTipoMembro(query, inscritos);
+  return classificados.filter(insc => {
+    if (filtro === 'ligantes') return insc._ligante;
+    if (filtro === 'diretivos') return insc._diretivo;
+    if (filtro === 'membros') return insc._ligante || insc._diretivo;
     return true;
   });
 }
@@ -2034,7 +2046,12 @@ router.get('/eventos/:id/presencas', requireAuth, requirePermissao('eventos'), a
     if (!ev) return res.redirect('/eventos');
     const inscrR = await query("SELECT * FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado' ORDER BY nome",[ev.id]);
     const dadosPresenca = await buscarDadosPresenca(query, ev.id);
-    const inscricoes = inscrR.rows.map(i => ({ ...i, presenca: calcularPercentual(i.id, dadosPresenca) }));
+    const comPresenca = inscrR.rows.map(i => ({ ...i, presenca: calcularPercentual(i.id, dadosPresenca) }));
+    // 19/08/2026: pedido do usuário — filtro por Ligantes/Diretivos/Ligantes+Diretivos na tela
+    // de presenças, igual já existe pro envio do link da live (ver filtrarPorTipoMembro). Aqui
+    // não filtra (a tela precisa mostrar todo mundo) — só classifica pra view poder filtrar
+    // client-side, como já faz com Status/Tipo.
+    const inscricoes = await classificarPorTipoMembro(query, comPresenca);
     res.render('pages/evento-presencas',{
       config, evento: ev, inscricoes, diasFechados: dadosPresenca.diasFechados, LIMIAR_FREQUENCIA,
       usuario: req.session.usuario, msg: req.flash('msg')
