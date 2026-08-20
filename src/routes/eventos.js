@@ -1970,9 +1970,15 @@ async function enviarLinkLiveParaPessoa(ev, config, appUrl, insc, diaInfo) {
   const temaDia = dia ? (dia.titulo || '') : '';
   // whatsapp-only:inicio — texto enviado via enviarWhatsApp abaixo; o e-mail (mesmo envio)
   // usa seu próprio HTML, não reaproveita essa string, então não precisa de semEmoji aqui.
+  // 19/08/2026 (2ª rodada): achado em produção com dado real — abrir o MESMO link em 2
+  // abas/dispositivos (comum: a pessoa recebe por WhatsApp E por e-mail, abre os dois em
+  // momentos diferentes) faz o sistema isolar a aba mais antiga pra não contar o tempo em
+  // dobro — correto, mas gera confusão quando acontece sem querer. Um aviso simples no texto
+  // reduz a chance de acontecer, sem mexer na regra em si (que continua necessária).
   const msg = (config.org_nome||'LAURO')+'\n\nOla, '+insc.nome.split(' ')[0]+'!\n\nSeu link de acesso ao evento '+ev.nome+':'
     + (diaRotulo ? '\n'+diaRotulo+(temaDia ? '\nTema: '+temaDia : '') : '')
-    + '\n\n'+link+'\n\nAcesse para assistir e registrar sua presenca automaticamente.';
+    + '\n\n'+link+'\n\nAcesse para assistir e registrar sua presenca automaticamente.'
+    + '\n\nAbra este link em apenas um dispositivo/aba (o que voce vai usar pra assistir) — abrir em mais de um lugar ao mesmo tempo pode interromper a contagem da sua presenca.';
   // whatsapp-only:fim
   let wppStatus = 'sem_whatsapp', emailStatus = 'sem_email';
   if (insc.whatsapp) {
@@ -1980,7 +1986,7 @@ async function enviarLinkLiveParaPessoa(ev, config, appUrl, insc, diaInfo) {
   }
   if (insc.email) {
     const temaHtml = temaDia ? '<p style="margin:0 0 20px;font-size:14px;color:#374151"><strong>Tema da aula:</strong> '+temaDia+'</p>' : '';
-    const html = '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:20px"><h2>'+ev.nome+'</h2><p>Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p>'+temaHtml+'<p>Clique para assistir e ter sua presenca registrada:</p><div style="text-align:center;margin:24px 0"><a href="'+link+'" style="background:#1a56db;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700">Assistir ao evento</a></div><p style="font-size:12px;color:#6b7280">Link exclusivo — nao compartilhe.</p></div>';
+    const html = '<div style="font-family:Arial,sans-serif;max-width:520px;margin:0 auto;padding:20px"><h2>'+ev.nome+'</h2><p>Ola, <strong>'+insc.nome.split(' ')[0]+'</strong>!</p>'+temaHtml+'<p>Clique para assistir e ter sua presenca registrada:</p><div style="text-align:center;margin:24px 0"><a href="'+link+'" style="background:#1a56db;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700">Assistir ao evento</a></div><p style="font-size:12px;color:#6b7280">Abra este link em apenas um dispositivo/aba — abrir em mais de um lugar ao mesmo tempo pode interromper a contagem da sua presenca.</p><p style="font-size:12px;color:#6b7280">Link exclusivo — nao compartilhe.</p></div>';
     try {
       await enviarEmail({
         para:insc.email,
