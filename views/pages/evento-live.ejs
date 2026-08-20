@@ -222,23 +222,27 @@
 
   <!-- CHAT -->
   <div class="chat-section">
-    <div class="chat-header" style="justify-content:space-between">
+    <div class="chat-header">
       <span style="display:flex;align-items:center;gap:8px">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
         Chat en vivo
       </span>
-      <% if (ytId) { %>
-      <!-- 19/08/2026 (2ª rodada): um link "abrir no YouTube" foi removido daqui — o usuário
-           apontou corretamente que ele contradiz o propósito da página (sair pra comentar
-           interrompe a contagem de presença, que é justamente o que essa tela existe pra
-           garantir). Fica só um aviso informativo, sem sair da página — comentar dentro do chat
-           embutido exige login do Google DENTRO do iframe, e navegadores com bloqueio de cookie
-           de terceiro (Safari por padrão, cada vez mais o Chrome) recusam esse login. Não tem
-           correção possível do nosso lado (é uma restrição do próprio YouTube/navegador, não um
-           bug daqui) — só dá pra ler o chat nesses casos, não comentar. -->
-      <span title="Algunos navegadores (ej: Safari) bloquean el inicio de sesión de Google dentro del chat incrustado por seguridad — en ese caso solo es posible leer el chat, no comentar. Esto no depende de esta página." style="font-size:11px;color:var(--texto2);cursor:help;white-space:nowrap">¿No puede comentar? ⓘ</span>
-      <% } %>
     </div>
+    <% if (ytId) { %>
+    <!-- 19/08/2026 (3ª rodada): pedido do usuário — comentar dentro do chat EMBUTIDO exige login
+         do Google DENTRO de um iframe, e o próprio Google recusa abrir a tela de login dele em
+         QUALQUER iframe de QUALQUER site (política deles, sem correção possível do nosso lado).
+         Solução do usuário: em vez de tentar logar dentro do iframe (impossível), orienta a abrir
+         o link REAL do YouTube (não embutido) em OUTRO dispositivo — lá o login do Google
+         funciona normal (é a própria página do YouTube, não tem iframe nenhum), e o dispositivo
+         principal (que está contando a presença) nunca sai desta página, então a contagem não é
+         interrompida. target="_blank" por segurança, mesmo que a pessoa toque no mesmo aparelho. -->
+    <a href="https://www.youtube.com/watch?v=<%= ytId %>" target="_blank" rel="noopener" style="display:block;background:linear-gradient(135deg,#dc2626,#ea580c);color:#fff;padding:14px 16px;font-size:12.5px;line-height:1.5;text-align:center;text-decoration:none">
+      <strong>¿Quiere comentar, preguntar o sugerir algo?</strong><br>
+      Abra este enlace en OTRO dispositivo para interactuar en el chat con su cuenta de Google — sin interrumpir el conteo de su presencia en esta pantalla.
+      <span style="display:inline-block;margin-top:10px;padding:8px 20px;background:#fff;color:#dc2626;border-radius:8px;font-weight:800">Abrir chat en YouTube ↗</span>
+    </a>
+    <% } %>
     <% if (ytId) { %>
       <iframe class="chat-iframe" src="https://www.youtube.com/live_chat?v=<%= ytId %>&embed_domain=<%= typeof embedDomain !== 'undefined' && embedDomain ? embedDomain : 'sistema.lauroucpcde.com' %>" allow="accelerometer; autoplay; clipboard-write; encrypted-media"></iframe>
     <% } else { %>
