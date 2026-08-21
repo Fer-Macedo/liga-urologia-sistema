@@ -672,6 +672,22 @@ async function initSchema() {
     )
   `);
 
+  // 21/08/2026: marca quando o e-mail de confirmação (com QR Code) foi mandado, pra o botão
+  // "Confirmação a quem falta" (envio em massa) não reenviar pra quem já recebeu — só o botão
+  // individual "Email" de cada inscrito reenvia sem essa checagem.
+  await query('ALTER TABLE evento_inscricoes ADD COLUMN IF NOT EXISTS confirmacao_email_enviado_em TIMESTAMP');
+  // Backfill (idempotente, só toca quem ainda está NULL): inscrições confirmadas ANTES desta
+  // coluna existir já passaram pelo e-mail automático em algum destes 2 caminhos — isento (grátis,
+  // confirma e manda na hora) ou pagamento aprovado (webhook/confirmação manual também manda na
+  // hora). Quem não é nem isento nem tem pagamento pago (cadastro manual ou em lote pelo admin,
+  // que NÃO manda e-mail sozinho) fica de propósito com a coluna NULL, pra o botão em massa
+  // mandar pra essas pessoas quando for usado pela primeira vez.
+  await query(`
+    UPDATE evento_inscricoes i SET confirmacao_email_enviado_em = i.criado_em
+    WHERE i.status='confirmado' AND i.confirmacao_email_enviado_em IS NULL
+      AND (i.isento = true OR EXISTS (SELECT 1 FROM evento_pagamentos p WHERE p.inscricao_id=i.id AND p.status='pago'))
+  `);
+
   // Admin padrão
   const admin = await query("SELECT id FROM usuarios WHERE perfil = 'admin'");
   if (admin.rows.length === 0) {

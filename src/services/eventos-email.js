@@ -36,6 +36,7 @@ async function enviarEmailConfirmacaoEvento(inscricaoId) {
       +'<p style="margin:6px 0 0;font-size:12px;font-family:monospace;color:#475569;font-weight:600">'+insc.qrcode+'</p>'
       +'</div>';
     await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: insc.email, subject: 'Inscripción confirmada — ' + insc.evento_nome, html, faixaLabel: 'INSCRIPCIÓN CONFIRMADA' });
+    await query('UPDATE evento_inscricoes SET confirmacao_email_enviado_em=NOW() WHERE id=$1', [inscricaoId]);
     if (insc.notif_email) {
       await enviarEmail({ from: 'LAURO - Liga Urologia <lauroucpcde@lauroucpcde.com>', to: insc.notif_email, subject: 'Pagamento confirmado — ' + insc.nome + ' | ' + insc.evento_nome, html: '<p>Confirmado: <strong>' + insc.nome + '</strong> — ' + insc.evento_nome + '</p>' }).catch(() => {});
     }

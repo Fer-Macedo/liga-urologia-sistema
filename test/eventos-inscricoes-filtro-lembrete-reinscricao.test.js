@@ -91,11 +91,13 @@ test('lembrete a todos os pendentes: sem nenhum pendente, avisa e não dispara n
   assert.deepStrictEqual(req.session.msg, ['Não há inscrições pendentes neste evento.']);
 });
 
-test('confirmação em massa: dispara o e-mail com QR Code pra cada confirmado e responde na hora', async () => {
+test('confirmação em massa: dispara o e-mail com QR Code só pra quem ainda não recebeu, e responde na hora', async () => {
   const enviados = [];
+  let sqlUsado = null;
   const { rotas } = montar({
     queryImpl: async (sql) => {
       if (/SELECT id FROM evento_inscricoes WHERE evento_id=\$1 AND status='confirmado'/.test(sql)) {
+        sqlUsado = sql;
         return { rows: [{ id: 20 }, { id: 21 }, { id: 22 }] };
       }
       return { rows: [] };
@@ -106,13 +108,14 @@ test('confirmação em massa: dispara o e-mail com QR Code pra cada confirmado e
   const req = { params: { id: '5' }, query: { status: 'confirmado' }, session: {} };
   const res = resRedirect();
   await rotas['POST /eventos/:id/inscricoes/confirmacoes-massa'](req, res);
+  assert.ok(/confirmacao_email_enviado_em IS NULL/.test(sqlUsado), 'a consulta precisa filtrar quem já recebeu, pra não reenviar');
   assert.strictEqual(res._redirect, '/eventos/5?tab=inscritos&status=confirmado');
   assert.ok(req.session.msg[0].includes('3 inscrito'));
   await new Promise(r => setTimeout(r, 20));
   assert.deepStrictEqual(enviados, [20, 21, 22]);
 });
 
-test('confirmação em massa: sem nenhum confirmado, avisa e não dispara nada', async () => {
+test('confirmação em massa: ninguém pendente de e-mail (todos já receberam), avisa e não dispara nada', async () => {
   const { rotas } = montar({ queryImpl: async (sql) => {
     if (/SELECT id FROM evento_inscricoes WHERE evento_id=\$1 AND status='confirmado'/.test(sql)) return { rows: [] };
     return { rows: [] };
@@ -120,7 +123,7 @@ test('confirmação em massa: sem nenhum confirmado, avisa e não dispara nada',
   const req = { params: { id: '5' }, query: {}, session: {} };
   const res = resRedirect();
   await rotas['POST /eventos/:id/inscricoes/confirmacoes-massa'](req, res);
-  assert.deepStrictEqual(req.session.msg, ['Não há inscrições confirmadas neste evento.']);
+  assert.deepStrictEqual(req.session.msg, ['Não há inscrições confirmadas pendentes de e-mail neste evento (todos já receberam).']);
 });
 
 test('reinscrição de quem ficou pendente: NÃO bloqueia, redireciona pra retomar o pagamento existente', async () => {

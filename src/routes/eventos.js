@@ -821,13 +821,16 @@ router.post('/eventos/:id/inscricoes/:iid/reenviar-email', requireAuth, requireP
 // Mesma confirmação de cima (com QR Code), mas pra TODOS os confirmados do evento de uma vez —
 // em segundo plano, mesmo padrão do lembrete em massa logo abaixo (dezenas de e-mails um por um
 // travariam a resposta HTTP). Útil depois de um cadastro em lote (ver /inscricoes/em-lote).
+// SÓ pega quem NUNCA recebeu (confirmacao_email_enviado_em IS NULL) — clicar de novo depois de
+// cadastrar mais gente não reenvia pra quem já tinha recebido; reenvio pontual continua sendo o
+// botão individual "Email" de cada inscrito, que ignora essa checagem de propósito.
 router.post('/eventos/:id/inscricoes/confirmacoes-massa', requireAuth, requirePermissao('eventos'), async (req, res) => {
   const eventoId = req.params.id;
-  const confirmadosR = await query("SELECT id FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado'", [eventoId]);
+  const confirmadosR = await query("SELECT id FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado' AND confirmacao_email_enviado_em IS NULL", [eventoId]);
   const total = confirmadosR.rows.length;
   req.session.msg = [total
     ? `Enviando e-mail de confirmação para ${total} inscrito(s) em segundo plano — atualize a página em alguns minutos.`
-    : 'Não há inscrições confirmadas neste evento.'];
+    : 'Não há inscrições confirmadas pendentes de e-mail neste evento (todos já receberam).'];
   res.redirect(voltarInscritos(req, eventoId));
   if (!total) return;
   (async () => {
