@@ -63,17 +63,35 @@ test('modo=todos_diretivos: cadastra todos os diretivos ativos', async () => {
   assert.strictEqual(inserts[0][5], 'diretivo');
 });
 
+// 21/08/2026: BUG REAL em produção — o body-parser deste projeto usa
+// express.urlencoded({extended:true}) (lib "qs"), que tira os colchetes da chave ao montar o
+// array: um campo HTML "ligantes_selecionados[]" chega em req.body.ligantes_selecionados (SEM
+// colchetes), nunca em req.body['ligantes_selecionados[]']. A rota lia a chave errada — nenhuma
+// seleção nunca era reconhecida, mesmo com checkboxes marcados. Este teste usa o body do jeito
+// que o "qs" de verdade entrega (chave sem colchetes, valor em array), pra não mascarar o bug
+// de novo como a versão anterior deste teste mascarou.
 test('modo=selecao: só cadastra quem foi marcado, ligantes e diretivos juntos', async () => {
   const { rotas, inserts } = montar({ ligantes: LIGANTES, diretivos: DIRETIVOS });
   const req = reqBase({ params: { id: '5' }, body: {
     modo: 'selecao',
-    'ligantes_selecionados[]': 'Bruno Ligante',
-    'diretivos_selecionados[]': 'Carla Diretiva'
+    ligantes_selecionados: ['Bruno Ligante'],
+    diretivos_selecionados: ['Carla Diretiva']
   } });
   await rotas['POST /eventos/:id/inscricoes/em-lote'](req, resRedirect());
   assert.strictEqual(inserts.length, 2);
   const nomes = inserts.map(i => i[1]).sort();
   assert.deepStrictEqual(nomes, ['Bruno Ligante', 'Carla Diretiva'], 'Ana Ligante NÃO foi selecionada, não entra');
+});
+
+test('modo=selecao com apenas 1 pessoa marcada: qs entrega o valor como array de 1 item, não string solta', async () => {
+  const { rotas, inserts } = montar({ ligantes: LIGANTES });
+  const req = reqBase({ params: { id: '5' }, body: {
+    modo: 'selecao',
+    ligantes_selecionados: ['Ana Ligante'] // é assim que o qs entrega, mesmo com 1 só marcado
+  } });
+  await rotas['POST /eventos/:id/inscricoes/em-lote'](req, resRedirect());
+  assert.strictEqual(inserts.length, 1);
+  assert.strictEqual(inserts[0][1], 'Ana Ligante');
 });
 
 test('status=pendente: grava a inscrição como pendente em vez de confirmado', async () => {

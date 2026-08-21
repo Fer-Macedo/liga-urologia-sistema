@@ -640,8 +640,15 @@ router.post('/eventos/:id/inscricoes/em-lote', requireAuth, requirePermissao('ev
   try {
     const modo = req.body.modo; // 'todos_ligantes' | 'todos_diretivos' | 'selecao'
     const status = req.body.status === 'pendente' ? 'pendente' : 'confirmado';
-    const selLigantes = new Set([].concat(req.body['ligantes_selecionados[]'] || []));
-    const selDiretivos = new Set([].concat(req.body['diretivos_selecionados[]'] || []));
+    // 21/08/2026: BUG REAL em produção — o body-parser deste projeto usa
+    // express.urlencoded({extended:true}), que usa a lib "qs". Com "extended:true", um campo
+    // nomeado "nome[]" no HTML chega no req.body SEM os colchetes na chave (qs.parse
+    // ("x[]=a&x[]=b") vira {x:['a','b']}, nunca {'x[]':['a','b']}) — ler req.body['nome[]']
+    // sempre dava undefined, então NENHUMA seleção era reconhecida, mesmo com checkboxes
+    // marcados. O atributo name="...[]" no HTML pode continuar (é só uma convenção visual),
+    // mas a leitura no servidor tem que ser pela chave SEM colchetes.
+    const selLigantes = new Set([].concat(req.body.ligantes_selecionados || []));
+    const selDiretivos = new Set([].concat(req.body.diretivos_selecionados || []));
 
     let pessoas = [];
     if (modo === 'todos_ligantes' || modo === 'selecao') {
