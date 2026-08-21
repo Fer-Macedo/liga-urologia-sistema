@@ -817,6 +817,29 @@ router.post('/eventos/:id/inscricoes/:iid/reenviar-email', requireAuth, requireP
   }
   res.redirect(voltarInscritos(req, req.params.id));
 });
+
+// Mesma confirmação de cima (com QR Code), mas pra TODOS os confirmados do evento de uma vez —
+// em segundo plano, mesmo padrão do lembrete em massa logo abaixo (dezenas de e-mails um por um
+// travariam a resposta HTTP). Útil depois de um cadastro em lote (ver /inscricoes/em-lote).
+router.post('/eventos/:id/inscricoes/confirmacoes-massa', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  const eventoId = req.params.id;
+  const confirmadosR = await query("SELECT id FROM evento_inscricoes WHERE evento_id=$1 AND status='confirmado'", [eventoId]);
+  const total = confirmadosR.rows.length;
+  req.session.msg = [total
+    ? `Enviando e-mail de confirmação para ${total} inscrito(s) em segundo plano — atualize a página em alguns minutos.`
+    : 'Não há inscrições confirmadas neste evento.'];
+  res.redirect(voltarInscritos(req, eventoId));
+  if (!total) return;
+  (async () => {
+    let enviados = 0;
+    for (const c of confirmadosR.rows) {
+      try { await enviarEmailConfirmacaoEvento(c.id); enviados++; }
+      catch(e) { console.error('[CONFIRMACAO-MASSA] inscricao ' + c.id + ' erro:', e.message); }
+    }
+    console.log(`[CONFIRMACAO-MASSA] evento ${eventoId}: ${enviados}/${total} e-mails enviados.`);
+  })().catch(e => console.error('[CONFIRMACAO-MASSA] erro geral:', e.message));
+});
+
 // Dispara na hora o mesmo lembrete (WhatsApp + email) que o cron horário manda sozinho pra
 // inscrições pendentes há 2-48h — pra equipe poder cutucar alguém específico sem esperar.
 router.post('/eventos/:id/inscricoes/:iid/lembrete-pendente', requireAuth, requirePermissao('eventos'), async (req, res) => {
