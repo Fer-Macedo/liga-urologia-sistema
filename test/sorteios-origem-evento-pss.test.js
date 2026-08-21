@@ -33,6 +33,7 @@ function montar({ sorteio, eventoInscritos, pssCandidatos, membros, diretivos, m
       if (/UPDATE sorteios SET tipo=\$1/.test(sql)) { updates.push(params); return { rows: [] }; }
       if (/UPDATE sorteios SET status='sorteado', ganhador_nome=\$1/.test(sql)) { updates.push(params); return { rows: [] }; }
       if (/UPDATE sorteios SET ganhador_nome=\$1 WHERE id=\$2/.test(sql)) { updates.push(params); return { rows: [] }; }
+      if (/UPDATE sorteios SET status='sorteado', sorteado_em=NOW\(\), sorteado_por=\$1 WHERE id=\$2/.test(sql)) { updates.push(params); return { rows: [] }; }
       return { rows: [] };
     }
   }};
@@ -288,7 +289,12 @@ test('POST /sorteios/:id/confirmar-ganhador: 1º de 2 prêmios — anexa sem fec
   assert.strictEqual(updates[0].length, 2, 'UPDATE parcial não mexe em status/sorteado_em/sorteado_por');
 });
 
-test('POST /sorteios/:id/confirmar-ganhador: 2º de 2 prêmios — completa e fecha o sorteio (status=sorteado)', async () => {
+// 20/08/2026: BUG REAL em produção, AO VIVO — bater qtd_ganhadores costumava FECHAR o sorteio
+// sozinho (status='sorteado'), trocando "Sortear Agora" por "Refazer Sorteio" e cortando
+// qualquer jeito de continuar. Um sorteio criado com qtd_ganhadores errado (ex: 1 em vez de 5)
+// travava pra sempre depois do 1º ganhador. Agora bater o número é só informativo — o sorteio
+// só fecha quando o admin clica em "Finalizar Sorteio" (rota /finalizar), nunca sozinho.
+test('POST /sorteios/:id/confirmar-ganhador: 2º de 2 prêmios — continua em rascunho, NÃO fecha sozinho', async () => {
   const { rotas, updates } = montar({
     sorteio: { id: 20, tipo: 'interno', publico_alvo: 'ligantes', qtd_ganhadores: 2, ganhador_nome: 'Ana' },
     membros: [{ nome: 'Ana' }, { nome: 'Bruno' }]
@@ -297,7 +303,56 @@ test('POST /sorteios/:id/confirmar-ganhador: 2º de 2 prêmios — completa e fe
   await rotas['POST /sorteios/:id/confirmar-ganhador'](req, resRedirect());
   assert.strictEqual(updates.length, 1);
   assert.strictEqual(updates[0][0], 'Ana|Bruno', 'anexa ao que já tinha, pipe-separado');
-  assert.strictEqual(updates[0][1], 1, 'sorteado_por = usuário da sessão');
+  assert.strictEqual(updates[0].length, 2, 'não mexe em status/sorteado_em/sorteado_por — só o admin fecha, via Finalizar');
+});
+
+test('POST /sorteios/:id/confirmar-ganhador: sorteio já passou de qtd_ganhadores mas continua aceitando mais um (não trava mais)', async () => {
+  const { rotas, updates } = montar({
+    sorteio: { id: 20, tipo: 'interno', publico_alvo: 'ligantes', qtd_ganhadores: 2, ganhador_nome: 'Ana|Bruno' },
+    membros: [{ nome: 'Ana' }, { nome: 'Bruno' }, { nome: 'Carla' }]
+  });
+  const req = reqBase({ params: { id: '20' }, body: { nome: 'Carla' } });
+  await rotas['POST /sorteios/:id/confirmar-ganhador'](req, resRedirect());
+  assert.strictEqual(updates.length, 1, 'qtd_ganhadores é só um rótulo — nunca bloqueia mais um ganhador');
+  assert.strictEqual(updates[0][0], 'Ana|Bruno|Carla');
+});
+
+test('POST /sorteios/:id/confirmar-ganhador: sorteio JÁ FINALIZADO (status=sorteado) recusa novo nome', async () => {
+  const { rotas, updates } = montar({
+    sorteio: { id: 20, tipo: 'interno', publico_alvo: 'ligantes', qtd_ganhadores: 2, status: 'sorteado', ganhador_nome: 'Ana|Bruno' },
+    membros: [{ nome: 'Ana' }, { nome: 'Bruno' }, { nome: 'Carla' }]
+  });
+  const req = reqBase({ params: { id: '20' }, body: { nome: 'Carla' } });
+  await rotas['POST /sorteios/:id/confirmar-ganhador'](req, resRedirect());
+  assert.strictEqual(updates.length, 0, 'depois de finalizado precisa resetar antes de registrar mais alguém');
+});
+
+test('POST /sorteios/:id/finalizar: fecha o sorteio com os ganhadores confirmados até agora', async () => {
+  const { rotas, updates } = montar({
+    sorteio: { id: 20, tipo: 'interno', publico_alvo: 'ligantes', qtd_ganhadores: 5, status: 'rascunho', ganhador_nome: 'Ana|Bruno|Carla' }
+  });
+  const req = reqBase({ params: { id: '20' } });
+  await rotas['POST /sorteios/:id/finalizar'](req, resRedirect());
+  assert.strictEqual(updates.length, 1);
+  assert.strictEqual(updates[0][0], 1, 'sorteado_por = usuário da sessão');
+});
+
+test('POST /sorteios/:id/finalizar: recusa finalizar sem nenhum ganhador confirmado ainda', async () => {
+  const { rotas, updates } = montar({
+    sorteio: { id: 20, tipo: 'interno', publico_alvo: 'ligantes', qtd_ganhadores: 5, status: 'rascunho', ganhador_nome: null }
+  });
+  const req = reqBase({ params: { id: '20' } });
+  await rotas['POST /sorteios/:id/finalizar'](req, resRedirect());
+  assert.strictEqual(updates.length, 0, 'não dá pra finalizar um sorteio sem ganhador nenhum');
+});
+
+test('POST /sorteios/:id/finalizar: sorteio já finalizado não refaz a query (idempotente)', async () => {
+  const { rotas, updates } = montar({
+    sorteio: { id: 20, tipo: 'interno', publico_alvo: 'ligantes', qtd_ganhadores: 5, status: 'sorteado', ganhador_nome: 'Ana' }
+  });
+  const req = reqBase({ params: { id: '20' } });
+  await rotas['POST /sorteios/:id/finalizar'](req, resRedirect());
+  assert.strictEqual(updates.length, 0);
 });
 
 test('POST /sorteios/:id/confirmar-ganhador: recusa nome que não está na lista de participantes desse sorteio', async () => {
@@ -320,15 +375,6 @@ test('POST /sorteios/:id/confirmar-ganhador: recusa a mesma pessoa duas vezes no
   assert.strictEqual(updates.length, 0, 'Ana já ganhou o 1º prêmio — não pode ganhar de novo');
 });
 
-test('POST /sorteios/:id/confirmar-ganhador: sorteio já com todos os prêmios confirmados recusa novo nome', async () => {
-  const { rotas, updates } = montar({
-    sorteio: { id: 20, tipo: 'interno', publico_alvo: 'ligantes', qtd_ganhadores: 2, ganhador_nome: 'Ana|Bruno' },
-    membros: [{ nome: 'Ana' }, { nome: 'Bruno' }, { nome: 'Carla' }]
-  });
-  const req = reqBase({ params: { id: '20' }, body: { nome: 'Carla' } });
-  await rotas['POST /sorteios/:id/confirmar-ganhador'](req, resRedirect());
-  assert.strictEqual(updates.length, 0);
-});
 
 test('POST /sorteios/:id/confirmar-ganhador: nome vazio recusa sem tocar no banco', async () => {
   const { rotas, updates } = montar({

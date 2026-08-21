@@ -175,8 +175,13 @@
                 <!-- DISPLAY ANIMADO -->
                 <% var poolRestante = participantes.filter(function(p){ return ganhadores.indexOf(p) === -1; }); %>
                 <div class="sorteio-display">
-                  <% if(sorteio.qtd_ganhadores > 1 && sorteio.status !== 'sorteado'){ %>
-                  <div style="font-size:12px;font-weight:700;color:#6b7280;text-align:center;margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px">Prêmio <%= ganhadores.length + 1 %> de <%= sorteio.qtd_ganhadores %></div>
+                  <% if(sorteio.status !== 'sorteado'){ %>
+                  <!-- 20/08/2026: BUG REAL em produção, ao vivo — qtd_ganhadores era um TETO
+                       RÍGIDO (ver comentário na rota confirmar-ganhador); um sorteio criado com
+                       o valor errado travava pra sempre depois de bater o número. Agora é só um
+                       rótulo — some o "de N" quando já passou dele, em vez de mostrar algo tipo
+                       "Prêmio 6 de 5" (confuso). O admin decide quando parar, no botão Finalizar. -->
+                  <div style="font-size:12px;font-weight:700;color:#6b7280;text-align:center;margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px">Prêmio <%= ganhadores.length + 1 %><% if(ganhadores.length + 1 <= sorteio.qtd_ganhadores){ %> de <%= sorteio.qtd_ganhadores %><% } %></div>
                   <% } %>
                   <div class="sorteio-drum">
                     <div class="drum-label">Participante</div>
@@ -208,6 +213,11 @@
                       </div>
                     </div>
                     <div style="font-size:11px;color:#94a3b8;margin-top:10px">Depois de girar, só confirme quando a pessoa realmente atender/estiver presente — senão sorteie de novo.</div>
+                    <% if(ganhadores.length > 0){ %>
+                    <form method="POST" action="/sorteios/<%= sorteio.id %>/finalizar" style="margin-top:14px;text-align:center" onsubmit="var f=this; confirmarAcao('Finalizar o sorteio com <%= ganhadores.length %> ganhador(es) confirmado(s)? Depois disso não dá mais pra sortear/registrar mais ninguém sem resetar.', function(){ f.submit(); }); return false;">
+                      <button type="submit" class="btn-novo-sorteio" style="background:var(--cor-primaria);color:#fff;border-color:transparent">Finalizar Sorteio (<%= ganhadores.length %> confirmado<%= ganhadores.length>1?'s':'' %>)</button>
+                    </form>
+                    <% } %>
                   <% } else { %>
                     <div style="text-align:center;margin-bottom:16px">
                       <div style="font-size:14px;color:#6b7280;margin-bottom:12px">Ganhador sorteado! Valide abaixo <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><polyline points="9 18 15 12 9 6"/></svg></div>
@@ -216,8 +226,8 @@
                   <% } %>
                 </div>
 
-                <!-- GANHADORES JÁ CONFIRMADOS (sorteio com mais de 1 prêmio) -->
-                <% if(sorteio.qtd_ganhadores > 1 && ganhadores.length > 0){ %>
+                <!-- GANHADORES JÁ CONFIRMADOS -->
+                <% if(ganhadores.length > 0){ %>
                 <div class="ganhadores-lista">
                   <% ganhadores.forEach((g,i) => { var ct = contatoTexto(g); %>
                   <div class="ganhador-item">

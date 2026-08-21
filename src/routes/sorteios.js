@@ -248,8 +248,17 @@ router.get('/sorteios/:id', requireAuth, requirePermissao('sorteios'), async (re
 // antes, um sorteio com qtd_ganhadores=2 sorteava e salvava os 2 nomes de uma vez só; na prática
 // (evento ao vivo, ~500 pessoas) é comum o 1º sorteado não atender/não estar presente, e o nome
 // errado ficava registrado como ganhador junto do certo. Agora cada prêmio é sorteado (ou
-// escolhido manualmente) e confirmado individualmente — só vira status='sorteado' (trava edição,
-// libera a validação) quando o último prêmio for confirmado.
+// escolhido manualmente) e confirmado individualmente.
+// 20/08/2026: BUG REAL em produção, AO VIVO — qtd_ganhadores dessa rota costumava ser um TETO
+// RÍGIDO: assim que o número de ganhadores confirmados batia com ele, essa rota passava a
+// RECUSAR qualquer novo sorteio/registro (e o status virava 'sorteado', trocando o botão
+// "Sortear" por "Refazer Sorteio" — sumindo com o jeito de continuar). Um sorteio criado com
+// qtd_ganhadores=1 por engano (ou qualquer valor errado) ficava travado pra sempre depois do 1º
+// ganhador, sem chance de corrigir ao vivo — só resetando tudo (perdendo os ganhadores já
+// confirmados) resolvia. Corrigido na raiz: qtd_ganhadores agora é só um RÓTULO informativo
+// ("Prêmio X de N") — nunca bloqueia. O admin sorteia/registra quantos ganhadores quiser, na
+// hora que quiser, e só quando decidir que terminou é que clica em "Finalizar Sorteio"
+// (ver rota /finalizar abaixo) pra travar e liberar a validação.
 router.post('/sorteios/:id/confirmar-ganhador', requireAuth, requirePermissao('sorteios'), async (req, res) => {
   try {
     const nome = (req.body.nome || '').trim();
@@ -262,11 +271,11 @@ router.post('/sorteios/:id/confirmar-ganhador', requireAuth, requirePermissao('s
     if (!s.rows.length) return res.redirect('/sorteios');
     const sorteio = s.rows[0];
 
-    const atuais = sorteio.ganhador_nome ? sorteio.ganhador_nome.split('|') : [];
-    if (atuais.length >= sorteio.qtd_ganhadores) {
-      req.flash('erro', ['Todos os prêmios deste sorteio já têm ganhador confirmado.']);
+    if (sorteio.status === 'sorteado') {
+      req.flash('erro', ['Este sorteio já foi finalizado — resete antes de registrar mais ganhadores.']);
       return res.redirect('/sorteios/' + req.params.id);
     }
+    const atuais = sorteio.ganhador_nome ? sorteio.ganhador_nome.split('|') : [];
     if (atuais.includes(nome)) {
       req.flash('erro', ['Essa pessoa já foi confirmada como ganhadora nesse sorteio.']);
       return res.redirect('/sorteios/' + req.params.id);
@@ -280,16 +289,26 @@ router.post('/sorteios/:id/confirmar-ganhador', requireAuth, requirePermissao('s
     }
 
     const novos = [...atuais, nome];
-    const completo = novos.length >= sorteio.qtd_ganhadores;
-    if (completo) {
-      await query(
-        `UPDATE sorteios SET status='sorteado', ganhador_nome=$1, sorteado_em=NOW(), sorteado_por=$2 WHERE id=$3`,
-        [novos.join('|'), req.session.usuario.id, req.params.id]
-      );
-    } else {
-      await query(`UPDATE sorteios SET ganhador_nome=$1 WHERE id=$2`, [novos.join('|'), req.params.id]);
+    await query(`UPDATE sorteios SET ganhador_nome=$1 WHERE id=$2`, [novos.join('|'), req.params.id]);
+    req.flash('msg', ['Ganhador confirmado! Sorteie (ou registre) o próximo, ou finalize quando terminar.']);
+    res.redirect('/sorteios/' + req.params.id);
+  } catch(e) { req.flash('erro', [e.message]); res.redirect('/sorteios/' + req.params.id); }
+});
+
+// Finaliza o sorteio — ação EXPLÍCITA do admin (não mais automática ao bater qtd_ganhadores, ver
+// comentário acima). Trava a lista de ganhadores (bloqueia confirmar-ganhador/editar) e libera a
+// etapa de Validar. Fecha também a página pública de inscrição, pra sorteio externo.
+router.post('/sorteios/:id/finalizar', requireAuth, requirePermissao('sorteios'), async (req, res) => {
+  try {
+    const s = await query('SELECT status, ganhador_nome FROM sorteios WHERE id=$1', [req.params.id]);
+    if (!s.rows.length) return res.redirect('/sorteios');
+    if (s.rows[0].status === 'sorteado') return res.redirect('/sorteios/' + req.params.id);
+    if (!s.rows[0].ganhador_nome) {
+      req.flash('erro', ['Sorteie ou registre pelo menos um ganhador antes de finalizar.']);
+      return res.redirect('/sorteios/' + req.params.id);
     }
-    req.flash('msg', [completo ? 'Todos os prêmios têm ganhador — agora é só validar.' : 'Ganhador confirmado! Sorteie (ou registre) o próximo prêmio.']);
+    await query("UPDATE sorteios SET status='sorteado', sorteado_em=NOW(), sorteado_por=$1 WHERE id=$2", [req.session.usuario.id, req.params.id]);
+    req.flash('msg', ['Sorteio finalizado — agora é só validar.']);
     res.redirect('/sorteios/' + req.params.id);
   } catch(e) { req.flash('erro', [e.message]); res.redirect('/sorteios/' + req.params.id); }
 });
