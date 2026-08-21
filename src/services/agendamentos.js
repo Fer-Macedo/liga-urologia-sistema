@@ -380,12 +380,18 @@ async function enviarFrequenciaMensal() {
 
   const turmas = await query('SELECT * FROM turmas WHERE ativo=1');
   for (const turma of turmas.rows) {
+    // 21/08/2026: BUG REAL em produção — achado ao investigar duplicatas de cadastro
+    // financeiro. Esta consulta (lado ligante) nunca filtrou m.ativo=1, ao contrário do lado
+    // diretivo logo abaixo (que já filtra d.ativo=1). Um ligante inativado (ex: virou diretivo,
+    // ou foi desligado) continua em turma_membros pra sempre — sem esse filtro, ele seguia
+    // recebendo o relatório mensal de frequência de ligante indefinidamente, mesmo não sendo
+    // mais ligante ativo nenhum.
     const membros = await query(
       `SELECT m.*, tm.data_entrada,
         (SELECT COUNT(*) FROM atividades a WHERE a.turma_id=$1) as total_atividades,
         (SELECT COUNT(*) FROM presencas p JOIN atividades a ON a.id=p.atividade_id
          WHERE a.turma_id=$1 AND p.membro_id=m.id AND p.presente=1) as presencas
-       FROM turma_membros tm JOIN membros m ON m.id=tm.membro_id WHERE tm.turma_id=$1`,
+       FROM turma_membros tm JOIN membros m ON m.id=tm.membro_id WHERE tm.turma_id=$1 AND m.ativo=1`,
       [turma.id]
     );
 
