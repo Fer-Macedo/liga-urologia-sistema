@@ -611,6 +611,7 @@
             </div>
             <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
               <button class="btn btn-sm" onclick="abrirModal('modal-inscricao-manual')" style="white-space:nowrap">+ Manual</button>
+              <button class="btn btn-sm" onclick="abrirModal('modal-inscricao-lote')" style="white-space:nowrap">+ Ligantes/Diretivos</button>
               <button class="btn btn-sm" onclick="limparFiltrosInscritos()" style="white-space:nowrap">Limpar</button>
               <button class="btn btn-sm" onclick="imprimirInscritos()" style="white-space:nowrap;background:var(--cor-primaria);color:#fff;border-color:transparent">Imprimir filtrados</button>
               <button class="btn btn-sm" onclick="exportarExcel()" style="white-space:nowrap;background:#166534;color:#fff;border-color:transparent"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Excel / CSV</button>
@@ -1458,6 +1459,64 @@
         </div>
       </div>
       <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-inscricao-manual')">Cancelar</button><button type="submit" class="btn btn-primario">Inscrever</button></div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL CADASTRAR LIGANTES/DIRETIVOS EM LOTE -->
+<!-- 21/08/2026: pedido do usuário — evento interno (não divulgado) onde parte ou toda a liga
+     participa: cadastrar todos os Ligantes ativos, todos os Diretivos ativos, ou selecionar
+     individualmente quem participa, em vez de usar o formulário manual pessoa por pessoa (esse
+     continua servindo só pra gente de fora, que não está no cadastro de ligante/diretivo). -->
+<div class="modal-overlay" id="modal-inscricao-lote" style="display:none">
+  <div class="modal" style="max-width:580px">
+    <div class="modal-header"><span class="modal-titulo">Cadastrar Ligantes/Diretivos</span><button class="icon-btn" onclick="fecharModal('modal-inscricao-lote')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+    <% var _ligantesAtivos = typeof ligantesAtivos !== 'undefined' ? ligantesAtivos : []; %>
+    <% var _diretivosAtivos = typeof diretivosAtivos !== 'undefined' ? diretivosAtivos : []; %>
+    <form action="/eventos/<%= evento.id %>/inscricoes/em-lote" method="POST">
+      <div class="modal-body" style="max-height:56vh;overflow-y:auto">
+        <div class="campo">
+          <label class="label">Quem cadastrar</label>
+          <select name="modo" id="lote-modo" class="input" onchange="atualizarModoLote()">
+            <option value="todos_ligantes">Todos os Ligantes ativos (<%= _ligantesAtivos.length %>)</option>
+            <option value="todos_diretivos">Todos os Diretivos ativos (<%= _diretivosAtivos.length %>)</option>
+            <option value="selecao">Selecionar individualmente</option>
+          </select>
+        </div>
+        <div class="campo">
+          <label class="label">Status da inscrição</label>
+          <select name="status" class="input"><option value="confirmado">Confirmado</option><option value="pendente">Pendente</option></select>
+        </div>
+        <div id="lote-selecao" style="display:none">
+          <div style="display:flex;gap:8px;margin-bottom:10px">
+            <button type="button" class="btn btn-sm" onclick="marcarTodosLote(true)">Marcar todos</button>
+            <button type="button" class="btn btn-sm" onclick="marcarTodosLote(false)">Desmarcar todos</button>
+          </div>
+          <% if(_ligantesAtivos.length){ %>
+          <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin:6px 0">Ligantes</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:2px;max-height:180px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px;margin-bottom:12px">
+            <% _ligantesAtivos.forEach(function(l){ %>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:4px 6px;cursor:pointer">
+              <input type="checkbox" name="ligantes_selecionados[]" value="<%= l.nome %>" class="lote-checkbox">
+              <span><%= l.nome %></span>
+            </label>
+            <% }) %>
+          </div>
+          <% } %>
+          <% if(_diretivosAtivos.length){ %>
+          <div style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin:6px 0">Diretivos</div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:2px;max-height:180px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px">
+            <% _diretivosAtivos.forEach(function(d){ %>
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:4px 6px;cursor:pointer">
+              <input type="checkbox" name="diretivos_selecionados[]" value="<%= d.nome %>" class="lote-checkbox">
+              <span><%= d.nome %></span>
+            </label>
+            <% }) %>
+          </div>
+          <% } %>
+        </div>
+      </div>
+      <div class="modal-footer"><button type="button" class="btn" onclick="fecharModal('modal-inscricao-lote')">Cancelar</button><button type="submit" class="btn btn-primario">Cadastrar</button></div>
     </form>
   </div>
 </div>
@@ -2312,6 +2371,14 @@ function abrirDetalhesLinksLive(logs) {
 }
 </script>
 <script>
+// 21/08/2026: pedido do usuário — modal "Cadastrar Ligantes/Diretivos" (em lote).
+function atualizarModoLote() {
+  var modo = document.getElementById('lote-modo').value;
+  document.getElementById('lote-selecao').style.display = modo === 'selecao' ? 'block' : 'none';
+}
+function marcarTodosLote(marcar) {
+  document.querySelectorAll('#lote-selecao .lote-checkbox').forEach(function(cb){ cb.checked = marcar; });
+}
 // ===== Filtros + paginação + impressão da aba Inscritos =====
 var _insPagina = 1;
 var _insFiltradas = [];

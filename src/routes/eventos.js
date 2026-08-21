@@ -231,7 +231,13 @@ router.get('/eventos/:id', requireAuth, requirePermissao('eventos'), async (req,
   // qual dia seria enviado — resolve o mesmo dia que a página /live e o e-mail usam, pra mostrar
   // isso explícito no painel ANTES do clique, não só depois.
   const diaAtualEnvioLive = await diaAtualParaEnvioLive(req.params.id);
-  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows, cupons: cuponsR.rows, prefixoCupomEvento, perguntasAvaliacaoAtuais: perguntasAvaliacaoDoEvento(evR.rows[0]), calcularLiquidoEvento, formatarNome, diaAtualEnvioLive });
+  // 21/08/2026: pedido do usuário — cadastrar ligantes/diretivos em lote num evento interno
+  // (ver POST /inscricoes/em-lote); a tela de seleção individual precisa da lista de nomes.
+  const [ligantesR, diretivosR] = await Promise.all([
+    query("SELECT nome FROM ligantes WHERE ativo=1 AND pendente=false ORDER BY nome"),
+    query("SELECT nome FROM diretivos WHERE ativo=1 AND pendente=false ORDER BY nome")
+  ]);
+  res.render('pages/evento-detalhe', { config, usuario: req.session.usuario, msg, erro, evento: evR.rows[0], lotes: lotesR.rows, inscricoes: inscrR.rows, pagamentos: pgR.rows, certificados: certR.rows, stats, campos: camposR.rows, programacao: progR.rows, palestrantes: palesR.rows, patrocinadores: patrocR.rows, cupons: cuponsR.rows, prefixoCupomEvento, perguntasAvaliacaoAtuais: perguntasAvaliacaoDoEvento(evR.rows[0]), calcularLiquidoEvento, formatarNome, diaAtualEnvioLive, ligantesAtivos: ligantesR.rows, diretivosAtivos: diretivosR.rows });
 });
 
 router.post('/eventos/:id/editar', requireAuth, requirePermissao('eventos'), async (req, res) => {
@@ -622,6 +628,57 @@ router.post('/eventos/:id/inscricoes/manual', requireAuth, requirePermissao('eve
   await query('INSERT INTO evento_inscricoes (evento_id,lote_id,nome,email,whatsapp,cpf,status,qrcode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
     [req.params.id,lote_id||null,nome,email,whatsapp||null,cpf||null,status||'confirmado',qrcode]);
   req.session.msg=['Inscrição manual adicionada!']; res.redirect('/eventos/'+req.params.id);
+});
+
+// 21/08/2026: pedido do usuário — evento INTERNO (não divulgado publicamente): em vez de
+// cadastrar ligante por ligante no formulário manual (um a um), deixa inscrever de uma vez todos
+// os ligantes ativos, todos os diretivos ativos, ou uma seleção específica de cada — porque nem
+// todo evento interno é pra liga inteira (às vezes só uma parte dos ligantes/diretivos participa).
+// Cada pessoa vira uma evento_inscricoes normal (mesmo qrcode, mesmo fluxo de check-in/presença/
+// certificado de sempre) — não é uma tabela nova nem um caminho especial.
+router.post('/eventos/:id/inscricoes/em-lote', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  try {
+    const modo = req.body.modo; // 'todos_ligantes' | 'todos_diretivos' | 'selecao'
+    const status = req.body.status === 'pendente' ? 'pendente' : 'confirmado';
+    const selLigantes = new Set([].concat(req.body['ligantes_selecionados[]'] || []));
+    const selDiretivos = new Set([].concat(req.body['diretivos_selecionados[]'] || []));
+
+    let pessoas = [];
+    if (modo === 'todos_ligantes' || modo === 'selecao') {
+      const r = await query("SELECT nome, email, whatsapp, cpf FROM ligantes WHERE ativo=1 AND pendente=false");
+      const rows = modo === 'todos_ligantes' ? r.rows : r.rows.filter(p => selLigantes.has(p.nome));
+      pessoas.push(...rows.map(p => ({ ...p, tipo_participante: 'ligante' })));
+    }
+    if (modo === 'todos_diretivos' || modo === 'selecao') {
+      const r = await query("SELECT nome, email, whatsapp, cpf FROM diretivos WHERE ativo=1 AND pendente=false");
+      const rows = modo === 'todos_diretivos' ? r.rows : r.rows.filter(p => selDiretivos.has(p.nome));
+      pessoas.push(...rows.map(p => ({ ...p, tipo_participante: 'diretivo' })));
+    }
+    if (!pessoas.length) {
+      req.session.erro = ['Nenhuma pessoa selecionada.'];
+      return res.redirect('/eventos/' + req.params.id + '?tab=inscritos');
+    }
+
+    // Não duplica quem já está inscrito (por e-mail) — importante porque o botão "Todos" pode
+    // ser clicado de novo depois de já ter cadastrado uma leva.
+    const existentesR = await query('SELECT LOWER(email) as email FROM evento_inscricoes WHERE evento_id=$1', [req.params.id]);
+    const emailsExistentes = new Set(existentesR.rows.map(r => r.email).filter(Boolean));
+
+    let adicionados = 0, jaInscritos = 0;
+    for (const p of pessoas) {
+      const emailN = (p.email || '').trim().toLowerCase();
+      if (emailN && emailsExistentes.has(emailN)) { jaInscritos++; continue; }
+      const qrcode = 'LAURO-' + req.params.id + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+      await query(
+        'INSERT INTO evento_inscricoes (evento_id,nome,email,whatsapp,cpf,tipo_participante,status,qrcode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+        [req.params.id, p.nome, p.email || null, p.whatsapp || null, p.cpf || null, p.tipo_participante, status, qrcode]
+      );
+      if (emailN) emailsExistentes.add(emailN);
+      adicionados++;
+    }
+    req.session.msg = [adicionados + ' pessoa(s) cadastrada(s)!' + (jaInscritos ? ' (' + jaInscritos + ' já estavam inscritas e foram ignoradas.)' : '')];
+    res.redirect('/eventos/' + req.params.id + '?tab=inscritos');
+  } catch (e) { req.session.erro = [e.message]; res.redirect('/eventos/' + req.params.id + '?tab=inscritos'); }
 });
 
 // Confirmação manual da inscrição (botão "Confirmar" da lista) — usada sobretudo pra
