@@ -155,8 +155,19 @@
                 <div style="font-weight:600"><%= i.nome %></div>
                 <div style="font-size:11px;color:var(--texto2)"><%= i.email %></div>
                 <% if (p.porDia.length > 1) { %>
-                <div style="font-size:10px;color:var(--texto2);margin-top:3px">
-                  <%= p.porDia.map(d => (d.titulo||'Dia')+': '+d.pct+'%').join(' · ') %>
+                <!-- 21/08/2026: pedido do usuário — panorama do % de CADA dia, não só o geral do
+                     evento inteiro. A presença é dada por dia (>=75% naquele dia específico) e o
+                     certificado no final depende do total dos dias — precisa dar pra ver os dois
+                     de relance. Cada dia agora é um badge colorido (mesmo limiar/cores do status
+                     geral), em vez de um texto corrido só com números. -->
+                <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
+                  <% p.porDia.forEach(function(d){
+                    var corDia = d.pct >= LIMIAR_FREQUENCIA ? '#166534' : d.pct >= 50 ? '#92400e' : '#991b1b';
+                    var bgDia = d.pct >= LIMIAR_FREQUENCIA ? '#dcfce7' : d.pct >= 50 ? '#fef3c7' : '#fee2e2';
+                    var dataFmt = d.data ? new Date(d.data).toLocaleDateString('pt-BR',{timeZone:'UTC'}) : '';
+                  %>
+                  <span style="display:inline-flex;align-items:center;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;background:<%= bgDia %>;color:<%= corDia %>" title="<%= (d.titulo||'Dia') + (dataFmt ? ' — '+dataFmt : '') %>"><%= (d.titulo||'Dia').split(' ')[0] %>: <%= d.pct %>%</span>
+                  <% }) %>
                 </div>
                 <% } %>
               </td>
