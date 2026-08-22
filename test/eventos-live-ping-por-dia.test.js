@@ -265,6 +265,90 @@ test('POST /live/:token/ping: data bate e o horário já passou — acumula norm
   assert.strictEqual(res._body.preview, undefined);
 });
 
+// 22/08/2026: pedido do usuário — depois de uma dúvida real sobre quem afirmava ter tentado
+// acessar a live mas aparecia com 0% de frequência, registra CADA tentativa (certa ou errada)
+// pra virar prova confiável em vez de suposição.
+test('POST /live/:token/tentativa-acesso: registra tentativa com e-mail errado', async () => {
+  const inserts = [];
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc' },
+    mock: (sql, params) => {
+      if (/SELECT id FROM evento_presencas_online WHERE token=\$1/.test(sql)) return { rows: [{ id: 1 }] };
+      if (/INSERT INTO evento_live_tentativas_acesso/.test(sql)) { inserts.push(params); return { rows: [] }; }
+    }
+  });
+  const res = resJson();
+  await rotas['POST /live/:token/tentativa-acesso']({ params: { token: 'abc' }, body: { email: 'errado@x.com', sucesso: false }, headers: {}, socket: {} }, res);
+  assert.strictEqual(res._body.ok, true);
+  assert.strictEqual(inserts.length, 1);
+  assert.strictEqual(inserts[0][0], 1, 'presenca_id resolvido pelo token');
+  assert.strictEqual(inserts[0][1], 'errado@x.com');
+  assert.strictEqual(inserts[0][2], false);
+});
+
+test('POST /live/:token/tentativa-acesso: registra tentativa com e-mail certo', async () => {
+  const inserts = [];
+  const { rotas } = montar({
+    presenca: { id: 1, evento_id: 5, token: 'abc' },
+    mock: (sql, params) => {
+      if (/SELECT id FROM evento_presencas_online WHERE token=\$1/.test(sql)) return { rows: [{ id: 1 }] };
+      if (/INSERT INTO evento_live_tentativas_acesso/.test(sql)) { inserts.push(params); return { rows: [] }; }
+    }
+  });
+  const res = resJson();
+  await rotas['POST /live/:token/tentativa-acesso']({ params: { token: 'abc' }, body: { email: 'certo@x.com', sucesso: true }, headers: {}, socket: {} }, res);
+  assert.strictEqual(inserts[0][2], true);
+});
+
+test('POST /live/:token/tentativa-acesso: token inexistente não quebra e não grava nada', async () => {
+  const inserts = [];
+  const { rotas } = montar({
+    presenca: null,
+    mock: (sql, params) => { if (/INSERT INTO evento_live_tentativas_acesso/.test(sql)) { inserts.push(params); return { rows: [] }; } }
+  });
+  const res = resJson();
+  await rotas['POST /live/:token/tentativa-acesso']({ params: { token: 'xxx' }, body: { email: 'a@x.com', sucesso: false }, headers: {}, socket: {} }, res);
+  assert.strictEqual(res._body.ok, false);
+  assert.strictEqual(inserts.length, 0);
+});
+
+test('GET /eventos/:id/inscricoes/:iid/live-tentativas: monta a lista de tentativas daquela inscrição', async () => {
+  const { rotas } = montar({
+    presenca: null,
+    mock: (sql, params) => {
+      if (/SELECT \* FROM eventos WHERE id=\$1/.test(sql)) return { rows: [{ id: 5, nome: 'Jornada' }] };
+      if (/SELECT \* FROM evento_inscricoes WHERE id=\$1 AND evento_id=\$2/.test(sql)) return { rows: [{ id: 249, nome: 'Matheus', email: 'medmatheus756@gmail.com' }] };
+      if (/SELECT id, primeiro_acesso, ultimo_ping FROM evento_presencas_online WHERE inscricao_id=\$1 AND evento_id=\$2/.test(sql)) return { rows: [{ id: 18, primeiro_acesso: new Date(), ultimo_ping: new Date() }] };
+      if (/SELECT email_digitado, sucesso, ip, criado_em FROM evento_live_tentativas_acesso WHERE presenca_id=\$1/.test(sql)) return { rows: [{ email_digitado: 'errado@x.com', sucesso: false, ip: '1.2.3.4', criado_em: new Date() }] };
+    }
+  });
+  let view = null, locals = null, erro = null;
+  const res = { render: (v, l) => { view = v; locals = l; }, status: () => ({ send: (m) => { erro = m; } }) };
+  await rotas['GET /eventos/:id/inscricoes/:iid/live-tentativas']({ params: { id: '5', iid: '249' }, session: { usuario: {} } }, res);
+  assert.strictEqual(erro, null, 'não deveria cair no catch');
+  assert.strictEqual(view, 'pages/evento-live-tentativas');
+  assert.strictEqual(locals.tentativas.length, 1);
+  assert.strictEqual(locals.tentativas[0].email_digitado, 'errado@x.com');
+  assert.strictEqual(locals.insc.nome, 'Matheus');
+});
+
+test('GET /eventos/:id/inscricoes/:iid/live-tentativas: inscrição nunca abriu o link — lista vazia, sem quebrar', async () => {
+  const { rotas } = montar({
+    presenca: null,
+    mock: (sql, params) => {
+      if (/SELECT \* FROM eventos WHERE id=\$1/.test(sql)) return { rows: [{ id: 5, nome: 'Jornada' }] };
+      if (/SELECT \* FROM evento_inscricoes WHERE id=\$1 AND evento_id=\$2/.test(sql)) return { rows: [{ id: 250, nome: 'Ana', email: 'ana@x.com' }] };
+      if (/SELECT id, primeiro_acesso, ultimo_ping FROM evento_presencas_online WHERE inscricao_id=\$1 AND evento_id=\$2/.test(sql)) return { rows: [] };
+    }
+  });
+  let view = null, locals = null, erro = null;
+  const res = { render: (v, l) => { view = v; locals = l; }, status: () => ({ send: (m) => { erro = m; } }) };
+  await rotas['GET /eventos/:id/inscricoes/:iid/live-tentativas']({ params: { id: '5', iid: '250' }, session: { usuario: {} } }, res);
+  assert.strictEqual(erro, null, 'não deveria cair no catch');
+  assert.strictEqual(locals.presenca, null);
+  assert.deepStrictEqual(locals.tentativas, []);
+});
+
 test('POST /live/:token/sair: marca ativo=false sem quebrar', async () => {
   const { rotas } = montar({ presenca: { id: 1, evento_id: 5, token: 'abc' } });
   const res = resJson();

@@ -672,6 +672,24 @@ async function initSchema() {
     )
   `);
 
+  // 22/08/2026: pedido do usuário, após uma dúvida real sobre 3 pessoas que juravam ter assistido
+  // a Jornada mas apareciam com 0% de frequência — a tela de acesso da live (evento-live.ejs)
+  // exige digitar o e-mail EXATO da inscrição antes de liberar o vídeo/cronômetro, mas nenhuma
+  // tentativa (certa ou errada) ficava registrada em lugar nenhum: não dava pra provar se a
+  // pessoa realmente tentou e errou o e-mail, ou se foi uma falha técnica do lado do sistema.
+  // Agora toda tentativa de acesso (sucesso ou falha) fica rastreável.
+  await query(`
+    CREATE TABLE IF NOT EXISTS evento_live_tentativas_acesso (
+      id SERIAL PRIMARY KEY,
+      presenca_id INTEGER NOT NULL REFERENCES evento_presencas_online(id) ON DELETE CASCADE,
+      email_digitado VARCHAR(200),
+      sucesso BOOLEAN NOT NULL,
+      ip VARCHAR(60),
+      criado_em TIMESTAMP DEFAULT NOW()
+    )
+  `);
+  await query('CREATE INDEX IF NOT EXISTS idx_elta_presenca ON evento_live_tentativas_acesso (presenca_id)');
+
   // 21/08/2026: marca quando o e-mail de confirmação (com QR Code) foi mandado, pra o botão
   // "Confirmação a quem falta" (envio em massa) não reenviar pra quem já recebeu — só o botão
   // individual "Email" de cada inscrito reenvia sem essa checagem.

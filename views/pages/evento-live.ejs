@@ -290,6 +290,14 @@ function atualizarUI() {
   document.getElementById('tempo-total').textContent = fmt(segundosAcumulados + segundosSessao);
 }
 
+// 22/08/2026: registra no servidor CADA tentativa de acesso (certa ou errada) — antes disso não
+// tinha como provar, depois do fato, se alguém que reclamou "eu tentei acessar" realmente digitou
+// o e-mail errado ou se foi outra coisa. Fire-and-forget: nunca deve travar o acesso de quem
+// acertou só porque o registro falhou (rede instável, etc.).
+function registrarTentativa(email, sucesso) {
+  fetch('/live/'+token+'/tentativa-acesso', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, sucesso})}).catch(()=>{});
+}
+
 function validarAcesso() {
   const email = document.getElementById('login-email').value.toLowerCase().trim();
   const erro = document.getElementById('login-erro');
@@ -299,7 +307,9 @@ function validarAcesso() {
   // Corrigido junto (18/08/2026): antes essa mensagem não era escrita de novo aqui, então se a
   // pessoa primeiro deixasse o campo vazio ("Ingrese su correo.") e só depois digitasse um
   // e-mail errado, a mensagem antiga ficava na tela, sem dizer que o problema agora era outro.
-  if (email !== emailInscrito) { erro.textContent='Este correo no coincide con el registrado en su inscripción. Verifique el correo utilizado al inscribirse en la Liga Académica e intente nuevamente.'; erro.style.display='block'; return; }
+  const bateu = email === emailInscrito;
+  registrarTentativa(email, bateu);
+  if (!bateu) { erro.textContent='Este correo no coincide con el registrado en su inscripción. Verifique el correo utilizado al inscribirse en la Liga Académica e intente nuevamente.'; erro.style.display='block'; return; }
 
   document.getElementById('login-overlay').style.display = 'none';
   document.getElementById('main-header').style.display = 'flex';

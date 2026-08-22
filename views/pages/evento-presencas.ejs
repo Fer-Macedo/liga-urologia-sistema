@@ -153,7 +153,9 @@
             <tr class="pr-row" data-busca="<%= (i.nome + ' ' + (i.email||'')).toLowerCase() %>" data-status="<%= _st %>" data-tipo="<%= tipo %>" data-membro="<%= _membroTokens.trim() %>">
               <td>
                 <div style="font-weight:600"><%= i.nome %></div>
-                <div style="font-size:11px;color:var(--texto2)"><%= i.email %></div>
+                <div style="font-size:11px;color:var(--texto2)"><%= i.email %>
+                  <a href="/eventos/<%= evento.id %>/inscricoes/<%= i.id %>/live-tentativas" style="margin-left:6px;color:var(--cor-primaria);text-decoration:none;font-weight:600" title="Ver tentativas de acesso à live desta pessoa">· acessos</a>
+                </div>
                 <% if (p.porDia.length > 1) { %>
                 <!-- 21/08/2026: pedido do usuário — panorama do % de CADA dia, não só o geral do
                      evento inteiro. A presença é dada por dia (>=75% naquele dia específico) e o

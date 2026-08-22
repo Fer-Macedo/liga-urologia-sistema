@@ -1971,6 +1971,22 @@ router.get('/live/:token', async (req, res) => {
     });
   } catch(e) { console.error('GET /live:', e.message); res.status(500).send('Erro ao carregar transmissão.'); }
 });
+// 22/08/2026: registra CADA tentativa de acesso na tela de login da live (certa ou errada) —
+// a comparação do e-mail em si continua no cliente (evento-live.ejs), mas o registro fica no
+// servidor pra virar prova confiável em caso de dúvida futura ("eu tentei acessar e não
+// consegui"). Público como o resto da rota /live — sem sessão de admin envolvida.
+router.post('/live/:token/tentativa-acesso', async (req, res) => {
+  try {
+    const presR = await query('SELECT id FROM evento_presencas_online WHERE token=$1', [req.params.token]);
+    const presenca = presR.rows[0];
+    if (!presenca) return res.json({ ok: false });
+    const email = (req.body.email || '').trim().toLowerCase().slice(0, 200);
+    const sucesso = !!req.body.sucesso;
+    const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').toString().slice(0, 60);
+    await query('INSERT INTO evento_live_tentativas_acesso (presenca_id, email_digitado, sucesso, ip) VALUES ($1,$2,$3,$4)', [presenca.id, email, sucesso, ip]);
+    res.json({ ok: true });
+  } catch (e) { res.json({ ok: false }); }
+});
 router.post('/live/:token/ping', async (req, res) => {
   try {
     const presR = await query('SELECT id, evento_id, sessao_atual, tempo_total_segundos FROM evento_presencas_online WHERE token=$1',[req.params.token]);
@@ -2153,6 +2169,25 @@ router.get('/eventos/:id/presencas', requireAuth, requirePermissao('eventos'), a
       config, evento: ev, inscricoes, diasFechados: dadosPresenca.diasFechados, LIMIAR_FREQUENCIA,
       usuario: req.session.usuario, msg: req.flash('msg')
     });
+  } catch(e) { res.status(500).send('Erro: '+e.message); }
+});
+// 22/08/2026: consulta o log de tentativas de acesso à live de UM inscrito — pra resolver dúvida
+// de quem afirma ter tentado acessar mas aparece com 0% (ver /live/:token/tentativa-acesso).
+router.get('/eventos/:id/inscricoes/:iid/live-tentativas', requireAuth, requirePermissao('eventos'), async (req, res) => {
+  try {
+    const config = await getConfig();
+    const [evR, inscR] = await Promise.all([
+      query('SELECT * FROM eventos WHERE id=$1', [req.params.id]),
+      query('SELECT * FROM evento_inscricoes WHERE id=$1 AND evento_id=$2', [req.params.iid, req.params.id])
+    ]);
+    const ev = evR.rows[0], insc = inscR.rows[0];
+    if (!ev || !insc) return res.status(404).send('Inscrição não encontrada.');
+    const presR = await query('SELECT id, primeiro_acesso, ultimo_ping FROM evento_presencas_online WHERE inscricao_id=$1 AND evento_id=$2', [req.params.iid, req.params.id]);
+    const presenca = presR.rows[0] || null;
+    const tentativasR = presenca
+      ? await query('SELECT email_digitado, sucesso, ip, criado_em FROM evento_live_tentativas_acesso WHERE presenca_id=$1 ORDER BY criado_em', [presenca.id])
+      : { rows: [] };
+    res.render('pages/evento-live-tentativas', { config, evento: ev, insc, presenca, tentativas: tentativasR.rows, usuario: req.session.usuario });
   } catch(e) { res.status(500).send('Erro: '+e.message); }
 });
 router.get('/eventos/:id/presencas-pdf', requireAuth, requirePermissao('eventos'), async (req, res) => {

@@ -20,9 +20,12 @@ const ROTAS_ISENTAS = [
 
 // /live/:token/ping e /live/:token/sair sao chamados via navigator.sendBeacon (fecho de aba),
 // que nao permite enviar headers customizados - ficam isentos, ja protegidos pelo proprio
-// token aleatorio e imprevisivel na URL (equivalente a uma chave de uso unico).
+// token aleatorio e imprevisivel na URL (equivalente a uma chave de uso unico). Mesmo motivo
+// vale pra /tentativa-acesso (22/08/2026): a pagina evento-live.ejs e publica, sem token CSRF
+// embutido (nao inclui o script que injeta um em todo fetch), entao um fetch() normal daqui
+// tambem cairia sem o campo _csrf.
 const PADROES_ISENTOS = [
-  /^\/live\/[^/]+\/(ping|sair)$/,
+  /^\/live\/[^/]+\/(ping|sair|tentativa-acesso)$/,
 ];
 
 function rotaIsenta(path) {
