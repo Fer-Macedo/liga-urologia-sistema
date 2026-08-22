@@ -1498,7 +1498,7 @@
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:2px;max-height:180px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px;margin-bottom:12px">
             <% _ligantesAtivos.forEach(function(l){ %>
             <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:4px 6px;cursor:pointer">
-              <input type="checkbox" name="ligantes_selecionados[]" value="<%= l.nome %>" class="lote-checkbox">
+              <input type="checkbox" name="ligantes_selecionados[]" value="<%= l.nome %>" class="lote-checkbox" checked>
               <span><%= l.nome %></span>
             </label>
             <% }) %>
@@ -1509,7 +1509,7 @@
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:2px;max-height:180px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px">
             <% _diretivosAtivos.forEach(function(d){ %>
             <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:4px 6px;cursor:pointer">
-              <input type="checkbox" name="diretivos_selecionados[]" value="<%= d.nome %>" class="lote-checkbox">
+              <input type="checkbox" name="diretivos_selecionados[]" value="<%= d.nome %>" class="lote-checkbox" checked>
               <span><%= d.nome %></span>
             </label>
             <% }) %>
