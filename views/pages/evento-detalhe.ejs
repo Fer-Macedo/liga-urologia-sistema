@@ -1474,6 +1474,14 @@
     <div class="modal-header"><span class="modal-titulo">Cadastrar Ligantes/Diretivos</span><button class="icon-btn" onclick="fecharModal('modal-inscricao-lote')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline;vertical-align:middle"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
     <% var _ligantesAtivos = typeof ligantesAtivos !== 'undefined' ? ligantesAtivos : []; %>
     <% var _diretivosAtivos = typeof diretivosAtivos !== 'undefined' ? diretivosAtivos : []; %>
+    <%
+      // 21/08/2026: marcar TUDO por padrão só ajudava na primeira leva (quase todo mundo entra).
+      // Reabrindo o modal depois pra adicionar só mais alguns, isso obrigava a desmarcar a
+      // maioria em vez de marcar só quem falta. Certo é refletir quem JÁ está inscrito neste
+      // evento (vem marcado — não duplica, o back-end já ignora quem repete) e deixar
+      // desmarcado quem ainda não está, pra sobrar só marcar os novos.
+      var _nomesJaInscritos = new Set((typeof inscricoes !== 'undefined' ? inscricoes : []).map(function(i){ return (i.nome||'').trim().toLowerCase(); }));
+    %>
     <form action="/eventos/<%= evento.id %>/inscricoes/em-lote" method="POST">
       <div class="modal-body" style="max-height:56vh;overflow-y:auto">
         <div class="campo">
@@ -1502,7 +1510,7 @@
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:2px;max-height:180px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px;margin-bottom:12px">
             <% _ligantesAtivos.forEach(function(l){ %>
             <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:4px 6px;cursor:pointer">
-              <input type="checkbox" name="ligantes_selecionados[]" value="<%= l.nome %>" class="lote-checkbox" checked>
+              <input type="checkbox" name="ligantes_selecionados[]" value="<%= l.nome %>" class="lote-checkbox" <%= _nomesJaInscritos.has((l.nome||'').trim().toLowerCase()) ? 'checked' : '' %>>
               <span><%= l.nome %></span>
             </label>
             <% }) %>
@@ -1513,7 +1521,7 @@
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:2px;max-height:180px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:6px;padding:8px">
             <% _diretivosAtivos.forEach(function(d){ %>
             <label style="display:flex;align-items:center;gap:6px;font-size:13px;padding:4px 6px;cursor:pointer">
-              <input type="checkbox" name="diretivos_selecionados[]" value="<%= d.nome %>" class="lote-checkbox" checked>
+              <input type="checkbox" name="diretivos_selecionados[]" value="<%= d.nome %>" class="lote-checkbox" <%= _nomesJaInscritos.has((d.nome||'').trim().toLowerCase()) ? 'checked' : '' %>>
               <span><%= d.nome %></span>
             </label>
             <% }) %>
