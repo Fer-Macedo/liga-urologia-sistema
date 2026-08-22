@@ -643,8 +643,17 @@ module.exports = function (router) {
         return renderErro('Debe aceptar las Bases del Edital para continuar.');
       if (req.body.aceite_lgpd !== 'on')
         return renderErro('Debe aceptar la Política de Privacidad (LGPD) para continuar.');
-      const dup = await query("SELECT id FROM ps_candidatos WHERE processo_id=$1 AND (LOWER(email)=$2 OR (documento IS NOT NULL AND documento=$3)) LIMIT 1", [p.id, email, documento]);
-      if (dup.rows.length) return renderErro('Ya existe una inscripción con este documento o correo en este proceso. / Já existe uma inscrição com este documento ou e-mail neste processo.');
+      // Quem começou a se inscrever mas não concluiu o pagamento fica com status 'pendente' —
+      // barrar de novo com "já existe inscrição" impedia essa pessoa de voltar e concluir (a
+      // única saída era o admin excluir manualmente o cadastro pendente). Mesma correção já
+      // feita em eventos (POST /inscricao/:id): só quem já está 'confirmado' é de fato
+      // duplicata; quem ficou pendente é redirecionado pra retomar o pagamento existente.
+      const dup = await query("SELECT id, status FROM ps_candidatos WHERE processo_id=$1 AND (LOWER(email)=$2 OR (documento IS NOT NULL AND documento=$3)) LIMIT 1", [p.id, email, documento]);
+      if (dup.rows.length) {
+        const existente = dup.rows[0];
+        if (existente.status === 'pendente') return res.redirect('/pss/pagamento/' + existente.id);
+        return renderErro('Ya existe una inscripción con este documento o correo en este proceso. / Já existe uma inscrição com este documento ou e-mail neste processo.');
+      }
       const cupomCodigo = (req.body.cupom_codigo || '').toUpperCase().trim();
       let valorBase = parseFloat(p.valor_inscricao) || 0, valorFinal = valorBase, isento = false, cupomValido = null;
       if (cupomCodigo) {
