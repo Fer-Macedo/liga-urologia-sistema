@@ -640,6 +640,7 @@ router.post('/eventos/:id/inscricoes/em-lote', requireAuth, requirePermissao('ev
   try {
     const modo = req.body.modo; // 'todos_ligantes' | 'todos_diretivos' | 'selecao'
     const status = req.body.status === 'pendente' ? 'pendente' : 'confirmado';
+    const loteId = req.body.lote_id || null;
     // 21/08/2026: BUG REAL em produção — o body-parser deste projeto usa
     // express.urlencoded({extended:true}), que usa a lib "qs". Com "extended:true", um campo
     // nomeado "nome[]" no HTML chega no req.body SEM os colchetes na chave (qs.parse
@@ -677,8 +678,8 @@ router.post('/eventos/:id/inscricoes/em-lote', requireAuth, requirePermissao('ev
       if (emailN && emailsExistentes.has(emailN)) { jaInscritos++; continue; }
       const qrcode = 'LAURO-' + req.params.id + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
       await query(
-        'INSERT INTO evento_inscricoes (evento_id,nome,email,whatsapp,cpf,tipo_participante,status,qrcode) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
-        [req.params.id, p.nome, p.email || null, p.whatsapp || null, p.cpf || null, p.tipo_participante, status, qrcode]
+        'INSERT INTO evento_inscricoes (evento_id,nome,email,whatsapp,cpf,tipo_participante,status,qrcode,lote_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+        [req.params.id, p.nome, p.email || null, p.whatsapp || null, p.cpf || null, p.tipo_participante, status, qrcode, loteId]
       );
       if (emailN) emailsExistentes.add(emailN);
       adicionados++;

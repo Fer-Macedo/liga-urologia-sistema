@@ -1488,6 +1488,10 @@
           <label class="label">Status da inscrição</label>
           <select name="status" class="input"><option value="confirmado">Confirmado</option><option value="pendente">Pendente</option></select>
         </div>
+        <div class="campo">
+          <label class="label">Lote</label>
+          <select name="lote_id" class="input"><option value="">— Sem lote —</option><% lotes.forEach(function(l){ %><option value="<%= l.id %>"><%= l.nome %> — R$ <%= Number(l.preco).toFixed(2) %></option><% }) %></select>
+        </div>
         <div id="lote-selecao" style="display:none">
           <div style="display:flex;gap:8px;margin-bottom:10px">
             <button type="button" class="btn btn-sm" onclick="marcarTodosLote(true)">Marcar todos</button>

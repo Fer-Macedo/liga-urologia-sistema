@@ -52,6 +52,19 @@ test('modo=todos_ligantes: cadastra todos os ligantes ativos como confirmado por
   assert.strictEqual(inserts[0][1], 'Ana Ligante');
   assert.strictEqual(inserts[0][5], 'ligante', 'tipo_participante = ligante');
   assert.strictEqual(inserts[0][6], 'confirmado', 'status padrão');
+  assert.strictEqual(inserts[0][8], null, 'sem lote escolhido, fica sem lote (não "—" quebrado, e sim NULL de verdade)');
+});
+
+// 21/08/2026: cadastro anterior deixava lote_id sempre NULL — ligantes/diretivos cadastrados
+// em lote apareciam com "—" no lote na lista de inscritos, mesmo quando o evento já tinha um
+// lote "Miembros LAURO" pensado exatamente pra esse grupo. Agora o modal deixa escolher o lote.
+test('lote escolhido no modal é aplicado a todos os cadastrados em lote', async () => {
+  const { rotas, inserts } = montar({ ligantes: LIGANTES });
+  const req = reqBase({ params: { id: '5' }, body: { modo: 'todos_ligantes', lote_id: '9' } });
+  await rotas['POST /eventos/:id/inscricoes/em-lote'](req, resRedirect());
+  assert.strictEqual(inserts.length, 2);
+  assert.strictEqual(inserts[0][8], '9');
+  assert.strictEqual(inserts[1][8], '9');
 });
 
 test('modo=todos_diretivos: cadastra todos os diretivos ativos', async () => {
